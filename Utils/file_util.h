@@ -10,11 +10,14 @@
 #include "d_memory.h"
 #include "allocator.h"
 
+// #define USE_C_STDIO
+
+#ifndef USE_C_STDIO
 #ifdef WINDOWS
 #define USE_C_STDIO
 #endif
+#endif
 
-// #define USE_C_STDIO
 #ifdef USE_C_STDIO
 static inline
 force_inline

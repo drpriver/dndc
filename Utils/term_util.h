@@ -14,9 +14,18 @@ static inline TermSize get_terminal_size(void);
 #define _CRT_NONSTDC_NO_DEPRECATE
 #endif
 #include <io.h>
+#include <stdio.h>
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
+static inline
+int fileno(FILE* stream){
+    return _fileno(stream);
+    }
+static inline
+int isatty(int fd){
+    return _isatty(fd);
+    }
 // punting for now
 static inline
 TermSize

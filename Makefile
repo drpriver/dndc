@@ -2,12 +2,14 @@ include defs.mak
 include PythonEmbed/pythonembed.mak
 include DndC/dndc.mak
 
-%/README.html: %/README.dnd | $(BINDIR)/dndc
-	mkdir -p Depends/$*
-	$(BINDIR)/dndc $< $@ -d $(DEPDIR)/$*
+DNDC:=$(BINDIR)/dndc$(EXE)
 
-README.html: README.dnd | $(BINDIR)/dndc
-	$(BINDIR)/dndc $< $@ -d $(DEPDIR)
+%/README.html: %/README.dnd | $(DNDC)
+	mkdir -p Depends/$*
+	$(DNDC) $< $@ -d $(DEPDIR)/$*
+
+README.html: README.dnd | $(DNDC)
+	$(DNDC) $< $@ -d $(DEPDIR)
 
 # Assumes libclang is installed.
 tags: $(wildcard *.h *.c **/*.c **/*.h) Scripts/tag_and_syntax.py compile_commands.json
@@ -44,10 +46,10 @@ run-tests: clean-tests tests
 
 all: dndc dndcbench README.html
 
-install: $(BINDIR)/dndc
-	@$(INSTALL) -C $< $(INSTALLDIR)/dndc
+install: $(DNDC)
+	@$(INSTALL) -C $< $(INSTALLDIR)/dndc$(EXE)
 
-fuzz: $(BINDIR)/dndcfuzz | $(FUZZDIR)
+fuzz: $(BINDIR)/dndcfuzz$(EXE) | $(FUZZDIR)
 	$< $(FUZZDIR) -fork=4 -only_ascii=1
 
 .DEFAULT_GOAL := all

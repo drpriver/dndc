@@ -1,6 +1,7 @@
 #ifndef RECORDING_ALLOCATOR_H
 #define RECORDING_ALLOCATOR_H
 #include "allocator.h"
+
 PushDiagnostic();
 SuppressUnusedFunction();
 

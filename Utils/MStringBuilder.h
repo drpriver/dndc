@@ -315,69 +315,6 @@ msb_rjust(Nonnull(MStringBuilder*)msb, Nonnull(const Allocator*)a, char c, int t
     msb->cursor +=n;
     }
 
-static inline
-void
-msb_merge(
-        Nonnull(MStringBuilder*)restrict msb,
-        Nonnull(const Allocator*)restrict a,
-        Nonnull(Nonnull(const char* restrict)*)restrict strings,
-        int n_strings
-    ){
-    assert(n_strings >= 0);
-    if(not n_strings)
-        return;
-    size_t* string_lens = alloca(sizeof(*string_lens)*n_strings);
-    size_t total_len = 0;
-    for(int i = 0; i < n_strings; i++){
-        string_lens[i] = strlen(strings[i]);
-        total_len += string_lens[i];
-        }
-    _check_msb_size(msb, a, total_len);
-    size_t cursor = msb->cursor;
-    for(int i = 0; i < n_strings; i++){
-        size_t string_len = string_lens[i];
-        memcpy(msb->data+cursor, strings[i], string_len);
-        cursor += string_len;
-        }
-    msb->cursor = cursor;
-    }
-
-static inline
-void
-msb_join(
-        Nonnull(MStringBuilder*)restrict msb,
-        Nonnull(const Allocator*)restrict a,
-        Nonnull(const char*)restrict joiner,
-        Nonnull(Nonnull(const char* restrict)*)restrict strings,
-        int n_strings
-    ){
-    assert(n_strings >= 0);
-    if(not n_strings)
-        return;
-    auto joiner_len = strlen(joiner);
-    if(not joiner_len){
-        msb_merge(msb, a, strings, n_strings);
-        return;
-        }
-    size_t* string_lens = alloca(sizeof(*string_lens)*n_strings);
-    size_t total_len = joiner_len * (n_strings-1);
-    for(int i = 0; i < n_strings; i++){
-        string_lens[i] = strlen(strings[i]);
-        total_len += string_lens[i];
-        }
-    _check_msb_size(msb, a, total_len);
-    size_t cursor = msb->cursor;
-    for(int i = 0; i < n_strings; i++){
-        if(i != 0){
-            memcpy(msb->data+cursor, joiner, joiner_len);
-            cursor += joiner_len;
-            }
-        size_t string_len = string_lens[i];
-        memcpy(msb->data+cursor, strings[i], string_len);
-        cursor += string_len;
-        }
-    msb->cursor = cursor;
-    }
 #define msb_write_literal(msb, a, lit) msb_write_str(msb, a, ""lit, sizeof(""lit)-1)
 
 

@@ -1,4 +1,4 @@
-FREEZE=$(BINDIR)/freeze_py_module
+FREEZE=$(BINDIR)/freeze_py_module$(EXE)
 FROZENDIR:=PythonEmbed/frozen
 $(FROZENDIR): ; @$(MKDIR) -p $@
 DIRECTORIES+=$(FROZENDIR)

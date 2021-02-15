@@ -82,4 +82,16 @@ msb_append_path(Nonnull(MStringBuilder*)sb, Nonnull(const Allocator*)a, Nonnull(
     sb->cursor += length;
     }
 
+#ifdef WINDOWS
+#include "windowsheader.h"
+static inline
+int 
+chdir(Nonnull(const char*) dirname){
+    PushDiagnostic();
+    SuppressDiscardQualifiers();
+    return SetCurrentDirectory(dirname) != 0;
+    PopDiagnostic();
+    }
+#endif
+
 #endif

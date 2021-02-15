@@ -75,12 +75,12 @@ NodeHandle_eq(NodeHandle a, NodeHandle b){
 //TODO: move to a thread utils?
 #if defined(LINUX) || defined(DARWIN)
 #include <pthread.h>
-// opaque thread type to ease porting to Windows later.
+#define THREADFUNC(name) Nullable(void*) (name)(Nullable(void*)thread_arg)
+typedef THREADFUNC(thread_func);
 typedef struct ThreadHandle {
     pthread_t thread;
 }ThreadHandle;
 
-typedef Nullable(void*) (thread_func)(Nullable(void*));
 static
 void
 create_thread(Nonnull(ThreadHandle*)handle, Nonnull(thread_func*) func, Nullable(void*)thread_arg){
@@ -89,11 +89,28 @@ create_thread(Nonnull(ThreadHandle*)handle, Nonnull(thread_func*) func, Nullable
 
 static
 void
-join_thread(ThreadHandle handle, Nullable(void*)result){
-    pthread_join(handle.thread, result);
+join_thread(ThreadHandle handle){
+    pthread_join(handle.thread, NULL);
     }
 #elif defined(WINDOWS)
-#error "didn't actually do windows"
+#define THREADFUNC(name) unsigned long (name)(Nullable(void*)thread_arg)
+typedef THREADFUNC(thread_func);
+
+#include "windowsheader.h"
+typedef struct ThreadHandle {
+    HANDLE thread;
+} ThreadHandle;
+static
+void
+create_thread(Nonnull(ThreadHandle*)handle, Nonnull(thread_func*) func, Nullable(void*)thread_arg){
+    handle->thread = CreateThread(NULL, 0, func, thread_arg, 0, NULL);
+    }
+
+static
+void
+join_thread(ThreadHandle handle){
+    WaitForSingleObject(handle.thread, INFINITE);
+    }
 
 #else
 #error "Unhandled threading platform."
@@ -156,10 +173,9 @@ typedef struct BinaryJob{
     } BinaryJob;
 
 static
-Nullable(void*)
-binary_worker(Nonnull(void*) j){
+THREADFUNC(binary_worker){
     auto before = get_t();
-    BinaryJob* jobp = j;
+    BinaryJob* jobp = thread_arg;
     auto job = *jobp;
     auto count = job.sourcepaths.count;
     auto data = job.sourcepaths.data;
@@ -188,7 +204,7 @@ binary_worker(Nonnull(void*) j){
     auto after = get_t();
     if(job.report_time)
         fprintf(stderr, "Info: Binary worker took %.3fms\n", (after-before)/1000.);
-    return NULL;
+    return 0;
     }
 
 
@@ -1258,7 +1274,7 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
     if(binary_work_to_be_done){
         if(!(flags & PARSE_NO_THREADS)){
             auto before = get_t();
-            join_thread(worker, NULL);
+            join_thread(worker);
             auto after = get_t();
             report_stat(ctx.flags, "Joining took : %.3fms", (after-before)/1000.);
             }
