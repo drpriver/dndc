@@ -37,11 +37,10 @@
 #define _Nullable
 #define _Null_unspecified
 #endif
+
 #define Nonnull(x) x _Nonnull
 #define Nullable(x) x _Nullable
 #define NullUnspec(x) x _Null_unspecified
-typedef const char* _Null_unspecified const_c_string;
-typedef char* _Null_unspecified c_string;
 
 /*
    Force a compilation error if condition is true, but also produce a result
@@ -58,10 +57,10 @@ typedef char* _Null_unspecified c_string;
 #define __must_be_array(a) 0
 #endif
 
+// Gets the length of an array, while avoiding the problem of pointers.
 #define arrlen(arr) (sizeof(arr) / sizeof((arr)[0]) + __must_be_array(arr))
 
 #if defined(__GNUC__) || defined(__clang__)
-    #define PACKED __attribute__((__packed__))
     #ifndef WINDOWS
     #define SmallEnum enum __attribute__((__packed__))
         #if !defined(__clang__)
@@ -76,8 +75,6 @@ typedef char* _Null_unspecified c_string;
 #else
 // leave both undefined as things are going to be broken
 #endif
-
-#define toggle(x) (x = !x)
 
 #ifdef DEBUG
 #define unreachable() ({assert(0);__builtin_unreachable();})

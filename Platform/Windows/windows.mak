@@ -22,6 +22,6 @@ PYCFLAGS=-I$(LOCALAPPDATA)\Programs\Python\Python38\include -Wno-visibility
 PYLDFLAGS=$(LOCALAPPDATA)\Programs\Python\Python38\libs\python38.lib
 endif
 
-Bin\python38.dll:
-	$(CP) $(LOCALAPPDATA)\Programs\Python\Python38\python38.dll Bin
-all: Bin\python38.dll
+$(BINDIR)\python38.dll:
+	$(CP) $(LOCALAPPDATA)\Programs\Python\Python38\python38.dll $(BINDIR)
+$(BINDIR)\dndc.exe: $(BINDIR)\python38.dll

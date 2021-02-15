@@ -16,105 +16,8 @@
 #include "base64.h"
 #include "json_util.h"
 #include "recording_allocator.h"
-
-#define MARRAY_T StringView
-#include "Marray.h"
-#define MARRAY_T LongString
-#include "Marray.h"
-
-typedef struct LoadedSource {
-    LongString sourcepath; // doesn't have to be a filename
-    LongString sourcetext; // the actual source text
-    } LoadedSource;
-#define MARRAY_T LoadedSource
-#include "Marray.h"
-
-typedef struct LoadedBin {
-    LongString path; // doesn't have to be a filename
-    ByteBuffer bytes;
-    } LoadedBin;
-#define MARRAY_T LoadedBin
-#include "Marray.h"
-
-typedef struct LinkItem {
-    StringView key;
-    StringView value;
-} LinkItem;
-#define MARRAY_T LinkItem
-#include "Marray.h"
-
-typedef struct DataItem {
-    StringView key;
-    LongString value;
-} DataItem;
-#define MARRAY_T DataItem
-#include "Marray.h"
-
-typedef struct Attribute {
-    StringView key;
-    StringView value; // often null
-    } Attribute;
-#define MARRAY_T Attribute
-#include "Marray.h"
-
-typedef union NodeHandle {
-    struct{uint32_t index; };
-    uint32_t _value;
-    } NodeHandle;
-#define INVALID_NODE_HANDLE ((NodeHandle){._value=-1})
-static inline
-force_inline
-bool
-NodeHandle_eq(NodeHandle a, NodeHandle b){
-    return a._value == b._value;
-    }
-#define MARRAY_T NodeHandle
-#include "Marray.h"
-
-
-//TODO: move to a thread utils?
-#if defined(LINUX) || defined(DARWIN)
-#include <pthread.h>
-#define THREADFUNC(name) Nullable(void*) (name)(Nullable(void*)thread_arg)
-typedef THREADFUNC(thread_func);
-typedef struct ThreadHandle {
-    pthread_t thread;
-}ThreadHandle;
-
-static
-void
-create_thread(Nonnull(ThreadHandle*)handle, Nonnull(thread_func*) func, Nullable(void*)thread_arg){
-    pthread_create(&handle->thread, NULL, func, thread_arg);
-    }
-
-static
-void
-join_thread(ThreadHandle handle){
-    pthread_join(handle.thread, NULL);
-    }
-#elif defined(WINDOWS)
-#define THREADFUNC(name) unsigned long (name)(Nullable(void*)thread_arg)
-typedef THREADFUNC(thread_func);
-
-#include "windowsheader.h"
-typedef struct ThreadHandle {
-    HANDLE thread;
-} ThreadHandle;
-static
-void
-create_thread(Nonnull(ThreadHandle*)handle, Nonnull(thread_func*) func, Nullable(void*)thread_arg){
-    handle->thread = CreateThread(NULL, 0, func, thread_arg, 0, NULL);
-    }
-
-static
-void
-join_thread(ThreadHandle handle){
-    WaitForSingleObject(handle.thread, INFINITE);
-    }
-
-#else
-#error "Unhandled threading platform."
-#endif
+#include "dndc_types.h"
+#include "thread_utils.h"
 
 
 static
@@ -170,7 +73,7 @@ typedef struct BinaryJob{
     Nonnull(const Allocator*) a;
     Marray(LoadedSource) loaded;
     bool report_time;
-    } BinaryJob;
+} BinaryJob;
 
 static
 THREADFUNC(binary_worker){

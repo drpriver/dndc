@@ -85,7 +85,7 @@ msb_append_path(Nonnull(MStringBuilder*)sb, Nonnull(const Allocator*)a, Nonnull(
 #ifdef WINDOWS
 #include "windowsheader.h"
 static inline
-int 
+int
 chdir(Nonnull(const char*) dirname){
     PushDiagnostic();
     SuppressDiscardQualifiers();
