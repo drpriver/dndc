@@ -16,8 +16,4 @@ TOUCH=touch
 MKDIR=mkdir
 CP=cp
 EXE=
-# I am confused about whether or not this should be .so or .dylib
-# But we are defining this for compatibility with windows
-# Hello, there's even a bundle type and a loader type on macos?
-# Should I use those so that I can get symbol checking at compile time?
-SO=.so
+INSTALL=install

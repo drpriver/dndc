@@ -45,7 +45,7 @@ run-tests: clean-tests tests
 all: dndc dndcbench README.html
 
 install: $(BINDIR)/dndc
-	@install -C $< $(INSTALLDIR)/dndc
+	@$(INSTALL) -C $< $(INSTALLDIR)/dndc
 
 fuzz: $(BINDIR)/dndcfuzz | $(FUZZDIR)
 	$< $(FUZZDIR) -fork=4 -only_ascii=1

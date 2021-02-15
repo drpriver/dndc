@@ -24,3 +24,4 @@ TOUCH=touch
 MKDIR=mkdir
 CP=cp
 EXE=
+INSTALL=install

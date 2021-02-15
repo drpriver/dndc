@@ -10,3 +10,7 @@
 # FAST: -OFast
 SPEED?=DEV
 INSTALLDIR?=/usr/local/bin
+
+# Windows people will want to set the right pyflags here
+# PYCFLAGS=
+# PYLDFLAGS=

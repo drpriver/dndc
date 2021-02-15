@@ -1,6 +1,6 @@
 """
 I gave up on finding the windows equivelants to basic unix
-commands, so instead I just implement them in a python script.
+commands, so instead I just implement them in this python script.
 """
 import argparse
 import os
@@ -59,6 +59,15 @@ def cp(src_dsts:List[str]) -> None:
     for src in srcs:
         shutil.copy(src, dst)
 
+def install(src_dsts:List[str], C:bool=False) -> None:
+    src_dsts = expand(src_dsts)
+    if len(src_dsts) != 2:
+        raise Exception("Install requires [src] [dst] as arguments.")
+    dst = src_dsts[-1]
+    srcs = src_dsts[:-1]
+    for src in srcs:
+        shutil.copy(src, dst)
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
@@ -86,6 +95,11 @@ def main() -> None:
     cp_parser = subparsers.add_parser('cp')
     cp_parser.add_argument('src_dsts', nargs='+')
     cp_parser.set_defaults(func=cp)
+
+    install_parser = subparsers.add_parser('install')
+    install_parser.add_argument('src_dsts', nargs='+')
+    install_parser.add_argument('-C', action='store_true')
+    install_parser.set_defaults(func=install)
 
     args = parser.parse_args()
     func = args.func
