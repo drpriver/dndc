@@ -5106,13 +5106,6 @@ static
 int
 init_python_interpreter(void){
     PyStatus status;
-#if PY_MAJOR_VERSION < 3
-#error "Only works with python3 or better"
-#endif
-#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 8
-    status = Py_Initialize();
-    return 0;
-#else
     PyPreConfig preconfig;
     PyPreConfig_InitIsolatedConfig(&preconfig);
     preconfig.use_environment = 0;
@@ -5164,7 +5157,6 @@ init_python_interpreter(void){
         return status.exitcode;
         }
     return 1;
-#endif
     }
 
 static
