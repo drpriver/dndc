@@ -6,6 +6,9 @@ include DndC/dndc.mak
 	mkdir -p Depends/$*
 	$(BINDIR)/dndc $< $@ -d $(DEPDIR)/$*
 
+README.html: README.dnd | $(BINDIR)/dndc
+	$(BINDIR)/dndc $< $@ -d $(DEPDIR)
+
 # Assumes libclang is installed.
 tags: $(wildcard *.h *.c **/*.c **/*.h) Scripts/tag_and_syntax.py compile_commands.json
 	$(PYTHON) -m Scripts.tag_and_syntax
@@ -39,7 +42,7 @@ convert:
 
 run-tests: clean-tests tests
 
-all: dndc dndcbench
+all: dndc dndcbench README.html
 
 install: $(BINDIR)/dndc
 	@install -C $< $(INSTALLDIR)/dndc

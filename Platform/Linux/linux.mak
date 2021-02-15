@@ -14,11 +14,10 @@ DEV_FLAGS=-DLOG_LEVEL=4\
 	 -DDEBUG\
 	 -O0\
 	 -g
-INCLUDE_FLAGS+=-I/usr/include/SDL2
 ifeq ($(CC),clang)
 DEBUG_FLAGS+=-fsanitize=nullability
 endif
-LINK_FLAGS+=-lm
+LINK_FLAGS+=-lm -lpthread
 RM=rm -rf
 MV=mv
 TOUCH=touch

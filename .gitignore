@@ -11,3 +11,4 @@ compile_commands.json
 Depends
 PythonEmbed/frozen
 README.html
+FuzzCorpus
