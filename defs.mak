@@ -57,8 +57,8 @@ include opt.mak
 
 # Platform specific nastiness.
 # After including these variables should be set:
-# CC, PYTHON, PYCFLAGS, PYLDFLAGS, 
-# RM, CP, MKDIR, TOUCH, EXE, 
+# CC, PYTHON, PYCFLAGS, PYLDFLAGS,
+# RM, CP, MKDIR, TOUCH, EXE,
 # DEBUG_FLAGS, LINK_FLAGS
 
 ifeq ($(OS),Windows_NT)

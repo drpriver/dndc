@@ -10,7 +10,7 @@ include DndC/dndc.mak
 tags: $(wildcard *.h *.c **/*.c **/*.h) Scripts/tag_and_syntax.py compile_commands.json
 	$(PYTHON) -m Scripts.tag_and_syntax
 
-.PHONY: clean clean-tests clean-depends deep-clean run-tests strip convert directories install compile_commands
+.PHONY: clean clean-tests clean-depends deep-clean run-tests strip convert directories install compile_commands fuzz
 
 # Assumes compiledb is installed.
 compile_commands.json:
@@ -39,9 +39,12 @@ convert:
 
 run-tests: clean-tests tests
 
-all: dndc
+all: dndc dndcbench
 
 install: $(BINDIR)/dndc
 	@install -C $< $(INSTALLDIR)/dndc
+
+fuzz: $(BINDIR)/dndcfuzz | $(FUZZDIR)
+	$< $(FUZZDIR) -fork=4 -only_ascii=1
 
 .DEFAULT_GOAL := all

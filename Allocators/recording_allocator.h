@@ -18,15 +18,14 @@ SuppressUnusedFunction();
 typedef struct RecordingAllocator {
     Nonnull(const Allocator*) _wrapped;
     // We need a dynamic array to record all of the allocations.
-    // We specialize it to be SOA instead of a generic Darray.
-    Nonnull(const Allocator*) _recording_allocator;
+    // We specialize it to be SOA
     struct {
         void*_Nullable*_Nonnull allocations;
         Nonnull(size_t*) allocation_sizes;
         size_t count;
         size_t capacity;
-        } recorded;
-    } RecordingAllocator;
+    } recorded;
+} RecordingAllocator;
 
 static inline
 void
@@ -37,34 +36,15 @@ recording_ensure_capacity(Nonnull(RecordingAllocator*) r){
     if(!rec->capacity){
         enum {INITIAL_CAPACITY=32};
         rec->capacity = INITIAL_CAPACITY;
-        rec->allocations = Allocator_alloc(r->_recording_allocator, INITIAL_CAPACITY*sizeof(*rec->allocations));
-        rec->allocation_sizes = Allocator_alloc(r->_recording_allocator, INITIAL_CAPACITY*sizeof(rec->allocation_sizes));
+        rec->allocations = malloc(INITIAL_CAPACITY*sizeof(*rec->allocations));
+        rec->allocation_sizes = malloc(INITIAL_CAPACITY*sizeof(*rec->allocation_sizes));
         return;
         }
     auto old_cap = rec->capacity;
-    auto old_a_size = old_cap * sizeof(*rec->allocations);
-    auto old_s_size = old_cap * sizeof(*rec->allocation_sizes);
     auto new_cap = old_cap * 2;
-    auto new_a_size = old_a_size * 2;
-    auto new_s_size = old_s_size * 2;
-    if(Allocator_supports_realloc(r->_recording_allocator)){
-        void** new_allocations = Allocator_realloc(r->_recording_allocator, rec->allocations, old_a_size, new_a_size);
-        size_t* new_sizes = Allocator_realloc(r->_recording_allocator, rec->allocation_sizes, old_s_size, new_s_size);
-        rec->capacity = new_cap;
-        rec->allocations = new_allocations;
-        rec->allocation_sizes = new_sizes;
-        return;
-        }
-    void** new_allocations = Allocator_alloc(r->_recording_allocator, new_a_size);
-    memcpy(new_allocations, rec->allocations, old_a_size);
-    size_t* new_sizes = Allocator_alloc(r->_recording_allocator, new_s_size);
-    memcpy(new_sizes, rec->allocation_sizes, old_s_size);
-    Allocator_free(r->_recording_allocator, rec->allocations, old_a_size);
-    Allocator_free(r->_recording_allocator, rec->allocation_sizes, old_s_size);
-    rec->allocations = new_allocations;
-    rec->allocation_sizes = new_sizes;
+    rec->allocations = realloc(rec->allocations, new_cap*sizeof(*rec->allocations));
+    rec->allocation_sizes = realloc(rec->allocation_sizes, new_cap*sizeof(*rec->allocation_sizes));
     rec->capacity = new_cap;
-    return;
     }
 
 MALLOC_FUNC
@@ -122,25 +102,6 @@ recording_free(Nonnull(RecordingAllocator*)r, Nullable(const void*) data, size_t
     assert(0);
     }
 
-// TODO: optimize this (binary search?)
-static
-bool
-recording_data_in_range(Nonnull(RecordingAllocator*)r, Nonnull(const void*) data, size_t size){
-    assert(data);
-    auto rec = &r->recorded;
-    for(size_t i = 0; i < rec->count; i++){
-        void* a = rec->allocations[i];
-        if(!a)
-            continue;
-        // front is in bounds;
-        if((const char*)data >= (const char*)a){
-            if( (const char*)data + size <= (const char*)a + rec->allocation_sizes[i])
-                return true;
-            }
-        }
-    return false;
-    }
-
 // The money function, the reason we did this in the first
 // place.
 static
@@ -161,8 +122,8 @@ recording_cleanup_tracking(Nonnull(RecordingAllocator*)r){
     auto rec = &r->recorded;
     if(!rec->capacity)
         return;
-    Allocator_free(r->_recording_allocator, rec->allocation_sizes, sizeof(*rec->allocation_sizes)*rec->capacity);
-    Allocator_free(r->_recording_allocator, rec->allocations, sizeof(*rec->allocations)*rec->capacity);
+    free(rec->allocation_sizes);
+    free(rec->allocations);
     memset(rec, 0, sizeof(*rec));
     return;
     }
@@ -200,6 +161,7 @@ recording_realloc(Nonnull(RecordingAllocator*)r, Nullable(void*)data, size_t ori
         }
     void* result = Allocator_realloc(r->_wrapped, data, orig_size, new_size);
     recording_ensure_capacity(r);
+    rec = &r->recorded;
     auto index = rec->count++;
     rec->allocations[index] = result;
     rec->allocation_sizes[index] = new_size;
@@ -209,10 +171,9 @@ recording_realloc(Nonnull(RecordingAllocator*)r, Nullable(void*)data, size_t ori
 
 static inline
 RecordingAllocator
-RecordingAllocator_from_allocators(Nonnull(const Allocator*)wrapped, Nonnull(const Allocator*)bookkeeping){
+RecordingAllocator_from_allocators(Nonnull(const Allocator*)wrapped){
     return (RecordingAllocator){
         ._wrapped = wrapped,
-        ._recording_allocator = bookkeeping,
         };
     }
 
@@ -234,7 +195,7 @@ Allocator_from_recorded_allocator(Nonnull(RecordingAllocator*)r){
 static inline
 RecordingAllocator
 RecordingAllocator_from_mallocator(void){
-    return RecordingAllocator_from_allocators(get_mallocator(), get_mallocator());
+    return RecordingAllocator_from_allocators(get_mallocator());
     }
 
 static inline
@@ -263,7 +224,6 @@ merge_recorded_mallocators_and_destroy_src(Nonnull(const Allocator*)dst, Nonnull
     recording_merge(dst->_allocator_data, src->_allocator_data);
     shallow_free_recorded_mallocator(src);
     }
-
 
 PopDiagnostic();
 

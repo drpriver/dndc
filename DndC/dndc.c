@@ -9,7 +9,6 @@
 #include "path_util.h"
 #include "linear_allocator.h"
 #include "long_string.h"
-// #include "init_python.h"
 #include "MStringBuilder.h"
 #include "frozenstdlib.h"
 #include "measure_time.h"
@@ -849,6 +848,8 @@ add_link_from_header(Nonnull(ParseContext*)ctx, StringView str){
 
 static Errorable_f(void) run_the_parser(uint64_t flags, LongString source_path, LongString output_path, LongString depends_dir);
 
+static void end_interpreter(void);
+
 #ifndef NOMAIN
 int main(int argc, char**argv){
     auto t0 = get_t();
@@ -1035,6 +1036,7 @@ int main(int argc, char**argv){
         e = run_the_parser(flags, source_path, output_path, depends_dir);
         assert(!e.errored);
         }
+    end_interpreter();
     return 0;
 #else
     auto e = run_the_parser(flags, source_path, output_path, depends_dir);
@@ -1158,11 +1160,7 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
 
     {
     auto worker_allocator = (flags & PARSE_NO_CLEANUP)?get_mallocator():make_recorded_mallocator();
-    // auto worker_recorded_ = RecordingAllocator_from_mallocator();
-    // auto worker_recorded = Allocator_from_recorded_allocator(&worker_recorded_);
     BinaryJob job = {
-        // .a = get_mallocator(), // maybe do a threadlocal one later?
-        // .a = &worker_recorded,
         .a = worker_allocator,
         .report_time = !!(ctx.flags & PARSE_PRINT_STATS),
         };
@@ -1273,10 +1271,9 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
             Marray_extend(LoadedSource)(&ctx.processed_binary_files, ctx.allocator, job.loaded.data, job.loaded.count);
         Allocator_free(job.a, job.loaded.data, sizeof(*job.loaded.data)*job.loaded.capacity);
         if(!(flags & PARSE_NO_CLEANUP)){
-            merge_recorded_mallocators_and_destroy_src(allocator, worker_allocator);
+            // assert(job.a == worker_allocator);
+            merge_recorded_mallocators_and_destroy_src(allocator, job.a);
             }
-        // recording_merge(&recorded_, &worker_recorded_);
-        // recording_cleanup_tracking(&worker_recorded_);
         }
     }
     report_stat(ctx.flags, "ctx.nodes.count = %zu", ctx.nodes.count);
@@ -1511,8 +1508,6 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
         auto after = get_t();
         report_stat(ctx.flags, "Cleaning up memory took: %.3fms", (after-before)/1000.);
         }
-    // recording_free_all(&recorded_);
-    // recording_cleanup_tracking(&recorded_);
     auto t1 = get_t();
     report_stat(ctx.flags, "Execution took: %.3fms", (t1-t0)/1000.);
     return result;
@@ -2483,10 +2478,11 @@ static
 Errorable_f(void)
 render_tree(Nonnull(ParseContext*)ctx, Nonnull(MStringBuilder*)msb){
     Errorable(void) result = {};
-    // estimate memory usage as 10 characters per node.
-    // TODO: actually measure this.
     auto a = ctx->allocator;
-    msb_reserve(msb, a, ctx->nodes.count*10);
+    auto imgcount = ctx->img_nodes.count + ctx->imglinks_nodes.count;
+    // estimate memory usage as 120 characters per node and 200 kb images.
+    auto reserve_amount = ctx->nodes.count*120 + imgcount*200*1024;
+    msb_reserve(msb, a, reserve_amount);
     msb_write_literal(msb, a,
         "<!DOCTYPE html>\n"
         "<html lang=\"en\">\n"
@@ -2608,6 +2604,14 @@ render_tree(Nonnull(ParseContext*)ctx, Nonnull(MStringBuilder*)msb){
         "</body>\n"
         "</html>\n"
         );
+#if 0
+    HEREPrint(ctx->nodes.count);
+    HEREPrint(ctx->nodes.count*20);
+    HEREPrint(msb->cursor);
+    HEREPrint(msb->cursor / ctx->nodes.count + 1);
+    HEREPrint(reserve_amount);
+    HEREPrint((double)msb->cursor / reserve_amount);
+#endif
     return result;
     }
 
@@ -2689,7 +2693,7 @@ gather_anchor(Nonnull(ParseContext*)ctx, NodeHandle handle){
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:{
             gather_anchor_children(ctx, node);
-            }
+            }break;
         case NODE_TABLE_ROW:
         case NODE_STYLESHEETS:
         case NODE_DEPENDENCIES:
@@ -3020,6 +3024,7 @@ RENDERFUNC(ROOT){
     }
 
 RENDERFUNC(STRING){
+    (void)header_depth;
     if(unlikely(node->classes.count))
         node_print_warning(ctx, node, "Ignoring classes on string node");
     if(unlikely(node->children.count))
@@ -3027,7 +3032,6 @@ RENDERFUNC(STRING){
     auto e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
     if(e.errored) return e;
     msb_write_char(sb, ctx->allocator, '\n');
-    (void)header_depth;
     return (Errorable(void)){};
     }
 
@@ -3336,7 +3340,7 @@ RENDERFUNC(QUOTE){
 RENDERFUNC(BULLET){
     msb_write_literal(sb, ctx->allocator, "<li>\n");
     if(unlikely(node->header.length))
-        node_print_warning(ctx, node, "ignoring header on bullet");
+        node_print_warning(ctx, node, "Ignoring header on bullet");
     if(unlikely(node->classes.count))
         node_print_warning(ctx, node, "Ignoring classes on bullet");
     auto count = node->children.count;
@@ -5173,5 +5177,10 @@ init_python_docparser(void){
             return e;
     }
     return result;
+    }
+
+static void
+end_interpreter(void){
+    Py_Finalize();
     }
 
