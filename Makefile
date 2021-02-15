@@ -6,10 +6,16 @@ include DndC/dndc.mak
 	mkdir -p Depends/$*
 	$(BINDIR)/dndc $< $@ -d $(DEPDIR)/$*
 
+# Assumes libclang is installed.
 tags: $(wildcard *.h *.c **/*.c **/*.h) Scripts/tag_and_syntax.py compile_commands.json
 	$(PYTHON) -m Scripts.tag_and_syntax
 
-.PHONY: clean clean-tests clean-depends deep-clean run-tests strip convert directories install
+.PHONY: clean clean-tests clean-depends deep-clean run-tests strip convert directories install compile_commands
+
+# Assumes compiledb is installed.
+compile_commands.json:
+	$(MAKE) clean
+	$(PYTHON) -m compiledb make
 clean:
 	@$(RM)  -f $(OBJDIR)/*
 	@$(RM)  -f $(BINDIR)/*
@@ -36,6 +42,6 @@ run-tests: clean-tests tests
 all: dndc
 
 install: $(BINDIR)/dndc
-	install -vdC $< $(INSTALLDIR)/dndc
+	@install -C $< $(INSTALLDIR)/dndc
 
 .DEFAULT_GOAL := all

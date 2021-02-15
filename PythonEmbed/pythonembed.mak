@@ -1,5 +1,6 @@
 FREEZE=$(BINDIR)/freeze_py_module
 FROZENDIR:=PythonEmbed/frozen
+$(FROZENDIR): ; @$(MKDIR) -p $@
 DIRECTORIES+=$(FROZENDIR)
 PYVENDOR=PythonEmbed/vendored
 
@@ -67,8 +68,6 @@ FROZEN_MODULES:=$(addprefix $(FROZENDIR)/,\
 
 $(OBJDIR)/frozenstdlib.o: $(DEPDIR)/frozenstdlib.dep PythonEmbed/frozenstdlib.c $(FROZEN_MODULES) | $(DIRECTORIES)
 	$(CC) $(INCLUDE_FLAGS) $(PLATFORM_FLAGS) $(FAST_FLAGS) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/frozenstdlib.dep PythonEmbed/frozenstdlib.c -c -o $(OBJDIR)/frozenstdlib.o
-$(FROZENDIR):
-	mkdir -p $@
 
 $(FROZENDIR)/%.py.h: $(PYVENDOR)/%.py | $(FREEZE) $(FROZENDIR)
 	$(FREEZE) $* $< $@

@@ -12,10 +12,21 @@ static inline uint64_t get_t(void){
     return t.tv_sec * 1000000llu + t.tv_nsec/1000;
     }
 #else
-#include "SDLhead.h"
+#define WIN32_LEAN_AND_MEAN
+#define WIN32_EXTRA_LEAN
+#include <windows.h>
+static LARGE_INTEGER freq;
 static inline uint64_t get_t(void){
-    return 1000* SDL_GetTicks();
+    LARGE_INTEGER time;
+    if(!freq.QuadPart){
+        BOOL ok = QueryPerformanceFrequency(&freq);
+        assert(ok == TRUE);
     }
+
+    BOOL ok = QueryPerformanceCounter(&time);
+    assert(ok == TRUE);
+    return  (1000000llu * time.QuadPart) / freq.QuadPart;
+}
 #endif
 
 
