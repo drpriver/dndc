@@ -1,0 +1,410 @@
+#ifndef BASE64_H
+#define BASE64_H
+#include <stdint.h>
+#include <assert.h>
+#include "MStringBuilder.h"
+#include "ByteBuilder.h"
+#include "error_handling.h"
+
+static inline
+size_t
+base64_encode_size(size_t src_length){
+    size_t size_needed = src_length * 4;
+    size_needed = size_needed / 3 + !!(size_needed % 3);
+    return size_needed;
+    }
+static inline
+size_t
+base64_decode_size(size_t src_length){
+    size_t size_needed = src_length * 3;
+    size_needed = size_needed / 4 + !!(size_needed % 4);
+    return size_needed;
+    }
+
+
+static inline
+size_t
+base64_encode(Nonnull(char*) restrict dst, size_t dst_length, Nonnull(const void*) restrict src, size_t src_length){
+    static const char  base64_encode_table0[256] =
+        "AAAABBBBCC"
+        "CCDDDDEEEE"
+        "FFFFGGGGHH"
+        "HHIIIIJJJJ"
+        "KKKKLLLLMM"
+        "MMNNNNOOOO"
+        "PPPPQQQQRR"
+        "RRSSSSTTTT"
+        "UUUUVVVVWW"
+        "WWXXXXYYYY"
+        "ZZZZaaaabb"
+        "bbccccdddd"
+        "eeeeffffgg"
+        "gghhhhiiii"
+        "jjjjkkkkll"
+        "llmmmmnnnn"
+        "ooooppppqq"
+        "qqrrrrssss"
+        "ttttuuuuvv"
+        "vvwwwwxxxx"
+        "yyyyzzzz00"
+        "0011112222"
+        "3333444455"
+        "5566667777"
+        "88889999++"
+        "++////";
+    static const char base64_encode_table1[256] =
+        "ABCDEFGHIJ"
+        "KLMNOPQRST"
+        "UVWXYZabcd"
+        "efghijklmn"
+        "opqrstuvwx"
+        "yz01234567"
+        "89+/ABCDEF"
+        "GHIJKLMNOP"
+        "QRSTUVWXYZ"
+        "abcdefghij"
+        "klmnopqrst"
+        "uvwxyz0123"
+        "456789+/AB"
+        "CDEFGHIJKL"
+        "MNOPQRSTUV"
+        "WXYZabcdef"
+        "ghijklmnop"
+        "qrstuvwxyz"
+        "0123456789"
+        "+/ABCDEFGH"
+        "IJKLMNOPQR"
+        "STUVWXYZab"
+        "cdefghijkl"
+        "mnopqrstuv"
+        "wxyz012345"
+        "6789+/";
+    static const char base64_encode_table2[256] =
+        "ABCDEFGHIJ"
+        "KLMNOPQRST"
+        "UVWXYZabcd"
+        "efghijklmn"
+        "opqrstuvwx"
+        "yz01234567"
+        "89+/ABCDEF"
+        "GHIJKLMNOP"
+        "QRSTUVWXYZ"
+        "abcdefghij"
+        "klmnopqrst"
+        "uvwxyz0123"
+        "456789+/AB"
+        "CDEFGHIJKL"
+        "MNOPQRSTUV"
+        "WXYZabcdef"
+        "ghijklmnop"
+        "qrstuvwxyz"
+        "0123456789"
+        "+/ABCDEFGH"
+        "IJKLMNOPQR"
+        "STUVWXYZab"
+        "cdefghijkl"
+        "mnopqrstuv"
+        "wxyz012345"
+        "6789+/";
+
+
+    size_t i = 0;
+    uint8_t* d = (uint8_t*) dst;
+    const uint8_t* str = src;
+    auto len = src_length;
+
+    /* unsigned here is important! */
+    uint8_t t1, t2, t3, t4, t5, t6;
+
+    if(len > 5) {
+        for(; i < len - 5; i += 6) {
+            t1 = str[i];
+            t2 = str[i+1];
+            t3 = str[i+2];
+            t4 = str[i+3];
+            t5 = str[i+4];
+            t6 = str[i+5];
+            *d++ = base64_encode_table0[t1];
+            unsigned index1 = ((t1 & 0b11) << 4) | ((t2 >> 4) & 0b1111);
+            *d++ = base64_encode_table1[index1];
+            unsigned index2 = ((t2 & 0b1111) << 2) | ((t3 >> 6) & 0b11);
+            *d++ = base64_encode_table1[index2];
+            *d++ = base64_encode_table2[t3];
+
+            *d++ = base64_encode_table0[t4];
+            unsigned index3 = ((t4 & 0b11) << 4) | ((t5 >> 4) & 0b1111);
+            *d++ = base64_encode_table1[index3];
+            unsigned index4 = ((t5 & 0b1111) << 2) | ((t6 >> 6) & 0b11);
+            *d++ = base64_encode_table1[index4];
+            *d++ = base64_encode_table2[t6];
+        }
+    }
+    if(i < len -2){
+        t1 = str[i];
+        t2 = str[i+1];
+        t3 = str[i+2];
+        *d++ = base64_encode_table0[t1];
+        unsigned index1 = ((t1 & 0b11) << 4) | ((t2 >> 4) & 0b1111);
+        *d++ = base64_encode_table1[index1];
+        unsigned index2 = ((t2 & 0b1111) << 2) | ((t3 >> 6) & 0b11);
+        *d++ = base64_encode_table1[index2];
+        *d++ = base64_encode_table2[t3];
+        i += 3;
+    }
+
+    switch(len - i) {
+        case 0:
+            break;
+        case 1:
+            t1 = str[i];
+            *d++ = base64_encode_table0[t1];
+            *d++ = base64_encode_table1[(t1 & 0b11) << 4];
+            break;
+        default: /* case 2 */
+            t1 = str[i]; t2 = str[i+1];
+            *d++ = base64_encode_table0[t1];
+            *d++ = base64_encode_table1[((t1 & 0b11) << 4) | ((t2 >> 4) & 0b1111)];
+            *d++ = base64_encode_table2[(t2 & 0b1111) << 2];
+    }
+    auto used_length = d - (uint8_t*)dst;
+    assert(used_length == dst_length);
+    return used_length;
+#if 0
+    const uint8_t base64_table[] = {
+        [ 0] = 'A', [16] = 'Q', [32] = 'g', [48] = 'w',
+        [ 1] = 'B', [17] = 'R', [33] = 'h', [49] = 'x',
+        [ 2] = 'C', [18] = 'S', [34] = 'i', [50] = 'y',
+        [ 3] = 'D', [19] = 'T', [35] = 'j', [51] = 'z',
+        [ 4] = 'E', [20] = 'U', [36] = 'k', [52] = '0',
+        [ 5] = 'F', [21] = 'V', [37] = 'l', [53] = '1',
+        [ 6] = 'G', [22] = 'W', [38] = 'm', [54] = '2',
+        [ 7] = 'H', [23] = 'X', [39] = 'n', [55] = '3',
+        [ 8] = 'I', [24] = 'Y', [40] = 'o', [56] = '4',
+        [ 9] = 'J', [25] = 'Z', [41] = 'p', [57] = '5',
+        [10] = 'K', [26] = 'a', [42] = 'q', [58] = '6',
+        [11] = 'L', [27] = 'b', [43] = 'r', [59] = '7',
+        [12] = 'M', [28] = 'c', [44] = 's', [60] = '8',
+        [13] = 'N', [29] = 'd', [45] = 't', [61] = '9',
+        [14] = 'O', [30] = 'e', [46] = 'u', [62] = '+',
+        [15] = 'P', [31] = 'f', [47] = 'v', [63] = '/',
+        };
+    size_t size_needed = base64_encode_size(src_length);
+    if(unlikely(!size_needed)) return 0;
+    assert(dst_length >= size_needed);
+    const uint8_t* d = src;
+    size_t size_used = 0;
+    size_t length = src_length;
+    // read 3 bytes at at a time
+    for(;length > 2;length-=3){
+        unsigned b0 = *(d++);
+        unsigned b1 = *(d++);
+        unsigned b2 = *(d++);
+        unsigned index0 = (b0 & 0b11111100) >> 2;
+        unsigned index1 = (b0 & 0b11) | (( b1 & 0b11110000) >> 4);
+        unsigned index2 = (b1 & 0b1111) | ((b2 & 0b11000000) >> 6);
+        unsigned index3 = b2 & 0b111111;
+        size_used +=4;
+        *(dst++) = base64_table[index0];
+        *(dst++) = base64_table[index1];
+        *(dst++) = base64_table[index2];
+        *(dst++) = base64_table[index3];
+        }
+    uint32_t bits = 0;
+    uint32_t remaining_bits = 0;
+    int n_remaining = 0;
+    // cleanup
+    for(;length;){
+        switch(n_remaining){
+            case 0:
+                bits = (*d & 0b11111100) >> 2;
+                remaining_bits = ((*d) & 0b11) << 4;
+                n_remaining = 2;
+                *(dst++) = base64_table[bits];
+                size_used++;
+                break;
+            case 2:
+                bits = (*d & 0b11110000) >> 4 | remaining_bits;
+                remaining_bits = (*d & 0b1111) << 2;
+                n_remaining = 4;
+                *(dst++) = base64_table[bits];
+                size_used++;
+                break;
+            case 4:
+                bits = ((*d & 0b11000000) >> 6 ) | remaining_bits;
+                remaining_bits = *d & 0b111111;
+                n_remaining = 0;
+                *(dst++) = base64_table[bits];
+                *(dst++) = base64_table[remaining_bits];
+                size_used++;
+                size_used++;
+                remaining_bits = 0;
+                break;
+            default:
+                unreachable();
+            }
+        length--;
+        d++;
+        }
+    if(n_remaining){
+        *(dst++) = base64_table[remaining_bits];
+        size_used++;
+        }
+    assert(size_used == size_needed);
+    return size_needed;
+#endif
+    }
+
+static inline
+void
+msb_write_b64(Nonnull(MStringBuilder*)restrict sb, Nonnull(const Allocator*)a, Nonnull(const void*) data, size_t length){
+    size_t size_needed = base64_encode_size(length);
+    if(unlikely(!size_needed))
+        return;
+    _check_msb_size(sb, a, size_needed);
+    size_t size_used = base64_encode(sb->data + sb->cursor, size_needed, data, length);
+    assert(size_used == size_needed);
+    sb->cursor += size_used;
+    }
+
+// Returns a DECODING_ERROR if data is not a base64 character, like it's a '}' or something.
+// Doesn't support '=' as zero end-padding.
+static inline
+Errorable_f(void)
+base64_decode(Nonnull(void*)restrict dst, size_t dst_length, Nonnull(const uint8_t*) restrict src, size_t src_length){
+    Errorable(void) result = {};
+    // In order to detect invalid inputs, but without introducing a branch on
+    // every byte of input, we set bad inputs to have the 0b11000000  bits set
+    // (which is outside the range of a 64 bit number). We then OR our bad mask
+    // with this from every byte, which lets us check at the end whether there
+    // was an invalid byte. We lose which byte is bad and we always decode
+    // the entire input data.
+    enum {BAD=0xff};
+    const uint8_t base64_decode_table[] = {
+        [  0 ...  42] = BAD,
+        ['+'] = 62, // '+' is 43
+        [ 44 ...  46] = BAD,
+        ['/'] = 63, // '/' is 47
+        ['0'] = 52, ['1'] = 53, ['2'] = 54, ['3'] = 55,
+        ['4'] = 56, ['5'] = 57, ['6'] = 58, ['7'] = 59,
+        ['8'] = 60, ['9'] = 61,
+        [ 58 ...  64] = BAD,
+        ['A'] =  0,  // 'A' is 65
+        ['B'] =  1, ['C'] =  2, ['D'] =  3, ['E'] =  4,
+        ['F'] =  5, ['G'] =  6, ['H'] =  7, ['I'] =  8,
+        ['J'] =  9, ['K'] = 10, ['L'] = 11, ['M'] = 12,
+        ['N'] = 13, ['O'] = 14, ['P'] = 15, ['Q'] = 16,
+        ['R'] = 17, ['S'] = 18, ['T'] = 19, ['U'] = 20,
+        ['V'] = 21, ['W'] = 22, ['X'] = 23, ['Y'] = 24,
+        ['Z'] = 25,
+        [ 91 ...  96] = BAD,
+        ['a'] = 26, ['b'] = 27, ['c'] = 28, ['d'] = 29,
+        ['e'] = 30, ['f'] = 31, ['g'] = 32, ['h'] = 33,
+        ['i'] = 34, ['j'] = 35, ['k'] = 36, ['l'] = 37,
+        ['m'] = 38, ['n'] = 39, ['o'] = 40, ['p'] = 41,
+        ['q'] = 42, ['r'] = 43, ['s'] = 44, ['t'] = 45,
+        ['u'] = 46, ['v'] = 47, ['w'] = 48, ['x'] = 49,
+        ['y'] = 50, ['z'] = 51,
+        [123 ... 255] = BAD,
+        };
+    size_t size_needed = base64_decode_size(src_length);
+    if(!size_needed) return result;
+    // we allow a 1 byte under in case last few bits were just padding.
+    // AUDITME: make sure the math actually works out. Tests are passing for now.
+    if(dst_length +1 < size_needed)
+        Raise(WOULD_OVERFLOW);
+    unsigned bad = 0;
+    uint8_t* out = dst;
+    size_t length = src_length;
+    // Read 4 chars at a time into 3 bytes
+    {
+    for(;length > 3;length-=4){
+        unsigned v1 = base64_decode_table[*(src++)];
+        unsigned v2 = base64_decode_table[*(src++)];
+        unsigned v3 = base64_decode_table[*(src++)];
+        unsigned v4 = base64_decode_table[*(src++)];
+        bad |= v1;
+        bad |= v2;
+        bad |= v3;
+        bad |= v4;
+        *(out++) = (v1 << 2) | (v2 >> 4);
+        *(out++) = (v2 << 4) | (v3 >> 2);
+        *(out++) = (v3 << 6) | v4;
+        }
+    }
+    {
+    // Since I did the optimization above, this becomes the cleanup loop instead
+    // of the main loop. Some of these cases are now dead code. So, TODO.
+    unsigned bits_remaining = 0;
+    unsigned remainder = 0;
+    for(;length;length--){
+        unsigned v = base64_decode_table[*(src++)];
+        bad |= v;
+        switch(bits_remaining){
+            case 0:
+                remainder = v;
+                bits_remaining = 6;
+                break;
+            case 2:
+                *(out++) = (remainder << 6) | v;
+                remainder = 0;
+                bits_remaining = 0;
+                break;
+            case 4:
+                *(out++) = (remainder << 4) | (v >> 2);
+                remainder = v & 0b11;
+                bits_remaining = 2;
+                break;
+            case 6:
+                *(out++) = (remainder << 2) | (v >> 4);
+                remainder = v & 0b1111;
+                bits_remaining = 4;
+                break;
+            default:
+                unreachable();
+            }
+        }
+    // It's possible the leftover bits are the result of padding with zeros.
+    if(size_needed == dst_length){
+        switch(bits_remaining){
+            case 0:
+                break;
+            case 2:
+                *(out++) = remainder << 6;
+                break;
+            case 4:
+                *(out++) = remainder << 4;
+                break;
+            case 6:
+                *(out++) = remainder << 2;
+                break;
+            default:
+                unreachable();
+            }
+        }
+    else {
+        // Assuming the last bits are always 0. Check that assumption here.
+        if(remainder)
+            Raise(DECODING_ERROR);
+        }
+    }
+    // Return error if we read a bad input character.
+    if(unlikely(bad & 0b11000000))
+        Raise(DECODING_ERROR);
+
+    return result;
+    }
+
+static inline
+Errorable_f(void)
+bb_decode_b64(Nonnull(ByteBuilder*)bb, Nonnull(const uint8_t*) restrict src, size_t src_length){
+    Errorable(void) result = {};
+    auto reserved_size = base64_decode_size(src_length);
+    if(!reserved_size) return result;
+    bb_reserve(bb, reserved_size);
+    void* dst = bb->data + bb->cursor;
+    auto e = base64_decode(dst, reserved_size, src, src_length);
+    if(e.errored) return e;
+    bb->cursor += reserved_size;
+    return result;
+    }
+#endif

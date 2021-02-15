@@ -1,0 +1,13 @@
+*.pyc
+Bin
+*tags
+tags
+.vimrc
+Objs
+*.o
+.DS_Store
+compile_commands.json
+*.trace
+Depends
+PythonEmbed/frozen
+README.html

@@ -1,0 +1,504 @@
+DND --- David's Novel Documents::title
+A Better Way to Write::md
+  .dnd files are a convenient way to write documents, create dungeons, record
+  notes, and other things that you would like to write prose or free-form text,
+  but with a little more structure. .dnd files offer unrivaled ability to
+  introspect the document for a document format.
+
+  At its heart, .dnd is a tree-based language.  Blocks are actually composable
+  and can have different parse rules, which is useful for embedding other
+  languages within a document. Normally, a block is designated by indentation
+  and ends when either the document ends or a block with less indentation is
+  introduced. A new block is normally introduced by a block containing two
+  colons. For example:
+
+  ::pre.embedded
+    Hello World!::text
+      This is some wonderful text!
+
+  In the above example, a block is introduced on the first line. The text to
+  the left of the double colon is the "header" of the block. For documents,
+  this is used as text for a heading. It is optional. The text to the right of
+  the double colon is the block's type, in this case "text". The type must be
+  one recognized by the compiling program and changes the parsing rules for the
+  subsequent block.
+
+  On the next line, we indent as the string is a child of the text block.  The
+  rules for text blocks is that consecutive lines of text will be combined
+  together into paragraph nodes. A blank line indicates the end of a paragraph.
+  Text blocks can also embed other blocks, which are introduced in the usual
+  manner by double colons.
+
+  The above snippet will be translated into the following:
+  ::pre.embedded
+    <div>
+    <h2 id="hello-world">Hello World!</h2>
+    <p>
+    This is some wonderful text!
+    </p>
+    </div>
+  ::comment
+    Comments look like this. You would only notice this if you were reading
+    this from the source demo down below.
+
+    The raw block fixes the indentation, but otherwises pastes the strings as
+    is into the resulting document. This is an escape hatch and allows you to
+    do arbitrary things that don't deserve special syntax. For example, if you
+    want to embed an input form then you are no longer writing prose, so just
+    writing some raw html there is fine.
+
+    Most nodes that contain other nodes will either have a <div> tag or will
+    have the appropriate tag for that kind of node (for example, a pre node
+    will have a <pre> tag.) The raw node is one of the exceptions to this.
+  Which looks like:
+  ::div.embedded
+    ::raw
+      <div>
+      <h2 id="hello-world">Hello World!</h2>
+      <p>
+      This is some wonderful text!
+      </p>
+      </div>
+  The exact level of the heading will depend on where the block is in the final
+  document tree. Parent blocks with headings will increase the level of child
+  headings. Blocks at root scope with headings will be h2s.
+
+Convenience::md
+  The most convenient type of block to write in is the "md" block.
+  It is not a markdown block, but it is similar in some ways. 
+  Notably missing are markdown style headers. We offer the 'h' block instead,
+  or just nest another md block.
+
+  For example:
+
+  ::pre.embedded
+    I am so smart::md
+      It is really amazing how smart I am. Behold my intelligence:
+
+      1. I am really good looking.
+      2. My IQ is over 9000.
+
+      * This is an important point.
+      * Wait, what does that have to do with intelligence?
+
+      This is an internal heading::h
+      Yeah, what about it?
+
+      An internal block::md
+        This is what I usually use instead as it mirrors how I think about
+        the topic (subtopic is a subtree).
+
+  Turns into this:
+  ::comment
+    Formatted a bit for legibility, we avoid indenting to save on whitespace
+    normally.
+  ::div.embedded
+    ::raw
+      <div>
+        <h2 id="i-am-so-smart">I am so smart</h2>
+        <p>
+        It is really amazing how smart I am. Behold my intelligence:
+        </p>
+        <div>
+          <ol>
+          <li>I am really good looking.</li>
+          <li>My IQ is over 9000.</li>
+          </ol>
+        </div>
+        <div>
+          <ul>
+          <li>This is an important point.</li>
+          <li>Wait, what does that have to do with intelligence?</li>
+          </ul>
+        </div>
+
+        <h2 id="this-is-an-internal-heading">This is an internal heading</h2>
+        <p>
+        Yeah, what about it?
+        </p>
+
+        <div>
+          <h3 id="an-internal-block">An internal block</h3>
+          <p>
+          This is what I usually use instead as it mirrors how I think about
+          the topic (subtopic is a subtree).
+          </p>
+        </div>
+      </div>
+
+  Additionally we support tables. For example:
+  ::python
+    # I got lazy and didn't want to write it twice, so I just did this as
+    # a script.
+
+    text='''
+    ::comment
+      This is a comment by the way! It is not in the rendered html.
+
+      The first row of the table is taken to be the headings for the table.
+      There is no requirement to have the same number of cells in each table,
+      but user beware, it gets wonky, but I think there are CSS properties
+      to fix that.
+    The Nodes::table
+      Node Type    | Block Name   | Container Tag | Heading | Hidden
+      ROOT         | ---          |               | ---     | No
+      TEXT         | text         | <div>         | Yes     | No
+      DIV          | div          | <div>         | Yes     | No
+      STRING       | ---          |               | ---     | No
+      PARA         | ---          | <p>           | ---     | No
+      TITLE        | title        | <h1>          | Yes     | No
+      HEADING      | h            | <hN>          | Yes     | No
+      TABLE        | table        | <div><table>  | Yes     | No
+      TABLE_ROW    | ---          | <tr>          | ---     | No
+      STYLESHEETS  | stylesheets  | ---           | ---     | No
+      DEPENDENCIES | dependencies | ---           | ---     | No
+      LINKS        | links        | ---           | ---     | No
+      SCRIPTS      | scripts      | ---           | ---     | No
+      IMPORT       | import       | ---           | ---     | No
+      IMAGE        | img          | <div><img>    | Yes     | No
+      BULLETS      | bullets      | <div><ul>     | Yes     | No
+      BULLET       | ---          | <li>          | ---     | No
+      PYTHON       | python       | ---           | No      | No
+      RAW          | raw          |               | No      | No
+      PRE          | pre          | <div><pre>    | Yes     | No
+      LIST         | list         | <div><ol>     | Yes     | No
+      LIST_ITEM    | ---          | <li>          | No      | No
+      KEYVALUE     | kv           | <div><table>  | Yes     | No
+      KEYVALUEPAIR | ---          | <tr>          | No      | No
+      IMGLINKS     | imglinks     | <div><svg>    | Yes     | No
+      NAV          | nav          | <div><nav>    | Yes     | No
+      DATA         | data         | ---           | No      | No
+      COMMENT      | comment      | ---           | ---     | No
+      MD           | md           | <div>         | Yes     | No
+      CONTAINER    | ---          |               | No      | No
+      INVALID      | ---          | ---           | ---     | No
+
+    ::md
+      * Node Type is the type of the node. 
+      * Block name is how it is introduced via the double colon syntax
+        (an empty entry indicates the node can only be created via scripts
+        or implicitly as part of another node).
+      * Container tag is what html tag is outputted for the node. 
+      * Heading is whether or not the header is turned into a heading. 
+      * Hidden nodes are not represented at that spot in the final document. 
+        They usually have some side effect on the document.
+      * The INVALID node will cause an error if encountered during rendering.
+        It can be used as a poison node when debugging.
+      * text, bullets, and list are generally not used in favor of md blocks.
+        They are useful for script-generated nodes though.
+    '''
+    prenode = ctx.make_node(NodeType.PRE, classes=['embedded'])
+    for line in text.strip().split('\n'):
+      prenode.add_child(line.rstrip())
+    node.parent.add_child(prenode)
+    # parse is convenient, it appends the nodes by
+    # parsing the string as if it were a document.
+    node.parent.parse('::md\n  And here is that table')
+    node.parent.parse(text)
+    #endpython
+
+
+Styling and Scripting::md
+  We've shown off some regular 
+Self-Contained::md
+  .dnd documents can include stylesheets and js files. They will be placed into
+  the head of the document so that the html page is completely self-contained.
+  However, you don't have to write them inline here in one document. You can
+  include them in the document by the appropriate block.
+
+  Example:
+  ::pre.embedded
+    ::stylesheets
+      cssfile1.css
+      another/css/file.css
+      and/another.css
+    ::scripts
+      somejsfile.js
+      another/jsfile.js
+    ::stylesheets @inline
+      * {
+        box-sizing: border-box;
+      }
+    ::comment
+      You haven't seen this before. The '@' symbol to the right of the double
+      colon indicates an attribute. Attributes can be simple identifiers. They 
+      are generally used to tag nodes with extra metadata for your python blocks.
+      Some identifiers are special to the system. For example, this @inline
+      attribute tells the system to not interpret the contents as filepaths, but
+      instead as raw strings to be included in the <style> tags.
+
+      scripts also support @inline with the same meaning, but for <script>.
+  Images can also be included. They are base64-encoded and stored as a data string
+  in the html page. Possibly we can add an attribute to disable this in the future.
+
+  Data Blobs::md
+    Sometimes your js wants access to some data that you want accessible for your
+    scripts. If what you want is rendered html that you can later dynamically
+    insert into the document, use a data block.
+
+    Example:
+    ::pre.embedded
+      ::data
+        Hello::md
+          This entire html fragment that this md block renders into will be
+          stored in a special js object at global scope called 'data_blob'.
+          This one will be under the 'Hello' key.
+        World::md
+          And this will be under the 'World' key.
+          Inspect the source!
+    ::data
+      Hello::md
+        This entire html fragment that this md block renders into will be
+        stored in a special js object at global scope called 'data_blob'.
+        This one will be under the 'Hello' key.
+      World::md
+        And this will be under the 'World' key.
+        Inspect the source!
+    Data blocks are rendered into html, but do not appear at the document at that
+    location - their contents only appear in the data blob.
+
+    You can add keys to the data blob in python blocks. You must use string
+    keys and string values.
+
+    ::pre.embedded
+      ::python
+        ctx.set_data('foo', 'bar')
+        #endpython
+
+    You can't currently introspect the data blob from python as the blocks
+    aren't rendered until all user scripts are finished executing.
+
+    If you need more than strings, use a python block to create a SCRIPTS node,
+    set the 'inline' attribute and then just insert whatever you want using 
+    js syntax.
+
+Attributes and Classes::md
+  Blocks can have classes, which directly correspond to css classes in the
+  output html.
+
+  Example:
+  ::pre.embedded
+    Hola::div .foo .bar
+      ::text
+        hello, aloha
+  In this example the Hola div will have .foo and .bar as css classes.
+
+  Blocks can also have attributes, which are generally user defined tags, but some
+  have special meaning.
+
+  Example:
+  ::pre.embedded
+    Don't look::div @hide
+      Don't put me in the document!
+    A room::md @coord(1,2)
+      some stuff is in the room
+    Duplicate Heading::h @id(my-id)
+    Duplicate Heading::h @id(my-id-2)
+
+    Don't ID me bro::md @noid
+      IDs are for squares!
+  A block can have any number of attributes. Attributes are identifiers and can
+  have arguments in parens. The contents of the parens are stored as a string.
+
+  Python blocks can retrieve the attributes of a node via the .attributes
+  field, with the regular square-bracket setting and getting and using del.  It
+  presents a dict-like interface to the attributes. You can also 'add' an
+  attribute which will give it an empty string as its value. Many things only
+  check for the  presence of the key and ignore the value.
+
+  Special Attributes::md
+    The following attributes are special to the system:
+
+    ::table
+      Attribute | Meaning
+      @noid     | Don't give the heading an id
+      @id(iden) | Instead of the automatic id, use iden as the id for the heading
+      @hide     | Don't output the block in the rendered output.
+      @inline   | Use contents, don't interpret as filepaths.
+      @external | (unimplemented) Produce a link (href) instead of embedding.
+
+    All other attributes are used for user python blocks. I can't guarantee
+    that they won't break when I add a new attribute though! We'll stabilize
+    when the version is 1.0.
+  
+
+But Wait, There's More::md
+  The structured document format is convenient to write in, but sometimes
+  you need to manipulate the document programmatically. Python blocks
+  are your friend.
+
+  example:
+  ::pre.embedded
+  ::python
+    """
+    python blocks have 3 special variables in them.
+      node: this node (the python block)
+      ctx: this variable represents the state of compiling. 
+            It offers methods such as `make_node` to create new nodes
+            that can be inserted into the document.
+      NodeType: This is actually a do-nothing class, that is used to
+                namespace the types of the nodes. This is useful because
+                you need to choose a type if you make a new node.
+                You can also check the `type` attribute on nodes.
+    """
+    parent = node.parent
+    for child in parent.children:
+      if child.type == NodeType.PARA:
+        for line in child.children:
+          if 'example' in line.header:
+            line.header = 'For Example:'
+      if child.type == NodeType.PRE:
+        child.add_child('::python')
+        for line in node.children:
+          child.add_child('  '+line.header)
+        break
+    # If you're paying attention, you'll realize this python block added itself
+    # to the document.
+    # the endpython comment is not necessary. I only include it so that
+    # vim knows when the python block ends for syntax highlighting purposes.
+    #endpython
+
+  Python blocks are somewhat isolated. They have an empty sys.path and will not
+  import the "site" module, but sys.path is still mutable and you can import
+  things if you really want. Some things won't work as I didn't port all of the
+  standard library.
+
+  Tangent: the regular python interpreter does crazy stuff like import io.py
+  during bootstrapping itself. It reads the actual io.py file off the disk from
+  the standard library installation. I figured out which python modules it
+  needs to init itself and embedded them as bytecode in this binary. The fruit
+  of this is that the python initialization only takes 6-7ms instead of the
+  30-40ms it normally takes.
+
+  You can set code breakpoints and print things in python blocks, which is
+  useful for exploring the document and debugging things. I used it several
+  times while writing this!
+
+  ::pre.embedded
+    ::python
+      """
+      This block will print out every node in the document. 
+      The system can do this as well more efficiently, but this is just
+      showing off that io works as expected.
+      """
+      def walk(n, depth=0):
+        if depth > 10:
+          breakpoint()
+        print('__'*depth, n, sep='')
+        for child in n.children:
+          walk(child, depth+1)
+      walk(ctx.root)
+      #endpython
+
+  Here is a fun demo. We will now embed the entire document via python.
+  This is all done at compile time.
+  You can even see the python block that was used to embed the text.
+
+  ::python
+    prenode = ctx.make_node(NodeType.PRE, classes=['embedded'])
+    # `add_child` can accept two kinds of arguments: nodes and strings
+    # strings are converted to STRING nodes.
+    ctx.root.add_child(prenode)
+    with open(ctx.sourcepath, encoding='utf-8') as fp:
+      for line in fp:
+        prenode.add_child(line.rstrip())
+      
+    # the endpython comment is not necessary. I only include it so that
+    # vim knows when the python block ends for syntax highlighting purposes.
+    #endpython
+
+
+::comment
+  Normally I would put the css in its own file, but this README
+  itself needs to be self-contained.
+::stylesheets @inline
+  .embedded {
+    border: 1px solid black;
+    max-width: 44em;
+    width: auto;
+    padding: 0 1em;
+  }
+  div.container {
+    max-width: 44em;
+    grid-column: 2;
+    grid-row:1;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  a {
+    text-decoration: none;
+    color: black;
+    border-bottom: 1px grey dotted;
+  }
+  div.root {
+    display: grid;
+    grid-template-columns: 15% 85%;
+    grid-column-gap: 4em;
+  }
+  nav a {
+    border-bottom: 0;
+    color: initial;
+    text-decoration: none;
+  }
+  nav li {
+    list-style-type: square;
+  }
+  nav {
+    position: fixed;
+  }
+  th, td {
+    padding: 4px 8px;
+    border: 1px solid grey;
+    text-align: left;
+  }
+  th {
+    border-bottom:2px solid black;
+  }
+  table {
+    border-collapse: collapse;
+    margin:auto;
+  }
+
+  @media only screen and (max-width: 720px) {
+    nav {
+      display: none;
+    }
+    div.root {
+      display: initial;
+    }
+  }
+  @media (prefers-color-scheme: dark) {
+    body {
+      color:rgb(100, 100, 100);
+      background-color:rgb(40,40,40);
+      font-size: 1.3rem; /* dark mode is lower contrast, so enlarge text */
+    }
+    nav a {
+      color:rgb(100, 100, 100);
+    }
+    .embedded {
+      border: 1px solid rgb(100,100,100);
+    }
+    th {
+      border-bottom:2px solid rgb(100,100,100);
+    }
+  }
+  @media (prefers-color-scheme: light) {
+  }
+
+
+::python
+  # this shows more raw manipulation of the tree.
+  # we actually temporarily detach the root node from the context
+  root = ctx.root
+  root.type = NodeType.DIV # ROOT nodes don't output a container tag.
+  root.classes.append('container')
+  new_root = ctx.make_node(NodeType.DIV, classes=['root'])
+  root.detach()
+  new_root.add_child(root)
+  # NAV blocks are kind of special. As one of the last things, the system
+  # will walk the document tree and create a toc of all the h2 and h3s.
+  new_root.add_child(ctx.make_node(NodeType.NAV))
+  ctx.set_root(new_root)
+  #endpython
