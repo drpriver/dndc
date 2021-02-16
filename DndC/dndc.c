@@ -1087,6 +1087,11 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
             report_stat(ctx.flags, "Launching binary data processing took: %.3fms", (after-before)/1000.);
             }
         }
+    else {
+        if(!(flags & PARSE_NO_CLEANUP)){
+            shallow_free_recorded_mallocator(job.a);
+            }
+        }
 
     bool init_python = !(flags & PARSE_PYTHON_IS_INIT);
     if(!(flags & PARSE_NO_PYTHON) and ctx.python_nodes.count){
@@ -2711,7 +2716,7 @@ build_nav_block_children(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(M
 
 static inline
 void
-write_tag_escaped_str(Nonnull(ParseContext*) ctx, Nonnull(MStringBuilder*)sb, Nonnull(const char*)text, size_t length){
+write_tag_escaped_str(Nonnull(ParseContext*) ctx, Nonnull(MStringBuilder*)sb, NullUnspec(const char*)text, size_t length){
     for(size_t i = 0; i < length; i++){
         char c = text[i];
         if(unlikely(c == '&')){

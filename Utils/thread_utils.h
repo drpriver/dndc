@@ -6,9 +6,12 @@
 #include <pthread.h>
 #define THREADFUNC(name) Nullable(void*) (name)(Nullable(void*)thread_arg)
 typedef THREADFUNC(thread_func);
+PushDiagnostic();
+SuppressNullabilityComplete();
 typedef struct ThreadHandle {
-    NullUnspec(pthread_t) thread;
+    pthread_t thread;
 } ThreadHandle;
+PopDiagnostic();
 
 static
 void
@@ -29,9 +32,12 @@ join_thread(ThreadHandle handle){
 typedef THREADFUNC(thread_func);
 
 #include "windowsheader.h"
+PushDiagnostic();
+SuppressNullabilityComplete();
 typedef struct ThreadHandle {
-    NullUnspec(HANDLE) thread;
+    HANDLE thread;
 } ThreadHandle;
+PopDiagnostic();
 
 static
 void

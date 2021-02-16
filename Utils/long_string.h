@@ -103,8 +103,8 @@ LongString_equals(const LongString a, const LongString b){
 #error "LS defined"
 #endif
 
-#define LS(literal) ((LongString){.text=""literal, .length=sizeof(literal)-1})
-#define SV(literal) ((StringView){.text=""literal, .length=sizeof(literal)-1})
+#define LS(literal) ((LongString){.text=""literal, .length=sizeof(""literal)-1})
+#define SV(literal) ((StringView){.text=""literal, .length=sizeof(""literal)-1})
 
 static inline
 bool

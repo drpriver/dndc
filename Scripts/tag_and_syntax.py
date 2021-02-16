@@ -133,6 +133,11 @@ def fix_args(args:List[str], source_file) -> List[str]:
         if a in {"-MF", "-MT", "-MQ", "-o", "--serialize-diagnostics", "-Xclang"}:
             skip = True
             continue
+        if '=' in a:
+            head, tail = a.split('=')
+            # compiledb fucks strings that are defined as macros
+            if head in {'-DBENCHMARKINPUTPATH', '-DBENCHMARKDIRECTORY', '-DBENCHMARKOUTPUTPATH',}:
+                a = '{}="{}"'.format(head, tail)
         fixed.append(a)
     fixed.remove('clang')
     fixed.remove(source_file)
@@ -147,7 +152,7 @@ def do_tags(arguments:List[str], identer:Identer, source_file:str) -> None:
             )
     errors = [d for d in tu.diagnostics if d.severity in (Diagnostic.Error, Diagnostic.Fatal)]
     if errors:
-        raise Exception("File '{}' failed clang's parsing and type-checking: {}\n\nargs was {}".format(tu.spelling, [d.spelling for d in errors], clang_args))
+        raise Exception("File '{}' failed clang's parsing and type-checking:\n {}\n\nargs was {}".format(tu.spelling, '\n'.join(['{}:{}:{}: {}'.format(d.location.file, d.location.line, d.location.column, d.spelling) for d in errors]), clang_args))
 
     source_files = [normpath(tu.spelling)]
 
