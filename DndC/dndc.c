@@ -727,8 +727,9 @@ add_link_from_header(Nonnull(ParseContext*)ctx, StringView str){
         return;
     auto kebabed = LS_to_SV(msb_detach(&sb, ctx->allocator));
 
-    const char* anchor = Allocator_strndup(ctx->allocator, kebabed.text, kebabed.length);
-    StringView value = {.text=anchor, .length = kebabed.length+1};
+    msb_sprintf(&sb, ctx->allocator, "#%.*s", (int)kebabed.length, kebabed.text);
+    LongString anchor = msb_detach(&sb, ctx->allocator);
+    StringView value = LS_to_SV(anchor);
     auto li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
     li->key = kebabed;
     li->value = value;
@@ -4935,7 +4936,7 @@ DndContext_getattr(Nonnull(DndContext*)pyctx, Nonnull(const char*)attr){
         return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_set_data);
         }
     if(CHECK("outfile")){
-        auto filename = path_basename(LS_to_SV(ctx->outputfile));
+        auto filename = ctx->outputfile.length?path_basename(LS_to_SV(ctx->outputfile)):SV("");
         return PyUnicode_FromStringAndSize(filename.text, filename.length);
         }
     if(CHECK("outdir")){
