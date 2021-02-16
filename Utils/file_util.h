@@ -15,7 +15,6 @@
 
 static inline Errorable_f(LongString) read_file(Nonnull(const Allocator*)a, Nonnull(const char*)filepath);
 static inline Errorable_f(ByteBuffer) read_bin_file(Nonnull(const Allocator*)a, Nonnull(const char*)filepath);
-static inline Errorable_f(void) write_and_swap_file(Nonnull(const char*)filename, Nonnull(const char*) tempname, Nonnull(const void*)data, size_t data_length);
 static inline Errorable_f(void) write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_length);
 
 static inline
@@ -148,32 +147,6 @@ finally:
 
 static inline
 Errorable_f(void)
-write_and_swap_file(Nonnull(const char*)filename, Nonnull(const char*) tempname, Nonnull(const void*)data, size_t data_length){
-    Errorable(void) result = {};
-    // Technically the "x" specifier is not conformant, but it is documented
-    // to work on macos, windows and glibc linux.
-    // "x" makes it fail if the file already exists.
-    auto fp = fopen(tempname, "wxb");
-    if(!fp) Raise(FILE_NOT_OPENED);
-
-    size_t nwrit = fwrite(data, 1, data_length, fp);
-    if(nwrit != data_length){
-        fclose(fp);
-        remove(tempname);
-        Raise(FILE_ERROR);
-        }
-    fflush(fp);
-    fclose(fp);
-    auto err = rename(tempname, filename);
-    if(err == -1){
-        remove(tempname);
-        Raise(FILE_ERROR);
-        }
-    return result;
-    }
-
-static inline
-Errorable_f(void)
 write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_length){
     Errorable(void) result = {};
     auto fp = fopen(filename, "wb");
@@ -273,36 +246,6 @@ finally:
     return result;
     }
 
-// Write to the temporary location (exclusively) and then rename to filename
-// Greatly reduces chance of data corruption for things like savefiles.
-static inline
-Errorable_f(void)
-write_and_swap_file(Nonnull(const char*)filename, Nonnull(const char*) tempname, Nonnull(const void*)data, size_t data_length){
-    Errorable(void) result = {};
-    return result;
-    int fd = open(
-            tempname,
-            O_WRONLY | O_EXCL | O_NOFOLLOW | O_CREAT,
-            S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-    if(fd < 0)
-        Raise(FILE_NOT_OPENED);
-    ssize_t nwrit = write(fd, data, data_length);
-    if(nwrit != data_length){
-        close(fd);
-        remove(tempname);
-        Raise(FILE_ERROR);
-        }
-    // I don't think we need to fsync.
-    // But I am unsure, so just to be safe.
-    fsync(fd);
-    close(fd);
-    auto err = rename(tempname, filename);
-    if(err == -1){
-        remove(tempname);
-        Raise(FILE_ERROR);
-        }
-    return result;
-    }
 static inline
 Errorable_f(void)
 write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_length){
@@ -417,12 +360,6 @@ finally:
     CloseHandle(handle);
     return result;
     }
-#if 0
-static inline 
-Errorable_f(void) 
-write_and_swap_file(Nonnull(const char*)filename, Nonnull(const char*) tempname, Nonnull(const void*)data, size_t data_length){
-    }
-#endif
 static inline 
 Errorable_f(void) 
 write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_length){

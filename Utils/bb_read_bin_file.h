@@ -68,7 +68,7 @@ bb_read_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const char*)filename){
     PushDiagnostic();
     SuppressDiscardQualifiers();
     auto handle = CreateFile(
-            filepath,
+            filename,
             GENERIC_READ,
             FILE_SHARE_READ,
             NULL,
