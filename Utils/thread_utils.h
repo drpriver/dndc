@@ -30,7 +30,7 @@ typedef THREADFUNC(thread_func);
 
 #include "windowsheader.h"
 typedef struct ThreadHandle {
-    HANDLE thread;
+    NullUnspec(HANDLE) thread;
 } ThreadHandle;
 
 static

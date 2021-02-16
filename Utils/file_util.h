@@ -329,7 +329,9 @@ write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_l
 static inline 
 Errorable_f(LongString) 
 read_file(Nonnull(const Allocator*)a, Nonnull(const char*)filepath){
-    Errorable(LongString) result = {}
+    Errorable(LongString) result = {};
+    PushDiagnostic();
+    SuppressDiscardQualifiers();
     auto handle = CreateFile(
             filepath,
             GENERIC_READ,
@@ -339,6 +341,7 @@ read_file(Nonnull(const Allocator*)a, Nonnull(const char*)filepath){
             FILE_ATTRIBUTE_NORMAL,
             NULL
             );
+    PopDiagnostic();
     if(handle == INVALID_HANDLE_VALUE){
         Raise(FILE_NOT_OPENED);
         }
@@ -371,8 +374,10 @@ finally:
 
 static inline 
 Errorable_f(ByteBuffer) 
-read_bin_file(Nonnull(const char*)filepath){
-    Errorable(ByteBuffer) result = {}
+read_bin_file(Nonnull(const Allocator*)a, Nonnull(const char*)filepath){
+    Errorable(ByteBuffer) result = {};
+    PushDiagnostic();
+    SuppressDiscardQualifiers();
     auto handle = CreateFile(
             filepath,
             GENERIC_READ,
@@ -382,6 +387,7 @@ read_bin_file(Nonnull(const char*)filepath){
             FILE_ATTRIBUTE_NORMAL,
             NULL
             );
+    PopDiagnostic();
     if(handle == INVALID_HANDLE_VALUE){
         Raise(FILE_NOT_OPENED);
         }
@@ -410,16 +416,20 @@ finally:
     CloseHandle(handle);
     return result;
     }
+#if 0
 static inline 
 Errorable_f(void) 
 write_and_swap_file(Nonnull(const char*)filename, Nonnull(const char*) tempname, Nonnull(const void*)data, size_t data_length){
     }
+#endif
 static inline 
 Errorable_f(void) 
 write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_length){
     Errorable(void) result = {};
+    PushDiagnostic();
+    SuppressDiscardQualifiers();
     auto handle = CreateFile(
-            filepath,
+            filename,
             GENERIC_WRITE,
             0,
             NULL,
@@ -437,6 +447,7 @@ write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_l
             data_length,
             &bytes_written,
             NULL);
+    PopDiagnostic();
     if(!write_success){
         result.errored = FILE_ERROR;
         goto finally;
