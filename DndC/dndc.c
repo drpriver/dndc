@@ -544,7 +544,7 @@ load_source_file(Nonnull(ParseContext*)ctx, StringView sourcepath){
     char* path = Allocator_strndup(ctx->allocator, sourcepath.text, sourcepath.length);
     // DBG("Loading '%s'", path);
     auto before = get_t();
-    auto load_err = read_file_a(ctx->allocator, path);
+    auto load_err = read_file(ctx->allocator, path);
     auto after = get_t();
     if(!load_err.errored){
         report_stat(ctx->flags, "Loading '%.*s' took %.3fms", (int)sourcepath.length, sourcepath.text, (after-before)/1000.);
@@ -587,7 +587,7 @@ load_binary_file(Nonnull(ParseContext*)ctx, StringView binarypath){
     char* path = Allocator_strndup(ctx->allocator, binarypath.text, binarypath.length);
     // DBG("Loading '%s'", path);
     auto before = get_t();
-    auto load_err = read_bin_file_a(ctx->allocator, path);
+    auto load_err = read_bin_file(ctx->allocator, path);
     auto after = get_t();
     if(!load_err.errored){
         report_stat(ctx->flags, "Loading '%.*s' took %.3fms", (int)binarypath.length, binarypath.text, (after-before)/1000.);

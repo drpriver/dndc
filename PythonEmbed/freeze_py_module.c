@@ -39,7 +39,7 @@ main(int argc, char *argv[])
     name = argv[1];
     inpath = argv[2];
     outpath = argv[3];
-    auto insource = read_file(inpath);
+    auto insource = read_file(get_mallocator(), inpath);
     if(insource.errored){
         fprintf(stderr, "cannot open '%s' for reading\n", inpath);
         goto error;
