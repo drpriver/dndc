@@ -9,7 +9,7 @@ typedef struct ByteBuilder {
     size_t cursor;
     size_t capacity;
     NullUnspec(unsigned char*) data;
-    const Allocator* _Null_unspecified allocator;
+    Allocator allocator;
 } ByteBuilder;
 
 static inline
@@ -20,7 +20,7 @@ static inline
 void
 force_inline
 _resize_bb(Nonnull(ByteBuilder*) bb, size_t size){
-    if(unlikely(!bb->allocator)){
+    if(unlikely(!bb->allocator._vtable)){
         bb->allocator = get_mallocator();
         }
     unsigned char* new_data = Allocator_realloc(bb->allocator, bb->data, bb->capacity, size);

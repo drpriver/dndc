@@ -34,30 +34,13 @@ new_linear_storage(size_t size, Nullable(const char*) name){
         };
     }
 
-/// name is duped by the allocator
-static inline warn_unused
-LinearAllocator
-mnew_linear_storage(Nonnull(const Allocator*)a , size_t size, Nullable(const char*) name){
-    // malloc has to return a pointer suitably aligned for any object,
-    // so we don't have to do any alignment fixup
-    void* _data = Allocator_alloc(a, size);
-    assert(_data);
-    return (LinearAllocator){
-        ._data = _data,
-        ._capacity=size,
-        ._cursor=0,
-        .high_water=0,
-        .name = name?Allocator_dupe(a, (const void*)name, strlen(name)+1):name,
-        };
-    }
-
 static inline
 void
 linear_reset(Nonnull(LinearAllocator*) s){
     s->_cursor = 0;
     }
 
-static inline
+static
 void
 destroy_linear_storage(Nonnull(LinearAllocator*) s){
     free(s->_data);
@@ -70,7 +53,7 @@ destroy_linear_storage(Nonnull(LinearAllocator*) s){
 
 MALLOC_FUNC
 ALLOCATOR_SIZE(2)
-static inline
+static
 warn_unused
 Nonnull(void*)
 linear_aligned_alloc(Nonnull(LinearAllocator*) restrict s, size_t size, size_t alignment){
@@ -100,7 +83,7 @@ linear_aligned_alloc(Nonnull(LinearAllocator*) restrict s, size_t size, size_t a
 
 MALLOC_FUNC
 ALLOCATOR_SIZE(2)
-static inline
+static
 warn_unused
 Nonnull(void*)
 linear_alloc(Nonnull(LinearAllocator*) restrict s, size_t size){
@@ -112,7 +95,7 @@ linear_alloc(Nonnull(LinearAllocator*) restrict s, size_t size){
 
 MALLOC_FUNC
 ALLOCATOR_SIZE(2)
-static inline
+static
 warn_unused
 Nonnull(void*)
 linear_aligned_zalloc(Nonnull(LinearAllocator*) restrict s, size_t size, size_t alignment){
@@ -123,59 +106,14 @@ linear_aligned_zalloc(Nonnull(LinearAllocator*) restrict s, size_t size, size_t 
 
 MALLOC_FUNC
 ALLOCATOR_SIZE(2)
-static inline warn_unused
+static
+warn_unused
 Nonnull(void*)
 linear_zalloc(Nonnull(LinearAllocator*) restrict s, size_t size){
     return linear_aligned_zalloc(s, size, _Alignof(void*));
     }
 
-MALLOC_FUNC
-ALLOCATOR_SIZE(3)
-static inline warn_unused
-Nonnull(void*)
-linear_aligned_dupe(Nonnull(LinearAllocator*) restrict s, Nonnull(const void*) restrict src, size_t size, size_t alignment){
-    void* result = linear_aligned_alloc(s, size, alignment);
-    memcpy(result, src, size);
-    return result;
-    }
-
-MALLOC_FUNC
-ALLOCATOR_SIZE(3)
-static inline warn_unused
-Nonnull(void*)
-linear_dupe(Nonnull(LinearAllocator*) restrict s, Nonnull(const void*) restrict src, size_t size){
-    return linear_aligned_dupe(s, src, size, _Alignof(void*));
-    }
-
-printf_func(2, 3)
-static inline warn_unused
-Nonnull(char*)
-lprintf(Nonnull(LinearAllocator*) restrict s, Nonnull(const char*) restrict fmt, ...){
-    va_list args, args2;
-    va_start(args, fmt);
-    va_copy(args2, args);
-    auto _msg_size = vsnprintf(NULL, 0, fmt, args)+1;
-    va_end(args);
-    auto buff = linear_aligned_alloc(s, _msg_size, 1);
-    vsprintf(buff, fmt, args2);
-    va_end(args2);
-    return buff;
-    }
-
-static inline warn_unused
-Nonnull(char*)
-lvprintf(Nonnull(LinearAllocator*) restrict s, Nonnull(const char*) restrict fmt, va_list args){
-    va_list args2;
-    va_copy(args2, args);
-    auto msg_size = vsnprintf(NULL, 0, fmt, args)+1;
-    va_end(args);
-    auto buff = linear_aligned_zalloc(s, msg_size, 1);
-    vsprintf(buff, fmt, args2);
-    va_end(args2);
-    return buff;
-    }
-
-static inline
+static
 void
 linear_free(Nonnull(LinearAllocator*)la, Nullable(const void*) data, size_t size){
     if(!data)
@@ -210,17 +148,31 @@ linear_realloc(Nonnull(LinearAllocator*)la, Nullable(void*)data, size_t orig_siz
     return result;
     }
 
-static inline
+static const AllocatorVtable LinearAllocatorVtable = {
+    .alloc = (alloc_func)linear_alloc,
+    .zalloc = (alloc_func)linear_zalloc,
+    .realloc = (realloc_func)linear_realloc,
+    .free = (free_func)linear_free,
+    .free_all = (free_all_func)linear_reset,
+    .cleanup = (cleanup_func)destroy_linear_storage,
+    };
+
+static
 Allocator
-Allocator_from_linear_allocator(Nonnull(LinearAllocator*)la){
-    Allocator allocator = {
-        ._allocator_data = la,
-        .alloc = (alloc_func)linear_alloc,
-        .zalloc = (alloc_func)linear_zalloc,
-        .realloc = (realloc_func)linear_realloc,
-        .free = (free_func)linear_free,
-        .free_all = (free_all_func)linear_reset,
+allocator_from_la(Nonnull(LinearAllocator*)la){
+    return (Allocator){
+        ._data = la,
+        ._vtable = &LinearAllocatorVtable,
         };
-    return allocator;
     }
+
+static
+Allocator
+new_la_allocator(size_t capacity, Nonnull(const char*)name){
+    LinearAllocator* la = malloc(sizeof(*la));
+    *la = new_linear_storage(capacity, name);
+    return allocator_from_la(la);
+    }
+
+
 #endif

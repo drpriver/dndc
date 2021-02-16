@@ -75,21 +75,21 @@ typedef struct Marray(MARRAY_T) {
 
 static inline
 void
-Marray_ensure(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), Nonnull(const Allocator*), size_t);
-static inline void Marray_push(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), Nonnull(const Allocator*), MARRAY_T);
-static inline warn_unused Nonnull(MARRAY_T*) Marray_alloc(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), Nonnull(const Allocator*));
-static inline warn_unused size_t Marray_alloc_index(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), Nonnull(const Allocator*));
-static inline void Marray_insert(MARRAY_T)(Nonnull(Marray(MARRAY_T)*),Nonnull(const Allocator*), size_t, MARRAY_T);
+Marray_ensure(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator , size_t);
+static inline void Marray_push(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator , MARRAY_T);
+static inline warn_unused Nonnull(MARRAY_T*) Marray_alloc(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator );
+static inline warn_unused size_t Marray_alloc_index(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator );
+static inline void Marray_insert(MARRAY_T)(Nonnull(Marray(MARRAY_T)*),const Allocator , size_t, MARRAY_T);
 static inline void Marray_remove(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), size_t);
 static inline
-void Marray_extend(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), Nonnull(const Allocator*), Nonnull(const MARRAY_T*) , size_t);
+void Marray_extend(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator , Nonnull(const MARRAY_T*) , size_t);
 static inline
-warn_unused Marray(MARRAY_T) Marray_from(MARRAY_T)(Nonnull(const Allocator*), Nonnull(const MARRAY_T*), size_t);
+warn_unused Marray(MARRAY_T) Marray_from(MARRAY_T)(const Allocator , Nonnull(const MARRAY_T*), size_t);
 static inline MARRAY_T
 Marray_pop(MARRAY_T)(Nonnull(Marray(MARRAY_T)*));
 static inline warn_unused MARRAY_T Marray_peek(MARRAY_T)(Nonnull(Marray(MARRAY_T)*));
-static inline void Marray_reserve(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), Nonnull(const Allocator*), size_t);
-static inline void Marray_cleanup(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), Nonnull(const Allocator*));
+static inline void Marray_reserve(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator , size_t);
+static inline void Marray_cleanup(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator );
 static inline force_inline void Marray_clear(MARRAY_T)(Nonnull(Marray(MARRAY_T)*));
 static inline Errorable_f(size_t) Marray_find(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), MARRAY_T);
 #endif
@@ -99,7 +99,7 @@ PushDiagnostic()
 SuppressUnusedFunction()
 
 static inline void
-Marray_ensure(MARRAY_T)(Nonnull(Marray(MARRAY_T)*)marray, Nonnull(const Allocator*)a, size_t n_additional){
+Marray_ensure(MARRAY_T)(Nonnull(Marray(MARRAY_T)*)marray, const Allocator a, size_t n_additional){
     size_t required_capacity = marray->count + n_additional;
     if(marray->capacity >= required_capacity)
         return;
@@ -119,7 +119,7 @@ Marray_ensure(MARRAY_T)(Nonnull(Marray(MARRAY_T)*)marray, Nonnull(const Allocato
 
 static inline
 void
-Marray_push(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, Nonnull(const Allocator*)a, MARRAY_T value){
+Marray_push(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator a, MARRAY_T value){
     Marray_ensure(MARRAY_T)(marray, a, 1);
     marray->data[marray->count] = value;
     marray->count++;
@@ -127,7 +127,7 @@ Marray_push(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, Nonnull(const Allocator
 
 static inline
 Nonnull(MARRAY_T*)
-Marray_alloc(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, Nonnull(const Allocator*)a){
+Marray_alloc(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator a){
     Marray_ensure(MARRAY_T)(marray, a, 1);
     MARRAY_T* result = &marray->data[marray->count];
     marray->count++;
@@ -135,14 +135,14 @@ Marray_alloc(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, Nonnull(const Allocato
     }
 static inline
 size_t
-Marray_alloc_index(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, Nonnull(const Allocator*)a){
+Marray_alloc_index(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator a){
     Marray_ensure(MARRAY_T)(marray, a, 1);
     return marray->count++;
     }
 
 static inline
 void
-Marray_insert(MARRAY_T)(Nonnull(Marray(MARRAY_T)*)marray, Nonnull(const Allocator*)a, size_t index, MARRAY_T value){
+Marray_insert(MARRAY_T)(Nonnull(Marray(MARRAY_T)*)marray, const Allocator a, size_t index, MARRAY_T value){
     assert(index < marray->count+1);
     if(index == marray->count){
         Marray_push(MARRAY_T)(marray, a, value);
@@ -171,7 +171,7 @@ Marray_remove(MARRAY_T)(Nonnull(Marray(MARRAY_T)*)marray, size_t index){
 
 static inline
 void
-Marray_extend(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, Nonnull(const Allocator*) a, Nonnull(const MARRAY_T*) values, size_t n_values){
+Marray_extend(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator  a, Nonnull(const MARRAY_T*) values, size_t n_values){
     Marray_ensure(MARRAY_T)(marray, a, n_values);
     memcpy(marray->data+marray->count, values, n_values*(sizeof(marray->data[0])));
     marray->count+=n_values;
@@ -180,7 +180,7 @@ Marray_extend(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, Nonnull(const Allocat
 
 static inline
 Marray(MARRAY_T)
-Marray_from(MARRAY_T)(Nonnull(const Allocator*)a, Nonnull(const MARRAY_T*) values, size_t n_values){
+Marray_from(MARRAY_T)(const Allocator a, Nonnull(const MARRAY_T*) values, size_t n_values){
     Marray(MARRAY_T) result = {};
     Marray_extend(MARRAY_T)(&result, a, values, n_values);
     return result;
@@ -203,7 +203,7 @@ Marray_peek(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray){
 
 static inline
 void
-Marray_reserve(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, Nonnull(const Allocator*)a, size_t n){
+Marray_reserve(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator a, size_t n){
     if (n <= marray->capacity)
         return;
     size_t old_size = marray->capacity * sizeof(MARRAY_T);
@@ -216,7 +216,7 @@ Marray_reserve(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, Nonnull(const Alloca
 
 static inline
 void
-Marray_cleanup(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, Nonnull(const Allocator*)a){
+Marray_cleanup(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator a){
     Allocator_free(a, marray->data, marray->capacity*sizeof(MARRAY_T));
     marray->data = 0;
     marray->count = 0;

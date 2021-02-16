@@ -3,7 +3,7 @@
 #include "allocator.h"
 MALLOC_FUNC
 ALLOCATOR_SIZE(2)
-static inline
+static
 Nonnull(void*)
 allocator_wrapped_malloc(Nullable(void*) _unused, size_t size){
     (void)_unused;
@@ -14,7 +14,7 @@ allocator_wrapped_malloc(Nullable(void*) _unused, size_t size){
 
 MALLOC_FUNC
 ALLOCATOR_SIZE(2)
-static inline
+static
 Nonnull(void*)
 allocator_wrapped_zalloc(Nullable(void*) _unused, size_t size){
     (void)_unused;
@@ -24,7 +24,7 @@ allocator_wrapped_zalloc(Nullable(void*) _unused, size_t size){
     }
 
 ALLOCATOR_SIZE(4)
-static inline
+static
 Nonnull(void*)
 allocator_wrapped_realloc(Nullable(void*) _unused, Nullable(void*) data, size_t orig_size, size_t new_size){
     (void)_unused;
@@ -34,7 +34,7 @@ allocator_wrapped_realloc(Nullable(void*) _unused, Nullable(void*) data, size_t 
     return result;
     }
 
-static inline
+static
 void
 allocator_wrapped_free(Nullable(void*) _unused, Nullable(const void*) data, size_t size){
     (void)_unused;
@@ -46,18 +46,22 @@ allocator_wrapped_free(Nullable(void*) _unused, Nullable(const void*) data, size
     return;
     }
 
-static const Allocator MallocAllocator = {
-    ._allocator_data = NULL,
+static const AllocatorVtable MallocVtable = {
     .alloc           = allocator_wrapped_malloc,
     .zalloc          = allocator_wrapped_zalloc,
     .realloc         = allocator_wrapped_realloc,
     .free            = allocator_wrapped_free,
     };
 
+static const Allocator MallocAllocator = {
+    ._data= NULL,
+    ._vtable = &MallocVtable,
+    };
+
 static inline
 force_inline
-Nonnull(const Allocator*)
+Allocator
 get_mallocator(void){
-    return &MallocAllocator;
+    return MallocAllocator;
     }
 #endif

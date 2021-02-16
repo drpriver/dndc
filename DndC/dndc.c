@@ -23,9 +23,8 @@
 
 static
 Errorable_f(LongString)
-read_and_base64_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const Allocator*)a, Nonnull(const char*) filepath){
+read_and_base64_bin_file(Nonnull(ByteBuilder*)bb, const Allocator a, Nonnull(const char*) filepath){
     Errorable(LongString) result = {};
-    assert(bb->allocator);
     assert(bb->cursor == 0);
     auto e = bb_read_bin_file(bb, filepath);
     if(e.errored)
@@ -40,7 +39,7 @@ read_and_base64_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const Allocator*)a, No
 
 typedef struct BinaryJob{
     Marray(StringView) sourcepaths;
-    Nonnull(const Allocator*) a;
+    const Allocator a;
     Marray(LoadedSource) loaded;
     bool report_time;
 } BinaryJob;
@@ -83,7 +82,7 @@ THREADFUNC(binary_worker){
 
 static inline
 int
-msb_write_kebab(Nonnull(MStringBuilder*)msb, Nonnull(const Allocator*)a, Nonnull(const char*)text, size_t length){
+msb_write_kebab(Nonnull(MStringBuilder*)msb, const Allocator a, Nonnull(const char*)text, size_t length){
     int n_written = 0;
     bool want_write_hyphen = false;
     for(size_t i = 0; i < length; i++){
@@ -114,7 +113,7 @@ msb_write_kebab(Nonnull(MStringBuilder*)msb, Nonnull(const Allocator*)a, Nonnull
 
 static inline
 void
-msb_write_title(Nonnull(MStringBuilder*) restrict msb, Nonnull(const Allocator*)a, Nonnull(const char*) restrict str, size_t len){
+msb_write_title(Nonnull(MStringBuilder*) restrict msb, const Allocator a, Nonnull(const char*) restrict str, size_t len){
     if(not len)
         return;
     _check_msb_size(msb, a, len);
@@ -296,8 +295,8 @@ node_get_attribute(Nonnull(const Node*) node, StringView attr){
 typedef struct ParseContext {
     Marray(Node) nodes;
     NodeHandle root_handle;
-    Nonnull(const Allocator*) allocator;
-    Nonnull(const Allocator*) temp_allocator;
+    const Allocator  allocator;
+    const Allocator  temp_allocator;
     // current parsing locating
     struct {
         const char*_Nonnull cursor;
@@ -945,21 +944,15 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
         path = SV("(string input)");
     else
         path = LS_to_SV(source_path);
-    const Allocator* allocator;
-    if(flags & PARSE_NO_CLEANUP){
-        allocator = get_mallocator();
-        }
-    else {
-        allocator = make_recorded_mallocator();
-        }
+    const Allocator allocator = flags & PARSE_NO_CLEANUP?get_mallocator():new_ra_from_allocator(get_mallocator());
     auto la_ = new_linear_storage(1024*1024, "temp storage");
-    auto la = Allocator_from_linear_allocator(&la_);
+    auto la = allocator_from_la(&la_);
     ParseContext ctx = {
         .flags = flags,
         .allocator = allocator,
         // .allocator = mallocator,
         // .allocator = &recorded,
-        .temp_allocator = &la,
+        .temp_allocator = la,
         .titlenode = INVALID_NODE_HANDLE,
         .navnode = INVALID_NODE_HANDLE,
         .outputfile = output_path,
@@ -1049,7 +1042,7 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
     report_stat(ctx.flags, "Resolving imports took: %.3fms", (after_imports-before_imports)/1000.);
 
     {
-    auto worker_allocator = (flags & PARSE_NO_CLEANUP)?get_mallocator():make_recorded_mallocator();
+    const Allocator worker_allocator = flags & PARSE_NO_CLEANUP?get_mallocator():new_ra_from_allocator(get_mallocator());
     BinaryJob job = {
         .a = worker_allocator,
         .report_time = !!(ctx.flags & PARSE_PRINT_STATS),
@@ -1152,7 +1145,8 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
             auto after = get_t();
             report_stat(ctx.flags, "Joining took : %.3fms", (after-before)/1000.);
             }
-        Allocator_free(job.a, job.sourcepaths.data, sizeof(*job.sourcepaths.data)*job.sourcepaths.capacity);
+        Marray_cleanup(StringView)(&job.sourcepaths, job.a);
+        // Allocator_free(job.a, job.sourcepaths.data, sizeof(*job.sourcepaths.data)*job.sourcepaths.capacity);
         // for(size_t i = 0; i < job.loaded.count; i++){
             // Marray_push(LoadedSource)(&ctx.processed_binary_files, ctx.allocator, job.loaded.data[i]);
             // }
@@ -1163,6 +1157,7 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
         if(!(flags & PARSE_NO_CLEANUP)){
             // assert(job.a == worker_allocator);
             merge_recorded_mallocators_and_destroy_src(allocator, job.a);
+            shallow_free_recorded_mallocator(job.a);
             }
         }
     }
@@ -1384,7 +1379,7 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
     if(!(flags & PARSE_NO_CLEANUP)){
         auto before = get_t();
         if(ctx.flags & PARSE_PRINT_STATS){
-            RecordingAllocator* recorder = allocator->_allocator_data;
+            RecordingAllocator* recorder = allocator._data;
             report_stat(ctx.flags, "There were %zu allocations.", recorder->recorded.count);
             size_t total = 0;
             for(size_t i = 0; i < recorder->recorded.count; i++){
@@ -3662,7 +3657,7 @@ PushDiagnostic();
 SuppressUnusedFunction();
 static inline
 LongString
-pystring_to_longstring(Nonnull(PyObject*)pyobj, Nonnull(const Allocator*)a){
+pystring_to_longstring(Nonnull(PyObject*)pyobj, const Allocator a){
     const char* text;
     Py_ssize_t length;
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
@@ -3680,7 +3675,7 @@ PopDiagnostic();
 
 static inline
 StringView
-pystring_to_stringview(Nonnull(PyObject*)pyobj, Nonnull(const Allocator*)a){
+pystring_to_stringview(Nonnull(PyObject*)pyobj, const Allocator a){
     const char* text;
     Py_ssize_t length;
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);

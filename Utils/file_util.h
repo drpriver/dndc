@@ -13,8 +13,8 @@
 
 // #define USE_C_STDIO
 
-static inline Errorable_f(LongString) read_file(Nonnull(const Allocator*)a, Nonnull(const char*)filepath);
-static inline Errorable_f(ByteBuffer) read_bin_file(Nonnull(const Allocator*)a, Nonnull(const char*)filepath);
+static inline Errorable_f(LongString) read_file(const Allocator a, Nonnull(const char*)filepath);
+static inline Errorable_f(ByteBuffer) read_bin_file(const Allocator a, Nonnull(const char*)filepath);
 static inline Errorable_f(void) write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_length);
 
 static inline
@@ -82,7 +82,7 @@ file_size_from_fp(Nonnull(FILE*) fp){
 
 static inline
 Errorable_f(LongString)
-read_file(Nonnull(const Allocator*)a, Nonnull(const char*)filepath){
+read_file(const Allocator a, Nonnull(const char*)filepath){
     Errorable(LongString) result = {};
     auto fp = fopen(filepath, "rb");
     if(not fp)
@@ -114,7 +114,7 @@ finally:
 
 static inline
 Errorable_f(ByteBuffer)
-read_bin_file(Nonnull(const Allocator*)a, Nonnull(const char*)filepath){
+read_bin_file(const Allocator a, Nonnull(const char*)filepath){
     Errorable(ByteBuffer) result = {};
     auto fp = fopen(filepath, "rb");
     if(not fp)
@@ -181,7 +181,7 @@ file_size_from_fd(int fd){
 
 static inline
 Errorable_f(LongString)
-read_file(Nonnull(const Allocator*)a, Nonnull(const char*)filepath){
+read_file(const Allocator a, Nonnull(const char*)filepath){
     Errorable(LongString) result = {};
     int fd = open(filepath, O_RDONLY);
     if(fd < 0)
@@ -215,7 +215,7 @@ finally:
 
 static inline
 Errorable_f(ByteBuffer)
-read_bin_file(Nonnull(const Allocator*)a, Nonnull(const char*)filepath){
+read_bin_file(const Allocator a, Nonnull(const char*)filepath){
     Errorable(ByteBuffer) result = {};
     int fd = open(filepath, O_RDONLY);
     if(fd < 0)
@@ -272,7 +272,7 @@ write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_l
 #include "windowsheader.h"
 static inline
 Errorable_f(LongString)
-read_file(Nonnull(const Allocator*)a, Nonnull(const char*)filepath){
+read_file(const Allocator a, Nonnull(const char*)filepath){
     Errorable(LongString) result = {};
     PushDiagnostic();
     SuppressDiscardQualifiers();
@@ -318,7 +318,7 @@ finally:
 
 static inline
 Errorable_f(ByteBuffer)
-read_bin_file(Nonnull(const Allocator*)a, Nonnull(const char*)filepath){
+read_bin_file(const Allocator a, Nonnull(const char*)filepath){
     Errorable(ByteBuffer) result = {};
     PushDiagnostic();
     SuppressDiscardQualifiers();

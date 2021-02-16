@@ -17,7 +17,7 @@ typedef struct MStringBuilder {
 
 static inline
 void
-msb_destroy(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*) a){
+msb_destroy(Nonnull(MStringBuilder*) msb, const Allocator a){
     Allocator_free(a, msb->data, msb->capacity);
     msb->data=0;
     msb->cursor=0;
@@ -27,25 +27,25 @@ msb_destroy(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*) a){
 static inline
 force_inline
 void
-_check_msb_size(Nonnull(MStringBuilder*), Nonnull(const Allocator*), size_t);
+_check_msb_size(Nonnull(MStringBuilder*), const Allocator, size_t);
 
 static inline
 void
-msb_nul_terminate(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*)a){
+msb_nul_terminate(Nonnull(MStringBuilder*) msb, const Allocator a){
     _check_msb_size(msb, a, 1);
     msb->data[msb->cursor] = '\0';
     }
 
 static inline
 void
-msb_reserve(Nonnull(MStringBuilder*)msb, Nonnull(const Allocator*)a, size_t additional_capacity){
+msb_reserve(Nonnull(MStringBuilder*)msb, const Allocator a, size_t additional_capacity){
     _check_msb_size(msb, a, additional_capacity);
     }
 
 
 static inline
 LongString
-msb_detach(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*)a){
+msb_detach(Nonnull(MStringBuilder*) msb, const Allocator a){
     assert(msb->data);
     msb_nul_terminate(msb, a);
     LongString result = {};
@@ -59,7 +59,7 @@ msb_detach(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*)a){
 
 static inline
 StringView
-msb_borrow(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*)a){
+msb_borrow(Nonnull(MStringBuilder*) msb, const Allocator a){
     msb_nul_terminate(msb, a);
     assert(msb->data);
     return (StringView) {
@@ -82,7 +82,7 @@ msb_reset(Nonnull(MStringBuilder*) msb){
 
 static inline
 MStringBuilder
-create_msb(size_t size, Nonnull(const Allocator*)a){
+create_msb(size_t size, const Allocator a){
     MStringBuilder msb = {
         .data = Allocator_alloc(a, size),
         .capacity=size,
@@ -94,7 +94,7 @@ create_msb(size_t size, Nonnull(const Allocator*)a){
 
 static inline
 void
-_resize_msb(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*)a, size_t size){
+_resize_msb(Nonnull(MStringBuilder*) msb, const Allocator a, size_t size){
     char* new_data = Allocator_realloc(a, msb->data, msb->capacity, size);
     assert(new_data);
     msb->data = new_data;
@@ -104,7 +104,7 @@ _resize_msb(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*)a, size_t siz
 static inline
 force_inline
 void
-_check_msb_size(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*)a, size_t len){
+_check_msb_size(Nonnull(MStringBuilder*) msb, const Allocator a, size_t len){
     if (msb->cursor + len > msb->capacity){
         size_t new_size = Max_literal((msb->capacity*3)/2, 32);
         while(new_size < msb->cursor+len){
@@ -116,7 +116,7 @@ _check_msb_size(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*)a, size_t
 
 static inline
 void
-msb_write_str(Nonnull(MStringBuilder*) restrict msb, Nonnull(const Allocator*)a, NullUnspec(const char*) restrict str, size_t len){
+msb_write_str(Nonnull(MStringBuilder*) restrict msb, const Allocator a, NullUnspec(const char*) restrict str, size_t len){
     if(not len)
         return;
     _check_msb_size(msb, a, len);
@@ -126,7 +126,7 @@ msb_write_str(Nonnull(MStringBuilder*) restrict msb, Nonnull(const Allocator*)a,
 
 static inline
 void
-msb_write_cstr(Nonnull(MStringBuilder*) restrict msb, Nonnull(const Allocator*)a, Nonnull(const char*) restrict str){
+msb_write_cstr(Nonnull(MStringBuilder*) restrict msb, const Allocator a, Nonnull(const char*) restrict str){
     auto len = strlen(str);
     msb_write_str(msb, a, str, len);
     }
@@ -134,14 +134,14 @@ msb_write_cstr(Nonnull(MStringBuilder*) restrict msb, Nonnull(const Allocator*)a
 static inline
 force_inline
 void
-msb_write_char(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*)a, char c){
+msb_write_char(Nonnull(MStringBuilder*) msb, const Allocator a, char c){
     _check_msb_size(msb, a, 1);
     msb->data[msb->cursor++] = c;
     }
 
 static inline
 void
-msb_insert_char(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*)a, int index, char c){
+msb_insert_char(Nonnull(MStringBuilder*) msb, const Allocator a, int index, char c){
     _check_msb_size(msb, a, 1);
     int move_length = msb->cursor - index;
     if(move_length)
@@ -166,7 +166,7 @@ msb_erase_char_at(Nonnull(MStringBuilder*) msb, int index){
 // 'foo' is backwards though, so fixes up the byte order as well.
 static inline
 void
-msb_write_multibyte_char(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*)a, unsigned int c){
+msb_write_multibyte_char(Nonnull(MStringBuilder*) msb, const Allocator a, unsigned int c){
     if(c & 0xff000000)
         msb_write_char(msb, a, (c & 0xff000000)>>24);
     if(c & 0xff0000)
@@ -179,7 +179,7 @@ msb_write_multibyte_char(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*)
 
 static inline
 void
-msb_write_repeated_char(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*)a, char c, int n){
+msb_write_repeated_char(Nonnull(MStringBuilder*) msb, const Allocator a, char c, int n){
     _check_msb_size(msb, a, n);
     for(int i = 0; i < n; i++){
         msb->data[msb->cursor++] = c;
@@ -250,7 +250,7 @@ msb_strip(Nonnull(MStringBuilder*)msb){
 
 static inline
 void
-msb_read_file(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*)a, Nonnull(FILE*) restrict fp){
+msb_read_file(Nonnull(MStringBuilder*) msb, const Allocator a, Nonnull(FILE*) restrict fp){
     // do it 1024 bytes at a time? maybe we can do it faster? idk
     enum {SB_READ_FILE_SIZE=4096};
     for(;;){
@@ -265,7 +265,7 @@ msb_read_file(Nonnull(MStringBuilder*) msb, Nonnull(const Allocator*)a, Nonnull(
 printf_func(3, 4)
 static inline
 int
-msb_sprintf(Nonnull(MStringBuilder*)msb, Nonnull(const Allocator*)a, Nonnull(const char*) restrict fmt, ...){
+msb_sprintf(Nonnull(MStringBuilder*)msb, const Allocator a, Nonnull(const char*) restrict fmt, ...){
     va_list args, args2;
     va_start(args, fmt);
     va_copy(args2, args);
@@ -280,7 +280,7 @@ msb_sprintf(Nonnull(MStringBuilder*)msb, Nonnull(const Allocator*)a, Nonnull(con
 
 static inline
 int
-msb_vsprintf(Nonnull(MStringBuilder*)msb, Nonnull(const Allocator*)a, Nonnull(const char*)restrict fmt, va_list args){
+msb_vsprintf(Nonnull(MStringBuilder*)msb, const Allocator a, Nonnull(const char*)restrict fmt, va_list args){
     va_list args2;
     va_copy(args2, args);
     auto _msg_size = vsnprintf(NULL, 0, fmt, args)+1;
@@ -294,7 +294,7 @@ msb_vsprintf(Nonnull(MStringBuilder*)msb, Nonnull(const Allocator*)a, Nonnull(co
 
 static inline
 void
-msb_ljust(Nonnull(MStringBuilder*)msb, Nonnull(const Allocator*)a, char c, int total_length){
+msb_ljust(Nonnull(MStringBuilder*)msb, const Allocator a, char c, int total_length){
     if(msb->cursor > total_length)
         return;
     auto n = total_length - msb->cursor;
@@ -303,7 +303,7 @@ msb_ljust(Nonnull(MStringBuilder*)msb, Nonnull(const Allocator*)a, char c, int t
 
 static inline
 void
-msb_rjust(Nonnull(MStringBuilder*)msb, Nonnull(const Allocator*)a, char c, int total_length){
+msb_rjust(Nonnull(MStringBuilder*)msb, const Allocator a, char c, int total_length){
     if(msb->cursor > total_length)
         return;
     auto n = total_length - msb->cursor;

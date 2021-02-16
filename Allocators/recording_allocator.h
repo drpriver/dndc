@@ -17,7 +17,6 @@ SuppressUnusedFunction();
 
 
 typedef struct RecordingAllocator {
-    Nonnull(const Allocator*) _wrapped;
     // We need a dynamic array to record all of the allocations.
     // We specialize it to be SOA
     struct {
@@ -54,7 +53,7 @@ static
 warn_unused
 Nonnull(void*)
 recording_alloc(Nonnull(RecordingAllocator*) r, size_t size){
-    auto result = Allocator_alloc(r->_wrapped, size);
+    auto result = malloc(size);
     if(!result)
         return result;
     recording_ensure_capacity(r);
@@ -71,7 +70,7 @@ static
 warn_unused
 Nonnull(void*)
 recording_zalloc(Nonnull(RecordingAllocator*) r, size_t size){
-    auto result = Allocator_zalloc(r->_wrapped, size);
+    auto result = calloc(1, size);
     if(!result)
         return result;
     recording_ensure_capacity(r);
@@ -92,7 +91,7 @@ recording_free(Nonnull(RecordingAllocator*)r, Nullable(const void*) data, size_t
     for(size_t i = 0; i < rec->count; i++){
         if(data == rec->allocations[i]){
             unhandled_error_condition(size != rec->allocation_sizes[i]);
-            Allocator_free(r->_wrapped, data, size);
+            const_free(data);
             // TODO: compact?
             rec->allocations[i] = NULL;
             rec->allocation_sizes[i] = 0;
@@ -112,17 +111,17 @@ recording_free_all(Nonnull(RecordingAllocator*)r){
     for(size_t i = 0; i < rec->count; i++){
         if(!rec->allocations[i])
             continue;
-        Allocator_free(r->_wrapped, rec->allocations[i], rec->allocation_sizes[i]);
+        free(rec->allocations[i]);
         }
     rec->count = 0;
     }
 
 static
 void
-recording_cleanup_tracking(Nonnull(RecordingAllocator*)r){
+recording_cleanup(Nonnull(RecordingAllocator*)r){
     auto rec = &r->recorded;
-    if(!rec->capacity)
-        return;
+    // if(!rec->capacity)
+        // return;
     free(rec->allocation_sizes);
     free(rec->allocations);
     memset(rec, 0, sizeof(*rec));
@@ -160,7 +159,7 @@ recording_realloc(Nonnull(RecordingAllocator*)r, Nullable(void*)data, size_t ori
             break;
             }
         }
-    void* result = Allocator_realloc(r->_wrapped, data, orig_size, new_size);
+    void* result = realloc(data, new_size);
     recording_ensure_capacity(r);
     rec = &r->recorded;
     auto index = rec->count++;
@@ -169,61 +168,38 @@ recording_realloc(Nonnull(RecordingAllocator*)r, Nullable(void*)data, size_t ori
     return result;
     }
 
-
-static inline
-RecordingAllocator
-RecordingAllocator_from_allocators(Nonnull(const Allocator*)wrapped){
-    return (RecordingAllocator){
-        ._wrapped = wrapped,
-        };
-    }
-
-
-static inline
-Allocator
-Allocator_from_recorded_allocator(Nonnull(RecordingAllocator*)r){
-    Allocator allocator = {
-        ._allocator_data = r,
-        .alloc = (alloc_func)recording_alloc,
-        .zalloc = (alloc_func)recording_zalloc,
-        .realloc = (realloc_func)recording_realloc,
-        .free = (free_func)recording_free,
-        .free_all = (free_all_func)recording_free_all,
-        };
-    return allocator;
-    }
-
-static inline
-RecordingAllocator
-RecordingAllocator_from_mallocator(void){
-    return RecordingAllocator_from_allocators(get_mallocator());
-    }
-
-static inline
-Nonnull(Allocator*)
-make_recorded_mallocator(void){
-    RecordingAllocator* r = malloc(sizeof(*r));
-    *r = RecordingAllocator_from_mallocator();
-    Allocator* a = malloc(sizeof(*a));
-    auto local = Allocator_from_recorded_allocator(r);
-    memcpy(a, &local, sizeof(local));
-    return a;
-    }
-
 static inline
 void
-shallow_free_recorded_mallocator(Nonnull(const Allocator*)a){
-    RecordingAllocator* r = a->_allocator_data;
-    recording_cleanup_tracking(r);
+shallow_free_recorded_mallocator(const Allocator a){
+    RecordingAllocator* r = a._data;
+    recording_cleanup(r);
     const_free(r);
-    const_free(a);
     }
 
 static inline
 void
-merge_recorded_mallocators_and_destroy_src(Nonnull(const Allocator*)dst, Nonnull(const Allocator*)src){
-    recording_merge(dst->_allocator_data, src->_allocator_data);
-    shallow_free_recorded_mallocator(src);
+merge_recorded_mallocators_and_destroy_src(const Allocator dst, const Allocator src){
+    recording_merge(dst._data, src._data);
+    // shallow_free_recorded_mallocator(src);
+    }
+
+static AllocatorVtable RecordedAllocatorVtable = {
+    .alloc = (alloc_func)recording_alloc,
+    .zalloc = (alloc_func)recording_zalloc,
+    .realloc = (realloc_func)recording_realloc,
+    .free = (free_func)recording_free,
+    .free_all = (free_all_func)recording_free_all,
+    .cleanup = (cleanup_func)recording_cleanup,
+    };
+
+static
+Allocator
+new_ra_from_allocator(Allocator a ){
+    RecordingAllocator* ra = calloc(1, sizeof(*ra));
+    return (Allocator){
+        ._data = ra,
+        ._vtable = &RecordedAllocatorVtable,
+        };
     }
 
 PopDiagnostic();

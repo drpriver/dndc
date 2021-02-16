@@ -5,7 +5,7 @@
 
 static inline
 void
-msb_write_json_escaped_str(Nonnull(MStringBuilder*)restrict sb, Nonnull(const Allocator*)a, Nonnull(const char*)restrict str, size_t length){
+msb_write_json_escaped_str(Nonnull(MStringBuilder*)restrict sb, const Allocator a, Nonnull(const char*)restrict str, size_t length){
     _check_msb_size(sb, a, length*2);
     auto data = sb->data;
     auto cursor = sb->cursor;
