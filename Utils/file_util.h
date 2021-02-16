@@ -270,8 +270,8 @@ write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_l
 
 #elif defined(WINDOWS)
 #include "windowsheader.h"
-static inline 
-Errorable_f(LongString) 
+static inline
+Errorable_f(LongString)
 read_file(Nonnull(const Allocator*)a, Nonnull(const char*)filepath){
     Errorable(LongString) result = {};
     PushDiagnostic();
@@ -316,8 +316,8 @@ finally:
     return result;
     }
 
-static inline 
-Errorable_f(ByteBuffer) 
+static inline
+Errorable_f(ByteBuffer)
 read_bin_file(Nonnull(const Allocator*)a, Nonnull(const char*)filepath){
     Errorable(ByteBuffer) result = {};
     PushDiagnostic();
@@ -360,8 +360,8 @@ finally:
     CloseHandle(handle);
     return result;
     }
-static inline 
-Errorable_f(void) 
+static inline
+Errorable_f(void)
 write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_length){
     Errorable(void) result = {};
     PushDiagnostic();

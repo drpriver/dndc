@@ -186,7 +186,7 @@ Allocator_from_recorded_allocator(Nonnull(RecordingAllocator*)r){
         ._allocator_data = r,
         .alloc = (alloc_func)recording_alloc,
         .zalloc = (alloc_func)recording_zalloc,
-        .realloc = Allocator_supports_realloc(r->_wrapped)?(realloc_func)recording_realloc:NULL,
+        .realloc = (realloc_func)recording_realloc,
         .free = (free_func)recording_free,
         .free_all = (free_all_func)recording_free_all,
         };

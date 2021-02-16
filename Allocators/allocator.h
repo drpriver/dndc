@@ -23,27 +23,12 @@ typedef struct Allocator {
     const Nonnull(alloc_func) alloc;
     const Nonnull(alloc_func) zalloc;
     // Not all allocators support realloc
-    const Nullable(realloc_func) realloc;
+    const Nonnull(realloc_func) realloc;
     const Nonnull(free_func) free;
     // If this function is null, indicates the allocator does not support freeing everything
     const Nullable(free_all_func) free_all;
-    } Allocator;
+} Allocator;
 
-static inline
-force_inline
-warn_unused
-bool
-Allocator_supports_realloc(Nonnull(const Allocator*) a){
-    return !!(a->realloc);
-    }
-
-static inline
-force_inline
-warn_unused
-bool
-Allocator_supports_free_all(Nonnull(const Allocator*) a){
-    return !!(a->free_all);
-    }
 
 MALLOC_FUNC
 ALLOCATOR_SIZE(2)
@@ -99,66 +84,6 @@ Allocator_dupe(Nonnull(const Allocator*) allocator, Nonnull(const void*) data, s
 MALLOC_FUNC
 ALLOCATOR_SIZE(2)
 static inline
-Nonnull(void*)
-allocator_wrapped_malloc(Nullable(void*) _unused, size_t size){
-    (void)_unused;
-    void* result = malloc(size);
-    assert(result);
-    return result;
-    }
-
-MALLOC_FUNC
-ALLOCATOR_SIZE(2)
-static inline
-Nonnull(void*)
-allocator_wrapped_zalloc(Nullable(void*) _unused, size_t size){
-    (void)_unused;
-    void* result = calloc(1, size);
-    assert(result);
-    return result;
-    }
-
-ALLOCATOR_SIZE(4)
-static inline
-Nonnull(void*)
-allocator_wrapped_realloc(Nullable(void*) _unused, Nullable(void*) data, size_t orig_size, size_t new_size){
-    (void)_unused;
-    (void)orig_size;
-    void* result = realloc(data, new_size);
-    assert(result);
-    return result;
-    }
-
-static inline
-void
-allocator_wrapped_free(Nullable(void*) _unused, Nullable(const void*) data, size_t size){
-    (void)_unused;
-    (void)size;
-    PushDiagnostic();
-    SuppressCastQual();
-    free((void*)data);
-    PopDiagnostic();
-    return;
-    }
-
-static const Allocator MallocAllocator = {
-    ._allocator_data = NULL,
-    .alloc           = allocator_wrapped_malloc,
-    .zalloc          = allocator_wrapped_zalloc,
-    .realloc         = allocator_wrapped_realloc,
-    .free            = allocator_wrapped_free,
-    };
-
-static inline
-force_inline
-Nonnull(const Allocator*)
-get_mallocator(void){
-    return &MallocAllocator;
-    }
-
-MALLOC_FUNC
-ALLOCATOR_SIZE(2)
-static inline
 warn_unused
 // force_inline
 Nonnull(void*)
@@ -182,24 +107,7 @@ static inline
 warn_unused
 Nonnull(void*)
 Allocator_realloc(Nonnull(const Allocator*) allocator, Nullable(void*) data, size_t orig_size, size_t size){
-    // TODO: allocators are allowed to not have realloc but
-    // should they just return NULL if they don't support it?
-    if(!allocator->realloc)
-        return Allocator_fallback_realloc(allocator, data, orig_size, size);
-    assert(allocator->realloc);
     return allocator->realloc(allocator->_allocator_data, data, orig_size, size);
-    }
-
-ALLOCATOR_SIZE(4)
-static inline
-warn_unused
-Nonnull(void*)
-Allocator_fallback_realloc(Nonnull(const Allocator*) allocator, Nullable(void*) data, size_t orig_size, size_t size){
-    auto new_data = Allocator_alloc(allocator, size);
-    assert(size >= orig_size);
-    memcpy(new_data, data, orig_size);
-    Allocator_free(allocator, data, orig_size);
-    return new_data;
     }
 
 static inline
@@ -235,35 +143,6 @@ Allocator_strndup(Nonnull(const Allocator*)allocator, Nonnull(const char*)str, s
         memcpy(result, str, length);
     result[length] = '\0';
     return result;
-    }
-
-MALLOC_FUNC
-printf_func(2, 3)
-static inline warn_unused
-Nonnull(char*)
-mprintf(Nonnull(const Allocator*) a, Nonnull(const char*) restrict fmt, ...){
-    va_list args, args2;
-    va_start(args, fmt);
-    va_copy(args2, args);
-    auto _msg_size = vsnprintf(NULL, 0, fmt, args)+1;
-    va_end(args);
-    auto buff = Allocator_alloc(a, _msg_size);
-    vsprintf(buff, fmt, args2);
-    va_end(args2);
-    return buff;
-    }
-
-MALLOC_FUNC
-static inline warn_unused
-Nonnull(char*)
-vmprintf(Nonnull(const Allocator*) a, Nonnull(const char*) restrict fmt, va_list args){
-    va_list args2;
-    va_copy(args2, args);
-    auto _msg_size = vsnprintf(NULL, 0, fmt, args)+1;
-    auto buff = Allocator_alloc(a, _msg_size);
-    vsprintf(buff, fmt, args2);
-    va_end(args2);
-    return buff;
     }
 
 #endif

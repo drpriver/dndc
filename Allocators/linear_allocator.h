@@ -10,44 +10,12 @@
 #include "common_macros.h"
 #include "allocator.h"
 typedef struct LinearAllocator {
-    // Apparently there's no good way to use const members
-    // if you want to malloc things
-    // Really, _data and _capacity should be const as they are set once
-    // when we allocate the arena and then never again, but the language
-    // semantics don't allow that apparently.
     NullUnspec(void*)  _data;
     size_t _capacity; // if over _capacity, we start mallocing
     size_t _cursor;
     size_t high_water;
     NullUnspec(const char*) name; // for logging purposes
-    } LinearAllocator;
-// static asserts to keep in sync with D
-_Static_assert(sizeof(LinearAllocator) == 40, "");
-_Static_assert(offsetof(LinearAllocator, _data)==0, "");
-_Static_assert(offsetof(LinearAllocator,_capacity)==8, "");
-_Static_assert(offsetof(LinearAllocator,_cursor)==16, "");
-_Static_assert(offsetof(LinearAllocator,high_water)==24, "");
-_Static_assert(offsetof(LinearAllocator,name)==32, "");
-
-typedef struct LinearAllocatorCheckpoint{
-    // this is a bit dangerous to use, but this auto's you back up to an earlier allocation state.
-    // This can be useful for deep callgraphs that need lots of scratch space, but only for some
-    // computations or communication.
-    size_t _cursor;
-    } LinearAllocatorCheckpoint;
-
-static inline warn_unused
-LinearAllocatorCheckpoint
-get_linear_checkpoint(Nonnull(LinearAllocator*)s){
-    return (LinearAllocatorCheckpoint){
-        ._cursor=s->_cursor,
-        };
-    }
-static inline
-void
-reset_to_linear_checkpoint(Nonnull(LinearAllocator*)s, LinearAllocatorCheckpoint checkpoint){
-    s->_cursor = checkpoint._cursor;
-    }
+} LinearAllocator;
 
 /// name is strdup'd
 static inline warn_unused

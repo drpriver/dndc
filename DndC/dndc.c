@@ -19,7 +19,7 @@
 #include "dndc_types.h"
 #include "thread_utils.h"
 #include "bb_read_bin_file.h"
-
+#include "mallocator.h"
 
 static
 Errorable_f(LongString)
@@ -727,7 +727,7 @@ add_link_from_header(Nonnull(ParseContext*)ctx, StringView str){
         return;
     auto kebabed = LS_to_SV(msb_detach(&sb, ctx->allocator));
 
-    const char* anchor = mprintf(ctx->allocator, "#%.*s", (int)kebabed.length, kebabed.text);
+    const char* anchor = Allocator_strndup(ctx->allocator, kebabed.text, kebabed.length);
     StringView value = {.text=anchor, .length = kebabed.length+1};
     auto li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
     li->key = kebabed;

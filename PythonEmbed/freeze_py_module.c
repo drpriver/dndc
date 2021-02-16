@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include "file_util.h"
+#include "mallocator.h"
 /* To avoid a circular dependency on frozen.o, we create our own structure
    of frozen modules instead, left deliberately blank so as to avoid
    unintentional import of a stale version of _frozen_importlib. */
