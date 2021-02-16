@@ -9,7 +9,7 @@ typedef struct ByteBuilder {
     size_t capacity;
     NullUnspec(unsigned char*) data;
     const Allocator* _Null_unspecified allocator;
-    } ByteBuilder;
+} ByteBuilder;
 
 static inline
 void

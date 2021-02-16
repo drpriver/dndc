@@ -9,6 +9,7 @@
 #include "long_string.h"
 #include "d_memory.h"
 #include "allocator.h"
+#include "ByteBuilder.h"
 
 // #define USE_C_STDIO
 

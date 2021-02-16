@@ -18,6 +18,7 @@
 #include "recording_allocator.h"
 #include "dndc_types.h"
 #include "thread_utils.h"
+#include "bb_read_bin_file.h"
 
 
 static
@@ -26,40 +27,9 @@ read_and_base64_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const Allocator*)a, No
     Errorable(LongString) result = {};
     assert(bb->allocator);
     assert(bb->cursor == 0);
-#ifdef USE_C_STDIO
-    auto fp = fopen(filepath, "rb");
-    if(not fp)
-        Raise(FILE_NOT_OPENED);
-    auto size_e = file_size_from_fp(fp);
-    if(size_e.errored){
-        fclose(fp);
-        Raise(FILE_ERROR);
-        }
-    auto nbytes = unwrap(size_e);
-    bb_reserve(bb, nbytes);
-    auto fread_result = fread(bb->data, 1, nbytes, fp);
-    fclose(fp);
-    if(fread_result != nbytes){
-        Raise(FILE_ERROR);
-        }
-#else
-    int fd = open(filepath, O_RDONLY);
-    if(fd < 0)
-        Raise(FILE_NOT_OPENED);
-    auto size_e = file_size_from_fd(fd);
-    if(size_e.errored){
-        close(fd);
-        Raise(FILE_ERROR);
-        }
-    auto nbytes = unwrap(size_e);
-    bb_reserve(bb, nbytes);
-    auto read_result = read(fd, bb->data, nbytes);
-    close(fd);
-    if(read_result != nbytes){
-        Raise(FILE_ERROR);
-        }
-#endif
-    bb->cursor = nbytes;
+    auto e = bb_read_bin_file(bb, filepath);
+    if(e.errored)
+        Raise(e.errored);
     auto buff = bb_borrow(bb);
     MStringBuilder sb = {};
     msb_write_b64(&sb, a, buff.buff, buff.n_bytes);
