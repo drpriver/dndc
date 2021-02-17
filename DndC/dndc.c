@@ -176,6 +176,7 @@ typedef struct Node {
     int row, col; // 0-based
 }Node;
 _Static_assert(sizeof(Node) == 15*sizeof(size_t), "");
+// Damn these are fat.
 _Static_assert(sizeof(Node) == 120, "");
 #define MARRAY_T Node
 #include "Marray.h"
@@ -829,7 +830,7 @@ int main(int argc, char**argv){
         .keyword.count = arrlen(kw_args),
         .option_char = '-',
         };
-    Args args = argc?(Args){argc-1, (const char**)argv+1}: (Args){0, 0};
+    Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
     if(check_for_help(&args)){
         print_help(&argparser);
         return 0;
@@ -910,7 +911,7 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
         path = SV("(string input)");
     else
         path = LS_to_SV(source_path);
-    const Allocator allocator = flags & PARSE_NO_CLEANUP?get_mallocator():new_ra_from_allocator(get_mallocator());
+    const Allocator allocator = flags & PARSE_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
     auto la_ = new_linear_storage(1024*1024, "temp storage");
     auto la = allocator_from_la(&la_);
     ParseContext ctx = {
@@ -1010,7 +1011,7 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
     report_stat(ctx.flags, "Resolving imports took: %.3fms", (after_imports-before_imports)/1000.);
 
     {
-    const Allocator worker_allocator = flags & PARSE_NO_CLEANUP?get_mallocator():new_ra_from_allocator(get_mallocator());
+    const Allocator worker_allocator = flags & PARSE_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
     BinaryJob job = {
         .a = worker_allocator,
         .report_time = !!(ctx.flags & PARSE_PRINT_STATS),
@@ -5048,8 +5049,11 @@ init_python_docparser(uint64_t flags){
     return result;
     }
 
-static void
+PushDiagnostic();
+SuppressUnusedFunction();
+static inline
+void
 end_interpreter(void){
     Py_Finalize();
     }
-
+PopDiagnostic();

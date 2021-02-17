@@ -14,7 +14,7 @@ DIRECTORIES= $(DEPDIR) $(OBJDIR) $(BINDIR) $(DOCDIR)
 DEPFILES:= $(wildcard Depends/*.dep)
 include $(DEPFILES)
 
-WARNINGS:=-Wall\
+WARNING_FLAGS:=-Wall\
 	-Wbad-function-cast\
 	-Wextra \
 	-Wvla\

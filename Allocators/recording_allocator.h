@@ -194,7 +194,7 @@ static AllocatorVtable RecordedAllocatorVtable = {
 
 static
 Allocator
-new_ra_from_allocator(Allocator a ){
+new_recorded_mallocator(void){
     RecordingAllocator* ra = calloc(1, sizeof(*ra));
     return (Allocator){
         ._data = ra,

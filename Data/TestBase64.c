@@ -38,14 +38,14 @@ TestFunction(TestBase64){
         msb_write_b64(&sb, a, data, sizeof(data));
         auto encoded = msb_borrow(&sb, a);
         uint64_t decoded[arrlen(data)] = {};
-        auto e = base64_decode(decoded, sizeof(decoded), (uint8_t*)encoded.text, encoded.length);
+        auto e = base64_decode(decoded, sizeof(decoded), (const uint8_t*)encoded.text, encoded.length);
         TestExpectSuccess(e);
         TestExpectEquals(memcmp(decoded, data, sizeof(data)), 0);
         for(size_t i = 0; i < arrlen(data); i++){
             TestExpectEquals(data[i], decoded[i]);
             }
         uint8_t shortbuff[sizeof(decoded)-1] = {};
-        auto e2 = base64_decode(shortbuff, sizeof(shortbuff), (uint8_t*)encoded.text, encoded.length);
+        auto e2 = base64_decode(shortbuff, sizeof(shortbuff), (const uint8_t*)encoded.text, encoded.length);
         TestExpectFailure(e2);
     }
     msb_destroy(&sb, a);
@@ -70,7 +70,7 @@ TestFunction(TestBase64_2){
         StringView expected = SV("AQIDBAUGBwgJCw");
         TestExpectTrue(SV_equals(encoded, expected));
         uint8_t decoded[arrlen(data)] = {};
-        auto e = base64_decode(decoded, sizeof(decoded), (uint8_t*)encoded.text, encoded.length);
+        auto e = base64_decode(decoded, sizeof(decoded), (const uint8_t*)encoded.text, encoded.length);
         TestExpectSuccess(e);
         TestExpectEquals(memcmp(decoded, data, sizeof(data)), 0);
         msb_destroy(&sb, a);

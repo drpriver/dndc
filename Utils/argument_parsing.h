@@ -12,7 +12,7 @@
 typedef struct Args {
     // argc/argv should exclude the program name, as it is useless
     int argc;
-    const char *_Nonnull *_Nonnull argv;
+    const char *_Nonnull const *_Nonnull argv;
 } Args;
 typedef struct ArgParser ArgParser;
 static inline Errorable_f(void) parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args);
@@ -308,7 +308,7 @@ Errorable_f(void)
 parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
     Errorable(void) result = {};
     auto argc = args->argc;
-    const char** argv = args->argv;
+    auto argv = args->argv;
     auto past_the_end = argv+argc;
     if(parser->positional.count){
         Nonnull(ArgToParse*) arg = &parser->positional.args[0];

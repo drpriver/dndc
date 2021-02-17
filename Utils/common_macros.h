@@ -82,6 +82,7 @@
 #define unreachable() __builtin_unreachable()
 #endif
 
+// TODO: Log an error message?
 #define unhandled_error_condition(cond) assert(!(cond))
 
 #if defined(__clang__)
@@ -95,7 +96,6 @@
     __attribute__((no_sanitize("address"))) \
     __attribute__((no_sanitize("undefined")))
 #define nosan_null
-#elif defined(__GNUC__)
 #else
 #define nosan
 #define nosan_null
@@ -110,13 +110,8 @@
 // TODO: breakpoints on arm
 #define breakpoint()  asm("int $3")
 
-#define GET_ARG_11(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,N,...) N
-#define COUNT_MACRO_ARGS(...) GET_ARG_11( __VA_ARGS__, 10,9,8,7,6,5,4,3,2,1,I_CANNOT_SEE_ZERO_ARGS)
-
 // These all use GNU statement expressions, so I'll have to address those later
-#define Swap(x,y) ({ 	auto _tmp = x; \
-		 	x = y;\
-			y = _tmp;})
+// if I want to port to MSVC, but screw that crappy compiler.
 
 #define Max(a, b) ({ 	auto max_temp_a__ = (a);\
 			auto max_temp_b__ = (b);\
@@ -134,24 +129,18 @@
             auto _b = (typeof(_a)) literal;\
             _a < _b ? _a : _b;})
 
-#define Abs(a) ({ auto _a = a;\
-                    _a < 0 ? -_a : _a;})
-#define Sign(x) ( {\
-        auto _x = x;\
-        (_x > 0) - (_x < 0);} )
 
-
-#ifdef __clang__
-#define typeof_member(Struct, m)\
-    PushDiagnostic() \
-    SuppressMissingBraces() \
-    typeof(((Struct){0}).m)\
-    PopDiagnostic()
-#else
-#define typeof_member(Struct, m)\
-    typeof(((Struct){0}).m)
-#endif
-
+// There's a bug in the c spec that free's prototype is
+//
+// void free(void*);
+//
+// instead of
+//
+// void free(const void*);
+//
+// This is stupid as hell as it means you can't free pointers that you have
+// made const after allocation (for example, a string).
+// So, suppress the diagnostics and do it anyway.
 #define const_free(ptr) do{\
     PushDiagnostic(); \
     SuppressDiscardQualifiers(); \
@@ -163,7 +152,7 @@
  * Warning Suppression
  *
  * Pragmas to suppress warnings. Currently only supporting
- * clang, but using these macros means I can use the
+ * clang and gcc, but using these macros means I can use the
  * compiler-specific pragmas.
  */
 #ifdef __clang__
@@ -232,20 +221,7 @@
 #define printf_func(...)
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
-#define PURE __attribute__((pure))
-#define CONST __attribute__((const))
-#else
-#define PURE
-#define CONST
-#endif
-
-#if defined(__GNUC__) || defined(__clang__)
-#define UNUSED __attribute__((unused))
-#else
-#define UNUSED
-#endif
-
-#include "dbg_print.h"
+// Always want logging, so include that.
+#include "log_print.h"
 
 #endif

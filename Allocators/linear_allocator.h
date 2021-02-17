@@ -157,21 +157,13 @@ static const AllocatorVtable LinearAllocatorVtable = {
     .cleanup = (cleanup_func)destroy_linear_storage,
     };
 
-static
+static inline
 Allocator
 allocator_from_la(Nonnull(LinearAllocator*)la){
     return (Allocator){
         ._data = la,
         ._vtable = &LinearAllocatorVtable,
         };
-    }
-
-static
-Allocator
-new_la_allocator(size_t capacity, Nonnull(const char*)name){
-    LinearAllocator* la = malloc(sizeof(*la));
-    *la = new_linear_storage(capacity, name);
-    return allocator_from_la(la);
     }
 
 

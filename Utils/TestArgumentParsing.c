@@ -169,7 +169,6 @@ TestFunction(TestArgumentParsing6){
     }
 TestFunction(TestArgumentParsing7){
     TESTBEGIN();
-    char argstring[] = "bin --f --f";
     const char* argv[] = {"bin", "--f", "--f"};
     auto e = test_parse_args(arrlen(argv), argv);
     TestExpectEquals(e.errored, DUPLICATE_KWARG);
