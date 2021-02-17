@@ -64,6 +64,7 @@
     apply(GENERIC_ERROR, 39)\
 
 #ifdef WINDOWS
+#undef NO_ERROR
 typedef uint8_t ErrorCode;
 enum {
 #define X(x, v) x = v,
