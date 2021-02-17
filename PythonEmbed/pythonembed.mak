@@ -66,14 +66,14 @@ FROZEN_MODULES:=$(addprefix $(FROZENDIR)/,\
 	pdb.py.h\
 	)
 
-$(OBJDIR)/frozenstdlib.o: $(DEPDIR)/frozenstdlib.dep PythonEmbed/frozenstdlib.c $(FROZEN_MODULES) | $(DIRECTORIES)
-	$(CC) $(INCLUDE_FLAGS) $(PLATFORM_FLAGS) $(FAST_FLAGS) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/frozenstdlib.dep PythonEmbed/frozenstdlib.c -c -o $(OBJDIR)/frozenstdlib.o
+$(OBJDIR)/frozenstdlib.o: PythonEmbed/frozenstdlib.c $(DEPDIR)/frozenstdlib.dep  $(FROZEN_MODULES) | $(DIRECTORIES)
+	$(CC) $(INCLUDE_FLAGS) $(PLATFORM_FLAGS) $(FAST_FLAGS) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/frozenstdlib.dep $< -c -o $@
 
 $(FROZENDIR)/%.py.h: $(PYVENDOR)/%.py | $(FREEZE) $(FROZENDIR)
 	$(FREEZE) $* $< $@
 
 # needs weird name
 $(FROZENDIR)/importlib.py.h: $(PYVENDOR)/importlib_bootstrap.py
-	$(FREEZE) importlib_bootstrap $< $(FROZENDIR)/importlib.py.h
+	$(FREEZE) importlib_bootstrap $< $@
 $(FROZENDIR)/importlib_external.py.h: $(PYVENDOR)/importlib_bootstrap_external.py
-	$(FREEZE) importlib_bootstrap_external $< $(FROZENDIR)/importlib_external.py.h
+	$(FREEZE) importlib_bootstrap_external $< $@

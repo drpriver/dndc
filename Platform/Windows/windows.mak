@@ -20,8 +20,9 @@ INSTALL=$(PYTHON) -m Scripts.win_utils install
 ifeq ($(PYCFLAGS), )
 PYCFLAGS=-I$(LOCALAPPDATA)\Programs\Python\Python38\include -Wno-visibility
 PYLDFLAGS=$(LOCALAPPDATA)\Programs\Python\Python38\libs\python38.lib
+PYDLL=$(LOCALAPPDATA)\Programs\Python\Python38\python38.dll
 endif
 
-$(BINDIR)\python38.dll:
-	$(CP) $(LOCALAPPDATA)\Programs\Python\Python38\python38.dll $(BINDIR)
+$(BINDIR)\python38.dll: $(PYDLL)
+	$(CP) $< $@
 $(BINDIR)\dndc.exe: $(BINDIR)\python38.dll

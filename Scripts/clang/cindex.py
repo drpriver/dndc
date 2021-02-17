@@ -68,7 +68,7 @@ underlying API call is efficient.
 from __future__ import annotations
 import ctypes
 
-from Scripts.clang import enumerations
+from . import enumerations
 
 from typing import Optional, Union, Dict, TypeVar, Callable, Any, Generic, List, cast, Sequence, Iterator, Iterable
 from typing import Type as TypingType
