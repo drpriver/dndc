@@ -5,17 +5,19 @@
 #include "common_macros.h"
 #include "error_handling.h"
 
+// LongStrings and StringViews are very similar.
+// A LongString is basically a StringView with a guranteed nul-terminator.
+// It is unspecified if a StringView has a nul-terminator.
 typedef struct LongString {
     size_t length; // excludes the terminating NUL
-    NullUnspec(char*) text;
-    } LongString;
+    NullUnspec(const char*) text;
+} LongString;
 Errorable_declare(LongString);
 
-// this happens to be compatible with D's char[]
 typedef struct StringView {
     size_t length;
     Nonnull(const char*) text;
-    } StringView;
+} StringView;
 Errorable_declare(StringView);
 
 static inline
@@ -36,79 +38,17 @@ cstr_to_SV(Nonnull(const char*)cstr){
     }
 
 static inline
-force_inline
-StringView
-ls_to_string_view(LongString ls){
-    return (StringView){ls.length, ls.text};
-    }
-
-static inline
-LongString
-LongString_duped_from_cstring(Nonnull(const char*) text){
-    return (LongString){
-        .length = strlen(text),
-        .text = strdup(text),
-        };
-    }
-
-static inline
-void
-destroy_LongString(Nonnull(LongString*) str){
-    free(str->text);
-    str->text = NULL;
-    str->length = 0;
-    }
-
-static inline
-LongString
-LongString_duped_from_string(Nonnull(const char*) text, size_t length){
-    char* str = malloc(length+1);
-    assert(str);
-    memcpy(str, text, length);
-    str[length] = '\0';
-    return (LongString){
-        .length = length,
-        .text = str,
-        };
-    }
-
-static inline
-LongString
-LongString_borrowed_from_cstring(Nonnull(char*) text){
-    return (LongString){
-        .length = strlen(text),
-        .text = text,
-        };
-    }
-
-static inline
-LongString
-LongString_clone(LongString first){
-    if(not first.text)
-        return (LongString){};
-    char* new_text = malloc(first.length+1);
-    memcpy(new_text, first.text, first.length+1);
-    return (LongString){
-        .text = new_text,
-        .length = first.length,
-        };
-    }
-
-static inline
 bool
-LongString_equals(const LongString a, const LongString b){
+LS_equals(const LongString a, const LongString b){
     if (a.length != b.length)
         return false;
     if(a.text == b.text)
         return true;
     assert(a.text);
     assert(b.text);
-    // if(not a.text)
-        // return false;
-    // if(not b.text)
-        // return false;
     return !strcmp(a.text, b.text);
     }
+
 #ifdef LS
 #error "LS defined"
 #endif
@@ -121,6 +61,10 @@ bool
 SV_equals(const StringView a, const StringView b){
     if(a.length != b.length)
         return false;
+    if(a.text == b.text)
+        return true;
+    assert(a.text);
+    assert(b.text);
     return memcmp(a.text, b.text, a.length) == 0;
     }
 
@@ -129,6 +73,41 @@ bool
 LS_SV_equals(const LongString ls, const StringView sv){
     if(ls.length != sv.length)
         return false;
+    if(ls.text == sv.text)
+        return true;
+    assert(ls.text);
+    assert(sv.text);
     return memcmp(ls.text, sv.text, sv.length)==0;
     }
+
+// Maybe it's UB (idk) but this works for LongStrings as well.
+// Although maybe I should just use strcmp for those.
+static inline
+int
+StringView_cmp(Nonnull(const void*)a, Nonnull(const void*) b){
+    // TODO: There's probably a cleaner way to implement this.
+    Nonnull(const StringView*)lhs = a;
+    Nonnull(const StringView*)rhs = b;
+    auto l1 = lhs->length;
+    auto l2 = rhs->length;
+    if(l1 == l2){
+        if(!l1)
+            return 0;
+        if(lhs->text == rhs->text)
+            return 0;
+        return memcmp(lhs->text, rhs->text, l1);
+        }
+    if(!lhs->length)
+        return -(int)(unsigned char)rhs->text[0];
+    if(!rhs->length)
+        return (int)(unsigned char)lhs->text[0];
+    int prefix_cmp = memcmp(lhs->text, rhs->text, lhs->length > rhs->length?rhs->length:lhs->length);
+    if(prefix_cmp)
+        return prefix_cmp;
+    if(lhs->length > rhs->length){
+        return (int)(unsigned char)lhs->text[rhs->length];
+        }
+    return -(int)(unsigned char)rhs->text[lhs->length];
+    }
+
 #endif

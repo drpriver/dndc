@@ -11,7 +11,7 @@ Nonnull(char*)
 strdup(Nonnull(const char*)str){
     size_t len = strlen(str)+1;
     char* result = malloc(len);
-    assert(result);
+    unhandled_error_condition(!result);
     memcpy(result, str, len);
     return result;
     }
@@ -59,32 +59,6 @@ stripped_view(Nonnull(const char*)str, size_t len){
         break;
         }
     return (StringView){.text=str, .length=len};
-    }
-
-// Maybe it's UB (idk) but this works for LongStrings as well.
-static inline
-int
-StringView_cmp(Nonnull(const void*)a, Nonnull(const void*) b){
-    Nonnull(const StringView*)lhs = a;
-    Nonnull(const StringView*)rhs = b;
-    auto l1 = lhs->length;
-    auto l2 = rhs->length;
-    if(l1 == l2){
-        if(!l1)
-            return 0;
-        return memcmp(lhs->text, rhs->text, l1);
-        }
-    if(!lhs->length)
-        return -(int)(unsigned char)rhs->text[0];
-    if(!rhs->length)
-        return (int)(unsigned char)lhs->text[0];
-    int prefix_cmp = memcmp(lhs->text, rhs->text, lhs->length > rhs->length?rhs->length:lhs->length);
-    if(prefix_cmp)
-        return prefix_cmp;
-    if(lhs->length > rhs->length){
-        return (int)(unsigned char)lhs->text[rhs->length];
-        }
-    return -(int)(unsigned char)rhs->text[lhs->length];
     }
 
 static inline

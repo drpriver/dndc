@@ -155,8 +155,8 @@ void RegisterTest(test_func func){
     test_funcs[test_funcs_count++] = func;
     }
 
-static 
-struct test_stats 
+static
+struct test_stats
 test_main(void){
     struct test_stats result = {};
     register_tests();

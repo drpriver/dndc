@@ -15,7 +15,7 @@ typedef struct {
     int i_count;
 } holder;
 Errorable_declare(holder);
-Errorable_f(holder) 
+Errorable_f(holder)
 test_parse_args(int argc, const char** argv){
     Errorable(holder) result = {};
     Args args= {argc-1, argv+1};

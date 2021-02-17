@@ -142,7 +142,7 @@ warn_unused
 Nonnull(char*)
 Allocator_strndup(const Allocator allocator, Nonnull(const char*)str, size_t length){
     char* result = Allocator_alloc(allocator, length+1);
-    assert(result);
+    unhandled_error_condition(!result);
     if(likely(length))
         memcpy(result, str, length);
     result[length] = '\0';

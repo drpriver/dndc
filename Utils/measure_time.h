@@ -27,10 +27,16 @@ uint64_t
 get_t(void){
     LARGE_INTEGER time;
     if(!freq.QuadPart){
+        // This should never fail.
+        // "On systems that run Windows XP or later, the function will always
+        // succeed and will thus never return zero."
         BOOL ok = QueryPerformanceFrequency(&freq);
         assert(ok == TRUE);
     }
 
+    // This should never fail.
+    // "On systems that run Windows XP or later, the function will always
+    // succeed and will thus never return zero."
     BOOL ok = QueryPerformanceCounter(&time);
     assert(ok == TRUE);
     return  (1000000llu * time.QuadPart) / freq.QuadPart;

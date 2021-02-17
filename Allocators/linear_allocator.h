@@ -24,7 +24,7 @@ new_linear_storage(size_t size, Nullable(const char*) name){
     // malloc has to return a pointer suitably aligned for any object,
     // so we don't have to do any alignment fixup
     void* _data = malloc(size);
-    assert(_data);
+    unhandled_error_condition(!_data);
     return (LinearAllocator){
         ._data = _data,
         ._capacity=size,
@@ -70,7 +70,7 @@ linear_aligned_alloc(Nonnull(LinearAllocator*) restrict s, size_t size, size_t a
         s->high_water = s->_cursor + size;
         // leak
         void* result =  malloc(size);
-        assert(result);
+        unhandled_error_condition(!result);
         return result;
         }
     void* result = ((char*)s->_data) + s->_cursor;

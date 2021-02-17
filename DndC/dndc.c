@@ -881,7 +881,7 @@ int main(int argc, char**argv){
         output_path = LS(BENCHMARKOUTPUTPATH);
         }
     auto chdir_e = chdir(BENCHMARKDIRECTORY);
-    assert(chdir_e == 0);
+    unhandled_error_condition(chdir_e != 0);
     flags &= ~PARSE_NO_CLEANUP;
     auto e = run_the_parser(flags, source_path, output_path, depends_dir);
     assert(!e.errored);
@@ -1037,7 +1037,8 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
                     if(SV_equals(child->header, job.sourcepaths.data[j]))
                         goto Continue;
                     }
-                Marray_push(StringView)(&job.sourcepaths, job.a, child->header);
+                auto sv = Marray_alloc(StringView)(&job.sourcepaths, job.a);
+                *sv = child->header;
                 Continue:;
                 }
             }
@@ -3637,7 +3638,7 @@ pystring_to_longstring(Nonnull(PyObject*)pyobj, const Allocator a){
     const char* text;
     Py_ssize_t length;
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
-    assert(text);
+    unhandled_error_condition(!text);
     if(!length){
         return (LongString){};
         }
@@ -3655,7 +3656,7 @@ pystring_to_stringview(Nonnull(PyObject*)pyobj, const Allocator a){
     const char* text;
     Py_ssize_t length;
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
-    assert(text);
+    unhandled_error_condition(!text);
     if(!length){
         return (StringView){};
         }
@@ -3671,7 +3672,7 @@ pystring_borrow_stringview(Nonnull(PyObject*)pyobj){
     const char* text;
     Py_ssize_t length;
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
-    assert(text);
+    unhandled_error_condition(!text);
     return (StringView){.text=text, .length=length};
     }
 
@@ -3755,7 +3756,7 @@ static
 Nonnull(PyObject*)
 make_node_type_enum(NodeType t){
     NodeTypeEnum* self = (NodeTypeEnum*)NodeTypeEnumType.tp_alloc(&NodeTypeEnumType, 0);
-    assert(self);
+    unhandled_error_condition(!self);
     self->type = t;
     return (PyObject*)self;
     }
@@ -3789,7 +3790,7 @@ static
 Nonnull(PyObject*)
 make_node_bound_method(Nonnull(ParseContext*)ctx, NodeHandle handle, NodeMethod func){
     NodeBoundMethod* self = (NodeBoundMethod*)NodeBoundMethodType.tp_alloc(&NodeBoundMethodType, 0);
-    assert(self);
+    unhandled_error_condition(!self);
     self->ctx = ctx;
     self->handle = handle;
     self->func = func;
@@ -3967,7 +3968,7 @@ static
 Nonnull(PyObject*)
 make_classes_list(Nonnull(ParseContext*)ctx, NodeHandle handle){
     DndClassesList* self = (DndClassesList*)DndClassesListType.tp_alloc(&DndClassesListType, 0);
-    assert(self);
+    unhandled_error_condition(!self);
     self->ctx = ctx;
     self->handle = handle;
     return (PyObject*)self;
@@ -4177,7 +4178,7 @@ static
 Nonnull(PyObject*)
 make_attributes_map(Nonnull(ParseContext*)ctx, NodeHandle handle){
     DndAttributesMap* self = (DndAttributesMap*)DndAttributesMapType.tp_alloc(&DndAttributesMapType, 0);
-    assert(self);
+    unhandled_error_condition(!self);
     self->ctx = ctx;
     self->handle = handle;
     return (PyObject*)self;
@@ -4261,7 +4262,7 @@ static
 Nullable(PyObject*)
 make_py_node(Nonnull(ParseContext*)ctx, NodeHandle handle){
     DndNode* self = (DndNode*)DndNodeType.tp_alloc(&DndNodeType, 0);
-    assert(self);
+    unhandled_error_condition(!self);
     self->ctx = ctx;
     self->handle = handle;
     return (PyObject*)self;
@@ -4603,7 +4604,7 @@ execute_python_string(Nonnull(ParseContext*)ctx, Nonnull(const char*)text, NodeH
         Py_XDECREF(enu);
         }
     auto nt = _PyNamespace_New(nodetypes);
-    assert(nt);
+    unhandled_error_condition(!nt);
     Py_XDECREF(nodetypes);
     PyDict_SetItemString(glbl, "NodeType", nt);
     Py_XDECREF(nt);
@@ -4642,9 +4643,9 @@ execute_python_string(Nonnull(ParseContext*)ctx, Nonnull(const char*)text, NodeH
             }
         else{
             PyObject* exc_str = PyObject_Str(value);
-            assert(exc_str);
+            unhandled_error_condition(!exc_str);
             const char* exc_text = PyUnicode_AsUTF8(exc_str);
-            assert(exc_text);
+            unhandled_error_condition(!exc_text);
             auto python_block = get_node(ctx, handle);
             auto old_row = python_block->row;
             auto new_row = old_row;
@@ -4662,7 +4663,7 @@ execute_python_string(Nonnull(ParseContext*)ctx, Nonnull(const char*)text, NodeH
                 }
             // kind of hacky, but meh;
             const char* type_text = ((PyTypeObject*)type)->tp_name;
-            assert(type_text);
+            unhandled_error_condition(!type_text);
             // NASTY: modding the line number
             python_block->row = new_row;
             node_set_err(ctx, python_block, "%s: %s", type_text, exc_text);
@@ -4720,7 +4721,7 @@ DndNode_getattr(Nonnull(DndNode*)obj, Nonnull(const char*)name){
             auto pynode = make_py_node(obj->ctx, child);
             auto fail = PyTuple_SetItem(result, i, pynode);
             //meh
-            assert(fail == 0);
+            unhandled_error_condition(fail != 0);
             }
         return result;
         }
@@ -4931,7 +4932,7 @@ static
 Nonnull(PyObject*)
 make_py_ctx(Nonnull(ParseContext*)ctx){
     DndContext* self = (DndContext*)DndContextType.tp_alloc(&DndContextType, 0);
-    assert(self);
+    unhandled_error_condition(!self);
     self->ctx = ctx;
     return (PyObject*)self;
     }

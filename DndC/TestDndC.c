@@ -23,7 +23,7 @@ TestFunction(TestDndC1){
         "::python\n"
         "  ctx.root.add_child('hello')\n"
         );
-    uint64_t flags = PARSE_FLAGS_NONE 
+    uint64_t flags = PARSE_FLAGS_NONE
         | PARSE_DONT_WRITE
         | PARSE_SOURCE_PATH_IS_DATA_NOT_PATH
         | PARSE_SUPPRESS_WARNINGS
@@ -43,7 +43,7 @@ TestFunction(TestDndC2){
         "::python\n"
         "  ctx.root.add_child('hello')\n"
         );
-    uint64_t flags = PARSE_FLAGS_NONE 
+    uint64_t flags = PARSE_FLAGS_NONE
         | PARSE_PYTHON_IS_INIT
         | PARSE_DONT_WRITE
         | PARSE_SOURCE_PATH_IS_DATA_NOT_PATH
@@ -63,7 +63,7 @@ TestFunction(TestDndC3){
         "::python\n"
         "  ctx.root.add_child('hello')\n"
         );
-    uint64_t flags = PARSE_FLAGS_NONE 
+    uint64_t flags = PARSE_FLAGS_NONE
         | PARSE_PYTHON_IS_INIT
         | PARSE_DONT_WRITE
         | PARSE_SOURCE_PATH_IS_DATA_NOT_PATH

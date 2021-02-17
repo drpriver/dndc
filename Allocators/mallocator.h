@@ -8,7 +8,7 @@ Nonnull(void*)
 allocator_wrapped_malloc(Nullable(void*) _unused, size_t size){
     (void)_unused;
     void* result = malloc(size);
-    assert(result);
+    unhandled_error_condition(!result);
     return result;
     }
 
@@ -19,7 +19,7 @@ Nonnull(void*)
 allocator_wrapped_zalloc(Nullable(void*) _unused, size_t size){
     (void)_unused;
     void* result = calloc(1, size);
-    assert(result);
+    unhandled_error_condition(!result);
     return result;
     }
 
@@ -30,7 +30,7 @@ allocator_wrapped_realloc(Nullable(void*) _unused, Nullable(void*) data, size_t 
     (void)_unused;
     (void)orig_size;
     void* result = realloc(data, new_size);
-    assert(result);
+    unhandled_error_condition(!result);
     return result;
     }
 

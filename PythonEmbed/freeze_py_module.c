@@ -76,7 +76,6 @@ main(int argc, char *argv[])
     char buf[100];
     snprintf(buf, sizeof(buf), "<frozen %s>", name);
     code = Py_CompileStringExFlags(text.text, buf, Py_file_input, NULL, 0);
-    assert(code);
     if(code == NULL){
         ERROR("code is NULL (%p)\n", code);
         goto error;
@@ -91,7 +90,7 @@ main(int argc, char *argv[])
         goto error;
         }
 
-    assert(PyBytes_CheckExact(marshalled));
+    unhandled_error_condition(!PyBytes_CheckExact(marshalled));
     auto data = (unsigned char *) PyBytes_AS_STRING(marshalled);
     size_t data_size = PyBytes_GET_SIZE(marshalled);
 

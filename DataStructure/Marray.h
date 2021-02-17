@@ -31,15 +31,11 @@ resize_to_some_weird_number(uint64_t x){
         result =  x | (x >> 1);
         }
     else {
-        // count leading zeros for the unaware
         auto clz = __builtin_clzll(x);
         result = 1ull << (64 - clz);
         }
     return result;
     }
-
-
-
 
 // Level of indirection is necessary for it to work properly
 // with macros.
@@ -47,16 +43,11 @@ resize_to_some_weird_number(uint64_t x){
 #define Marray(type) MarrayI(type)
 #define MarrayI(type) Marray__##type
 #define Marray_push(type) MARRAYIMPL(push, type)
-#define Marray_pop(type) MARRAYIMPL(pop, type)
 #define Marray_cleanup(type) MARRAYIMPL(cleanup, type)
-#define Marray_find(type) MARRAYIMPL(find, type)
 #define Marray_reserve(type) MARRAYIMPL(reserve, type)
-#define Marray_clear(type) MARRAYIMPL(clear, type)
-#define Marray_peek(type) MARRAYIMPL(peek, type)
 #define Marray_extend(type) MARRAYIMPL(extend, type)
 #define Marray_insert(type) MARRAYIMPL(insert, type)
 #define Marray_remove(type) MARRAYIMPL(remove, type)
-#define Marray_from(type) MARRAYIMPL(from, type)
 #define Marray_alloc(type) MARRAYIMPL(alloc, type)
 #define Marray_alloc_index(type) MARRAYIMPL(alloc_index, type)
 #define Marray_ensure(type) MARRAYIMPL(ensure, type)
@@ -73,32 +64,23 @@ typedef struct Marray(MARRAY_T) {
     NullUnspec(MARRAY_T*) data;
 } Marray(MARRAY_T);
 
-static inline
-void
-Marray_ensure(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator , size_t);
+static inline void Marray_ensure(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator , size_t);
 static inline void Marray_push(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator , MARRAY_T);
 static inline warn_unused Nonnull(MARRAY_T*) Marray_alloc(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator );
 static inline warn_unused size_t Marray_alloc_index(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator );
 static inline void Marray_insert(MARRAY_T)(Nonnull(Marray(MARRAY_T)*),const Allocator , size_t, MARRAY_T);
 static inline void Marray_remove(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), size_t);
-static inline
-void Marray_extend(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator , Nonnull(const MARRAY_T*) , size_t);
-static inline
-warn_unused Marray(MARRAY_T) Marray_from(MARRAY_T)(const Allocator , Nonnull(const MARRAY_T*), size_t);
-static inline MARRAY_T
-Marray_pop(MARRAY_T)(Nonnull(Marray(MARRAY_T)*));
-static inline warn_unused MARRAY_T Marray_peek(MARRAY_T)(Nonnull(Marray(MARRAY_T)*));
+static inline void Marray_extend(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator , Nonnull(const MARRAY_T*) , size_t);
 static inline void Marray_reserve(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator , size_t);
 static inline void Marray_cleanup(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), const Allocator );
-static inline force_inline void Marray_clear(MARRAY_T)(Nonnull(Marray(MARRAY_T)*));
-static inline Errorable_f(size_t) Marray_find(MARRAY_T)(Nonnull(Marray(MARRAY_T)*), MARRAY_T);
 #endif
 
 #ifndef MARRAY_DECL_ONLY
 PushDiagnostic()
 SuppressUnusedFunction()
 
-static inline void
+static inline
+void
 Marray_ensure(MARRAY_T)(Nonnull(Marray(MARRAY_T)*)marray, const Allocator a, size_t n_additional){
     size_t required_capacity = marray->count + n_additional;
     if(marray->capacity >= required_capacity)
@@ -113,7 +95,7 @@ Marray_ensure(MARRAY_T)(Nonnull(Marray(MARRAY_T)*)marray, const Allocator a, siz
             }
         }
     marray->data = Allocator_realloc(a, marray->data, marray->capacity*sizeof(MARRAY_T), new_capacity*sizeof(MARRAY_T));
-    assert(marray->data);
+    unhandled_error_condition(!marray->data);
     marray->capacity = new_capacity;
     }
 
@@ -121,18 +103,17 @@ static inline
 void
 Marray_push(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator a, MARRAY_T value){
     Marray_ensure(MARRAY_T)(marray, a, 1);
-    marray->data[marray->count] = value;
-    marray->count++;
+    marray->data[marray->count++] = value;
     }
 
 static inline
 Nonnull(MARRAY_T*)
 Marray_alloc(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator a){
     Marray_ensure(MARRAY_T)(marray, a, 1);
-    MARRAY_T* result = &marray->data[marray->count];
-    marray->count++;
+    MARRAY_T* result = &marray->data[marray->count++];
     return result;
     }
+
 static inline
 size_t
 Marray_alloc_index(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator a){
@@ -173,32 +154,9 @@ static inline
 void
 Marray_extend(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator  a, Nonnull(const MARRAY_T*) values, size_t n_values){
     Marray_ensure(MARRAY_T)(marray, a, n_values);
-    memcpy(marray->data+marray->count, values, n_values*(sizeof(marray->data[0])));
+    memcpy(marray->data+marray->count, values, n_values*(sizeof(MARRAY_T)));
     marray->count+=n_values;
     return;
-    }
-
-static inline
-Marray(MARRAY_T)
-Marray_from(MARRAY_T)(const Allocator a, Nonnull(const MARRAY_T*) values, size_t n_values){
-    Marray(MARRAY_T) result = {};
-    Marray_extend(MARRAY_T)(&result, a, values, n_values);
-    return result;
-    }
-
-static inline
-MARRAY_T
-Marray_pop(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray){
-    assert(marray->count);
-    marray->count--;
-    return marray->data[marray->count];
-    }
-
-static inline
-MARRAY_T
-Marray_peek(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray){
-    assert(marray->count);
-    return marray->data[marray->count-1];
     }
 
 static inline
@@ -210,7 +168,7 @@ Marray_reserve(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator a, s
     size_t new_size = n * sizeof(MARRAY_T);
     marray->data = Allocator_realloc(a, marray->data, old_size, new_size);
     marray->capacity = n;
-    assert(marray->data);
+    unhandled_error_condition(!marray->data);
     return;
     }
 
@@ -218,32 +176,12 @@ static inline
 void
 Marray_cleanup(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator a){
     Allocator_free(a, marray->data, marray->capacity*sizeof(MARRAY_T));
-    marray->data = 0;
+    marray->data = NULL;
     marray->count = 0;
     marray->capacity = 0;
     return;
     }
 
-static inline
-force_inline
-void
-Marray_clear(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray){
-    marray->count = 0;
-    return;
-    }
-
-static inline
-Errorable_f(size_t)
-Marray_find(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, MARRAY_T needle){
-    Errorable(size_t) result = {};
-    for (size_t i = 0; i < marray->count; i++){
-        if(memcmp(&marray->data[i], &needle, sizeof(MARRAY_T))==0){
-            result.result = i;
-            return result;
-            }
-        }
-    Raise(NOT_FOUND);
-    }
 PopDiagnostic()
 #endif
 

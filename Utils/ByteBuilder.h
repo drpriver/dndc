@@ -24,7 +24,7 @@ _resize_bb(Nonnull(ByteBuilder*) bb, size_t size){
         bb->allocator = get_mallocator();
         }
     unsigned char* new_data = Allocator_realloc(bb->allocator, bb->data, bb->capacity, size);
-    assert(new_data);
+    unhandled_error_condition(!new_data);
     bb->data = new_data;
     bb->capacity = size;
     }

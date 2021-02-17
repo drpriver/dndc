@@ -88,7 +88,7 @@ create_msb(size_t size, const Allocator a){
         .capacity=size,
         .cursor = 0,
         };
-    assert(msb.data);
+    unhandled_error_condition(!msb.data);
     return msb;
     }
 
@@ -96,7 +96,7 @@ static inline
 void
 _resize_msb(Nonnull(MStringBuilder*) msb, const Allocator a, size_t size){
     char* new_data = Allocator_realloc(a, msb->data, msb->capacity, size);
-    assert(new_data);
+    unhandled_error_condition(!new_data);
     msb->data = new_data;
     msb->capacity = size;
     }
