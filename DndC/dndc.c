@@ -954,6 +954,7 @@ static
 Errorable_f(void)
 run_the_parser(uint64_t flags, LongString source_path, LongString output_path, LongString depends_dir){
     auto t0 = get_t();
+    MStringBuilder msb = {};
     Errorable(void) result = {};
     StringView path;
     if(flags & PARSE_SOURCE_PATH_IS_DATA_NOT_PATH)
@@ -993,7 +994,8 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
         auto source_err = load_source_file(&ctx, path);
         if(source_err.errored){
             report_error(flags, "Unable to open %.*s", (int)path.length, path.text);
-            Raise(source_err.errored);
+            result.errored = source_err.errored;
+            goto cleanup;
             }
         source = unwrap(source_err);
         }
@@ -1017,10 +1019,10 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
     report_stat(ctx.flags, "Initial parsing took: %.3fms", (after_parse-before_parse)/1000.);
     if(e.errored){
         report_error(flags, "%s", ctx.error_message.text);
-        Raise(e.errored);
+        result.errored = e.errored;
+        goto cleanup;
         }
     }
-    MStringBuilder msb = {};
     auto before_imports = get_t();
     for(size_t i = 0; i < ctx.imports.count; i++){
         auto handle = ctx.imports.data[i];
@@ -1032,7 +1034,8 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
             auto child = get_node(&ctx, child_handle);
             if(child->type != NODE_STRING){
                 node_print_err(&ctx, child, "import child is not a string");
-                Raise(PARSE_ERROR);
+                result.errored = PARSE_ERROR;
+                goto cleanup;
                 }
             filename = child->header;
             child->type = NODE_CONTAINER;
@@ -1040,7 +1043,8 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
             auto imp_e = load_source_file(&ctx, filename);
             if(imp_e.errored){
                 node_print_err(&ctx, child, "Unable to open '%.*s'", (int)filename.length, filename.text);
-                Raise(imp_e.errored);
+                result.errored = imp_e.errored;
+                goto cleanup;
                 }
             auto imp_text = unwrap(imp_e);
             set_context_source(&ctx, filename, imp_text.text);
@@ -1048,7 +1052,8 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
             auto parse_e = parse(&ctx, child_handle);
             if(parse_e.errored){
                 report_error(flags, "%s", ctx.error_message.text);
-                Raise(parse_e.errored);
+                result.errored = parse_e.errored;
+                goto cleanup;
                 }
             }
         }
@@ -1092,6 +1097,7 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
     bool binary_work_to_be_done = !!job.sourcepaths.count;
     if(binary_work_to_be_done){
         if(flags & PARSE_NO_THREADS){
+            // Do it ourselves.
             binary_worker(&job);
             }
         else{
@@ -1112,7 +1118,8 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
         auto e = init_python_docparser(flags);
         if(e.errored) {
             report_error(flags, "Failed to initialize python\n");
-            Raise(e.errored);
+            result.errored = e.errored;
+            goto cleanup;
             }
         auto after = get_t();
         report_stat(ctx.flags, "Python startup took: %.3fms", (after-before)/1000.);
@@ -1134,7 +1141,8 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
             auto py_err = execute_python_string(&ctx, str.text, handle);
             if(py_err.errored){
                 report_error(flags, "%s", ctx.error_message.text);
-                Raise(py_err.errored);
+                result.errored = py_err.errored;
+                goto cleanup;
                 }
             }
             auto node = get_node(&ctx, handle);
@@ -1190,7 +1198,8 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
         }
     if(NodeHandle_eq(ctx.root_handle, INVALID_NODE_HANDLE)){
         report_error(flags, "ctx has no root Node.");
-        Raise(PARSE_ERROR);
+        result.errored = PARSE_ERROR;
+        goto cleanup;
         }
     // check that the tree is not too deep!
     {
@@ -1198,7 +1207,8 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
     auto e = check_depth(&ctx);
     if(e.errored){
         report_error(flags, "%s", ctx.error_message.text);
-        Raise(PARSE_ERROR);
+        result.errored = e.errored;
+        goto cleanup;
         }
     auto after = get_t();
     report_stat(ctx.flags, "Checking depth took %.3fms", (after-before)/1000.);
@@ -1211,7 +1221,8 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
         report_stat(ctx.flags, "Link resolving took: %.3fms", (after-before)/1000.);
         if(ctx.error_message.length){
             report_error(flags, "%s", ctx.error_message.text);
-            Raise(PARSE_ERROR);
+            result.errored = PARSE_ERROR;
+            goto cleanup;
             }
     }
 
@@ -1239,7 +1250,8 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
                 // This looks weird, but I am formatting the error.
                 node_set_err(&ctx, link_str_node, "%s", ctx.error_message.text);
                 report_error(flags, "%s", ctx.error_message.text);
-                Raise(e.errored);
+                result.errored = e.errored;
+                goto cleanup;
                 }
             }
         }
@@ -1286,7 +1298,8 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
             auto e = render_node(&ctx, &sb, child, 1);
             if(e.errored){
                 report_error(flags, "%s", ctx.error_message.text);
-                Raise(e.errored);
+                result.errored = e.errored;
+                goto cleanup;
                 }
             }
             if(!sb.cursor){
@@ -1312,7 +1325,8 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
 
     if(e.errored){
         report_error(flags, "%s", ctx.error_message.text);
-        Raise(e.errored);
+        result.errored = e.errored;
+        goto cleanup;
         }
     auto str = msb_borrow(&msb, ctx.allocator);
     if(!output_path.length){
@@ -1327,7 +1341,8 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
     if(write_err.errored){
         ERROR("Error on write: %s", get_error_name(write_err));
         perror("Error on write");
-        Raise(write_err.errored);
+        result.errored = write_err.errored;
+        goto cleanup;
         }
     }
     if(depends_dir.length){
@@ -1380,10 +1395,12 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
         if(write_err.errored){
             ERROR("Error on write: %s", get_error_name(write_err));
             perror("Error on write");
-            Raise(write_err.errored);
+            result.errored = write_err.errored;
+            goto cleanup;
             }
         }
-    success:
+    success:;
+    cleanup:;
     msb_destroy(&msb, ctx.allocator);
     report_stat(ctx.flags, "la_.high_water = %zu", la_.high_water);
     if(!(flags & PARSE_NO_CLEANUP)){
