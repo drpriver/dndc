@@ -1,4 +1,3 @@
-#define DOCPARSER_VERSION "0.1.0"
 #ifdef LOG_LEVEL
 #undef LOG_LEVEL
 #endif
@@ -10,15 +9,20 @@
 #include "linear_allocator.h"
 #include "long_string.h"
 #include "MStringBuilder.h"
+#include "msb_extensions.h"
 #include "measure_time.h"
 #include "argument_parsing.h"
 #include "base64.h"
-#include "json_util.h"
 #include "recording_allocator.h"
 #include "dndc_types.h"
 #include "thread_utils.h"
 #include "bb_read_bin_file.h"
 #include "mallocator.h"
+
+#define DNC_MAJOR 0
+#define DNC_MINOR 2
+#define DNC_MICRO 0
+#define DNDC_VERSION STRINGIFY(DNC_MAJOR) "." STRINGIFY(DNC_MINOR) "." STRINGIFY(DNC_MICRO)
 
 static
 Errorable_f(LongString)
@@ -47,96 +51,40 @@ static
 THREADFUNC(binary_worker){
     auto before = get_t();
     BinaryJob* jobp = thread_arg;
-    auto job = *jobp;
-    auto count = job.sourcepaths.count;
-    auto data = job.sourcepaths.data;
+    bool report_time = jobp->report_time;
+    const Allocator a = jobp->a;
+    size_t count = jobp->sourcepaths.count;
+    StringView* data = jobp->sourcepaths.data;
     MStringBuilder sb = {};
     ByteBuilder bb = {};
-    bb.allocator = job.a;
+    bb.allocator = a;
+    Marray(LoadedSource) loaded = {};
+    Marray_reserve(LoadedSource)(&loaded, a, count);
     for(size_t i = 0; i < count; i++){
         auto sv = data[i];
-        msb_write_str(&sb, job.a, sv.text, sv.length);
-        msb_nul_terminate(&sb, job.a);
-        auto path = msb_borrow(&sb, job.a);
-        auto e = read_and_base64_bin_file(&bb, job.a, path.text);
+        msb_write_str(&sb, a, sv.text, sv.length);
+        msb_nul_terminate(&sb, a);
+        auto path = msb_borrow(&sb, a);
+        auto e = read_and_base64_bin_file(&bb, a, path.text);
         if(e.errored){
             // We'll let the renderer report the error when it tries
             // to load it.
             msb_reset(&sb);
             continue;
             }
-        auto s = Marray_alloc(LoadedSource)(&job.loaded, job.a);
-        s->sourcepath = msb_detach(&sb, job.a);
+        auto s = Marray_alloc(LoadedSource)(&loaded, a);
+        s->sourcepath = msb_detach(&sb, a);
         s->sourcetext = unwrap(e);
         }
-    msb_destroy(&sb, job.a);
+    msb_destroy(&sb, a);
     bb_destroy(&bb);
-    jobp->loaded = job.loaded;
+    jobp->loaded = loaded;
     auto after = get_t();
-    if(job.report_time)
+    if(report_time)
         fprintf(stderr, "Info: Binary worker took %.3fms\n", (after-before)/1000.);
     return 0;
     }
 
-
-static inline
-int
-msb_write_kebab(Nonnull(MStringBuilder*)msb, const Allocator a, Nonnull(const char*)text, size_t length){
-    int n_written = 0;
-    bool want_write_hyphen = false;
-    for(size_t i = 0; i < length; i++){
-        char c = text[i];
-        switch(c){
-            case 'A' ... 'Z':
-                c |= 0x20; // tolower
-                // fall-through
-            case 'a' ... 'z':
-            case '0' ... '9':
-                if(want_write_hyphen){
-                    msb_write_char(msb, a, '-');
-                    want_write_hyphen = false;
-                    }
-                msb_write_char(msb, a, c);
-                n_written += 1;
-                continue;
-            case ' ': case '\t': case '-':
-                if(n_written)
-                    want_write_hyphen = true;
-                continue;
-            default:
-                continue;
-            }
-        }
-    return n_written;
-    }
-
-static inline
-void
-msb_write_title(Nonnull(MStringBuilder*) restrict msb, const Allocator a, Nonnull(const char*) restrict str, size_t len){
-    if(not len)
-        return;
-    _check_msb_size(msb, a, len);
-    bool wants_cap = true;
-    for(size_t i = 0; i < len; i++){
-        char c = str[i];
-        switch(c){
-            case 'a' ... 'z':
-                if(wants_cap){
-                    c &= ~0x20;
-                    wants_cap = false;
-                    }
-                break;
-            case 'A' ... 'Z':
-                wants_cap = false;
-                break;
-            default:
-                c = ' ';
-                wants_cap = true;
-                break;
-            }
-        msb->data[msb->cursor++] = c;
-        }
-    }
 #define NODETYPES(apply) \
     apply(ROOT,           0) \
     apply(TEXT,           1) \
@@ -406,6 +354,15 @@ FlagEnum ParseFlags {
 #endif
 
 printf_func(3, 4)
+static void set_err(Nonnull(ParseContext*)ctx, NullUnspec(const char*) errchar, Nonnull(const char*) fmt, ...);
+printf_func(3, 4)
+static void node_set_err(Nonnull(ParseContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
+printf_func(3, 4)
+static void node_print_err(Nonnull(ParseContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
+printf_func(2, 3)
+static void report_stat(uint64_t flags, Nonnull(const char*) fmt, ...);
+
+printf_func(3, 4)
 static
 void
 set_err(Nonnull(ParseContext*)ctx, NullUnspec(const char*) errchar, Nonnull(const char*) fmt, ...){
@@ -587,14 +544,6 @@ set_context_source(Nonnull(ParseContext*)ctx, StringView filename, Nonnull(const
     ctx->lineno = 0;
     ctx->filename = filename;
     }
-printf_func(3, 4)
-static void set_err(Nonnull(ParseContext*)ctx, NullUnspec(const char*) errchar, Nonnull(const char*) fmt, ...);
-printf_func(3, 4)
-static void node_set_err(Nonnull(ParseContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
-printf_func(3, 4)
-static void node_print_err(Nonnull(ParseContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
-printf_func(2, 3)
-static void report_stat(uint64_t flags, Nonnull(const char*) fmt, ...);
 static void print_node_and_children(Nonnull(ParseContext*), NodeHandle handle, int depth);
 static Errorable_f(void) parse(Nonnull(ParseContext*), NodeHandle root);
 #define PARSEFUNC(name) static Errorable_f(void) name(Nonnull(ParseContext*)ctx, NodeHandle parent_handle, int indentation)
@@ -873,7 +822,7 @@ int main(int argc, char**argv){
     ArgParser argparser = {
         .name = argv[0],
         .description = "A .dnd to .html parser and compiler.",
-        .version = "Docparser version " DOCPARSER_VERSION "",
+        .version = "dndc version " DNDC_VERSION "",
         .positional.args = pos_args,
         .positional.count = arrlen(pos_args),
         .keyword.args = kw_args,

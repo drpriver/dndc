@@ -4,7 +4,7 @@
 
 # Valid choices are DEBUG, FAST, DEV.
 # Targets should all depend on this file so that
-# ke don't end up with a mix of optimization levels.
+# we don't end up with a mix of optimization levels.
 # DEBUG: -O0, -g, and sanitizers
 # DEV: -O0, -g
 # FAST: -OFast
