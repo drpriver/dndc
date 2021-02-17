@@ -37,14 +37,17 @@ deep-clean: clean clean-tests clean-depends
 
 directories: $(DIRECTORIES)
 
+# Strips trailing whitespace from source files.
 strip:
 	$(PYTHON) -m Scripts.convert --strip_only
+
+# Renames identifiers.
 convert:
 	$(PYTHON) -m Scripts.convert --extensions .h .c
 
 run-tests: clean-tests tests
 
-all: dndc dndcbench README.html
+all: tests dndc dndcbench README.html
 
 install: $(DNDC)
 	@$(INSTALL) -C $< $(INSTALLDIR)/dndc$(EXE)

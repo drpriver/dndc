@@ -26,6 +26,16 @@ LS_to_SV(LongString ls){
     }
 
 static inline
+StringView
+cstr_to_SV(Nonnull(const char*)cstr){
+    auto len = strlen(cstr);
+    return (StringView){
+        .length = len,
+        .text = cstr,
+        };
+    }
+
+static inline
 force_inline
 StringView
 ls_to_string_view(LongString ls){

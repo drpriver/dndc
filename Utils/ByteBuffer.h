@@ -1,5 +1,6 @@
-#ifndef d_memory_h
-#define d_memory_h
+#ifndef BYTE_BUFFER_H
+#define BYTE_BUFFER_H
+// for size_t
 #include <stdlib.h>
 #include "common_macros.h"
 #include "error_handling.h"

@@ -12,7 +12,7 @@
 typedef struct Args {
     // argc/argv should exclude the program name, as it is useless
     int argc;
-    char *_Nonnull *_Nonnull argv;
+    const char *_Nonnull *_Nonnull argv;
 } Args;
 typedef struct ArgParser ArgParser;
 static inline Errorable_f(void) parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args);
@@ -59,8 +59,8 @@ static Nonnull(const char*) const Arg_Type_Names[] = {
 #define ARGDEST(_x) {.type = ARGTYPE((_x)[0]), .pointer=_x}
 
 typedef struct ArgToParse {
-    LongString name;
-    LongString altname1;
+    StringView name;
+    StringView altname1;
     int min_num;
     int max_num;
     int num_parsed;
@@ -219,7 +219,7 @@ print_arg_help(Nonnull(const ArgToParse*) arg){
 
 static inline
 Errorable_f(void)
-parse_arg(Nonnull(ArgToParse*)arg, LongString s){
+parse_arg(Nonnull(ArgToParse*)arg, StringView s){
     Errorable(void) result = {};
     if(arg->num_parsed >= arg->max_num)
         Raise(EXCESS_KWARGS);
@@ -250,7 +250,9 @@ parse_arg(Nonnull(ArgToParse*)arg, LongString s){
         case ARG_FLAG:
             unreachable();
         case ARG_STRING:{
-            LongString* dest = arg->dest.pointer;
+            // This is a hack, our target
+            // is actually a LongString.
+            StringView* dest = arg->dest.pointer;
             dest += arg->num_parsed;
             *dest = s;
             arg->num_parsed += 1;
@@ -276,8 +278,8 @@ static inline
 bool
 check_for_help(Nonnull(Args*) args){
     for(int i = 0; i < args->argc; i++){
-        auto argstring = LongString_borrowed_from_cstring(args->argv[i]);
-        if(LongString_equals(argstring, LS("-h")) or LongString_equals(argstring, LS("--help"))){
+        auto argstring = cstr_to_SV(args->argv[i]);
+        if(SV_equals(argstring, SV("-h")) or SV_equals(argstring, SV("--help"))){
             return true;
             }
         }
@@ -288,8 +290,8 @@ static inline
 bool
 check_for_version(Nonnull(Args*) args){
     for(int i = 0; i < args->argc; i++){
-        auto argstring = LongString_borrowed_from_cstring(args->argv[i]);
-        if(LongString_equals(argstring, LS("--version")))
+        auto argstring = cstr_to_SV(args->argv[i]);
+        if(SV_equals(argstring, SV("--version")))
             return true;
         }
     return false;
@@ -306,7 +308,7 @@ Errorable_f(void)
 parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
     Errorable(void) result = {};
     auto argc = args->argc;
-    char** argv = args->argv;
+    const char** argv = args->argv;
     auto past_the_end = argv+argc;
     if(parser->positional.count){
         Nonnull(ArgToParse*) arg = &parser->positional.args[0];
@@ -323,7 +325,7 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
                 }
             if(argv == past_the_end)
                 break;
-            auto s = LongString_borrowed_from_cstring(*argv);
+            auto s = cstr_to_SV(*argv);
             if(s.length > 1){
                 if(s.text[0] == parser->option_char){
                     // make sure it's not actually a number.
@@ -357,12 +359,12 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
             top:;
             if(argv == past_the_end)
                 break;
-            auto s = LongString_borrowed_from_cstring(*argv);
+            auto s = cstr_to_SV(*argv);
             argv++;
             // always check for an argument match
             for(int i = 0; i < parser->keyword.count; i++){
                 auto a = &parser->keyword.args[i];
-                if(LongString_equals(s, a->name) or LongString_equals(s, a->altname1)){
+                if(SV_equals(s, a->name) or SV_equals(s, a->altname1)){
                     if(arg and !parsed_an_arg){
                         // we got something like --foo --bar when --foo expected an argument
                         Raise(MISSING_ARG);

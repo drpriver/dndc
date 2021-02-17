@@ -7,9 +7,8 @@
 #include <sys/stat.h>
 #include "common_macros.h"
 #include "long_string.h"
-#include "d_memory.h"
+#include "ByteBuffer.h"
 #include "allocator.h"
-#include "ByteBuilder.h"
 
 // #define USE_C_STDIO
 

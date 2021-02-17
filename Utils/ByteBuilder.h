@@ -1,7 +1,7 @@
 #ifndef BYTEBUILDER_H
 #define BYTEBUILDER_H
 #include "common_macros.h"
-#include "d_memory.h"
+#include "ByteBuffer.h"
 #include "allocator.h"
 #include "mallocator.h"
 

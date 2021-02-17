@@ -764,14 +764,14 @@ int main(int argc, char**argv){
     {
     ArgToParse pos_args[] = {
         [0] = {
-            .name = LS("source"),
+            .name = SV("source"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&source_path),
             .help = "Source file (.dnd file) to read from.",
             },
         [1] = {
-            .name = LS("output"),
+            .name = SV("output"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&output_path),
@@ -781,8 +781,8 @@ int main(int argc, char**argv){
         };
     ArgToParse kw_args[] = {
         {
-            .name = LS("-d"),
-            .altname1 = LS("--depends-dir"),
+            .name = SV("-d"),
+            .altname1 = SV("--depends-dir"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&depends_dir),
@@ -790,56 +790,56 @@ int main(int argc, char**argv){
             .hide_default = true,
         },
         {
-            .name = LS("--report-orphans"),
+            .name = SV("--report-orphans"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&report_orphans),
             .help = "Report orphaned nodes (for debugging scripts).",
         },
         {
-            .name = LS("--no-python"),
+            .name = SV("--no-python"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&no_python),
             .help = "Don't execute python nodes.",
         },
         {
-            .name = LS("--print-tree"),
+            .name = SV("--print-tree"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&print_tree),
             .help = "Print out the entire document tree.",
         },
         {
-            .name = LS("--print-links"),
+            .name = SV("--print-links"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&print_links),
             .help = "Print out all links (and what they target) known by the system.",
         },
         {
-            .name = LS("--print-stats"),
+            .name = SV("--print-stats"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&print_stats),
             .help = "Log some informative statistics.",
         },
         {
-            .name = LS("--allow-bad-links"),
+            .name = SV("--allow-bad-links"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&allow_bad_links),
             .help = "Warn instead of erroring if a link can't be resolved.",
         },
         {
-            .name = LS("--suppress-warnings"),
+            .name = SV("--suppress-warnings"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&suppress_warnings),
             .help = "Don't report non-fatal errors.",
         },
         {
-            .name = LS("--dont-write"),
+            .name = SV("--dont-write"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&dont_write),
@@ -847,14 +847,14 @@ int main(int argc, char**argv){
                 "    Outputfile is exposed to scripts so that must still be given.",
         },
         {
-            .name = LS("--no-threads"),
+            .name = SV("--no-threads"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&no_threads),
             .help = "Do not create worker threads, do everything in the same thread.",
         },
         {
-            .name = LS("--cleanup"),
+            .name = SV("--cleanup"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&cleanup),
@@ -862,7 +862,7 @@ int main(int argc, char**argv){
                 "    Development debugging tool, useless in regular cli use."
         },
         {
-            .name = LS("--use-site"),
+            .name = SV("--use-site"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&use_site),
@@ -880,7 +880,7 @@ int main(int argc, char**argv){
         .keyword.count = arrlen(kw_args),
         .option_char = '-',
         };
-    Args args = argc?(Args){argc-1, argv+1}: (Args){0, 0};
+    Args args = argc?(Args){argc-1, (const char**)argv+1}: (Args){0, 0};
     if(check_for_help(&args)){
         print_help(&argparser);
         return 0;

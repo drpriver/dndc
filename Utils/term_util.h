@@ -10,9 +10,11 @@ typedef struct TermSize {
 static inline TermSize get_terminal_size(void);
 // Have a terminal util header to handle isatty, enable_vt, etc.
 #ifdef WINDOWS
+
 #ifndef _CRT_NONSTDC_NO_DEPRECATE
 #define _CRT_NONSTDC_NO_DEPRECATE
 #endif
+
 #include <io.h>
 #include <stdio.h>
 #define STDIN_FILENO 0
@@ -26,10 +28,19 @@ static inline
 int isatty(int fd){
     return _isatty(fd);
     }
+
+#include "windowsheader.h"
 // punting for now
 static inline
 TermSize
 get_terminal_size(void){
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    BOOL success = GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+    if(success){
+        int columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+        int rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+        return (TermSize){columns, rows};
+        }
     return (TermSize){80, 24};
     }
 #else
