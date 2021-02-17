@@ -1,3 +1,5 @@
+#ifndef TERMINAL_LOGGER_C
+#define TERMINAL_LOGGER_C
 #include <stdio.h>
 #include <stdarg.h>
 #include "common_macros.h"
@@ -51,3 +53,5 @@ void logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, 
     vlogfunc(log_level, file, func, line, fmt, args);
     va_end(args);
     }
+
+#endif

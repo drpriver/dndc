@@ -19,3 +19,10 @@ FUZZDIR=FuzzCorpus
 $(FUZZDIR): ; @$(MKDIR) -p $@
 
 
+$(BINDIR)/TestDndC_fast$(EXE): DndC/TestDndC.c $(DEPDIR)/TestDndC_fast.dep $(OBJDIR)/frozenstdlib.o | $(DIRECTORIES)
+	$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndC_fast.dep $(OBJDIR)/frozenstdlib.o $< -o $@ -g  $(LINK_FLAGS) $(PYLDFLAGS)
+	$@
+$(BINDIR)/TestDndC_debug$(EXE): DndC/TestDndC.c $(DEPDIR)/TestDndC_debug.dep $(OBJDIR)/frozenstdlib.o | $(DIRECTORIES)
+	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndC_debug.dep $(OBJDIR)/frozenstdlib.o $< -o $@ -g  $(LINK_FLAGS) $(PYLDFLAGS)
+	$@
+TestDndC: $(BINDIR)/TestDndC_debug$(EXE) $(BINDIR)/TestDndC_fast$(EXE)

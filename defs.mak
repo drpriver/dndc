@@ -119,19 +119,19 @@ FLAGS=$(INCLUDE_FLAGS) $(WARNING_FLAGS) $(PLATFORM_FLAGS)
 
 
 
-TESTS:=$(wildcard **/Test*.c)
+TESTS:=$(filter-out DndC/TestDndC.c, $(wildcard **/Test*.c))
 # all of the tests are compiled both in fast and debug mode
 # as bugs sometimes will present themselves in one and not the other
 
 define TEST_template
 $(BINDIR)/$(notdir $(basename $(1)))_fast$(EXE): $(DEPDIR)/$(notdir $(1))_fast.dep defs.mak | $(DIRECTORIES)
-	@$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(TDEPFLAGS) $(DEPDIR)/$(notdir $(1))_fast.dep $(1) -o $(BINDIR)/$(notdir $(basename $(1)))_fast$(EXE) -g  $(LINK_FLAGS)
-	$(BINDIR)/$(notdir $(basename $(1)))_fast$(EXE)
+	$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(TDEPFLAGS) $(DEPDIR)/$(notdir $(1))_fast.dep $(1) -o $$@ -g  $(LINK_FLAGS)
+	$$@
 $(BINDIR)/$(notdir $(basename $(1)))_debug$(EXE): $(DEPDIR)/$(notdir $(1))_debug.dep defs.mak | $(DIRECTORIES)
-	@$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(TDEPFLAGS) $(DEPDIR)/$(notdir $(1))_debug.dep $(1) -o $(BINDIR)/$(notdir $(basename $(1)))_debug$(EXE) -g  $(LINK_FLAGS)
-	$(BINDIR)/$(notdir $(basename $(1)))_debug$(EXE)
+	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(TDEPFLAGS) $(DEPDIR)/$(notdir $(1))_debug.dep $(1) -o $$@ -g  $(LINK_FLAGS)
+	$$@
 $(notdir $(basename $(1))): $(BINDIR)/$(notdir $(basename $(1)))_debug$(EXE) $(BINDIR)/$(notdir $(basename $(1)))_fast$(EXE)
 endef
 $(foreach test, $(TESTS), $(eval $(call TEST_template, $(test))))
 
-tests: $(notdir $(basename $(TESTS)))
+tests: $(notdir $(basename $(TESTS))) TestDndC

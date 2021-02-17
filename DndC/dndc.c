@@ -966,8 +966,6 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
     ParseContext ctx = {
         .flags = flags,
         .allocator = allocator,
-        // .allocator = mallocator,
-        // .allocator = &recorded,
         .temp_allocator = la,
         .titlenode = INVALID_NODE_HANDLE,
         .navnode = INVALID_NODE_HANDLE,
@@ -1387,7 +1385,7 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
         }
     success:
     msb_destroy(&msb, ctx.allocator);
-    DBGPrint(la_.high_water);
+    report_stat(ctx.flags, "la_.high_water = %zu", la_.high_water);
     if(!(flags & PARSE_NO_CLEANUP)){
         auto before = get_t();
         if(ctx.flags & PARSE_PRINT_STATS){

@@ -13,6 +13,9 @@ typedef struct test_stats (*_test_func)(void);
 typedef Nonnull(_test_func) test_func;
 static test_func test_funcs[1000];
 int test_funcs_count;
+static inline void RegisterTest(test_func);
+// Users should register their test by defining this function.
+static inline void register_tests(void);
 
 #define TestReport(fmt, ...) fprintf(stderr, gray_coloring "%-16.16s %5d: " reset_coloring fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 #define TestExpect(cond) ({\
@@ -151,7 +154,6 @@ void RegisterTest(test_func func){
     assert(test_funcs_count < arrlen(test_funcs));
     test_funcs[test_funcs_count++] = func;
     }
-static inline void register_tests(void);
 
 static 
 struct test_stats 

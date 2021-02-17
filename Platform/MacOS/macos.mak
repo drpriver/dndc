@@ -10,7 +10,7 @@ DEBUG_FLAGS=-DLOG_LEVEL=4\
 	 -fsanitize=address\
 	 -O0\
 	 -g
-LINK_FLAGS+=-Wl,-dead_strip
+# LINK_FLAGS+=-Wl,-dead_strip
 RM=rm -rf
 MV=mv
 TOUCH=touch
