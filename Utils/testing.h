@@ -64,7 +64,6 @@ static inline void RegisterTest(test_func);
 static inline void register_tests(void);
 
 
-
 // Internal use, use the RegisterTest function to register a test.
 // This array is where registered tests are located.
 // A single test program can not directly register more than 1000 tests.
@@ -82,8 +81,11 @@ Nonnull(const char*) _test_color_blue  = ""
 Nonnull(const char*) _test_color_green = ""
 Nonnull(const char*) _test_color_red   = ""
 #endif
+// 
 // Internal use macro to report test results within a failed condition.
-// You can use it if you want.
+// You can use it if you want in your test functions if you need more reporting.
+// It's an fprintf wrapper (appends a newline though).
+//
 #define TestReport(fmt, ...) \
     fprintf(stderr, "%s%-16.16s %5d: %s" fmt "\n",\
         _test_color_gray, __FILE__, __LINE__, \
@@ -109,13 +111,15 @@ Nonnull(const char*) _test_color_red   = ""
 // Expects lhs == rhs, using the == operator
 //
 #define TestExpectEquals(lhs, rhs)do{\
+        auto _lhs = lhs; \
+        auto _rhs = rhs; \
         TEST_stats.executed++;\
-        if (!(lhs == rhs)) {\
+        if (!(_lhs == _rhs)) {\
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s == %s", #lhs, #rhs); \
-            HEREPrint(lhs);\
-            HEREPrint(rhs);\
+            HEREPrint(_lhs);\
+            HEREPrint(_rhs);\
             }\
         }while(0)
 
@@ -123,13 +127,15 @@ Nonnull(const char*) _test_color_red   = ""
 // Expects lhs != rhs, using the != operator
 //
 #define TestExpectNotEquals(lhs, rhs) do{\
+        auto _lhs = lhs; \
+        auto _rhs = rhs; \
         TEST_stats.executed++;\
-        if (!(lhs != rhs)) {\
+        if (!(_lhs != _rhs)) {\
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s != %s", #lhs, #rhs); \
-            HEREPrint(lhs);\
-            HEREPrint(rhs);\
+            HEREPrint(_lhs);\
+            HEREPrint(_rhs);\
             }\
         }while(0)
 
@@ -210,15 +216,17 @@ Nonnull(const char*) _test_color_red   = ""
 // Asserts lhs is equal to rhs, using ==
 //
 #define TestAssertEquals(lhs, rhs) do{\
+        auto _lhs = lhs; \
+        auto _rhs = rhs; \
         TEST_stats.executed++;\
-        if (! (lhs==rhs)){ \
+        if (! (_lhs==_rhs)){ \
             TEST_stats.failures++; \
             TEST_stats.assert_failures++; \
             TestReport("Test condition failed");\
             TestReport("%s prematurely ended", __func__);\
             TestReport("%s == %s", #lhs, #rhs); \
-            HEREPrint(lhs);\
-            HEREPrint(rhs); \
+            HEREPrint(_lhs);\
+            HEREPrint(_rhs); \
             return TEST_stats;\
             }\
         }while(0)

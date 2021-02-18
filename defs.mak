@@ -133,10 +133,10 @@ TESTS:=$(filter-out DndC/TestDndC.c, $(wildcard **/Test*.c))
 
 define TEST_template
 $(BINDIR)/$(notdir $(basename $(1)))_fast$(EXE): $(DEPDIR)/$(notdir $(1))_fast.dep defs.mak | $(DIRECTORIES)
-	$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(TDEPFLAGS) $(DEPDIR)/$(notdir $(1))_fast.dep $(1) -o $$@ -g  $(LINK_FLAGS)
+	@$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(TDEPFLAGS) $(DEPDIR)/$(notdir $(1))_fast.dep $(1) -o $$@ -g  $(LINK_FLAGS)
 	$$@
 $(BINDIR)/$(notdir $(basename $(1)))_debug$(EXE): $(DEPDIR)/$(notdir $(1))_debug.dep defs.mak | $(DIRECTORIES)
-	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(TDEPFLAGS) $(DEPDIR)/$(notdir $(1))_debug.dep $(1) -o $$@ -g  $(LINK_FLAGS)
+	@$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(TDEPFLAGS) $(DEPDIR)/$(notdir $(1))_debug.dep $(1) -o $$@ -g  $(LINK_FLAGS)
 	$$@
 $(notdir $(basename $(1))): $(BINDIR)/$(notdir $(basename $(1)))_debug$(EXE) $(BINDIR)/$(notdir $(basename $(1)))_fast$(EXE)
 endef
