@@ -6,6 +6,7 @@
 #include "ByteBuilder.h"
 #include "error_handling.h"
 
+// The size needed to encode a data buffer into a string.
 static inline
 size_t
 base64_encode_size(size_t src_length){
@@ -13,6 +14,8 @@ base64_encode_size(size_t src_length){
     size_needed = size_needed / 3 + !!(size_needed % 3);
     return size_needed;
     }
+
+// The size needed to decode a str into a buffer.
 static inline
 size_t
 base64_decode_size(size_t src_length){
@@ -21,7 +24,9 @@ base64_decode_size(size_t src_length){
     return size_needed;
     }
 
-
+// Base64 encodes the data into the output string.
+// This uses '+' and '/' and does not pad the end with '='.
+// Some implementations don't like that, but they are wrong!
 static inline
 size_t
 base64_encode(Nonnull(char*) restrict dst, size_t dst_length, Nonnull(const void*) restrict src, size_t src_length){
@@ -170,6 +175,7 @@ base64_encode(Nonnull(char*) restrict dst, size_t dst_length, Nonnull(const void
     assert(used_length == dst_length);
     return used_length;
 #if 0
+    // A simpler, but slower version.
     const uint8_t base64_table[] = {
         [ 0] = 'A', [16] = 'Q', [32] = 'g', [48] = 'w',
         [ 1] = 'B', [17] = 'R', [33] = 'h', [49] = 'x',
@@ -254,6 +260,7 @@ base64_encode(Nonnull(char*) restrict dst, size_t dst_length, Nonnull(const void
 #endif
     }
 
+// Writes the base64 representation of the data buffer into the builder.
 static inline
 void
 msb_write_b64(Nonnull(MStringBuilder*)restrict sb, const Allocator a, Nonnull(const void*) data, size_t length){
@@ -266,6 +273,7 @@ msb_write_b64(Nonnull(MStringBuilder*)restrict sb, const Allocator a, Nonnull(co
     sb->cursor += size_used;
     }
 
+// Decodes a base64 string into a data buffer.
 // Returns a DECODING_ERROR if data is not a base64 character, like it's a '}' or something.
 // Doesn't support '=' as zero end-padding.
 static inline
@@ -394,6 +402,8 @@ base64_decode(Nonnull(void*)restrict dst, size_t dst_length, Nonnull(const uint8
     return result;
     }
 
+// Decodes a base64 string into a ByteBuilder.
+// ByteBuilder handles things like allocating the proper size, etc.
 static inline
 Errorable_f(void)
 bb_decode_b64(Nonnull(ByteBuilder*)bb, Nonnull(const uint8_t*) restrict src, size_t src_length){

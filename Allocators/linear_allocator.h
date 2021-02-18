@@ -17,6 +17,21 @@ typedef struct LinearAllocator {
     NullUnspec(const char*) name; // for logging purposes
 } LinearAllocator;
 
+#ifdef WINDOWS
+// Weird to have this here, but windows is missing strdup and
+// we strdup the name in the linear storage for error reporting purposes.
+static inline
+Nonnull(char*)
+strdup(Nonnull(const char*)str){
+    size_t len = strlen(str)+1;
+    char* result = malloc(len);
+    unhandled_error_condition(!result);
+    memcpy(result, str, len);
+    return result;
+    }
+#endif
+
+
 /// name is strdup'd
 static inline warn_unused
 LinearAllocator

@@ -827,7 +827,6 @@ int main(int argc, char**argv){
         .positional.count = arrlen(pos_args),
         .keyword.args = kw_args,
         .keyword.count = arrlen(kw_args),
-        .option_char = '-',
         };
     Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
     if(check_for_help(&args)){

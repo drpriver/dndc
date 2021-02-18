@@ -52,7 +52,7 @@ TermSize
 get_terminal_size(void){
     struct winsize w;
     int err = ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-    if(err < -1){
+    if(err == -1){
         char* cols_s = getenv("COLUMNS");
         if(!cols_s)
             goto err;

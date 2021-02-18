@@ -1,41 +1,8 @@
 #ifndef STR_UTIL_H
 #define STR_UTIL_H
 #include <string.h>
-#include "linear_allocator.h"
 #include "common_macros.h"
 #include "long_string.h"
-
-#ifdef WINDOWS
-static inline
-Nonnull(char*)
-strdup(Nonnull(const char*)str){
-    size_t len = strlen(str)+1;
-    char* result = malloc(len);
-    unhandled_error_condition(!result);
-    memcpy(result, str, len);
-    return result;
-    }
-#endif
-
-static inline
-bool
-str_startswith(Nonnull(const char*) haystack, size_t hay_len, Nonnull(const char*) needle, size_t needle_len){
-    if(!needle_len)
-        return true;
-    if(hay_len < needle_len)
-        return false;
-    return memcmp(haystack, needle, needle_len) == 0;
-    }
-
-static inline
-bool
-str_endswith(Nonnull(const char*) haystack, size_t hay_len, Nonnull(const char*) needle, size_t needle_len){
-    if(!needle_len)
-        return true;
-    if(hay_len < needle_len)
-        return false;
-    return memcmp(haystack+hay_len-needle_len, needle, needle_len) == 0;
-    }
 
 static inline
 StringView
