@@ -4,27 +4,9 @@
 #include <limits.h>
 #include "common_macros.h"
 #include "error_handling.h"
-
-static inline
-Errorable_f(uint64_t)
-power64(uint64_t base, uint64_t exp){
-    Errorable(uint64_t) result = {};
-    uint64_t res = 1;
-    for(;;){
-        if (exp & 1){
-            if(__builtin_mul_overflow(res, base, &res))
-                Raise(OVERFLOWED_VALUE);
-            }
-        exp /= 2;
-        if(!exp)
-            break;
-        if(__builtin_mul_overflow(base, base, &base))
-            Raise(OVERFLOWED_VALUE);
-        }
-    result.result = res;
-    return result;
-    }
-
+//
+// Functions for parsing strings into integers.
+//
 
 static inline
 Errorable_f(uint64_t)
@@ -227,8 +209,9 @@ parse_binary_inner(Nonnull(const char*) str, size_t length){
     return result;
     }
 
-// parses an unsigned integer, in whatever format is comfortable for a human
-// accepts 0x hexes, 0b binary, plain integers, and also # hexes
+//
+// Parses an unsigned integer, in whatever format is comfortable for a human.
+// Accepts 0x hexes, 0b binary, plain decimals, and also # hexes.
 static inline
 Errorable_f(uint64_t)
 parse_unsigned_human(Nonnull(const char*) str, size_t length){
@@ -244,44 +227,6 @@ parse_unsigned_human(Nonnull(const char*) str, size_t length){
             return parse_binary(str, length);
         }
     return parse_uint64(str, length);
-    }
-
-typedef struct Integer {
-    bool is_signed;
-    union {
-        uint64_t value;
-        int64_t svalue;
-        };
-    } Integer;
-
-Errorable_declare(Integer);
-static inline
-Errorable_f(Integer)
-parse_human_integer(Nonnull(const char*) str, size_t length){
-    Errorable(Integer) result = {};
-    if(not length)
-        Raise(UNEXPECTED_END);
-    if(str[0] == '-'){
-        result.result.svalue = attempt(parse_int64(str, length));
-        result.result.is_signed = true;
-        return result;
-        }
-    if(str[0] == '#'){
-        result.result.value = attempt(parse_pound_hex(str, length));
-        return result;
-        }
-    if(str[0] == '0' and length > 1){
-        if(str[1] == 'x' or str[1] == 'X'){
-            result.result.value = attempt(parse_hex(str, length));
-            return result;
-            }
-        if(str[1] == 'b' or str[1] == 'B'){
-            result.result.value = attempt(parse_binary(str, length));
-            return result;
-            }
-        }
-    result.result.value = attempt(parse_uint64(str, length));
-    return result;
     }
 
 #endif

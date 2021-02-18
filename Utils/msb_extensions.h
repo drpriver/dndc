@@ -1,6 +1,27 @@
 #ifndef MSB_EXTENSIONS_H
 #define MSB_EXTENSIONS_H
+#include "MStringBuilder.h"
 
+//
+// These functions are not universal enough to go in the main MStringBuilder
+// header, but require access to internal functions and state for efficiency
+// purposes. Thus we prefix them with msb_, but define them here.
+// One of the upsides of no method-call syntax is extension methods like this
+// look identical to methods in the data type's definition.
+// Whether that's worth not getting to do sb.write_str("foo", 3); is
+// left as an exercise to the reader.
+//
+
+//
+// Writes the string into the builder, but kebabs the string.
+// "Kebabs" the string, turning into something useable as an html id.
+// Preserves digits, lowercases alphabetical characters and turns
+// gaps between alphanumeric into a single hyphen (thus the kebab).
+//
+// For example (quotes are just for clarity, they are not included):
+//  "My wonderful cat, Lucy" -> "my-wonderful-cat-lucy"
+//  "123, North Elm St." -> "123-north-elm-st"
+//
 static inline
 int
 msb_write_kebab(Nonnull(MStringBuilder*)msb, const Allocator a, Nonnull(const char*)text, size_t length){
@@ -32,6 +53,11 @@ msb_write_kebab(Nonnull(MStringBuilder*)msb, const Allocator a, Nonnull(const ch
     return n_written;
     }
 
+//
+// Writes the string into the builder, but title-cases the string.
+// Capitalizes the first letter of each word (even articles like "an" unfortunately).
+// For example:
+//  "this is some text." -> "This Is Some Text."
 static inline
 void
 msb_write_title(Nonnull(MStringBuilder*) restrict msb, const Allocator a, Nonnull(const char*) restrict str, size_t len){
@@ -60,6 +86,11 @@ msb_write_title(Nonnull(MStringBuilder*) restrict msb, const Allocator a, Nonnul
         }
     }
 
+//
+// Writes the given string into the builder, escaping those characters required
+// by json (kind of, I don't think I handle unicode properly).
+// Does not include the containing quotation marks. Write those yourself if you
+// need them.
 static inline
 void
 msb_write_json_escaped_str(Nonnull(MStringBuilder*)restrict sb, const Allocator a, Nonnull(const char*)restrict str, size_t length){

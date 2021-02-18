@@ -12,3 +12,4 @@ Depends
 PythonEmbed/frozen
 README.html
 FuzzCorpus
+opt.mak

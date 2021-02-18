@@ -4,6 +4,7 @@
 #include "long_string.h"
 #include "MStringBuilder.h"
 
+// Helper to distinguish what is a path separator.
 static inline
 force_inline
 bool
@@ -15,6 +16,8 @@ is_sep(char c){
     #endif
     }
 
+// Helper to find the next slash in a string, but also finding backslashes
+// on Windows.
 static inline
 force_inline
 Nullable(void*)
@@ -28,8 +31,11 @@ memsep(Nonnull(const char*)str, size_t length){
     }
 
 
-// probably more efficient way of doing these.
-// Wish there was a reverse memchr
+//
+// Returns the filename component of a path. If the path ends
+// with a slash, returns the empty string.
+// This is different than the posix utility basename.
+//
 static inline
 StringView
 path_basename(StringView path){
@@ -37,6 +43,8 @@ path_basename(StringView path){
         return path;
     const char* basename = path.text;
     const char* end = path.text + path.length;
+    // probably more efficient way of doing these.
+    // Wish there was a reverse memchr
     for(;basename != end;){
         const char* slash = memsep(basename, end-basename);
         if(!slash)
@@ -46,6 +54,12 @@ path_basename(StringView path){
     return (StringView){.text=basename, .length = end - basename};
     }
 
+//
+// Returns the directory portion of the filename.
+// Trailing slashes are stripped from the result, unless the final
+// path is exactly equal to '/'. This allows you to distinguish
+// '/foo' from 'foo' without needing to return a '.' that's not in
+// the original string (as doing so would break pointer arithmetic).
 static inline
 StringView
 path_dirname(StringView path){
@@ -66,6 +80,12 @@ path_dirname(StringView path){
     return result;
     }
 
+//
+// Removes the extension part of a string.
+//
+// Turns /foo/bar/baz.html into /foo/bar/baz
+// Turn /foo/bar into /foo/bar
+//
 static inline
 StringView
 path_strip_extension(StringView path){
@@ -82,6 +102,8 @@ path_strip_extension(StringView path){
     return path;
     }
 
+//
+// Appends a path separator to the builder and then writes the given the string.
 static inline
 void
 msb_append_path(Nonnull(MStringBuilder*)sb, const Allocator a, Nonnull(const char*) restrict path, size_t length){

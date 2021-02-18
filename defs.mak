@@ -53,10 +53,14 @@ DEV_FLAGS=-O0 -g
 # Don't tolerate warnings for tests.
 TEST_FLAGS=-Werror
 
+opt.mak:
+	@echo "Creating default opt.mak"
+	@$(CP) opt.mak.template opt.mak
+
 include opt.mak
 
 # Platform specific nastiness.
-# After including these variables should be set:
+# After inclusion, these variables should be set:
 # CC, PYTHON, PYCFLAGS, PYLDFLAGS,
 # RM, CP, MKDIR, TOUCH, EXE,
 # DEBUG_FLAGS, LINK_FLAGS
@@ -109,7 +113,9 @@ else ifeq ($(SPEED),DEBUG)
 OPT_FLAGS=$(DEBUG_FLAGS)
 else ifeq ($(SPEED),DEV)
 OPT_FLAGS=$(DEV_FLAGS)
-else
+# Only error if opt.mak exists, as make will re-invoke itself
+# after building opt.mak if it is missing.
+else ifeq ($(wildcard opt.mak),opt.mak)
 $(error SPEED must be one of DEBUG|FAST|DEV: is '$(SPEED)')
 endif
 

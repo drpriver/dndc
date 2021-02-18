@@ -1,6 +1,12 @@
 #ifndef MEASURE_TIME_H
 #define MEASURE_TIME_H
 
+//
+// Gets current monotonically increasing time, measured in microseconds.
+// Always succeeds.
+//
+static inline uint64_t get_t(void);
+
 #if defined(LINUX) || defined(DARWIN)
 
 #include <time.h>

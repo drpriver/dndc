@@ -10,51 +10,24 @@
 #include "ByteBuffer.h"
 #include "allocator.h"
 
+// If this is defined, use libc's FILE* to do everything instead of
+// native apis like read or ReadFile.
 // #define USE_C_STDIO
 
+// Read an entire file into a string. Reads it in binary mode, so all
+// bytes are preserved, but we do nul-terminate.
+// Doesn't convert CRLF to newlines or anything like that. The caller
+// should handle both the presence of a carriage return or its absence. Even
+// on Posix platforms, you will encounter files with CRLF, or mixed!
+// Most algorithms want to ignore trailing spaces anyway, so this isn't
+// that big an imposition.
 static inline Errorable_f(LongString) read_file(const Allocator a, Nonnull(const char*)filepath);
+// Read an entire file into a byte buffer. Not guranteed nul-terminated.
 static inline Errorable_f(ByteBuffer) read_bin_file(const Allocator a, Nonnull(const char*)filepath);
+// Write an entire file. Agnostic as to text and binary, opens the file in binary
+// mode. Writes whatever you give it as is, so we don't convert unix newlines to CRLF
+// or anything like that.
 static inline Errorable_f(void) write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_length);
-
-static inline
-Errorable_f(uint64_t)
-get_file_mtime(Nonnull(const char*) filename){
-    Errorable(uint64_t) result = {};
-    struct stat file_stat;
-    if(stat(filename, &file_stat)){
-        Raise(FILE_ERROR);
-        }
-    #ifdef DARWIN
-        auto mtime = &file_stat.st_mtimespec;
-        result.result = mtime->tv_sec * 1000000000llu + mtime->tv_nsec;
-    #elif defined(LINUX)
-        auto mtime = &file_stat.st_mtim;
-        result.result = mtime->tv_sec * 1000000000llu + mtime->tv_nsec;
-    #elif defined(WINDOWS)
-    // check this is correct?
-        result.result = file_stat.st_mtime;
-    #else
-        #error "Unrecognized os"
-    #endif
-    return result;
-    }
-
-// Note: this is almost never what you want, and should
-// instead should just try to open the file for reading if you
-// need to read it or call `open` with the appropriate exclusivity
-// flag if you need to write to a file only if it doesn't exist.
-//
-// However, you might just be checking that a file with the same
-// name exists in two directories at once or something, so this
-// simplifies that.
-static inline
-bool
-file_exists(Nonnull(const char*) filename){
-    struct stat unused;
-    return !stat(filename, &unused);
-    }
-
-
 
 #ifdef USE_C_STDIO
 static inline

@@ -3,6 +3,16 @@
 #include "ByteBuilder.h"
 #include "file_util.h"
 
+//
+// Reads an entire file into a ByteBuilder.
+// Returns an error if the data could not be read for the file for
+// whatever reason (file doesn't exist, some random file error, whatever).
+// The byte builder handles allocating enough data to hold the contents
+// of the file.
+static inline
+Errorable_f(void)
+bb_read_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const char*)filename);
+
 #ifdef USE_C_STDIO
 
 static inline
