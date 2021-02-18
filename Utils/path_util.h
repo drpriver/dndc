@@ -4,12 +4,18 @@
 #include "long_string.h"
 #include "MStringBuilder.h"
 
+#ifdef WINDOWS
+#ifndef BACKSLASH_IS_A_PATH_SEP
+#define BACKSLASH_IS_A_PATH_SEP
+#endif
+#endif
+
 // Helper to distinguish what is a path separator.
 static inline
 force_inline
 bool
 is_sep(char c){
-    #ifdef WINDOWS
+    #ifdef BACKSLASH_IS_A_PATH_SEP
     return c == '/' or c == '\\';
     #else
     return c == '/';
@@ -23,7 +29,7 @@ force_inline
 Nullable(void*)
 memsep(Nonnull(const char*)str, size_t length){
     char* slash = memchr(str, '/', length);
-    #ifdef WINDOWS
+    #ifdef BACKSLASH_IS_A_PATH_SEP
     if(!slash)
         slash = memchr(str, '\\', length);
     #endif
@@ -60,6 +66,7 @@ path_basename(StringView path){
 // path is exactly equal to '/'. This allows you to distinguish
 // '/foo' from 'foo' without needing to return a '.' that's not in
 // the original string (as doing so would break pointer arithmetic).
+//
 static inline
 StringView
 path_dirname(StringView path){
@@ -84,7 +91,7 @@ path_dirname(StringView path){
 // Removes the extension part of a string.
 //
 // Turns /foo/bar/baz.html into /foo/bar/baz
-// Turn /foo/bar into /foo/bar
+// Turns /foo/bar into /foo/bar
 //
 static inline
 StringView
@@ -103,25 +110,26 @@ path_strip_extension(StringView path){
     }
 
 //
-// Appends a path separator to the builder and then writes the given the string.
+// Appends a path separator to the builder and then writes the given string.
+// If the builder is empty, a path separator is not appended. This prevents
+// accidentally turning a relative path into the wrong absolute path.
+//
 static inline
 void
 msb_append_path(Nonnull(MStringBuilder*)sb, const Allocator a, Nonnull(const char*) restrict path, size_t length){
     _check_msb_size(sb, a, length+1);
-    sb->data[sb->cursor++] = '/';
+    if(sb->cursor)
+        sb->data[sb->cursor++] = '/';
     memcpy(sb->data + sb->cursor, path, length);
     sb->cursor += length;
     }
 
 #ifdef WINDOWS
-#include "windowsheader.h"
+#include <direct.h>
 static inline
 int
 chdir(Nonnull(const char*) dirname){
-    PushDiagnostic();
-    SuppressDiscardQualifiers();
-    return SetCurrentDirectory(dirname) != 0;
-    PopDiagnostic();
+    return _chdir(dirname);
     }
 #endif
 

@@ -53,9 +53,11 @@ DEV_FLAGS=-O0 -g
 # Don't tolerate warnings for tests.
 TEST_FLAGS=-Werror
 
-opt.mak:
-	@echo "Creating default opt.mak"
-	@$(CP) opt.mak.template opt.mak
+# Currently this matches opt.mak
+# This will override the local version if the template is changed.
+%: %.template
+	@echo "Creating default $@"
+	@$(CP) $< $@
 
 include opt.mak
 

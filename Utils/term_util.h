@@ -5,10 +5,12 @@
 typedef struct TermSize {
     int columns, rows;
 } TermSize;
+//
 // Returns the size of the terminal.
 // On error, we return 80 columns and 24 rows.
+//
 static inline TermSize get_terminal_size(void);
-// Have a terminal util header to handle isatty, enable_vt, etc.
+
 #ifdef WINDOWS
 
 #ifndef _CRT_NONSTDC_NO_DEPRECATE
@@ -30,7 +32,6 @@ int isatty(int fd){
     }
 
 #include "windowsheader.h"
-// punting for now
 static inline
 TermSize
 get_terminal_size(void){
