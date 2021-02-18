@@ -42,7 +42,7 @@ StringView
 stripped_view(Nonnull(const char*)str, size_t len){
     for(;len;len--, str++){
         switch(*str){
-            case ' ': case '\t': case '\r': case '\n':
+            case ' ': case '\t': case '\r': case '\n': case '\f':
                 continue;
             default:
                 break;
@@ -51,7 +51,7 @@ stripped_view(Nonnull(const char*)str, size_t len){
         }
     for(;len;len--){
         switch(str[len-1]){
-            case ' ': case '\t': case '\r': case '\n':
+            case ' ': case '\t': case '\r': case '\n': case '\f':
                 continue;
             default:
                 break;
@@ -63,16 +63,17 @@ stripped_view(Nonnull(const char*)str, size_t len){
 
 static inline
 StringView
-strip_sv_tabspace(StringView view){
-    StringView result = view;
-    while(result.length and (result.text[0] == ' ' or result.text[0] == '\t')){
-        result.text++;
-        result.length--;
+rstripped_view(Nonnull(const char*)str, size_t len){
+    for(;len;len--){
+        switch(str[len-1]){
+            case ' ': case '\t': case '\r': case '\n': case '\f':
+                continue;
+            default:
+                break;
+            }
+        break;
         }
-    while(result.length and (result.text[result.length-1] == ' ' or result.text[result.length-1] == '\t')){
-        result.length--;
-        }
-    return result;
+    return (StringView){.text=str, .length=len};
     }
 
 typedef struct SplitPair {

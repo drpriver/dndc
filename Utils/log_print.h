@@ -73,7 +73,7 @@ void logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, 
 //       return 0;
 //   }
 //
-// Will result in: 
+// Will result in:
 //   [DEBUG] SomeDir/SomeFile.c:main:4: foo = 3
 //
 // This is convenient for debugging and logging some stats, like high water

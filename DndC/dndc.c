@@ -645,8 +645,7 @@ add_link_from_sv(Nonnull(ParseContext*)ctx, StringView str, bool check_valid){
         Raise(PARSE_ERROR);
         }
     auto key = LS_to_SV(msb_detach(&sb, ctx->allocator));
-    StringView value = {.text = equals + 1, .length = (str.text+str.length)-(equals+1)};
-    value = strip_sv_tabspace(value);
+    StringView value = stripped_view(equals + 1, (str.text+str.length)-(equals+1));
     if(!value.length){
         ctx->error_message = LS("link target is empty");
         Raise(PARSE_ERROR);
@@ -1506,19 +1505,18 @@ parse_double_colon(Nonnull(ParseContext*)ctx, NodeHandle parent_handle){
     // parse the node header
     const char* starttext = ctx->doublecolon + 2;
     size_t length = ctx->lineend - starttext;
-    StringView postcolon = {.text = starttext, .length=length};
+    StringView postcolon = stripped_view(starttext, length);
     auto new_node_handle = alloc_handle(ctx);
     init_node(ctx, new_node_handle, ctx->linestart+ctx->nspaces, NODE_INVALID);
     {
-    auto e = parse_post_colon(ctx, postcolon, new_node_handle);
-    if(e.errored) return e;
+        auto e = parse_post_colon(ctx, postcolon, new_node_handle);
+        if(e.errored) return e;
     }
     append_child(ctx, parent_handle, new_node_handle);
     {
-    auto node = get_node(ctx, new_node_handle);
-    const char* header = ctx->linestart + ctx->nspaces;
-    node->header = (StringView){.text=header, .length=ctx->doublecolon-header};
-    node->header = strip_sv_tabspace(node->header);
+        auto node = get_node(ctx, new_node_handle);
+        const char* header = ctx->linestart + ctx->nspaces;
+        node->header = stripped_view(header, ctx->doublecolon - header);
     }
     auto new_indent = ctx->nspaces;
     advance_row(ctx);
@@ -1594,7 +1592,8 @@ PARSEFUNC(parse_node){
             continue;
             }
         // default: string node
-        StringView content = {.length = (ctx->lineend - ctx->linestart)-ctx->nspaces, .text = ctx->linestart + ctx->nspaces};
+        StringView content = stripped_view(ctx->linestart + ctx->nspaces,
+            (ctx->lineend - ctx->linestart)-ctx->nspaces);
         auto new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
         append_child(ctx, parent_handle, new_node_handle);
@@ -1644,7 +1643,7 @@ PARSEFUNC(parse_list_node){
         auto li_handle = alloc_handle(ctx);
         init_node(ctx, li_handle, ctx->linestart+ctx->nspaces, NODE_LIST_ITEM);
         append_child(ctx, parent_handle, li_handle);
-        StringView text = {.text=firstchar, .length=ctx->lineend - firstchar};
+        StringView text = stripped_view(firstchar, ctx->lineend - firstchar);
         auto first_child = alloc_handle(ctx);
         init_string_node(ctx, first_child, text);
         advance_row(ctx);
@@ -1691,9 +1690,9 @@ PARSEFUNC(parse_list_item){
             }
         after:;
         // default: string node
-        StringView content = {.length = (ctx->lineend - ctx->linestart)-ctx->nspaces, .text = ctx->linestart + ctx->nspaces};
+        StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->lineend - ctx->linestart)-ctx->nspaces);
         auto new_node_handle = alloc_handle(ctx);
-        init_string_node(ctx, new_node_handle, strip_sv_tabspace(content));
+        init_string_node(ctx, new_node_handle, content);
         append_child(ctx, parent_handle, new_node_handle);
         advance_row(ctx);
         }
@@ -1731,7 +1730,7 @@ PARSEFUNC(parse_raw_node){
             text = ctx->linestart + ctx->nspaces - length;
             }
         // default: string node
-        StringView content = {.length = length, .text = text};
+        auto content = rstripped_view(text, length);
         auto new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
         append_child(ctx, parent_handle, new_node_handle);
@@ -1772,16 +1771,14 @@ PARSEFUNC(parse_table_node){
         while(pipe){
             auto cell_index = alloc_handle(ctx);
             size_t length = pipe - cursor;
-            StringView content = {.text = cursor, .length = length};
-            content = strip_sv_tabspace(content);
+            StringView content = stripped_view(cursor,length);
             init_string_node(ctx, cell_index, content);
             append_child(ctx, new_node_handle, cell_index);
             cursor = pipe+1;
             pipe = memchr(cursor, '|', ctx->lineend - cursor);
             }
         auto cell_index = alloc_handle(ctx);
-        StringView content = {.text=cursor, .length = ctx->lineend-cursor};
-        content = strip_sv_tabspace(content);
+        StringView content = stripped_view(cursor, ctx->lineend-cursor);
         init_string_node(ctx, cell_index, content);
         append_child(ctx, new_node_handle, cell_index);
         advance_row(ctx);
@@ -1819,12 +1816,12 @@ PARSEFUNC(parse_keyvalue_node){
             }
         const char* pre_text = ctx->linestart+ctx->nspaces;
 
-        StringView pre = {.text = pre_text, .length = colon - pre_text};
-        StringView post = {.text = colon+1, .length = (ctx->lineend-colon)-1};
+        StringView pre = stripped_view(pre_text,colon - pre_text);
+        StringView post = stripped_view(colon+1, (ctx->lineend-colon)-1);
         auto key_idx = alloc_handle(ctx);
-        init_string_node(ctx, key_idx, strip_sv_tabspace(pre));
+        init_string_node(ctx, key_idx, pre);
         auto val_idx = alloc_handle(ctx);
-        init_string_node(ctx, val_idx, strip_sv_tabspace(post));
+        init_string_node(ctx, val_idx, post);
         append_child(ctx, new_node_handle, key_idx);
         append_child(ctx, new_node_handle, val_idx);
         advance_row(ctx);
@@ -1860,9 +1857,7 @@ PARSEFUNC(parse_bullets_node){
             Raise(PARSE_ERROR);
             }
         firstchar++;
-        StringView bullet_text = {.text = firstchar, .length = ctx->lineend - firstchar};
-        bullet_text = strip_sv_tabspace(bullet_text);
-
+        StringView bullet_text = stripped_view(firstchar, ctx->lineend - firstchar);
         auto bullet_node_handle = alloc_handle(ctx);
         init_node(ctx, bullet_node_handle, ctx->linestart+ctx->nspaces, NODE_BULLET);
         append_child(ctx, parent_handle, bullet_node_handle);
@@ -1905,9 +1900,9 @@ PARSEFUNC(parse_bullet_node){
             continue;
             }
         // default: string node
-        StringView content = {.length = (ctx->lineend - ctx->linestart)-ctx->nspaces, .text = ctx->linestart + ctx->nspaces};
+        StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->lineend - ctx->linestart)-ctx->nspaces);
         auto new_node_handle = alloc_handle(ctx);
-        init_string_node(ctx, new_node_handle, strip_sv_tabspace(content));
+        init_string_node(ctx, new_node_handle, content);
         append_child(ctx, parent_handle, new_node_handle);
         advance_row(ctx);
         }
@@ -1944,9 +1939,9 @@ PARSEFUNC(parse_text_node){
             }
         in_para_node = true;
         // default: new paragraph node
-        StringView content = {.length = (ctx->lineend - ctx->linestart)-ctx->nspaces, .text = ctx->linestart + ctx->nspaces};
+        StringView content = stripped_view(ctx->linestart+ctx->nspaces, (ctx->lineend - ctx->linestart)-ctx->nspaces);
         auto new_node_handle = alloc_handle(ctx);
-        init_string_node(ctx, new_node_handle, strip_sv_tabspace(content));
+        init_string_node(ctx, new_node_handle, content);
         append_child(ctx, para_handle, new_node_handle);
         advance_row(ctx);
         }
@@ -2028,9 +2023,9 @@ PARSEFUNC(parse_md_node){
             init_node(ctx, bullet_handle, ctx->linestart+ctx->nspaces, NODE_BULLET);
             append_child(ctx, bullets_handle, bullet_handle);
 
-            StringView content = {.length = (ctx->lineend - ctx->linestart)-ctx->nspaces-1, .text = ctx->linestart + ctx->nspaces+1};
+            StringView content = stripped_view(ctx->linestart + ctx->nspaces+1, (ctx->lineend - ctx->linestart)-ctx->nspaces-1);
             auto new_node_handle = alloc_handle(ctx);
-            init_string_node(ctx, new_node_handle, strip_sv_tabspace(content));
+            init_string_node(ctx, new_node_handle, content);
             append_child(ctx, bullet_handle, new_node_handle);
             advance_row(ctx);
             state = newstate;
@@ -2049,9 +2044,9 @@ PARSEFUNC(parse_md_node){
             const char* dot = memchr(ctx->linestart, '.', ctx->lineend-ctx->linestart);
             assert(dot);
             dot++;
-            StringView content = {.length = ctx->lineend - dot, .text = dot};
+            StringView content = stripped_view(dot, ctx->lineend-dot);
             auto new_node_handle = alloc_handle(ctx);
-            init_string_node(ctx, new_node_handle, strip_sv_tabspace(content));
+            init_string_node(ctx, new_node_handle, content);
             append_child(ctx, list_item_handle, new_node_handle);
             advance_row(ctx);
             state = newstate;
@@ -2064,9 +2059,9 @@ PARSEFUNC(parse_md_node){
                 init_node(ctx, para_handle, ctx->linestart+ctx->nspaces, NODE_PARA);
                 append_child(ctx, parent_handle, para_handle);
                 }
-            StringView content = {.length = (ctx->lineend - ctx->linestart)-ctx->nspaces, .text = ctx->linestart + ctx->nspaces};
+            StringView content = stripped_view( ctx->linestart + ctx->nspaces, (ctx->lineend - ctx->linestart)-ctx->nspaces);
             auto new_node_handle = alloc_handle(ctx);
-            init_string_node(ctx, new_node_handle, strip_sv_tabspace(content));
+            init_string_node(ctx, new_node_handle, content);
             append_child(ctx, para_handle, new_node_handle);
             advance_row(ctx);
             state = newstate;
@@ -2074,17 +2069,17 @@ PARSEFUNC(parse_md_node){
             }
         // don't change state for these
         if(state == BULLET){
-            StringView content = {.length = (ctx->lineend - ctx->linestart)-ctx->nspaces, .text = ctx->linestart + ctx->nspaces};
+            StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->lineend - ctx->linestart)-ctx->nspaces);
             auto new_node_handle = alloc_handle(ctx);
-            init_string_node(ctx, new_node_handle, strip_sv_tabspace(content));
+            init_string_node(ctx, new_node_handle, content);
             append_child(ctx, bullet_handle, new_node_handle);
             advance_row(ctx);
             continue;
             }
         if(state == LIST){
-            StringView content = {.length = (ctx->lineend - ctx->linestart)-ctx->nspaces, .text = ctx->linestart + ctx->nspaces};
+            StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->lineend - ctx->linestart)-ctx->nspaces);
             auto new_node_handle = alloc_handle(ctx);
-            init_string_node(ctx, new_node_handle, strip_sv_tabspace(content));
+            init_string_node(ctx, new_node_handle, content);
             append_child(ctx, list_item_handle, new_node_handle);
             advance_row(ctx);
             continue;
@@ -2119,7 +2114,7 @@ Errorable_f(void)
 parse_post_colon(Nonnull(ParseContext*)ctx, StringView postcolon, NodeHandle node_handle){
     Errorable(void) result = {};
     auto node = get_node(ctx, node_handle);
-    eat_leading_tabspaces(&postcolon);
+    // eat_leading_tabspaces(&postcolon);
     size_t boundary = postcolon.length;
     for(size_t i = 0; i < postcolon.length;i++){
         switch(postcolon.text[i]){
@@ -2692,17 +2687,28 @@ void
 write_tag_escaped_str(Nonnull(ParseContext*) ctx, Nonnull(MStringBuilder*)sb, NullUnspec(const char*)text, size_t length){
     for(size_t i = 0; i < length; i++){
         char c = text[i];
-        if(unlikely(c == '&')){
-            msb_write_literal(sb, ctx->allocator, "&amp;");
-            }
-        else if(unlikely(c == '<')){
-            msb_write_literal(sb, ctx->allocator, "&lt;");
-            }
-        else if(unlikely(c == '>')){
-            msb_write_literal(sb, ctx->allocator, "&gt;");
-            }
-        else {
-            msb_write_char(sb, ctx->allocator, c);
+        switch(c){
+            case '&':
+                msb_write_literal(sb, ctx->allocator, "&amp;");
+                break;
+            case '<':
+                msb_write_literal(sb, ctx->allocator, "&lt;");
+                break;
+            case '>':
+                msb_write_literal(sb, ctx->allocator, "&gt;");
+                break;
+            case '\r':
+            case '\f':
+                msb_write_char(sb, ctx->allocator, ' ');
+                break;
+            // Don't print control characters.
+            case  0 ... 8:
+            case 10 ... 11:
+            case 14 ... 31:
+                break;
+            default:
+                msb_write_char(sb, ctx->allocator, c);
+                break;
             }
         }
     }
@@ -2714,122 +2720,133 @@ write_link_escaped_str(Nonnull(ParseContext*) ctx, Nonnull(MStringBuilder*)sb, N
     Errorable(void) result = {};
     for(size_t i = 0; i < length; i++){
         char c = text[i];
-        if(unlikely(c == '[')){
-            msb_write_literal(sb, ctx->allocator, "<a href=\"");
-            const char* closing_brace = memchr(text+i, ']', length-i);
-            if(!closing_brace){
-                MStringBuilder eb = {};
-                msb_sprintf(&eb, ctx->allocator, "%.*s:%d:%d: Unterminated '['", (int)node->filename.length, node->filename.text, node->row+1, node->col+1+(int)i);
-                ctx->error_message = msb_detach(&eb, ctx->allocator);
-                Raise(PARSE_ERROR);
-                }
-            size_t link_length = closing_brace - (text+i);
-            {
-            MStringBuilder temp = {};
-            msb_write_kebab(&temp, ctx->temp_allocator, text+i+1, link_length-1);
-            auto temp_str = msb_borrow(&temp, ctx->temp_allocator);
-            auto value = find_link_target(ctx, temp_str);
-            if(!value){
-                if(ctx->flags & PARSE_ALLOW_BAD_LINKS){
-                    node_print_warning(ctx, node, "Unable to resolve link '%.*s'", (int)temp_str.length, temp_str.text);
-                    msb_write_str(sb, ctx->allocator, temp_str.text, temp_str.length);
-                    }
-                else {
-                    node_set_err(ctx, node, "Unable to resolve link '%.*s'", (int)temp_str.length, temp_str.text);
-                    msb_destroy(&temp, ctx->temp_allocator);
+        switch(c){
+            case '[':{
+                msb_write_literal(sb, ctx->allocator, "<a href=\"");
+                const char* closing_brace = memchr(text+i, ']', length-i);
+                if(!closing_brace){
+                    MStringBuilder eb = {};
+                    msb_sprintf(&eb, ctx->allocator, "%.*s:%d:%d: Unterminated '['", (int)node->filename.length, node->filename.text, node->row+1, node->col+1+(int)i);
+                    ctx->error_message = msb_detach(&eb, ctx->allocator);
                     Raise(PARSE_ERROR);
                     }
-                }
-            else {
-                StringView* val = value;
-                msb_write_str(sb, ctx->allocator, val->text, val->length);
-                }
-            msb_destroy(&temp, ctx->temp_allocator);
-            }
-            msb_write_literal(sb, ctx->allocator, "\">");
-            msb_write_str(sb, ctx->allocator, text+i+1, link_length-1);
-            msb_write_literal(sb, ctx->allocator, "</a>");
-            i += link_length;
-            continue;
-            }
-        else if(unlikely(c == '-')){
-            if(i < length - 1){
-                auto peek1 = text[i+1];
-                if(peek1 == '-'){
-                    if(i < length - 2){
-                        auto peek2 = text[i+2];
-                        if(peek2 == '-'){
-                            msb_write_literal(sb, ctx->allocator, "&mdash;");
-                            i += 2;
-                            continue;
+                size_t link_length = closing_brace - (text+i);
+                {
+                    MStringBuilder temp = {};
+                    msb_write_kebab(&temp, ctx->temp_allocator, text+i+1, link_length-1);
+                    auto temp_str = msb_borrow(&temp, ctx->temp_allocator);
+                    auto value = find_link_target(ctx, temp_str);
+                    if(!value){
+                        if(ctx->flags & PARSE_ALLOW_BAD_LINKS){
+                            node_print_warning(ctx, node, "Unable to resolve link '%.*s'", (int)temp_str.length, temp_str.text);
+                            msb_write_str(sb, ctx->allocator, temp_str.text, temp_str.length);
+                            }
+                        else {
+                            node_set_err(ctx, node, "Unable to resolve link '%.*s'", (int)temp_str.length, temp_str.text);
+                            msb_destroy(&temp, ctx->temp_allocator);
+                            Raise(PARSE_ERROR);
                             }
                         }
-                        msb_write_literal(sb, ctx->allocator, "&ndash;");
-                        i += 1;
-                        continue;
-                    }
-                }
-            msb_write_char(sb, ctx->allocator, c);
-            }
-        else if(unlikely(c == '&')){
-            msb_write_literal(sb, ctx->allocator, "&amp;");
-            }
-        else if(unlikely(c == '<')){
-            // we allow inline <b>, <s>, <i>, </b>, </s>, </i>
-            if(i < length - 1){
-                auto peek1 = text[i+1];
-                switch(peek1){
-                    case 'b':
-                    case 's':
-                    case 'i':
-                    case '/':
-                        break;
-                    default:
-                        msb_write_literal(sb, ctx->allocator, "&lt;");
-                        continue;
-                    }
-                if(i < length - 2){
-                    auto peek2 = text[i+2];
-                    if(peek1 != '/'){
-                        if(peek2 == '>'){
-                            msb_write_char(sb, ctx->allocator, c);
-                            msb_write_char(sb, ctx->allocator, peek1);
-                            msb_write_char(sb, ctx->allocator, peek2);
-                            i += 2;
-                            continue;
-                            }
-                        msb_write_literal(sb, ctx->allocator, "&lt;");
-                        continue;
+                    else {
+                        StringView* val = value;
+                        msb_write_str(sb, ctx->allocator, val->text, val->length);
                         }
-                    switch(peek2){
+                    msb_destroy(&temp, ctx->temp_allocator);
+                }
+                msb_write_literal(sb, ctx->allocator, "\">");
+                msb_write_str(sb, ctx->allocator, text+i+1, link_length-1);
+                msb_write_literal(sb, ctx->allocator, "</a>");
+                i += link_length;
+                continue;
+                }break;
+            case '-':{
+                if(i < length - 1){
+                    auto peek1 = text[i+1];
+                    if(peek1 == '-'){
+                        if(i < length - 2){
+                            auto peek2 = text[i+2];
+                            if(peek2 == '-'){
+                                msb_write_literal(sb, ctx->allocator, "&mdash;");
+                                i += 2;
+                                continue;
+                                }
+                            }
+                            msb_write_literal(sb, ctx->allocator, "&ndash;");
+                            i += 1;
+                            continue;
+                        }
+                    }
+                msb_write_char(sb, ctx->allocator, c);
+                }break;
+            case '&':{
+                msb_write_literal(sb, ctx->allocator, "&amp;");
+                }break;
+            case '<':{
+                // we allow inline <b>, <s>, <i>, </b>, </s>, </i>
+                if(i < length - 1){
+                    auto peek1 = text[i+1];
+                    switch(peek1){
                         case 'b':
                         case 's':
                         case 'i':
+                        case '/':
                             break;
                         default:
                             msb_write_literal(sb, ctx->allocator, "&lt;");
                             continue;
                         }
-                    if(i < length - 3){
-                        auto peek3 = text[i+3];
-                        if(peek3 == '>'){
-                            msb_write_char(sb, ctx->allocator, c);
-                            msb_write_char(sb, ctx->allocator, peek1);
-                            msb_write_char(sb, ctx->allocator, peek2);
-                            msb_write_char(sb, ctx->allocator, peek3);
-                            i += 3;
+                    if(i < length - 2){
+                        auto peek2 = text[i+2];
+                        if(peek1 != '/'){
+                            if(peek2 == '>'){
+                                msb_write_char(sb, ctx->allocator, c);
+                                msb_write_char(sb, ctx->allocator, peek1);
+                                msb_write_char(sb, ctx->allocator, peek2);
+                                i += 2;
+                                continue;
+                                }
+                            msb_write_literal(sb, ctx->allocator, "&lt;");
                             continue;
+                            }
+                        switch(peek2){
+                            case 'b':
+                            case 's':
+                            case 'i':
+                                break;
+                            default:
+                                msb_write_literal(sb, ctx->allocator, "&lt;");
+                                continue;
+                            }
+                        if(i < length - 3){
+                            auto peek3 = text[i+3];
+                            if(peek3 == '>'){
+                                msb_write_char(sb, ctx->allocator, c);
+                                msb_write_char(sb, ctx->allocator, peek1);
+                                msb_write_char(sb, ctx->allocator, peek2);
+                                msb_write_char(sb, ctx->allocator, peek3);
+                                i += 3;
+                                continue;
+                                }
                             }
                         }
                     }
-                }
-            msb_write_literal(sb, ctx->allocator, "&lt;");
-            }
-        else if(unlikely(c == '>')){
-            msb_write_literal(sb, ctx->allocator, "&gt;");
-            }
-        else {
-            msb_write_char(sb, ctx->allocator, c);
+                msb_write_literal(sb, ctx->allocator, "&lt;");
+                }break;
+            case '>':{
+                msb_write_literal(sb, ctx->allocator, "&gt;");
+                }break;
+            case '\r':
+            case '\f':{
+                msb_write_char(sb, ctx->allocator, ' ');
+                }break;
+            // Don't print control characters.
+            case  0 ... 8:
+            case 10 ... 11:
+            case 14 ... 31:{
+                }break;
+            default:{
+                msb_write_char(sb, ctx->allocator, c);
+                }break;
             }
         }
     return result;
