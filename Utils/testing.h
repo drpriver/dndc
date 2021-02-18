@@ -5,7 +5,7 @@
 #include "common_macros.h"
 
 //
-// Macros for defining a test function. 
+// Macros for defining a test function.
 // TESTBEGIN must be paired with TESTEND().
 // You should use semicolons after them.
 //
@@ -42,7 +42,7 @@ typedef struct TestStats (*_test_func)(void);
 typedef Nonnull(_test_func) test_func;
 
 //
-// Register a test for execution. 
+// Register a test for execution.
 // Use this within your definition of the register_tests function.
 //
 static inline void RegisterTest(test_func);
@@ -329,32 +329,33 @@ PopDiagnostic();
     auto result = test_main();
 
     const char* text = test_funcs_count == 1? "test function executed" : "test functions executed";
-    fprintf(stderr, "%s%s: %s%d%s %s\n", 
-            gray, filename, 
-            blue, test_funcs_count, 
+    fprintf(stderr, "%s%s: %s%d%s %s\n",
+            gray, filename,
+            blue, test_funcs_count,
             reset, text);
 
     text = result.executed == 1? "test executed" : "tests executed";
-    fprintf(stderr, "%s%s: %s%d%s %s\n", 
-            gray, filename, 
-            blue, result.executed, 
+    fprintf(stderr, "%s%s: %s%d%s %s\n",
+            gray, filename,
+            blue, result.executed,
             reset, text);
 
     text = result.assert_failures == 1? "test function aborted early" : "test functions aborted early";
     const char* color = result.assert_failures?red:green;
-    fprintf(stderr, "%s%s: %s%d%s %s\n", 
-            gray, filename, 
-            color, result.assert_failures, 
+    fprintf(stderr, "%s%s: %s%d%s %s\n",
+            gray, filename,
+            color, result.assert_failures,
             reset, text);
 
     color = result.failures?red:green;
     text = result.failures == 1? "test failed" : "tests failed";
-    fprintf(stderr, "%s%s: %s%d%s %s\n", 
-            gray, filename, 
-            color, result.failures, 
+    fprintf(stderr, "%s%s: %s%d%s %s\n",
+            gray, filename,
+            color, result.failures,
             reset, text);
 
     return result.failures + result.assert_failures == 0? 0 : 1;
     }
+
 #include "terminal_logger.c"
 #endif
