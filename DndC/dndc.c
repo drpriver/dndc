@@ -91,14 +91,14 @@ int main(int argc, char**argv){
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&source_path),
-            .help = "Source file (.dnd file) to read from.",
+            .help = "Source file (.dnd file) to read from.\nIf not given, reads from stdin.",
             },
         [1] = {
             .name = SV("output"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&output_path),
-            .help = "output path (.html file) to write to.",
+            .help = "output path (.html file) to write to.\n If not given, writes to stdout.",
             .hide_default = true,
             },
         };
@@ -377,6 +377,7 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
                         result.errored = imp_e.errored;
                         goto cleanup;
                         }
+                    imp_text = unwrap(imp_e);
                 }
                 auto parse_e = dndc_parse(&ctx, child_handle, filename, imp_text.text);
                 if(parse_e.errored){
