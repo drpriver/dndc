@@ -23,6 +23,7 @@
 // that big an imposition.
 static inline Errorable_f(LongString) read_file(const Allocator a, Nonnull(const char*)filepath);
 // Read an entire file into a byte buffer. Not guranteed nul-terminated.
+// TODO: this isn't used anymore. Delete it?
 static inline Errorable_f(ByteBuffer) read_bin_file(const Allocator a, Nonnull(const char*)filepath);
 // Write an entire file. Agnostic as to text and binary, opens the file in binary
 // mode. Writes whatever you give it as is, so we don't convert unix newlines to CRLF

@@ -1,0 +1,333 @@
+#ifndef DNDC_FUNCS_H
+#define DNDC_FUNCS_H
+#include "MStringBuilder.h"
+#include "dndc_types.h"
+
+//
+// Forward declarations of functions that are shared between components,
+// including the main run function.
+//
+
+//
+// The money function.
+// Basically executes the whole thing from end to end.
+//
+// Arguments
+// ---------
+// flags:
+//    bitflags controlling behavior of execution. Consult the types header
+//    for the meanings of individual values. Is a bitwise-or-combination
+//    of the different options.
+//
+// source_path:
+//    As controlled by the flags, this can be the data to parse, a path
+//    to a file to parse, or if .length is 0, stdin will be read instead.
+//
+// output_path:
+//    A filepath to write the generated html to. If .length is 0, the html
+//    will be printed to stdout instead. Printing at all can be suppressed
+//    by flags.
+//
+// depends_dir:
+//    A path to a directory to write a make-style dependency file.
+//    If not given, no such file is written.
+//
+// Returns
+// -------
+// Nothing is returned upon success (.errored == NO_ERROR).
+// On failure, an error will be indicated.
+//
+static
+Errorable_f(void)
+run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, LongString depends_dir);
+
+//
+// The following functions are for reporting errors and warnings.
+// ONLY use these functions for that purpose. Do not directly use printf,
+// fprintf or a log function. These functions will report the error as
+// originating from a specific file, line, column and will handle suppressing
+// them based on the flags given to run_the_dndc.
+//
+
+//
+// Sets an error message on the context during parsing.
+// errchar is a pointer to the first character where the error occurred.
+// Pointer arithmetic is then used to determine the column of the error (file
+// and line are implicit).
+//
+// This is a printf-like function, so additionally supply a format string and
+// varargs.
+//
+printf_func(3, 4) static
+void
+set_err(Nonnull(ParseContext*)ctx, NullUnspec(const char*) errchar, Nonnull(const char*) fmt, ...);
+
+//
+// Sets an error message originating from the source location that corresponds
+// to the given node.
+//
+// printf-like function.
+//
+printf_func(3, 4) static
+void
+node_set_err(Nonnull(ParseContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
+
+//
+// Like node_set_err, but immediately prints the message instead of setting
+// a string. Only use this in the body of run_the_dndc.
+//
+// printf-like function
+//
+printf_func(3, 4) static
+void
+node_print_err(Nonnull(ParseContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
+
+//
+// Like node_set_err, but immediately prints the message instead of setting
+// a string and is intended for non-fatal warning messages.
+//
+// printf-like function
+//
+printf_func(3, 4)
+static
+void
+node_print_warning(Nonnull(ParseContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...);
+
+//
+// Reports some informative message, such as time to execute some component.
+// Flags is the same flags as given to run_the_dndc and controls
+// whether the message is actually printed, allowing this function
+// to be called unconditionally.
+//
+// printf-like function
+//
+printf_func(2, 3) static
+void
+report_stat(uint64_t flags, Nonnull(const char*) fmt, ...);
+
+//
+// Reports an error. Should only be called by run_the_dndc right before it
+// returns an error.
+//
+printf_func(2, 3) static
+void
+report_error(uint64_t flags, Nonnull(const char*)fmt, ...);
+
+//
+// Getter function to turn a node handle to an acual pointer to a Node.
+// Keep the scopes on these pointers as tight as possible as allocating
+// new nodes can trigger pointer invalidation.
+//
+static inline
+Nonnull(Node*)
+get_node(Nonnull(ParseContext*), NodeHandle);
+
+//
+// Like get_node, but will be available in the debugger as it is extern.
+// Don't use this, use get_node, this is purely for the debugger.
+//
+extern
+Nonnull(Node*)
+get_node_e(Nonnull(ParseContext*), NodeHandle);
+
+
+//
+// Checks if the node has an attribute or not.
+// For example:
+//
+//    if(node_has_attribute(mynode, SV("noid"))){
+//       ... Do something based on the fact that the node is noid ...
+//    }
+//
+static inline
+bool
+node_has_attribute(Nonnull(const Node*) node, StringView attr);
+
+//
+// Retrieves the value associate with attr key.
+// If the node does not have that attribute, returns NULL.
+// Many attributes will have empty strings. In that case, a pointer
+// to an empty string view is returned.
+//
+// Note that this pointer returned by this function is unstable.
+// Adding attributes can invalidate the pointer.
+//
+static inline
+Nullable(StringView*)
+node_get_attribute(Nonnull(const Node*) node, StringView attr);
+
+//
+// Loads the text of a sourcefile given by sourcepath, or an error if
+// something went wrong.
+//
+// This function provides caching and management of the text. Do not
+// read files directly, use this function instead.
+//
+static
+Errorable_f(LongString)
+load_source_file(Nonnull(ParseContext*)ctx, StringView sourcepath);
+
+//
+// Load a binary file as base64 text, or an error if something went wrong.
+//
+// This function provides caching and management of the text. Do not
+// read files directly, use this function instead.
+//
+static
+Errorable_f(LongString)
+load_processed_binary_file(Nonnull(ParseContext*)ctx, StringView binarypath);
+
+//
+// Set the source on the context for parsing.
+//
+// filename is the name to be used for diagnostics if there are parse errors.
+//
+// text is the actual source text to be parsed. It must be nul-terminated.
+//
+// FIXME: there's no reason for this to be separate from the parse func.
+// These should just be arguments to parse.
+//
+static
+void
+set_context_source(Nonnull(ParseContext*)ctx, StringView filename, Nonnull(const char*) text);
+
+//
+// Parse the source text that was set on this node.
+// Resulting nodes will be added as children of the node indicated by
+// the given NodeHandle.
+// set_context_source must have been called first.
+// FIXME: combine this function with set_context_source.
+//
+static
+Errorable_f(void)
+parse(Nonnull(ParseContext*), NodeHandle root);
+
+
+//
+// Prints out a representation of the final document tree.
+// I might remove this later, it's mostly for debugging.
+// Calls itself recursively, thus the depth argument.
+//
+static
+void
+print_node_and_children(Nonnull(ParseContext*), NodeHandle handle, int depth);
+
+//
+// Writes the document tree (starting from the context's root node)
+// as html into the given builder. The result is a fully valid html
+// document including head tags, etc.
+//
+static
+Errorable_f(void)
+render_tree(Nonnull(ParseContext*), Nonnull(MStringBuilder*));
+
+//
+// Writes the tree originating from the given node into the builder.
+// header_depth controls whether a header is an h2, h3, etc.
+// Pass 1 to have titles be h1s, top level headers be h2 etc. Increase this to get
+// h3s or whatever instead.
+//
+// The result is an html fragment.
+//
+static inline force_inline
+Errorable_f(void)
+render_node(Nonnull(ParseContext*), Nonnull(MStringBuilder*) restrict, Nonnull(const Node*), int header_depth);
+
+//
+// Traverses the tree to find all the link targets
+// that result from the header targets in the document.
+// Populates the link-target mapping.
+//
+static
+void
+gather_anchors(Nonnull(ParseContext*));
+
+//
+// Call this before any function that traverses the tree.
+// Ensures that the tree is not so deep that there is a danger of exhausting
+// the stack.
+//
+static
+Errorable_f(void)
+check_depth(Nonnull(ParseContext*));
+
+//
+// Walks the tree to construct the nav block.
+// Sets the result as a string on the context.
+//
+static
+void
+build_nav_block(Nonnull(ParseContext*));
+
+//
+// Allocate a new node and return its handle.
+//
+static inline
+NodeHandle
+alloc_handle(Nonnull(ParseContext*));
+
+//
+// Execute a string representing python code. The string should be nul terminated.
+// The NodeHandle will be present in the locals of the executed python code
+// as "node".
+//
+static
+Errorable_f(void)
+execute_python_string(Nonnull(ParseContext*), Nonnull(const char*), NodeHandle);
+
+//
+// Initialize the python interpreter and the dndc python data types.
+// Takes a flags argument, which is the same flags passed to run_the_dndc.
+// This handles the PYTHON_IS_INIT flag.
+//
+static
+Errorable_f(void)
+init_python_docparser(uint64_t);
+
+//
+// Shutsdown the python interpreter, mostly freeing any resources it allocated.
+// This is mostly for detecting memory leaks. There's some reference leaks
+// somewhere it seems.
+//
+static
+void
+end_interpreter(void);
+
+//
+// Add a node to be a child of another node. The child will have its parent node
+// set to this parent node and the child will be appended to the parent's
+// children array.
+//
+static
+void
+append_child(Nonnull(ParseContext*), NodeHandle parent, NodeHandle child);
+
+//
+// Find the target that the kebabed string view is actually a link to.
+// Can return NULL if the link can't be resolved.
+//
+static inline
+Nullable(StringView*)
+find_link_target(Nonnull(ParseContext*)ctx, StringView kebabed);
+
+//
+// Parses a line of a ::links block, which is of the form "link = target"
+//
+// The check_valid parameter means for targets that start with a '#', aka anchor
+// links, to check that this is actually a valid anchor link in the document.
+//
+static inline
+Errorable_f(void)
+add_link_from_sv(Nonnull(ParseContext*)ctx, StringView str, bool check_valid);
+
+//
+// Adds the link to the link map as derived from the header
+// The transmutation is:
+//   kebabed(str) = #kebabed(str)
+//
+//
+static inline
+void
+add_link_from_header(Nonnull(ParseContext*)ctx, StringView str);
+
+#endif

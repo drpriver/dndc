@@ -30,7 +30,7 @@ TestFunction(TestDndC1){
         | PARSE_SUPPRESS_WARNINGS
         | PARSE_DONT_PRINT_ERRORS
         ;
-    auto e = run_the_parser(flags, source, LS(""), LS(""));
+    auto e = run_the_dndc(flags, source, LS(""), LS(""));
     TestExpectSuccess(e);
     TESTEND();
     }
@@ -51,7 +51,7 @@ TestFunction(TestDndC2){
         | PARSE_SUPPRESS_WARNINGS
         | PARSE_DONT_PRINT_ERRORS
         ;
-    auto e = run_the_parser(flags, source, LS(""), LS(""));
+    auto e = run_the_dndc(flags, source, LS(""), LS(""));
     TestExpectSuccess(e);
     TESTEND();
     }
@@ -71,7 +71,7 @@ TestFunction(TestDndC3){
         | PARSE_SUPPRESS_WARNINGS
         | PARSE_DONT_PRINT_ERRORS
         ;
-    auto e = run_the_parser(flags, source, LS(""), LS(""));
+    auto e = run_the_dndc(flags, source, LS(""), LS(""));
     TestExpectFailure(e);
     TESTEND();
     }

@@ -1,7 +1,8 @@
-#ifndef BB_READ_BIN_FILE_H
-#define BB_READ_BIN_FILE_H
+#ifndef BB_EXTENSIONS_H
+#define BB_EXTENSIONS_H
 #include "ByteBuilder.h"
 #include "file_util.h"
+#include "base64.h"
 
 //
 // Reads an entire file into a ByteBuilder.
@@ -113,6 +114,30 @@ finally:
 
 #endif
 
+//
+// Reads in a file as binary and base64-ifies it.
+// The byte builder is just as a buffer to read into, so you can
+// use something like a temporary allocator for its allocator
+// if yu have one.
+//
+// All failures are file-related errors.
+// The base64-ifying can't fail.
+//
+static
+Errorable_f(LongString)
+read_and_base64_bin_file(Nonnull(ByteBuilder*)bb, const Allocator a, Nonnull(const char*) filepath){
+    Errorable(LongString) result = {};
+    assert(bb->cursor == 0);
+    auto e = bb_read_bin_file(bb, filepath);
+    if(e.errored)
+        Raise(e.errored);
+    auto buff = bb_borrow(bb);
+    MStringBuilder sb = {};
+    msb_write_b64(&sb, a, buff.buff, buff.n_bytes);
+    result.result = msb_detach(&sb, a);
+    bb_reset(bb);
+    return result;
+    }
 
 
 #endif

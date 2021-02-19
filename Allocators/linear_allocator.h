@@ -59,6 +59,7 @@ typedef struct LinearAllocator {
 // The name parameter needs to live for at least as long as the LinearAllocator
 // as we do not copy it. Almost always it's a string literal so that is no
 // worry.
+//
 static inline
 warn_unused
 LinearAllocator
