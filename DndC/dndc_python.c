@@ -285,12 +285,11 @@ DndClasses_setitem(Nonnull(DndClassesList*)list, Py_ssize_t index, Nullable(PyOb
 static
 Nullable(PyObject*)
 DndClasses_append(Nonnull(DndClassesList*)list, Nonnull(PyObject*)args){
-    const char* text;
-    Py_ssize_t length;
-    if(!PyArg_ParseTuple(args, "s#:append", &text, &length))
+    PyObject* text;
+    if(!PyArg_ParseTuple(args, "O!:append", &PyUnicode_Type, &text))
         return NULL;
     auto node = get_node(list->ctx, list->handle);
-    StringView sv = {.text = Allocator_dupe(list->ctx->allocator, text, length), .length=length};
+    StringView sv = pystring_to_stringview(text, list->ctx->allocator);
     Marray_push(StringView)(&node->classes, list->ctx->allocator, sv);
     Py_RETURN_NONE;
     }
@@ -439,9 +438,6 @@ DndAttributesMap_setitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key, 
         return -1;
         }
     auto key_sv = pystring_borrow_stringview(key);
-    StringView value_sv;
-    if(value)
-        value_sv = pystring_to_stringview((Nonnull(PyObject*))value, map->ctx->allocator);
     auto node = get_node(map->ctx, map->handle);
     auto attributes = &node->attributes;
     auto count = attributes->count;
@@ -449,7 +445,7 @@ DndAttributesMap_setitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key, 
         auto attr = &attributes->data[i];
         if(SV_equals(attr->key, key_sv)){
             if(value){
-                attr->value = value_sv;
+                attr->value = pystring_to_stringview((Nonnull(PyObject*))value, map->ctx->allocator);
                 return 0;
                 }
             else {
@@ -466,7 +462,7 @@ DndAttributesMap_setitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key, 
     auto attr = Marray_alloc(Attribute)(&node->attributes, map->ctx->allocator);
     attr->key.length = key_sv.length;
     attr->key.text = key_copy;
-    attr->value = value_sv;
+    attr->value = pystring_to_stringview((Nonnull(PyObject*))value, map->ctx->allocator);
     return 0;
     }
 
@@ -723,19 +719,17 @@ static
 Nullable(PyObject*)
 py_add_dependency(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
     (void)handle;
-    const char* text;
-    Py_ssize_t length;
+    PyObject* text;
     const char* const keywords[] = { "text", NULL, };
     PushDiagnostic();
     SuppressCastQual();
     // This call is guaranteed to not modify keywords, but it's declared as char**
     // as const in C is kind of broken.
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "s#:add_dependency", (char**)keywords, &text, &length)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!:add_dependency", (char**)keywords, &PyUnicode_Type, &text)){
         return NULL;
         }
     PopDiagnostic();
-    char* copy = Allocator_dupe(ctx->allocator, text, length);
-    StringView sv = {.text=copy, .length=length};
+    StringView sv = pystring_to_stringview(text, ctx->allocator);
     Marray_push(StringView)(&ctx->dependencies, ctx->allocator, sv);
     Py_RETURN_NONE;
     }
@@ -745,8 +739,7 @@ Nullable(PyObject*)
 py_make_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
     (void)handle;
     NodeTypeEnum* type;
-    const char* text = NULL;
-    Py_ssize_t length;
+    PyObject* text = NULL;
     PyObject* classes = NULL;
     PyObject* class_sq = NULL;
     PyObject* attributes = NULL;
@@ -756,7 +749,7 @@ py_make_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args
     SuppressCastQual();
     // This call is guaranteed to not modify keywords, but it's declared as char**
     // as const in C is kind of broken.
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|s#OO:make_node", (char**)keywords, &NodeTypeEnumType, &type, &text, &length, &classes, &attributes)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OO:make_node", (char**)keywords, &NodeTypeEnumType, &type, &PyUnicode_Type, &text, &classes, &attributes)){
         return NULL;
         }
     PopDiagnostic();
@@ -801,9 +794,7 @@ py_make_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args
         }
     }
     if(text){
-        char* copy = Allocator_dupe(ctx->allocator, text, length);
-        StringView sv = {.text=copy, .length=length};
-        node->header = sv;
+        node->header = pystring_to_stringview(text, ctx->allocator);
         }
     if(class_sq){
         auto sq_length = PySequence_Fast_GET_SIZE(class_sq);
@@ -870,26 +861,20 @@ static
 Nullable(PyObject*)
 py_set_data(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
     (void)handle;
-    const char* key_text = NULL;
-    Py_ssize_t key_length;
-    const char* value_text = NULL;
-    Py_ssize_t value_length;
+    PyObject* key = NULL;
+    PyObject* value = NULL;
     const char* const keywords[] = { "key", "value", NULL, };
     PushDiagnostic();
     SuppressCastQual();
     // This call is guaranteed to not modify keywords, but it's declared as char**
     // as const in C is kind of broken.
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "s#s#:set_data", (char**)keywords, &key_text, &key_length, &value_text, &value_length)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!:set_data", (char**)keywords, &PyUnicode_Type, &key, &PyUnicode_Type, &value)){
         return NULL;
         }
     PopDiagnostic();
-    char* key_copy = Allocator_dupe(ctx->allocator, key_text, key_length);
     auto new_data = Marray_alloc(DataItem)(&ctx->rendered_data, ctx->allocator);
-    new_data->key.text = key_copy;
-    new_data->key.length = key_length;
-    char* value_copy = Allocator_dupe(ctx->allocator, value_text, value_length+1);
-    new_data->value.text = value_copy;
-    new_data->value.length = value_length;
+    new_data->key = pystring_to_stringview(key, ctx->allocator);
+    new_data->value = pystring_to_longstring(value, ctx->allocator);
     Py_RETURN_NONE;
     }
 

@@ -705,7 +705,7 @@ PARSEFUNC(parse_text_node){
     assert(parent->type == NODE_TEXT);
     }
     bool in_para_node = 0;
-    NodeHandle para_handle;
+    NodeHandle para_handle = INVALID_NODE_HANDLE;
     Errorable(void) result = {};
     for(;ctx->cursor[0];){
         analyze_line(ctx);

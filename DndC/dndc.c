@@ -359,26 +359,22 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
             auto node = get_node(&ctx, handle);
             for(size_t j = 0; j < node->children.count; j++, node=get_node(&ctx, handle)){
                 auto child_handle = node->children.data[j];
-                StringView filename;
-                LongString imp_text;
-                {
-                    auto child = get_node(&ctx, child_handle);
-                    if(child->type != NODE_STRING){
-                        node_print_err(&ctx, child, "import child is not a string");
-                        result.errored = PARSE_ERROR;
-                        goto cleanup;
-                        }
-                    filename = child->header;
-                    child->type = NODE_CONTAINER;
-                    child->header = SV("");
-                    auto imp_e = load_source_file(&ctx, filename);
-                    if(imp_e.errored){
-                        node_print_err(&ctx, child, "Unable to open '%.*s'", (int)filename.length, filename.text);
-                        result.errored = imp_e.errored;
-                        goto cleanup;
-                        }
-                    imp_text = unwrap(imp_e);
-                }
+                auto child = get_node(&ctx, child_handle);
+                if(child->type != NODE_STRING){
+                    node_print_err(&ctx, child, "import child is not a string");
+                    result.errored = PARSE_ERROR;
+                    goto cleanup;
+                    }
+                StringView filename = child->header;
+                child->type = NODE_CONTAINER;
+                child->header = SV("");
+                auto imp_e = load_source_file(&ctx, filename);
+                if(imp_e.errored){
+                    node_print_err(&ctx, child, "Unable to open '%.*s'", (int)filename.length, filename.text);
+                    result.errored = imp_e.errored;
+                    goto cleanup;
+                    }
+                LongString imp_text = unwrap(imp_e);
                 auto parse_e = dndc_parse(&ctx, child_handle, filename, imp_text.text);
                 if(parse_e.errored){
                     report_error(flags, "%s", ctx.error_message.text);
@@ -431,7 +427,12 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
                     }
                 }
         }
-        ThreadHandle worker;
+        // FIXME: initializing it like this is just to suppress compiler
+        // warnings.
+        // It would be better to restructure this code so that the worker is
+        // either used or not in scope instead of using state variables to
+        // track it.
+        ThreadHandle worker = {};
         bool binary_work_to_be_done = !!job.sourcepaths.count;
         if(binary_work_to_be_done){
             if(flags & DNDC_NO_THREADS){

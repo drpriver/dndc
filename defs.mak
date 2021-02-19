@@ -80,7 +80,7 @@ endif
 endif
 
 
-ifeq ($(CC_FLAVOR),CLANG)
+ifeq ($(CC),clang)
 WARNING_FLAGS+=-Wassign-enum\
 	-Wshadow \
 	-Warray-bounds-pointer-arithmetic\
@@ -102,8 +102,10 @@ WARNING_FLAGS+=-Wassign-enum\
 	-Werror=nullability\
 	-Wno-c++17-extensions\
 	-Wno-gnu-alignof-expression\
+	-Wuninitialized\
+	-Wconditional-uninitialized\
 	-Wcomma
-else ifeq ($(CC_FLAVOR),GCC)
+else ifeq ($(CC),gcc)
 WARNING_FLAGS+=-Wno-missing-braces\
 	-Wno-missing-field-initializers
 endif
