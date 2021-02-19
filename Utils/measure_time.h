@@ -4,6 +4,7 @@
 //
 // Gets current monotonically increasing time, measured in microseconds.
 // Always succeeds.
+// Used for ad-hoc profiling of different parts of the program.
 //
 static inline uint64_t get_t(void);
 

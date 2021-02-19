@@ -675,17 +675,17 @@ static inline
 void
 add_link_from_header(Nonnull(ParseContext*)ctx, StringView str){
     MStringBuilder sb = {};
+    msb_write_char(&sb, ctx->allocator, '#');
     msb_write_kebab(&sb, ctx->allocator, str.text, str.length);
-    if(!sb.cursor)
+    if(sb.cursor==1){
+        msb_destroy(&sb, ctx->allocator);
         return;
-    auto kebabed = LS_to_SV(msb_detach(&sb, ctx->allocator));
-
-    msb_sprintf(&sb, ctx->allocator, "#%.*s", (int)kebabed.length, kebabed.text);
+        }
     LongString anchor = msb_detach(&sb, ctx->allocator);
-    StringView value = LS_to_SV(anchor);
+    StringView kebabed = {.text = anchor.text+1, .length=anchor.length-1};
     auto li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
     li->key = kebabed;
-    li->value = value;
+    li->value = LS_to_SV(anchor);
     return;
     }
 
@@ -822,7 +822,7 @@ int main(int argc, char**argv){
     ArgParser argparser = {
         .name = argv[0],
         .description = "A .dnd to .html parser and compiler.",
-        .version = "dndc version " DNDC_VERSION "",
+        .version = "dndc version " DNDC_VERSION ". Compiled " __TIMESTAMP__,
         .positional.args = pos_args,
         .positional.count = arrlen(pos_args),
         .keyword.args = kw_args,
@@ -950,184 +950,204 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
     set_context_source(&ctx, path, source.text);
     Marray_reserve(Node)(&ctx.nodes, ctx.allocator, source.length/10+1);
 
+    // Setup the root node.
     {
-    auto root_handle = alloc_handle(&ctx);
-    ctx.root_handle = root_handle;
-    auto root = get_node(&ctx, root_handle);
-    root->col = 0;
-    root->row = 0;
-    root->filename = ctx.filename;
-    root->type = NODE_ROOT;
-    root->parent = root_handle;
+        auto root_handle = alloc_handle(&ctx);
+        ctx.root_handle = root_handle;
+        auto root = get_node(&ctx, root_handle);
+        root->col = 0;
+        root->row = 0;
+        root->filename = ctx.filename;
+        root->type = NODE_ROOT;
+        root->parent = root_handle;
     }
+    // Parse the initial document.
     {
-    auto before_parse = get_t();
-    auto e = parse(&ctx, ctx.root_handle);
-    auto after_parse = get_t();
-    report_stat(ctx.flags, "Initial parsing took: %.3fms", (after_parse-before_parse)/1000.);
-    if(e.errored){
-        report_error(flags, "%s", ctx.error_message.text);
-        result.errored = e.errored;
-        goto cleanup;
-        }
-    }
-    auto before_imports = get_t();
-    for(size_t i = 0; i < ctx.imports.count; i++){
-        auto handle = ctx.imports.data[i];
-        auto node = get_node(&ctx, handle);
-        for(size_t j = 0; j < node->children.count; j++, node=get_node(&ctx, handle)){
-            auto child_handle = node->children.data[j];
-            StringView filename;
-            {
-            auto child = get_node(&ctx, child_handle);
-            if(child->type != NODE_STRING){
-                node_print_err(&ctx, child, "import child is not a string");
-                result.errored = PARSE_ERROR;
-                goto cleanup;
-                }
-            filename = child->header;
-            child->type = NODE_CONTAINER;
-            child->header = SV("");
-            auto imp_e = load_source_file(&ctx, filename);
-            if(imp_e.errored){
-                node_print_err(&ctx, child, "Unable to open '%.*s'", (int)filename.length, filename.text);
-                result.errored = imp_e.errored;
-                goto cleanup;
-                }
-            auto imp_text = unwrap(imp_e);
-            set_context_source(&ctx, filename, imp_text.text);
-            }
-            auto parse_e = parse(&ctx, child_handle);
-            if(parse_e.errored){
-                report_error(flags, "%s", ctx.error_message.text);
-                result.errored = parse_e.errored;
-                goto cleanup;
-                }
-            }
-        }
-    auto after_imports = get_t();
-    report_stat(ctx.flags, "Resolving imports took: %.3fms", (after_imports-before_imports)/1000.);
-
-    {
-    const Allocator worker_allocator = flags & PARSE_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
-    BinaryJob job = {
-        .a = worker_allocator,
-        .report_time = !!(ctx.flags & PARSE_PRINT_STATS),
-        };
-    {
-        Marray(NodeHandle)* img_nodes[] = {
-            &ctx.img_nodes,
-            &ctx.imglinks_nodes,
-            };
-        for(size_t n = 0; n < arrlen(img_nodes); n++){
-            auto nodes = img_nodes[n];
-            for(size_t i = 0; i < nodes->count; i++){
-                auto node = get_node(&ctx, nodes->data[i]);
-                if(!node->children.count)
-                    continue;
-                auto child = get_node(&ctx, node->children.data[0]);
-                if(!child->header.length)
-                    continue;
-                // FIXME: this makes it O(N^2)
-                // In practice, we only have a few images though.
-                // But also in practice, we don't have duplicates and
-                // this just speeds up benchmarks. *shrug*.
-                for(size_t j = 0; j < job.sourcepaths.count; j++){
-                    if(SV_equals(child->header, job.sourcepaths.data[j]))
-                        goto Continue;
-                    }
-                auto sv = Marray_alloc(StringView)(&job.sourcepaths, job.a);
-                *sv = child->header;
-                Continue:;
-                }
-            }
-    }
-    ThreadHandle worker;
-    bool binary_work_to_be_done = !!job.sourcepaths.count;
-    if(binary_work_to_be_done){
-        if(flags & PARSE_NO_THREADS){
-            // Do it ourselves.
-            binary_worker(&job);
-            }
-        else{
-            auto before = get_t();
-            create_thread(&worker, &binary_worker, &job);
-            auto after = get_t();
-            report_stat(ctx.flags, "Launching binary data processing took: %.3fms", (after-before)/1000.);
-            }
-        }
-    else {
-        if(!(flags & PARSE_NO_CLEANUP)){
-            shallow_free_recorded_mallocator(job.a);
-            }
-        }
-
-    if(!(flags & PARSE_NO_PYTHON) and ctx.python_nodes.count){
-        auto before = get_t();
-        auto e = init_python_docparser(flags);
-        if(e.errored) {
-            report_error(flags, "Failed to initialize python\n");
+        auto before_parse = get_t();
+        auto e = parse(&ctx, ctx.root_handle);
+        auto after_parse = get_t();
+        report_stat(ctx.flags, "Initial parsing took: %.3fms", (after_parse-before_parse)/1000.);
+        if(e.errored){
+            report_error(flags, "%s", ctx.error_message.text);
             result.errored = e.errored;
             goto cleanup;
             }
-        auto after = get_t();
-        report_stat(ctx.flags, "Python startup took: %.3fms", (after-before)/1000.);
-        for(size_t i = 0; i < ctx.python_nodes.count; i++){
-            auto handle = ctx.python_nodes.data[i];
-            {
+    }
+    // Handle imports. Imports can import more imports.
+    {
+        auto before_imports = get_t();
+        for(size_t i = 0; i < ctx.imports.count; i++){
+            auto handle = ctx.imports.data[i];
             auto node = get_node(&ctx, handle);
-            if(node->type != NODE_PYTHON)
-                continue;
-            for(auto j = 0; j < node->children.count; j++){
-                auto child = node->children.data[j];
-                auto child_node = get_node(&ctx, child);
-                msb_write_str(&msb, ctx.allocator, child_node->header.text, child_node->header.length);
-                msb_write_char(&msb, ctx.allocator, '\n');
+            for(size_t j = 0; j < node->children.count; j++, node=get_node(&ctx, handle)){
+                auto child_handle = node->children.data[j];
+                StringView filename;
+                {
+                auto child = get_node(&ctx, child_handle);
+                if(child->type != NODE_STRING){
+                    node_print_err(&ctx, child, "import child is not a string");
+                    result.errored = PARSE_ERROR;
+                    goto cleanup;
+                    }
+                filename = child->header;
+                child->type = NODE_CONTAINER;
+                child->header = SV("");
+                auto imp_e = load_source_file(&ctx, filename);
+                if(imp_e.errored){
+                    node_print_err(&ctx, child, "Unable to open '%.*s'", (int)filename.length, filename.text);
+                    result.errored = imp_e.errored;
+                    goto cleanup;
+                    }
+                auto imp_text = unwrap(imp_e);
+                set_context_source(&ctx, filename, imp_text.text);
                 }
-            if(!msb.cursor)
-                continue;
-            auto str = msb_detach(&msb, ctx.allocator);
-            auto py_err = execute_python_string(&ctx, str.text, handle);
-            if(py_err.errored){
-                report_error(flags, "%s", ctx.error_message.text);
-                result.errored = py_err.errored;
-                goto cleanup;
-                }
-            }
-            auto node = get_node(&ctx, handle);
-            // unsure if this is right, but doing it for now.
-            auto parent = get_node(&ctx, node->parent);
-            node->parent = INVALID_NODE_HANDLE;
-            for(size_t j = 0; j < parent->children.count; j++){
-                if(NodeHandle_eq(handle, parent->children.data[j])){
-                    Marray_remove__NodeHandle(&parent->children, j);
-                    goto after;
+                auto parse_e = parse(&ctx, child_handle);
+                if(parse_e.errored){
+                    report_error(flags, "%s", ctx.error_message.text);
+                    result.errored = parse_e.errored;
+                    goto cleanup;
                     }
                 }
-            // don't both warning here, but leave the scaffolding in case I want to.
-            after:;
             }
-        auto after_python = get_t();
-        report_stat(ctx.flags, "Python scripts took: %.3fms", (after_python-after)/1000.);
-        report_stat(ctx.flags, "Python total took: %.3fms", (after_python-before)/1000.);
-        }
-    if(binary_work_to_be_done){
-        if(!(flags & PARSE_NO_THREADS)){
-            auto before = get_t();
-            join_thread(worker);
-            auto after = get_t();
-            report_stat(ctx.flags, "Joining took : %.3fms", (after-before)/1000.);
-            }
-        Marray_cleanup(StringView)(&job.sourcepaths, job.a);
-        if(job.loaded.count)
-            Marray_extend(LoadedSource)(&ctx.processed_binary_files, ctx.allocator, job.loaded.data, job.loaded.count);
-        Marray_cleanup(LoadedSource)(&job.loaded, job.a);
-        if(!(flags & PARSE_NO_CLEANUP)){
-            merge_recorded_mallocators_and_destroy_src(allocator, job.a);
-            shallow_free_recorded_mallocator(job.a);
-            }
-        }
+        auto after_imports = get_t();
+        report_stat(ctx.flags, "Resolving imports took: %.3fms", (after_imports-before_imports)/1000.);
     }
+
+    // Speculatively load imgs and imglinks and preprocess them.
+    // Do this as the same time we execute the Python nodes.
+    // Python blocks can add imgs or change the paths of the img nodes,
+    // but they usually don't, so doing these in parallel is a win as
+    // Python startup is very slow.
+    {
+        // Setup for the worker thread.
+        const Allocator worker_allocator = flags & PARSE_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
+        BinaryJob job = {
+            .a = worker_allocator,
+            .report_time = !!(ctx.flags & PARSE_PRINT_STATS),
+            };
+        {
+            Marray(NodeHandle)* img_nodes[] = {
+                &ctx.img_nodes,
+                &ctx.imglinks_nodes,
+                };
+            for(size_t n = 0; n < arrlen(img_nodes); n++){
+                auto nodes = img_nodes[n];
+                for(size_t i = 0; i < nodes->count; i++){
+                    auto node = get_node(&ctx, nodes->data[i]);
+                    if(!node->children.count)
+                        continue;
+                    auto child = get_node(&ctx, node->children.data[0]);
+                    if(!child->header.length)
+                        continue;
+                    // FIXME: this makes it O(N^2)
+                    // In practice, we only have a few images though.
+                    // But also in practice, we don't have duplicates and
+                    // this just speeds up benchmarks. *shrug*.
+                    for(size_t j = 0; j < job.sourcepaths.count; j++){
+                        if(SV_equals(child->header, job.sourcepaths.data[j]))
+                            goto Continue;
+                        }
+                    auto sv = Marray_alloc(StringView)(&job.sourcepaths, job.a);
+                    *sv = child->header;
+                    Continue:;
+                    }
+                }
+        }
+        ThreadHandle worker;
+        bool binary_work_to_be_done = !!job.sourcepaths.count;
+        if(binary_work_to_be_done){
+            if(flags & PARSE_NO_THREADS){
+                // Do it ourselves in this thread.
+                binary_worker(&job);
+                }
+            else{
+                auto before = get_t();
+                create_thread(&worker, &binary_worker, &job);
+                auto after = get_t();
+                report_stat(ctx.flags, "Launching binary data processing took: %.3fms", (after-before)/1000.);
+                }
+            }
+        else {
+            if(!(flags & PARSE_NO_CLEANUP)){
+                shallow_free_recorded_mallocator(job.a);
+                }
+            }
+
+        // Execute the python blocks.
+        if(!(flags & PARSE_NO_PYTHON) and ctx.python_nodes.count){
+            auto before = get_t();
+            // init_python_docparser handles the PARSE_PYTHON_IS_INIT flag.
+            auto e = init_python_docparser(flags);
+            if(e.errored) {
+                report_error(flags, "Failed to initialize python\n");
+                result.errored = e.errored;
+                goto cleanup;
+                }
+            auto after = get_t();
+            report_stat(ctx.flags, "Python startup took: %.3fms", (after-before)/1000.);
+            for(size_t i = 0; i < ctx.python_nodes.count; i++){
+                auto handle = ctx.python_nodes.data[i];
+                {
+                auto node = get_node(&ctx, handle);
+                if(node->type != NODE_PYTHON)
+                    continue;
+                for(auto j = 0; j < node->children.count; j++){
+                    auto child = node->children.data[j];
+                    auto child_node = get_node(&ctx, child);
+                    msb_write_str(&msb, ctx.allocator, child_node->header.text, child_node->header.length);
+                    msb_write_char(&msb, ctx.allocator, '\n');
+                    }
+                if(!msb.cursor)
+                    continue;
+                auto str = msb_detach(&msb, ctx.allocator);
+                auto py_err = execute_python_string(&ctx, str.text, handle);
+                if(py_err.errored){
+                    report_error(flags, "%s", ctx.error_message.text);
+                    result.errored = py_err.errored;
+                    goto cleanup;
+                    }
+                }
+                auto node = get_node(&ctx, handle);
+                // unsure if this is right, but doing it for now.
+                auto parent = get_node(&ctx, node->parent);
+                node->parent = INVALID_NODE_HANDLE;
+                for(size_t j = 0; j < parent->children.count; j++){
+                    if(NodeHandle_eq(handle, parent->children.data[j])){
+                        Marray_remove__NodeHandle(&parent->children, j);
+                        goto after;
+                        }
+                    }
+                // don't both warning here, but leave the scaffolding in case I want to.
+                after:;
+                }
+            auto after_python = get_t();
+            report_stat(ctx.flags, "Python scripts took: %.3fms", (after_python-after)/1000.);
+            report_stat(ctx.flags, "Python total took: %.3fms", (after_python-before)/1000.);
+            }
+        // Python blocks are done, join with the base64 thread.
+        // We could actually join later now that I think about it.
+        // We only need to join by the time we start rendering any of the nodes into html.
+        // Well, todo, we almost always finish by the time python is done.
+        if(binary_work_to_be_done){
+            if(!(flags & PARSE_NO_THREADS)){
+                auto before = get_t();
+                join_thread(worker);
+                auto after = get_t();
+                // This is usually very fast as the worker thread finished before python.
+                report_stat(ctx.flags, "Joining took: %.3fms", (after-before)/1000.);
+                }
+            Marray_cleanup(StringView)(&job.sourcepaths, job.a);
+            // Merge the worker's output and allocations into ours.
+            if(job.loaded.count)
+                Marray_extend(LoadedSource)(&ctx.processed_binary_files, ctx.allocator, job.loaded.data, job.loaded.count);
+            Marray_cleanup(LoadedSource)(&job.loaded, job.a);
+            if(!(flags & PARSE_NO_CLEANUP)){
+                merge_recorded_mallocators_and_destroy_src(allocator, job.a);
+                shallow_free_recorded_mallocator(job.a);
+                }
+            }
+    }
+    // Do some reporting as we don't add any nodes after this.
     report_stat(ctx.flags, "ctx.nodes.count = %zu", ctx.nodes.count);
     report_stat(ctx.flags, "ctx.python_nodes.count = %zu", ctx.python_nodes.count);
     report_stat(ctx.flags, "ctx.imports.count = %zu", ctx.imports.count);
@@ -1150,19 +1170,19 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
         result.errored = PARSE_ERROR;
         goto cleanup;
         }
-    // check that the tree is not too deep!
+    // Check that the tree is not too deep!
     {
-    auto before = get_t();
-    auto e = check_depth(&ctx);
-    if(e.errored){
-        report_error(flags, "%s", ctx.error_message.text);
-        result.errored = e.errored;
-        goto cleanup;
-        }
-    auto after = get_t();
-    report_stat(ctx.flags, "Checking depth took %.3fms", (after-before)/1000.);
+        auto before = get_t();
+        auto e = check_depth(&ctx);
+        if(e.errored){
+            report_error(flags, "%s", ctx.error_message.text);
+            result.errored = e.errored;
+            goto cleanup;
+            }
+        auto after = get_t();
+        report_stat(ctx.flags, "Checking depth took %.3fms", (after-before)/1000.);
     }
-    // resolve links
+    // Create links from headers.
     {
         auto before = get_t();
         gather_anchors(&ctx);
@@ -1175,8 +1195,12 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
             }
     }
 
+    // Maybe should remove this option as it clogs up the cli and was just for debugging
+    // before rendering was off the ground.
     if(flags & PARSE_PRINT_TREE)
         print_node_and_children(&ctx, ctx.root_handle, 0);
+
+    // Render the nav block if we have one.
     {
         auto before = get_t();
         if(!NodeHandle_eq(ctx.navnode, INVALID_NODE_HANDLE))
@@ -1184,116 +1208,123 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
         auto after =  get_t();
         report_stat(ctx.flags, "Nav block building took: %.3fms", (after-before)/1000.);
     }
+
+    // Add in the links from explicit link blocks.
     {
-    auto link_node_count = ctx.link_nodes.count;
-    auto link_handles = ctx.link_nodes.data;
-    for(size_t ln = 0; ln < link_node_count; ln++){
-        auto link_node_handle = link_handles[ln];
-        auto link_node = get_node(&ctx, link_node_handle);
-        for(size_t i = 0; i < link_node->children.count; i++){
-            auto link_str_handle = link_node->children.data[i];
-            auto link_str_node = get_node(&ctx, link_str_handle);
-            auto str = link_str_node->header;
-            auto e = add_link_from_sv(&ctx, str, true);
-            if(e.errored){
-                // This looks weird, but I am formatting the error.
-                node_set_err(&ctx, link_str_node, "%s", ctx.error_message.text);
-                report_error(flags, "%s", ctx.error_message.text);
-                result.errored = e.errored;
-                goto cleanup;
+        auto link_node_count = ctx.link_nodes.count;
+        auto link_handles = ctx.link_nodes.data;
+        for(size_t ln = 0; ln < link_node_count; ln++){
+            auto link_node = get_node(&ctx, link_handles[ln]);
+            for(size_t i = 0; i < link_node->children.count; i++){
+                auto link_str_node = get_node(&ctx, link_node->children.data[i]);
+                auto str = link_str_node->header;
+                auto e = add_link_from_sv(&ctx, str, /*check_valid=*/true);
+                if(e.errored){
+                    // This looks weird, but I am formatting the error.
+                    // FIXME: pass the node into the add_link_from_sv function?
+                    // That way it can properly format the error itself?
+                    node_set_err(&ctx, link_str_node, "%s", ctx.error_message.text);
+                    report_error(flags, "%s", ctx.error_message.text);
+                    result.errored = e.errored;
+                    goto cleanup;
+                    }
                 }
             }
-        }
-    if(ctx.links.count)
-        qsort(ctx.links.data, ctx.links.count, sizeof(ctx.links.data[0]), StringView_cmp);
-    if(flags & PARSE_PRINT_LINKS){
-        for(size_t i = 0; i < ctx.links.count; i++){
-            auto li = &ctx.links.data[i];
-            printf("[%zu] key: '%.*s', value: '%.*s'\n", i, (int)li->key.length, li->key.text, (int)li->value.length, li->value.text);
+        // Sort so we can do a binary search.
+        if(ctx.links.count)
+            qsort(ctx.links.data, ctx.links.count, sizeof(ctx.links.data[0]), StringView_cmp);
+        if(flags & PARSE_PRINT_LINKS){
+            for(size_t i = 0; i < ctx.links.count; i++){
+                auto li = &ctx.links.data[i];
+                printf("[%zu] key: '%.*s', value: '%.*s'\n", i, (int)li->key.length, li->key.text, (int)li->value.length, li->value.text);
+                }
             }
-        }
+        report_stat(ctx.flags, "ctx.links.count = %zu", ctx.links.count);
     }
-    report_stat(ctx.flags, "ctx.links.count = %zu", ctx.links.count);
+
     if(unlikely(flags & PARSE_DONT_WRITE))
         goto success;
 
-    auto before_data = get_t();
+    // Render data nodes into the data blob.
     {
-    MStringBuilder sb = {};
-    for(size_t i = 0; i < ctx.data_nodes.count; i++){
-        auto handle = ctx.data_nodes.data[i];
-        auto data_node = get_node(&ctx, handle);
-        // Node could've been mutated after being registered.
-        if(data_node->type != NODE_DATA)
-            continue;
-        for(size_t j = 0; j < data_node->children.count; j++){
-            auto child = get_node(&ctx, data_node->children.data[j]);
-            if(!child->header.length){
-                node_print_warning(&ctx, child, "Missing header from data child?");
-                }
-            // FIXME:
-            // A maliciously crafted python block could bypass our depth check
-            // up above by detaching the data node and making one too deep,
-            // thus making us vulnerable to stack exhaustion during this
-            // recursive call.
-            //
-            // However, our code execution is totally unsandboxed right now and
-            // a malicious python block can just do anything. Crashing this
-            // main program is the least of your worries when it can just do an
-            // os.system('rm -rf /'). We bother guarding at all as you could
-            // run this in no-python mode.
-            {
-            msb_reset(&sb);
-            auto e = render_node(&ctx, &sb, child, 1);
-            if(e.errored){
-                report_error(flags, "%s", ctx.error_message.text);
-                result.errored = e.errored;
-                goto cleanup;
-                }
-            }
-            if(!sb.cursor){
-                node_print_warning(&ctx, child, "Rendered a data node with no data. Not outputting it.");
+        auto before_data = get_t();
+        MStringBuilder sb = {};
+        for(size_t i = 0; i < ctx.data_nodes.count; i++){
+            auto handle = ctx.data_nodes.data[i];
+            auto data_node = get_node(&ctx, handle);
+            // Node could've been mutated after being registered.
+            if(data_node->type != NODE_DATA)
                 continue;
+            for(size_t j = 0; j < data_node->children.count; j++){
+                auto child = get_node(&ctx, data_node->children.data[j]);
+                if(!child->header.length){
+                    node_print_warning(&ctx, child, "Missing header from data child?");
+                    }
+                // FIXME:
+                // A maliciously crafted python block could bypass our depth check
+                // up above by detaching the data node and making one too deep,
+                // thus making us vulnerable to stack exhaustion during this
+                // recursive call.
+                //
+                // However, our code execution is totally unsandboxed right now and
+                // a malicious python block can just do anything. Crashing this
+                // main program is the least of your worries when it can just do an
+                // os.system('rm -rf /'). We bother guarding at all as you could
+                // run this in no-python mode.
+                {
+                msb_reset(&sb);
+                auto e = render_node(&ctx, &sb, child, 1);
+                if(e.errored){
+                    report_error(flags, "%s", ctx.error_message.text);
+                    result.errored = e.errored;
+                    goto cleanup;
+                    }
                 }
-            auto text = msb_detach(&sb, ctx.allocator);
-            auto di = Marray_alloc(DataItem)(&ctx.rendered_data, ctx.allocator);
-            di->key = child->header;
-            di->value = text;
+                if(!sb.cursor){
+                    node_print_warning(&ctx, child, "Rendered a data node with no data. Not outputting it.");
+                    continue;
+                    }
+                auto text = msb_detach(&sb, ctx.allocator);
+                auto di = Marray_alloc(DataItem)(&ctx.rendered_data, ctx.allocator);
+                di->key = child->header;
+                di->value = text;
+                }
             }
-        }
-    auto after_data = get_t();
-    report_stat(ctx.flags, "Data blob rendering took: %.3fms", (after_data-before_data)/1000.);
-    report_stat(ctx.flags, "ctx.rendered_data.count = %zu", ctx.rendered_data.count);
+        auto after_data = get_t();
+        report_stat(ctx.flags, "Data blob rendering took: %.3fms", (after_data-before_data)/1000.);
+        report_stat(ctx.flags, "ctx.rendered_data.count = %zu", ctx.rendered_data.count);
     }
+    // Render the actual document into a string as html.
     {
-    msb_reset(&msb);
-    auto before_render = get_t();
-    auto e = render_tree(&ctx, &msb);
-    auto after_render = get_t();
-    report_stat(ctx.flags, "Rendering took: %.3fms", (after_render-before_render)/1000.);
+        msb_reset(&msb);
+        auto before_render = get_t();
+        auto e = render_tree(&ctx, &msb);
+        auto after_render = get_t();
+        report_stat(ctx.flags, "Rendering took: %.3fms", (after_render-before_render)/1000.);
 
-    if(e.errored){
-        report_error(flags, "%s", ctx.error_message.text);
-        result.errored = e.errored;
-        goto cleanup;
-        }
-    auto str = msb_borrow(&msb, ctx.allocator);
-    if(!output_path.length){
-        fputs(str.text, stdout);
-        goto success;
-        }
-    auto before_write = get_t();
-    auto write_err = write_file(output_path.text, str.text, str.length);
-    auto after_write = get_t();
-    report_stat(ctx.flags, "Writing took: %.3fms", (after_write-before_write)/1000.);
-    report_stat(ctx.flags, "Total output size: %zu bytes", str.length);
-    if(write_err.errored){
-        ERROR("Error on write: %s", get_error_name(write_err));
-        perror("Error on write");
-        result.errored = write_err.errored;
-        goto cleanup;
-        }
+        if(e.errored){
+            report_error(flags, "%s", ctx.error_message.text);
+            result.errored = e.errored;
+            goto cleanup;
+            }
+        auto str = msb_borrow(&msb, ctx.allocator);
+        if(!output_path.length){
+            fputs(str.text, stdout);
+            goto success;
+            }
+        auto before_write = get_t();
+        auto write_err = write_file(output_path.text, str.text, str.length);
+        auto after_write = get_t();
+        report_stat(ctx.flags, "Writing took: %.3fms", (after_write-before_write)/1000.);
+        report_stat(ctx.flags, "Total output size: %zu bytes", str.length);
+        if(write_err.errored){
+            ERROR("Error on write: %s", get_error_name(write_err));
+            perror("Error on write");
+            result.errored = write_err.errored;
+            goto cleanup;
+            }
     }
+    // Write the make-style dependency file to the Dependency directory.
     if(depends_dir.length){
         for(size_t i = 0; i < ctx.loaded_files.count; i++){
             Marray_push(StringView)(&ctx.dependencies, ctx.allocator, LS_to_SV(ctx.loaded_files.data[i].sourcepath));

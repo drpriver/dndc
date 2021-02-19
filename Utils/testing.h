@@ -81,7 +81,7 @@ Nonnull(const char*) _test_color_blue  = ""
 Nonnull(const char*) _test_color_green = ""
 Nonnull(const char*) _test_color_red   = ""
 #endif
-// 
+//
 // Internal use macro to report test results within a failed condition.
 // You can use it if you want in your test functions if you need more reporting.
 // It's an fprintf wrapper (appends a newline though).

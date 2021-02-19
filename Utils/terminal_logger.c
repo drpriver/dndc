@@ -4,6 +4,9 @@
 #include <stdarg.h>
 #include "common_macros.h"
 #include "term_util.h"
+
+// This file is the implementation of the logfunc needed by log_print.h
+
 static const char*_Nonnull const log_strings[] = {
     "[HERE ]",
     "[ERROR]",
@@ -21,7 +24,6 @@ void vlogfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func,
         log_text = "[ ??? ]";
     else
         log_text = log_strings[log_level];
-    // TODO: figure out how to do this in a single fprintf call.
     static int is_tty;
     if(!is_tty){
         if(isatty(STDERR_FILENO)){
@@ -31,6 +33,7 @@ void vlogfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func,
             is_tty = 1;
         }
     bool print_colors = is_tty == 2;
+    // TODO: figure out how to do this in a single fprintf call.
     fprintf(stderr, "%s %s:%s:%d: ", log_text, file, func, line);
     if(print_colors){
         fprintf(stderr, blue_coloring);

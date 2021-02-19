@@ -258,7 +258,7 @@ def add_extra(filename:str, stuff:List[str]) -> None:
             stuff.append(l)
 
 def get_proj_dirs() -> List[str]:
-    EXCLUDED = {'Bin','Assets', 'Fonts', 'Icons', 'Objs', 'Resources', 'dave.egg-info', 'aux','Depends', 'Cache'}
+    EXCLUDED = {'Bin', 'Objs', 'Depends',}
     dirs = [d for d in os.listdir('.') if os.path.isdir(d) and d not in EXCLUDED and not d.startswith(('.', '_')) and '.app' not in d]
     subdirs = []
     for d in dirs:
@@ -276,7 +276,13 @@ def get_proj_dirs() -> List[str]:
 def write_vim(funcs:List[str], enums:List[str], types:List[str], globs:List[str], macros:List[str]) -> None:
     # remove some special macros
     macros_ = set(macros)
-    macros_.difference_update(['auto', 'bool', 'Nonnull', 'Nullable', 'NullUnspec'])
+    macros_.difference_update([
+        'auto',
+        'bool', 'true', 'false',
+        'Nonnull', 'Nullable', 'NullUnspec',
+        'or', 'and', 'not',
+        'Raise', 'attempt', 'unwrap',
+        ])
     macros_.difference_update(funcs)
     macros_.difference_update(enums)
     macros_.difference_update(types)
