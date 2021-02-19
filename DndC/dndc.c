@@ -910,7 +910,12 @@ run_the_parser(uint64_t flags, LongString source_path, LongString output_path, L
     else
         path = LS_to_SV(source_path);
     const Allocator allocator = flags & PARSE_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
-    auto la_ = new_linear_storage(1024*1024, "temp storage");
+    // The linear allocator is very useful for temporary allocations, like
+    // when we need to turn a string into its kebabed form and then look it up
+    // in the link map. We do this a lot and throw away the temporary string
+    // constantly - this means we don't have to keep hitting malloc
+    // just for temporary strings of arbitrary size.
+    LinearAllocator la_ = new_linear_storage(1024*1024, "temp storage");
     auto la = allocator_from_la(&la_);
     ParseContext ctx = {
         .flags = flags,

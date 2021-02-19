@@ -2,6 +2,7 @@
 #define NOMAIN
 #include "dndc.c"
 
+// TODO: more interesting tests.
 TestFunction(TestDndC1);
 TestFunction(TestDndC2);
 TestFunction(TestDndC3);
