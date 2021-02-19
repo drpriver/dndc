@@ -219,32 +219,32 @@ int main(int argc, char**argv){
         }
     auto after_parse_args = get_t();
     // this one has to be done manually as we don't have a ctx yet.
-    report_stat(print_stats?PARSE_PRINT_STATS:0, "Parsing args took: %.3fms", (after_parse_args-t0)/1000.);
+    report_stat(print_stats?DNDC_PRINT_STATS:0, "Parsing args took: %.3fms", (after_parse_args-t0)/1000.);
     }
 
-    uint64_t flags = PARSE_FLAGS_NONE;
+    uint64_t flags = DNDC_FLAGS_NONE;
     if(allow_bad_links)
-        flags |= PARSE_ALLOW_BAD_LINKS;
+        flags |= DNDC_ALLOW_BAD_LINKS;
     if(suppress_warnings)
-        flags |= PARSE_SUPPRESS_WARNINGS;
+        flags |= DNDC_SUPPRESS_WARNINGS;
     if(print_stats)
-        flags |= PARSE_PRINT_STATS;
+        flags |= DNDC_PRINT_STATS;
     if(report_orphans)
-        flags |= PARSE_REPORT_ORPHANS;
+        flags |= DNDC_REPORT_ORPHANS;
     if(no_python)
-        flags |= PARSE_NO_PYTHON;
+        flags |= DNDC_NO_PYTHON;
     if(print_tree)
-        flags |= PARSE_PRINT_TREE;
+        flags |= DNDC_PRINT_TREE;
     if(print_links)
-        flags |= PARSE_PRINT_LINKS;
+        flags |= DNDC_PRINT_LINKS;
     if(no_threads)
-        flags |= PARSE_NO_THREADS;
+        flags |= DNDC_NO_THREADS;
     if(dont_write)
-        flags |= PARSE_DONT_WRITE;
+        flags |= DNDC_DONT_WRITE;
     if(not cleanup)
-        flags |= PARSE_NO_CLEANUP;
+        flags |= DNDC_NO_CLEANUP;
     if(use_site)
-        flags |= PARSE_PYTHON_UNISOLATED;
+        flags |= DNDC_PYTHON_UNISOLATED;
 
     #ifdef BENCHMARKING
     if(!source_path.length){
@@ -255,10 +255,10 @@ int main(int argc, char**argv){
         }
     auto chdir_e = chdir(BENCHMARKDIRECTORY);
     unhandled_error_condition(chdir_e != 0);
-    flags &= ~PARSE_NO_CLEANUP;
+    flags &= ~DNDC_NO_CLEANUP;
     auto e = run_the_dndc(flags, source_path, output_path, depends_dir);
     assert(!e.errored);
-    flags |= PARSE_PYTHON_IS_INIT;
+    flags |= DNDC_PYTHON_IS_INIT;
     for(int i = 0; i < BENCHMARKITERS;i++){
         e = run_the_dndc(flags, source_path, output_path, depends_dir);
         assert(!e.errored);
@@ -279,11 +279,11 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
     MStringBuilder msb = {};
     Errorable(void) result = {};
     StringView path;
-    if(flags & PARSE_SOURCE_PATH_IS_DATA_NOT_PATH)
+    if(flags & DNDC_SOURCE_PATH_IS_DATA_NOT_PATH)
         path = SV("(string input)");
     else
         path = LS_to_SV(source_path);
-    const Allocator allocator = flags & PARSE_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
+    const Allocator allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
     // The linear allocator is very useful for temporary allocations, like
     // when we need to turn a string into its kebabed form and then look it up
     // in the link map. We do this a lot and throw away the temporary string
@@ -291,7 +291,7 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
     // just for temporary strings of arbitrary size.
     LinearAllocator la_ = new_linear_storage(1024*1024, "temp storage");
     auto la = allocator_from_la(&la_);
-    ParseContext ctx = {
+    DndcContext ctx = {
         .flags = flags,
         .allocator = allocator,
         .temp_allocator = la,
@@ -300,7 +300,7 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
         .outputfile = output_path,
         };
     LongString source;
-    if(flags & PARSE_SOURCE_PATH_IS_DATA_NOT_PATH){
+    if(flags & DNDC_SOURCE_PATH_IS_DATA_NOT_PATH){
         source = source_path;
         }
     else if(!path.length){
@@ -326,7 +326,6 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
             }
         source = unwrap(source_err);
         }
-    set_context_source(&ctx, path, source.text);
     Marray_reserve(Node)(&ctx.nodes, ctx.allocator, source.length/10+1);
 
     // Setup the root node.
@@ -336,14 +335,14 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
         auto root = get_node(&ctx, root_handle);
         root->col = 0;
         root->row = 0;
-        root->filename = ctx.filename;
+        root->filename = path;
         root->type = NODE_ROOT;
         root->parent = root_handle;
     }
     // Parse the initial document.
     {
         auto before_parse = get_t();
-        auto e = parse(&ctx, ctx.root_handle);
+        auto e = dndc_parse(&ctx, ctx.root_handle, path, source.text);
         auto after_parse = get_t();
         report_stat(ctx.flags, "Initial parsing took: %.3fms", (after_parse-before_parse)/1000.);
         if(e.errored){
@@ -361,26 +360,25 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
             for(size_t j = 0; j < node->children.count; j++, node=get_node(&ctx, handle)){
                 auto child_handle = node->children.data[j];
                 StringView filename;
+                LongString imp_text;
                 {
-                auto child = get_node(&ctx, child_handle);
-                if(child->type != NODE_STRING){
-                    node_print_err(&ctx, child, "import child is not a string");
-                    result.errored = PARSE_ERROR;
-                    goto cleanup;
-                    }
-                filename = child->header;
-                child->type = NODE_CONTAINER;
-                child->header = SV("");
-                auto imp_e = load_source_file(&ctx, filename);
-                if(imp_e.errored){
-                    node_print_err(&ctx, child, "Unable to open '%.*s'", (int)filename.length, filename.text);
-                    result.errored = imp_e.errored;
-                    goto cleanup;
-                    }
-                auto imp_text = unwrap(imp_e);
-                set_context_source(&ctx, filename, imp_text.text);
+                    auto child = get_node(&ctx, child_handle);
+                    if(child->type != NODE_STRING){
+                        node_print_err(&ctx, child, "import child is not a string");
+                        result.errored = PARSE_ERROR;
+                        goto cleanup;
+                        }
+                    filename = child->header;
+                    child->type = NODE_CONTAINER;
+                    child->header = SV("");
+                    auto imp_e = load_source_file(&ctx, filename);
+                    if(imp_e.errored){
+                        node_print_err(&ctx, child, "Unable to open '%.*s'", (int)filename.length, filename.text);
+                        result.errored = imp_e.errored;
+                        goto cleanup;
+                        }
                 }
-                auto parse_e = parse(&ctx, child_handle);
+                auto parse_e = dndc_parse(&ctx, child_handle, filename, imp_text.text);
                 if(parse_e.errored){
                     report_error(flags, "%s", ctx.error_message.text);
                     result.errored = parse_e.errored;
@@ -399,10 +397,10 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
     // Python startup is very slow.
     {
         // Setup for the worker thread.
-        const Allocator worker_allocator = flags & PARSE_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
+        const Allocator worker_allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
         BinaryJob job = {
             .a = worker_allocator,
-            .report_time = !!(ctx.flags & PARSE_PRINT_STATS),
+            .report_time = !!(ctx.flags & DNDC_PRINT_STATS),
             };
         {
             Marray(NodeHandle)* img_nodes[] = {
@@ -435,7 +433,7 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
         ThreadHandle worker;
         bool binary_work_to_be_done = !!job.sourcepaths.count;
         if(binary_work_to_be_done){
-            if(flags & PARSE_NO_THREADS){
+            if(flags & DNDC_NO_THREADS){
                 // Do it ourselves in this thread.
                 binary_worker(&job);
                 }
@@ -447,15 +445,15 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
                 }
             }
         else {
-            if(!(flags & PARSE_NO_CLEANUP)){
+            if(!(flags & DNDC_NO_CLEANUP)){
                 shallow_free_recorded_mallocator(job.a);
                 }
             }
 
         // Execute the python blocks.
-        if(!(flags & PARSE_NO_PYTHON) and ctx.python_nodes.count){
+        if(!(flags & DNDC_NO_PYTHON) and ctx.python_nodes.count){
             auto before = get_t();
-            // init_python_docparser handles the PARSE_PYTHON_IS_INIT flag.
+            // init_python_docparser handles the DNDC_PYTHON_IS_INIT flag.
             auto e = init_python_docparser(flags);
             if(e.errored) {
                 report_error(flags, "Failed to initialize python\n");
@@ -508,7 +506,7 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
         // We only need to join by the time we start rendering any of the nodes into html.
         // Well, todo, we almost always finish by the time python is done.
         if(binary_work_to_be_done){
-            if(!(flags & PARSE_NO_THREADS)){
+            if(!(flags & DNDC_NO_THREADS)){
                 auto before = get_t();
                 join_thread(worker);
                 auto after = get_t();
@@ -520,7 +518,7 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
             if(job.loaded.count)
                 Marray_extend(LoadedSource)(&ctx.processed_binary_files, ctx.allocator, job.loaded.data, job.loaded.count);
             Marray_cleanup(LoadedSource)(&job.loaded, job.a);
-            if(!(flags & PARSE_NO_CLEANUP)){
+            if(!(flags & DNDC_NO_CLEANUP)){
                 merge_recorded_mallocators_and_destroy_src(allocator, job.a);
                 shallow_free_recorded_mallocator(job.a);
                 }
@@ -533,7 +531,7 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
     report_stat(ctx.flags, "ctx.script_nodes.count = %zu", ctx.script_nodes.count);
     report_stat(ctx.flags, "ctx.dependencies.count = %zu", ctx.dependencies_nodes.count);
     report_stat(ctx.flags, "ctx.link_nodes.count = %zu", ctx.link_nodes.count);
-    if(flags & PARSE_REPORT_ORPHANS){
+    if(flags & DNDC_REPORT_ORPHANS){
         for(size_t i = 0; i < ctx.nodes.count; i++){
             auto node = &ctx.nodes.data[i];
             // python nodes get orphaned after execution
@@ -576,7 +574,7 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
 
     // Maybe should remove this option as it clogs up the cli and was just for debugging
     // before rendering was off the ground.
-    if(flags & PARSE_PRINT_TREE)
+    if(flags & DNDC_PRINT_TREE)
         print_node_and_children(&ctx, ctx.root_handle, 0);
 
     // Render the nav block if we have one.
@@ -612,7 +610,7 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
         // Sort so we can do a binary search.
         if(ctx.links.count)
             qsort(ctx.links.data, ctx.links.count, sizeof(ctx.links.data[0]), StringView_cmp);
-        if(flags & PARSE_PRINT_LINKS){
+        if(flags & DNDC_PRINT_LINKS){
             for(size_t i = 0; i < ctx.links.count; i++){
                 auto li = &ctx.links.data[i];
                 printf("[%zu] key: '%.*s', value: '%.*s'\n", i, (int)li->key.length, li->key.text, (int)li->value.length, li->value.text);
@@ -621,7 +619,7 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
         report_stat(ctx.flags, "ctx.links.count = %zu", ctx.links.count);
     }
 
-    if(unlikely(flags & PARSE_DONT_WRITE))
+    if(unlikely(flags & DNDC_DONT_WRITE))
         goto success;
 
     // Render data nodes into the data blob.
@@ -759,9 +757,9 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
     cleanup:;
     msb_destroy(&msb, ctx.allocator);
     report_stat(ctx.flags, "la_.high_water = %zu", la_.high_water);
-    if(!(flags & PARSE_NO_CLEANUP)){
+    if(!(flags & DNDC_NO_CLEANUP)){
         auto before = get_t();
-        if(ctx.flags & PARSE_PRINT_STATS){
+        if(ctx.flags & DNDC_PRINT_STATS){
             RecordingAllocator* recorder = allocator._data;
             report_stat(ctx.flags, "There were %zu allocations.", recorder->recorded.count);
             size_t total = 0;
@@ -784,7 +782,7 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
 // Idk where to put this.
 static
 void
-print_node_and_children(Nonnull(ParseContext*)ctx, NodeHandle handle, int depth){
+print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
     auto node = get_node(ctx, handle);
     for(int i = 0 ; i < depth*2; i++){
         putchar(' ');

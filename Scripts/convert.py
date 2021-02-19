@@ -50,7 +50,6 @@ def find_files(d:str, extensions:Tuple[str, ...]) -> List[str]:
 
 def convert(original:str, compiled_replacements=[]) -> str:
     replacements = [
-            ("david_macros.h", "common_macros.h"),
         ]
     if replacements and not compiled_replacements:
         for pattern, repl in replacements:

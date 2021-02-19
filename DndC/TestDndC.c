@@ -24,11 +24,11 @@ TestFunction(TestDndC1){
         "::python\n"
         "  ctx.root.add_child('hello')\n"
         );
-    uint64_t flags = PARSE_FLAGS_NONE
-        | PARSE_DONT_WRITE
-        | PARSE_SOURCE_PATH_IS_DATA_NOT_PATH
-        | PARSE_SUPPRESS_WARNINGS
-        | PARSE_DONT_PRINT_ERRORS
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_DONT_WRITE
+        | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_DONT_PRINT_ERRORS
         ;
     auto e = run_the_dndc(flags, source, LS(""), LS(""));
     TestExpectSuccess(e);
@@ -44,12 +44,12 @@ TestFunction(TestDndC2){
         "::python\n"
         "  ctx.root.add_child('hello')\n"
         );
-    uint64_t flags = PARSE_FLAGS_NONE
-        | PARSE_PYTHON_IS_INIT
-        | PARSE_DONT_WRITE
-        | PARSE_SOURCE_PATH_IS_DATA_NOT_PATH
-        | PARSE_SUPPRESS_WARNINGS
-        | PARSE_DONT_PRINT_ERRORS
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_PYTHON_IS_INIT
+        | DNDC_DONT_WRITE
+        | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_DONT_PRINT_ERRORS
         ;
     auto e = run_the_dndc(flags, source, LS(""), LS(""));
     TestExpectSuccess(e);
@@ -64,12 +64,12 @@ TestFunction(TestDndC3){
         "::python\n"
         "  ctx.root.add_child('hello')\n"
         );
-    uint64_t flags = PARSE_FLAGS_NONE
-        | PARSE_PYTHON_IS_INIT
-        | PARSE_DONT_WRITE
-        | PARSE_SOURCE_PATH_IS_DATA_NOT_PATH
-        | PARSE_SUPPRESS_WARNINGS
-        | PARSE_DONT_PRINT_ERRORS
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_PYTHON_IS_INIT
+        | DNDC_DONT_WRITE
+        | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_DONT_PRINT_ERRORS
         ;
     auto e = run_the_dndc(flags, source, LS(""), LS(""));
     TestExpectFailure(e);

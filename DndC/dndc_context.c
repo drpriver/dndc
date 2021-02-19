@@ -44,7 +44,7 @@ node_get_attribute(Nonnull(const Node*) node, StringView attr){
 printf_func(3, 4)
 static
 void
-set_err(Nonnull(ParseContext*)ctx, NullUnspec(const char*) errchar, Nonnull(const char*) fmt, ...){
+parse_set_err(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, Nonnull(const char*) fmt, ...){
     MStringBuilder msb = {};
     int col = (int)(errchar - ctx->linestart);
     msb_sprintf(&msb, ctx->allocator, "%.*s:%d:%d: ", (int)ctx->filename.length, ctx->filename.text, ctx->lineno+1, col+1);
@@ -58,7 +58,7 @@ set_err(Nonnull(ParseContext*)ctx, NullUnspec(const char*) errchar, Nonnull(cons
 printf_func(3, 4)
 static
 void
-node_set_err(Nonnull(ParseContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...){
+node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...){
     MStringBuilder msb = {};
     auto filename = node->filename;
     auto lineno = node->row;
@@ -74,8 +74,8 @@ node_set_err(Nonnull(ParseContext*)ctx, Nonnull(const Node*)node, Nonnull(const 
 printf_func(3, 4)
 static
 void
-node_print_err(Nonnull(ParseContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...){
-    if(ctx->flags & PARSE_DONT_PRINT_ERRORS)
+node_print_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...){
+    if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
     MStringBuilder msb = {};
     auto filename = node->filename;
@@ -94,10 +94,10 @@ node_print_err(Nonnull(ParseContext*)ctx, Nonnull(const Node*)node, Nonnull(cons
 printf_func(3, 4)
 static
 void
-node_print_warning(Nonnull(ParseContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...){
-    if(ctx->flags & PARSE_SUPPRESS_WARNINGS)
+node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...){
+    if(ctx->flags & DNDC_SUPPRESS_WARNINGS)
         return;
-    if(ctx->flags & PARSE_DONT_PRINT_ERRORS)
+    if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
     MStringBuilder msb = {};
     auto filename = node->filename;
@@ -117,7 +117,7 @@ printf_func(2, 3)
 static
 void
 report_stat(uint64_t flags, Nonnull(const char*) fmt, ...){
-    if(!(flags & PARSE_PRINT_STATS))
+    if(!(flags & DNDC_PRINT_STATS))
         return;
     fprintf(stderr, "Info: ");
     va_list args;
@@ -131,7 +131,7 @@ printf_func(2, 3)
 static
 void
 report_error(uint64_t flags, Nonnull(const char*)fmt, ...){
-    if(flags & PARSE_DONT_PRINT_ERRORS)
+    if(flags & DNDC_DONT_PRINT_ERRORS)
         return;
     va_list args;
     va_start(args, fmt);
@@ -142,7 +142,7 @@ report_error(uint64_t flags, Nonnull(const char*)fmt, ...){
 
 static
 Errorable_f(LongString)
-load_source_file(Nonnull(ParseContext*)ctx, StringView sourcepath){
+load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
     // check if we already have it.
     for(size_t i = 0; i < ctx->loaded_files.count; i++){
         auto loaded = &ctx->loaded_files.data[i];
@@ -170,7 +170,7 @@ load_source_file(Nonnull(ParseContext*)ctx, StringView sourcepath){
 
 static
 Errorable_f(LongString)
-load_processed_binary_file(Nonnull(ParseContext*)ctx, StringView binarypath){
+load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath){
     // check if we already have it.
     for(size_t i = 0; i < ctx->processed_binary_files.count; i++){
         auto loaded = &ctx->processed_binary_files.data[i];
@@ -200,21 +200,10 @@ load_processed_binary_file(Nonnull(ParseContext*)ctx, StringView binarypath){
     return (Errorable(LongString)){.result=base64ed};
     }
 
-static
-void
-set_context_source(Nonnull(ParseContext*)ctx, StringView filename, Nonnull(const char*) text){
-    ctx->cursor = text;
-    ctx->linestart = NULL;
-    ctx->doublecolon = NULL;
-    ctx->lineend = NULL;
-    ctx->nspaces = 0;
-    ctx->lineno = 0;
-    ctx->filename = filename;
-    }
 
 static inline
 Nullable(StringView*)
-find_link_target(Nonnull(ParseContext*)ctx, StringView kebabed){
+find_link_target(Nonnull(DndcContext*)ctx, StringView kebabed){
     // HERE("kebabed = '%.*s'", (int)kebabed.length, kebabed.text);
     if(!ctx->links.count)
         return NULL;
@@ -251,7 +240,7 @@ find_link_target(Nonnull(ParseContext*)ctx, StringView kebabed){
 
 static inline
 Errorable_f(void)
-add_link_from_sv(Nonnull(ParseContext*)ctx, StringView str, bool check_valid){
+add_link_from_sv(Nonnull(DndcContext*)ctx, StringView str, bool check_valid){
     Errorable(void) result = {};
     const char* equals = memchr(str.text, '=', str.length);
     if(!equals){
@@ -294,7 +283,7 @@ add_link_from_sv(Nonnull(ParseContext*)ctx, StringView str, bool check_valid){
 
 static inline
 void
-add_link_from_header(Nonnull(ParseContext*)ctx, StringView str){
+add_link_from_header(Nonnull(DndcContext*)ctx, StringView str){
     MStringBuilder sb = {};
     msb_write_char(&sb, ctx->allocator, '#');
     msb_write_kebab(&sb, ctx->allocator, str.text, str.length);
@@ -313,7 +302,7 @@ add_link_from_header(Nonnull(ParseContext*)ctx, StringView str){
 static inline
 force_inline
 NodeHandle
-alloc_handle(Nonnull(ParseContext*)ctx){
+alloc_handle(Nonnull(DndcContext*)ctx){
     auto index = Marray_alloc_index(Node)(&ctx->nodes, ctx->allocator);
     ctx->nodes.data[index] = (Node){};
     // debug to help find nodes without parents
@@ -324,7 +313,7 @@ alloc_handle(Nonnull(ParseContext*)ctx){
 static inline
 Nonnull(Node*)
 force_inline
-get_node(Nonnull(ParseContext*)ctx, NodeHandle handle){
+get_node(Nonnull(DndcContext*)ctx, NodeHandle handle){
     assert(handle.index < ctx->nodes.count);
     auto result = &ctx->nodes.data[handle.index];
     return result;
@@ -333,31 +322,31 @@ get_node(Nonnull(ParseContext*)ctx, NodeHandle handle){
 // for debugging
 extern
 Nonnull(Node*)
-get_node_e(Nonnull(ParseContext*)ctx, NodeHandle handle){
+get_node_e(Nonnull(DndcContext*)ctx, NodeHandle handle){
     return get_node(ctx, handle);
     }
 
 static inline
 void
 force_inline
-append_child(Nonnull(ParseContext*)ctx, NodeHandle parent_handle, NodeHandle child_handle){
+append_child(Nonnull(DndcContext*)ctx, NodeHandle parent_handle, NodeHandle child_handle){
     auto parent = get_node(ctx, parent_handle);
     auto child = get_node(ctx, child_handle);
     child->parent = parent_handle;
     Marray_push(NodeHandle)(&parent->children, ctx->allocator, child_handle);
     }
 
-static Errorable_f(void) check_node_depth(Nonnull(ParseContext*)ctx, NodeHandle handle, int depth);
+static Errorable_f(void) check_node_depth(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth);
 
 static
 Errorable_f(void)
-check_depth(Nonnull(ParseContext*)ctx){
+check_depth(Nonnull(DndcContext*)ctx){
     return check_node_depth(ctx, ctx->root_handle, 0);
     }
 
 static
 Errorable_f(void)
-check_node_depth(Nonnull(ParseContext*)ctx, NodeHandle handle, int depth){
+check_node_depth(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
     auto node = get_node(ctx, handle);
     enum {MAX_DEPTH=64};
     if(unlikely(depth > MAX_DEPTH)){
@@ -371,17 +360,17 @@ check_node_depth(Nonnull(ParseContext*)ctx, NodeHandle handle, int depth){
     return (Errorable(void)){.errored=NO_ERROR};
     }
 
-static void gather_anchor(Nonnull(ParseContext*)ctx, NodeHandle handle);
+static void gather_anchor(Nonnull(DndcContext*)ctx, NodeHandle handle);
 static
 void
-gather_anchors(Nonnull(ParseContext*)ctx){
+gather_anchors(Nonnull(DndcContext*)ctx){
     auto root = ctx->root_handle;
     return gather_anchor(ctx, root);
     }
 
 static
 void
-gather_anchor_children(Nonnull(ParseContext*)ctx, Nonnull(Node*)node){
+gather_anchor_children(Nonnull(DndcContext*)ctx, Nonnull(Node*)node){
     auto count = node->children.count;
     auto children = node->children.data;
     for(size_t i = 0; i < count; i++){
@@ -391,7 +380,7 @@ gather_anchor_children(Nonnull(ParseContext*)ctx, Nonnull(Node*)node){
 
 static
 void
-gather_anchor(Nonnull(ParseContext*)ctx, NodeHandle handle){
+gather_anchor(Nonnull(DndcContext*)ctx, NodeHandle handle){
     auto node = get_node(ctx, handle);
     switch(node->type){
         case NODE_BULLETS:

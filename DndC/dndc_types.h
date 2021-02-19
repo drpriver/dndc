@@ -43,12 +43,19 @@ typedef enum NodeType {
     #undef X
     } NodeType;
 
-static const LongString nodenames[] = {
-#define X(a, b) [NODE_##a] = LS(#a),
+static const
+LongString nodenames[] = {
+    #define X(a, b) [NODE_##a] = LS(#a),
     NODETYPES(X)
-#undef X
+    #undef X
     };
-static const struct {
+//
+// These strings are how to refer to a kind of node from within a document.
+// It is intentional that not all nodes have an alias. Many nodes can not
+// be directly created.
+//
+static const
+struct {
     StringView name;
     NodeType type;
 } nodealiases[] = {
@@ -80,16 +87,24 @@ static const struct {
     };
 
 
+//
+// Janky pseudo-template shenanigans
+//
 
 #define MARRAY_T StringView
 #include "Marray.h"
+
 #define MARRAY_T LongString
 #include "Marray.h"
 
+// A cached loaded source file.
+// This is used both for actual sourcefiles loaded from physical storage
+// and for manufactured strings from python.
 typedef struct LoadedSource {
     LongString sourcepath; // doesn't have to be a filename
     LongString sourcetext; // the actual source text
-    } LoadedSource;
+} LoadedSource;
+
 #define MARRAY_T LoadedSource
 #include "Marray.h"
 
@@ -100,6 +115,9 @@ typedef struct LinkItem {
 #define MARRAY_T LinkItem
 #include "Marray.h"
 
+//
+// For things that will go in the generated js data_blob.
+//
 typedef struct DataItem {
     StringView key;
     LongString value;
@@ -114,18 +132,34 @@ typedef struct Attribute {
 #define MARRAY_T Attribute
 #include "Marray.h"
 
+//
+// Opaque handle to a node
+// Provides strong typing instead of using raw indexes.
+// Possibly we can do some trickery with generations and multi-threading the parser,
+// but then it turned out that was one of the fastest parts and the actual slow parts
+// are inherently serial.
+//
+// A thing we could actually do is tag if the node is a fat or skinny node
+// (skinny nodes being things like string nodes), which could potentially result
+// in some good savings.
+//
 typedef union NodeHandle {
-    struct{uint32_t index; };
+    struct { uint32_t index; };
     uint32_t _value;
-    } NodeHandle;
+} NodeHandle;
 
+//
+// As 0 is the root node, we use this as the invalid value instead.
+//
 #define INVALID_NODE_HANDLE ((NodeHandle){._value=-1})
+
 static inline
 force_inline
 bool
 NodeHandle_eq(NodeHandle a, NodeHandle b){
     return a._value == b._value;
     }
+
 #define MARRAY_T NodeHandle
 #include "Marray.h"
 
@@ -134,25 +168,45 @@ NodeHandle_eq(NodeHandle a, NodeHandle b){
 //      A large number of nodes are string nodes.
 //      We could get some gains from redesigning this.
 typedef struct Node {
-    NodeType type;
-    NodeHandle parent; // 0 is the root node, who will have itself as its own parent
-    StringView header;
-    Marray(NodeHandle) children;
-    Marray(Attribute) attributes;
-    Marray(StringView) classes;
-    StringView filename;
-    int row, col; // 0-based
+    // The type of the node
+    NodeType type;                // 4 bytes
+    // Handle to this node's parent node.
+    // It is possible for this to be INVALID_NODE_HANDLE, which indicates it
+    // has no parent.
+    NodeHandle parent;            // 4 bytes
+    // The header text for a node.
+    // For NODE_STRING, this is instead the contents of that node
+    StringView header;            // 16 bytes
+    // Handles to child nodes.
+    Marray(NodeHandle) children;   // 24 bytes
+    Marray(Attribute) attributes;  // 24 bytes
+    Marray(StringView) classes;    // 24 bytes
+    // Source filename (used for reporting errors)
+    StringView filename;           // 16 bytes
+    // Location of first character of where this node originated from.
+    // These are 0-based. Functions that report errors add 1 to this number
+    // for the general human-readable version.
+    int row, col;                  // 4 + 4 bytes.
+    // no padding in this struct
 }Node;
+
 _Static_assert(sizeof(Node) == 15*sizeof(size_t), "");
 // Damn these are fat.
+// As a huge number of nodes are string nodes, we need a different scheme
+// for storing children attributes and classes.
 _Static_assert(sizeof(Node) == 120, "");
+
 #define MARRAY_T Node
 #include "Marray.h"
 
-typedef struct ParseContext {
+typedef struct DndcContext {
+    // The actual storage for all the nodes.
     Marray(Node) nodes;
+    // Handle to the root node. Python blocks can change this.
     NodeHandle root_handle;
+    // General purpose allocator.
     const Allocator  allocator;
+    // Allocator for scratch allocations
     const Allocator  temp_allocator;
     // current parsing location
     struct {
@@ -185,15 +239,16 @@ typedef struct ParseContext {
         NodeHandle titlenode;
         NodeHandle navnode;
     };
-    struct {
-        // file/source string cache.
 
+    // file/source string cache.
+    struct {
         // Cached strings that are from loaded files.
         // We also copy the filename as we need those on our nodes.
         Marray(LoadedSource) loaded_files;
         Marray(LoadedSource) processed_binary_files;
-        // strings that are from strings generated by scripts.
+        // Strings that are from strings generated by scripts.
         // We make and keep a copy because our nodes will point into this string.
+        // TODO: since we use a recording allocator maybe we don't need this?
         Marray(LongString) loaded_strings;
     };
     Marray(StringView) dependencies;
@@ -206,61 +261,66 @@ typedef struct ParseContext {
     // is pretty powerful.
     // This made more sense when we didn't have internal scripting.
     Marray(DataItem) rendered_data;
+    // If a nav block exists, this string holds the html fragment
+    // that is the nav.
     LongString renderednav;
+    // Where the output will go to.
+    // Python gets read-only access to this.
     LongString outputfile;
+    // See flags below.
     uint64_t flags;
-} ParseContext;
+} DndcContext;
 
 #ifndef WINDOWS
-FlagEnum ParseFlags {
-    PARSE_FLAGS_NONE        = 0x0,
+FlagEnum DndcFlags {
+    DNDC_FLAGS_NONE        = 0x0,
     // Don't error on bad links.
-    PARSE_ALLOW_BAD_LINKS   = 0x001,
+    DNDC_ALLOW_BAD_LINKS   = 0x001,
     // Don't report any non-fatal errors.
-    PARSE_SUPPRESS_WARNINGS = 0x002,
+    DNDC_SUPPRESS_WARNINGS = 0x002,
     // Log stats during execution of timings and counts.
-    PARSE_PRINT_STATS       = 0x004,
+    DNDC_PRINT_STATS       = 0x004,
     // Log orphaned nodes.
-    PARSE_REPORT_ORPHANS    = 0x008,
+    DNDC_REPORT_ORPHANS    = 0x008,
     // Don't execute python blocks.
-    PARSE_NO_PYTHON         = 0x010,
+    DNDC_NO_PYTHON         = 0x010,
     // The python interpreter and docparser types have already been initialized.
-    PARSE_PYTHON_IS_INIT    = 0x020,
+    DNDC_PYTHON_IS_INIT    = 0x020,
     // Print out the document tree
-    PARSE_PRINT_TREE        = 0x040,
+    DNDC_PRINT_TREE        = 0x040,
     // Print out all links and what they resolve to
-    PARSE_PRINT_LINKS       = 0x080,
+    DNDC_PRINT_LINKS       = 0x080,
     // Don't spawn any worker threads. No parallelism.
-    PARSE_NO_THREADS        = 0x100,
+    DNDC_NO_THREADS        = 0x100,
     // Don't write out the final result.
-    PARSE_DONT_WRITE        = 0x200,
+    DNDC_DONT_WRITE        = 0x200,
     // Don't cleanup allocations or anything
-    PARSE_NO_CLEANUP        = 0x400,
+    DNDC_NO_CLEANUP        = 0x400,
     // The source_path argument is actually a string containing the data, not a path.
-    PARSE_SOURCE_PATH_IS_DATA_NOT_PATH = 0x800,
+    DNDC_SOURCE_PATH_IS_DATA_NOT_PATH = 0x800,
     // Don't print errors to stderr
-    PARSE_DONT_PRINT_ERRORS = 0x1000,
+    DNDC_DONT_PRINT_ERRORS = 0x1000,
     // Don't bother isolating python from site
     // Greatly slows startup, but allows importing user-installed
     // libraries.
-    PARSE_PYTHON_UNISOLATED = 0x2000,
+    DNDC_PYTHON_UNISOLATED = 0x2000,
 };
 #else
-#define PARSE_FLAGS_NONE                   0x0000
-#define PARSE_ALLOW_BAD_LINKS              0x0001
-#define PARSE_SUPPRESS_WARNINGS            0x0002
-#define PARSE_PRINT_STATS                  0x0004
-#define PARSE_REPORT_ORPHANS               0x0008
-#define PARSE_NO_PYTHON                    0x0010
-#define PARSE_PYTHON_IS_INIT               0x0020
-#define PARSE_PRINT_TREE                   0x0040
-#define PARSE_PRINT_LINKS                  0x0080
-#define PARSE_NO_THREADS                   0x0100
-#define PARSE_DONT_WRITE                   0x0200
-#define PARSE_NO_CLEANUP                   0x0400
-#define PARSE_SOURCE_PATH_IS_DATA_NOT_PATH 0x0800
-#define PARSE_DONT_PRINT_ERRORS            0x1000
-#define PARSE_PYTHON_UNISOLATED            0x2000
+#define DNDC_FLAGS_NONE                   0x0000
+#define DNDC_ALLOW_BAD_LINKS              0x0001
+#define DNDC_SUPPRESS_WARNINGS            0x0002
+#define DNDC_PRINT_STATS                  0x0004
+#define DNDC_REPORT_ORPHANS               0x0008
+#define DNDC_NO_PYTHON                    0x0010
+#define DNDC_PYTHON_IS_INIT               0x0020
+#define DNDC_PRINT_TREE                   0x0040
+#define DNDC_PRINT_LINKS                  0x0080
+#define DNDC_NO_THREADS                   0x0100
+#define DNDC_DONT_WRITE                   0x0200
+#define DNDC_NO_CLEANUP                   0x0400
+#define DNDC_SOURCE_PATH_IS_DATA_NOT_PATH 0x0800
+#define DNDC_DONT_PRINT_ERRORS            0x1000
+#define DNDC_PYTHON_UNISOLATED            0x2000
 #endif
 
 #endif

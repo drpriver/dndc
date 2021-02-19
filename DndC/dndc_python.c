@@ -143,11 +143,11 @@ make_node_type_enum(NodeType t){
     return (PyObject*)self;
     }
 
-typedef Nullable(PyObject*) (*_Nonnull NodeMethod)(Nonnull(ParseContext*), NodeHandle, Nonnull(PyObject*), Nullable(PyObject*));
+typedef Nullable(PyObject*) (*_Nonnull NodeMethod)(Nonnull(DndcContext*), NodeHandle, Nonnull(PyObject*), Nullable(PyObject*));
 
 typedef struct NodeBoundMethod {
     PyObject_HEAD
-    Nonnull(ParseContext*)ctx;
+    Nonnull(DndcContext*)ctx;
     NodeHandle handle;
     NodeMethod func;
     } NodeBoundMethod;
@@ -170,7 +170,7 @@ static PyTypeObject NodeBoundMethodType = {
 
 static
 Nonnull(PyObject*)
-make_node_bound_method(Nonnull(ParseContext*)ctx, NodeHandle handle, NodeMethod func){
+make_node_bound_method(Nonnull(DndcContext*)ctx, NodeHandle handle, NodeMethod func){
     NodeBoundMethod* self = (NodeBoundMethod*)NodeBoundMethodType.tp_alloc(&NodeBoundMethodType, 0);
     unhandled_error_condition(!self);
     self->ctx = ctx;
@@ -180,40 +180,41 @@ make_node_bound_method(Nonnull(ParseContext*)ctx, NodeHandle handle, NodeMethod 
     }
 
 Nullable(PyObject*)
-py_parse_and_append_children(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
-    const char* text;
-    Py_ssize_t length;
+py_parse_and_append_children(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+    PyObject* text;
     const char* const keywords[] = { "text", NULL, };
     PushDiagnostic();
     SuppressCastQual();
     // This call is guaranteed to not modify keywords, but it's declared as char**
     // as const in C is kind of broken.
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "s#:parse_and_append_children", (char**)keywords, &text, &length)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!:parse_and_append_children", (char**)keywords, &PyUnicode_Type, &text)){
         return NULL;
         }
     PopDiagnostic();
     // We dupe this as we have no guarantee that the python
     // string will last beyond this execution and we store pointers
     // into the original source string.
-    char* copy = Allocator_strndup(ctx->allocator, text, length);
+    auto source_text = pystring_to_longstring(text, ctx->allocator);
+    {
+        // We store it in case we need to be able to clean up ourselves later.
+        auto string_store = Marray_alloc(LongString)(&ctx->loaded_strings, ctx->allocator);
+        *string_store = source_text;
+    }
     auto old_filename = ctx->filename;
-    set_context_source(ctx, SV("(generated string from script)"), copy);
-    // We store it in case we need to be able to clean up ourselves later.
-    auto string_store = Marray_alloc(LongString)(&ctx->loaded_strings, ctx->allocator);
-    *string_store = (LongString){.text=copy, .length=length};
 
-    auto parse_e = parse(ctx, handle);
+    auto parse_e = dndc_parse(ctx, handle, SV("(generated string from script)"), source_text.text);
     if(parse_e.errored){
         PyErr_SetString(PyExc_ValueError, ctx->error_message.text);
         return NULL;
         }
+
     ctx->filename = old_filename;
     Py_RETURN_NONE;
     }
 
 typedef struct DndClassesList {
     PyObject_HEAD
-    Nonnull(ParseContext*)ctx;
+    Nonnull(DndcContext*)ctx;
     NodeHandle handle;
     } DndClassesList;
 
@@ -348,7 +349,7 @@ static PyTypeObject DndClassesListType = {
 
 static
 Nonnull(PyObject*)
-make_classes_list(Nonnull(ParseContext*)ctx, NodeHandle handle){
+make_classes_list(Nonnull(DndcContext*)ctx, NodeHandle handle){
     DndClassesList* self = (DndClassesList*)DndClassesListType.tp_alloc(&DndClassesListType, 0);
     unhandled_error_condition(!self);
     self->ctx = ctx;
@@ -358,7 +359,7 @@ make_classes_list(Nonnull(ParseContext*)ctx, NodeHandle handle){
 
 typedef struct DndAttributesMap {
     PyObject_HEAD
-    Nonnull(ParseContext*)ctx;
+    Nonnull(DndcContext*)ctx;
     NodeHandle handle;
     } DndAttributesMap;
 
@@ -558,7 +559,7 @@ static PyTypeObject DndAttributesMapType = {
 
 static
 Nonnull(PyObject*)
-make_attributes_map(Nonnull(ParseContext*)ctx, NodeHandle handle){
+make_attributes_map(Nonnull(DndcContext*)ctx, NodeHandle handle){
     DndAttributesMap* self = (DndAttributesMap*)DndAttributesMapType.tp_alloc(&DndAttributesMapType, 0);
     unhandled_error_condition(!self);
     self->ctx = ctx;
@@ -568,7 +569,7 @@ make_attributes_map(Nonnull(ParseContext*)ctx, NodeHandle handle){
 
 typedef struct DndNode {
     PyObject_HEAD
-    Nonnull(ParseContext*)ctx;
+    Nonnull(DndcContext*)ctx;
     NodeHandle handle;
     } DndNode;
 
@@ -617,7 +618,7 @@ DndNode_repr(Nonnull(DndNode*)self){
 
 static
 Nullable(PyObject*)
-py_node_set_err(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_node_set_err(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE)){
         PyErr_SetString(PyExc_ValueError, "Method called with invalid handle: 'err'");
         return NULL;
@@ -642,7 +643,7 @@ py_node_set_err(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject*)
 
 static
 Nullable(PyObject*)
-make_py_node(Nonnull(ParseContext*)ctx, NodeHandle handle){
+make_py_node(Nonnull(DndcContext*)ctx, NodeHandle handle){
     DndNode* self = (DndNode*)DndNodeType.tp_alloc(&DndNodeType, 0);
     unhandled_error_condition(!self);
     self->ctx = ctx;
@@ -652,7 +653,7 @@ make_py_node(Nonnull(ParseContext*)ctx, NodeHandle handle){
 
 static
 Nullable(PyObject*)
-py_change_root_node(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_change_root_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
     (void)handle; // we're abusing my pyboundmethod machinery
     DndNode* new_root;
     const char* const keywords[] = { "new_root", NULL, };
@@ -673,7 +674,7 @@ py_change_root_node(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObje
 
 static
 Nullable(PyObject*)
-py_make_string_node(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_make_string_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
     (void)handle;
     PyObject* arg;
     const char* const keywords[] = { "text", NULL, };
@@ -697,7 +698,7 @@ py_make_string_node(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObje
 
 static
 Nullable(PyObject*)
-py_kebab(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_kebab(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
     (void)handle;
     const char* text;
     Py_ssize_t length;
@@ -720,7 +721,7 @@ py_kebab(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, N
 
 static
 Nullable(PyObject*)
-py_add_dependency(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_add_dependency(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
     (void)handle;
     const char* text;
     Py_ssize_t length;
@@ -741,7 +742,7 @@ py_add_dependency(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject
 
 static
 Nullable(PyObject*)
-py_make_node(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_make_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
     (void)handle;
     NodeTypeEnum* type;
     const char* text = NULL;
@@ -867,7 +868,7 @@ py_make_node(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject*)arg
 
 static
 Nullable(PyObject*)
-py_set_data(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_set_data(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
     (void)handle;
     const char* key_text = NULL;
     Py_ssize_t key_length;
@@ -894,7 +895,7 @@ py_set_data(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args
 
 static
 Nullable(PyObject*)
-py_detach_node(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_detach_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
     const char* const keywords[] = { NULL, };
     PushDiagnostic();
     SuppressCastQual();
@@ -929,7 +930,7 @@ py_detach_node(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject*)a
 
 static
 Nullable(PyObject*)
-py_add_child_node(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_add_child_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
     const char* const keywords[] = { "new_root", NULL, };
     NodeHandle new_handle;
     PyObject* arg;
@@ -969,11 +970,11 @@ py_add_child_node(Nonnull(ParseContext*)ctx, NodeHandle handle, Nonnull(PyObject
     Py_RETURN_NONE;
     }
 
-static Nonnull(PyObject*) make_py_ctx(Nonnull(ParseContext*));
+static Nonnull(PyObject*) make_py_ctx(Nonnull(DndcContext*));
 
 static
 Errorable_f(void)
-execute_python_string(Nonnull(ParseContext*)ctx, Nonnull(const char*)text, NodeHandle handle){
+execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHandle handle){
     PyCompilerFlags flags = {
         .cf_flags = PyCF_SOURCE_IS_UTF8,
         .cf_feature_version = PY_MINOR_VERSION,
@@ -1063,22 +1064,6 @@ execute_python_string(Nonnull(ParseContext*)ctx, Nonnull(const char*)text, NodeH
     Py_XDECREF(code);
     return (Errorable(void)){};
     }
-#if 0
-static PyMethodDef DndParserMethods[] = {
-    // parse
-    // make_raw
-    // make_string
-    // err
-    {NULL,NULL, 0, NULL}, // terminator
-    };
-static PyModuleDef DndParseModule = {
-    .m_base = PyModuleDef_HEAD_INIT,
-    .m_name = "docparser",
-    .m_doc = "Extension module for the docparser",
-    .m_size = -1,
-    .m_methods = DndParserMethods,
-    };
-#endif
 
 static
 Nullable(PyObject*)
@@ -1233,12 +1218,12 @@ DndNode_setattr(Nonnull(DndNode*)obj, Nonnull(const char*)name, Nullable(PyObjec
     }
 
 // TODO:
-//  Possibly all these ParseContext* should actually be ParseContext** so they can get nulled.
+//  Possibly all these DndcContext* should actually be DndcContext** so they can get nulled.
 //
 // just a bare wrapper around the parse context
 typedef struct DndContext {
     PyObject_HEAD
-    Nonnull(ParseContext*) ctx;
+    Nonnull(DndcContext*) ctx;
     } DndContext;
 
 // static PyMethodDef DndContext_methods[] = {
@@ -1249,10 +1234,10 @@ static PyObject* _Nullable DndContext_getattr(Nonnull(DndContext*), Nonnull(cons
 
 static PyTypeObject DndContextType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "docparse.ParseContext",
+    .tp_name = "docparse.DndcContext",
     .tp_basicsize = sizeof(DndContext),
     .tp_flags = Py_TPFLAGS_DEFAULT,
-    .tp_doc = "ParseContext",
+    .tp_doc = "DndcContext",
     // can you just leave this out?
     // .tp_methods = DndContext_methods,
     .tp_getattr = (getattrfunc)&DndContext_getattr,
@@ -1312,7 +1297,7 @@ DndContext_getattr(Nonnull(DndContext*)pyctx, Nonnull(const char*)attr){
 
 static
 Nonnull(PyObject*)
-make_py_ctx(Nonnull(ParseContext*)ctx){
+make_py_ctx(Nonnull(DndcContext*)ctx){
     DndContext* self = (DndContext*)DndContextType.tp_alloc(&DndContextType, 0);
     unhandled_error_condition(!self);
     self->ctx = ctx;
@@ -1349,7 +1334,7 @@ static struct _inittab mods[] = {
 static
 int
 init_python_interpreter(uint64_t flags){
-    if(flags & PARSE_PYTHON_UNISOLATED){
+    if(flags & DNDC_PYTHON_UNISOLATED){
         Py_Initialize();
         return 0;
         }
@@ -1412,11 +1397,11 @@ static
 Errorable_f(void)
 init_python_docparser(uint64_t flags){
     Errorable(void) result = {};
-    if(flags & PARSE_PYTHON_IS_INIT)
+    if(flags & DNDC_PYTHON_IS_INIT)
         return result;
     if(Py_IsInitialized())
         return result;
-    if(!(flags & PARSE_PYTHON_UNISOLATED))
+    if(!(flags & DNDC_PYTHON_UNISOLATED))
         set_frozen_modules();
     auto fail = init_python_interpreter(flags);
     if(fail){

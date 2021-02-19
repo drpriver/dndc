@@ -60,7 +60,7 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
 //
 printf_func(3, 4) static
 void
-set_err(Nonnull(ParseContext*)ctx, NullUnspec(const char*) errchar, Nonnull(const char*) fmt, ...);
+parse_set_err(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, Nonnull(const char*) fmt, ...);
 
 //
 // Sets an error message originating from the source location that corresponds
@@ -70,7 +70,7 @@ set_err(Nonnull(ParseContext*)ctx, NullUnspec(const char*) errchar, Nonnull(cons
 //
 printf_func(3, 4) static
 void
-node_set_err(Nonnull(ParseContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
+node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
 
 //
 // Like node_set_err, but immediately prints the message instead of setting
@@ -80,7 +80,7 @@ node_set_err(Nonnull(ParseContext*)ctx, Nonnull(const Node*), Nonnull(const char
 //
 printf_func(3, 4) static
 void
-node_print_err(Nonnull(ParseContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
+node_print_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
 
 //
 // Like node_set_err, but immediately prints the message instead of setting
@@ -91,7 +91,7 @@ node_print_err(Nonnull(ParseContext*)ctx, Nonnull(const Node*), Nonnull(const ch
 printf_func(3, 4)
 static
 void
-node_print_warning(Nonnull(ParseContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...);
+node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...);
 
 //
 // Reports some informative message, such as time to execute some component.
@@ -120,7 +120,7 @@ report_error(uint64_t flags, Nonnull(const char*)fmt, ...);
 //
 static inline
 Nonnull(Node*)
-get_node(Nonnull(ParseContext*), NodeHandle);
+get_node(Nonnull(DndcContext*), NodeHandle);
 
 //
 // Like get_node, but will be available in the debugger as it is extern.
@@ -128,7 +128,7 @@ get_node(Nonnull(ParseContext*), NodeHandle);
 //
 extern
 Nonnull(Node*)
-get_node_e(Nonnull(ParseContext*), NodeHandle);
+get_node_e(Nonnull(DndcContext*), NodeHandle);
 
 
 //
@@ -165,7 +165,7 @@ node_get_attribute(Nonnull(const Node*) node, StringView attr);
 //
 static
 Errorable_f(LongString)
-load_source_file(Nonnull(ParseContext*)ctx, StringView sourcepath);
+load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath);
 
 //
 // Load a binary file as base64 text, or an error if something went wrong.
@@ -175,32 +175,16 @@ load_source_file(Nonnull(ParseContext*)ctx, StringView sourcepath);
 //
 static
 Errorable_f(LongString)
-load_processed_binary_file(Nonnull(ParseContext*)ctx, StringView binarypath);
+load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath);
 
 //
-// Set the source on the context for parsing.
-//
-// filename is the name to be used for diagnostics if there are parse errors.
-//
-// text is the actual source text to be parsed. It must be nul-terminated.
-//
-// FIXME: there's no reason for this to be separate from the parse func.
-// These should just be arguments to parse.
-//
-static
-void
-set_context_source(Nonnull(ParseContext*)ctx, StringView filename, Nonnull(const char*) text);
-
-//
-// Parse the source text that was set on this node.
+// Parses the nul-terminated source text;
 // Resulting nodes will be added as children of the node indicated by
 // the given NodeHandle.
-// set_context_source must have been called first.
-// FIXME: combine this function with set_context_source.
 //
 static
 Errorable_f(void)
-parse(Nonnull(ParseContext*), NodeHandle root);
+dndc_parse(Nonnull(DndcContext*), NodeHandle root, StringView filename, Nonnull(const char*) text);
 
 
 //
@@ -210,7 +194,7 @@ parse(Nonnull(ParseContext*), NodeHandle root);
 //
 static
 void
-print_node_and_children(Nonnull(ParseContext*), NodeHandle handle, int depth);
+print_node_and_children(Nonnull(DndcContext*), NodeHandle handle, int depth);
 
 //
 // Writes the document tree (starting from the context's root node)
@@ -219,19 +203,19 @@ print_node_and_children(Nonnull(ParseContext*), NodeHandle handle, int depth);
 //
 static
 Errorable_f(void)
-render_tree(Nonnull(ParseContext*), Nonnull(MStringBuilder*));
+render_tree(Nonnull(DndcContext*), Nonnull(MStringBuilder*));
 
 //
 // Writes the tree originating from the given node into the builder.
 // header_depth controls whether a header is an h2, h3, etc.
-// Pass 1 to have titles be h1s, top level headers be h2 etc. Increase this to get
-// h3s or whatever instead.
+// Pass 1 to have titles be h1s, top level headers be h2 etc.
+// Increase this to get h3s or whatever instead.
 //
 // The result is an html fragment.
 //
 static inline force_inline
 Errorable_f(void)
-render_node(Nonnull(ParseContext*), Nonnull(MStringBuilder*) restrict, Nonnull(const Node*), int header_depth);
+render_node(Nonnull(DndcContext*), Nonnull(MStringBuilder*) restrict, Nonnull(const Node*), int header_depth);
 
 //
 // Traverses the tree to find all the link targets
@@ -240,7 +224,7 @@ render_node(Nonnull(ParseContext*), Nonnull(MStringBuilder*) restrict, Nonnull(c
 //
 static
 void
-gather_anchors(Nonnull(ParseContext*));
+gather_anchors(Nonnull(DndcContext*));
 
 //
 // Call this before any function that traverses the tree.
@@ -249,7 +233,7 @@ gather_anchors(Nonnull(ParseContext*));
 //
 static
 Errorable_f(void)
-check_depth(Nonnull(ParseContext*));
+check_depth(Nonnull(DndcContext*));
 
 //
 // Walks the tree to construct the nav block.
@@ -257,14 +241,14 @@ check_depth(Nonnull(ParseContext*));
 //
 static
 void
-build_nav_block(Nonnull(ParseContext*));
+build_nav_block(Nonnull(DndcContext*));
 
 //
 // Allocate a new node and return its handle.
 //
 static inline
 NodeHandle
-alloc_handle(Nonnull(ParseContext*));
+alloc_handle(Nonnull(DndcContext*));
 
 //
 // Execute a string representing python code. The string should be nul terminated.
@@ -273,7 +257,7 @@ alloc_handle(Nonnull(ParseContext*));
 //
 static
 Errorable_f(void)
-execute_python_string(Nonnull(ParseContext*), Nonnull(const char*), NodeHandle);
+execute_python_string(Nonnull(DndcContext*), Nonnull(const char*), NodeHandle);
 
 //
 // Initialize the python interpreter and the dndc python data types.
@@ -300,7 +284,7 @@ end_interpreter(void);
 //
 static
 void
-append_child(Nonnull(ParseContext*), NodeHandle parent, NodeHandle child);
+append_child(Nonnull(DndcContext*), NodeHandle parent, NodeHandle child);
 
 //
 // Find the target that the kebabed string view is actually a link to.
@@ -308,7 +292,7 @@ append_child(Nonnull(ParseContext*), NodeHandle parent, NodeHandle child);
 //
 static inline
 Nullable(StringView*)
-find_link_target(Nonnull(ParseContext*)ctx, StringView kebabed);
+find_link_target(Nonnull(DndcContext*)ctx, StringView kebabed);
 
 //
 // Parses a line of a ::links block, which is of the form "link = target"
@@ -318,7 +302,7 @@ find_link_target(Nonnull(ParseContext*)ctx, StringView kebabed);
 //
 static inline
 Errorable_f(void)
-add_link_from_sv(Nonnull(ParseContext*)ctx, StringView str, bool check_valid);
+add_link_from_sv(Nonnull(DndcContext*)ctx, StringView str, bool check_valid);
 
 //
 // Adds the link to the link map as derived from the header
@@ -328,6 +312,6 @@ add_link_from_sv(Nonnull(ParseContext*)ctx, StringView str, bool check_valid);
 //
 static inline
 void
-add_link_from_header(Nonnull(ParseContext*)ctx, StringView str);
+add_link_from_header(Nonnull(DndcContext*)ctx, StringView str);
 
 #endif
