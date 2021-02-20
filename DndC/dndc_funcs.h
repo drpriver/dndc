@@ -24,9 +24,11 @@
 //    to a file to parse, or if .length is 0, stdin will be read instead.
 //
 // output_path:
-//    A filepath to write the generated html to. If .length is 0, the html
+//    A filepath to write the generated html to. If NULL, the html
 //    will be printed to stdout instead. Printing at all can be suppressed
 //    by flags.
+//    Flags can make this an out param instead, in which case a malloced string
+//    that is the generated html will be stored in this instead.
 //
 // depends_dir:
 //    A path to a directory to write a make-style dependency file.
@@ -39,7 +41,7 @@
 //
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, LongString depends_dir);
+run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) output_path, LongString depends_dir);
 
 //
 // The following functions are for reporting errors and warnings.

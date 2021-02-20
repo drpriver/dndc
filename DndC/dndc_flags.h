@@ -1,5 +1,7 @@
 #ifndef DNDC_FLAGS_H
 #define DNDC_FLAGS_H
+// I wish C offered a typesafe bitflags type, but we resort
+// to just making it a uint64 instead.
 #ifndef WINDOWS
 #include "common_macros.h"
 FlagEnum DndcFlags {
@@ -34,6 +36,8 @@ FlagEnum DndcFlags {
     // Greatly slows startup, but allows importing user-installed
     // libraries.
     DNDC_PYTHON_UNISOLATED = 0x2000,
+    // The output path is actually a string to output data to.
+    DNDC_OUTPUT_PATH_IS_OUT_PARAM = 0x4000,
 };
 #else
 #define DNDC_FLAGS_NONE                   0x0000
@@ -51,6 +55,7 @@ FlagEnum DndcFlags {
 #define DNDC_SOURCE_PATH_IS_DATA_NOT_PATH 0x0800
 #define DNDC_DONT_PRINT_ERRORS            0x1000
 #define DNDC_PYTHON_UNISOLATED            0x2000
+#define DNDC_OUTPUT_PATH_IS_OUT_PARAM     0x4000
 #endif
 
 

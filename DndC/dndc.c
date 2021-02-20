@@ -256,17 +256,17 @@ int main(int argc, char**argv){
     auto chdir_e = chdir(BENCHMARKDIRECTORY);
     unhandled_error_condition(chdir_e != 0);
     flags &= ~DNDC_NO_CLEANUP;
-    auto e = run_the_dndc(flags, source_path, output_path, depends_dir);
+    auto e = run_the_dndc(flags, source_path, &output_path, depends_dir);
     assert(!e.errored);
     flags |= DNDC_PYTHON_IS_INIT;
     for(int i = 0; i < BENCHMARKITERS;i++){
-        e = run_the_dndc(flags, source_path, output_path, depends_dir);
+        e = run_the_dndc(flags, source_path, &output_path, depends_dir);
         assert(!e.errored);
         }
     end_interpreter();
     return 0;
     #else
-    auto e = run_the_dndc(flags, source_path, output_path, depends_dir);
+    auto e = run_the_dndc(flags, source_path, output_path.length?& output_path : NULL, depends_dir);
     return e.errored;
     #endif
     }
@@ -274,7 +274,7 @@ int main(int argc, char**argv){
 
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, LongString depends_dir){
+run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) output_path, LongString depends_dir){
     auto t0 = get_t();
     MStringBuilder msb = {};
     Errorable(void) result = {};
@@ -283,6 +283,16 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
         path = SV("(string input)");
     else
         path = LS_to_SV(source_path);
+    LongString outpath;
+    if(!output_path){
+        outpath = LS("");
+        }
+    else if(flags & DNDC_OUTPUT_PATH_IS_OUT_PARAM){
+        outpath = LS("");
+        }
+    else {
+        outpath = *output_path;
+        }
     const Allocator allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
     // The linear allocator is very useful for temporary allocations, like
     // when we need to turn a string into its kebabed form and then look it up
@@ -297,7 +307,7 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
         .temp_allocator = la,
         .titlenode = INVALID_NODE_HANDLE,
         .navnode = INVALID_NODE_HANDLE,
-        .outputfile = output_path,
+        .outputfile = outpath,
         };
     LongString source;
     if(flags & DNDC_SOURCE_PATH_IS_DATA_NOT_PATH){
@@ -687,21 +697,35 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
             goto cleanup;
             }
         auto str = msb_borrow(&msb, ctx.allocator);
-        if(!output_path.length){
+        auto before_write = get_t();
+        if(flags & DNDC_OUTPUT_PATH_IS_OUT_PARAM){
+            assert(output_path);
+            // We don't use the allocator as this needs to outlive the recording
+            // allocator.
+            //
+            // We could do this without the extra copy, but this will work for now.
+            char* html_text = malloc(str.length+1);
+            memcpy(html_text, str.text, str.length);
+            html_text[str.length] = '\0';
+            output_path->text = html_text;
+            output_path->length = str.length;
+            }
+        else if(!output_path || outpath.length == 0){
             fputs(str.text, stdout);
             goto success;
             }
-        auto before_write = get_t();
-        auto write_err = write_file(output_path.text, str.text, str.length);
+        else {
+            auto write_err = write_file(outpath.text, str.text, str.length);
+            if(write_err.errored){
+                ERROR("Error on write: %s", get_error_name(write_err));
+                perror("Error on write");
+                result.errored = write_err.errored;
+                goto cleanup;
+                }
+            }
         auto after_write = get_t();
         report_stat(ctx.flags, "Writing took: %.3fms", (after_write-before_write)/1000.);
         report_stat(ctx.flags, "Total output size: %zu bytes", str.length);
-        if(write_err.errored){
-            ERROR("Error on write: %s", get_error_name(write_err));
-            perror("Error on write");
-            result.errored = write_err.errored;
-            goto cleanup;
-            }
     }
     // Write the make-style dependency file to the Dependency directory.
     if(depends_dir.length){
@@ -725,13 +749,13 @@ run_the_dndc(uint64_t flags, LongString source_path, LongString output_path, Lon
         msb_reset(&msb);
         MStringBuilder depb = {};
         msb_write_str(&depb, ctx.temp_allocator, depends_dir.text, depends_dir.length);
-        auto out = LS_to_SV(output_path);
+        auto out = LS_to_SV(outpath);
         auto basename = path_basename(out);
         auto stripped = path_strip_extension(basename);
         msb_append_path(&depb, ctx.temp_allocator, stripped.text, stripped.length);
         msb_write_literal(&depb, ctx.temp_allocator, ".dep");
         auto depfilename = msb_borrow(&depb, ctx.temp_allocator);
-        msb_write_str(&msb, ctx.allocator, output_path.text, output_path.length);
+        msb_write_str(&msb, ctx.allocator, outpath.text, outpath.length);
         msb_write_char(&msb, ctx.allocator, ':');
         for(size_t i = 0; i < ctx.dependencies.count; i++){
             auto dep = &ctx.dependencies.data[i];

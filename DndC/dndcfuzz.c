@@ -21,7 +21,7 @@ int LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
         | DNDC_NO_PYTHON
         ;
     LongString source = {.text=str, .length=size};
-    auto e = run_the_parser(flags, source, LS(""), LS(""));
+    auto e = run_the_dndc(flags, source, NULL, LS(""));
     (void)e;
     free(str);
     return 0;
