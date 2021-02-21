@@ -2,6 +2,9 @@ $(BINDIR)/dndc$(EXE): DndC/dndc.c $(DEPDIR)/dndc.dep  $(OBJDIR)/frozenstdlib.o o
 	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS)
 dndc: $(BINDIR)/dndc$(EXE)
 
+$(OBJDIR)/dndc.o: DndC/dndc.c $(DEPDIR)/dndc_o.dep opt.mak | $(DIRECTORIES)
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc_o.dep $< -c -o $@ -DNOMAIN
+
 
 BENCHMARKINPUTPATH ?= surface.dnd
 BENCHMARKOUTPUTPATH ?= foo.html

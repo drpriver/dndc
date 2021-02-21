@@ -138,6 +138,9 @@ parse_double_colon(Nonnull(DndcContext*)ctx, NodeHandle parent_handle){
         auto node = get_node(ctx, new_node_handle);
         const char* header = ctx->linestart + ctx->nspaces;
         node->header = stripped_view(header, ctx->doublecolon - header);
+        if(node_has_attribute(node, SV("comment"))){
+            node->type = NODE_COMMENT;
+            }
     }
     auto new_indent = ctx->nspaces;
     advance_row(ctx);

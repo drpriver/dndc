@@ -15,6 +15,7 @@
 #include "bb_extensions.h"
 #include "mallocator.h"
 #include "dndc_funcs.h"
+#include "dndc.h"
 
 #define DNC_MAJOR 0
 #define DNC_MINOR 2
@@ -65,6 +66,145 @@ THREADFUNC(binary_worker){
     if(report_time)
         fprintf(stderr, "Info: Binary worker took %.3fms\n", (after-before)/1000.);
     return 0;
+    }
+
+// NOTE: we can have larger scope than this if we want.
+// Slicing the work here this way is not inherent.
+static
+Errorable_f(void)
+do_python_and_load_images(Nonnull(DndcContext*)ctx){
+    Errorable(void) result = {};
+    // Setup for the worker thread.
+    auto flags = ctx->flags;
+    const Allocator worker_allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
+    BinaryJob job = {
+        .a = worker_allocator,
+        .report_time = !!(flags & DNDC_PRINT_STATS),
+        };
+    {
+        Marray(NodeHandle)* img_nodes[] = {
+            &ctx->img_nodes,
+            &ctx->imglinks_nodes,
+            };
+        for(size_t n = 0; n < arrlen(img_nodes); n++){
+            auto nodes = img_nodes[n];
+            for(size_t i = 0; i < nodes->count; i++){
+                auto node = get_node(ctx, nodes->data[i]);
+                if(!node->children.count)
+                    continue;
+                auto child = get_node(ctx, node->children.data[0]);
+                if(!child->header.length)
+                    continue;
+                // FIXME: this makes it O(N^2)
+                // In practice, we only have a few images though.
+                // But also in practice, we don't have duplicates and
+                // this just speeds up benchmarks. *shrug*.
+                for(size_t j = 0; j < job.sourcepaths.count; j++){
+                    if(SV_equals(child->header, job.sourcepaths.data[j]))
+                        goto Continue;
+                    }
+                auto sv = Marray_alloc(StringView)(&job.sourcepaths, job.a);
+                *sv = child->header;
+                Continue:;
+                }
+            }
+    }
+    ThreadHandle worker = {};
+    bool binary_work_to_be_done = !!job.sourcepaths.count;
+    if(binary_work_to_be_done){
+        if(flags & DNDC_NO_THREADS){
+            // Do it ourselves in this thread.
+            binary_worker(&job);
+            }
+        else{
+            auto before = get_t();
+            create_thread(&worker, &binary_worker, &job);
+            auto after = get_t();
+            report_stat(flags, "Launching binary data processing took: %.3fms", (after-before)/1000.);
+            }
+        }
+    else {
+        if(!(flags & DNDC_NO_CLEANUP)){
+            shallow_free_recorded_mallocator(job.a);
+            }
+        }
+
+    // Execute the python blocks.
+    if(!(flags & DNDC_NO_PYTHON) and ctx->python_nodes.count){
+        auto before = get_t();
+        // init_python_docparser handles the DNDC_PYTHON_IS_INIT flag.
+        auto e = init_python_docparser(flags);
+        if(e.errored) {
+            report_error(flags, "Failed to initialize python\n");
+            result.errored = e.errored;
+            goto cleanup;
+            }
+        auto after = get_t();
+        report_stat(flags, "Python startup took: %.3fms", (after-before)/1000.);
+        for(size_t i = 0; i < ctx->python_nodes.count; i++){
+            auto handle = ctx->python_nodes.data[i];
+            {
+            auto node = get_node(ctx, handle);
+            if(node->type != NODE_PYTHON)
+                continue;
+            MStringBuilder msb = {};
+            for(auto j = 0; j < node->children.count; j++){
+                auto child = node->children.data[j];
+                auto child_node = get_node(ctx, child);
+                msb_write_str(&msb, ctx->allocator, child_node->header.text, child_node->header.length);
+                msb_write_char(&msb, ctx->allocator, '\n');
+                }
+            if(!msb.cursor)
+                continue;
+            auto str = msb_detach(&msb, ctx->allocator);
+            auto py_err = execute_python_string(ctx, str.text, handle);
+            if(py_err.errored){
+                report_error(flags, "%s", ctx->error_message.text);
+                result.errored = py_err.errored;
+                goto cleanup;
+                }
+            }
+            auto node = get_node(ctx, handle);
+            // unsure if this is right, but doing it for now.
+            auto parent = get_node(ctx, node->parent);
+            node->parent = INVALID_NODE_HANDLE;
+            for(size_t j = 0; j < parent->children.count; j++){
+                if(NodeHandle_eq(handle, parent->children.data[j])){
+                    Marray_remove__NodeHandle(&parent->children, j);
+                    goto after;
+                    }
+                }
+            // don't both warning here, but leave the scaffolding in case I want to.
+            after:;
+            }
+        auto after_python = get_t();
+        report_stat(flags, "Python scripts took: %.3fms", (after_python-after)/1000.);
+        report_stat(flags, "Python total took: %.3fms", (after_python-before)/1000.);
+        }
+    // Python blocks are done, join with the base64 thread.
+    // We could actually join later now that I think about it.
+    // We only need to join by the time we start rendering any of the nodes into html.
+    // Well, todo, we almost always finish by the time python is done.
+    cleanup:
+    if(binary_work_to_be_done){
+        if(!(flags & DNDC_NO_THREADS)){
+            auto before = get_t();
+            join_thread(worker);
+            auto after = get_t();
+            // This is usually very fast as the worker thread finished before python.
+            report_stat(flags, "Joining took: %.3fms", (after-before)/1000.);
+            }
+        Marray_cleanup(StringView)(&job.sourcepaths, job.a);
+        // Merge the worker's output and allocations into ours.
+        if(job.loaded.count)
+            Marray_extend(LoadedSource)(&ctx->processed_binary_files, ctx->allocator, job.loaded.data, job.loaded.count);
+        Marray_cleanup(LoadedSource)(&job.loaded, job.a);
+        if(!(flags & DNDC_NO_CLEANUP)){
+            merge_recorded_mallocators_and_destroy_src(ctx->allocator, job.a);
+            shallow_free_recorded_mallocator(job.a);
+            }
+        }
+    return result;
     }
 
 #ifndef NOMAIN
@@ -346,7 +486,8 @@ run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) outpu
         root->col = 0;
         root->row = 0;
         root->filename = path;
-        root->type = NODE_ROOT;
+        // root->type = NODE_ROOT;
+        root->type = NODE_MD;
         root->parent = root_handle;
     }
     // Parse the initial document.
@@ -402,6 +543,18 @@ run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) outpu
     // Python blocks can add imgs or change the paths of the img nodes,
     // but they usually don't, so doing these in parallel is a win as
     // Python startup is very slow.
+    {
+        // This is shoved in its own function as we need to guarantee
+        // the worker has joined before continuing beyond this point.
+        // Putting it in its own function with single-point-of-exit style
+        // makes that easier to do.
+        auto e = do_python_and_load_images(&ctx);
+        if(e.errored){
+            result.errored = e.errored;
+            goto cleanup;
+            }
+    }
+#if 0
     {
         // Setup for the worker thread.
         const Allocator worker_allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
@@ -536,6 +689,7 @@ run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) outpu
                 }
             }
     }
+#endif
     // Do some reporting as we don't add any nodes after this.
     report_stat(ctx.flags, "ctx.nodes.count = %zu", ctx.nodes.count);
     report_stat(ctx.flags, "ctx.python_nodes.count = %zu", ctx.python_nodes.count);
@@ -875,3 +1029,24 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
 #include "dndc_htmlgen.c"
 #include "dndc_parser.c"
 #include "dndc_context.c"
+
+extern
+int
+dndc_make_html(LongString source_text, Nonnull(LongString*)output){
+    uint64_t flags = 0;
+    flags |= DNDC_SOURCE_PATH_IS_DATA_NOT_PATH;
+    flags |= DNDC_OUTPUT_PATH_IS_OUT_PARAM;
+    flags |= DNDC_PYTHON_IS_INIT;
+    flags |= DNDC_DONT_PRINT_ERRORS;
+    flags |= DNDC_SUPPRESS_WARNINGS;
+    flags |= DNDC_ALLOW_BAD_LINKS;
+    auto e = run_the_dndc(flags, source_text, output, LS(""));
+    return e.errored;
+    }
+
+extern
+int
+dndc_init_python(void){
+    auto err = init_python_docparser(0);
+    return err.errored;
+    }
