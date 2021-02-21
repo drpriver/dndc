@@ -111,6 +111,7 @@ TestFunction(TestDndcOutParam){
             "<body>\n"
             "<div>\n"
             "<div>\n"
+            "<div>\n"
             "<ul>\n"
             "<li>\n"
             "Hello World\n"
@@ -122,10 +123,15 @@ TestFunction(TestDndcOutParam){
             "</div>\n"
             "</div>\n"
             "hello\n"
+            "</div>\n"
             "</body>\n"
             "</html>\n");
         TestExpectEquals(expected.length, outdata.length);
         TestExpectEquals(LS_equals(expected, outdata), true);
+        if(!LS_equals(expected, outdata)){
+            HEREPrint(expected.text);
+            HEREPrint(outdata.text);
+            }
         const_free(outdata.text);
         }
     TESTEND();

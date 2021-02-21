@@ -76,25 +76,27 @@ NSRegularExpression* indent_pattern;
 - (DndTextView*) initWithFrame:(NSRect)textrect{
     self = [super initWithFrame:textrect];
     self->indent_pattern = [[NSRegularExpression alloc] initWithPattern:kIndentPatternString options:0 error:nil];
-    self.usesAdaptiveColorMappingForDarkAppearance = NO;
+    self.usesAdaptiveColorMappingForDarkAppearance = YES;
     self.automaticTextCompletionEnabled = NO;
     self.automaticLinkDetectionEnabled = NO;
     self.automaticSpellingCorrectionEnabled = NO;
     self.automaticDashSubstitutionEnabled = NO;
     self.automaticQuoteSubstitutionEnabled = NO;
     self.automaticDataDetectionEnabled = NO;
+    self.usesFindBar = YES;
+    self.incrementalSearchingEnabled = YES;
     self.font=[NSFont fontWithName:@"Menlo" size:11];
+    self.allowsUndo = YES;
+#if 0
     self.textColor= NSColor.blackColor;
     self.backgroundColor= NSColor.whiteColor;
     self.insertionPointColor= NSColor.blackColor;
-    self.usesFindBar = YES;
-    self.incrementalSearchingEnabled = YES;
     NSColor *selectedbgcolor = [NSColor colorWithCalibratedRed:0xbb/255. green:0xd5/255. blue:0xfc/255. alpha:1.0];
     self.selectedTextAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
         selectedbgcolor, NSBackgroundColorAttributeName,
         [NSColor blackColor], NSForegroundColorAttributeName,
         nil];
-    self.allowsUndo = YES;
+#endif
     return self;
 }
 
@@ -125,7 +127,15 @@ NSRegularExpression* indent_pattern;
 @implementation ViewController
 - (void)viewDidLoad {
     [super viewDidLoad];
-    NSRect textrect = {.origin={1400-550,0}, .size={550,800}};
+    auto screen = [NSScreen mainScreen];
+    NSRect screenrect;
+    if(screen){
+        screenrect = screen.visibleFrame;
+    }
+    else{
+        screenrect = NSMakeRect(0, 0, 1400, 800);
+    }
+    NSRect textrect = {.origin={screenrect.size.width-550,0}, .size={550,screenrect.size.height}};
     text = [[DndTextView alloc] initWithFrame:textrect];
     text.minSize = NSMakeSize(0.0, textrect.size.height);
     text.maxSize = NSMakeSize(1e9, 1e9);
@@ -137,9 +147,9 @@ NSRegularExpression* indent_pattern;
     highlighter = [[DndHighlighter alloc] init];
     text.textStorage.delegate = highlighter;
 
-    NSError* err;
-    NSString* str = [NSString stringWithContentsOfFile:testpath encoding:NSUTF8StringEncoding error:&err];
-    text.string = str;
+    // NSError* err;
+    // NSString* str = [NSString stringWithContentsOfFile:testpath encoding:NSUTF8StringEncoding error:&err];
+    // text.string = str;
     scrollview = [[NSScrollView alloc] initWithFrame:textrect];
     scrollview.borderType = NSNoBorder;
     scrollview.hasVerticalScroller = YES;
@@ -148,16 +158,12 @@ NSRegularExpression* indent_pattern;
     scrollview.documentView = text;
     [self.view addSubview:scrollview];
 
-    NSRect webrect = {.origin={0, 0}, .size={1400-550, 800}};
+    NSRect webrect = {.origin={0, 0}, .size={screenrect.size.width-550, screenrect.size.height}};
     WKWebViewConfiguration* config = [[WKWebViewConfiguration alloc] init];
-    // MacOS 11.0
-    // config.limitsNavigationsToAppBoundDomains = YES;
     webview = [[WKWebView alloc] initWithFrame:webrect configuration:config];
     [self.view addSubview:webview];
-    [self recalc_html:nil];
-    // NSURL* url = [[NSURL alloc] initFileURLWithPath:testurl];
-    // [webview loadFileURL:url allowingReadAccessToURL:url];
     webview.autoresizingMask = NSViewHeightSizable | NSViewWidthSizable;
+    [self recalc_html:nil];
 }
 
 - (void) recalc_html:(id)sender {
@@ -166,7 +172,8 @@ NSRegularExpression* indent_pattern;
     NSString *string = self->text.string;
     const char* source_text = [string UTF8String];
     LongString html = {};
-    auto err = dndc_make_html((LongString){strlen(source_text), source_text}, &html);
+    auto len = strlen(source_text);
+    auto err = dndc_make_html((LongString){len, source_text}, &html);
     if(err){
         // NSLog(@"error when doing html: %d", err);
         return;
@@ -182,27 +189,92 @@ NSRegularExpression* indent_pattern;
 
 - (void)loadView {
     // NSRect sframe = NSScreen.mainScreen.frame;
-    self.view = [[NSView alloc] initWithFrame: (NSRect){{0, 0}, {1400, 800}}];
+    auto screen = [NSScreen mainScreen];
+    NSRect screenrect;
+    if(screen){
+        screenrect = screen.visibleFrame;
+    }
+    else{
+        screenrect = NSMakeRect(0, 0, 1400, 800);
+    }
+    self.view = [[NSView alloc] initWithFrame: screenrect];
 }
 -(void) save:(id)sender{
     [self recalc_html:sender];
 }
 -(void) openDocument:(id)sender {
     auto panel = [NSOpenPanel openPanel];
-    auto resp = [panel runModal];
-    if(resp == NSModalResponseOK){
-        NSError* err = NULL;
-        NSString* str = [NSString stringWithContentsOfURL: (NSURL*)panel.URL encoding:NSUTF8StringEncoding error:&err];
-        text.string = str;
-    }
+    [panel beginWithCompletionHandler:^(NSModalResponse resp){
+        if(resp == NSModalResponseOK){
+            NSError* err = NULL;
+            NSString* str = [NSString stringWithContentsOfURL: (NSURL*)panel.URL encoding:NSUTF8StringEncoding error:&err];
+            text.string = str;
+            [self recalc_html:nil];
+        }
+    }];
 }
 
 @end
 
+@interface DndWindowController: NSWindowController {
+    // NSMutableArray<NSWindow*>* windows;
+}
+@end
 @interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate> {
-    NSWindow* window;
+    DndWindowController* winc;
 }
 @end
+
+@implementation DndWindowController: NSWindowController
+-(instancetype)init{
+    self = [super init];
+    // windows = [[NSMutableArray alloc] init];
+    return self;
+}
+-(void)make_window{
+    auto screen = [NSScreen mainScreen];
+    NSRect rect;
+    if(screen){
+        NSLog(@"%s %@", __func__, screen);
+        rect = screen.visibleFrame;
+    }
+    else{
+        rect = NSMakeRect(0, 0, 1400, 800);
+    }
+    NSWindow* window = [[NSWindow alloc]
+        initWithContentRect: rect
+        styleMask: NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable
+        backing: NSBackingStoreBuffered
+        defer: NO];
+    window.title = @"DndC";
+    // [window cascadeTopLeftFromPoint: NSMakePoint(20,20)];
+    [window makeKeyAndOrderFront: nil];
+    window.tabbingMode = NSWindowTabbingModePreferred;
+    window.contentViewController = [[ViewController alloc] init];
+    // [windows addObject:window];
+}
+-(void) newWindowForTab:(id)sender{
+    auto mainwin = [NSApp mainWindow];
+    if(!mainwin){
+        [self make_window];
+        return;
+    }
+    NSWindow* window = [[NSWindow alloc]
+        initWithContentRect: mainwin.frame
+        styleMask: NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable
+        backing: NSBackingStoreBuffered
+        defer: NO];
+    window.title = @"DndC";
+    [mainwin addTabbedWindow:window ordered:NSWindowAbove];
+    [window makeKeyAndOrderFront: nil];
+    window.tabbingMode = NSWindowTabbingModePreferred;
+    window.contentViewController = [[ViewController alloc] init];
+    // [windows addObject:window];
+
+}
+
+@end
+
 
 static void do_menus(void);
 @implementation AppDelegate : NSObject
@@ -211,17 +283,14 @@ static void do_menus(void);
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
-    window = [NSWindow.alloc
-        initWithContentRect: NSMakeRect(0, 0, 1400, 800)
-        styleMask: NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable
-        backing: NSBackingStoreBuffered
-        defer: NO];
-    window.title = @"DndC";
-    [window cascadeTopLeftFromPoint: NSMakePoint(20,20)];
-    [window makeKeyAndOrderFront: nil];
-    window.contentViewController = [[ViewController alloc] init];
+    winc = [[DndWindowController alloc] init];
+    [winc make_window];
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     [NSApp activateIgnoringOtherApps:YES];
+}
+// this is wrong but whatever
+-(void)newWindowForTab:(id)sender{
+    [self->winc newWindowForTab:sender];
 }
 @end
 
@@ -298,7 +367,8 @@ static void do_menus(void){
     /* Create the File menu */
     {
         NSMenu* fileMenu = [[NSMenu alloc] initWithTitle:@"File"];
-        [fileMenu addItemWithTitle:@"New" action:@selector(newDocument:) keyEquivalent:@"n"];
+        [fileMenu addItemWithTitle:@"New Tab" action:@selector(newWindowForTab:) keyEquivalent:@"n"];
+        [fileMenu addItemWithTitle:@"New Tab" action:@selector(newWindowForTab:) keyEquivalent:@"t"];
         [fileMenu addItemWithTitle:@"Open" action:@selector(openDocument:) keyEquivalent:@"o"];
         [fileMenu addItem:[NSMenuItem separatorItem]];
         [fileMenu addItemWithTitle:@"Close Window" action:@selector(performClose:) keyEquivalent:@"w"];

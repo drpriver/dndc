@@ -73,7 +73,8 @@ class Identer:
                 CursorKind.FUNCTION_DECL      : 'funcs',
                 CursorKind.ENUM_CONSTANT_DECL : 'enums',
                 CursorKind.VAR_DECL           : 'globs',
-                CursorKind.MACRO_DEFINITION   : 'macros'
+                CursorKind.MACRO_DEFINITION   : 'macros',
+                CursorKind.OBJC_INTERFACE_DECL: 'types',
                 }
         for tags in self.infos.values():
             for t in tags:
@@ -209,13 +210,18 @@ def is_definition(cursor):
             CursorKind.FUNCTION_DECL,
             CursorKind.CXX_METHOD,
             CursorKind.FUNCTION_TEMPLATE,
-            CursorKind.MACRO_DEFINITION
+            CursorKind.MACRO_DEFINITION,
+            CursorKind.OBJC_INTERFACE_DECL
             ])
 
 def should_exclude(name:str, excludes={}) -> bool:
     result = excludes.get(name)
     if result is not None:
         return result
+
+    if 'System' in name:
+        excludes[name] = True
+        return True
     # if 'DCraw' not in name and 'SDL' not in name:# and 'python' not in name:
         # excludes[name] = True
         # return True
@@ -278,7 +284,7 @@ def write_vim(funcs:List[str], enums:List[str], types:List[str], globs:List[str]
     macros_ = set(macros)
     macros_.difference_update([
         'auto',
-        'bool', 'true', 'false',
+        'bool', 'true', 'false', 'YES', 'NO',
         'Nonnull', 'Nullable', 'NullUnspec',
         'or', 'and', 'not',
         'Raise', 'attempt', 'unwrap',
