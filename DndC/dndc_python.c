@@ -195,11 +195,6 @@ py_parse_and_append_children(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnul
     // string will last beyond this execution and we store pointers
     // into the original source string.
     auto source_text = pystring_to_longstring(text, ctx->allocator);
-    {
-        // We store it in case we need to be able to clean up ourselves later.
-        auto string_store = Marray_alloc(LongString)(&ctx->loaded_strings, ctx->allocator);
-        *string_store = source_text;
-    }
     auto old_filename = ctx->filename;
 
     auto parse_e = dndc_parse(ctx, handle, SV("(generated string from script)"), source_text.text);
