@@ -34,6 +34,11 @@
 //    A path to a directory to write a make-style dependency file.
 //    If not given, no such file is written.
 //
+// b64cache:
+//    An optional pointer to an external cache for base64 images.
+//    If NULL, will internally create and then destroy one.
+//    Allows saving on io and computation if being run repeatedly.
+//
 // Returns
 // -------
 // Nothing is returned upon success (.errored == NO_ERROR).
@@ -41,7 +46,7 @@
 //
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) output_path, LongString depends_dir);
+run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) output_path, LongString depends_dir, Nullable(Base64Cache*)b64cache);
 
 //
 // The following functions are for reporting errors and warnings.
@@ -177,7 +182,7 @@ load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath);
 //
 static
 Errorable_f(LongString)
-load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath);
+load_processed_binary_file(Nonnull(Base64Cache*)cache, StringView binarypath, Nonnull(ByteBuilder*)bb);
 
 //
 // Parses the nul-terminated source text;

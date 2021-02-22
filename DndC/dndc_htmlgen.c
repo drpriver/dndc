@@ -735,7 +735,9 @@ RENDERFUNC(IMAGE){
             Raise(PARSE_ERROR);
             }
         auto header = imgpath_node->header;
-        auto processed_e = load_processed_binary_file(ctx, header);
+        ByteBuilder bb = {.allocator = ctx->allocator};
+        auto processed_e = load_processed_binary_file(&ctx->b64cache, header, &bb);
+        bb_destroy(&bb);
         if(processed_e.errored){
             node_set_err(ctx, imgpath_node, "Unable to read '%.*s'", (int)header.length, header.text);
             Raise(processed_e.errored);
@@ -963,7 +965,9 @@ RENDERFUNC(IMGLINKS){
             Raise(PARSE_ERROR);
             }
         auto header = imgpath_node->header;
-        auto processed_e = load_processed_binary_file(ctx, header);
+        ByteBuilder bb = {.allocator = ctx->allocator};
+        auto processed_e = load_processed_binary_file(&ctx->b64cache, header, &bb);
+        bb_destroy(&bb);
         if(processed_e.errored){
             node_set_err(ctx, imgpath_node, "Unable to read '%.*s'", (int)header.length, header.text);
             Raise(processed_e.errored);

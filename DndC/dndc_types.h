@@ -200,6 +200,11 @@ _Static_assert(sizeof(Node) == 120, "");
 #define MARRAY_T Node
 #include "Marray.h"
 
+typedef struct Base64Cache {
+    const Allocator allocator;
+    Marray(LoadedSource) processed_binary_files;
+} Base64Cache;
+
 typedef struct DndcContext {
     // The actual storage for all the nodes.
     Marray(Node) nodes;
@@ -246,8 +251,8 @@ typedef struct DndcContext {
         // Cached strings that are from loaded files.
         // We also copy the filename as we need those on our nodes.
         Marray(LoadedSource) loaded_files;
-        Marray(LoadedSource) processed_binary_files;
     };
+    Base64Cache b64cache;
     Marray(StringView) dependencies;
     // Mapping of shorthand for a link to its actual link.
     // Actually an array of pairs, we sort this and then do binary searches

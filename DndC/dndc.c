@@ -25,8 +25,7 @@
 // Unsure of where to put this. So, just putting it here for now.
 typedef struct BinaryJob{
     Marray(StringView) sourcepaths;
-    const Allocator a;
-    Marray(LoadedSource) loaded;
+    Nonnull(Base64Cache*)cache;
     bool report_time;
 } BinaryJob;
 
@@ -34,34 +33,22 @@ static
 THREADFUNC(binary_worker){
     auto before = get_t();
     BinaryJob* jobp = thread_arg;
+    auto cache = *jobp->cache;
     bool report_time = jobp->report_time;
-    const Allocator a = jobp->a;
     size_t count = jobp->sourcepaths.count;
     StringView* data = jobp->sourcepaths.data;
-    MStringBuilder sb = {};
-    ByteBuilder bb = {};
-    bb.allocator = a;
-    Marray(LoadedSource) loaded = {};
-    Marray_reserve(LoadedSource)(&loaded, a, count);
+    ByteBuilder bb = {.allocator=cache.allocator};
     for(size_t i = 0; i < count; i++){
         auto sv = data[i];
-        msb_write_str(&sb, a, sv.text, sv.length);
-        msb_nul_terminate(&sb, a);
-        auto path = msb_borrow(&sb, a);
-        auto e = read_and_base64_bin_file(&bb, a, path.text);
-        if(e.errored){
-            // We'll let the renderer report the error when it tries
-            // to load it.
-            msb_reset(&sb);
-            continue;
-            }
-        auto s = Marray_alloc(LoadedSource)(&loaded, a);
-        s->sourcepath = msb_detach(&sb, a);
-        s->sourcetext = unwrap(e);
+        auto e = load_processed_binary_file(&cache, sv, &bb);
+        // We'll let the renderer report the error when it tries
+        // to load it.
+        (void)e;
+        bb_reset(&bb);
         }
-    msb_destroy(&sb, a);
     bb_destroy(&bb);
-    jobp->loaded = loaded;
+    memcpy(jobp->cache, &cache, sizeof(cache));
+    // *jobp->cache = cache;
     auto after = get_t();
     if(report_time)
         fprintf(stderr, "Info: Binary worker took %.3fms\n", (after-before)/1000.);
@@ -76,9 +63,8 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
     Errorable(void) result = {};
     // Setup for the worker thread.
     auto flags = ctx->flags;
-    const Allocator worker_allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
     BinaryJob job = {
-        .a = worker_allocator,
+        .cache = &ctx->b64cache,
         .report_time = !!(flags & DNDC_PRINT_STATS),
         };
     {
@@ -103,7 +89,7 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
                     if(SV_equals(child->header, job.sourcepaths.data[j]))
                         goto Continue;
                     }
-                auto sv = Marray_alloc(StringView)(&job.sourcepaths, job.a);
+                auto sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
                 *sv = child->header;
                 Continue:;
                 }
@@ -123,12 +109,6 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             report_stat(flags, "Launching binary data processing took: %.3fms", (after-before)/1000.);
             }
         }
-    else {
-        if(!(flags & DNDC_NO_CLEANUP)){
-            shallow_free_recorded_mallocator(job.a);
-            }
-        }
-
     // Execute the python blocks.
     if(!(flags & DNDC_NO_PYTHON) and ctx->python_nodes.count){
         auto before = get_t();
@@ -194,15 +174,7 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             // This is usually very fast as the worker thread finished before python.
             report_stat(flags, "Joining took: %.3fms", (after-before)/1000.);
             }
-        Marray_cleanup(StringView)(&job.sourcepaths, job.a);
-        // Merge the worker's output and allocations into ours.
-        if(job.loaded.count)
-            Marray_extend(LoadedSource)(&ctx->processed_binary_files, ctx->allocator, job.loaded.data, job.loaded.count);
-        Marray_cleanup(LoadedSource)(&job.loaded, job.a);
-        if(!(flags & DNDC_NO_CLEANUP)){
-            merge_recorded_mallocators_and_destroy_src(ctx->allocator, job.a);
-            shallow_free_recorded_mallocator(job.a);
-            }
+        Marray_cleanup(StringView)(&job.sourcepaths, ctx->allocator);
         }
     return result;
     }
@@ -396,17 +368,17 @@ int main(int argc, char**argv){
     auto chdir_e = chdir(BENCHMARKDIRECTORY);
     unhandled_error_condition(chdir_e != 0);
     flags &= ~DNDC_NO_CLEANUP;
-    auto e = run_the_dndc(flags, source_path, &output_path, depends_dir);
+    auto e = run_the_dndc(flags, source_path, &output_path, depends_dir, NULL);
     assert(!e.errored);
     flags |= DNDC_PYTHON_IS_INIT;
     for(int i = 0; i < BENCHMARKITERS;i++){
-        e = run_the_dndc(flags, source_path, &output_path, depends_dir);
+        e = run_the_dndc(flags, source_path, &output_path, depends_dir, NULL);
         assert(!e.errored);
         }
     end_interpreter();
     return 0;
     #else
-    auto e = run_the_dndc(flags, source_path, output_path.length?& output_path : NULL, depends_dir);
+    auto e = run_the_dndc(flags, source_path, output_path.length? &output_path : NULL, depends_dir, NULL);
     return e.errored;
     #endif
     }
@@ -414,7 +386,7 @@ int main(int argc, char**argv){
 
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) output_path, LongString depends_dir){
+run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) output_path, LongString depends_dir, Nullable(Base64Cache*)external_b64cache){
     auto t0 = get_t();
     MStringBuilder msb = {};
     Errorable(void) result = {};
@@ -428,7 +400,7 @@ run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) outpu
         outpath = LS("");
         }
     else if(flags & DNDC_OUTPUT_PATH_IS_OUT_PARAM){
-        outpath = LS("");
+        outpath = LS("this.html");
         }
     else {
         outpath = *output_path;
@@ -448,6 +420,10 @@ run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) outpu
         .titlenode = INVALID_NODE_HANDLE,
         .navnode = INVALID_NODE_HANDLE,
         .outputfile = outpath,
+        .b64cache = external_b64cache? *external_b64cache : ({
+            const Allocator cache_allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
+            (Base64Cache){.allocator = cache_allocator};
+            }),
         };
     LongString source;
     if(flags & DNDC_SOURCE_PATH_IS_DATA_NOT_PATH){
@@ -554,142 +530,6 @@ run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) outpu
             goto cleanup;
             }
     }
-#if 0
-    {
-        // Setup for the worker thread.
-        const Allocator worker_allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
-        BinaryJob job = {
-            .a = worker_allocator,
-            .report_time = !!(ctx.flags & DNDC_PRINT_STATS),
-            };
-        {
-            Marray(NodeHandle)* img_nodes[] = {
-                &ctx.img_nodes,
-                &ctx.imglinks_nodes,
-                };
-            for(size_t n = 0; n < arrlen(img_nodes); n++){
-                auto nodes = img_nodes[n];
-                for(size_t i = 0; i < nodes->count; i++){
-                    auto node = get_node(&ctx, nodes->data[i]);
-                    if(!node->children.count)
-                        continue;
-                    auto child = get_node(&ctx, node->children.data[0]);
-                    if(!child->header.length)
-                        continue;
-                    // FIXME: this makes it O(N^2)
-                    // In practice, we only have a few images though.
-                    // But also in practice, we don't have duplicates and
-                    // this just speeds up benchmarks. *shrug*.
-                    for(size_t j = 0; j < job.sourcepaths.count; j++){
-                        if(SV_equals(child->header, job.sourcepaths.data[j]))
-                            goto Continue;
-                        }
-                    auto sv = Marray_alloc(StringView)(&job.sourcepaths, job.a);
-                    *sv = child->header;
-                    Continue:;
-                    }
-                }
-        }
-        // FIXME: initializing it like this is just to suppress compiler
-        // warnings.
-        // It would be better to restructure this code so that the worker is
-        // either used or not in scope instead of using state variables to
-        // track it.
-        ThreadHandle worker = {};
-        bool binary_work_to_be_done = !!job.sourcepaths.count;
-        if(binary_work_to_be_done){
-            if(flags & DNDC_NO_THREADS){
-                // Do it ourselves in this thread.
-                binary_worker(&job);
-                }
-            else{
-                auto before = get_t();
-                create_thread(&worker, &binary_worker, &job);
-                auto after = get_t();
-                report_stat(ctx.flags, "Launching binary data processing took: %.3fms", (after-before)/1000.);
-                }
-            }
-        else {
-            if(!(flags & DNDC_NO_CLEANUP)){
-                shallow_free_recorded_mallocator(job.a);
-                }
-            }
-
-        // Execute the python blocks.
-        if(!(flags & DNDC_NO_PYTHON) and ctx.python_nodes.count){
-            auto before = get_t();
-            // init_python_docparser handles the DNDC_PYTHON_IS_INIT flag.
-            auto e = init_python_docparser(flags);
-            if(e.errored) {
-                report_error(flags, "Failed to initialize python\n");
-                result.errored = e.errored;
-                goto cleanup;
-                }
-            auto after = get_t();
-            report_stat(ctx.flags, "Python startup took: %.3fms", (after-before)/1000.);
-            for(size_t i = 0; i < ctx.python_nodes.count; i++){
-                auto handle = ctx.python_nodes.data[i];
-                {
-                auto node = get_node(&ctx, handle);
-                if(node->type != NODE_PYTHON)
-                    continue;
-                for(auto j = 0; j < node->children.count; j++){
-                    auto child = node->children.data[j];
-                    auto child_node = get_node(&ctx, child);
-                    msb_write_str(&msb, ctx.allocator, child_node->header.text, child_node->header.length);
-                    msb_write_char(&msb, ctx.allocator, '\n');
-                    }
-                if(!msb.cursor)
-                    continue;
-                auto str = msb_detach(&msb, ctx.allocator);
-                auto py_err = execute_python_string(&ctx, str.text, handle);
-                if(py_err.errored){
-                    report_error(flags, "%s", ctx.error_message.text);
-                    result.errored = py_err.errored;
-                    goto cleanup;
-                    }
-                }
-                auto node = get_node(&ctx, handle);
-                // unsure if this is right, but doing it for now.
-                auto parent = get_node(&ctx, node->parent);
-                node->parent = INVALID_NODE_HANDLE;
-                for(size_t j = 0; j < parent->children.count; j++){
-                    if(NodeHandle_eq(handle, parent->children.data[j])){
-                        Marray_remove__NodeHandle(&parent->children, j);
-                        goto after;
-                        }
-                    }
-                // don't both warning here, but leave the scaffolding in case I want to.
-                after:;
-                }
-            auto after_python = get_t();
-            report_stat(ctx.flags, "Python scripts took: %.3fms", (after_python-after)/1000.);
-            report_stat(ctx.flags, "Python total took: %.3fms", (after_python-before)/1000.);
-            }
-        // Python blocks are done, join with the base64 thread.
-        // We could actually join later now that I think about it.
-        // We only need to join by the time we start rendering any of the nodes into html.
-        // Well, todo, we almost always finish by the time python is done.
-        if(binary_work_to_be_done){
-            if(!(flags & DNDC_NO_THREADS)){
-                auto before = get_t();
-                join_thread(worker);
-                auto after = get_t();
-                // This is usually very fast as the worker thread finished before python.
-                report_stat(ctx.flags, "Joining took: %.3fms", (after-before)/1000.);
-                }
-            Marray_cleanup(StringView)(&job.sourcepaths, job.a);
-            // Merge the worker's output and allocations into ours.
-            if(job.loaded.count)
-                Marray_extend(LoadedSource)(&ctx.processed_binary_files, ctx.allocator, job.loaded.data, job.loaded.count);
-            Marray_cleanup(LoadedSource)(&job.loaded, job.a);
-            if(!(flags & DNDC_NO_CLEANUP)){
-                merge_recorded_mallocators_and_destroy_src(allocator, job.a);
-                shallow_free_recorded_mallocator(job.a);
-                }
-            }
-    }
-#endif
     // Do some reporting as we don't add any nodes after this.
     report_stat(ctx.flags, "ctx.nodes.count = %zu", ctx.nodes.count);
     report_stat(ctx.flags, "ctx.python_nodes.count = %zu", ctx.python_nodes.count);
@@ -951,8 +791,17 @@ run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) outpu
         Allocator_free_all(allocator);
         shallow_free_recorded_mallocator(allocator);
         destroy_linear_storage(&la_);
+        if(!external_b64cache){
+            Allocator_free_all(ctx.b64cache.allocator);
+            shallow_free_recorded_mallocator(ctx.b64cache.allocator);
+            }
+        // TEMP: move ownership to caller
         auto after = get_t();
         report_stat(ctx.flags, "Cleaning up memory took: %.3fms", (after-before)/1000.);
+        }
+    if(external_b64cache){
+        DBG("Copying back");
+        memcpy(external_b64cache, &ctx.b64cache, sizeof(ctx.b64cache));
         }
     auto t1 = get_t();
     report_stat(ctx.flags, "Execution took: %.3fms", (t1-t0)/1000.);
@@ -1040,7 +889,9 @@ dndc_make_html(LongString source_text, Nonnull(LongString*)output){
     flags |= DNDC_DONT_PRINT_ERRORS;
     flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
-    auto e = run_the_dndc(flags, source_text, output, LS(""));
+    // gross, move to caller.
+    static Base64Cache cache = {.allocator._vtable = &MallocVtable};
+    auto e = run_the_dndc(flags, source_text, output, LS(""), &cache);
     return e.errored;
     }
 

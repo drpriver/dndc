@@ -170,31 +170,31 @@ load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
 
 static
 Errorable_f(LongString)
-load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath){
+load_processed_binary_file(Nonnull(Base64Cache*)cache, StringView binarypath, Nonnull(ByteBuilder*)bb){
     // check if we already have it.
-    for(size_t i = 0; i < ctx->processed_binary_files.count; i++){
-        auto loaded = &ctx->processed_binary_files.data[i];
+    for(size_t i = 0; i < cache->processed_binary_files.count; i++){
+        auto loaded = &cache->processed_binary_files.data[i];
         if(LS_SV_equals(loaded->sourcepath, binarypath)){
+            DBG("Returning cached b64: '%.*s'", (int)binarypath.length, binarypath.text);
             return (Errorable(LongString)){.result=loaded->sourcetext};
             }
         }
+    DBG("Not cached, processing b64: '%.*s'", (int)binarypath.length, binarypath.text);
 
     // We don't have it, try to load it ourselves.
-    auto a = ctx->allocator;
+    auto a = cache->allocator;
     MStringBuilder sb = {};
     msb_write_str(&sb, a, binarypath.text, binarypath.length);
     auto path = msb_borrow(&sb, a);
 
-    ByteBuilder bb = {.allocator = ctx->temp_allocator};
-    auto base64ed_e = read_and_base64_bin_file(&bb, a, path.text);
-    bb_destroy(&bb);
+    auto base64ed_e = read_and_base64_bin_file(bb, a, path.text);
     if(base64ed_e.errored){
         msb_destroy(&sb, a);
         return (Errorable(LongString)){.errored = base64ed_e.errored};
         }
     auto base64ed = unwrap(base64ed_e);
     auto sourcepath = msb_detach(&sb, a);
-    auto loaded = Marray_alloc(LoadedSource)(&ctx->processed_binary_files, a);
+    auto loaded = Marray_alloc(LoadedSource)(&cache->processed_binary_files, a);
     loaded->sourcepath = sourcepath;
     loaded->sourcetext = base64ed;
     return (Errorable(LongString)){.result=base64ed};
