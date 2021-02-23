@@ -92,7 +92,7 @@ NSRegularExpression* indent_pattern;
 
   return [super preferredPasteboardTypeFromArray:availableTypes restrictedToTypesFromArray:allowedTypes];
 }
-- (DndTextView*) initWithFrame:(NSRect)textrect{
+- (DndTextView*) initWithFrame:(NSRect)textrect font:(NSFont*)font{
     self = [super initWithFrame:textrect];
     self->indent_pattern = [[NSRegularExpression alloc] initWithPattern:kIndentPatternString options:0 error:nil];
     self.usesAdaptiveColorMappingForDarkAppearance = YES;
@@ -104,7 +104,7 @@ NSRegularExpression* indent_pattern;
     self.automaticDataDetectionEnabled = NO;
     self.usesFindBar = YES;
     self.incrementalSearchingEnabled = YES;
-    self.font=[NSFont fontWithName:@"Menlo" size:14];
+    self.font = font;
     self.allowsUndo = YES;
     return self;
 }
@@ -164,6 +164,15 @@ NSRegularExpression* indent_pattern;
 @end
 
 @implementation ViewController
+-(void)zoom_out:(id)sender{
+    webview.magnification/=1.2;
+}
+-(void)zoom_in:(id)sender{
+    webview.magnification*=1.2;
+}
+-(void)zoom_normal:(id)sender{
+    webview.magnification = 1.0;
+}
 -(void)keyDown:(NSEvent*) event{
     if(event.modifierFlags & NSEventModifierFlagCommand){
         auto num = [event.characters integerValue];
@@ -178,7 +187,7 @@ NSRegularExpression* indent_pattern;
     }
     [super keyDown:event];
 }
-- (instancetype) initWithURL:(NSURL*)url{
+-(instancetype)initWithURL:(NSURL*)url{
     self = [super init];
     auto screen = [NSScreen mainScreen];
     NSRect screenrect;
@@ -188,8 +197,12 @@ NSRegularExpression* indent_pattern;
     else{
         screenrect = NSMakeRect(0, 0, 1400, 800);
     }
-    NSRect textrect = {.origin={screenrect.size.width-550,0}, .size={550,screenrect.size.height}};
-    text = [[DndTextView alloc] initWithFrame:textrect];
+    auto font=[NSFont fontWithName:@"Menlo" size:11];
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:(id)font, NSFontAttributeName, nil];
+    auto Msize = [[NSAttributedString alloc] initWithString:@"M" attributes:attributes].size.width;
+    auto textwidth  = 80*Msize;
+    NSRect textrect = {.origin={screenrect.size.width-textwidth,0}, .size={textwidth,screenrect.size.height}};
+    text = [[DndTextView alloc] initWithFrame:textrect font:font];
     highlighter = [[DndHighlighter alloc] init];
     text.textStorage.delegate = highlighter;
     if(url){
@@ -206,9 +219,6 @@ NSRegularExpression* indent_pattern;
     text.textContainer.widthTracksTextView = YES;
     text.textContainerInset = NSMakeSize(4,4);
 
-    // NSError* err;
-    // NSString* str = [NSString stringWithContentsOfFile:testpath encoding:NSUTF8StringEncoding error:&err];
-    // text.string = str;
     scrollview = [[NSScrollView alloc] initWithFrame:textrect];
     scrollview.borderType = NSNoBorder;
     scrollview.hasVerticalScroller = YES;
@@ -217,10 +227,11 @@ NSRegularExpression* indent_pattern;
     scrollview.documentView = text;
     [self.view addSubview:scrollview];
 
-    NSRect webrect = {.origin={0, 0}, .size={screenrect.size.width-550, screenrect.size.height}};
+    NSRect webrect = {.origin={0, 0}, .size={screenrect.size.width-textwidth, screenrect.size.height}};
     WKWebViewConfiguration* config = [[WKWebViewConfiguration alloc] init];
     [config.preferences setValue:@YES forKey:@"developerExtrasEnabled"];
     webview = [[WKWebView alloc] initWithFrame:webrect configuration:config];
+    webview.allowsMagnification = YES;
     webnavdel = [[WebNavDel alloc] init];
     webview.navigationDelegate = webnavdel;
     [self.view addSubview:webview];
@@ -515,11 +526,6 @@ static void do_menus(void){
         [[NSApp mainMenu] addItem:menuItem];
     }
 
-    /* Tell the application object that this is now the application menu */
-    // it doesn't seem like you need this?
-    // [NSApp setAppleMenu:appleMenu];
-    // [appleMenu release];
-
     /* Create the File menu */
     {
         NSMenu* fileMenu = [[NSMenu alloc] initWithTitle:@"File"];
@@ -554,6 +560,11 @@ static void do_menus(void){
     {
         NSMenu* menu = [[NSMenu alloc] initWithTitle:@"View"];
         [menu addItemWithTitle:@"Toggle Editor" action:@selector(toggle_editor:) keyEquivalent:@"j"];
+        [menu addItem:[NSMenuItem separatorItem]];
+        [menu addItemWithTitle:@"Zoom Out" action:@selector(zoom_out:) keyEquivalent:@"-"];
+        [menu addItemWithTitle:@"Zoom In" action:@selector(zoom_in:) keyEquivalent:@"+"];
+        [menu addItemWithTitle:@"Actual Size" action:@selector(zoom_normal:) keyEquivalent:@"0"];
+
         NSMenuItem* menuItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
         [menuItem setSubmenu:menu];
         [[NSApp mainMenu] addItem:menuItem];
@@ -570,16 +581,6 @@ static void do_menus(void){
 
         [windowMenu addItemWithTitle:@"Zoom" action:@selector(performZoom:) keyEquivalent:@""];
 
-        /* Add the fullscreen toggle menu option, if supported */
-        if (floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_6) {
-            /* Cocoa should update the title to Enter or Exit Full Screen automatically.
-             * But if not, then just fallback to Toggle Full Screen.
-             */
-            NSMenuItem* menuItem = [[NSMenuItem alloc] initWithTitle:@"Toggle Full Screen" action:@selector(toggleFullScreen:) keyEquivalent:@"f"];
-            [menuItem setKeyEquivalentModifierMask:NSEventModifierFlagControl | NSEventModifierFlagCommand];
-            [windowMenu addItem:menuItem];
-        }
-
         /* Put menu into the menubar */
         NSMenuItem* menuItem = [[NSMenuItem alloc] initWithTitle:@"Window" action:nil keyEquivalent:@""];
         [menuItem setSubmenu:windowMenu];
@@ -587,6 +588,18 @@ static void do_menus(void){
 
         /* Tell the application object that this is now the window menu */
         [NSApp setWindowsMenu:windowMenu];
+    }
+    /* Create the help menu */
+    {
+        NSMenu* menu = [[NSMenu alloc] initWithTitle:@"Help"];
+
+
+        /* Put menu into the menubar */
+        NSMenuItem* menuItem = [[NSMenuItem alloc] initWithTitle:@"Help" action:nil keyEquivalent:@""];
+        [menuItem setSubmenu:menu];
+        [[NSApp mainMenu] addItem:menuItem];
+        /* Tell the application object that this is now the help menu */
+        [NSApp setHelpMenu:menu];
     }
 }
 

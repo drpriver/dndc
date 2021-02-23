@@ -19,6 +19,6 @@ CP=cp
 EXE=
 INSTALL=install
 
-$(BINDIR)/gdndc: Platform/MacOS/gdndc.m $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o Platform/MacOS/Info.plist
+$(BINDIR)/gdndc: Platform/MacOS/gdndc.m $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o Platform/MacOS/Info.plist Platform/MacOS/app_icon.png
 	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/gdndc.dep $< $(OBJDIR)/frozenstdlib.o $(OBJDIR)/dndc.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -framework Cocoa -framework WebKit -fobjc-arc -Wl,-sectcreate,__TEXT,__info_plist,Platform/MacOS/Info.plist
 gdndc: $(BINDIR)/gdndc
