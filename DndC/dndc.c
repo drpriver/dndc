@@ -3,6 +3,7 @@
 #endif
 #define LOG_LEVEL LOG_LEVEL_INFO
 #include <stdarg.h>
+#include "dndc_format.c"
 #include "path_util.h"
 #include "linear_allocator.h"
 #include "long_string.h"
@@ -196,6 +197,7 @@ int main(int argc, char**argv){
     bool no_threads = false;
     bool cleanup = false;
     bool use_site = false;
+    bool reformat_only = false;
     {
     ArgToParse pos_args[] = {
         [0] = {
@@ -303,6 +305,18 @@ int main(int argc, char**argv){
             .dest = ARGDEST(&use_site),
             .help = "Don't isolate python, import site, etc.\n"
                 "   Greatly slows startup, but allows importing user installed packages.",
+        },
+        {
+            .name = SV("--format"),
+            .min_num = 0,
+            .max_num = 1,
+            .dest = ARGDEST(&reformat_only),
+            .help = "Instead of rendering to html, render to .dnd with trailing  "
+                    "spaces removed, text wrapped to 80 columns (if semantically "
+                    "equivelant), etc. Imports will not be resolved - only the "
+                    "given input file will be imported.\n"
+                    "Implies --no-python."
+                    ,
         }
         };
     ArgParser argparser = {
@@ -357,6 +371,8 @@ int main(int argc, char**argv){
         flags |= DNDC_NO_CLEANUP;
     if(use_site)
         flags |= DNDC_PYTHON_UNISOLATED;
+    if(reformat_only)
+        flags |= DNDC_REFORMAT_ONLY;
 
     #ifdef BENCHMARKING
     if(!source_path.length){
@@ -387,6 +403,8 @@ int main(int argc, char**argv){
 static
 Errorable_f(void)
 run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) output_path, LongString depends_dir, Nullable(Base64Cache*)external_b64cache){
+    if(flags & DNDC_REFORMAT_ONLY)
+        flags |= DNDC_NO_PYTHON;
     auto t0 = get_t();
     MStringBuilder msb = {};
     Errorable(void) result = {};
@@ -478,6 +496,45 @@ run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) outpu
             goto cleanup;
             }
     }
+    if(flags & DNDC_REFORMAT_ONLY){
+        msb_reset(&msb);
+        auto before = get_t();
+        format_tree(&ctx, &msb);
+        auto after = get_t();
+        report_stat(ctx.flags, "Formatting took: %.3fms", (after-before)/1000.);
+
+        auto str = msb_borrow(&msb, ctx.allocator);
+        auto before_write = get_t();
+        if(flags & DNDC_OUTPUT_PATH_IS_OUT_PARAM){
+            assert(output_path);
+            // We don't use the allocator as this needs to outlive the recording
+            // allocator.
+            //
+            // We could do this without the extra copy, but this will work for now.
+            char* text = malloc(str.length+1);
+            memcpy(text, str.text, str.length);
+            text[str.length] = '\0';
+            output_path->text = text;
+            output_path->length = str.length;
+            }
+        else if(!output_path || outpath.length == 0){
+            fputs(str.text, stdout);
+            goto success;
+            }
+        else {
+            auto write_err = write_file(outpath.text, str.text, str.length);
+            if(write_err.errored){
+                ERROR("Error on write: %s", get_error_name(write_err));
+                perror("Error on write");
+                result.errored = write_err.errored;
+                goto cleanup;
+                }
+            }
+        auto after_write = get_t();
+        report_stat(ctx.flags, "Writing took: %.3fms", (after_write-before_write)/1000.);
+        report_stat(ctx.flags, "Total output size: %zu bytes", str.length);
+        goto success;
+        }
     // Handle imports. Imports can import more imports.
     {
         auto before_imports = get_t();
@@ -901,3 +958,5 @@ dndc_init_python(void){
     auto err = init_python_docparser(0);
     return err.errored;
     }
+
+

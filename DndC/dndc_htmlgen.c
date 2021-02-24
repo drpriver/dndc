@@ -1212,8 +1212,7 @@ RENDERFUNC(INVALID){
     (void)header_depth;
     return (Errorable(void)){.errored=GENERIC_ERROR};
     }
-
-
-
+#undef RENDERFUNC
+#undef RENDERFUNCNAME
 
 #endif

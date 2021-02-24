@@ -38,6 +38,10 @@ FlagEnum DndcFlags {
     DNDC_PYTHON_UNISOLATED = 0x2000,
     // The output path is actually a string to output data to.
     DNDC_OUTPUT_PATH_IS_OUT_PARAM = 0x4000,
+    // Instead of rendering to html, render to .dnd with trailing
+    // spaces removed, text aligned to 80 columns (if semantically equivelant)
+    // etc.
+    DNDC_REFORMAT_ONLY            = 0x8000,
 };
 #else
 #define DNDC_FLAGS_NONE                   0x0000
@@ -56,6 +60,7 @@ FlagEnum DndcFlags {
 #define DNDC_DONT_PRINT_ERRORS            0x1000
 #define DNDC_PYTHON_UNISOLATED            0x2000
 #define DNDC_OUTPUT_PATH_IS_OUT_PARAM     0x4000
+#define DNDC_REFORMAT_ONLY                0x8000
 #endif
 
 

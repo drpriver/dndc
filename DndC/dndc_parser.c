@@ -331,7 +331,12 @@ PARSEFUNC(parse_node){
         case NODE_PRE:
         case NODE_RAW:
         case NODE_PYTHON:
+        case NODE_COMMENT:
             return parse_raw_node(ctx, parent_handle, indentation);
+        // These two are impossible now as their aliases are not exposed.
+        // DELETEME?
+        case NODE_BULLETS:
+            return parse_bullets_node(ctx, parent_handle, indentation);
         case NODE_LIST:
             return parse_list_node(ctx, parent_handle, indentation);
         case NODE_TABLE:
@@ -342,9 +347,7 @@ PARSEFUNC(parse_node){
             return parse_md_node(ctx, parent_handle, indentation);
         case NODE_IMGLINKS:
         case NODE_DATA:
-        case NODE_COMMENT:
         case NODE_NAV:
-        case NODE_STYLESHEETS:
         case NODE_DEPENDENCIES:
         case NODE_LINKS:
         case NODE_SCRIPTS:
@@ -357,10 +360,14 @@ PARSEFUNC(parse_node){
         case NODE_CONTAINER:
         case NODE_QUOTE:
             break;
+        case NODE_STYLESHEETS:
+            // kind of gross
+            if(node_has_attribute(parent, SV("inline"))){
+                return parse_raw_node(ctx, parent_handle, indentation);
+                }
+            break; // do regular string parsing
         case NODE_TEXT:
             return parse_text_node(ctx, parent_handle, indentation);
-        case NODE_BULLETS:
-            return parse_bullets_node(ctx, parent_handle, indentation);
         case NODE_LIST_ITEM:
         case NODE_BULLET:
         case NODE_TABLE_ROW:
@@ -712,6 +719,7 @@ PARSEFUNC(parse_text_node){
     Errorable(void) result = {};
     for(;ctx->cursor[0];){
         analyze_line(ctx);
+        // blank line
         if(ctx->linestart+ctx->nspaces == ctx->lineend){
             in_para_node = false;
             advance_row(ctx);

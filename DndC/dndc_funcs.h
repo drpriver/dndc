@@ -1,6 +1,7 @@
 #ifndef DNDC_FUNCS_H
 #define DNDC_FUNCS_H
 #include "MStringBuilder.h"
+#include "ByteBuilder.h"
 #include "dndc_types.h"
 
 //
@@ -223,6 +224,14 @@ render_tree(Nonnull(DndcContext*), Nonnull(MStringBuilder*));
 static inline force_inline
 Errorable_f(void)
 render_node(Nonnull(DndcContext*), Nonnull(MStringBuilder*) restrict, Nonnull(const Node*), int header_depth);
+
+//
+// Writes the document tree (starting from the context's root node)
+// as a .dnd file, formatted to remove trailing spaces, wrap to 80 columns, etc.
+//
+static
+void
+format_tree(Nonnull(DndcContext*), Nonnull(MStringBuilder*));
 
 //
 // Traverses the tree to find all the link targets

@@ -51,6 +51,23 @@ rstripped_view(Nonnull(const char*)str, size_t len){
         }
     return (StringView){.text=str, .length=len};
     }
+//
+// Like stripped_view, but only strips from the left.
+//
+static inline
+StringView
+lstripped_view(Nonnull(const char*)str, size_t len){
+    for(;len;len--, str++){
+        switch(*str){
+            case ' ': case '\t': case '\r': case '\n': case '\f': case '\v':
+                continue;
+            default:
+                break;
+            }
+        break;
+        }
+    return (StringView){.text=str, .length=len};
+    }
 
 typedef struct SplitPair {
     StringView head;

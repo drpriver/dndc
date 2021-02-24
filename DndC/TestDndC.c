@@ -80,6 +80,7 @@ TestFunction(TestDndC3){
 TestFunction(TestDndcOutParam){
     TESTBEGIN();
     LongString source = LS(
+        "Hello::title\n"
         "::md\n"
         "   * Hello World\n"
         "   * This is amazing!\n"
@@ -106,10 +107,11 @@ TestFunction(TestDndcOutParam){
             "<script>\n"
             "const data_blob = {};\n"
             "</script>\n"
-            "<title></title>\n"
+            "<title>Hello</title>\n"
             "</head>\n"
             "<body>\n"
             "<div>\n"
+            "<h1 id=\"hello\">Hello</h1>\n"
             "<div>\n"
             "<div>\n"
             "<ul>\n"

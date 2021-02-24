@@ -78,13 +78,39 @@ struct {
     {SV("bullets"),      NODE_BULLETS},
     {SV("raw"),          NODE_RAW},
     {SV("pre"),          NODE_PRE},
-    {SV("list"),         NODE_LIST},
     {SV("kv"),           NODE_KEYVALUE},
     {SV("comment"),      NODE_COMMENT},
     {SV("imglinks"),     NODE_IMGLINKS},
     {SV("nav"),          NODE_NAV},
     {SV("data"),         NODE_DATA},
     {SV("quote"),        NODE_QUOTE},
+    };
+
+static const
+StringView
+nodetype_to_node_aliases[NODE_INVALID+1] = {
+     [NODE_MD]           = SV("md"),
+     [NODE_DIV]          = SV("div"),
+     [NODE_TEXT]         = SV("text"),
+     [NODE_IMPORT]       = SV("import"),
+     [NODE_PYTHON]       = SV("python"),
+     [NODE_TITLE]        = SV("title"),
+     [NODE_HEADING]      = SV("h"),
+     [NODE_TABLE]        = SV("table"),
+     [NODE_STYLESHEETS]  = SV("stylesheets"),
+     [NODE_DEPENDENCIES] = SV("dependencies"),
+     [NODE_LINKS]        = SV("links"),
+     [NODE_SCRIPTS]      = SV("scripts"),
+     [NODE_IMAGE]        = SV("img"),
+     [NODE_BULLETS]      = SV("bullets"),
+     [NODE_RAW]          = SV("raw"),
+     [NODE_PRE]          = SV("pre"),
+     [NODE_KEYVALUE]     = SV("kv"),
+     [NODE_COMMENT]      = SV("comment"),
+     [NODE_IMGLINKS]     = SV("imglinks"),
+     [NODE_NAV]          = SV("nav"),
+     [NODE_DATA]         = SV("data"),
+     [NODE_QUOTE]        = SV("quote"),
     };
 
 

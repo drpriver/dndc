@@ -55,4 +55,4 @@ install: $(DNDC)
 fuzz: $(BINDIR)/dndcfuzz$(EXE) | $(FUZZDIR)
 	$< $(FUZZDIR) -fork=4 -only_ascii=1
 
-.DEFAULT_GOAL := gdndc
+.DEFAULT_GOAL := dndc
