@@ -936,6 +936,7 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
 #include "dndc_parser.c"
 #include "dndc_context.c"
 
+
 extern
 int
 dndc_make_html(LongString source_text, Nonnull(LongString*)output){
@@ -943,12 +944,26 @@ dndc_make_html(LongString source_text, Nonnull(LongString*)output){
     flags |= DNDC_SOURCE_PATH_IS_DATA_NOT_PATH;
     flags |= DNDC_OUTPUT_PATH_IS_OUT_PARAM;
     flags |= DNDC_PYTHON_IS_INIT;
-    flags |= DNDC_DONT_PRINT_ERRORS;
+    // flags |= DNDC_DONT_PRINT_ERRORS;
     flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
     // gross, move to caller.
     static Base64Cache cache = {.allocator._vtable = &MallocVtable};
     auto e = run_the_dndc(flags, source_text, output, LS(""), &cache);
+    return e.errored;
+    }
+extern
+int
+dndc_format(LongString source_text, Nonnull(LongString*)output){
+    uint64_t flags = 0;
+    flags |= DNDC_SOURCE_PATH_IS_DATA_NOT_PATH;
+    flags |= DNDC_OUTPUT_PATH_IS_OUT_PARAM;
+    flags |= DNDC_PYTHON_IS_INIT;
+    flags |= DNDC_DONT_PRINT_ERRORS;
+    flags |= DNDC_SUPPRESS_WARNINGS;
+    flags |= DNDC_ALLOW_BAD_LINKS;
+    flags |= DNDC_REFORMAT_ONLY;
+    auto e = run_the_dndc(flags, source_text, output, LS(""), NULL);
     return e.errored;
     }
 

@@ -145,7 +145,25 @@ typedef struct FormatTokenized {
 
 FormatTokenized format_next_token(StringView sv){
     sv = lstripped_view(sv.text, sv.length);
-    for(size_t i = 0; i < sv.length; i++){
+    size_t i = 0;
+    if(sv.length && sv.text[0] == '['){
+        for(; i < sv.length; i++){
+            switch(sv.text[i]){
+                case ']':
+                    goto endloop;
+                    // return (FormatTokenized){
+                        // .token.text = sv.text,
+                        // .token.length = i+1,
+                        // .rest.text = sv.text+i+1,
+                        // .rest.length = sv.length - i-1,
+                        // };
+                default:
+                    continue;
+                }
+            }
+        endloop:;
+        }
+    for(; i < sv.length; i++){
         switch(sv.text[i]){
             case ' ':
             case '\t':
@@ -333,8 +351,9 @@ FORMATFUNC(table_node){
             else
                 msb_write_str(sb, ctx->allocator, EIGHTYSPACES, indent);
             auto cell = get_node(ctx, row->children.data[j]);
-            if(j != row->children.count-1)
+            if(j != row->children.count-1){
                 msb_sprintf(sb, ctx->allocator, "%-*.*s", (int)widths[j], (int)cell->header.length, cell->header.text);
+                }
             else
                 msb_write_str(sb, ctx->allocator, cell->header.text, cell->header.length);
             }
@@ -367,6 +386,10 @@ FORMATFUNC(raw_node){
     auto nspace = Min(indent, 80);
     for(size_t i = 0; i < node->children.count; i++){
         auto child = get_node(ctx, node->children.data[i]);
+        if(child->type != NODE_STRING){
+            format_node(ctx, sb, child, indent);
+            continue;
+            }
         assert(child->type == NODE_STRING);
         if(child->header.length){
             msb_write_str(sb, ctx->allocator, EIGHTYSPACES, nspace);

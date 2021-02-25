@@ -12,6 +12,10 @@ dndc_make_html(LongString source_text, Nonnull(LongString*)output);
 
 extern
 int
+dndc_format(LongString source_text, Nonnull(LongString*)output);
+
+extern
+int
 dndc_init_python(void);
 
 #endif

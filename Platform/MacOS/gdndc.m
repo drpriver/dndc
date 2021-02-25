@@ -102,10 +102,9 @@ NSRegularExpression* indent_pattern;
     self.automaticDashSubstitutionEnabled = NO;
     self.automaticQuoteSubstitutionEnabled = NO;
     self.automaticDataDetectionEnabled = NO;
-    self.usesFindBar = YES;
-    self.incrementalSearchingEnabled = YES;
     self.font = font;
     self.allowsUndo = YES;
+    // self.usesFindBar = YES;
     return self;
 }
 
@@ -128,11 +127,11 @@ NSRegularExpression* indent_pattern;
 }
 @end
 @implementation WebNavDel: NSObject
--(void)webView:(WKWebView *)webView 
+-(void)webView:(WKWebView *)webView
     didFinishNavigation:(WKNavigation *)navigation{
     auto title = webView.title;
     // Hack
-    [NSApp mainWindow].title = title; 
+    [NSApp mainWindow].title = title;
 }
 -(void)webView:(WKWebView *)webView
     decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction
@@ -160,6 +159,7 @@ NSRegularExpression* indent_pattern;
     WKWebView* webview;
     DndHighlighter* highlighter;
     WebNavDel* webnavdel;
+    // NSTextFinder* textfinder;
 }
 @end
 
@@ -200,7 +200,7 @@ NSRegularExpression* indent_pattern;
     auto font=[NSFont fontWithName:@"Menlo" size:11];
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:(id)font, NSFontAttributeName, nil];
     auto Msize = [[NSAttributedString alloc] initWithString:@"M" attributes:attributes].size.width;
-    auto textwidth  = 80*Msize;
+    auto textwidth  = 84*Msize;
     NSRect textrect = {.origin={screenrect.size.width-textwidth,0}, .size={textwidth,screenrect.size.height}};
     text = [[DndTextView alloc] initWithFrame:textrect font:font];
     highlighter = [[DndHighlighter alloc] init];
@@ -224,7 +224,19 @@ NSRegularExpression* indent_pattern;
     scrollview.hasVerticalScroller = YES;
     scrollview.hasHorizontalScroller = NO;
     scrollview.autoresizingMask = NSViewHeightSizable | NSViewMinXMargin;
+    // [scrollview addSubview:text];
     scrollview.documentView = text;
+    scrollview.findBarPosition = NSScrollViewFindBarPositionAboveContent;
+
+    text.usesFindBar = YES;
+    text.incrementalSearchingEnabled = YES;
+    NSLog(@"%@", [text enclosingScrollView]);
+    NSLog(@"%@", scrollview);
+    // scrollview.findBarVisible = YES;
+    // textfinder = [[NSTextFinder alloc] init];
+    // [textfinder setFindBarContainer:scrollview];
+    // [textfinder setClient:text];
+
     [self.view addSubview:scrollview];
 
     NSRect webrect = {.origin={0, 0}, .size={screenrect.size.width-textwidth, screenrect.size.height}};
@@ -240,11 +252,40 @@ NSRegularExpression* indent_pattern;
     [self recalc_html:nil];
     return self;
 }
+// -(void)performTextFinderAction:(id)sender{
+    // NSLog(@"%s %@", __func__, sender);
+    // NSLog(@"tag= %ld",((NSMenuItem*)sender).tag);
+    // [text performTextFinderAction:sender];
+    // [textfinder performTextFinderAction:sender];
+// }
 - (void)viewDidLoad {
     [super viewDidLoad];
 }
 
-- (void) recalc_html:(id)sender {
+-(void)format_dnd:(id)sender {
+    auto before = [self->scrollview lineScroll];
+    NSString *string = self->text.string;
+    const char* source_text = [string UTF8String];
+    // auto t1 = get_t();
+    LongString html = {};
+    auto len = strlen(source_text);
+    auto err = dndc_format((LongString){len, source_text}, &html);
+    // TODO: report?
+    if(err){
+        return;
+    }
+    PushDiagnostic();
+    SuppressCastQual();
+    NSData* htmldata = [NSData dataWithBytesNoCopy:(void*)html.text length:html.length freeWhenDone:YES];
+    PopDiagnostic();
+    auto str = [[NSString alloc] initWithData:htmldata encoding:NSUTF8StringEncoding];
+    if(!str)
+        return;
+    [self->text insertText:str replacementRange:NSMakeRange(0, [[self->text textStorage] length])];
+    [self->scrollview setLineScroll:before];
+}
+
+-(void)recalc_html:(id)sender {
     // FIXME: don't do this synchronously
     // FIXME: where the fuck are you supposed to put this stuff.
     // auto t0 = get_t();
@@ -308,7 +349,7 @@ NSRegularExpression* indent_pattern;
         if(resp == NSModalResponseOK){
             NSError* err = NULL;
             NSString* str = [NSString stringWithContentsOfURL: (NSURL*)panel.URL encoding:NSUTF8StringEncoding error:&err];
-            text.string = str;
+            [text insertText:str replacementRange:NSMakeRange(0, [[text textStorage] length])];
             [self recalc_html:nil];
         }
     }];
@@ -550,8 +591,25 @@ static void do_menus(void){
         [editMenu addItemWithTitle:@"Paste" action:@selector(paste:) keyEquivalent:@"v"];
         [editMenu addItem:[NSMenuItem separatorItem]];
         [editMenu addItemWithTitle:@"Select All" action:@selector(selectAll:) keyEquivalent:@"a"];
+        [editMenu addItemWithTitle:@"Format" action:@selector(format_dnd:) keyEquivalent:@"J"];
         // Idk how to do this.
-        [editMenu addItemWithTitle:@"Find" action:@selector(performFindPanelAction:) keyEquivalent:@"f"];
+        NSMenuItem* mi = [[NSMenuItem alloc] initWithTitle:@"Find..." action:@selector(performTextFinderAction:) keyEquivalent:@"f"];
+        mi.tag = NSTextFinderActionShowFindInterface;
+        [editMenu addItem:mi];
+
+        mi = [[NSMenuItem alloc] initWithTitle:@"Find and Replace..." action:@selector(performTextFinderAction:) keyEquivalent:@"F"];
+        mi.tag = NSTextFinderActionShowReplaceInterface;
+        [editMenu addItem:mi];
+
+        mi = [[NSMenuItem alloc] initWithTitle:@"Find Next" action:@selector(performTextFinderAction:) keyEquivalent:@"g"];
+        mi.tag = NSTextFinderActionNextMatch;
+        [editMenu addItem:mi];
+
+        mi = [[NSMenuItem alloc] initWithTitle:@"Find Previous" action:@selector(performTextFinderAction:) keyEquivalent:@"G"];
+        mi.tag = NSTextFinderActionPreviousMatch;
+        [editMenu addItem:mi];
+
+        // [editMenu addItemWithTitle:@"Find..." action:@selector(performTextFinderAction:) keyEquivalent:@"f"];
         NSMenuItem* menuItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
         [menuItem setSubmenu:editMenu];
         [[NSApp mainMenu] addItem:menuItem];
