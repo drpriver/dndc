@@ -5,12 +5,14 @@
 # Valid choices are DEBUG, FAST, DEV.
 # Targets should all depend on this file so that
 # we don't end up with a mix of optimization levels.
+# Sanitizers significantly slow linking.
 # DEBUG: -O0, -g, and sanitizers
 # DEV: -O0, -g
-# FAST: -OFast
+# FAST: -Ofast
 SPEED?=DEV
 INSTALLDIR?=/usr/local/bin
-.DEFAULT_GOAL := dndc
+# set the default target (what is built when you type a bare `make`)
+.DEFAULT_GOAL:=dndc
 
 # Windows people will want to set the right pyflags here
 # See windows.mak for what these are.

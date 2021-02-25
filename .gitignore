@@ -10,6 +10,6 @@ compile_commands.json
 *.trace
 Depends
 PythonEmbed/frozen
-README.html
+*.html
 FuzzCorpus
 opt.mak

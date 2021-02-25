@@ -1,0 +1,35 @@
+Tables::md
+  Tables need to allow line breaks for the last item in a row. This would make
+  things like
+
+  ::pre
+    foo | description
+    dog | A canine
+    cat | A most fantabulous
+          creature that everyone loves
+          and is so much better than everything else I've ever
+          seen.
+    bat | A mammal that flies!
+  The grammar should be unambiguous, I just need to track the effective indent of
+  the last row item.
+
+  It would also mean that tables need a new type (table cell) as cells could now
+  be containers instead of always being string ndoes.
+
+  Also need to update the formatter.
+
+Bullets::md
+  I removed the bullets node from the parser, making it so you can only create a
+  bullets node via a md node or programmatically adding one through python.
+
+Coordinate support::md
+  Jeff wanted some way to see the coords on a map.
+
+Windows Port::md
+  Stablize features and then port it to win32.
+
+::stylesheets @inline
+  body {
+    margin: auto;
+    max-width: 44em;
+  }

@@ -197,7 +197,7 @@ NSRegularExpression* indent_pattern;
     else{
         screenrect = NSMakeRect(0, 0, 1400, 800);
     }
-    auto font=[NSFont fontWithName:@"Menlo" size:11];
+    auto font=[NSFont fontWithName:@"Menlo" size:14];
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:(id)font, NSFontAttributeName, nil];
     auto Msize = [[NSAttributedString alloc] initWithString:@"M" attributes:attributes].size.width;
     auto textwidth  = 84*Msize;
@@ -230,8 +230,6 @@ NSRegularExpression* indent_pattern;
 
     text.usesFindBar = YES;
     text.incrementalSearchingEnabled = YES;
-    NSLog(@"%@", [text enclosingScrollView]);
-    NSLog(@"%@", scrollview);
     // scrollview.findBarVisible = YES;
     // textfinder = [[NSTextFinder alloc] init];
     // [textfinder setFindBarContainer:scrollview];
@@ -252,12 +250,6 @@ NSRegularExpression* indent_pattern;
     [self recalc_html:nil];
     return self;
 }
-// -(void)performTextFinderAction:(id)sender{
-    // NSLog(@"%s %@", __func__, sender);
-    // NSLog(@"tag= %ld",((NSMenuItem*)sender).tag);
-    // [text performTextFinderAction:sender];
-    // [textfinder performTextFinderAction:sender];
-// }
 - (void)viewDidLoad {
     [super viewDidLoad];
 }
@@ -396,9 +388,7 @@ NSRegularExpression* indent_pattern;
         backing: NSBackingStoreBuffered
         defer: NO];
     window.title = @"DndC";
-    // [window cascadeTopLeftFromPoint: NSMakePoint(20,20)];
     [window makeKeyAndOrderFront: nil];
-    // window.tabbingMode = NSWindowTabbingModePreferred;
     window.contentViewController = [[ViewController alloc] initWithURL:nil];
     window.windowController = self;
     // Total hack: retain a reference to the window
@@ -504,6 +494,7 @@ int main(int argc, const char * argv[]) {
         return 1;
 
     // hack!
+    // chdir("/Users/drpriver/Documents/Dungeons/KrugsBasement/");
     chdir("/Users/drpriver/Documents/Dungeons/BarrowMaze/");
     NSApplication* app = [NSApplication sharedApplication];
     AppDelegate* appDelegate = [AppDelegate new];

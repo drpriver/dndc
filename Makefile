@@ -4,7 +4,7 @@ include DndC/dndc.mak
 
 DNDC:=$(BINDIR)/dndc$(EXE)
 
-%/README.html: %/README.dnd | $(DNDC)
+%.html: %.dnd | $(DNDC)
 	mkdir -p Depends/$*
 	$(DNDC) $< $@ -d $(DEPDIR)/$*
 
