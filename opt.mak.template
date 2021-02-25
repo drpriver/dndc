@@ -10,6 +10,7 @@
 # FAST: -OFast
 SPEED?=DEV
 INSTALLDIR?=/usr/local/bin
+.DEFAULT_GOAL := dndc
 
 # Windows people will want to set the right pyflags here
 # See windows.mak for what these are.
