@@ -28,6 +28,10 @@ Coordinate support::md
 Windows Port::md
   Stablize features and then port it to win32.
 
+Remove the Directory Hack::md
+
+Add "Insert Image" support::md
+
 ::stylesheets @inline
   body {
     margin: auto;

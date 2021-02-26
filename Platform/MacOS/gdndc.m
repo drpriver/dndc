@@ -3,12 +3,106 @@
 #include "measure_time.h"
 #include "DndC/dndc.h"
 
-NSString* testpath = @"/Users/drpriver/Documents/Dungeons/BarrowMaze/surface.dnd";
-NSString * const kIndentPatternString = @"^(\\t|\\s)+";
+//
+// So, each document has N window controllers (I guess 1 for me).
+// Each window controller has a window.
+// Each window has a viewcontroller.
+// Each viewcontroller will have a webview and a textview.
+// The textview has a storage which has a highlighter.
+// The webview has a webnavdel.
+// 
+// Who owns the documents though? The DocController??
+//
 
+@interface DndWindowController: NSWindowController
+// Has a NSWindow* window
+@end
 
-@interface DndHighlighter : NSObject <NSTextStorageDelegate>
+@interface DndTextView: NSTextView
+@end
 
+@interface DndHighlighter: NSObject<NSTextStorageDelegate>
+@end
+
+@interface WebNavDel : NSObject <WKNavigationDelegate>
+@end
+
+@interface DndViewController: NSViewController{
+@public DndTextView* text;
+@public NSScrollView* scrollview; // contains the text
+@public DndHighlighter* highlighter; // for the text
+@public WKWebView* webview;
+@public WebNavDel* webnavdel; // for the webview
+}
+-(void)recalc_html:(id)sender;
+@end
+
+@interface DndDocument: NSDocument{
+// this is kind of janky, but whatever
+DndViewController* view_controller;
+
+}
+@end
+
+@interface DndAppDelegate : NSObject<NSApplicationDelegate>
+@end
+
+static void do_menus(void);
+static NSString * const kIndentPatternString = @"^(\\t|\\s)+";
+static NSRegularExpression* indent_pattern;
+static NSImage* appimage;
+
+@implementation DndDocument
+
++(BOOL)autosavesInPlace {
+    return YES;
+}
+-(instancetype)init {
+    self = [super init];
+    self->view_controller = [[DndViewController alloc] init];
+    return self;
+}
+-(NSWindow*)make_window{
+    auto screen = [NSScreen mainScreen];
+    NSRect rect = screen? screen.visibleFrame : NSMakeRect(0, 0, 1400, 800);
+
+    NSWindow* window = [[NSWindow alloc]
+        initWithContentRect: rect
+        styleMask: NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
+        backing: NSBackingStoreBuffered
+        defer: NO];
+    window.title = @"DndC";
+    window.tabbingIdentifier = @"Dnd Window";
+    window.contentViewController = self->view_controller;
+    return window;
+}
+-(void)makeWindowControllers{
+    auto mainwindow = [NSApp mainWindow];
+    NSWindow* docwindow = [self make_window];
+    DndWindowController* winc = [[DndWindowController alloc] initWithWindow:docwindow];
+    // is there a method for this or are you supposed to assign them like this?
+    [self addWindowController:winc];
+    if(mainwindow){
+        [mainwindow addTabbedWindow:docwindow ordered:NSWindowAbove];
+    }
+    [docwindow makeKeyAndOrderFront: nil];
+}
+-(NSString*)wv_title{
+    return self->view_controller->webview.title;
+}
+
+- (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError {
+    return [[view_controller->text string] dataUsingEncoding:NSUTF8StringEncoding];
+}
+
+- (BOOL)readFromData:(NSData *)data ofType:(NSString *)typeName error:(NSError **)outError {
+    NSString* str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    if(str){
+        view_controller->text.string = str;
+        [view_controller recalc_html:nil];
+    }
+    return YES;
+}
 @end
 
 @implementation DndHighlighter
@@ -74,13 +168,10 @@ NSString * const kIndentPatternString = @"^(\\t|\\s)+";
         saw_double_colon = NO;
         saw_colon = NO;
     }
-    auto thing = [NSApp keyWindow].contentViewController;
-    [thing performSelector:@selector(recalc_html:) withObject:nil];
-}
-@end
-
-@interface DndTextView : NSTextView {
-NSRegularExpression* indent_pattern;
+    auto thing = (DndViewController*)[NSApp keyWindow].contentViewController;
+    if(thing){
+        [thing recalc_html:nil];
+    }
 }
 @end
 
@@ -94,7 +185,8 @@ NSRegularExpression* indent_pattern;
 }
 - (DndTextView*) initWithFrame:(NSRect)textrect font:(NSFont*)font{
     self = [super initWithFrame:textrect];
-    self->indent_pattern = [[NSRegularExpression alloc] initWithPattern:kIndentPatternString options:0 error:nil];
+    if(!indent_pattern)
+        indent_pattern = [[NSRegularExpression alloc] initWithPattern:kIndentPatternString options:0 error:nil];
     self.usesAdaptiveColorMappingForDarkAppearance = YES;
     self.automaticTextCompletionEnabled = NO;
     self.automaticLinkDetectionEnabled = NO;
@@ -123,9 +215,7 @@ NSRegularExpression* indent_pattern;
 }
 
 @end
-@interface WebNavDel : NSObject <WKNavigationDelegate> {
-}
-@end
+
 @implementation WebNavDel: NSObject
 -(void)webView:(WKWebView *)webView
     didFinishNavigation:(WKNavigation *)navigation{
@@ -144,8 +234,17 @@ NSRegularExpression* indent_pattern;
         if([path characterAtIndex:0] == '/'){
             auto real_url = [[[NSURL fileURLWithPath:[path substringFromIndex:1]] URLByDeletingPathExtension] URLByAppendingPathExtension:@"dnd"];
             // hack: too lazy to declare interfaces
-            [[NSApp.delegate performSelector:@selector(get_winc)] performSelector: @selector(new_window_with_url:) withObject:real_url];
-            decisionHandler(WKNavigationActionPolicyCancel);
+            [[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:real_url display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
+                (void)documentWasAlreadyOpen;
+                (void)document;
+                if(error){
+                    NSLog(@"%@", error);
+                    decisionHandler(WKNavigationActionPolicyAllow);
+                }
+                else {
+                    decisionHandler(WKNavigationActionPolicyCancel);
+                }
+                }];
             return;
         }
         decisionHandler(WKNavigationActionPolicyCancel);
@@ -153,17 +252,8 @@ NSRegularExpression* indent_pattern;
 }
 @end
 
-@interface ViewController : NSViewController {
-    DndTextView* text;
-    NSScrollView* scrollview;
-    WKWebView* webview;
-    DndHighlighter* highlighter;
-    WebNavDel* webnavdel;
-    // NSTextFinder* textfinder;
-}
-@end
 
-@implementation ViewController
+@implementation DndViewController
 -(void)zoom_out:(id)sender{
     webview.magnification/=1.2;
 }
@@ -173,21 +263,7 @@ NSRegularExpression* indent_pattern;
 -(void)zoom_normal:(id)sender{
     webview.magnification = 1.0;
 }
--(void)keyDown:(NSEvent*) event{
-    if(event.modifierFlags & NSEventModifierFlagCommand){
-        auto num = [event.characters integerValue];
-        if(num){
-            num -= 1;
-           auto tabs =  [NSApp mainWindow].tabbedWindows;
-           if(tabs.count > num){
-               [tabs[num] makeKeyAndOrderFront:nil];
-               return;
-           }
-        }
-    }
-    [super keyDown:event];
-}
--(instancetype)initWithURL:(NSURL*)url{
+-(instancetype)init{
     self = [super init];
     auto screen = [NSScreen mainScreen];
     NSRect screenrect;
@@ -205,12 +281,6 @@ NSRegularExpression* indent_pattern;
     text = [[DndTextView alloc] initWithFrame:textrect font:font];
     highlighter = [[DndHighlighter alloc] init];
     text.textStorage.delegate = highlighter;
-    if(url){
-        NSError* err = NULL;
-        NSString* str = [NSString stringWithContentsOfURL: url encoding:NSUTF8StringEncoding error:&err];
-        if(!err)
-            text.string = str;
-    }
     text.minSize = NSMakeSize(0.0, textrect.size.height);
     text.maxSize = NSMakeSize(1e9, 1e9);
     text.verticallyResizable = YES;
@@ -220,20 +290,15 @@ NSRegularExpression* indent_pattern;
     text.textContainerInset = NSMakeSize(4,4);
 
     scrollview = [[NSScrollView alloc] initWithFrame:textrect];
-    scrollview.borderType = NSNoBorder;
+    // scrollview.borderType = NSNoBorder;
     scrollview.hasVerticalScroller = YES;
     scrollview.hasHorizontalScroller = NO;
     scrollview.autoresizingMask = NSViewHeightSizable | NSViewMinXMargin;
-    // [scrollview addSubview:text];
     scrollview.documentView = text;
     scrollview.findBarPosition = NSScrollViewFindBarPositionAboveContent;
 
     text.usesFindBar = YES;
     text.incrementalSearchingEnabled = YES;
-    // scrollview.findBarVisible = YES;
-    // textfinder = [[NSTextFinder alloc] init];
-    // [textfinder setFindBarContainer:scrollview];
-    // [textfinder setClient:text];
 
     [self.view addSubview:scrollview];
 
@@ -311,7 +376,6 @@ NSRegularExpression* indent_pattern;
 }
 
 - (void)loadView {
-    // NSRect sframe = NSScreen.mainScreen.frame;
     auto screen = [NSScreen mainScreen];
     NSRect screenrect;
     if(screen){
@@ -321,30 +385,6 @@ NSRegularExpression* indent_pattern;
         screenrect = NSMakeRect(0, 0, 1400, 800);
     }
     self.view = [[NSView alloc] initWithFrame: screenrect];
-}
--(void) save:(id)sender{
-    // [self recalc_html:sender];
-    auto panel = [NSSavePanel savePanel];
-    [panel beginWithCompletionHandler:^(NSModalResponse resp){
-        if(resp == NSModalResponseOK){
-            NSError* err = NULL;
-            NSURL* url = panel.URL;
-            NSString* str = text.string;
-            [str writeToURL:url atomically:YES encoding:NSUTF8StringEncoding error:&err];
-        }
-    }];
-
-}
--(void) openDocument:(id)sender {
-    auto panel = [NSOpenPanel openPanel];
-    [panel beginWithCompletionHandler:^(NSModalResponse resp){
-        if(resp == NSModalResponseOK){
-            NSError* err = NULL;
-            NSString* str = [NSString stringWithContentsOfURL: (NSURL*)panel.URL encoding:NSUTF8StringEncoding error:&err];
-            [text insertText:str replacementRange:NSMakeRange(0, [[text textStorage] length])];
-            [self recalc_html:nil];
-        }
-    }];
 }
 -(void) toggle_editor:(id)sender{
     scrollview.hidden = !self->scrollview.hidden;
@@ -358,125 +398,51 @@ NSRegularExpression* indent_pattern;
 
 @end
 
-@interface DndWindowController: NSWindowController {
-    // NSMutableArray<NSWindow*>* windows;
+@implementation DndWindowController : NSWindowController
+-(NSString*)windowTitleForDocumentDisplayName:(NSString*)displayName{
+    auto result = [self.document wv_title];
+    if(!result)
+        return displayName;
+    return result;
 }
-@end
-@interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate> {
-    DndWindowController* winc;
-}
-@end
-
-@implementation DndWindowController: NSWindowController
--(instancetype)init{
-    self = [super init];
-    // windows = [[NSMutableArray alloc] init];
-    return self;
-}
--(void)make_window{
-    auto screen = [NSScreen mainScreen];
-    NSRect rect;
-    if(screen){
-        rect = screen.visibleFrame;
+// !!! this doesn't go here !!!
+-(void)keyDown:(NSEvent*) event{
+    if(event.modifierFlags & NSEventModifierFlagCommand){
+        auto num = [event.characters integerValue];
+        if(num){
+            num -= 1;
+           auto tabs =  [NSApp mainWindow].tabbedWindows;
+           if(tabs.count > num){
+               [tabs[num] makeKeyAndOrderFront:nil];
+               return;
+           }
+        }
     }
-    else{
-        rect = NSMakeRect(0, 0, 1400, 800);
-    }
-    NSWindow* window = [[NSWindow alloc]
-        initWithContentRect: rect
-        styleMask: NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
-        backing: NSBackingStoreBuffered
-        defer: NO];
-    window.title = @"DndC";
-    [window makeKeyAndOrderFront: nil];
-    window.contentViewController = [[ViewController alloc] initWithURL:nil];
-    window.windowController = self;
-    // Total hack: retain a reference to the window
-    void* foo = (__bridge_retained void *)window;
-    (void)foo;
-    // [windows addObject:window];
+    [super keyDown:event];
 }
--(void) newWindowForTab:(id)sender{
-    auto mainwin = [NSApp mainWindow];
-    if(!mainwin){
-        [self make_window];
-        return;
-    }
-    NSWindow* window = [[NSWindow alloc]
-        initWithContentRect: mainwin.frame
-        styleMask: NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable
-        backing: NSBackingStoreBuffered
-        defer: NO];
-    window.title = @"DndC";
-    [mainwin addTabbedWindow:window ordered:NSWindowAbove];
-    [window makeKeyAndOrderFront: nil];
-    window.tabbingMode = NSWindowTabbingModePreferred;
-    window.contentViewController = [[ViewController alloc] initWithURL:nil];
-    // Total hack: retain a reference to the window
-    // I was getting crashes after freeing.
-    void* foo = (__bridge_retained void *)window;
-    (void)foo;
-    // [windows addObject:window];
-}
--(void) new_window_with_url:(NSURL*) url{
-    auto mainwin = [NSApp mainWindow];
-    if(!mainwin){
-        [self make_window];
-        return;
-    }
-    NSWindow* window = [[NSWindow alloc]
-        initWithContentRect: mainwin.frame
-        styleMask: NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable
-        backing: NSBackingStoreBuffered
-        defer: NO];
-    window.title = @"DndC";
-    [mainwin addTabbedWindow:window ordered:NSWindowAbove];
-    [window makeKeyAndOrderFront: nil];
-    window.tabbingMode = NSWindowTabbingModePreferred;
-    window.contentViewController = [[ViewController alloc] initWithURL:url];
-    // Total hack: retain a reference to the window
-    // I was getting crashes after freeing.
-    void* foo = (__bridge_retained void *)window;
-    (void)foo;
-    // [windows addObject:window];
-}
--(void) close_window:(NSWindow*)window{
-    [window performClose:nil];
-    // Dude I am failing to retain a reference or something idk.
-    // [windows removeObject:window];
-}
-
 @end
 
 
 static void do_menus(void);
 
-NSImage* appimage;
-
-@implementation AppDelegate : NSObject
--(DndWindowController*) get_winc{
-    return self->winc;
-}
+@implementation DndAppDelegate : NSObject
 -(void)applicationWillFinishLaunching:(NSNotification *)notification{
     do_menus();
 }
+- (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)sender{
+    auto controller = [NSDocumentController sharedDocumentController];
+    [controller openDocument:nil];
+    return NO;
+}
+
+
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
-    winc = [[DndWindowController alloc] init];
-    [winc make_window];
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     [NSApp activateIgnoringOtherApps:YES];
     NSApp.applicationIconImage = appimage;
 }
-// this is wrong but whatever
--(void)newWindowForTab:(id)sender{
-    [self->winc newWindowForTab:sender];
-}
--(void)doClose:(id)sender {
-    auto window = [NSApp keyWindow];
-    if(window)
-        [self->winc close_window:window];
-}
+
 @end
 
 
@@ -497,7 +463,7 @@ int main(int argc, const char * argv[]) {
     // chdir("/Users/drpriver/Documents/Dungeons/KrugsBasement/");
     chdir("/Users/drpriver/Documents/Dungeons/BarrowMaze/");
     NSApplication* app = [NSApplication sharedApplication];
-    AppDelegate* appDelegate = [AppDelegate new];
+    DndAppDelegate* appDelegate = [DndAppDelegate new];
     app.delegate = appDelegate;
     auto icon_size = _app_icon_end - _app_icon;
     NSData* imagedata = [NSData dataWithBytesNoCopy:(void*)_app_icon length:icon_size freeWhenDone:NO];
@@ -565,7 +531,7 @@ static void do_menus(void){
         [fileMenu addItemWithTitle:@"New Tab" action:@selector(newWindowForTab:) keyEquivalent:@"t"];
         [fileMenu addItemWithTitle:@"Open" action:@selector(openDocument:) keyEquivalent:@"o"];
         [fileMenu addItem:[NSMenuItem separatorItem]];
-        [fileMenu addItemWithTitle:@"Close Window" action:@selector(doClose:) keyEquivalent:@"w"];
+        [fileMenu addItemWithTitle:@"Close Window" action:@selector(performClose:) keyEquivalent:@"w"];
         [fileMenu addItemWithTitle:@"Save" action:@selector(save:) keyEquivalent:@"s"];
         NSMenuItem* menuItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
         [menuItem setSubmenu:fileMenu];
