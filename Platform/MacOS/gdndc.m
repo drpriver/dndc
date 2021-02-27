@@ -200,15 +200,50 @@ static NSImage* appimage;
     return self;
 }
 
-- (void) insertNewline:(id)sender {
-    NSRange currentLineRange = [self.string lineRangeForRange:self.selectedRange];
+-(void) deleteBackward:(id)sender{
+    auto r = self.selectedRange;
+    if(r.length == 0){
+        NSRange currentLineRange = [self.string lineRangeForRange:r];
+        NSString* currentLine = [self.string substringWithRange:currentLineRange];
+        NSTextCheckingResult* indent_matched = [indent_pattern firstMatchInString:currentLine options:0 range:NSMakeRange(0, currentLine.length)];
+        if(indent_matched){
+            auto this_char = r.location?[self.string characterAtIndex:r.location-1]:'\0';
+            // how far into the line the current selection is
+            auto rel = r.location - currentLineRange.location;
+            if(rel and !(rel & 1) and this_char == ' ' and rel <= indent_matched.range.length){
+                    [super deleteBackward:sender];
+                    [super deleteBackward:sender];
+                    [self display];
+                    return;
+                }
+            }
+        }
+    [super deleteBackward:sender];
+    [self display];
+}
+-(void) insertNewline:(id)sender {
+    auto sel_range = self.selectedRange;
+    if(sel_range.length){
+        [super insertNewline:sender];
+        return;
+    }
+    NSRange currentLineRange = [self.string lineRangeForRange:sel_range];
     NSString* currentLine = [self.string substringWithRange:currentLineRange];
     [super insertNewline:sender];
-    NSTextCheckingResult* indent_matched = [indent_pattern firstMatchInString:currentLine options:0 range:NSMakeRange(0, currentLine.length)];
-    if (indent_matched) {
-        NSString *indent = [currentLine substringWithRange:indent_matched.range];
-        [self insertText:indent replacementRange:self.selectedRange];
+    if(currentLine.length){
+        NSTextCheckingResult* indent_matched = [indent_pattern firstMatchInString:currentLine options:0 range:NSMakeRange(0, currentLine.length-1)];
+        if (indent_matched) {
+            NSString *indent = [currentLine substringWithRange:indent_matched.range];
+            bool all_spaces = (indent_matched.range.length == currentLine.length-1);
+            if(all_spaces){
+                [self insertText:@"\n" replacementRange:currentLineRange];
+            }
+
+            [self insertText:indent replacementRange:self.selectedRange];
+        }
     }
+    [self display];
+    [self.enclosingScrollView display];
 }
 - (void)insertTab:(id)sender{
  [self insertText: @"  " replacementRange:self.selectedRange];
@@ -273,7 +308,7 @@ static NSImage* appimage;
     else{
         screenrect = NSMakeRect(0, 0, 1400, 800);
     }
-    auto font=[NSFont fontWithName:@"Menlo" size:14];
+    auto font=[NSFont fontWithName:@"Menlo" size:11];
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:(id)font, NSFontAttributeName, nil];
     auto Msize = [[NSAttributedString alloc] initWithString:@"M" attributes:attributes].size.width;
     auto textwidth  = 84*Msize;
@@ -532,7 +567,8 @@ static void do_menus(void){
         [fileMenu addItemWithTitle:@"Open" action:@selector(openDocument:) keyEquivalent:@"o"];
         [fileMenu addItem:[NSMenuItem separatorItem]];
         [fileMenu addItemWithTitle:@"Close Window" action:@selector(performClose:) keyEquivalent:@"w"];
-        [fileMenu addItemWithTitle:@"Save" action:@selector(save:) keyEquivalent:@"s"];
+        [fileMenu addItemWithTitle:@"Save" action:@selector(saveDocument:) keyEquivalent:@"s"];
+        [fileMenu addItemWithTitle:@"Revert to Saved" action:@selector(revertDocumentToSaved:) keyEquivalent:@"r"];
         NSMenuItem* menuItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
         [menuItem setSubmenu:fileMenu];
         [[NSApp mainMenu] addItem:menuItem];
