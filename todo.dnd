@@ -18,9 +18,14 @@ Tables::md
 
   Also need to update the formatter.
 
+  Update::md
+    This was successful!
+
 Bullets::md
   I removed the bullets node from the parser, making it so you can only create a
   bullets node via a md node or programmatically adding one through python.
+  However, bullets cannot currently be nested! Fix this! We wanted nested
+  bullets!
 
 Coordinate support::md
   Jeff wanted some way to see the coords on a map.
@@ -29,8 +34,14 @@ Windows Port::md
   Stablize features and then port it to win32.
 
 Remove the Directory Hack::md
+  The gdndc chdir's to a fixed directory. We need to instead pass the base
+  directory into the dndc.
 
 Add "Insert Image" support::md
+  Insert menu and context menus.
+
+Depends Dir::md
+  This should really be a depends file argument, not a depends directory.
 
 ::stylesheets @inline
   body {
