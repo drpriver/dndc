@@ -10,6 +10,7 @@
 #include "bb_extensions.h"
 #include "msb_extensions.h"
 #include "str_util.h"
+#include "path_util.h"
 
 static inline
 bool
@@ -142,15 +143,23 @@ report_error(uint64_t flags, Nonnull(const char*)fmt, ...){
 
 static
 Errorable_f(LongString)
-load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
+ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
     // check if we already have it.
+    MStringBuilder temp_builder = {};
+    if(ctx->base_directory.length){
+        msb_write_str(&temp_builder, ctx->temp_allocator, ctx->base_directory.text, ctx->base_directory.length);
+        msb_append_path(&temp_builder, ctx->temp_allocator, sourcepath.text, sourcepath.length);
+        sourcepath = msb_borrow(&temp_builder, ctx->temp_allocator);
+        }
     for(size_t i = 0; i < ctx->loaded_files.count; i++){
         auto loaded = &ctx->loaded_files.data[i];
         if(LS_SV_equals(loaded->sourcepath, sourcepath)){
+            msb_destroy(&temp_builder, ctx->temp_allocator);
             return (Errorable(LongString)){.result=loaded->sourcetext};
             }
         }
     char* path = Allocator_strndup(ctx->allocator, sourcepath.text, sourcepath.length);
+    msb_destroy(&temp_builder, ctx->temp_allocator);
 
     auto before = get_t();
     auto load_err = read_file(ctx->allocator, path);
@@ -166,6 +175,22 @@ load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
         Allocator_free(ctx->allocator, path, sourcepath.length+1);
         }
     return load_err;
+    }
+
+static
+Errorable_f(LongString)
+ctx_load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath){
+    MStringBuilder path_builder = {};
+    if(ctx->base_directory.length){
+        msb_write_str(&path_builder, ctx->temp_allocator, ctx->base_directory.text, ctx->base_directory.length);
+        msb_append_path(&path_builder, ctx->temp_allocator, binarypath.text, binarypath.length);
+        binarypath = LS_to_SV(msb_detach(&path_builder, ctx->temp_allocator));
+        }
+    ByteBuilder bb = {.allocator = ctx->allocator};
+    auto result = load_processed_binary_file(&ctx->b64cache, binarypath, &bb);
+    bb_destroy(&bb);
+    msb_destroy(&path_builder, ctx->temp_allocator);
+    return result;
     }
 
 static

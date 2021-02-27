@@ -107,7 +107,7 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                         }
                     if(!child->header.length)
                         continue;
-                    auto style_e = load_source_file(ctx, child->header);
+                    auto style_e = ctx_load_source_file(ctx, child->header);
                     if(style_e.errored){
                         node_set_err(ctx, child, "Unable to load %.*s\n", (int)child->header.length, child->header.text);
                         Raise(style_e.errored);
@@ -149,7 +149,7 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                     }
                 if(!child->header.length)
                     continue;
-                auto script_e = load_source_file(ctx, child->header);
+                auto script_e = ctx_load_source_file(ctx, child->header);
                 if(script_e.errored){
                     node_set_err(ctx, child, "Unable to load %.*s\n", (int)child->header.length, child->header.text);
                     Raise(script_e.errored);
@@ -735,9 +735,7 @@ RENDERFUNC(IMAGE){
             Raise(PARSE_ERROR);
             }
         auto header = imgpath_node->header;
-        ByteBuilder bb = {.allocator = ctx->allocator};
-        auto processed_e = load_processed_binary_file(&ctx->b64cache, header, &bb);
-        bb_destroy(&bb);
+        auto processed_e = ctx_load_processed_binary_file(ctx, header);
         if(processed_e.errored){
             node_set_err(ctx, imgpath_node, "Unable to read '%.*s'", (int)header.length, header.text);
             Raise(processed_e.errored);
@@ -965,9 +963,7 @@ RENDERFUNC(IMGLINKS){
             Raise(PARSE_ERROR);
             }
         auto header = imgpath_node->header;
-        ByteBuilder bb = {.allocator = ctx->allocator};
-        auto processed_e = load_processed_binary_file(&ctx->b64cache, header, &bb);
-        bb_destroy(&bb);
+        auto processed_e = ctx_load_processed_binary_file(ctx, header);
         if(processed_e.errored){
             node_set_err(ctx, imgpath_node, "Unable to read '%.*s'", (int)header.length, header.text);
             Raise(processed_e.errored);

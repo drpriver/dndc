@@ -18,7 +18,7 @@ Tables::md
 
   Also need to update the formatter.
 
-  Update::md
+  Update::md @noid
     This was successful!
 
 Bullets::md
@@ -36,6 +36,9 @@ Windows Port::md
 Remove the Directory Hack::md
   The gdndc chdir's to a fixed directory. We need to instead pass the base
   directory into the dndc.
+
+  Update::md @noid
+    This was fixed!
 
 Add "Insert Image" support::md
   Insert menu and context menus.

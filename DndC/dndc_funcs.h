@@ -16,13 +16,19 @@
 // Arguments
 // ---------
 // flags:
-//    bitflags controlling behavior of execution. Consult the types header
-//    for the meanings of individual values. Is a bitwise-or-combination
+//    Bitflags controlling behavior of execution. Consult the types header
+//    for the meanings of individual values. Is a bitwise-or combination
 //    of the different options.
+//
+// base_directory:
+//    Base directory that is the root of all relative paths.
+//    Can be the empty string, in which case paths are left as is.
+//    Absolute paths in the document are left unaltered.
 //
 // source_path:
 //    As controlled by the flags, this can be the data to parse, a path
 //    to a file to parse, or if .length is 0, stdin will be read instead.
+//    This path is adjusted by the base_directory argument.
 //
 // output_path:
 //    A filepath to write the generated html to. If NULL, the html
@@ -30,10 +36,12 @@
 //    by flags.
 //    Flags can make this an out param instead, in which case a malloced string
 //    that is the generated html will be stored in this instead.
+//    This path is *NOT* adjusted by the base_directory argument.
 //
 // depends_dir:
 //    A path to a directory to write a make-style dependency file.
 //    If not given, no such file is written.
+//    This path is *NOT* adjusted by the base_directory argument.
 //
 // b64cache:
 //    An optional pointer to an external cache for base64 images.
@@ -47,7 +55,7 @@
 //
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) output_path, LongString depends_dir, Nullable(Base64Cache*)b64cache);
+run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, Nullable(LongString*) output_path, LongString depends_dir, Nullable(Base64Cache*)b64cache);
 
 //
 // The following functions are for reporting errors and warnings.
@@ -171,15 +179,33 @@ node_get_attribute(Nonnull(const Node*) node, StringView attr);
 // This function provides caching and management of the text. Do not
 // read files directly, use this function instead.
 //
+// sourcepath will be adjusted by the context's base directory.
+//
 static
 Errorable_f(LongString)
-load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath);
+ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath);
 
 //
 // Load a binary file as base64 text, or an error if something went wrong.
 //
 // This function provides caching and management of the text. Do not
 // read files directly, use this function instead.
+//
+// binarypath will be adjusted by the context's base directory.
+//
+static
+Errorable_f(LongString)
+ctx_load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath);
+
+//
+// Load a binary file as base64 text, or an error if something went wrong.
+//
+// This function provides caching and management of the text.
+// This is a lower level version of ctx_load_processed_binary_file. It allows
+// better control over re-using memory.
+//
+// binarypath is not adjusted by any implicit base directory. Thus, this function
+// should be called with a pre-adjusted path.
 //
 static
 Errorable_f(LongString)

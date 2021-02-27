@@ -33,6 +33,7 @@
 @public DndHighlighter* highlighter; // for the text
 @public WKWebView* webview;
 @public WebNavDel* webnavdel; // for the webview
+@public NSURL* file_url;
 }
 -(void)recalc_html:(id)sender;
 @end
@@ -91,7 +92,7 @@ static NSImage* appimage;
     return self->view_controller->webview.title;
 }
 
-- (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError {
+- (NSData*)dataOfType:(NSString *)typeName error:(NSError **)outError {
     return [[view_controller->text string] dataUsingEncoding:NSUTF8StringEncoding];
 }
 
@@ -99,6 +100,7 @@ static NSImage* appimage;
     NSString* str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     if(str){
         view_controller->text.string = str;
+        view_controller->file_url = [self fileURL];
         [view_controller recalc_html:nil];
     }
     return YES;
@@ -176,14 +178,14 @@ static NSImage* appimage;
 @end
 
 @implementation DndTextView
-- (NSString *)preferredPasteboardTypeFromArray:(NSArray *)availableTypes restrictedToTypesFromArray:(NSArray *)allowedTypes {
+-(NSString *)preferredPasteboardTypeFromArray:(NSArray *)availableTypes restrictedToTypesFromArray:(NSArray *)allowedTypes {
   if ([availableTypes containsObject:NSPasteboardTypeString]) {
     return NSPasteboardTypeString;
   }
 
   return [super preferredPasteboardTypeFromArray:availableTypes restrictedToTypesFromArray:allowedTypes];
 }
-- (DndTextView*) initWithFrame:(NSRect)textrect font:(NSFont*)font{
+-(DndTextView*)initWithFrame:(NSRect)textrect font:(NSFont*)font{
     self = [super initWithFrame:textrect];
     if(!indent_pattern)
         indent_pattern = [[NSRegularExpression alloc] initWithPattern:kIndentPatternString options:0 error:nil];
@@ -200,7 +202,7 @@ static NSImage* appimage;
     return self;
 }
 
--(void) deleteBackward:(id)sender{
+-(void)deleteBackward:(id)sender{
     auto r = self.selectedRange;
     if(r.length == 0){
         NSRange currentLineRange = [self.string lineRangeForRange:r];
@@ -221,7 +223,7 @@ static NSImage* appimage;
     [super deleteBackward:sender];
     [self display];
 }
--(void) insertNewline:(id)sender {
+-(void)insertNewline:(id)sender {
     auto sel_range = self.selectedRange;
     if(sel_range.length){
         [super insertNewline:sender];
@@ -385,10 +387,29 @@ static NSImage* appimage;
     const char* source_text = [string UTF8String];
     // auto t1 = get_t();
     LongString html = {};
-    auto len = strlen(source_text);
-    auto err = dndc_make_html((LongString){len, source_text}, &html);
+    NSString* dir = [[self->file_url URLByDeletingLastPathComponent] path];
+    StringView base_dir;
+    if(dir){
+        // TODO: is there a more efficient way to
+        // turn an NSString into a string view?
+        const char* dir_text = [dir UTF8String];
+        base_dir.text = dir_text;
+        base_dir.length = strlen(dir_text);
+    }
+    else {
+        base_dir = SV("");
+    }
+    LongString source = {
+        .text = source_text,
+        // this is so dumb. Is there an API to get the length of the utf-8 string?
+        // Maybe I should be turning NSString into
+        // NSData and then borrowing the buffer?
+        .length = strlen(source_text),
+    };
+    auto err = dndc_make_html(base_dir, source, &html);
     // auto t2 = get_t();
     if(err){
+        // TODO: report errors to the user (need to figure out the UX though).
         return;
     }
     PushDiagnostic();
@@ -493,10 +514,6 @@ asm(".global __app_icon\n"
 int main(int argc, const char * argv[]) {
     if(dndc_init_python() != 0)
         return 1;
-
-    // hack!
-    // chdir("/Users/drpriver/Documents/Dungeons/KrugsBasement/");
-    chdir("/Users/drpriver/Documents/Dungeons/BarrowMaze/");
     NSApplication* app = [NSApplication sharedApplication];
     DndAppDelegate* appDelegate = [DndAppDelegate new];
     app.delegate = appDelegate;

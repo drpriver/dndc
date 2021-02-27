@@ -82,17 +82,16 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
                 auto child = get_node(ctx, node->children.data[0]);
                 if(!child->header.length)
                     continue;
-                // FIXME: this makes it O(N^2)
-                // In practice, we only have a few images though.
-                // But also in practice, we don't have duplicates and
-                // this just speeds up benchmarks. *shrug*.
-                for(size_t j = 0; j < job.sourcepaths.count; j++){
-                    if(SV_equals(child->header, job.sourcepaths.data[j]))
-                        goto Continue;
-                    }
                 auto sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
-                *sv = child->header;
-                Continue:;
+                if(!ctx->base_directory.length){
+                    *sv = child->header;
+                    }
+                else {
+                    MStringBuilder path_builder = {};
+                    msb_write_str(&path_builder, ctx->allocator, ctx->base_directory.text, ctx->base_directory.length);
+                    msb_append_path(&path_builder, ctx->allocator, child->header.text, child->header.length);
+                    *sv = LS_to_SV(msb_detach(&path_builder, ctx->allocator));
+                    }
                 }
             }
     }
@@ -381,20 +380,18 @@ int main(int argc, char**argv){
     if(!output_path.length){
         output_path = LS(BENCHMARKOUTPUTPATH);
         }
-    auto chdir_e = chdir(BENCHMARKDIRECTORY);
-    unhandled_error_condition(chdir_e != 0);
     flags &= ~DNDC_NO_CLEANUP;
-    auto e = run_the_dndc(flags, source_path, &output_path, depends_dir, NULL);
+    auto e = run_the_dndc(flags, SV(BENCHMARKDIRECTORY), source_path, &output_path, depends_dir, NULL);
     assert(!e.errored);
     flags |= DNDC_PYTHON_IS_INIT;
     for(int i = 0; i < BENCHMARKITERS;i++){
-        e = run_the_dndc(flags, source_path, &output_path, depends_dir, NULL);
+        e = run_the_dndc(flags, SV(BENCHMARKDIRECTORY), source_path, &output_path, depends_dir, NULL);
         assert(!e.errored);
         }
     end_interpreter();
     return 0;
     #else
-    auto e = run_the_dndc(flags, source_path, output_path.length? &output_path : NULL, depends_dir, NULL);
+    auto e = run_the_dndc(flags, SV(""), source_path, output_path.length? &output_path : NULL, depends_dir, NULL);
     return e.errored;
     #endif
     }
@@ -402,7 +399,7 @@ int main(int argc, char**argv){
 
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) output_path, LongString depends_dir, Nullable(Base64Cache*)external_b64cache){
+run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, Nullable(LongString*) output_path, LongString depends_dir, Nullable(Base64Cache*)external_b64cache){
     if(flags & DNDC_REFORMAT_ONLY)
         flags |= DNDC_NO_PYTHON;
     auto t0 = get_t();
@@ -438,6 +435,7 @@ run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) outpu
         .titlenode = INVALID_NODE_HANDLE,
         .navnode = INVALID_NODE_HANDLE,
         .outputfile = outpath,
+        .base_directory = base_directory,
         .b64cache = external_b64cache? *external_b64cache : ({
             const Allocator cache_allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
             (Base64Cache){.allocator = cache_allocator};
@@ -462,7 +460,7 @@ run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) outpu
         source = msb_detach(&sb, ctx.allocator);
         }
     else {
-        auto source_err = load_source_file(&ctx, path);
+        auto source_err = ctx_load_source_file(&ctx, path);
         if(source_err.errored){
             report_error(flags, "Unable to open %.*s", (int)path.length, path.text);
             result.errored = source_err.errored;
@@ -552,7 +550,7 @@ run_the_dndc(uint64_t flags, LongString source_path, Nullable(LongString*) outpu
                 StringView filename = child->header;
                 child->type = NODE_CONTAINER;
                 child->header = SV("");
-                auto imp_e = load_source_file(&ctx, filename);
+                auto imp_e = ctx_load_source_file(&ctx, filename);
                 if(imp_e.errored){
                     node_print_err(&ctx, child, "Unable to open '%.*s'", (int)filename.length, filename.text);
                     result.errored = imp_e.errored;
@@ -939,7 +937,7 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
 
 extern
 int
-dndc_make_html(LongString source_text, Nonnull(LongString*)output){
+dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongString*)output){
     uint64_t flags = 0;
     flags |= DNDC_SOURCE_PATH_IS_DATA_NOT_PATH;
     flags |= DNDC_OUTPUT_PATH_IS_OUT_PARAM;
@@ -949,7 +947,7 @@ dndc_make_html(LongString source_text, Nonnull(LongString*)output){
     flags |= DNDC_ALLOW_BAD_LINKS;
     // gross, move to caller.
     static Base64Cache cache = {.allocator._vtable = &MallocVtable};
-    auto e = run_the_dndc(flags, source_text, output, LS(""), &cache);
+    auto e = run_the_dndc(flags, base_directory, source_text, output, LS(""), &cache);
     return e.errored;
     }
 extern
@@ -963,7 +961,7 @@ dndc_format(LongString source_text, Nonnull(LongString*)output){
     flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
     flags |= DNDC_REFORMAT_ONLY;
-    auto e = run_the_dndc(flags, source_text, output, LS(""), NULL);
+    auto e = run_the_dndc(flags, SV(""), source_text, output, LS(""), NULL);
     return e.errored;
     }
 

@@ -8,7 +8,7 @@
 //
 extern
 int
-dndc_make_html(LongString source_text, Nonnull(LongString*)output);
+dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongString*)output);
 
 extern
 int

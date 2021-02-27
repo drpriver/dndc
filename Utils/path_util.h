@@ -38,6 +38,20 @@ memsep(Nonnull(const char*)str, size_t length){
 
 
 //
+// Returns if the path is an absolute path (aka starts from /).
+// BUG: This doesn't handle windows correctly.
+//      In the future, it will handle things like drives.
+//
+static inline
+bool
+path_is_abspath(StringView path){
+    if(!path.length)
+        return false;
+    // FIXME: this is wrong on windows as you can inclue a drive letter.
+    return is_sep(path.text[0]);
+    }
+
+//
 // Returns the filename component of a path. If the path ends
 // with a slash, returns the empty string.
 // This is different than the posix utility basename.
