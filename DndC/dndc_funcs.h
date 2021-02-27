@@ -330,4 +330,14 @@ static inline
 void
 add_link_from_header(Nonnull(DndcContext*)ctx, StringView str);
 
+
+//
+// Makes a copy of the indicated node, turns the original node into a container
+// node and then adds the copy to the container.
+//
+static
+inline
+void
+convert_node_to_container_containing_clone_of_former_self(Nonnull(DndcContext*)ctx, NodeHandle handle);
+
 #endif

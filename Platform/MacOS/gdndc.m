@@ -10,7 +10,7 @@
 // Each viewcontroller will have a webview and a textview.
 // The textview has a storage which has a highlighter.
 // The webview has a webnavdel.
-// 
+//
 // Who owns the documents though? The DocController??
 //
 

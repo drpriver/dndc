@@ -317,11 +317,30 @@ FORMATFUNC(text_node){
     // unsure about this.
     msb_write_char(sb, ctx->allocator, '\n');
     }
+static inline
+size_t
+write_str_or_container(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)node){
+    if(node->type == NODE_STRING){
+        msb_write_str(sb, ctx->allocator, node->header.text, node->header.length);
+        return node->header.length;
+        }
+    size_t writ = 0;
+    for(size_t i = 0; i < node->children.count; i++){
+        if(i != 0){
+            msb_write_char(sb, ctx->allocator, ' ');
+            writ++;
+            }
+        auto str = get_node(ctx, node->children.data[i]);
+        msb_write_str(sb, ctx->allocator, str->header.text, str->header.length);
+        writ += str->header.length;
+        }
+    return writ;
+    }
 FORMATFUNC(table_node){
     format_header(ctx, sb, node, indent);
     indent += FORMAT_INDENT;
-    size_t n_cells = 0;
-    size_t widths[100] = {};
+    ssize_t n_cells = 0;
+    ssize_t widths[100] = {};
     // pre-pass to figure out widths
     for(size_t i = 0; i < node->children.count; i++){
         auto row = get_node(ctx, node->children.data[i]);
@@ -332,32 +351,88 @@ FORMATFUNC(table_node){
             n_cells = row->children.count;
         for(size_t j = 0; j < row->children.count; j++){
             auto cell = get_node(ctx, row->children.data[j]);
-            assert(cell->type == NODE_STRING);
-            if(cell->header.length > widths[j])
-                widths[j] = cell->header.length;
+            if(cell->type == NODE_STRING){
+                if(cell->header.length > widths[j])
+                    widths[j] = cell->header.length;
+                }
+            else {
+                assert(cell->type == NODE_CONTAINER);
+                size_t this_width = 0;
+                for(size_t k = 0; k < cell->children.count; k++){
+                    auto str = get_node(ctx, cell->children.data[k]);
+                    this_width += 1 + str->header.length;
+                    }
+                this_width -= 1;
+                widths[j] = this_width;
+                }
             }
         }
-    for(size_t i = 0; i < node->children.count; i++){
-        auto row = get_node(ctx, node->children.data[i]);
-        if(row->type != NODE_TABLE_ROW){
-            format_node(ctx, sb, row, indent);
-            continue;
+    // figure out if widths fit
+    size_t total_except_last = indent;
+    for(ssize_t i = 0; i < n_cells-1; i++){
+        total_except_last += widths[i];
+        total_except_last += sizeof(" | ")-1;
+        }
+    size_t total = total_except_last + (n_cells? widths[n_cells-1] : 0);
+    size_t effective_space = FORMAT_WIDTH - indent;
+    if(total < effective_space || total_except_last > effective_space){
+        // do them all as a single line
+        for(size_t i = 0; i < node->children.count; i++){
+            auto row = get_node(ctx, node->children.data[i]);
+            if(row->type != NODE_TABLE_ROW){
+                format_node(ctx, sb, row, indent);
+                continue;
+                }
+            for(size_t j = 0; j < row->children.count; j++){
+                if(j != 0){
+                    msb_write_literal(sb, ctx->allocator, " | ");
+                    }
+                else
+                    msb_write_str(sb, ctx->allocator, EIGHTYSPACES, indent);
+                auto cell = get_node(ctx, row->children.data[j]);
+                auto writ = write_str_or_container(ctx, sb, cell);
+                if(j != row->children.count-1 && widths[j] > writ){
+                    msb_write_str(sb, ctx->allocator, EIGHTYSPACES, widths[j] - writ);
+                    }
+                }
+            msb_write_char(sb, ctx->allocator, '\n');
             }
-        // FIXME: remove these ifs, cleaner way to do this
-        for(size_t j = 0; j < row->children.count; j++){
-            if(j != 0){
+        }
+    else {
+        // we need to wrap just the last line
+        for(size_t i = 0; i < node->children.count; i++){
+            auto row = get_node(ctx, node->children.data[i]);
+            if(row->type != NODE_TABLE_ROW){
+                format_node(ctx, sb, row, indent);
+                continue;
+                }
+            for(ssize_t j = 0; j < row->children.count - 1; j++){
+                if(j != 0){
+                    msb_write_literal(sb, ctx->allocator, " | ");
+                    }
+                else
+                    msb_write_str(sb, ctx->allocator, EIGHTYSPACES, indent);
+                auto cell = get_node(ctx, row->children.data[j]);
+                auto writ = write_str_or_container(ctx, sb, cell);
+                if(j != row->children.count-1 && widths[j] > writ){
+                    msb_write_str(sb, ctx->allocator, EIGHTYSPACES, widths[j] - writ);
+                    }
+                }
+            if(row->children.count > 1)
                 msb_write_literal(sb, ctx->allocator, " | ");
+            auto last_cell = get_node(ctx, row->children.data[row->children.count-1]);
+            FormatState state = {.lead = total_except_last, .col=total_except_last};
+            if(last_cell->type == NODE_STRING){
+                format_write_wrapped_string(ctx, sb, &state, last_cell->header);
                 }
-            else
-                msb_write_str(sb, ctx->allocator, EIGHTYSPACES, indent);
-            auto cell = get_node(ctx, row->children.data[j]);
-            if(j != row->children.count-1){
-                msb_sprintf(sb, ctx->allocator, "%-*.*s", (int)widths[j], (int)cell->header.length, cell->header.text);
+            else {
+                for(size_t j = 0; j < last_cell->children.count; j++){
+                    auto str = get_node(ctx, last_cell->children.data[j]);
+                    format_write_wrapped_string(ctx, sb, &state, str->header);
+                    }
                 }
-            else
-                msb_write_str(sb, ctx->allocator, cell->header.text, cell->header.length);
+            msb_write_char(sb, ctx->allocator, '\n');
             }
-        msb_write_char(sb, ctx->allocator, '\n');
         }
     }
 FORMATFUNC(kv_node){

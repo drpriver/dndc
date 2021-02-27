@@ -545,6 +545,8 @@ PARSEFUNC(parse_table_node){
         auto parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_TABLE);
     }
+    NodeHandle last_cell_handle = INVALID_NODE_HANDLE;
+    bool converted = false;
     Errorable(void) result = {};
     for(;ctx->cursor[0];){
         analyze_line(ctx);
@@ -564,11 +566,29 @@ PARSEFUNC(parse_table_node){
             if(e.errored) return e;
             continue;
             }
+        const char* cursor = ctx->linestart+ctx->nspaces;
+        const char* pipe = memchr(cursor, '|', ctx->lineend - cursor);
+        if(!pipe){
+            if(!NodeHandle_eq(last_cell_handle, INVALID_NODE_HANDLE)){
+                StringView content = stripped_view(cursor, ctx->lineend-cursor);
+                if(content.length){
+                    if(!converted){
+                        convert_node_to_container_containing_clone_of_former_self(ctx, last_cell_handle);
+                        converted = true;
+                        }
+                    auto str_handle = alloc_handle(ctx);
+                    init_string_node(ctx, str_handle, content);
+                    append_child(ctx, last_cell_handle, str_handle);
+                    }
+                }
+            advance_row(ctx);
+            continue;
+            }
         auto new_node_handle = alloc_handle(ctx);
         init_node(ctx, new_node_handle, ctx->linestart+ctx->nspaces, NODE_TABLE_ROW);
         append_child(ctx, parent_handle, new_node_handle);
-        const char* cursor = ctx->linestart+ctx->nspaces;
-        const char* pipe = memchr(cursor, '|', ctx->lineend - cursor);
+        last_cell_handle = INVALID_NODE_HANDLE;
+        converted = false;
         while(pipe){
             auto cell_index = alloc_handle(ctx);
             size_t length = pipe - cursor;
@@ -579,6 +599,7 @@ PARSEFUNC(parse_table_node){
             pipe = memchr(cursor, '|', ctx->lineend - cursor);
             }
         auto cell_index = alloc_handle(ctx);
+        last_cell_handle = cell_index;
         StringView content = stripped_view(cursor, ctx->lineend-cursor);
         init_string_node(ctx, cell_index, content);
         append_child(ctx, new_node_handle, cell_index);

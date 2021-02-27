@@ -441,5 +441,18 @@ gather_anchor(Nonnull(DndcContext*)ctx, NodeHandle handle){
         }
     }
 
-
+static
+inline
+void
+convert_node_to_container_containing_clone_of_former_self(Nonnull(DndcContext*)ctx, NodeHandle handle){
+    auto new_handle = alloc_handle(ctx);
+    auto new_node = get_node(ctx, new_handle);
+    auto old_node = get_node(ctx, handle);
+    assert(!old_node->children.count);
+    memcpy(new_node, old_node, sizeof(*new_node));
+    new_node->parent = handle;
+    Marray_push(NodeHandle)(&old_node->children, ctx->allocator, new_handle);
+    old_node->header = SV("");
+    old_node->type = NODE_CONTAINER;
+    }
 #endif
