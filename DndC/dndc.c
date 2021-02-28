@@ -83,7 +83,7 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
                 if(!child->header.length)
                     continue;
                 auto sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
-                if(!ctx->base_directory.length){
+                if(path_is_abspath(child->header) or !ctx->base_directory.length){
                     *sv = child->header;
                     }
                 else {
@@ -441,6 +441,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
             (Base64Cache){.allocator = cache_allocator};
             }),
         };
+    add_builtins(&ctx);
     LongString source;
     if(flags & DNDC_SOURCE_PATH_IS_DATA_NOT_PATH){
         source = source_path;
@@ -539,6 +540,11 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         for(size_t i = 0; i < ctx.imports.count; i++){
             auto handle = ctx.imports.data[i];
             auto node = get_node(&ctx, handle);
+            if(ctx.imports.count > 1000){
+                node_print_err(&ctx, node, "More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)");
+                result.errored = PARSE_ERROR;
+                goto cleanup;
+                }
             for(size_t j = 0; j < node->children.count; j++, node=get_node(&ctx, handle)){
                 auto child_handle = node->children.data[j];
                 auto child = get_node(&ctx, child_handle);

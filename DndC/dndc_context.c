@@ -141,12 +141,31 @@ report_error(uint64_t flags, Nonnull(const char*)fmt, ...){
     va_end(args);
     }
 
+static inline
+void
+ctx_store_source_file(Nonnull(DndcContext*)ctx, LongString sourcepath, LongString text){
+    if(not path_is_abspath(LS_to_SV(sourcepath)) && ctx->base_directory.length){
+        MStringBuilder path_builder = {};
+        msb_write_str(&path_builder, ctx->allocator, ctx->base_directory.text, ctx->base_directory.length);
+        msb_append_path(&path_builder, ctx->allocator, sourcepath.text, sourcepath.length);
+        sourcepath = msb_detach(&path_builder, ctx->allocator);
+        }
+    auto loaded = Marray_alloc(LoadedSource)(&ctx->loaded_files, ctx->allocator);
+    loaded->sourcepath = sourcepath;
+    loaded->sourcetext = text;
+    }
+
 static
 Errorable_f(LongString)
 ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
     // check if we already have it.
     MStringBuilder temp_builder = {};
-    if(ctx->base_directory.length){
+    if(!sourcepath.length){
+        return (Errorable(LongString)){.errored=UNEXPECTED_END};
+        }
+    assert(sourcepath.length);
+
+    if(not path_is_abspath(sourcepath) && ctx->base_directory.length){
         msb_write_str(&temp_builder, ctx->temp_allocator, ctx->base_directory.text, ctx->base_directory.length);
         msb_append_path(&temp_builder, ctx->temp_allocator, sourcepath.text, sourcepath.length);
         sourcepath = msb_borrow(&temp_builder, ctx->temp_allocator);
@@ -181,7 +200,7 @@ static
 Errorable_f(LongString)
 ctx_load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath){
     MStringBuilder path_builder = {};
-    if(ctx->base_directory.length){
+    if(not path_is_abspath(binarypath) && ctx->base_directory.length){
         msb_write_str(&path_builder, ctx->temp_allocator, ctx->base_directory.text, ctx->base_directory.length);
         msb_append_path(&path_builder, ctx->temp_allocator, binarypath.text, binarypath.length);
         binarypath = LS_to_SV(msb_detach(&path_builder, ctx->temp_allocator));
@@ -479,5 +498,35 @@ convert_node_to_container_containing_clone_of_former_self(Nonnull(DndcContext*)c
     Marray_push(NodeHandle)(&old_node->children, ctx->allocator, new_handle);
     old_node->header = SV("");
     old_node->type = NODE_CONTAINER;
+    }
+
+static inline
+void
+add_builtins(Nonnull(DndcContext*)ctx){
+    ctx_store_source_file(ctx, LS("builtins/coords.js"), LS(
+    // TODO: more maintainable way of doing this
+        "function coords(){\n"
+        "    const svgs = document.getElementsByTagName('svg');\n"
+        "    console.log(svgs);\n"
+        "    for(let i = 0; i < svgs.length; i++){\n"
+        "        const svg = svgs[i];\n"
+        "        const first_text = svg.getElementsByTagName('text')[0];\n"
+        "        const text_height = first_text.getBBox().height || 0;\n"
+        "        const parent = svg.parentElement;\n"
+        "        const p = document.createElement('p');\n"
+        "        p.style = 'text-align:center';\n"
+        "        parent.insertBefore(p, p.nextSibling);\n"
+        "        svg.addEventListener('mousemove', function(e){\n"
+        "            const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;\n"
+        "            const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height; \n"
+        "            const rect = e.currentTarget.getBoundingClientRect();\n"
+        "            const true_x = ((e.clientX - rect.x)/ x_scale) | 0;\n"
+        "            const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;\n"
+        "            p.innerHTML = 'coord(' + true_x + ',' + true_y+ ')';\n"
+        "        })\n"
+        "    }\n"
+        "}\n"
+        "document.addEventListener('DOMContentLoaded', coords);\n"
+        ));
     }
 #endif

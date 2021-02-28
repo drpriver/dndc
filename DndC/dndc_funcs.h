@@ -366,4 +366,11 @@ inline
 void
 convert_node_to_container_containing_clone_of_former_self(Nonnull(DndcContext*)ctx, NodeHandle handle);
 
+//
+// Adds special builtin-scripts and stylesheets to the source cache.
+//
+static inline
+void
+add_builtins(Nonnull(DndcContext*)ctx);
+
 #endif

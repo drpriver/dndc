@@ -1091,7 +1091,7 @@ RENDERFUNC(IMGLINKS){
                 }
             }
     }
-    msb_sprintf(sb, ctx->allocator, "<svg width=\"%d\" height=\"%d\" viewbox=\"%d %d %d %d\" style=\"background-image: url('data:image/png;base64,", width, height, viewbox[0], viewbox[1], viewbox[2], viewbox[3]);
+    msb_sprintf(sb, ctx->allocator, "<svg width=\"%d\" height=\"%d\" viewbox=\"%d %d %d %d\" style=\"background-size: 100%% 100%%; background-image: url('data:image/png;base64,", width, height, viewbox[0], viewbox[1], viewbox[2], viewbox[3]);
     auto before = get_t();
     assert(imgdatab64.length);
     msb_write_str(sb, ctx->allocator, imgdatab64.text, imgdatab64.length);
@@ -1142,7 +1142,7 @@ RENDERFUNC(IMGLINKS){
             }
         auto y = unwrap(y_err);
         msb_sprintf(sb, ctx->allocator,
-                "<a href=\"%.*s\"><text transform=\"translate(%d,%d)\">\n"
+                "<a href=\"%.*s\"><text style=\"text-anchor:middle;\" transform=\"translate(%d,%d)\">\n"
                 "%.*s\n"
                 "</text></a>\n", (int)second.length, second.text, x, y, (int)first.length, first.text);
         }

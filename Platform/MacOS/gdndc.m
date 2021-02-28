@@ -2,6 +2,9 @@
 #import <Webkit/WebKit.h>
 #include "measure_time.h"
 #include "DndC/dndc.h"
+// fuck it, I need to build strings!
+#include "MStringBuilder.h"
+#include "mallocator.h"
 
 //
 // So, each document has N window controllers (I guess 1 for me).
@@ -14,11 +17,21 @@
 // Who owns the documents though? The DocController??
 //
 
+//
+// Tags for inserting img blocks
+typedef enum GdndInsertTag{
+    GDND_INSERT_IMG,
+    GDND_INSERT_IMGLINKS,
+    GDND_INSERT_JS,
+    GDND_INSERT_CSS,
+    GDND_INSERT_DND,
+}GdndInsertTag;
 @interface DndWindowController: NSWindowController
 // Has a NSWindow* window
 @end
 
 @interface DndTextView: NSTextView
+-(void)insert_file_block:(NSString*)path tag:(GdndInsertTag)tag size:(NSSize)size;
 @end
 
 @interface DndHighlighter: NSObject<NSTextStorageDelegate>
@@ -178,6 +191,135 @@ static NSImage* appimage;
 @end
 
 @implementation DndTextView
+-(void)ensure_pattern{
+    // TODO: maybe this should be a getter instead?
+    if(!indent_pattern)
+        indent_pattern = [[NSRegularExpression alloc] initWithPattern:kIndentPatternString options:0 error:nil];
+}
+-(void)insert_file_block:(NSString*)path tag:(GdndInsertTag)tag size:(NSSize)size{
+    auto r = self.selectedRange;
+    NSRange currentLineRange = [self.string lineRangeForRange:r];
+    auto rel = r.location - currentLineRange.location;
+    switch(tag){
+        case GDND_INSERT_IMG:
+            [self insert_block:path at:r indent_amount:rel name:SV("::img\n")];
+            break;
+        case GDND_INSERT_DND:
+            [self insert_block:path at:r indent_amount:rel name:SV("::import\n")];
+            break;
+        case GDND_INSERT_JS:
+            [self insert_block:path at:r indent_amount:rel name:SV("::js\n")];
+            break;
+        case GDND_INSERT_CSS:
+            [self insert_block:path at:r indent_amount:rel name:SV("::css\n")];
+            break;
+        case GDND_INSERT_IMGLINKS:
+            [self insert_imglinks_block:path at:r indent_amount:rel size:size];
+            break;
+        default:
+            NSLog(@"%s: Unknown insert_file_block tag given: %d", __func__, tag);
+            break;
+    }
+}
+
+-(void)insert_block:(NSString*)path at:(NSRange)r indent_amount:(NSInteger)indent_amount name:(StringView)blockname{
+    MStringBuilder sb = {};
+    Allocator a = get_mallocator();
+    msb_reserve(&sb, a, 256);
+    msb_write_str(&sb, a, blockname.text, blockname.length);
+    for(size_t i = 0; i < indent_amount+2; i++){
+        msb_write_char(&sb, a, ' ');
+    }
+    const char* cpath = [path UTF8String];
+    msb_write_str(&sb, a, cpath, strlen(cpath));
+    msb_write_char(&sb, a, '\n');
+    auto strdata = msb_detach(&sb, a);
+    PushDiagnostic();
+    SuppressCastQual();
+    NSData* data = [NSData dataWithBytesNoCopy:(void*)strdata.text length:strdata.length freeWhenDone:YES];
+    PopDiagnostic();
+    auto to_insert = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    [self insertText:to_insert replacementRange:r];
+}
+-(void)insert_imglinks_block:(NSString*)path at:(NSRange)r indent_amount:(NSInteger)indent_amount size:(NSSize)size{
+    MStringBuilder sb = {};
+    Allocator a = get_mallocator();
+    msb_reserve(&sb, a, 256);
+    msb_write_literal(&sb, a, "::imglinks\n");
+#define DO_INDENT() do{\
+        msb_reserve(&sb, a, indent_amount+2); \
+        memset(sb.data+sb.cursor, ' ', indent_amount+2); \
+        sb.cursor += indent_amount+2; \
+    }while(0)
+
+    DO_INDENT();
+    const char* imgpath = [path UTF8String];
+    msb_write_str(&sb, a, imgpath, strlen(imgpath));
+    msb_write_char(&sb, a, '\n');
+    double scale = Min(800.0/size.width, 800.0/size.height);
+    DO_INDENT(); msb_sprintf(&sb, a,       "width = %d\n", (int)(size.width*scale));
+    DO_INDENT(); msb_sprintf(&sb, a,       "height = %d\n", (int)(size.height*scale));
+    DO_INDENT(); msb_sprintf(&sb, a,       "viewBox = 0 0 %d %d\n", (int)size.width, (int)size.height);
+    StringView script[] = {
+        SV("::python\n"),
+        SV("  # this is an example of how to script the imglinks\n"),
+        SV("  imglinks = node.parent\n"),
+        SV("  parent = imglinks.parent.parent\n"),
+        SV("  for node in parent.children:\n"),
+        SV("    if 'coord' in node.attributes:\n"),
+        SV("      lead = node.header  # change this probably\n"),
+        SV("      target = ctx.kebab(node.header)\n"),
+        SV("      position = node.attributes['coord']\n"),
+        SV("      imglinks.add_child(f'{lead} = {ctx.outfile}#{target} @{position}')\n"),
+        SV("  #endpython\n"),
+    };
+    for(int i = 0; i < arrlen(script); i++){
+        DO_INDENT();
+        msb_write_str(&sb, a, script[i].text, script[i].length);
+    }
+#undef DO_INDENT
+    auto strdata = msb_detach(&sb, a);
+    PushDiagnostic();
+    SuppressCastQual();
+    NSData* data = [NSData dataWithBytesNoCopy:(void*)strdata.text length:strdata.length freeWhenDone:YES];
+    PopDiagnostic();
+    auto to_insert = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    [self insertText:to_insert replacementRange:r];
+}
++(NSMenu*)defaultMenu{
+    NSMenu* result = [[NSMenu alloc] initWithTitle:@"Menu"];
+    NSMenuItem* item;
+    item = [[NSMenuItem alloc] initWithTitle:@"Cut" action:@selector(cut:) keyEquivalent:@""];
+    [result addItem:item];
+    item = [[NSMenuItem alloc] initWithTitle:@"Copy" action:@selector(copy:) keyEquivalent:@""];
+    [result addItem:item];
+    item = [[NSMenuItem alloc] initWithTitle:@"Paste" action:@selector(paste:) keyEquivalent:@""];
+    [result addItem:item];
+    [result addItem:[NSMenuItem separatorItem]];
+
+    item = [[NSMenuItem alloc] initWithTitle:@"Insert Image" action:@selector(insert_file:) keyEquivalent:@""];
+    item.tag = GDND_INSERT_IMG;
+
+    [result addItem:item];
+    item = [[NSMenuItem alloc] initWithTitle:@"Insert Imglinks" action:@selector(insert_file:) keyEquivalent:@""];
+    item.tag = GDND_INSERT_IMGLINKS;
+
+    [result addItem:item];
+    item = [[NSMenuItem alloc] initWithTitle:@"Insert CSS" action:@selector(insert_file:) keyEquivalent:@""];
+    item.tag = GDND_INSERT_CSS;
+
+    [result addItem:item];
+    item = [[NSMenuItem alloc] initWithTitle:@"Insert JS" action:@selector(insert_file:) keyEquivalent:@""];
+    item.tag = GDND_INSERT_JS;
+
+    [result addItem:item];
+    item = [[NSMenuItem alloc] initWithTitle:@"Insert DND" action:@selector(insert_file:) keyEquivalent:@""];
+    item.tag = GDND_INSERT_DND;
+
+    [result addItem:item];
+    [result addItem:[NSMenuItem separatorItem]];
+    return result;
+}
 -(NSString *)preferredPasteboardTypeFromArray:(NSArray *)availableTypes restrictedToTypesFromArray:(NSArray *)allowedTypes {
   if ([availableTypes containsObject:NSPasteboardTypeString]) {
     return NSPasteboardTypeString;
@@ -187,8 +329,7 @@ static NSImage* appimage;
 }
 -(DndTextView*)initWithFrame:(NSRect)textrect font:(NSFont*)font{
     self = [super initWithFrame:textrect];
-    if(!indent_pattern)
-        indent_pattern = [[NSRegularExpression alloc] initWithPattern:kIndentPatternString options:0 error:nil];
+    [self ensure_pattern];
     self.usesAdaptiveColorMappingForDarkAppearance = YES;
     self.automaticTextCompletionEnabled = NO;
     self.automaticLinkDetectionEnabled = NO;
@@ -207,6 +348,7 @@ static NSImage* appimage;
     if(r.length == 0){
         NSRange currentLineRange = [self.string lineRangeForRange:r];
         NSString* currentLine = [self.string substringWithRange:currentLineRange];
+        [self ensure_pattern];
         NSTextCheckingResult* indent_matched = [indent_pattern firstMatchInString:currentLine options:0 range:NSMakeRange(0, currentLine.length)];
         if(indent_matched){
             auto this_char = r.location?[self.string characterAtIndex:r.location-1]:'\0';
@@ -233,6 +375,7 @@ static NSImage* appimage;
     NSString* currentLine = [self.string substringWithRange:currentLineRange];
     [super insertNewline:sender];
     if(currentLine.length){
+        [self ensure_pattern];
         NSTextCheckingResult* indent_matched = [indent_pattern firstMatchInString:currentLine options:0 range:NSMakeRange(0, currentLine.length-1)];
         if (indent_matched) {
             NSString *indent = [currentLine substringWithRange:indent_matched.range];
@@ -291,6 +434,65 @@ static NSImage* appimage;
 
 
 @implementation DndViewController
+-(void)insert_file:(id)sender{
+    NSMenuItem* item = sender;
+    NSOpenPanel* panel = [NSOpenPanel openPanel];
+    panel.canChooseFiles = YES;
+    panel.canChooseDirectories = NO;
+    panel.allowsMultipleSelection = NO;
+    switch(item.tag){
+        case GDND_INSERT_IMGLINKS:
+        case GDND_INSERT_IMG:
+            panel.allowedFileTypes = @[@"png"];
+            break;
+        case GDND_INSERT_CSS:
+            panel.allowedFileTypes = @[@"css"];
+            break;
+        case GDND_INSERT_JS:
+            panel.allowedFileTypes = @[@"js"];
+            break;
+        case GDND_INSERT_DND:
+            panel.allowedFileTypes = @[@"dnd"];
+            break;
+    }
+    [panel beginWithCompletionHandler:^(NSInteger result){
+        if(result == NSModalResponseOK){
+            assert(panel.URL);
+            NSURL* url = panel.URL;
+            NSSize size = {};
+            if(item.tag == GDND_INSERT_IMGLINKS){
+                NSImage* img = [ [NSImage alloc] initByReferencingURL:url];
+                size.height = [img representations][0].pixelsHigh;
+                size.width = [img representations][0].pixelsWide;
+            }
+            NSString* path;
+            path = panel.URL.path;
+            if(self->file_url){
+                auto chosen_components = panel.URL.pathComponents;
+                auto doc_components = self->file_url.pathComponents;
+                if(doc_components.count > chosen_components.count){
+                    goto have_path;
+                }
+                auto shorter = doc_components.count;
+                NSUInteger i;
+                for(i = 0; i < shorter; i++){
+                    if([chosen_components[i] isEqual:doc_components[i]])
+                        continue;
+                    break;
+                }
+                if(i < shorter - 1){
+                    goto have_path;
+                }
+                NSArray<NSString*>* chosen = [chosen_components subarrayWithRange:NSMakeRange(i, chosen_components.count-i)];
+                path = [chosen componentsJoinedByString:@"/"];
+            }
+
+            have_path:;
+            [self->text insert_file_block:path tag:item.tag size:size];
+            [self recalc_html:nil];
+        }
+    }];
+}
 -(void)zoom_out:(id)sender{
     webview.magnification/=1.2;
 }
@@ -622,6 +824,34 @@ static void do_menus(void){
         // [editMenu addItemWithTitle:@"Find..." action:@selector(performTextFinderAction:) keyEquivalent:@"f"];
         NSMenuItem* menuItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
         [menuItem setSubmenu:editMenu];
+        [[NSApp mainMenu] addItem:menuItem];
+    }
+    {
+        NSMenu* menu = [[NSMenu alloc] initWithTitle:@"Insert"];
+        NSMenuItem* menuItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
+
+        NSMenuItem* mi;
+        mi = [[NSMenuItem alloc] initWithTitle:@"Image" action:@selector(insert_file:) keyEquivalent:@"i"];
+        mi.tag = GDND_INSERT_IMG;
+        [menu addItem:mi];
+
+        mi = [[NSMenuItem alloc] initWithTitle:@"Imglinks" action:@selector(insert_file:) keyEquivalent:@"I"];
+        mi.tag = GDND_INSERT_IMGLINKS;
+        [menu addItem:mi];
+
+        mi = [[NSMenuItem alloc] initWithTitle:@"CSS" action:@selector(insert_file:) keyEquivalent:@""];
+        mi.tag = GDND_INSERT_CSS;
+        [menu addItem:mi];
+
+        mi = [[NSMenuItem alloc] initWithTitle:@"JS" action:@selector(insert_file:) keyEquivalent:@""];
+        mi.tag = GDND_INSERT_JS;
+        [menu addItem:mi];
+
+        mi = [[NSMenuItem alloc] initWithTitle:@"Import" action:@selector(insert_file:) keyEquivalent:@""];
+        mi.tag = GDND_INSERT_DND;
+        [menu addItem:mi];
+
+        [menuItem setSubmenu:menu];
         [[NSApp mainMenu] addItem:menuItem];
     }
     /* Create the view menu */

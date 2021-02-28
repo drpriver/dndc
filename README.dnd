@@ -150,10 +150,10 @@ Convenience::md
       HEADING      | h            | <hN>          | Yes     | No
       TABLE        | table        | <div><table>  | Yes     | No
       TABLE_ROW    | ---          | <tr>          | ---     | No
-      STYLESHEETS  | stylesheets  | ---           | ---     | No
+      STYLESHEETS  | css          | ---           | ---     | No
       DEPENDENCIES | dependencies | ---           | ---     | No
       LINKS        | links        | ---           | ---     | No
-      SCRIPTS      | scripts      | ---           | ---     | No
+      SCRIPTS      | js           | ---           | ---     | No
       IMPORT       | import       | ---           | ---     | No
       IMAGE        | img          | <div><img>    | Yes     | No
       BULLETS      | bullets      | <div><ul>     | Yes     | No
@@ -201,21 +201,21 @@ Convenience::md
 Styling and Scripting::md
   We've shown off some regular 
 Self-Contained::md
-  .dnd documents can include stylesheets and js files. They will be placed into
+  .dnd documents can include css and js files. They will be placed into
   the head of the document so that the html page is completely self-contained.
   However, you don't have to write them inline here in one document. You can
   include them in the document by the appropriate block.
 
   Example:
   ::pre.embedded
-    ::stylesheets
+    ::css
       cssfile1.css
       another/css/file.css
       and/another.css
-    ::scripts
+    ::js
       somejsfile.js
       another/jsfile.js
-    ::stylesheets @inline
+    ::css @inline
       * {
         box-sizing: border-box;
       }
@@ -227,7 +227,7 @@ Self-Contained::md
       attribute tells the system to not interpret the contents as filepaths, but
       instead as raw strings to be included in the <style> tags.
 
-      scripts also support @inline with the same meaning, but for <script>.
+      js blocks also support @inline with the same meaning, but for <script>.
   Images can also be included. They are base64-encoded and stored as a data string
   in the html page. Possibly we can add an attribute to disable this in the future.
 
@@ -411,7 +411,7 @@ But Wait, There's More::md
 ::comment
   Normally I would put the css in its own file, but this README
   itself needs to be self-contained.
-::stylesheets @inline
+::css @inline
   .embedded {
     border: 1px solid black;
     max-width: 44em;

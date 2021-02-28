@@ -42,12 +42,22 @@ Remove the Directory Hack::md
 
 Add "Insert Image" support::md
   Insert menu and context menus.
+  Update::md @noid
+    Did this and also added support for js, css, imports.
 
 Depends Dir::md
   This should really be a depends file argument, not a depends directory.
 
-::stylesheets @inline
+Indent/Dedent::md
+  There's no easy way to indent or dedent a block of text in gdndc.
+  This makes its usability worse than vim's.
+
+::css @inline
   body {
     margin: auto;
     max-width: 44em;
+    font-family: "Helvetica";
+  }
+  h3,h4,h5 {
+    color: rgb(88,24,13);
   }
