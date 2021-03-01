@@ -25,6 +25,9 @@
 static inline
 int
 msb_write_kebab(Nonnull(MStringBuilder*)msb, const Allocator a, Nonnull(const char*)text, size_t length){
+    msb_reserve(msb, a, length);
+    auto data = msb->data;
+    auto cursor = msb->cursor;
     int n_written = 0;
     bool want_write_hyphen = false;
     for(size_t i = 0; i < length; i++){
@@ -36,10 +39,12 @@ msb_write_kebab(Nonnull(MStringBuilder*)msb, const Allocator a, Nonnull(const ch
             case 'a' ... 'z':
             case '0' ... '9':
                 if(want_write_hyphen){
-                    msb_write_char(msb, a, '-');
+                    // msb_write_char(msb, a, '-');
+                    data[cursor++] = '-';
                     want_write_hyphen = false;
                     }
-                msb_write_char(msb, a, c);
+                // msb_write_char(msb, a, c);
+                data[cursor++] = c;
                 n_written += 1;
                 continue;
             case ' ': case '\t': case '-':
@@ -50,6 +55,7 @@ msb_write_kebab(Nonnull(MStringBuilder*)msb, const Allocator a, Nonnull(const ch
                 continue;
             }
         }
+    msb->cursor = cursor;
     return n_written;
     }
 

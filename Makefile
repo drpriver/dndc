@@ -4,12 +4,12 @@ include DndC/dndc.mak
 
 DNDC:=$(BINDIR)/dndc$(EXE)
 
-%.html: %.dnd | $(DNDC)
+%.html: %.dnd | $(DNDC) $(DIRECTORIES)
 	mkdir -p Depends/$*
-	$(DNDC) $< $@ -d $(DEPDIR)/$*
+	$(DNDC) $< $@ -d $(DEPDIR)/$*.dep
 
-README.html: README.dnd | $(DNDC)
-	$(DNDC) $< $@ -d $(DEPDIR)
+README.html: README.dnd | $(DNDC) $(DIRECTORIES)
+	$(DNDC) $< $@ -d $(DEPDIR)/README.dep
 
 # Assumes libclang is installed.
 tags: $(wildcard *.h *.c **/*.c **/*.h) Scripts/tag_and_syntax.py compile_commands.json

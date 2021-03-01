@@ -29,6 +29,8 @@ Bullets::md
 
 Coordinate support::md
   Jeff wanted some way to see the coords on a map.
+  Update::md @noid
+    Did this - there is now a special builtin js script that will do this: builtins/coords.js
 
 Windows Port::md
   Stablize features and then port it to win32.
@@ -47,6 +49,9 @@ Add "Insert Image" support::md
 
 Depends Dir::md
   This should really be a depends file argument, not a depends directory.
+
+  Update::md @noid
+    This was super easy. Idk why I didn't do it this way before.
 
 Indent/Dedent::md
   There's no easy way to indent or dedent a block of text in gdndc.

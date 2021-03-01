@@ -184,7 +184,7 @@ int main(int argc, char**argv){
     auto t0 = get_t();
     LongString source_path = {};
     LongString output_path = {};
-    LongString depends_dir = {};
+    LongString depends_path = {};
     bool report_orphans = false;
     bool no_python = false;
     bool print_tree = false;
@@ -197,6 +197,7 @@ int main(int argc, char**argv){
     bool cleanup = false;
     bool use_site = false;
     bool reformat_only = false;
+    bool hidden_help = false;
     {
     ArgToParse pos_args[] = {
         [0] = {
@@ -218,11 +219,11 @@ int main(int argc, char**argv){
     ArgToParse kw_args[] = {
         {
             .name = SV("-d"),
-            .altname1 = SV("--depends-dir"),
+            .altname1 = SV("--depends-path"),
             .min_num = 0,
             .max_num = 1,
-            .dest = ARGDEST(&depends_dir),
-            .help = "If given, what directory to write a corresponding make-style .dep file.",
+            .dest = ARGDEST(&depends_path),
+            .help = "If given, where to write a make-style dependency file.",
             .hide_default = true,
         },
         {
@@ -231,6 +232,7 @@ int main(int argc, char**argv){
             .max_num = 1,
             .dest = ARGDEST(&report_orphans),
             .help = "Report orphaned nodes (for debugging scripts).",
+            .hidden = true,
         },
         {
             .name = SV("--no-python"),
@@ -238,6 +240,7 @@ int main(int argc, char**argv){
             .max_num = 1,
             .dest = ARGDEST(&no_python),
             .help = "Don't execute python nodes.",
+            .hidden = true,
         },
         {
             .name = SV("--print-tree"),
@@ -245,6 +248,7 @@ int main(int argc, char**argv){
             .max_num = 1,
             .dest = ARGDEST(&print_tree),
             .help = "Print out the entire document tree.",
+            .hidden = true,
         },
         {
             .name = SV("--print-links"),
@@ -252,6 +256,7 @@ int main(int argc, char**argv){
             .max_num = 1,
             .dest = ARGDEST(&print_links),
             .help = "Print out all links (and what they target) known by the system.",
+            .hidden = true,
         },
         {
             .name = SV("--print-stats"),
@@ -259,6 +264,7 @@ int main(int argc, char**argv){
             .max_num = 1,
             .dest = ARGDEST(&print_stats),
             .help = "Log some informative statistics.",
+            .hidden = true,
         },
         {
             .name = SV("--allow-bad-links"),
@@ -266,6 +272,7 @@ int main(int argc, char**argv){
             .max_num = 1,
             .dest = ARGDEST(&allow_bad_links),
             .help = "Warn instead of erroring if a link can't be resolved.",
+            .hidden = true,
         },
         {
             .name = SV("--suppress-warnings"),
@@ -273,21 +280,23 @@ int main(int argc, char**argv){
             .max_num = 1,
             .dest = ARGDEST(&suppress_warnings),
             .help = "Don't report non-fatal errors.",
+            .hidden = true,
         },
         {
             .name = SV("--dont-write"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&dont_write),
-            .help = "Don't write out the document.\n"
-                "    Outputfile is exposed to scripts so that must still be given.",
+            .help = "Don't write out the document.",
+            .hidden = true,
         },
         {
-            .name = SV("--no-threads"),
+            .name = SV("--singled-threaded"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&no_threads),
             .help = "Do not create worker threads, do everything in the same thread.",
+            .hidden = true,
         },
         {
             .name = SV("--cleanup"),
@@ -295,7 +304,8 @@ int main(int argc, char**argv){
             .max_num = 1,
             .dest = ARGDEST(&cleanup),
             .help = "Cleanup all resources (memory allocations, etc.).\n"
-                "    Development debugging tool, useless in regular cli use."
+                "    Development debugging tool, useless in regular cli use.",
+            .hidden = true,
         },
         {
             .name = SV("--use-site"),
@@ -313,9 +323,16 @@ int main(int argc, char**argv){
             .help = "Instead of rendering to html, render to .dnd with trailing  "
                     "spaces removed, text wrapped to 80 columns (if semantically "
                     "equivelant), etc. Imports will not be resolved - only the "
-                    "given input file will be imported.\n"
-                    "Implies --no-python."
+                    "given input file will be imported."
                     ,
+        },
+        {
+            .name = SV("-H"),
+            .altname1 = SV("--hidden-help"),
+            .min_num = 0,
+            .max_num = 1,
+            .dest = ARGDEST(&hidden_help),
+            .help = "Print out help for the hidden arguments.",
         }
         };
     ArgParser argparser = {
@@ -341,6 +358,21 @@ int main(int argc, char**argv){
         fprintf(stderr, "Error when parsing arguments.\n");
         print_help(&argparser);
         return e.errored;
+        }
+    if(hidden_help){
+        fputs(
+            "Hidden Arguments:\n"
+            "-----------------", stdout);
+        auto term_size = get_terminal_size();
+        for(int i = 0; i < arrlen(kw_args); i++){
+            auto arg = &kw_args[i];
+            if(!arg->hidden){
+                continue;
+                }
+            putchar('\n');
+            print_arg_help(arg, term_size);
+            }
+        return 0;
         }
     auto after_parse_args = get_t();
     // this one has to be done manually as we don't have a ctx yet.
@@ -381,17 +413,17 @@ int main(int argc, char**argv){
         output_path = LS(BENCHMARKOUTPUTPATH);
         }
     flags &= ~DNDC_NO_CLEANUP;
-    auto e = run_the_dndc(flags, SV(BENCHMARKDIRECTORY), source_path, &output_path, depends_dir, NULL);
+    auto e = run_the_dndc(flags, SV(BENCHMARKDIRECTORY), source_path, &output_path, depends_path, NULL);
     assert(!e.errored);
     flags |= DNDC_PYTHON_IS_INIT;
     for(int i = 0; i < BENCHMARKITERS;i++){
-        e = run_the_dndc(flags, SV(BENCHMARKDIRECTORY), source_path, &output_path, depends_dir, NULL);
+        e = run_the_dndc(flags, SV(BENCHMARKDIRECTORY), source_path, &output_path, depends_path, NULL);
         assert(!e.errored);
         }
     end_interpreter();
     return 0;
     #else
-    auto e = run_the_dndc(flags, SV(""), source_path, output_path.length? &output_path : NULL, depends_dir, NULL);
+    auto e = run_the_dndc(flags, SV(""), source_path, output_path.length? &output_path : NULL, depends_path, NULL);
     return e.errored;
     #endif
     }
@@ -399,7 +431,7 @@ int main(int argc, char**argv){
 
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, Nullable(LongString*) output_path, LongString depends_dir, Nullable(Base64Cache*)external_b64cache){
+run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, Nullable(LongString*) output_path, LongString depends_path, Nullable(Base64Cache*)external_b64cache){
     if(flags & DNDC_REFORMAT_ONLY)
         flags |= DNDC_NO_PYTHON;
     auto t0 = get_t();
@@ -441,7 +473,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
             (Base64Cache){.allocator = cache_allocator};
             }),
         };
-    add_builtins(&ctx);
+    ctx_add_builtins(&ctx);
     LongString source;
     if(flags & DNDC_SOURCE_PATH_IS_DATA_NOT_PATH){
         source = source_path;
@@ -783,7 +815,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         report_stat(ctx.flags, "Total output size: %zu bytes", str.length);
     }
     // Write the make-style dependency file to the Dependency directory.
-    if(depends_dir.length){
+    if(depends_path.length){
         for(size_t i = 0; i < ctx.loaded_files.count; i++){
             Marray_push(StringView)(&ctx.dependencies, ctx.allocator, LS_to_SV(ctx.loaded_files.data[i].sourcepath));
             }
@@ -802,14 +834,6 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
                 }
             }
         msb_reset(&msb);
-        MStringBuilder depb = {};
-        msb_write_str(&depb, ctx.temp_allocator, depends_dir.text, depends_dir.length);
-        auto out = LS_to_SV(outpath);
-        auto basename = path_basename(out);
-        auto stripped = path_strip_extension(basename);
-        msb_append_path(&depb, ctx.temp_allocator, stripped.text, stripped.length);
-        msb_write_literal(&depb, ctx.temp_allocator, ".dep");
-        auto depfilename = msb_borrow(&depb, ctx.temp_allocator);
         msb_write_str(&msb, ctx.allocator, outpath.text, outpath.length);
         msb_write_char(&msb, ctx.allocator, ':');
         for(size_t i = 0; i < ctx.dependencies.count; i++){
@@ -825,8 +849,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
             msb_write_literal(&msb, ctx.allocator, ":\n");
             }
         auto deptext = msb_borrow(&msb, ctx.allocator);
-        auto write_err = write_file(depfilename.text, deptext.text, deptext.length);
-        msb_destroy(&depb, ctx.temp_allocator);
+        auto write_err = write_file(depends_path.text, deptext.text, deptext.length);
         if(write_err.errored){
             ERROR("Error on write: %s", get_error_name(write_err));
             perror("Error on write");
@@ -951,6 +974,7 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
     // flags |= DNDC_DONT_PRINT_ERRORS;
     flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
+    flags |= DNDC_PRINT_STATS;
     // gross, move to caller.
     static Base64Cache cache = {.allocator._vtable = &MallocVtable};
     auto e = run_the_dndc(flags, base_directory, source_text, output, LS(""), &cache);

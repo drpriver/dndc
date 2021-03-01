@@ -55,7 +55,7 @@
 //
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, Nullable(LongString*) output_path, LongString depends_dir, Nullable(Base64Cache*)b64cache);
+run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, Nullable(LongString*) output_path, LongString depends_path, Nullable(Base64Cache*)b64cache);
 
 //
 // The following functions are for reporting errors and warnings.
@@ -371,6 +371,6 @@ convert_node_to_container_containing_clone_of_former_self(Nonnull(DndcContext*)c
 //
 static inline
 void
-add_builtins(Nonnull(DndcContext*)ctx);
+ctx_add_builtins(Nonnull(DndcContext*)ctx);
 
 #endif

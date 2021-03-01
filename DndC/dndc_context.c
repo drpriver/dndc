@@ -143,14 +143,8 @@ report_error(uint64_t flags, Nonnull(const char*)fmt, ...){
 
 static inline
 void
-ctx_store_source_file(Nonnull(DndcContext*)ctx, LongString sourcepath, LongString text){
-    if(not path_is_abspath(LS_to_SV(sourcepath)) && ctx->base_directory.length){
-        MStringBuilder path_builder = {};
-        msb_write_str(&path_builder, ctx->allocator, ctx->base_directory.text, ctx->base_directory.length);
-        msb_append_path(&path_builder, ctx->allocator, sourcepath.text, sourcepath.length);
-        sourcepath = msb_detach(&path_builder, ctx->allocator);
-        }
-    auto loaded = Marray_alloc(LoadedSource)(&ctx->loaded_files, ctx->allocator);
+ctx_store_builtin_file(Nonnull(DndcContext*)ctx, LongString sourcepath, LongString text){
+    auto loaded = Marray_alloc(LoadedSource)(&ctx->builtin_files, ctx->allocator);
     loaded->sourcepath = sourcepath;
     loaded->sourcetext = text;
     }
@@ -158,7 +152,13 @@ ctx_store_source_file(Nonnull(DndcContext*)ctx, LongString sourcepath, LongStrin
 static
 Errorable_f(LongString)
 ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
-    // check if we already have it.
+    // check if we already have it as a builtin
+    for(size_t i = 0; i < ctx->builtin_files.count; i++){
+        auto builtin = &ctx->builtin_files.data[i];
+        if(LS_SV_equals(builtin->sourcepath, sourcepath)){
+            return (Errorable(LongString)){.result=builtin->sourcetext};
+            }
+        }
     MStringBuilder temp_builder = {};
     if(!sourcepath.length){
         return (Errorable(LongString)){.errored=UNEXPECTED_END};
@@ -170,6 +170,7 @@ ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
         msb_append_path(&temp_builder, ctx->temp_allocator, sourcepath.text, sourcepath.length);
         sourcepath = msb_borrow(&temp_builder, ctx->temp_allocator);
         }
+    // check if we already have it.
     for(size_t i = 0; i < ctx->loaded_files.count; i++){
         auto loaded = &ctx->loaded_files.data[i];
         if(LS_SV_equals(loaded->sourcepath, sourcepath)){
@@ -412,7 +413,8 @@ gather_anchors(Nonnull(DndcContext*)ctx){
     return gather_anchor(ctx, root);
     }
 
-static
+static inline
+force_inline
 void
 gather_anchor_children(Nonnull(DndcContext*)ctx, Nonnull(Node*)node){
     auto count = node->children.count;
@@ -498,16 +500,16 @@ convert_node_to_container_containing_clone_of_former_self(Nonnull(DndcContext*)c
     Marray_push(NodeHandle)(&old_node->children, ctx->allocator, new_handle);
     old_node->header = SV("");
     old_node->type = NODE_CONTAINER;
+    old_node->attributes.count = 0;
     }
 
 static inline
 void
-add_builtins(Nonnull(DndcContext*)ctx){
-    ctx_store_source_file(ctx, LS("builtins/coords.js"), LS(
+ctx_add_builtins(Nonnull(DndcContext*)ctx){
+    ctx_store_builtin_file(ctx, LS("builtins/coords.js"), LS(
     // TODO: more maintainable way of doing this
-        "function coords(){\n"
+        "document.addEventListener('DOMContentLoaded', function(){\n"
         "    const svgs = document.getElementsByTagName('svg');\n"
-        "    console.log(svgs);\n"
         "    for(let i = 0; i < svgs.length; i++){\n"
         "        const svg = svgs[i];\n"
         "        const first_text = svg.getElementsByTagName('text')[0];\n"
@@ -525,8 +527,7 @@ add_builtins(Nonnull(DndcContext*)ctx){
         "            p.innerHTML = 'coord(' + true_x + ',' + true_y+ ')';\n"
         "        })\n"
         "    }\n"
-        "}\n"
-        "document.addEventListener('DOMContentLoaded', coords);\n"
+        "})\n"
         ));
     }
 #endif

@@ -136,6 +136,9 @@ typedef struct ArgToParse {
     //
     // Whether to show the default value in the help printout.
     bool hide_default; // maybe we'll want a bitflags field with options instead.
+    // Whether to hide this flag from the help output.
+    // Keyword argument only.
+    bool hidden;
     //
     // The description of the argument. When printed, the helpstring will be
     // tokenized and adjacent whitespace will be merged into a single space.
@@ -222,6 +225,8 @@ print_help(Nonnull(const ArgParser*) p){
         }
     for(int i = 0; i < p->keyword.count; i++){
         auto arg = &p->keyword.args[i];
+        if(arg->hidden)
+            continue;
         if(arg->dest.type == ARG_FLAG){
             if(arg->altname1.length){
                 auto to_print = sizeof(" [%s | %s]") - 5 + arg->name.length + arg->altname1.length;
@@ -265,12 +270,12 @@ print_help(Nonnull(const ArgParser*) p){
          "    Print this help and exit.\n"
          "\n"
          "--version: flag = false\n"
-         "    Print version information and exit.\n"
-         "");
+         "    Print version information and exit.");
     for(size_t i = 0; i < p->keyword.count; i++){
-        if(i != 0)
-            putchar('\n');
         auto arg = &p->keyword.args[i];
+        if(arg->hidden)
+            continue;
+        putchar('\n');
         print_arg_help(arg, term_size);
         }
     }

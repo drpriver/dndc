@@ -279,8 +279,9 @@ typedef struct DndcContext {
         // Cached strings that are from loaded files.
         // We also copy the filename as we need those on our nodes.
         Marray(LoadedSource) loaded_files;
+        Marray(LoadedSource) builtin_files;
+        Base64Cache b64cache;
     };
-    Base64Cache b64cache;
     Marray(StringView) dependencies;
     // Mapping of shorthand for a link to its actual link.
     // Actually an array of pairs, we sort this and then do binary searches
