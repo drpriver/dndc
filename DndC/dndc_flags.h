@@ -41,9 +41,11 @@ FlagEnum DndcFlags {
     // Instead of rendering to html, render to .dnd with trailing
     // spaces removed, text aligned to 80 columns (if semantically equivelant)
     // etc.
-    DNDC_REFORMAT_ONLY            = 0x8000,
+    DNDC_REFORMAT_ONLY     = 0x8000,
 };
 #else
+//
+// See above for documentation.
 #define DNDC_FLAGS_NONE                   0x0000
 #define DNDC_ALLOW_BAD_LINKS              0x0001
 #define DNDC_SUPPRESS_WARNINGS            0x0002

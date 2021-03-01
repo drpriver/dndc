@@ -7,6 +7,7 @@
 //
 // Forward declarations of functions that are shared between components,
 // including the main run function.
+// This documents the internal API. For the external API, see dndc.h
 //
 
 //
@@ -16,7 +17,7 @@
 // Arguments
 // ---------
 // flags:
-//    Bitflags controlling behavior of execution. Consult the types header
+//    Bitflags controlling behavior of execution. Consult the flags header
 //    for the meanings of individual values. Is a bitwise-or combination
 //    of the different options.
 //

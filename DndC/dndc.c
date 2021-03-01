@@ -1003,4 +1003,9 @@ dndc_init_python(void){
     return err.errored;
     }
 
-
+extern
+int
+dndc_init_python_types(void){
+    auto err = docparse_init_types();
+    return err.errored;
+    }
