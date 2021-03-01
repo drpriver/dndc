@@ -6,10 +6,10 @@ DNDC:=$(BINDIR)/dndc$(EXE)
 
 %.html: %.dnd | $(DNDC) $(DIRECTORIES)
 	mkdir -p Depends/$*
-	$(DNDC) $< $@ -d $(DEPDIR)/$*.dep
+	$(DNDC) $< -o $@ -d $(DEPDIR)/$*.dep
 
 README.html: README.dnd | $(DNDC) $(DIRECTORIES)
-	$(DNDC) $< $@ -d $(DEPDIR)/README.dep
+	$(DNDC) $< -o $@ -d $(DEPDIR)/README.dep
 
 # Assumes libclang is installed.
 tags: $(wildcard *.h *.c **/*.c **/*.h) Scripts/tag_and_syntax.py compile_commands.json

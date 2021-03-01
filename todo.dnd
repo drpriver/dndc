@@ -57,6 +57,9 @@ Indent/Dedent::md
   There's no easy way to indent or dedent a block of text in gdndc.
   This makes its usability worse than vim's.
 
+  Update::md @noid
+    This was pretty easy to implement.
+
 ::css @inline
   body {
     margin: auto;

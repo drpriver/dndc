@@ -207,16 +207,17 @@ int main(int argc, char**argv){
             .dest = ARGDEST(&source_path),
             .help = "Source file (.dnd file) to read from.\nIf not given, reads from stdin.",
             },
-        [1] = {
-            .name = SV("output"),
+        };
+    ArgToParse kw_args[] = {
+        {
+            .name = SV("-o"),
+            .altname1 = SV("--output"),
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&output_path),
             .help = "output path (.html file) to write to.\n If not given, writes to stdout.",
             .hide_default = true,
             },
-        };
-    ArgToParse kw_args[] = {
         {
             .name = SV("-d"),
             .altname1 = SV("--depends-path"),
@@ -322,7 +323,7 @@ int main(int argc, char**argv){
             .dest = ARGDEST(&reformat_only),
             .help = "Instead of rendering to html, render to .dnd with trailing  "
                     "spaces removed, text wrapped to 80 columns (if semantically "
-                    "equivelant), etc. Imports will not be resolved - only the "
+                    "equivalent), etc. Imports will not be resolved - only the "
                     "given input file will be imported."
                     ,
         },
@@ -974,7 +975,7 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
     // flags |= DNDC_DONT_PRINT_ERRORS;
     flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
-    flags |= DNDC_PRINT_STATS;
+    // flags |= DNDC_PRINT_STATS;
     // gross, move to caller.
     static Base64Cache cache = {.allocator._vtable = &MallocVtable};
     auto e = run_the_dndc(flags, base_directory, source_text, output, LS(""), &cache);

@@ -191,6 +191,54 @@ static NSImage* appimage;
 @end
 
 @implementation DndTextView
+-(void)indent:(id)sender{
+    auto r = self.selectedRange;
+    NSRange currentLineRange = [self.string lineRangeForRange:r];
+    int adjustment = 0;
+    [self insertText:@"  " replacementRange:NSMakeRange(currentLineRange.location, 0)];
+    adjustment += 2;
+    //               -1 to not do final newline
+    for(int i = 0; i < currentLineRange.length-1; i++){
+        auto c = [self.string characterAtIndex:i+currentLineRange.location+adjustment];
+        if(c == '\n'){
+            [self insertText:@"  " replacementRange:NSMakeRange(currentLineRange.location + i + 1 + adjustment, 0)];
+            adjustment += 2;
+        }
+    }
+    auto adjustedrange = NSMakeRange(currentLineRange.location, currentLineRange.length+adjustment);
+    if(r.length > 0)
+        [self setSelectedRange:adjustedrange];
+}
+-(void)dedent:(id)sender{
+    auto r = self.selectedRange;
+    NSRange currentLineRange = [self.string lineRangeForRange:r];
+    int adjustment = 0;
+    int n_leading_space = 0;  // negative means no longer counting leading spaces.
+    for(int i = 0; i < currentLineRange.length-1; i++){
+        auto c = [self.string characterAtIndex:i+currentLineRange.location+adjustment];
+        if(c == '\n'){
+            n_leading_space = 0;
+            continue;
+        }
+        if(n_leading_space < 0){
+            continue;
+        }
+        if(c == ' '){
+            n_leading_space++;
+            if(n_leading_space == 2){
+                auto range = NSMakeRange(currentLineRange.location+adjustment+i-1, 2);
+                [self insertText:@"" replacementRange:range];
+                n_leading_space = -1;
+                adjustment -= 2;
+            }
+            continue;
+        }
+        n_leading_space = -1;
+    }
+    auto adjustedrange = NSMakeRange(currentLineRange.location, currentLineRange.length+adjustment);
+    if(r.length > 0)
+        [self setSelectedRange:adjustedrange];
+}
 -(void)ensure_pattern{
     // TODO: maybe this should be a getter instead?
     if(!indent_pattern)
@@ -294,6 +342,10 @@ static NSImage* appimage;
     item = [[NSMenuItem alloc] initWithTitle:@"Copy" action:@selector(copy:) keyEquivalent:@""];
     [result addItem:item];
     item = [[NSMenuItem alloc] initWithTitle:@"Paste" action:@selector(paste:) keyEquivalent:@""];
+    [result addItem:item];
+    item = [[NSMenuItem alloc] initWithTitle:@"Indent" action:@selector(indent:) keyEquivalent:@""];
+    [result addItem:item];
+    item = [[NSMenuItem alloc] initWithTitle:@"Dedent" action:@selector(dedent:) keyEquivalent:@""];
     [result addItem:item];
     [result addItem:[NSMenuItem separatorItem]];
 
@@ -801,6 +853,8 @@ static void do_menus(void){
         [editMenu addItemWithTitle:@"Cut" action:@selector(cut:) keyEquivalent:@"x"];
         [editMenu addItemWithTitle:@"Copy" action:@selector(copy:) keyEquivalent:@"c"];
         [editMenu addItemWithTitle:@"Paste" action:@selector(paste:) keyEquivalent:@"v"];
+        [editMenu addItemWithTitle:@"Indent" action:@selector(indent:) keyEquivalent:@">"];
+        [editMenu addItemWithTitle:@"Dedent" action:@selector(dedent:) keyEquivalent:@"<"];
         [editMenu addItem:[NSMenuItem separatorItem]];
         [editMenu addItemWithTitle:@"Select All" action:@selector(selectAll:) keyEquivalent:@"a"];
         [editMenu addItemWithTitle:@"Format" action:@selector(format_dnd:) keyEquivalent:@"J"];
