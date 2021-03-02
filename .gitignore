@@ -13,3 +13,4 @@ PythonEmbed/frozen
 *.html
 FuzzCorpus
 opt.mak
+.cache

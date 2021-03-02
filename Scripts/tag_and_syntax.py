@@ -33,7 +33,10 @@ class IdentInfo(NamedTuple):
     filename : str
 
     def as_tag(self) -> str:
-        fn = os.path.relpath(self.filename)
+        try:
+            fn = os.path.relpath(self.filename)
+        except ValueError: # this can throw on windows if drives differ
+            fn = self.filename
         if '..' in fn:
             fn = self.filename
         line = self.line.replace('\\', '\\\\')

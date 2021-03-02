@@ -4,6 +4,10 @@
 #include "dndc_funcs.h"
 #include "str_util.h"
 
+#ifdef WINDOWS
+typedef long long ssize_t;
+#endif
+
 enum {FORMAT_WIDTH=80};
 enum {FORMAT_INDENT=2};
 const char* _Nonnull const EIGHTYSPACES = "                                                                                ";

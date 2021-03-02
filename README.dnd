@@ -459,6 +459,9 @@ But Wait, There's More::md
     border-collapse: collapse;
     margin:auto;
   }
+  body {
+    font-family: "Helvetica", "Verdana", "Tahoma', sans;
+  }
 
   @media only screen and (max-width: 720px) {
     nav {
