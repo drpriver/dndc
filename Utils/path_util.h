@@ -130,8 +130,8 @@ path_strip_extension(StringView path){
 //
 static inline
 void
-msb_append_path(Nonnull(MStringBuilder*)sb, const Allocator a, Nonnull(const char*) restrict path, size_t length){
-    _check_msb_size(sb, a, length+1);
+msb_append_path(Nonnull(MStringBuilder*)sb, Nonnull(const char*) restrict path, size_t length){
+    _check_msb_size(sb, length+1);
     if(sb->cursor)
         sb->data[sb->cursor++] = '/';
     memcpy(sb->data + sb->cursor, path, length);

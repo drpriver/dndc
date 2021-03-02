@@ -271,17 +271,16 @@ static NSImage* appimage;
 }
 
 -(void)insert_block:(NSString*)path at:(NSRange)r indent_amount:(NSInteger)indent_amount name:(StringView)blockname{
-    MStringBuilder sb = {};
-    Allocator a = get_mallocator();
-    msb_reserve(&sb, a, 256);
-    msb_write_str(&sb, a, blockname.text, blockname.length);
+    MStringBuilder sb = {.allocator=get_mallocator()};
+    msb_reserve(&sb, 256);
+    msb_write_str(&sb, blockname.text, blockname.length);
     for(size_t i = 0; i < indent_amount+2; i++){
-        msb_write_char(&sb, a, ' ');
+        msb_write_char(&sb, ' ');
     }
     const char* cpath = [path UTF8String];
-    msb_write_str(&sb, a, cpath, strlen(cpath));
-    msb_write_char(&sb, a, '\n');
-    auto strdata = msb_detach(&sb, a);
+    msb_write_str(&sb, cpath, strlen(cpath));
+    msb_write_char(&sb, '\n');
+    auto strdata = msb_detach(&sb);
     PushDiagnostic();
     SuppressCastQual();
     NSData* data = [NSData dataWithBytesNoCopy:(void*)strdata.text length:strdata.length freeWhenDone:YES];
@@ -290,24 +289,23 @@ static NSImage* appimage;
     [self insertText:to_insert replacementRange:r];
 }
 -(void)insert_imglinks_block:(NSString*)path at:(NSRange)r indent_amount:(NSInteger)indent_amount size:(NSSize)size{
-    MStringBuilder sb = {};
-    Allocator a = get_mallocator();
-    msb_reserve(&sb, a, 256);
-    msb_write_literal(&sb, a, "::imglinks\n");
+    MStringBuilder sb = {.allocator = get_mallocator()};
+    msb_reserve(&sb, 256);
+    msb_write_literal(&sb, "::imglinks\n");
 #define DO_INDENT() do{\
-        msb_reserve(&sb, a, indent_amount+2); \
+        msb_reserve(&sb, indent_amount+2); \
         memset(sb.data+sb.cursor, ' ', indent_amount+2); \
         sb.cursor += indent_amount+2; \
     }while(0)
 
     DO_INDENT();
     const char* imgpath = [path UTF8String];
-    msb_write_str(&sb, a, imgpath, strlen(imgpath));
-    msb_write_char(&sb, a, '\n');
+    msb_write_str(&sb, imgpath, strlen(imgpath));
+    msb_write_char(&sb, '\n');
     double scale = Min(800.0/size.width, 800.0/size.height);
-    DO_INDENT(); msb_sprintf(&sb, a,       "width = %d\n", (int)(size.width*scale));
-    DO_INDENT(); msb_sprintf(&sb, a,       "height = %d\n", (int)(size.height*scale));
-    DO_INDENT(); msb_sprintf(&sb, a,       "viewBox = 0 0 %d %d\n", (int)size.width, (int)size.height);
+    DO_INDENT(); msb_sprintf(&sb, "width = %d\n", (int)(size.width*scale));
+    DO_INDENT(); msb_sprintf(&sb, "height = %d\n", (int)(size.height*scale));
+    DO_INDENT(); msb_sprintf(&sb, "viewBox = 0 0 %d %d\n", (int)size.width, (int)size.height);
     StringView script[] = {
         SV("::python\n"),
         SV("  # this is an example of how to script the imglinks\n"),
@@ -323,10 +321,10 @@ static NSImage* appimage;
     };
     for(int i = 0; i < arrlen(script); i++){
         DO_INDENT();
-        msb_write_str(&sb, a, script[i].text, script[i].length);
+        msb_write_str(&sb, script[i].text, script[i].length);
     }
 #undef DO_INDENT
-    auto strdata = msb_detach(&sb, a);
+    auto strdata = msb_detach(&sb);
     PushDiagnostic();
     SuppressCastQual();
     NSData* data = [NSData dataWithBytesNoCopy:(void*)strdata.text length:strdata.length freeWhenDone:YES];

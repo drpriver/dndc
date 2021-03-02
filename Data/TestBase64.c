@@ -5,13 +5,12 @@
 
 TestFunction(TestBase64){
     TESTBEGIN();
-    auto a = get_mallocator();
-    MStringBuilder sb = {};
+    MStringBuilder sb = {.allocator=get_mallocator()};
     {
         StringView text = SV("any carnal pleasur");
-        msb_write_b64(&sb, a, text.text, text.length);
+        msb_write_b64(&sb, text.text, text.length);
         StringView gt = SV("YW55IGNhcm5hbCBwbGVhc3Vy");
-        auto encoded = msb_borrow(&sb, a);
+        auto encoded = msb_borrow(&sb);
         TestExpectEquals(gt.length, encoded.length);
         TestExpectEquals(strcmp(gt.text, encoded.text), 0);
         char decoded[sizeof("any carnal pleasur")] = {};
@@ -22,9 +21,9 @@ TestFunction(TestBase64){
     }
     {
         StringView text = SV("any carnal pleasure.");
-        msb_write_b64(&sb, a, text.text, text.length);
+        msb_write_b64(&sb, text.text, text.length);
         StringView gt = SV("YW55IGNhcm5hbCBwbGVhc3VyZS4");
-        auto encoded = msb_borrow(&sb, a);
+        auto encoded = msb_borrow(&sb);
         TestExpectEquals(encoded.length, gt.length);
         TestExpectEquals(strcmp(encoded.text, gt.text), 0);
         char decoded[sizeof("any carnal pleasure.")] = {};
@@ -35,8 +34,8 @@ TestFunction(TestBase64){
     }
     {
         uint64_t data[] = {0x7812231, 0xdeadbeef, 0xcafebabe, 0x1337f00d, 0x888a6a96};
-        msb_write_b64(&sb, a, data, sizeof(data));
-        auto encoded = msb_borrow(&sb, a);
+        msb_write_b64(&sb, data, sizeof(data));
+        auto encoded = msb_borrow(&sb);
         uint64_t decoded[arrlen(data)] = {};
         auto e = base64_decode(decoded, sizeof(decoded), (const uint8_t*)encoded.text, encoded.length);
         TestExpectSuccess(e);
@@ -48,7 +47,7 @@ TestFunction(TestBase64){
         auto e2 = base64_decode(shortbuff, sizeof(shortbuff), (const uint8_t*)encoded.text, encoded.length);
         TestExpectFailure(e2);
     }
-    msb_destroy(&sb, a);
+    msb_destroy(&sb);
     TESTEND();
     }
 
@@ -64,16 +63,16 @@ TestFunction(TestBase64_2){
     }
     {
         uint8_t data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 11};
-        MStringBuilder sb = {};
-        msb_write_b64(&sb, a,  data, sizeof(data));
-        StringView encoded = msb_borrow(&sb, a);
+        MStringBuilder sb = {.allocator=a};
+        msb_write_b64(&sb,  data, sizeof(data));
+        StringView encoded = msb_borrow(&sb);
         StringView expected = SV("AQIDBAUGBwgJCw");
         TestExpectTrue(SV_equals(encoded, expected));
         uint8_t decoded[arrlen(data)] = {};
         auto e = base64_decode(decoded, sizeof(decoded), (const uint8_t*)encoded.text, encoded.length);
         TestExpectSuccess(e);
         TestExpectEquals(memcmp(decoded, data, sizeof(data)), 0);
-        msb_destroy(&sb, a);
+        msb_destroy(&sb);
     }
     TESTEND();
     }

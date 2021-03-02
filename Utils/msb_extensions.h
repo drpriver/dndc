@@ -24,8 +24,8 @@
 //
 static inline
 int
-msb_write_kebab(Nonnull(MStringBuilder*)msb, const Allocator a, Nonnull(const char*)text, size_t length){
-    msb_reserve(msb, a, length);
+msb_write_kebab(Nonnull(MStringBuilder*)msb, Nonnull(const char*)text, size_t length){
+    msb_reserve(msb, length);
     auto data = msb->data;
     auto cursor = msb->cursor;
     int n_written = 0;
@@ -66,10 +66,10 @@ msb_write_kebab(Nonnull(MStringBuilder*)msb, const Allocator a, Nonnull(const ch
 //  "this is some text." -> "This Is Some Text."
 static inline
 void
-msb_write_title(Nonnull(MStringBuilder*) restrict msb, const Allocator a, Nonnull(const char*) restrict str, size_t len){
+msb_write_title(Nonnull(MStringBuilder*) restrict msb, Nonnull(const char*) restrict str, size_t len){
     if(not len)
         return;
-    _check_msb_size(msb, a, len);
+    _check_msb_size(msb, len);
     bool wants_cap = true;
     for(size_t i = 0; i < len; i++){
         char c = str[i];
@@ -99,8 +99,8 @@ msb_write_title(Nonnull(MStringBuilder*) restrict msb, const Allocator a, Nonnul
 // need them.
 static inline
 void
-msb_write_json_escaped_str(Nonnull(MStringBuilder*)restrict sb, const Allocator a, Nonnull(const char*)restrict str, size_t length){
-    _check_msb_size(sb, a, length*2);
+msb_write_json_escaped_str(Nonnull(MStringBuilder*)restrict sb, Nonnull(const char*)restrict str, size_t length){
+    _check_msb_size(sb, length*2);
     auto data = sb->data;
     auto cursor = sb->cursor;
     for(size_t i = 0; i < length; i++){

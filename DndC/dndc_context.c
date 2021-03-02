@@ -46,30 +46,30 @@ printf_func(3, 4)
 static
 void
 parse_set_err(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, Nonnull(const char*) fmt, ...){
-    MStringBuilder msb = {};
+    MStringBuilder msb = {.allocator = ctx->allocator};
     int col = (int)(errchar - ctx->linestart);
-    msb_sprintf(&msb, ctx->allocator, "%.*s:%d:%d: ", (int)ctx->filename.length, ctx->filename.text, ctx->lineno+1, col+1);
+    msb_sprintf(&msb, "%.*s:%d:%d: ", (int)ctx->filename.length, ctx->filename.text, ctx->lineno+1, col+1);
     va_list args;
     va_start(args, fmt);
-    msb_vsprintf(&msb, ctx->allocator, fmt, args);
+    msb_vsprintf(&msb, fmt, args);
     va_end(args);
-    ctx->error_message = msb_detach(&msb, ctx->allocator);
+    ctx->error_message = msb_detach(&msb);
     }
 
 printf_func(3, 4)
 static
 void
 node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...){
-    MStringBuilder msb = {};
+    MStringBuilder msb = {.allocator=ctx->allocator};
     auto filename = node->filename;
     auto lineno = node->row;
     int col = node->col;
-    msb_sprintf(&msb, ctx->allocator, "%.*s:%d:%d: ", (int)filename.length, filename.text, lineno+1, col+1);
+    msb_sprintf(&msb, "%.*s:%d:%d: ", (int)filename.length, filename.text, lineno+1, col+1);
     va_list args;
     va_start(args, fmt);
-    msb_vsprintf(&msb, ctx->allocator, fmt, args);
+    msb_vsprintf(&msb, fmt, args);
     va_end(args);
-    ctx->error_message = msb_detach(&msb, ctx->allocator);
+    ctx->error_message = msb_detach(&msb);
     }
 
 printf_func(3, 4)
@@ -78,18 +78,18 @@ void
 node_print_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...){
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
-    MStringBuilder msb = {};
+    MStringBuilder msb = {.allocator=ctx->temp_allocator};
     auto filename = node->filename;
     auto lineno = node->row;
     int col = node->col;
-    msb_sprintf(&msb, ctx->temp_allocator, "%.*s:%d:%d: ", (int)filename.length, filename.text, lineno+1, col+1);
+    msb_sprintf(&msb, "%.*s:%d:%d: ", (int)filename.length, filename.text, lineno+1, col+1);
     va_list args;
     va_start(args, fmt);
-    msb_vsprintf(&msb, ctx->temp_allocator, fmt, args);
+    msb_vsprintf(&msb, fmt, args);
     va_end(args);
-    auto msg = msb_borrow(&msb, ctx->temp_allocator);
+    auto msg = msb_borrow(&msb);
     fprintf(stderr, "%s\n", msg.text);
-    msb_destroy(&msb, ctx->temp_allocator);
+    msb_destroy(&msb);
     }
 
 printf_func(3, 4)
@@ -100,18 +100,18 @@ node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(c
         return;
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
-    MStringBuilder msb = {};
+    MStringBuilder msb = {.allocator=ctx->temp_allocator};
     auto filename = node->filename;
     auto lineno = node->row;
     int col = node->col;
-    msb_sprintf(&msb, ctx->temp_allocator, "%.*s:%d:%d: ", (int)filename.length, filename.text, lineno+1, col+1);
+    msb_sprintf(&msb, "%.*s:%d:%d: ", (int)filename.length, filename.text, lineno+1, col+1);
     va_list args;
     va_start(args, fmt);
-    msb_vsprintf(&msb, ctx->temp_allocator, fmt, args);
+    msb_vsprintf(&msb, fmt, args);
     va_end(args);
-    auto msg = msb_borrow(&msb, ctx->temp_allocator);
+    auto msg = msb_borrow(&msb);
     fprintf(stderr, "%s\n", msg.text);
-    msb_destroy(&msb, ctx->temp_allocator);
+    msb_destroy(&msb);
     }
 
 printf_func(2, 3)
@@ -159,27 +159,27 @@ ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
             return (Errorable(LongString)){.result=builtin->sourcetext};
             }
         }
-    MStringBuilder temp_builder = {};
+    MStringBuilder temp_builder = {.allocator=ctx->temp_allocator};
     if(!sourcepath.length){
         return (Errorable(LongString)){.errored=UNEXPECTED_END};
         }
     assert(sourcepath.length);
 
     if(not path_is_abspath(sourcepath) && ctx->base_directory.length){
-        msb_write_str(&temp_builder, ctx->temp_allocator, ctx->base_directory.text, ctx->base_directory.length);
-        msb_append_path(&temp_builder, ctx->temp_allocator, sourcepath.text, sourcepath.length);
-        sourcepath = msb_borrow(&temp_builder, ctx->temp_allocator);
+        msb_write_str(&temp_builder, ctx->base_directory.text, ctx->base_directory.length);
+        msb_append_path(&temp_builder, sourcepath.text, sourcepath.length);
+        sourcepath = msb_borrow(&temp_builder);
         }
     // check if we already have it.
     for(size_t i = 0; i < ctx->loaded_files.count; i++){
         auto loaded = &ctx->loaded_files.data[i];
         if(LS_SV_equals(loaded->sourcepath, sourcepath)){
-            msb_destroy(&temp_builder, ctx->temp_allocator);
+            msb_destroy(&temp_builder);
             return (Errorable(LongString)){.result=loaded->sourcetext};
             }
         }
     char* path = Allocator_strndup(ctx->allocator, sourcepath.text, sourcepath.length);
-    msb_destroy(&temp_builder, ctx->temp_allocator);
+    msb_destroy(&temp_builder);
 
     auto before = get_t();
     auto load_err = read_file(ctx->allocator, path);
@@ -200,16 +200,16 @@ ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
 static
 Errorable_f(LongString)
 ctx_load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath){
-    MStringBuilder path_builder = {};
+    MStringBuilder path_builder = {.allocator=ctx->temp_allocator};
     if(not path_is_abspath(binarypath) && ctx->base_directory.length){
-        msb_write_str(&path_builder, ctx->temp_allocator, ctx->base_directory.text, ctx->base_directory.length);
-        msb_append_path(&path_builder, ctx->temp_allocator, binarypath.text, binarypath.length);
-        binarypath = LS_to_SV(msb_detach(&path_builder, ctx->temp_allocator));
+        msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
+        msb_append_path(&path_builder, binarypath.text, binarypath.length);
+        binarypath = LS_to_SV(msb_detach(&path_builder));
         }
     ByteBuilder bb = {.allocator = ctx->allocator};
     auto result = load_processed_binary_file(&ctx->b64cache, binarypath, &bb);
     bb_destroy(&bb);
-    msb_destroy(&path_builder, ctx->temp_allocator);
+    msb_destroy(&path_builder);
     return result;
     }
 
@@ -228,17 +228,17 @@ load_processed_binary_file(Nonnull(Base64Cache*)cache, StringView binarypath, No
 
     // We don't have it, try to load it ourselves.
     auto a = cache->allocator;
-    MStringBuilder sb = {};
-    msb_write_str(&sb, a, binarypath.text, binarypath.length);
-    auto path = msb_borrow(&sb, a);
+    MStringBuilder sb = {.allocator = a};
+    msb_write_str(&sb, binarypath.text, binarypath.length);
+    auto path = msb_borrow(&sb);
 
     auto base64ed_e = read_and_base64_bin_file(bb, a, path.text);
     if(base64ed_e.errored){
-        msb_destroy(&sb, a);
+        msb_destroy(&sb);
         return (Errorable(LongString)){.errored = base64ed_e.errored};
         }
     auto base64ed = unwrap(base64ed_e);
-    auto sourcepath = msb_detach(&sb, a);
+    auto sourcepath = msb_detach(&sb);
     auto loaded = Marray_alloc(LoadedSource)(&cache->processed_binary_files, a);
     loaded->sourcepath = sourcepath;
     loaded->sourcetext = base64ed;
@@ -293,13 +293,13 @@ add_link_from_sv(Nonnull(DndcContext*)ctx, StringView str, bool check_valid){
         ctx->error_message = LS("no '=' in a link node");
         Raise(PARSE_ERROR);
         }
-    MStringBuilder sb = {};
-    msb_write_kebab(&sb, ctx->allocator, str.text, equals - str.text);
+    MStringBuilder sb = {.allocator=ctx->allocator};
+    msb_write_kebab(&sb, str.text, equals - str.text);
     if(!sb.cursor){
         ctx->error_message = LS("key is empty");
         Raise(PARSE_ERROR);
         }
-    auto key = LS_to_SV(msb_detach(&sb, ctx->allocator));
+    auto key = LS_to_SV(msb_detach(&sb));
     StringView value = stripped_view(equals + 1, (str.text+str.length)-(equals+1));
     if(!value.length){
         ctx->error_message = LS("link target is empty");
@@ -329,14 +329,14 @@ add_link_from_sv(Nonnull(DndcContext*)ctx, StringView str, bool check_valid){
 static inline
 void
 add_link_from_header(Nonnull(DndcContext*)ctx, StringView str){
-    MStringBuilder sb = {};
-    msb_write_char(&sb, ctx->allocator, '#');
-    msb_write_kebab(&sb, ctx->allocator, str.text, str.length);
+    MStringBuilder sb = {.allocator=ctx->allocator};
+    msb_write_char(&sb, '#');
+    msb_write_kebab(&sb, str.text, str.length);
     if(sb.cursor==1){
-        msb_destroy(&sb, ctx->allocator);
+        msb_destroy(&sb);
         return;
         }
-    LongString anchor = msb_detach(&sb, ctx->allocator);
+    LongString anchor = msb_detach(&sb);
     StringView kebabed = {.text = anchor.text+1, .length=anchor.length-1};
     auto li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
     li->key = kebabed;

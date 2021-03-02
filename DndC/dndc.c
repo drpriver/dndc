@@ -87,10 +87,10 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
                     *sv = child->header;
                     }
                 else {
-                    MStringBuilder path_builder = {};
-                    msb_write_str(&path_builder, ctx->allocator, ctx->base_directory.text, ctx->base_directory.length);
-                    msb_append_path(&path_builder, ctx->allocator, child->header.text, child->header.length);
-                    *sv = LS_to_SV(msb_detach(&path_builder, ctx->allocator));
+                    MStringBuilder path_builder = {.allocator=ctx->allocator};
+                    msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
+                    msb_append_path(&path_builder, child->header.text, child->header.length);
+                    *sv = LS_to_SV(msb_detach(&path_builder));
                     }
                 }
             }
@@ -127,16 +127,16 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             auto node = get_node(ctx, handle);
             if(node->type != NODE_PYTHON)
                 continue;
-            MStringBuilder msb = {};
+            MStringBuilder msb = {.allocator=ctx->allocator};
             for(auto j = 0; j < node->children.count; j++){
                 auto child = node->children.data[j];
                 auto child_node = get_node(ctx, child);
-                msb_write_str(&msb, ctx->allocator, child_node->header.text, child_node->header.length);
-                msb_write_char(&msb, ctx->allocator, '\n');
+                msb_write_str(&msb, child_node->header.text, child_node->header.length);
+                msb_write_char(&msb, '\n');
                 }
             if(!msb.cursor)
                 continue;
-            auto str = msb_detach(&msb, ctx->allocator);
+            auto str = msb_detach(&msb);
             auto py_err = execute_python_string(ctx, str.text, handle);
             if(py_err.errored){
                 report_error(flags, "%s", ctx->error_message.text);
@@ -436,7 +436,6 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
     if(flags & DNDC_REFORMAT_ONLY)
         flags |= DNDC_NO_PYTHON;
     auto t0 = get_t();
-    MStringBuilder msb = {};
     Errorable(void) result = {};
     StringView path;
     if(flags & DNDC_SOURCE_PATH_IS_DATA_NOT_PATH)
@@ -474,6 +473,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
             (Base64Cache){.allocator = cache_allocator};
             }),
         };
+    MStringBuilder msb = {.allocator=ctx.allocator};
     ctx_add_builtins(&ctx);
     LongString source;
     if(flags & DNDC_SOURCE_PATH_IS_DATA_NOT_PATH){
@@ -481,17 +481,17 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         }
     else if(!path.length){
         // read from stdin
-        MStringBuilder sb = {};
+        MStringBuilder sb = {.allocator=ctx.allocator};
         for(;;){
             enum {N = 4096};
-            msb_reserve(&sb, ctx.allocator, N);
+            msb_reserve(&sb, N);
             char* buff = sb.data + sb.cursor;
             auto numread = fread(buff, 1, N, stdin);
             sb.cursor += numread;
             if(numread != N)
                 break;
             }
-        source = msb_detach(&sb, ctx.allocator);
+        source = msb_detach(&sb);
         }
     else {
         auto source_err = ctx_load_source_file(&ctx, path);
@@ -535,7 +535,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         auto after = get_t();
         report_stat(ctx.flags, "Formatting took: %.3fms", (after-before)/1000.);
 
-        auto str = msb_borrow(&msb, ctx.allocator);
+        auto str = msb_borrow(&msb);
         auto before_write = get_t();
         if(flags & DNDC_OUTPUT_PATH_IS_OUT_PARAM){
             assert(output_path);
@@ -725,7 +725,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
     // Render data nodes into the data blob.
     {
         auto before_data = get_t();
-        MStringBuilder sb = {};
+        MStringBuilder sb = {.allocator=ctx.allocator};
         for(size_t i = 0; i < ctx.data_nodes.count; i++){
             auto handle = ctx.data_nodes.data[i];
             auto data_node = get_node(&ctx, handle);
@@ -761,7 +761,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
                     node_print_warning(&ctx, child, "Rendered a data node with no data. Not outputting it.");
                     continue;
                     }
-                auto text = msb_detach(&sb, ctx.allocator);
+                auto text = msb_detach(&sb);
                 auto di = Marray_alloc(DataItem)(&ctx.rendered_data, ctx.allocator);
                 di->key = child->header;
                 di->value = text;
@@ -784,7 +784,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
             result.errored = e.errored;
             goto cleanup;
             }
-        auto str = msb_borrow(&msb, ctx.allocator);
+        auto str = msb_borrow(&msb);
         auto before_write = get_t();
         if(flags & DNDC_OUTPUT_PATH_IS_OUT_PARAM){
             assert(output_path);
@@ -835,21 +835,21 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
                 }
             }
         msb_reset(&msb);
-        msb_write_str(&msb, ctx.allocator, outpath.text, outpath.length);
-        msb_write_char(&msb, ctx.allocator, ':');
+        msb_write_str(&msb, outpath.text, outpath.length);
+        msb_write_char(&msb, ':');
         for(size_t i = 0; i < ctx.dependencies.count; i++){
             auto dep = &ctx.dependencies.data[i];
-            msb_write_char(&msb, ctx.allocator, ' ');
-            msb_write_str(&msb, ctx.allocator, dep->text, dep->length);
+            msb_write_char(&msb, ' ');
+            msb_write_str(&msb, dep->text, dep->length);
             }
-        msb_write_char(&msb, ctx.allocator, '\n');
+        msb_write_char(&msb, '\n');
         // generate empty rules so deleted files don't fail the build
         for(size_t i = 0; i < ctx.dependencies.count; i++){
             auto dep = &ctx.dependencies.data[i];
-            msb_write_str(&msb, ctx.allocator, dep->text, dep->length);
-            msb_write_literal(&msb, ctx.allocator, ":\n");
+            msb_write_str(&msb, dep->text, dep->length);
+            msb_write_literal(&msb, ":\n");
             }
-        auto deptext = msb_borrow(&msb, ctx.allocator);
+        auto deptext = msb_borrow(&msb);
         auto write_err = write_file(depends_path.text, deptext.text, deptext.length);
         if(write_err.errored){
             ERROR("Error on write: %s", get_error_name(write_err));
@@ -860,7 +860,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         }
     success:;
     cleanup:;
-    msb_destroy(&msb, ctx.allocator);
+    msb_destroy(&msb);
     report_stat(ctx.flags, "la_.high_water = %zu", la_.high_water);
     if(!(flags & DNDC_NO_CLEANUP)){
         auto before = get_t();

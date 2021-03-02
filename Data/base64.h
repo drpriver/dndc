@@ -263,11 +263,11 @@ base64_encode(Nonnull(char*) restrict dst, size_t dst_length, Nonnull(const void
 // Writes the base64 representation of the data buffer into the builder.
 static inline
 void
-msb_write_b64(Nonnull(MStringBuilder*)restrict sb, const Allocator a, Nonnull(const void*) data, size_t length){
+msb_write_b64(Nonnull(MStringBuilder*)restrict sb, Nonnull(const void*) data, size_t length){
     size_t size_needed = base64_encode_size(length);
     if(unlikely(!size_needed))
         return;
-    _check_msb_size(sb, a, size_needed);
+    _check_msb_size(sb, size_needed);
     size_t size_used = base64_encode(sb->data + sb->cursor, size_needed, data, length);
     assert(size_used == size_needed);
     sb->cursor += size_used;

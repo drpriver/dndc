@@ -4,12 +4,11 @@
 
 TestFunction(TestMStringBuilder1){
     TESTBEGIN();
-    auto a = get_mallocator();
-    MStringBuilder sb = {};
-    msb_sprintf(&sb, a, "%s = %d\n", "hello there", 5);
-    auto s = msb_borrow(&sb, a);
+    MStringBuilder sb = {.allocator=get_mallocator()};
+    msb_sprintf(&sb, "%s = %d\n", "hello there", 5);
+    auto s = msb_borrow(&sb);
     TestExpectEquals(memcmp(s.text, "hello there = 5\n", s.length), 0);
-    msb_destroy(&sb, a);
+    msb_destroy(&sb);
     TESTEND();
     }
 

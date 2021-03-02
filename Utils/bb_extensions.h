@@ -132,9 +132,9 @@ read_and_base64_bin_file(Nonnull(ByteBuilder*)bb, const Allocator a, Nonnull(con
     if(e.errored)
         Raise(e.errored);
     auto buff = bb_borrow(bb);
-    MStringBuilder sb = {};
-    msb_write_b64(&sb, a, buff.buff, buff.n_bytes);
-    result.result = msb_detach(&sb, a);
+    MStringBuilder sb = {.allocator=a};
+    msb_write_b64(&sb, buff.buff, buff.n_bytes);
+    result.result = msb_detach(&sb);
     bb_reset(bb);
     return result;
     }

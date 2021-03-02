@@ -293,21 +293,20 @@ static
 Nullable(PyObject*)
 DndClasses_repr(Nonnull(DndClassesList*)list){
     auto node = get_node(list->ctx, list->handle);
-    auto allocator = list->ctx->temp_allocator;
-    MStringBuilder msb = {};
-    msb_write_char(&msb, allocator, '[');
+    MStringBuilder msb = {.allocator=list->ctx->temp_allocator};
+    msb_write_char(&msb, '[');
     for(size_t i = 0; i < node->classes.count; i++){
         if(i != 0)
-            msb_write_str(&msb, allocator, ", ", 2);
-        msb_write_char(&msb, allocator, '\'');
+            msb_write_str(&msb, ", ", 2);
+        msb_write_char(&msb, '\'');
         auto sv = node->classes.data[i];
-        msb_write_str(&msb, allocator, sv.text, sv.length);
-        msb_write_char(&msb, allocator, '\'');
+        msb_write_str(&msb, sv.text, sv.length);
+        msb_write_char(&msb, '\'');
         }
-    msb_write_char(&msb, allocator, ']');
-    auto str = msb_borrow(&msb, allocator);
+    msb_write_char(&msb, ']');
+    auto str = msb_borrow(&msb);
     auto result = PyUnicode_FromStringAndSize(str.text, str.length);
-    msb_destroy(&msb, allocator);
+    msb_destroy(&msb);
     return result;
     }
 
@@ -465,30 +464,29 @@ static
 Nullable(PyObject*)
 DndAttributesMap_repr(Nonnull(DndAttributesMap*)map){
     auto node = get_node(map->ctx, map->handle);
-    auto allocator = map->ctx->temp_allocator;
     auto attributes = &node->attributes;
     auto count = attributes->count;
-    MStringBuilder msb = {};
-    msb_write_char(&msb, allocator, '{');
+    MStringBuilder msb = {.allocator = map->ctx->temp_allocator};
+    msb_write_char(&msb, '{');
     for(size_t i = 0; i < count; i++){
         auto attr = &attributes->data[i];
         if(i != 0)
-            msb_write_str(&msb, allocator, ", ", 2);
-        msb_write_char(&msb, allocator, '\'');
+            msb_write_str(&msb,  ", ", 2);
+        msb_write_char(&msb,  '\'');
         auto key = attr->key;
-        msb_write_str(&msb, allocator, key.text, key.length);
-        msb_write_char(&msb, allocator, '\'');
-        msb_write_char(&msb, allocator, ':');
-        msb_write_char(&msb, allocator, ' ');
-        msb_write_char(&msb, allocator, '\'');
+        msb_write_str(&msb, key.text, key.length);
+        msb_write_char(&msb, '\'');
+        msb_write_char(&msb, ':');
+        msb_write_char(&msb, ' ');
+        msb_write_char(&msb, '\'');
         auto val = attr->value;
-        msb_write_str(&msb, allocator, val.text, val.length);
-        msb_write_char(&msb, allocator, '\'');
+        msb_write_str(&msb, val.text, val.length);
+        msb_write_char(&msb, '\'');
         }
-    msb_write_char(&msb, allocator, '}');
-    auto str = msb_borrow(&msb, allocator);
+    msb_write_char(&msb, '}');
+    auto str = msb_borrow(&msb);
     auto result = PyUnicode_FromStringAndSize(str.text, str.length);
-    msb_destroy(&msb, allocator);
+    msb_destroy(&msb);
     return result;
     }
 
@@ -589,21 +587,20 @@ Nullable(PyObject*)
 DndNode_repr(Nonnull(DndNode*)self){
     auto node = get_node(self->ctx, self->handle);
     // format a buffer as python apparently doesn't support %.*s
-    auto allocator = self->ctx->temp_allocator;
-    MStringBuilder msb = {};
+    MStringBuilder msb = {.allocator=self->ctx->temp_allocator};
     if(not node->classes.count)
-        msb_sprintf(&msb, allocator, "Node(%s, '%.*s', [%d children])",  nodenames[node->type].text, (int)node->header.length, node->header.text, (int)node->children.count);
+        msb_sprintf(&msb, "Node(%s, '%.*s', [%d children])",  nodenames[node->type].text, (int)node->header.length, node->header.text, (int)node->children.count);
     else {
-        msb_sprintf(&msb, allocator, "Node(%s", nodenames[node->type].text);
+        msb_sprintf(&msb, "Node(%s", nodenames[node->type].text);
         for(size_t i = 0; i < node->classes.count;i++){
             auto class = &node->classes.data[i];
-            msb_sprintf(&msb, allocator, ".%.*s", (int)class->length, class->text);
+            msb_sprintf(&msb, ".%.*s", (int)class->length, class->text);
             }
-        msb_sprintf(&msb, allocator, ", '%.*s', [%d children])",   (int)node->header.length, node->header.text, (int)node->children.count);
+        msb_sprintf(&msb, ", '%.*s', [%d children])",   (int)node->header.length, node->header.text, (int)node->children.count);
     }
-    auto text = msb_borrow(&msb, allocator);
+    auto text = msb_borrow(&msb);
     auto result = PyUnicode_FromStringAndSize(text.text, text.length);
-    msb_destroy(&msb, allocator);
+    msb_destroy(&msb);
     return result;
     }
 
@@ -630,7 +627,6 @@ py_node_set_err(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)a
     PyErr_SetString(PyExc_Exception, "Node threw error.");
     return NULL;
     }
-
 
 static
 Nullable(PyObject*)
@@ -702,11 +698,11 @@ py_kebab(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nu
         return NULL;
         }
     PopDiagnostic();
-    MStringBuilder sb = {};
-    msb_write_kebab(&sb, ctx->temp_allocator, text, length);
-    auto kebabed = msb_borrow(&sb, ctx->temp_allocator);
+    MStringBuilder sb = {.allocator=ctx->temp_allocator};
+    msb_write_kebab(&sb, text, length);
+    auto kebabed = msb_borrow(&sb);
     PyObject* result = PyUnicode_FromStringAndSize(kebabed.text, kebabed.length);
-    msb_destroy(&sb, ctx->temp_allocator);
+    msb_destroy(&sb);
     return result;
     }
 

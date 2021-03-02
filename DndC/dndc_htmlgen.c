@@ -43,12 +43,11 @@ static
 Errorable_f(void)
 render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
     Errorable(void) result = {};
-    auto a = ctx->allocator;
     auto imgcount = ctx->img_nodes.count + ctx->imglinks_nodes.count;
     // estimate memory usage as 120 characters per node and 200 kb images.
     auto reserve_amount = ctx->nodes.count*120 + imgcount*200*1024;
-    msb_reserve(msb, a, reserve_amount);
-    msb_write_literal(msb, a,
+    msb_reserve(msb, reserve_amount);
+    msb_write_literal(msb,
         "<!DOCTYPE html>\n"
         "<html lang=\"en\">\n"
         "<head>\n"
@@ -56,32 +55,32 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=yes\">\n"
         );
     if(!ctx->rendered_data.count){
-        msb_write_literal(msb, a, "<script>\nconst data_blob = {};\n</script>\n");
+        msb_write_literal(msb, "<script>\nconst data_blob = {};\n</script>\n");
         }
     else{
-        msb_write_literal(msb, a, "<script>\nconst data_blob = {");
+        msb_write_literal(msb, "<script>\nconst data_blob = {");
         for(size_t i = 0; i < ctx->rendered_data.count; i++){
             auto data = &ctx->rendered_data.data[i];
-            msb_write_char(msb, a, '"');
-            msb_write_str(msb, a, data->key.text, data->key.length);
-            msb_write_literal(msb, a, "\": \"");
-            msb_write_json_escaped_str(msb, a, data->value.text, data->value.length);
-            msb_write_literal(msb, a, "\",\n");
+            msb_write_char(msb, '"');
+            msb_write_str(msb, data->key.text, data->key.length);
+            msb_write_literal(msb, "\": \"");
+            msb_write_json_escaped_str(msb, data->value.text, data->value.length);
+            msb_write_literal(msb, "\",\n");
             }
-        msb_write_literal(msb, a, "};\n</script>\n");
+        msb_write_literal(msb, "};\n</script>\n");
         }
     if(!NodeHandle_eq(ctx->titlenode, INVALID_NODE_HANDLE)){
         auto n = get_node(ctx, ctx->titlenode);
-        msb_sprintf(msb, a, "<title>%.*s</title>\n", (int)n->header.length, n->header.text);
+        msb_sprintf(msb, "<title>%.*s</title>\n", (int)n->header.length, n->header.text);
         }
     else {
         auto filename = path_basename(path_strip_extension(LS_to_SV(ctx->outputfile)));
-        msb_write_literal(msb, a, "<title>");
-        msb_write_title(msb, a, filename.text, filename.length);
-        msb_write_literal(msb, a, "</title>\n");
+        msb_write_literal(msb, "<title>");
+        msb_write_title(msb, filename.text, filename.length);
+        msb_write_literal(msb, "</title>\n");
         }
     if(ctx->stylesheets_nodes.count){
-        msb_write_literal(msb, a, "<style>\n");
+        msb_write_literal(msb, "<style>\n");
         for(size_t i = 0; i < ctx->stylesheets_nodes.count; i++){
             auto node = get_node(ctx, ctx->stylesheets_nodes.data[i]);
             // python nodes can change node types after they are registered
@@ -94,8 +93,8 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                         node_print_warning(ctx, child, "Non-string child of a style sheet is being ignored.");
                         continue;
                         }
-                    msb_write_str(msb, a, child->header.text, child->header.length);
-                    msb_write_char(msb, a, '\n');
+                    msb_write_str(msb, child->header.text, child->header.length);
+                    msb_write_char(msb, '\n');
                     }
                 }
             else{
@@ -113,15 +112,15 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                         Raise(style_e.errored);
                         }
                     auto style = unwrap(style_e);
-                    msb_write_str(msb, a, style.text, style.length);
+                    msb_write_str(msb, style.text, style.length);
                     }
                 }
             }
-        msb_write_literal(msb, a, "</style>\n");
+        msb_write_literal(msb, "</style>\n");
         }
     if(ctx->script_nodes.count){
         for(size_t i = 0; i < ctx->script_nodes.count; i++){
-            msb_write_literal(msb, a, "<script>\n");
+            msb_write_literal(msb, "<script>\n");
             auto node = get_node(ctx, ctx->script_nodes.data[i]);
             // python nodes can change node types after they are registered
             if(unlikely(node->type != NODE_SCRIPTS))
@@ -135,10 +134,10 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                         }
                     auto header = child->header;
                     if(header.length)
-                        msb_write_str(msb, a, header.text, header.length);
-                    msb_write_char(msb, a, '\n');
+                        msb_write_str(msb, header.text, header.length);
+                    msb_write_char(msb, '\n');
                     }
-                msb_write_literal(msb, a, "</script>\n");
+                msb_write_literal(msb, "</script>\n");
                 continue;
                 }
             for(size_t j = 0; j < node->children.count; j++){
@@ -155,17 +154,17 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                     Raise(script_e.errored);
                     }
                 auto script = unwrap(script_e);
-                msb_write_str(msb, a, script.text, script.length);
+                msb_write_str(msb, script.text, script.length);
                 }
-            msb_write_literal(msb, a, "</script>\n");
+            msb_write_literal(msb, "</script>\n");
             }
         }
-    msb_write_literal(msb, a, "</head>\n");
-    msb_write_literal(msb, a, "<body>\n");
+    msb_write_literal(msb, "</head>\n");
+    msb_write_literal(msb, "<body>\n");
     auto root_node = get_node(ctx, ctx->root_handle);
     auto e = render_node(ctx, msb, root_node, 1);
     if(e.errored) return e;
-    msb_write_literal(msb, a,
+    msb_write_literal(msb,
         "</body>\n"
         "</html>\n"
         );
@@ -178,12 +177,11 @@ static void build_nav_block_children(Nonnull(DndcContext*), NodeHandle, Nonnull(
 static
 void
 build_nav_block(Nonnull(DndcContext*)ctx){
-    MStringBuilder sb = {};
-    auto a = ctx->allocator;
-    msb_write_literal(&sb, a, "<nav>\n<ul>\n");
+    MStringBuilder sb = {.allocator=ctx->allocator};
+    msb_write_literal(&sb, "<nav>\n<ul>\n");
     build_nav_block_node(ctx, ctx->root_handle, &sb, 1);
-    msb_write_literal(&sb, a, "</ul>\n</nav>");
-    ctx->renderednav = msb_detach(&sb, ctx->allocator);
+    msb_write_literal(&sb, "</ul>\n</nav>");
+    ctx->renderednav = msb_detach(&sb);
     }
 
 static
@@ -210,19 +208,19 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
                 if(likely(!id)){
                     id = &node->header;
                     }
-                msb_write_literal(sb, a, "<li><a href=\"#");
-                msb_write_kebab(sb, a, id->text, id->length);
-                msb_sprintf(sb, a, "\">%.*s</a>\n<ul>\n", (int)node->header.length, node->header.text);
+                msb_write_literal(sb, "<li><a href=\"#");
+                msb_write_kebab(sb, id->text, id->length);
+                msb_sprintf(sb, "\">%.*s</a>\n<ul>\n", (int)node->header.length, node->header.text);
                 // kind of a hack
                 auto cursor = sb->cursor;
                 build_nav_block_children(ctx, handle, sb, depth+1);
                 if(cursor != sb->cursor){
-                    msb_write_literal(sb, a, "</ul>\n");
+                    msb_write_literal(sb, "</ul>\n");
                     }
                 else{
                     msb_erase(sb, sizeof("\n<ul>\n")-1);
                     }
-                msb_write_literal(sb, a, "</li>\n");
+                msb_write_literal(sb,"</li>\n");
                 break;
                 }
             // fall-through
@@ -254,10 +252,10 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
                 if(likely(!id)){
                     id = &node->header;
                     }
-                msb_write_literal(sb, a, "<li><a href=\"#");
-                msb_write_kebab(sb, a, id->text, id->length);
-                msb_sprintf(sb, a, "\">%.*s</a>", (int)node->header.length, node->header.text);
-                msb_write_literal(sb, a, "</li>\n");
+                msb_write_literal(sb, "<li><a href=\"#");
+                msb_write_kebab(sb, id->text, id->length);
+                msb_sprintf(sb, "\">%.*s</a>", (int)node->header.length, node->header.text);
+                msb_write_literal(sb, "</li>\n");
                 }
             break;
         }
@@ -283,17 +281,17 @@ write_tag_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, Nul
         char c = text[i];
         switch(c){
             case '&':
-                msb_write_literal(sb, ctx->allocator, "&amp;");
+                msb_write_literal(sb, "&amp;");
                 break;
             case '<':
-                msb_write_literal(sb, ctx->allocator, "&lt;");
+                msb_write_literal(sb, "&lt;");
                 break;
             case '>':
-                msb_write_literal(sb, ctx->allocator, "&gt;");
+                msb_write_literal(sb, "&gt;");
                 break;
             case '\r':
             case '\f':
-                msb_write_char(sb, ctx->allocator, ' ');
+                msb_write_char(sb, ' ');
                 break;
             // Don't print control characters.
             case  0 ... 8:
@@ -301,7 +299,7 @@ write_tag_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, Nul
             case 14 ... 31:
                 break;
             default:
-                msb_write_char(sb, ctx->allocator, c);
+                msb_write_char(sb, c);
                 break;
             }
         }
@@ -316,40 +314,40 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
         char c = text[i];
         switch(c){
             case '[':{
-                msb_write_literal(sb, ctx->allocator, "<a href=\"");
+                msb_write_literal(sb, "<a href=\"");
                 const char* closing_brace = memchr(text+i, ']', length-i);
                 if(!closing_brace){
-                    MStringBuilder eb = {};
-                    msb_sprintf(&eb, ctx->allocator, "%.*s:%d:%d: Unterminated '['", (int)node->filename.length, node->filename.text, node->row+1, node->col+1+(int)i);
-                    ctx->error_message = msb_detach(&eb, ctx->allocator);
+                    MStringBuilder eb = {.allocator=ctx->allocator};
+                    msb_sprintf(&eb, "%.*s:%d:%d: Unterminated '['", (int)node->filename.length, node->filename.text, node->row+1, node->col+1+(int)i);
+                    ctx->error_message = msb_detach(&eb);
                     Raise(PARSE_ERROR);
                     }
                 size_t link_length = closing_brace - (text+i);
                 {
-                    MStringBuilder temp = {};
-                    msb_write_kebab(&temp, ctx->temp_allocator, text+i+1, link_length-1);
-                    auto temp_str = msb_borrow(&temp, ctx->temp_allocator);
+                    MStringBuilder temp = {.allocator=ctx->temp_allocator};
+                    msb_write_kebab(&temp, text+i+1, link_length-1);
+                    auto temp_str = msb_borrow(&temp);
                     auto value = find_link_target(ctx, temp_str);
                     if(!value){
                         if(ctx->flags & DNDC_ALLOW_BAD_LINKS){
                             node_print_warning(ctx, node, "Unable to resolve link '%.*s'", (int)temp_str.length, temp_str.text);
-                            msb_write_str(sb, ctx->allocator, temp_str.text, temp_str.length);
+                            msb_write_str(sb, temp_str.text, temp_str.length);
                             }
                         else {
                             node_set_err(ctx, node, "Unable to resolve link '%.*s'", (int)temp_str.length, temp_str.text);
-                            msb_destroy(&temp, ctx->temp_allocator);
+                            msb_destroy(&temp);
                             Raise(PARSE_ERROR);
                             }
                         }
                     else {
                         StringView* val = value;
-                        msb_write_str(sb, ctx->allocator, val->text, val->length);
+                        msb_write_str(sb, val->text, val->length);
                         }
-                    msb_destroy(&temp, ctx->temp_allocator);
+                    msb_destroy(&temp);
                 }
-                msb_write_literal(sb, ctx->allocator, "\">");
-                msb_write_str(sb, ctx->allocator, text+i+1, link_length-1);
-                msb_write_literal(sb, ctx->allocator, "</a>");
+                msb_write_literal(sb, "\">");
+                msb_write_str(sb, text+i+1, link_length-1);
+                msb_write_literal(sb, "</a>");
                 i += link_length;
                 continue;
                 }break;
@@ -360,20 +358,20 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
                         if(i < length - 2){
                             auto peek2 = text[i+2];
                             if(peek2 == '-'){
-                                msb_write_literal(sb, ctx->allocator, "&mdash;");
+                                msb_write_literal(sb, "&mdash;");
                                 i += 2;
                                 continue;
                                 }
                             }
-                            msb_write_literal(sb, ctx->allocator, "&ndash;");
+                            msb_write_literal(sb, "&ndash;");
                             i += 1;
                             continue;
                         }
                     }
-                msb_write_char(sb, ctx->allocator, c);
+                msb_write_char(sb, c);
                 }break;
             case '&':{
-                msb_write_literal(sb, ctx->allocator, "&amp;");
+                msb_write_literal(sb, "&amp;");
                 }break;
             case '<':{
                 // we allow inline <b>, <s>, <i>, </b>, </s>, </i>
@@ -386,20 +384,20 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
                         case '/':
                             break;
                         default:
-                            msb_write_literal(sb, ctx->allocator, "&lt;");
+                            msb_write_literal(sb, "&lt;");
                             continue;
                         }
                     if(i < length - 2){
                         auto peek2 = text[i+2];
                         if(peek1 != '/'){
                             if(peek2 == '>'){
-                                msb_write_char(sb, ctx->allocator, c);
-                                msb_write_char(sb, ctx->allocator, peek1);
-                                msb_write_char(sb, ctx->allocator, peek2);
+                                msb_write_char(sb, c);
+                                msb_write_char(sb, peek1);
+                                msb_write_char(sb, peek2);
                                 i += 2;
                                 continue;
                                 }
-                            msb_write_literal(sb, ctx->allocator, "&lt;");
+                            msb_write_literal(sb, "&lt;");
                             continue;
                             }
                         switch(peek2){
@@ -408,30 +406,30 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
                             case 'i':
                                 break;
                             default:
-                                msb_write_literal(sb, ctx->allocator, "&lt;");
+                                msb_write_literal(sb, "&lt;");
                                 continue;
                             }
                         if(i < length - 3){
                             auto peek3 = text[i+3];
                             if(peek3 == '>'){
-                                msb_write_char(sb, ctx->allocator, c);
-                                msb_write_char(sb, ctx->allocator, peek1);
-                                msb_write_char(sb, ctx->allocator, peek2);
-                                msb_write_char(sb, ctx->allocator, peek3);
+                                msb_write_char(sb, c);
+                                msb_write_char(sb, peek1);
+                                msb_write_char(sb, peek2);
+                                msb_write_char(sb, peek3);
                                 i += 3;
                                 continue;
                                 }
                             }
                         }
                     }
-                msb_write_literal(sb, ctx->allocator, "&lt;");
+                msb_write_literal(sb, "&lt;");
                 }break;
             case '>':{
-                msb_write_literal(sb, ctx->allocator, "&gt;");
+                msb_write_literal(sb, "&gt;");
                 }break;
             case '\r':
             case '\f':{
-                msb_write_char(sb, ctx->allocator, ' ');
+                msb_write_char(sb, ' ');
                 }break;
             // Don't print control characters.
             case  0 ... 8:
@@ -439,7 +437,7 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
             case 14 ... 31:{
                 }break;
             default:{
-                msb_write_char(sb, ctx->allocator, c);
+                msb_write_char(sb, c);
                 }break;
             }
         }
@@ -451,18 +449,18 @@ Errorable_f(void)
 write_header(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(const char*)text, size_t length, Nonnull(const Node*)node, int header_level){
     bool no_id = node_has_attribute(node, SV("noid"));
     if(no_id)
-        msb_sprintf(sb, ctx->allocator, "<h%d>", header_level);
+        msb_sprintf(sb, "<h%d>", header_level);
     else{
         auto id = node_get_attribute(node, SV("id"));
         const char* id_text = id?id->text:text;
         size_t id_length = id?id->length:length;
-        msb_sprintf(sb, ctx->allocator, "<h%d id=\"", header_level);
-        msb_write_kebab(sb, ctx->allocator, id_text, id_length);
-        msb_write_literal(sb, ctx->allocator, "\">");
+        msb_sprintf(sb, "<h%d id=\"", header_level);
+        msb_write_kebab(sb, id_text, id_length);
+        msb_write_literal(sb, "\">");
         }
     auto e = write_link_escaped_str(ctx, sb, text, length, node);
     if(e.errored) return e;
-    msb_sprintf(sb, ctx->allocator, "</h%d>", header_level);
+    msb_sprintf(sb, "</h%d>", header_level);
     return (Errorable(void)){};
     }
 
@@ -472,15 +470,15 @@ write_classes(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(cons
     auto count = node->classes.count;
     if(!count) return;
     auto classes = node->classes.data;
-    msb_write_literal(sb, ctx->allocator, " class=\"");
+    msb_write_literal(sb, " class=\"");
     for(size_t i = 0; i < count; i++){
         if(i != 0){
-            msb_write_char(sb, ctx->allocator, ' ');
+            msb_write_char(sb, ' ');
             }
         auto c = &classes[i];
-        msb_write_str(sb, ctx->allocator, c->text, c->length);
+        msb_write_str(sb, c->text, c->length);
         }
-    msb_write_char(sb, ctx->allocator, '"');
+    msb_write_char(sb, '"');
     return;
     }
 
@@ -505,19 +503,19 @@ RENDERFUNC(STRING){
         node_print_warning(ctx, node, "Ignoring children of string node");
     auto e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
     if(e.errored) return e;
-    msb_write_char(sb, ctx->allocator, '\n');
+    msb_write_char(sb, '\n');
     return (Errorable(void)){};
     }
 
 RENDERFUNC(TEXT){
-    msb_write_literal(sb, ctx->allocator, "<div");
+    msb_write_literal(sb, "<div");
     write_classes(ctx, sb, node);
-    msb_write_literal(sb, ctx->allocator, ">\n");
+    msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
         auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
         if(e.errored) return e;
-        msb_write_char(sb, ctx->allocator, '\n');
+        msb_write_char(sb, '\n');
         }
     auto children = &node->children;
     auto count = children->count;
@@ -526,18 +524,18 @@ RENDERFUNC(TEXT){
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "</div>\n");
+    msb_write_literal(sb, "</div>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(DIV){
-    msb_write_literal(sb, ctx->allocator, "<div");
+    msb_write_literal(sb, "<div");
     write_classes(ctx, sb, node);
-    msb_write_literal(sb, ctx->allocator, ">\n");
+    msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
         auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
         if(e.errored) return e;
-        msb_write_char(sb, ctx->allocator, '\n');
+        msb_write_char(sb, '\n');
         }
     auto children = &node->children;
     auto count = children->count;
@@ -546,7 +544,7 @@ RENDERFUNC(DIV){
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "</div>\n");
+    msb_write_literal(sb, "</div>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(NAV){
@@ -557,7 +555,7 @@ RENDERFUNC(NAV){
     if(node->children.count){
         node_print_warning(ctx, node, "Children on navs unsupported");
         }
-    msb_write_str(sb, ctx->allocator, ctx->renderednav.text, ctx->renderednav.length);
+    msb_write_str(sb, ctx->renderednav.text, ctx->renderednav.length);
     return (Errorable(void)){};
     }
 RENDERFUNC(PARA){
@@ -568,7 +566,7 @@ RENDERFUNC(PARA){
     if(node->header.length){
         node_print_warning(ctx, node, "Ignoring header on paragraph node");
         }
-    msb_write_literal(sb, ctx->allocator, "<p>\n");
+    msb_write_literal(sb, "<p>\n");
     auto count = node->children.count;
     auto children = node->children.data;
     for(size_t i = 0; i < count; i++){
@@ -577,13 +575,13 @@ RENDERFUNC(PARA){
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "</p>\n");
+    msb_write_literal(sb, "</p>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(TITLE){
     auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
     if(e.errored) return e;
-    msb_write_char(sb, ctx->allocator, '\n');
+    msb_write_char(sb, '\n');
     if(node->children.count){
         node_print_warning(ctx, node, "Ignoring children of title");
         }
@@ -595,7 +593,7 @@ RENDERFUNC(TITLE){
 RENDERFUNC(HEADING){
     auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
     if(e.errored) return e;
-    msb_write_char(sb, ctx->allocator, '\n');
+    msb_write_char(sb, '\n');
     if(node->children.count){
         node_print_warning(ctx, node, "Ignoring children of heading");
         }
@@ -605,15 +603,15 @@ RENDERFUNC(HEADING){
     return (Errorable(void)){};
     }
 RENDERFUNC(TABLE){
-    msb_write_literal(sb, ctx->allocator, "<div");
+    msb_write_literal(sb, "<div");
     write_classes(ctx, sb, node);
-    msb_write_literal(sb, ctx->allocator, ">\n");
+    msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
         auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "<table>\n<thead>\n");
+    msb_write_literal(sb, "<table>\n<thead>\n");
     auto count = node->children.count;
     auto children = node->children.data;
     if(count){
@@ -623,40 +621,40 @@ RENDERFUNC(TABLE){
             return (Errorable(void)){.errored=GENERIC_ERROR};
             }
         // inline rendering table row here so we can do heads
-        msb_write_literal(sb, ctx->allocator, "<tr>\n");
+        msb_write_literal(sb, "<tr>\n");
         auto child_count = child->children.count;
         auto child_children = child->children.data;
         for(size_t i = 0; i < child_count; i++){
             auto child_child = get_node(ctx, child_children[i]);
-            msb_write_literal(sb, ctx->allocator, "<th>");
+            msb_write_literal(sb, "<th>");
             auto e = render_node(ctx, sb, child_child, header_depth);
             if(e.errored) return e;
-            msb_write_literal(sb, ctx->allocator, "</th>\n");
+            msb_write_literal(sb, "</th>\n");
             }
-        msb_write_literal(sb, ctx->allocator, "</tr>\n");
+        msb_write_literal(sb, "</tr>\n");
         }
-    msb_write_literal(sb, ctx->allocator, "</thead>\n<tbody>\n");
+    msb_write_literal(sb, "</thead>\n<tbody>\n");
     for(size_t i = 1; i < count; i++){
         auto child = get_node(ctx, children[i]);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "</tbody></table>\n</div>\n");
+    msb_write_literal(sb, "</tbody></table>\n</div>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(TABLE_ROW){
     // TODO: odd even class?
-    msb_write_literal(sb, ctx->allocator, "<tr>\n");
+    msb_write_literal(sb, "<tr>\n");
     auto count = node->children.count;
     auto children = node->children.data;
     for(size_t i = 0; i < count; i++){
         auto child = get_node(ctx, children[i]);
-        msb_write_literal(sb, ctx->allocator, "<td>");
+        msb_write_literal(sb, "<td>");
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        msb_write_literal(sb, ctx->allocator, "</td>\n");
+        msb_write_literal(sb, "</td>\n");
         }
-    msb_write_literal(sb, ctx->allocator, "</tr>\n");
+    msb_write_literal(sb, "</tr>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(STYLESHEETS){
@@ -709,14 +707,14 @@ RENDERFUNC(IMPORT){
     }
 RENDERFUNC(IMAGE){
     Errorable(void) result = {};
-    msb_write_literal(sb, ctx->allocator, "<div");
+    msb_write_literal(sb, "<div");
     write_classes(ctx, sb, node);
-    msb_write_literal(sb, ctx->allocator, ">\n");
+    msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
         auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
         if(e.errored) return e;
-        msb_write_char(sb, ctx->allocator, '\n');
+        msb_write_char(sb, '\n');
         }
     if(!node->children.count){
         node_set_err(ctx, node, "Image node missing any children (first should be a string that is path to the image");
@@ -741,11 +739,11 @@ RENDERFUNC(IMAGE){
             Raise(processed_e.errored);
             }
         else {
-            msb_write_literal(sb, ctx->allocator, "<img src=\"data:image/png;base64,");
+            msb_write_literal(sb, "<img src=\"data:image/png;base64,");
             auto b64 = unwrap(processed_e);
-            msb_write_str(sb, ctx->allocator, b64.text, b64.length);
+            msb_write_str(sb, b64.text, b64.length);
             }
-        msb_write_literal(sb, ctx->allocator, "\">");
+        msb_write_literal(sb, "\">");
     }
     auto count = children->count;
     for(size_t i = 1; i < count; i++){
@@ -753,7 +751,7 @@ RENDERFUNC(IMAGE){
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "</div>\n");
+    msb_write_literal(sb, "</div>\n");
     return result;
     }
 RENDERFUNC(BULLETS){
@@ -761,15 +759,15 @@ RENDERFUNC(BULLETS){
     // so that I don't output these divs unnnecessarily.
     // But maybe I should do that in the parse phase (distinguish between bullets
     // and nested bullets?).
-    msb_write_literal(sb, ctx->allocator, "<div");
+    msb_write_literal(sb, "<div");
     write_classes(ctx, sb, node);
-    msb_write_literal(sb, ctx->allocator, ">\n");
+    msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
         auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "<ul>\n");
+    msb_write_literal(sb, "<ul>\n");
     auto count = node->children.count;
     auto children = node->children.data;
     for(size_t i = 0; i < count; i++){
@@ -777,19 +775,19 @@ RENDERFUNC(BULLETS){
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "</ul>\n</div>\n");
+    msb_write_literal(sb, "</ul>\n</div>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(QUOTE){
-    msb_write_literal(sb, ctx->allocator, "<div");
+    msb_write_literal(sb, "<div");
     write_classes(ctx, sb, node);
-    msb_write_literal(sb, ctx->allocator, ">\n");
+    msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
         auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "<blockquote>\n");
+    msb_write_literal(sb, "<blockquote>\n");
     auto count = node->children.count;
     auto children = node->children.data;
     for(size_t i = 0; i < count; i++){
@@ -797,11 +795,11 @@ RENDERFUNC(QUOTE){
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "</blockquote>\n</div>\n");
+    msb_write_literal(sb, "</blockquote>\n</div>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(BULLET){
-    msb_write_literal(sb, ctx->allocator, "<li>\n");
+    msb_write_literal(sb, "<li>\n");
     if(unlikely(node->header.length))
         node_print_warning(ctx, node, "Ignoring header on bullet");
     if(unlikely(node->classes.count))
@@ -810,12 +808,12 @@ RENDERFUNC(BULLET){
     auto children = node->children.data;
     for(size_t i = 0; i < count; i++){
         if(i != 0)
-            msb_write_char(sb, ctx->allocator, ' ');
+            msb_write_char(sb, ' ');
         auto child = get_node(ctx, children[i]);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "</li>\n");
+    msb_write_literal(sb, "</li>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(PYTHON){
@@ -834,22 +832,22 @@ RENDERFUNC(RAW){
         auto child = get_node(ctx, children[i]);
         if(unlikely(child->type != NODE_STRING))
             node_print_warning(ctx, child, "Raw node with a non-string child");
-        msb_write_str(sb, ctx->allocator, child->header.text, child->header.length);
-        msb_write_char(sb, ctx->allocator, '\n');
+        msb_write_str(sb, child->header.text, child->header.length);
+        msb_write_char(sb, '\n');
         }
     (void)header_depth;
     return (Errorable(void)){};
     }
 RENDERFUNC(PRE){
-    msb_write_literal(sb, ctx->allocator, "<div");
+    msb_write_literal(sb, "<div");
     write_classes(ctx, sb, node);
-    msb_write_literal(sb, ctx->allocator, ">\n");
+    msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
         auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "<pre>\n");
+    msb_write_literal(sb, "<pre>\n");
     auto count = node->children.count;
     auto children = node->children.data;
     for(size_t i = 0; i < count; i++){
@@ -857,9 +855,9 @@ RENDERFUNC(PRE){
         if(unlikely(child->type != NODE_STRING))
             node_print_warning(ctx, child, "pre node with a non-string child");
         write_tag_escaped_str(ctx, sb, child->header.text, child->header.length);
-        msb_write_char(sb, ctx->allocator, '\n');
+        msb_write_char(sb, '\n');
         }
-    msb_write_literal(sb, ctx->allocator, "</pre>\n</div>\n");
+    msb_write_literal(sb, "</pre>\n</div>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(LIST){
@@ -867,15 +865,15 @@ RENDERFUNC(LIST){
     // so that I don't output these divs unnnecessarily.
     // But maybe I should do that in the parse phase (distinguish between lists
     // and nested lists?).
-    msb_write_literal(sb, ctx->allocator, "<div");
+    msb_write_literal(sb, "<div");
     write_classes(ctx, sb, node);
-    msb_write_literal(sb, ctx->allocator, ">\n");
+    msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
         auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "<ol>\n");
+    msb_write_literal(sb, "<ol>\n");
     auto count = node->children.count;
     auto children = node->children.data;
     for(size_t i = 0; i < count; i++){
@@ -883,11 +881,11 @@ RENDERFUNC(LIST){
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "</ol>\n</div>\n");
+    msb_write_literal(sb, "</ol>\n</div>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(LIST_ITEM){
-    msb_write_literal(sb, ctx->allocator, "<li>");
+    msb_write_literal(sb, "<li>");
     if(unlikely(node->header.length))
         node_print_warning(ctx, node, "ignoring header on list item");
     if(unlikely(node->classes.count))
@@ -896,24 +894,24 @@ RENDERFUNC(LIST_ITEM){
     auto children = node->children.data;
     for(size_t i = 0; i < count; i++){
         if(i != 0)
-            msb_write_char(sb, ctx->allocator, ' ');
+            msb_write_char(sb, ' ');
         auto child = get_node(ctx, children[i]);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "</li>\n");
+    msb_write_literal(sb, "</li>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(KEYVALUE){
-    msb_write_literal(sb, ctx->allocator, "<div");
+    msb_write_literal(sb, "<div");
     write_classes(ctx, sb, node);
-    msb_write_literal(sb, ctx->allocator, ">\n");
+    msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
         auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "<table><tbody>\n");
+    msb_write_literal(sb, "<table><tbody>\n");
     auto count = node->children.count;
     auto children = node->children.data;
     for(size_t i = 0; i < count; i++){
@@ -921,30 +919,30 @@ RENDERFUNC(KEYVALUE){
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "</tbody></table>\n</div>\n");
+    msb_write_literal(sb, "</tbody></table>\n</div>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(KEYVALUEPAIR){
     // TODO: maybe this should be lowered into a table row node?
     // TODO: odd even class?
-    msb_write_literal(sb, ctx->allocator, "<tr>\n");
+    msb_write_literal(sb, "<tr>\n");
     auto count = node->children.count;
     auto children = node->children.data;
     for(size_t i = 0; i < count; i++){
         auto child = get_node(ctx, children[i]);
-        msb_write_literal(sb, ctx->allocator, "<td>");
+        msb_write_literal(sb, "<td>");
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        msb_write_literal(sb, ctx->allocator, "</td>\n");
+        msb_write_literal(sb, "</td>\n");
         }
-    msb_write_literal(sb, ctx->allocator, "</tr>\n");
+    msb_write_literal(sb, "</tr>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(IMGLINKS){
     Errorable(void) result = {};
-    msb_write_literal(sb, ctx->allocator, "<div");
+    msb_write_literal(sb, "<div");
     write_classes(ctx, sb, node);
-    msb_write_literal(sb, ctx->allocator, ">\n");
+    msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
         auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
@@ -1091,13 +1089,13 @@ RENDERFUNC(IMGLINKS){
                 }
             }
     }
-    msb_sprintf(sb, ctx->allocator, "<svg width=\"%d\" height=\"%d\" viewbox=\"%d %d %d %d\" style=\"background-size: 100%% 100%%; background-image: url('data:image/png;base64,", width, height, viewbox[0], viewbox[1], viewbox[2], viewbox[3]);
+    msb_sprintf(sb, "<svg width=\"%d\" height=\"%d\" viewbox=\"%d %d %d %d\" style=\"background-size: 100%% 100%%; background-image: url('data:image/png;base64,", width, height, viewbox[0], viewbox[1], viewbox[2], viewbox[3]);
     auto before = get_t();
     assert(imgdatab64.length);
-    msb_write_str(sb, ctx->allocator, imgdatab64.text, imgdatab64.length);
+    msb_write_str(sb, imgdatab64.text, imgdatab64.length);
     auto after = get_t();
     report_stat(ctx->flags, "Base64ing an imglinks took %.3fms", (after-before)/1000.);
-    msb_write_literal(sb, ctx->allocator, "');\">\n");
+    msb_write_literal(sb, "');\">\n");
     for(size_t i = 4; i < node->children.count; i++){
         auto child = get_node(ctx, node->children.data[i]);
         if(child->type != NODE_STRING){
@@ -1141,13 +1139,13 @@ RENDERFUNC(IMGLINKS){
             Raise(y_err.errored);
             }
         auto y = unwrap(y_err);
-        msb_sprintf(sb, ctx->allocator,
+        msb_sprintf(sb,
                 "<a href=\"%.*s\"><text style=\"text-anchor:middle;\" transform=\"translate(%d,%d)\">\n"
                 "%.*s\n"
                 "</text></a>\n", (int)second.length, second.text, x, y, (int)first.length, first.text);
         }
-    msb_write_literal(sb, ctx->allocator, "</svg>\n");
-    msb_write_literal(sb, ctx->allocator, "</div>\n");
+    msb_write_literal(sb, "</svg>\n");
+    msb_write_literal(sb, "</div>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(DATA){
@@ -1167,14 +1165,14 @@ RENDERFUNC(COMMENT){
     return (Errorable(void)){};
     }
 RENDERFUNC(MD){
-    msb_write_literal(sb, ctx->allocator, "<div");
+    msb_write_literal(sb, "<div");
     write_classes(ctx, sb, node);
-    msb_write_literal(sb, ctx->allocator, ">\n");
+    msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
         auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
         if(e.errored) return e;
-        msb_write_char(sb, ctx->allocator, '\n');
+        msb_write_char(sb, '\n');
         }
     auto children = &node->children;
     auto count = children->count;
@@ -1183,7 +1181,7 @@ RENDERFUNC(MD){
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, ctx->allocator, "</div>\n");
+    msb_write_literal(sb, "</div>\n");
     return (Errorable(void)){};
     return (Errorable(void)){};
     }
