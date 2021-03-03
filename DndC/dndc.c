@@ -992,7 +992,7 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
     flags |= DNDC_ALLOW_BAD_LINKS;
     // idk how to do this one
     // flags |= DNDC_DONT_INLINE_IMAGES;
-    flags |= DNDC_PRINT_STATS;
+    // flags |= DNDC_PRINT_STATS;
     // gross, move to caller.
     static Base64Cache cache = {.allocator.type = ALLOCATOR_MALLOC};
     auto e = run_the_dndc(flags, base_directory, source_text, output, LS(""), &cache);

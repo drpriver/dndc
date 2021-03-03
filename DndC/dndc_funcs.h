@@ -174,6 +174,18 @@ Nullable(StringView*)
 node_get_attribute(Nonnull(const Node*) node, StringView attr);
 
 //
+// Retrieves the id of the node.
+// Handles the id being set via attribute.
+// If the node has empty header, returns NULL.
+//
+// Note that the pointer returned by this function is unstable.
+// Adding attributes can invalidate the pointer.
+//
+static inline
+Nullable(const StringView*)
+node_get_id(Nonnull(const Node*) node);
+
+//
 // Loads the text of a sourcefile given by sourcepath, or an error if
 // something went wrong.
 //

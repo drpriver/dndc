@@ -1090,6 +1090,22 @@ DndNode_getattr(Nonnull(DndNode*)obj, Nonnull(const char*)name){
     if(CHECK("err")){
         return make_node_bound_method(obj->ctx, obj->handle, &py_node_set_err);
         }
+    if(CHECK("id")){
+        auto node = get_node(obj->ctx, obj->handle);
+        auto id = node_get_id(node);
+        if(id){
+            MStringBuilder temp = {.allocator = obj->ctx->temp_allocator};
+            msb_write_kebab(&temp, id->text, id->length);
+            auto kebabed = msb_borrow(&temp);
+            auto result = PyUnicode_FromStringAndSize(kebabed.text, kebabed.length);
+            msb_destroy(&temp);
+            return result;
+            }
+        else {
+            PyErr_SetString(PyExc_AttributeError, "This node has no id");
+            return NULL;
+            }
+        }
     PyErr_Format(PyExc_AttributeError, "Unknown attribute: %s", name);
     return NULL;
     }

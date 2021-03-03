@@ -201,12 +201,9 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
         case NODE_IMGLINKS:
         case NODE_MD:
         case NODE_QUOTE:
-        case NODE_CONTAINER:
-            if(node->header.length and !node_has_attribute(node, SV("noid"))){
-                auto id = node_get_attribute(node, SV("id"));
-                if(likely(!id)){
-                    id = &node->header;
-                    }
+        case NODE_CONTAINER:{
+            auto id = node_get_id(node);
+            if(id){
                 msb_write_literal(sb, "<li><a href=\"#");
                 msb_write_kebab(sb, id->text, id->length);
                 msb_sprintf(sb, "\">%.*s</a>\n<ul>\n", (int)node->header.length, node->header.text);
@@ -223,6 +220,7 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
                 break;
                 }
             // fall-through
+            }
         case NODE_DATA: // this is a little sketchy
         case NODE_ROOT:
         case NODE_IMPORT:
@@ -244,18 +242,15 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
         case NODE_INVALID:
             break;
         case NODE_PRE:
-        case NODE_RAW:
-            if(node->header.length and !node_has_attribute(node, SV("noid"))){
-                auto id = node_get_attribute(node, SV("id"));
-                if(likely(!id)){
-                    id = &node->header;
-                    }
+        case NODE_RAW:{
+            auto id = node_get_id(node);
+            if(id){
                 msb_write_literal(sb, "<li><a href=\"#");
                 msb_write_kebab(sb, id->text, id->length);
                 msb_sprintf(sb, "\">%.*s</a>", (int)node->header.length, node->header.text);
                 msb_write_literal(sb, "</li>\n");
                 }
-            break;
+            }break;
         }
     }
 
@@ -444,19 +439,17 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
 
 static inline
 Errorable_f(void)
-write_header(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(const char*)text, size_t length, Nonnull(const Node*)node, int header_level){
-    bool no_id = node_has_attribute(node, SV("noid"));
-    if(no_id)
+write_header(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(const Node*)node, int header_level){
+    auto id = node_get_id(node);
+    if(!id){
         msb_sprintf(sb, "<h%d>", header_level);
+        }
     else{
-        auto id = node_get_attribute(node, SV("id"));
-        const char* id_text = id?id->text:text;
-        size_t id_length = id?id->length:length;
         msb_sprintf(sb, "<h%d id=\"", header_level);
-        msb_write_kebab(sb, id_text, id_length);
+        msb_write_kebab(sb, id->text, id->length);
         msb_write_literal(sb, "\">");
         }
-    auto e = write_link_escaped_str(ctx, sb, text, length, node);
+    auto e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
     if(e.errored) return e;
     msb_sprintf(sb, "</h%d>", header_level);
     return (Errorable(void)){};
@@ -511,7 +504,7 @@ RENDERFUNC(TEXT){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
+        auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         msb_write_char(sb, '\n');
         }
@@ -531,7 +524,7 @@ RENDERFUNC(DIV){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
+        auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         msb_write_char(sb, '\n');
         }
@@ -577,7 +570,7 @@ RENDERFUNC(PARA){
     return (Errorable(void)){};
     }
 RENDERFUNC(TITLE){
-    auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
+    auto e = write_header(ctx, sb, node, header_depth);
     if(e.errored) return e;
     msb_write_char(sb, '\n');
     if(node->children.count){
@@ -589,7 +582,7 @@ RENDERFUNC(TITLE){
     return (Errorable(void)){};
     }
 RENDERFUNC(HEADING){
-    auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
+    auto e = write_header(ctx, sb, node, header_depth);
     if(e.errored) return e;
     msb_write_char(sb, '\n');
     if(node->children.count){
@@ -606,7 +599,7 @@ RENDERFUNC(TABLE){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
+        auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         }
     msb_write_literal(sb, "<table>\n<thead>\n");
@@ -710,7 +703,7 @@ RENDERFUNC(IMAGE){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
+        auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         msb_write_char(sb, '\n');
         }
@@ -778,7 +771,7 @@ RENDERFUNC(BULLETS){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
+        auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         }
     msb_write_literal(sb, "<ul>\n");
@@ -798,7 +791,7 @@ RENDERFUNC(QUOTE){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
+        auto e = write_header(ctx, sb,  node, header_depth);
         if(e.errored) return e;
         }
     msb_write_literal(sb, "<blockquote>\n");
@@ -858,7 +851,7 @@ RENDERFUNC(PRE){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
+        auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         }
     msb_write_literal(sb, "<pre>\n");
@@ -884,7 +877,7 @@ RENDERFUNC(LIST){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
+        auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         }
     msb_write_literal(sb, "<ol>\n");
@@ -922,7 +915,7 @@ RENDERFUNC(KEYVALUE){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
+        auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         }
     msb_write_literal(sb, "<table><tbody>\n");
@@ -959,7 +952,7 @@ RENDERFUNC(IMGLINKS){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
+        auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         }
     if(node->children.count < 4){
@@ -1198,7 +1191,7 @@ RENDERFUNC(MD){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        auto e = write_header(ctx, sb, node->header.text, node->header.length, node, header_depth);
+        auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         msb_write_char(sb, '\n');
         }

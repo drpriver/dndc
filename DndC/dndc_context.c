@@ -42,6 +42,18 @@ node_get_attribute(Nonnull(const Node*) node, StringView attr){
     return NULL;
     }
 
+static inline
+Nullable(const StringView*)
+node_get_id(Nonnull(const Node*) node){
+    if(node_has_attribute(node, SV("noid")))
+        return NULL;
+    const StringView* id = node_get_attribute(node, SV("id"));
+    if(likely(!id)){
+        if(node->header.length)
+            id = &node->header;
+        }
+    return id;
+    }
 printf_func(3, 4)
 static
 void
@@ -442,16 +454,12 @@ gather_anchor(Nonnull(DndcContext*)ctx, NodeHandle handle){
         case NODE_IMGLINKS:
         case NODE_MD:
         case NODE_QUOTE:
-        case NODE_CONTAINER:
-            if(node->header.length and !node_has_attribute(node, SV("noid"))){
-                auto id = node_get_attribute(node, SV("id"));
-                if(unlikely(id)){
-                    add_link_from_header(ctx, *id);
-                    }
-                else{
-                    add_link_from_header(ctx, node->header);
-                    }
+        case NODE_CONTAINER:{
+            auto id = node_get_id(node);
+            if(id){
+                add_link_from_header(ctx, *id);
                 }
+            }
             // fall-through
         case NODE_DATA: // this is a little sketchy
         case NODE_ROOT:
