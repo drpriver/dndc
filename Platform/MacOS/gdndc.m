@@ -264,9 +264,12 @@ static NSImage* appimage;
         case GDND_INSERT_IMGLINKS:
             [self insert_imglinks_block:path at:r indent_amount:rel size:size];
             break;
+        PushDiagnostic();
+        SuppressCoveredSwitchDefault();
         default:
             NSLog(@"%s: Unknown insert_file_block tag given: %d", __func__, tag);
             break;
+        PopDiagnostic();
     }
 }
 

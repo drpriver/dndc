@@ -977,7 +977,7 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
     flags |= DNDC_ALLOW_BAD_LINKS;
     // flags |= DNDC_PRINT_STATS;
     // gross, move to caller.
-    static Base64Cache cache = {.allocator._vtable = &MallocVtable};
+    static Base64Cache cache = {.allocator.type = ALLOCATOR_MALLOC};
     auto e = run_the_dndc(flags, base_directory, source_text, output, LS(""), &cache);
     return e.errored;
     }

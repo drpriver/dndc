@@ -127,7 +127,7 @@ msb_write_str(Nonnull(MStringBuilder*) restrict msb, NullUnspec(const char*) res
     if(not len)
         return;
     _check_msb_size(msb, len);
-    memcpy(msb->data + msb->cursor, str, len);
+    (memcpy)(msb->data + msb->cursor, str, len);
     msb->cursor += len;
     }
 

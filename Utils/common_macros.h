@@ -163,6 +163,7 @@
 #define SuppressMissingBraces()  _Pragma("clang diagnostic ignored \"-Wmissing-braces\"")
 #define SuppressDoublePromotion() _Pragma("clang diagnostic ignored \"-Wdouble-promotion\"")
 #define SuppressCastFunction()
+#define SuppressCoveredSwitchDefault() _Pragma("clang diagnostic ignored \"-Wcovered-switch-default\"")
 #define PushDiagnostic() _Pragma("clang diagnostic push")
 #define PopDiagnostic() _Pragma("clang diagnostic pop")
 #elif defined(__GNUC__)
@@ -173,6 +174,7 @@
 #define SuppressDoublePromotion() _Pragma("GCC diagnostic ignored \"-Wdouble-promotion\"")
 #define SuppressMissingBraces()  _Pragma("GCC diagnostic ignored \"-Wmissing-braces\"")
 #define SuppressCastFunction() _Pragma("GCC diagnostic ignored \"-Wcast-function-type\"")
+#define SuppressCoveredSwitchDefault()
 #define PushDiagnostic() _Pragma("GCC diagnostic push")
 #define PopDiagnostic() _Pragma("GCC diagnostic pop")
 #else
@@ -183,6 +185,7 @@
 #define SuppressMissingBraces()
 #define SuppressDiscardQualifiers()
 #define SuppressDoublePromotion()
+#define SuppressCoveredSwitchDefault()
 #define PushDiagnostic()
 #define PopDiagnostic()
 #endif
@@ -199,7 +202,13 @@
  *   pointer points to.
  */
 #if defined(__GNUC__) || defined(__clang__)
-#define ALLOCATOR_SIZE(N) __attribute__((alloc_size(N)))
+//
+// With this defined and apple clang 1200.0.32.29, I was getting incorrect
+// __builtin_obj_size values which was causing it to generated ud2
+// instructions when _FORTIFY_SOURCE was defined.
+//
+// #define ALLOCATOR_SIZE(N) __attribute__((alloc_size(N)))
+#define ALLOCATOR_SIZE(...)
 #define MALLOC_FUNC __attribute__((malloc))
 #define likely(x)      __builtin_expect(!!(x), 1)
 #define unlikely(x)    __builtin_expect(!!(x), 0)

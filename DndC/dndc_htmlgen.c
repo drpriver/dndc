@@ -203,7 +203,6 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
         case NODE_QUOTE:
         case NODE_CONTAINER:
             if(node->header.length and !node_has_attribute(node, SV("noid"))){
-                auto a = ctx->allocator;
                 auto id = node_get_attribute(node, SV("id"));
                 if(likely(!id)){
                     id = &node->header;
@@ -247,7 +246,6 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
         case NODE_PRE:
         case NODE_RAW:
             if(node->header.length and !node_has_attribute(node, SV("noid"))){
-                auto a = ctx->allocator;
                 auto id = node_get_attribute(node, SV("id"));
                 if(likely(!id)){
                     id = &node->header;
@@ -276,7 +274,7 @@ build_nav_block_children(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MS
 
 static inline
 void
-write_tag_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, NullUnspec(const char*)text, size_t length){
+write_tag_escaped_str(Nonnull(MStringBuilder*)sb, NullUnspec(const char*)text, size_t length){
     for(size_t i = 0; i < length; i++){
         char c = text[i];
         switch(c){
@@ -466,7 +464,7 @@ write_header(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(const
 
 static inline
 void
-write_classes(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(const Node*)node){
+write_classes(Nonnull(MStringBuilder*)sb, Nonnull(const Node*)node){
     auto count = node->classes.count;
     if(!count) return;
     auto classes = node->classes.data;
@@ -509,7 +507,7 @@ RENDERFUNC(STRING){
 
 RENDERFUNC(TEXT){
     msb_write_literal(sb, "<div");
-    write_classes(ctx, sb, node);
+    write_classes(sb, node);
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
@@ -529,7 +527,7 @@ RENDERFUNC(TEXT){
     }
 RENDERFUNC(DIV){
     msb_write_literal(sb, "<div");
-    write_classes(ctx, sb, node);
+    write_classes(sb, node);
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
@@ -604,7 +602,7 @@ RENDERFUNC(HEADING){
     }
 RENDERFUNC(TABLE){
     msb_write_literal(sb, "<div");
-    write_classes(ctx, sb, node);
+    write_classes(sb, node);
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
@@ -708,7 +706,7 @@ RENDERFUNC(IMPORT){
 RENDERFUNC(IMAGE){
     Errorable(void) result = {};
     msb_write_literal(sb, "<div");
-    write_classes(ctx, sb, node);
+    write_classes(sb, node);
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
@@ -760,7 +758,7 @@ RENDERFUNC(BULLETS){
     // But maybe I should do that in the parse phase (distinguish between bullets
     // and nested bullets?).
     msb_write_literal(sb, "<div");
-    write_classes(ctx, sb, node);
+    write_classes(sb, node);
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
@@ -780,7 +778,7 @@ RENDERFUNC(BULLETS){
     }
 RENDERFUNC(QUOTE){
     msb_write_literal(sb, "<div");
-    write_classes(ctx, sb, node);
+    write_classes(sb, node);
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
@@ -840,7 +838,7 @@ RENDERFUNC(RAW){
     }
 RENDERFUNC(PRE){
     msb_write_literal(sb, "<div");
-    write_classes(ctx, sb, node);
+    write_classes(sb, node);
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
@@ -854,7 +852,7 @@ RENDERFUNC(PRE){
         auto child = get_node(ctx, children[i]);
         if(unlikely(child->type != NODE_STRING))
             node_print_warning(ctx, child, "pre node with a non-string child");
-        write_tag_escaped_str(ctx, sb, child->header.text, child->header.length);
+        write_tag_escaped_str(sb, child->header.text, child->header.length);
         msb_write_char(sb, '\n');
         }
     msb_write_literal(sb, "</pre>\n</div>\n");
@@ -866,7 +864,7 @@ RENDERFUNC(LIST){
     // But maybe I should do that in the parse phase (distinguish between lists
     // and nested lists?).
     msb_write_literal(sb, "<div");
-    write_classes(ctx, sb, node);
+    write_classes(sb, node);
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
@@ -904,7 +902,7 @@ RENDERFUNC(LIST_ITEM){
     }
 RENDERFUNC(KEYVALUE){
     msb_write_literal(sb, "<div");
-    write_classes(ctx, sb, node);
+    write_classes(sb, node);
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
@@ -941,7 +939,7 @@ RENDERFUNC(KEYVALUEPAIR){
 RENDERFUNC(IMGLINKS){
     Errorable(void) result = {};
     msb_write_literal(sb, "<div");
-    write_classes(ctx, sb, node);
+    write_classes(sb, node);
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
@@ -1166,7 +1164,7 @@ RENDERFUNC(COMMENT){
     }
 RENDERFUNC(MD){
     msb_write_literal(sb, "<div");
-    write_classes(ctx, sb, node);
+    write_classes(sb, node);
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;

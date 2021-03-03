@@ -3,7 +3,6 @@
 #include "common_macros.h"
 #include "ByteBuffer.h"
 #include "allocator.h"
-#include "mallocator.h"
 
 typedef struct ByteBuilder {
     size_t cursor;
@@ -20,7 +19,7 @@ static inline
 void
 force_inline
 _resize_bb(Nonnull(ByteBuilder*) bb, size_t size){
-    if(unlikely(!bb->allocator._vtable)){
+    if(unlikely(!bb->allocator.type)){
         bb->allocator = get_mallocator();
         }
     unsigned char* new_data = Allocator_realloc(bb->allocator, bb->data, bb->capacity, size);

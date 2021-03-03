@@ -9,7 +9,8 @@
 #include <stddef.h>
 #include "common_macros.h"
 #include "allocator.h"
-
+PushDiagnostic();
+SuppressUnusedFunction();
 //
 // A very simple allocator. All allocations are just advancing down a pointer in
 // a linear fashion. We support freeing, but only if it was the most recent
@@ -93,7 +94,7 @@ linear_reset(Nonnull(LinearAllocator*) s){
     }
 
 //
-// If alloced via malloc, cleansup the resources.
+// If alloced via malloc, cleans-up the resources.
 //
 static
 void
@@ -230,16 +231,6 @@ linear_realloc(Nonnull(LinearAllocator*)la, Nullable(void*)data, size_t orig_siz
     return result;
     }
 
-// The Allocator interface.
-static const AllocatorVtable LinearAllocatorVtable = {
-    .alloc = (alloc_func)linear_alloc,
-    .zalloc = (alloc_func)linear_zalloc,
-    .realloc = (realloc_func)linear_realloc,
-    .free = (free_func)linear_free,
-    .free_all = (free_all_func)linear_reset,
-    .cleanup = (cleanup_func)destroy_linear_storage,
-    };
-
 //
 // Turns a specific LinearAllocator into the erased Allocator. Take care
 // that the LinearAllocator outlives the Allocator!
@@ -249,9 +240,9 @@ Allocator
 allocator_from_la(Nonnull(LinearAllocator*)la){
     return (Allocator){
         ._data = la,
-        ._vtable = &LinearAllocatorVtable,
+        .type = ALLOCATOR_LINEAR,
         };
     }
 
-
+PopDiagnostic();
 #endif

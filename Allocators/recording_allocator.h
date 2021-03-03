@@ -183,22 +183,13 @@ merge_recorded_mallocators_and_destroy_src(const Allocator dst, const Allocator 
     // shallow_free_recorded_mallocator(src);
     }
 
-static AllocatorVtable RecordedAllocatorVtable = {
-    .alloc = (alloc_func)recording_alloc,
-    .zalloc = (alloc_func)recording_zalloc,
-    .realloc = (realloc_func)recording_realloc,
-    .free = (free_func)recording_free,
-    .free_all = (free_all_func)recording_free_all,
-    .cleanup = (cleanup_func)recording_cleanup,
-    };
-
 static
 Allocator
 new_recorded_mallocator(void){
     RecordingAllocator* ra = calloc(1, sizeof(*ra));
     return (Allocator){
         ._data = ra,
-        ._vtable = &RecordedAllocatorVtable,
+        .type = ALLOCATOR_RECORDED,
         };
     }
 

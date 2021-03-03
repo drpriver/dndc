@@ -8,29 +8,21 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include "common_macros.h"
+#include "linear_allocator_forward.h"
+#include "recording_allocator_forward.h"
 
-typedef Nonnull(void*) (* alloc_func)(Nullable(void*), size_t);
-typedef Nonnull(void*) (* realloc_func)(Nullable(void*), Nullable(void*), size_t, size_t);
-typedef void (*free_func)(Nullable(void*), Nullable(const void*), size_t);
-typedef void (*free_all_func)(Nonnull(void*));
-typedef void (*cleanup_func)(Nonnull(void*));
+enum AllocatorType {
+    ALLOCATOR_UNSET = 0,
+    ALLOCATOR_MALLOC = 1,
+    ALLOCATOR_LINEAR = 2,
+    ALLOCATOR_RECORDED = 3,
+    };
 
-/*
- * It's generally easier to just use the Allocator_* functions instead
- * of invoking these function pointers directly.
- */
-typedef struct AllocatorVtable {
-    const Nonnull(alloc_func) alloc;
-    const Nonnull(alloc_func) zalloc;
-    const Nonnull(realloc_func) realloc;
-    const Nonnull(free_func) free;
-    const Nullable(free_all_func) free_all;
-    const Nullable(cleanup_func) cleanup;
-} AllocatorVtable;
 
 typedef struct Allocator {
+    enum AllocatorType type;
+    // 4 bytes of padding
     Nonnull(void*) _data;
-    Nonnull(const AllocatorVtable*) _vtable;
 } Allocator;
 
 
@@ -73,16 +65,26 @@ Allocator_free(const Allocator allocator, Nullable(const void*) data, size_t siz
 static inline
 void
 Allocator_free_all(const Allocator a){
-    unhandled_error_condition(!a._vtable->free_all);
-    a._vtable->free_all(a._data);
-    }
-
-static inline
-void
-Allocator_cleanup(const Allocator a){
-    if(!a._vtable->cleanup)
-        return;
-    a._vtable->cleanup(a._data);
+    switch(a.type){
+        case ALLOCATOR_UNSET:
+            abort();
+            break;
+        case ALLOCATOR_MALLOC:
+            abort();
+            break;
+        case ALLOCATOR_LINEAR:
+            linear_reset(a._data);
+            break;
+        case ALLOCATOR_RECORDED:
+            recording_free_all(a._data);
+            break;
+    PushDiagnostic();
+    SuppressCoveredSwitchDefault();
+        default:
+            abort();
+            break;
+    PopDiagnostic();
+        }
     }
 
 MALLOC_FUNC
@@ -92,7 +94,23 @@ warn_unused
 // force_inline
 Nonnull(void*)
 Allocator_alloc(const Allocator a, size_t size){
-    return a._vtable->alloc(a._data, size);
+    switch(a.type){
+        case ALLOCATOR_UNSET:
+            abort();
+            break;
+        case ALLOCATOR_LINEAR:
+            return linear_alloc(a._data, size);
+        case ALLOCATOR_MALLOC:
+            return malloc(size);
+        case ALLOCATOR_RECORDED:
+            return recording_alloc(a._data, size);
+    PushDiagnostic();
+    SuppressCoveredSwitchDefault();
+        default:
+            abort();
+            break;
+    PopDiagnostic();
+        }
     }
 
 MALLOC_FUNC
@@ -102,7 +120,23 @@ warn_unused
 // force_inline
 Nonnull(void*)
 Allocator_zalloc(const Allocator a, size_t size){
-    return a._vtable->zalloc(a._data, size);
+    switch(a.type){
+        case ALLOCATOR_UNSET:
+            abort();
+            break;
+        case ALLOCATOR_LINEAR:
+            return linear_zalloc(a._data, size);
+        case ALLOCATOR_MALLOC:
+            return calloc(1, size);
+        case ALLOCATOR_RECORDED:
+            return recording_zalloc(a._data, size);
+    PushDiagnostic();
+    SuppressCoveredSwitchDefault();
+        default:
+            abort();
+            break;
+    PopDiagnostic();
+        }
     }
 
 ALLOCATOR_SIZE(4)
@@ -111,19 +145,51 @@ static inline
 warn_unused
 Nonnull(void*)
 Allocator_realloc(const Allocator a, Nullable(void*) data, size_t orig_size, size_t size){
-    return a._vtable->realloc(a._data, data, orig_size, size);
+    switch(a.type){
+        case ALLOCATOR_UNSET:
+            abort();
+            break;
+        case ALLOCATOR_LINEAR:
+            return linear_realloc(a._data, data, orig_size, size);
+        case ALLOCATOR_MALLOC:
+            return realloc(data, size);
+        case ALLOCATOR_RECORDED:
+            return recording_realloc(a._data, data, orig_size, size);
+    PushDiagnostic();
+    SuppressCoveredSwitchDefault();
+        default:
+            abort();
+            break;
+    PopDiagnostic();
+        }
     }
 
 static inline
 // force_inline
 void
 Allocator_free(const Allocator a, Nullable(const void*) data, size_t size){
-    a._vtable->free(a._data, data, size);
+    switch(a.type){
+        case ALLOCATOR_UNSET:
+            abort();
+            break;
+        case ALLOCATOR_LINEAR:
+            linear_free(a._data, data, size);
+            break;
+        case ALLOCATOR_MALLOC:
+            const_free(data);
+            break;
+        case ALLOCATOR_RECORDED:
+            recording_free(a._data, data, size);
+            break;
+    PushDiagnostic();
+    SuppressCoveredSwitchDefault();
+        default:
+            abort();
+            break;
+    PopDiagnostic();
+        }
     }
 
-// Can't use malloc func here as we could be copying a struct
-// with pointers.
-// Should I make a data version of this?
 ALLOCATOR_SIZE(3)
 static inline
 warn_unused
@@ -148,5 +214,8 @@ Allocator_strndup(const Allocator allocator, Nonnull(const char*)str, size_t len
     result[length] = '\0';
     return result;
     }
-
+// FIXME:
+#include "linear_allocator.h"
+#include "recording_allocator.h"
+#include "mallocator.h"
 #endif

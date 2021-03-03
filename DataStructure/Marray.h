@@ -131,7 +131,7 @@ Marray_insert(MARRAY_T)(Nonnull(Marray(MARRAY_T)*)marray, const Allocator a, siz
         }
     Marray_ensure(MARRAY_T)(marray, a, 1);
     size_t n_move = marray->count - index;
-    memmove(marray->data+index+1, marray->data+index, n_move*sizeof(marray->data[0]));
+    (memmove)(marray->data+index+1, marray->data+index, n_move*sizeof(marray->data[0]));
     marray->data[index] = value;
     marray->count++;
     }
@@ -145,7 +145,7 @@ Marray_remove(MARRAY_T)(Nonnull(Marray(MARRAY_T)*)marray, size_t index){
         return;
         }
     size_t n_move = marray->count - index - 1;
-    memmove(marray->data+index, marray->data+index+1, n_move*(sizeof(marray->data[0])));
+    (memmove)(marray->data+index, marray->data+index+1, n_move*(sizeof(marray->data[0])));
     marray->count--;
     return;
     }
@@ -154,7 +154,7 @@ static inline
 void
 Marray_extend(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator  a, Nonnull(const MARRAY_T*) values, size_t n_values){
     Marray_ensure(MARRAY_T)(marray, a, n_values);
-    memcpy(marray->data+marray->count, values, n_values*(sizeof(MARRAY_T)));
+    (memcpy)(marray->data+marray->count, values, n_values*(sizeof(MARRAY_T)));
     marray->count+=n_values;
     return;
     }
