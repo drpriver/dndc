@@ -19,7 +19,7 @@
 #include "dndc.h"
 
 #define DNC_MAJOR 0
-#define DNC_MINOR 2
+#define DNC_MINOR 3
 #define DNC_MICRO 1
 #define DNDC_VERSION STRINGIFY(DNC_MAJOR) "." STRINGIFY(DNC_MINOR) "." STRINGIFY(DNC_MICRO)
 
@@ -784,9 +784,10 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
     }
     // Render the actual document into a string as html.
     {
-        msb_reset(&msb);
+        // msb_reset(&msb);
+        MStringBuilder output_sb = {.allocator = get_mallocator()};
         auto before_render = get_t();
-        auto e = render_tree(&ctx, &msb);
+        auto e = render_tree(&ctx, &output_sb);
         auto after_render = get_t();
         report_stat(ctx.flags, "Rendering took: %.3fms", (after_render-before_render)/1000.);
 
@@ -795,7 +796,6 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
             result.errored = e.errored;
             goto cleanup;
             }
-        auto str = msb_borrow(&msb);
         auto before_write = get_t();
         if(flags & DNDC_OUTPUT_PATH_IS_OUT_PARAM){
             assert(output_path);
@@ -803,28 +803,33 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
             // allocator.
             //
             // We could do this without the extra copy, but this will work for now.
-            char* html_text = malloc(str.length+1);
-            memcpy(html_text, str.text, str.length);
-            html_text[str.length] = '\0';
-            output_path->text = html_text;
-            output_path->length = str.length;
+            *output_path = msb_detach(&output_sb);
+            // char* html_text = malloc(str.length+1);
+            // memcpy(html_text, str.text, str.length);
+            // html_text[str.length] = '\0';
+            // output_path->text = html_text;
+            // output_path->length = str.length;
             }
         else if(!output_path || outpath.length == 0){
+            auto str = msb_borrow(&output_sb);
             fputs(str.text, stdout);
+            msb_destroy(&output_sb);
             goto success;
             }
         else {
+            auto str = msb_borrow(&output_sb);
             auto write_err = write_file(outpath.text, str.text, str.length);
+            msb_destroy(&output_sb);
             if(write_err.errored){
                 ERROR("Error on write: %s", get_error_name(write_err));
                 perror("Error on write");
                 result.errored = write_err.errored;
                 goto cleanup;
                 }
+        report_stat(ctx.flags, "Total output size: %zu bytes", str.length);
             }
         auto after_write = get_t();
         report_stat(ctx.flags, "Writing took: %.3fms", (after_write-before_write)/1000.);
-        report_stat(ctx.flags, "Total output size: %zu bytes", str.length);
     }
     // Write the make-style dependency file to the Dependency directory.
     if(depends_path.length){
@@ -975,7 +980,6 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
 #include "dndc_parser.c"
 #include "dndc_context.c"
 
-
 extern
 int
 dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongString*)output){
@@ -988,12 +992,13 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
     flags |= DNDC_ALLOW_BAD_LINKS;
     // idk how to do this one
     // flags |= DNDC_DONT_INLINE_IMAGES;
-    // flags |= DNDC_PRINT_STATS;
+    flags |= DNDC_PRINT_STATS;
     // gross, move to caller.
     static Base64Cache cache = {.allocator.type = ALLOCATOR_MALLOC};
     auto e = run_the_dndc(flags, base_directory, source_text, output, LS(""), &cache);
     return e.errored;
     }
+
 extern
 int
 dndc_format(LongString source_text, Nonnull(LongString*)output){
