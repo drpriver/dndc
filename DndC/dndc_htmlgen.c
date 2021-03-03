@@ -719,7 +719,23 @@ RENDERFUNC(IMAGE){
         Raise(PARSE_ERROR);
         }
     auto children = &node->children;
-    {
+    if(ctx->flags & DNDC_DONT_INLINE_IMAGES){
+        auto first_child = get_node(ctx, children->data[0]);
+        if(first_child->type != NODE_STRING){
+            node_set_err(ctx, first_child, "First child of an imagee node should be a string that is path to the image.");
+            Raise(PARSE_ERROR);
+            }
+        auto imgpath_node = get_node(ctx, node->children.data[0]);
+        if(imgpath_node->type != NODE_STRING){
+            node_set_err(ctx, imgpath_node, "First should be a string and be the path to the image.");
+            Raise(PARSE_ERROR);
+            }
+        auto header = imgpath_node->header;
+        msb_write_literal(sb, "<img src=\"");
+        msb_write_str(sb, header.text, header.length);
+        msb_write_literal(sb, "\">");
+        }
+    else{
         auto first_child = get_node(ctx, children->data[0]);
         if(first_child->type != NODE_STRING){
             node_set_err(ctx, first_child, "First child of an imagee node should be a string that is path to the image.");
@@ -952,7 +968,7 @@ RENDERFUNC(IMGLINKS){
         }
 
     LongString imgdatab64 = {};
-    {
+    if(not (ctx->flags & DNDC_DONT_INLINE_IMAGES)){
         auto imgpath_node = get_node(ctx, node->children.data[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, "First should be a string and be the path to the image");
@@ -1087,13 +1103,27 @@ RENDERFUNC(IMGLINKS){
                 }
             }
     }
-    msb_sprintf(sb, "<svg width=\"%d\" height=\"%d\" viewbox=\"%d %d %d %d\" style=\"background-size: 100%% 100%%; background-image: url('data:image/png;base64,", width, height, viewbox[0], viewbox[1], viewbox[2], viewbox[3]);
-    auto before = get_t();
-    assert(imgdatab64.length);
-    msb_write_str(sb, imgdatab64.text, imgdatab64.length);
-    auto after = get_t();
-    report_stat(ctx->flags, "Base64ing an imglinks took %.3fms", (after-before)/1000.);
-    msb_write_literal(sb, "');\">\n");
+    msb_sprintf(sb, "<svg width=\"%d\" height=\"%d\" viewbox=\"%d %d %d %d\" style=\"background-size: 100%% 100%%; ", width, height, viewbox[0], viewbox[1], viewbox[2], viewbox[3]);
+    if(ctx->flags & DNDC_DONT_INLINE_IMAGES){
+        msb_write_literal(sb, "background-image: url('");
+        auto imgpath_node = get_node(ctx, node->children.data[0]);
+        if(imgpath_node->type != NODE_STRING){
+            node_set_err(ctx, imgpath_node, "First should be a string and be the path to the image");
+            Raise(PARSE_ERROR);
+            }
+        auto header = imgpath_node->header;
+        msb_write_str(sb, header.text, header.length);
+        msb_write_literal(sb, "');\">\n");
+        }
+    else {
+        msb_write_literal(sb, "background-image: url('data:image/png;base64,");
+        auto before = get_t();
+        assert(imgdatab64.length);
+        msb_write_str(sb, imgdatab64.text, imgdatab64.length);
+        auto after = get_t();
+        report_stat(ctx->flags, "Base64ing an imglinks took %.3fms", (after-before)/1000.);
+        msb_write_literal(sb, "');\">\n");
+        }
     for(size_t i = 4; i < node->children.count; i++){
         auto child = get_node(ctx, node->children.data[i]);
         if(child->type != NODE_STRING){

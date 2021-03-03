@@ -68,7 +68,7 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
         .cache = &ctx->b64cache,
         .report_time = !!(flags & DNDC_PRINT_STATS),
         };
-    {
+    if(not (ctx->flags & DNDC_DONT_INLINE_IMAGES)){
         Marray(NodeHandle)* img_nodes[] = {
             &ctx->img_nodes,
             &ctx->imglinks_nodes,
@@ -198,6 +198,7 @@ int main(int argc, char**argv){
     bool use_site = false;
     bool reformat_only = false;
     bool hidden_help = false;
+    bool dont_inline_images = false;
     {
     ArgToParse pos_args[] = {
         [0] = {
@@ -334,7 +335,15 @@ int main(int argc, char**argv){
             .max_num = 1,
             .dest = ARGDEST(&hidden_help),
             .help = "Print out help for the hidden arguments.",
-        }
+        },
+        {
+            .name = SV("--dont-inline-images"),
+            .min_num = 0,
+            .max_num = 1,
+            .dest = ARGDEST(&dont_inline_images),
+            .help = "Instead of base64ing the images, use a link.",
+            .hidden = true,
+        },
         };
     ArgParser argparser = {
         .name = argv[0],
@@ -405,6 +414,8 @@ int main(int argc, char**argv){
         flags |= DNDC_PYTHON_UNISOLATED;
     if(reformat_only)
         flags |= DNDC_REFORMAT_ONLY;
+    if(dont_inline_images)
+        flags |= DNDC_DONT_INLINE_IMAGES;
 
     #ifdef BENCHMARKING
     if(!source_path.length){
@@ -975,6 +986,8 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
     // flags |= DNDC_DONT_PRINT_ERRORS;
     flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
+    // idk how to do this one
+    // flags |= DNDC_DONT_INLINE_IMAGES;
     // flags |= DNDC_PRINT_STATS;
     // gross, move to caller.
     static Base64Cache cache = {.allocator.type = ALLOCATOR_MALLOC};
