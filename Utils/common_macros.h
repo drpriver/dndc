@@ -202,13 +202,7 @@
  *   pointer points to.
  */
 #if defined(__GNUC__) || defined(__clang__)
-//
-// With this defined and apple clang 1200.0.32.29, I was getting incorrect
-// __builtin_obj_size values which was causing it to generated ud2
-// instructions when _FORTIFY_SOURCE was defined.
-//
-// #define ALLOCATOR_SIZE(N) __attribute__((alloc_size(N)))
-#define ALLOCATOR_SIZE(...)
+#define ALLOCATOR_SIZE(N) __attribute__((alloc_size(N)))
 #define MALLOC_FUNC __attribute__((malloc))
 #define likely(x)      __builtin_expect(!!(x), 1)
 #define unlikely(x)    __builtin_expect(!!(x), 0)

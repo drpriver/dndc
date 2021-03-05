@@ -11,7 +11,7 @@ README.html: README.dnd | $(DNDC) $(DIRECTORIES)
 	$(DNDC) $< -o $@ -d $(DEPDIR)/README.dep
 
 # Assumes libclang is installed.
-tags: $(wildcard *.h *.c **/*.c **/*.h) Scripts/tag_and_syntax.py compile_commands.json
+tags: $(wildcard *.h *.c **/*.c **/*.h **/*.m) Scripts/tag_and_syntax.py compile_commands.json
 	$(PYTHON) -m Scripts.tag_and_syntax
 
 .PHONY: clean clean-tests clean-depends deep-clean run-tests strip convert directories install compile_commands fuzz

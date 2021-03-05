@@ -1046,15 +1046,16 @@ Nullable(PyObject*)
 DndNode_getattr(Nonnull(DndNode*)obj, Nonnull(const char*)name){
     auto len = strlen(name);
 #define CHECK(lit) (len == sizeof(""lit)-1 and memcmp(name, ""lit, sizeof(""lit)-1)==0)
+    // TODO: we can probably do this more optimally
     if(CHECK("parent")){
         auto node = get_node(obj->ctx, obj->handle);
         return make_py_node(obj->ctx, node->parent);
         }
-    if(CHECK("type")){
+    else if(CHECK("type")){
         auto node = get_node(obj->ctx, obj->handle);
         return make_node_type_enum(node->type);
         }
-    if(CHECK("children")){
+    else if(CHECK("children")){
         auto node = get_node(obj->ctx, obj->handle);
         auto result = PyTuple_New(node->children.count);
         if(!result)
@@ -1068,29 +1069,29 @@ DndNode_getattr(Nonnull(DndNode*)obj, Nonnull(const char*)name){
             }
         return result;
         }
-    if(CHECK("header")){
+    else if(CHECK("header")){
         auto node = get_node(obj->ctx, obj->handle);
         return PyUnicode_FromStringAndSize(node->header.text, node->header.length);
         }
-    if(CHECK("attributes")){
+    else if(CHECK("attributes")){
         return make_attributes_map(obj->ctx, obj->handle);
         }
-    if(CHECK("classes")){
+    else if(CHECK("classes")){
         return make_classes_list(obj->ctx, obj->handle);
         }
-    if(CHECK("parse")){
+    else if(CHECK("parse")){
         return make_node_bound_method(obj->ctx, obj->handle, &py_parse_and_append_children);
         }
-    if(CHECK("detach")){
+    else if(CHECK("detach")){
         return make_node_bound_method(obj->ctx, obj->handle, &py_detach_node);
         }
-    if(CHECK("add_child")){
+    else if(CHECK("add_child")){
         return make_node_bound_method(obj->ctx, obj->handle, &py_add_child_node);
         }
-    if(CHECK("err")){
+    else if(CHECK("err")){
         return make_node_bound_method(obj->ctx, obj->handle, &py_node_set_err);
         }
-    if(CHECK("id")){
+    else if(CHECK("id")){
         auto node = get_node(obj->ctx, obj->handle);
         auto id = node_get_id(node);
         if(id){
@@ -1122,15 +1123,15 @@ DndNode_setattr(Nonnull(DndNode*)obj, Nonnull(const char*)name, Nullable(PyObjec
         PyErr_SetString(PyExc_TypeError, "parent cannot be reassigned");
         return -1;
         }
-    if(CHECK("attributes")){
+    else if(CHECK("attributes")){
         PyErr_SetString(PyExc_TypeError, "attributes cannot be reassigned");
         return -1;
         }
-    if(CHECK("classes")){
+    else if(CHECK("classes")){
         PyErr_SetString(PyExc_TypeError, "classes cannot be reassigned");
         return -1;
         }
-    if(CHECK("type")){
+    else if(CHECK("type")){
         if(PyObject_IsInstance(value, (PyObject *)&NodeTypeEnumType)){
             auto ty = (NodeTypeEnum*)value;
             auto node = get_node(obj->ctx, obj->handle);
@@ -1195,7 +1196,7 @@ DndNode_setattr(Nonnull(DndNode*)obj, Nonnull(const char*)name, Nullable(PyObjec
             return -1;
             }
         }
-    if(CHECK("header")){
+    else if(CHECK("header")){
         if(!PyUnicode_Check(value)){
             PyErr_SetString(PyExc_TypeError, "Header must be a string");
             return -1;
