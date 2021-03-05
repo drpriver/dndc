@@ -5,7 +5,7 @@ DIRECTORIES+=$(FROZENDIR)
 PYVENDOR=PythonEmbed/vendored
 
 $(FREEZE): PythonEmbed/freeze_py_module.c $(DEPDIR)/freeze_py_module.dep  PythonEmbed/pythonembed.mak | $(DIRECTORIES)
-	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(FAST_FLAGS) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/freeze_py_module.dep $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS)
+	$(CC) $(FLAGS) $(FAST_FLAGS) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/freeze_py_module.dep $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS)
 freeze_py_module: $(FREEZE)
 
 frozen-modules: $(FROZEN_MODULES)

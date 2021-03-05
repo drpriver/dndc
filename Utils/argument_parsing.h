@@ -499,7 +499,7 @@ Errorable_f(void)
 parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
     Errorable(void) result = {};
     auto argc = args->argc;
-    auto argv = args->argv;
+    const char*const* argv = args->argv;
     auto past_the_end = argv+argc;
     if(parser->positional.count){
         Nonnull(ArgToParse*) arg = &parser->positional.args[0];

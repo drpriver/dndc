@@ -3,7 +3,8 @@ PYTHON:=python3
 PYCFLAGS?=-I/usr/include/python3.8
 PYLDFLAGS?=-L/usr/lib/python3.8/config-3.8-x64_64-linux-gnu -lpython3.8
 
-PLATFORM_FLAGS=-D_GNU_SOURCE -DLINUX -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
+# I think there is a bug with clang and _FORTIFY_SOURCE
+PLATFORM_FLAGS=-DLINUX -U_FORTIFY_SOURCE
 DEBUG_FLAGS=-DDEBUG\
 	 -DLOG_LEVEL=4\
 	 -fsanitize=undefined\
