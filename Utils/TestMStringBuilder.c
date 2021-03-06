@@ -15,3 +15,4 @@ TestFunction(TestMStringBuilder1){
 void register_tests(void){
     RegisterTest(TestMStringBuilder1);
     }
+#include "allocator.c"

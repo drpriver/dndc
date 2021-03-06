@@ -3,6 +3,7 @@
 #include "common_macros.h"
 #include "ByteBuffer.h"
 #include "allocator.h"
+#include "mallocator.h"
 
 typedef struct ByteBuilder {
     size_t cursor;

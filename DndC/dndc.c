@@ -5,16 +5,17 @@
 #include <stdarg.h>
 #include "dndc_format.c"
 #include "path_util.h"
+#include "allocator.h"
+#include "mallocator.h"
 #include "linear_allocator.h"
+#include "recording_allocator.h"
 #include "long_string.h"
 #include "MStringBuilder.h"
 #include "measure_time.h"
 #include "argument_parsing.h"
-#include "recording_allocator.h"
 #include "dndc_types.h"
 #include "thread_utils.h"
 #include "bb_extensions.h"
-#include "mallocator.h"
 #include "dndc_funcs.h"
 #include "dndc.h"
 
@@ -979,6 +980,7 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
 #include "dndc_htmlgen.c"
 #include "dndc_parser.c"
 #include "dndc_context.c"
+#include "allocator.c"
 
 extern
 int

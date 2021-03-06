@@ -81,3 +81,4 @@ void register_tests(void){
     RegisterTest(TestBase64);
     RegisterTest(TestBase64_2);
     }
+#include "allocator.c"

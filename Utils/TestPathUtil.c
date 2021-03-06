@@ -111,3 +111,5 @@ void register_tests(void){
     RegisterTest(TestDirName);
     RegisterTest(TestStripExtension);
     }
+
+#include "allocator.c"

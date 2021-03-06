@@ -954,4 +954,3 @@ static void do_menus(void){
         [NSApp setHelpMenu:menu];
     }
 }
-

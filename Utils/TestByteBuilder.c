@@ -31,3 +31,5 @@ void register_tests(void){
     // RegisterTest(TestByteBuilder9);
     // RegisterTest(TestByteBuilder10);
     }
+
+#include "allocator.c"
