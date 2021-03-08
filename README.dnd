@@ -75,11 +75,10 @@ Convenience::md
     I am so smart::md
       It is really amazing how smart I am. Behold my intelligence:
 
-      1. I am really good looking.
-      2. My IQ is over 9000.
-
-      * This is an important point.
-      * Wait, what does that have to do with intelligence?
+      1. My IQ is over 9000.
+      2. I am really good looking.
+        * This is an important point.
+        * Wait, what does that have to do with intelligence?
 
       This is an internal heading::h
       Yeah, what about it?
@@ -98,31 +97,33 @@ Convenience::md
       <div>
         <h2 id="i-am-so-smart">I am so smart</h2>
         <p>
-        It is really amazing how smart I am. Behold my intelligence:
+          It is really amazing how smart I am. Behold my intelligence:
         </p>
-        <div>
-          <ol>
-          <li>I am really good looking.</li>
-          <li>My IQ is over 9000.</li>
-          </ol>
-        </div>
-        <div>
-          <ul>
-          <li>This is an important point.</li>
-          <li>Wait, what does that have to do with intelligence?</li>
-          </ul>
-        </div>
-
+        <ol>
+          <li>
+            My IQ is over 9000.
+          </li>
+          <li>
+            I am really good looking.
+            <ul>
+              <li>
+                This is an important point.
+              </li>
+              <li>
+                Wait, what does that have to do with intelligence?
+              </li>
+            </ul>
+          </li>
+        </ol>
         <h2 id="this-is-an-internal-heading">This is an internal heading</h2>
         <p>
-        Yeah, what about it?
+          Yeah, what about it?
         </p>
-
         <div>
           <h3 id="an-internal-block">An internal block</h3>
           <p>
-          This is what I usually use instead as it mirrors how I think about
-          the topic (subtopic is a subtree).
+            This is what I usually use instead as it mirrors how I think about
+            the topic (subtopic is a subtree).
           </p>
         </div>
       </div>

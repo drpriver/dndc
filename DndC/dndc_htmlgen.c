@@ -760,30 +760,6 @@ RENDERFUNC(IMAGE){
     msb_write_literal(sb, "</div>\n");
     return result;
     }
-RENDERFUNC(BULLETS){
-    // I should probably be checking if the parent of this node is a bullet
-    // so that I don't output these divs unnnecessarily.
-    // But maybe I should do that in the parse phase (distinguish between bullets
-    // and nested bullets?).
-    msb_write_literal(sb, "<div");
-    write_classes(sb, node);
-    msb_write_literal(sb, ">\n");
-    if(node->header.length){
-        header_depth++;
-        auto e = write_header(ctx, sb, node, header_depth);
-        if(e.errored) return e;
-        }
-    msb_write_literal(sb, "<ul>\n");
-    auto count = node->children.count;
-    auto children = node->children.data;
-    for(size_t i = 0; i < count; i++){
-        auto child = get_node(ctx, children[i]);
-        auto e = render_node(ctx, sb, child, header_depth);
-        if(e.errored) return e;
-        }
-    msb_write_literal(sb, "</ul>\n</div>\n");
-    return (Errorable(void)){};
-    }
 RENDERFUNC(QUOTE){
     msb_write_literal(sb, "<div");
     write_classes(sb, node);
@@ -848,19 +824,27 @@ RENDERFUNC(PRE){
     msb_write_literal(sb, "</pre>\n</div>\n");
     return (Errorable(void)){};
     }
-RENDERFUNC(LIST){
-    // I should probably be checking if the parent of this node is a list item
-    // so that I don't output these divs unnnecessarily.
-    // But maybe I should do that in the parse phase (distinguish between lists
-    // and nested lists?).
-    msb_write_literal(sb, "<div");
-    write_classes(sb, node);
-    msb_write_literal(sb, ">\n");
-    if(node->header.length){
-        header_depth++;
-        auto e = write_header(ctx, sb, node, header_depth);
+RENDERFUNC(BULLETS){
+    if(unlikely(node->header.length))
+        node_print_warning(ctx, node, "ignoring header on bullet list");
+    if(unlikely(node->classes.count))
+        node_print_warning(ctx, node, "Ignoring classes on bullet list");
+    msb_write_literal(sb, "<ul>\n");
+    auto count = node->children.count;
+    auto children = node->children.data;
+    for(size_t i = 0; i < count; i++){
+        auto child = get_node(ctx, children[i]);
+        auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
+    msb_write_literal(sb, "</ul>\n");
+    return (Errorable(void)){};
+    }
+RENDERFUNC(LIST){
+    if(unlikely(node->header.length))
+        node_print_warning(ctx, node, "ignoring header on list");
+    if(unlikely(node->classes.count))
+        node_print_warning(ctx, node, "Ignoring classes on list");
     msb_write_literal(sb, "<ol>\n");
     auto count = node->children.count;
     auto children = node->children.data;
@@ -869,11 +853,11 @@ RENDERFUNC(LIST){
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, "</ol>\n</div>\n");
+    msb_write_literal(sb, "</ol>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(LIST_ITEM){
-    msb_write_literal(sb, "<li>");
+    msb_write_literal(sb, "<li>\n");
     if(unlikely(node->header.length))
         node_print_warning(ctx, node, "ignoring header on list item");
     if(unlikely(node->classes.count))

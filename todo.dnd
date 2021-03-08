@@ -27,6 +27,12 @@ Bullets::md
   However, bullets cannot currently be nested! Fix this! We wanted nested
   bullets!
 
+  Update::md @noid
+    This works! We can also nest ols in uls etc.
+
+    However, it did demonstrate that my formatting code is not handling errors properly.
+    I should change it so that invalid trees generate an error so that we can format post python execution.
+
 Coordinate support::md
   Jeff wanted some way to see the coords on a map.
   Update::md @noid

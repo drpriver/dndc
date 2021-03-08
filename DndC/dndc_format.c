@@ -62,13 +62,15 @@ format_node(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)
             return format_raw_node(ctx, sb, node, indent);
         case NODE_TABLE:
             return format_table_node(ctx, sb, node, indent);
+        case NODE_LIST:
+            return format_md_list(ctx, sb, node, indent);
+        case NODE_BULLETS:
+            return format_md_bullets(ctx, sb, node, indent);
         case NODE_ROOT:
             unreachable();
             // return format_raw_node(ctx, sb, node, indent);
         case NODE_CONTAINER:
         case NODE_TABLE_ROW:
-        case NODE_LIST:
-        case NODE_BULLETS:
         case NODE_PARA:
         case NODE_STRING:
         case NODE_LIST_ITEM:
@@ -249,14 +251,27 @@ FORMATFUNC(md_bullets){
         auto child = get_node(ctx, node->children.data[i]);
         assert(child->type == NODE_LIST_ITEM);
         msb_write_str(sb, EIGHTYSPACES, indent);
+        // FIXME: We actually need to preserve exactly which token was used
+        //        as a bullet. We discard that info, so we currently just output a '*' unconditionally.
         msb_write_literal(sb, "* ");
         FormatState state = {.lead = indent+2, .col=indent+2};
         for(size_t j = 0; j < child->children.count; j++){
             auto subchild = get_node(ctx, child->children.data[j]);
-            assert(subchild->type == NODE_STRING);
-            format_write_wrapped_string(sb, &state, subchild->header);
+            // assert(subchild->type == NODE_STRING);
+            // format_write_wrapped_string(sb, &state, subchild->header);
+            if(subchild->type == NODE_STRING){
+                format_write_wrapped_string(sb, &state, subchild->header);
+                }
+            else {
+                if(state.col != state.lead)
+                    msb_write_char(sb, '\n');
+                format_node(ctx, sb, subchild, indent+2);
+                // FIXME: this is sketch - we shouldn't have strings after a nested list.
+                state = (FormatState){.lead=indent+2, .col=indent+2};
+                }
             }
-        msb_write_char(sb, '\n');
+        if(state.col != state.lead)
+            msb_write_char(sb, '\n');
         }
     }
 FORMATFUNC(md_list){
@@ -274,10 +289,20 @@ FORMATFUNC(md_list){
         FormatState state = {.lead = indent+numwidth+2, .col=indent+numwidth+2};
         for(size_t j = 0; j < child->children.count; j++){
             auto subchild = get_node(ctx, child->children.data[j]);
-            assert(subchild->type == NODE_STRING);
-            format_write_wrapped_string(sb, &state, subchild->header);
+            // assert(subchild->type == NODE_STRING);
+            if(subchild->type == NODE_STRING){
+                format_write_wrapped_string(sb, &state, subchild->header);
+                }
+            else {
+                if(state.col != state.lead)
+                    msb_write_char(sb, '\n');
+                format_node(ctx, sb, subchild, indent+numwidth+2);
+                // FIXME: this is sketch - we shouldn't have strings after a nested list.
+                state = (FormatState){.lead=indent+numwidth+2, .col=indent+numwidth+2};
+                }
             }
-        msb_write_char(sb, '\n');
+        if(state.col != state.lead)
+            msb_write_char(sb, '\n');
         }
     }
 FORMATFUNC(md_node){

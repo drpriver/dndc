@@ -376,6 +376,13 @@ get_node(Nonnull(DndcContext*)ctx, NodeHandle handle){
     return result;
     }
 
+static inline
+NodeHandle
+force_inline
+get_parent_handle(Nonnull(DndcContext*)ctx, NodeHandle handle){
+    return get_node(ctx, handle)->parent;
+    }
+
 // for debugging
 extern
 Nonnull(Node*)

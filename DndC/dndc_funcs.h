@@ -140,6 +140,13 @@ Nonnull(Node*)
 get_node(Nonnull(DndcContext*), NodeHandle);
 
 //
+//
+//
+static inline
+NodeHandle
+get_parent_handle(Nonnull(DndcContext*), NodeHandle);
+
+//
 // Like get_node, but will be available in the debugger as it is extern.
 // Don't use this, use get_node, this is purely for the debugger.
 //

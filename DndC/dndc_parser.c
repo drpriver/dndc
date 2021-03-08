@@ -777,13 +777,14 @@ PARSEFUNC(parse_md_node){
         LIST = 3,
         };
     enum MDSTATE state = NONE;
-    NodeHandle list_stack[8];
-    int indentation_stack[8];
-    int list_depth = 0;
-    int current_indentation = -1;
-    NodeHandle current_list_handle = INVALID_NODE_HANDLE;
-    NodeHandle current_list_item_handle = INVALID_NODE_HANDLE;
-    NodeHandle para_handle      = INVALID_NODE_HANDLE;
+    struct {
+        NodeHandle list;
+        NodeHandle item;
+        int indentation;
+        enum MDSTATE state;
+        } stack[8];
+    int si = -1;
+    NodeHandle para_handle = INVALID_NODE_HANDLE;
     int normal_indent = -1;
     Errorable(void) result = {};
     for(;ctx->cursor[0];){
@@ -807,21 +808,27 @@ PARSEFUNC(parse_md_node){
             }
         enum MDSTATE newstate = NONE;
         const char* firstchar = ctx->linestart + ctx->nspaces;
+        int prefix_length = 0;
         switch(*firstchar){
             case '+':
             case '-':
             case '*':
-                if(firstchar[1] == ' ')
+                if(firstchar[1] == ' '){
+                    prefix_length = 1;
                     newstate = BULLET;
+                    }
                 else
                     newstate = PARA;
                 goto after;
             case '0' ... '9':{
+                prefix_length = 1;
                 for(const char* c = firstchar+1;;c++){
                     switch(*c){
                         case '0' ... '9':
+                            prefix_length++;
                             continue;
                         case '.':
+                            prefix_length++;
                             newstate = LIST;
                             goto after;
                         default:
@@ -836,41 +843,87 @@ PARSEFUNC(parse_md_node){
             }
         after:;
         assert(newstate != NONE);
-        if(newstate == BULLET){
-            if(state != BULLET){
-                bullets_handle = alloc_handle(ctx);
-                init_node(ctx, bullets_handle, ctx->linestart+ctx->nspaces, NODE_BULLETS);
-                append_child(ctx, parent_handle, bullets_handle);
+        if(newstate == BULLET or newstate == LIST){
+            if(si == -1){
+                si = 0;
+                auto s = &stack[si];
+                s->list = alloc_handle(ctx);
+                s->item = INVALID_NODE_HANDLE;
+                s->indentation = ctx->nspaces;
+                s->state = newstate;
+                init_node(ctx, s->list, ctx->linestart+ctx->nspaces, newstate==BULLET?NODE_BULLETS:NODE_LIST);
+                append_child(ctx, parent_handle, s->list);
                 }
-            bullet_handle = alloc_handle(ctx);
-            init_node(ctx, bullet_handle, ctx->linestart+ctx->nspaces, NODE_LIST_ITEM);
-            append_child(ctx, bullets_handle, bullet_handle);
-
-            StringView content = stripped_view(ctx->linestart + ctx->nspaces+1, (ctx->lineend - ctx->linestart)-ctx->nspaces-1);
-            auto new_node_handle = alloc_handle(ctx);
-            init_string_node(ctx, new_node_handle, content);
-            append_child(ctx, bullet_handle, new_node_handle);
-            advance_row(ctx);
-            state = newstate;
-            continue;
-            }
-        if(newstate == LIST){
-            if(state != LIST){
-                list_handle = alloc_handle(ctx);
-                init_node(ctx, list_handle, ctx->linestart+ctx->nspaces, NODE_LIST);
-                append_child(ctx, parent_handle, list_handle);
+            else {
+                // new level of list
+                if(ctx->nspaces > stack[si].indentation){
+                    si++;
+                    if(si == arrlen(stack)){
+                        parse_set_err(ctx, ctx->linestart+ctx->nspaces, "Only up to 8 levels of nested lists are supported.");
+                        Raise(PARSE_ERROR);
+                        }
+                    auto s = &stack[si];
+                    s->list = alloc_handle(ctx);
+                    s->item = INVALID_NODE_HANDLE;
+                    s->indentation = ctx->nspaces;
+                    s->state = newstate;
+                    init_node(ctx, s->list, ctx->linestart+ctx->nspaces, newstate==BULLET?NODE_BULLETS:NODE_LIST);
+                    append_child(ctx, stack[si-1].item, s->list);
+                    }
+                // neighbors
+                else if(ctx->nspaces == stack[si].indentation){
+                    auto s = &stack[si];
+                    if(s->state != newstate){
+                        // neighbor of different type
+                        auto prev = &stack[si-1];
+                        s->list = alloc_handle(ctx);
+                        s->item = INVALID_NODE_HANDLE;
+                        s->indentation = ctx->nspaces;
+                        s->state = newstate;
+                        init_node(ctx, s->list, ctx->linestart+ctx->nspaces, newstate==BULLET?NODE_BULLETS:NODE_LIST);
+                        append_child(ctx, prev->item, s->list);
+                        }
+                    else {
+                        // Neighbor of same type, do nothing
+                        }
+                    }
+                // go back up
+                else {
+                    for(;;){
+                        si--;
+                        assert(si >= 0);
+                        auto indent = stack[si].indentation;
+                        if(indent > ctx->nspaces)
+                            continue;
+                        if(indent == ctx->nspaces)
+                            break;
+                        if(indent < ctx->nspaces){
+                            parse_set_err(ctx, ctx->linestart+ctx->nspaces, "Ambiguous dedent inside a list");
+                            Raise(PARSE_ERROR);
+                            }
+                        }
+                    auto s = &stack[si];
+                    if(s->state != newstate){
+                        s->list = alloc_handle(ctx);
+                        s->item = INVALID_NODE_HANDLE;
+                        s->indentation = ctx->nspaces;
+                        s->state = newstate;
+                        init_node(ctx, s->list, ctx->linestart+ctx->nspaces, newstate==BULLET?NODE_BULLETS:NODE_LIST);
+                        if(si)
+                            append_child(ctx, stack[si-1].item, s->list);
+                        else
+                            append_child(ctx, parent_handle, s->list);
+                        }
+                    }
                 }
-            list_item_handle = alloc_handle(ctx);
-            init_node(ctx, list_item_handle, ctx->linestart+ctx->nspaces, NODE_LIST_ITEM);
-            append_child(ctx, list_handle, list_item_handle);
-
-            const char* dot = memchr(ctx->linestart, '.', ctx->lineend-ctx->linestart);
-            assert(dot);
-            dot++;
-            StringView content = stripped_view(dot, ctx->lineend-dot);
-            auto new_node_handle = alloc_handle(ctx);
+            auto s = &stack[si];
+            s->item = alloc_handle(ctx);
+            init_node(ctx, s->item, ctx->linestart+ctx->nspaces, NODE_LIST_ITEM);
+            append_child(ctx, s->list, s->item);
+            StringView content = stripped_view(ctx->linestart + ctx->nspaces+prefix_length, (ctx->lineend - ctx->linestart)-ctx->nspaces-prefix_length);
+            NodeHandle new_node_handle = alloc_handle(ctx);
             init_string_node(ctx, new_node_handle, content);
-            append_child(ctx, list_item_handle, new_node_handle);
+            append_child(ctx, s->item, new_node_handle);
             advance_row(ctx);
             state = newstate;
             continue;
@@ -890,24 +943,17 @@ PARSEFUNC(parse_md_node){
             state = newstate;
             continue;
             }
+        if(ctx->nspaces <= stack[si].indentation){
+            parse_set_err(ctx, ctx->linestart+ctx->nspaces, "Ambiguous dedent inside a list");
+            Raise(PARSE_ERROR);
+            }
         // don't change state for these
-        if(state == BULLET){
-            StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->lineend - ctx->linestart)-ctx->nspaces);
-            auto new_node_handle = alloc_handle(ctx);
-            init_string_node(ctx, new_node_handle, content);
-            append_child(ctx, bullet_handle, new_node_handle);
-            advance_row(ctx);
-            continue;
-            }
-        if(state == LIST){
-            StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->lineend - ctx->linestart)-ctx->nspaces);
-            auto new_node_handle = alloc_handle(ctx);
-            init_string_node(ctx, new_node_handle, content);
-            append_child(ctx, list_item_handle, new_node_handle);
-            advance_row(ctx);
-            continue;
-            }
-        unreachable();
+        StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->lineend - ctx->linestart)-ctx->nspaces);
+        auto new_node_handle = alloc_handle(ctx);
+        init_string_node(ctx, new_node_handle, content);
+        append_child(ctx, stack[si].item, new_node_handle);
+        advance_row(ctx);
+        continue;
         }
     return result;
     }
