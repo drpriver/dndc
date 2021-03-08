@@ -923,7 +923,6 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
         case NODE_ROOT:
         case NODE_PARA:
         case NODE_TABLE_ROW:
-        case NODE_BULLET:
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:
             break;

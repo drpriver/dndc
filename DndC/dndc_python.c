@@ -1173,7 +1173,6 @@ DndNode_setattr(Nonnull(DndNode*)obj, Nonnull(const char*)name, Nullable(PyObjec
                 case NODE_TABLE_ROW:
                 case NODE_IMAGE:
                 case NODE_BULLETS:
-                case NODE_BULLET:
                 case NODE_RAW:
                 case NODE_PRE:
                 case NODE_LIST:

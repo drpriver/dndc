@@ -66,7 +66,6 @@ format_node(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)
             unreachable();
             // return format_raw_node(ctx, sb, node, indent);
         case NODE_CONTAINER:
-        case NODE_BULLET:
         case NODE_TABLE_ROW:
         case NODE_LIST:
         case NODE_BULLETS:
@@ -248,7 +247,7 @@ FORMATFUNC(para_node){
 FORMATFUNC(md_bullets){
     for(size_t i = 0; i < node->children.count; i++){
         auto child = get_node(ctx, node->children.data[i]);
-        assert(child->type == NODE_BULLET);
+        assert(child->type == NODE_LIST_ITEM);
         msb_write_str(sb, EIGHTYSPACES, indent);
         msb_write_literal(sb, "* ");
         FormatState state = {.lead = indent+2, .col=indent+2};

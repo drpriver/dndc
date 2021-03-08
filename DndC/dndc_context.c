@@ -464,7 +464,6 @@ gather_anchor(Nonnull(DndcContext*)ctx, NodeHandle handle){
         case NODE_DATA: // this is a little sketchy
         case NODE_ROOT:
         case NODE_IMPORT:
-        case NODE_BULLET:
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:{
             gather_anchor_children(ctx, node);

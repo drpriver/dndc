@@ -333,12 +333,6 @@ PARSEFUNC(parse_node){
         case NODE_PYTHON:
         case NODE_COMMENT:
             return parse_raw_node(ctx, parent_handle, indentation);
-        // These two are impossible now as their aliases are not exposed.
-        // DELETEME?
-        case NODE_BULLETS:
-            return parse_bullets_node(ctx, parent_handle, indentation);
-        case NODE_LIST:
-            return parse_list_node(ctx, parent_handle, indentation);
         case NODE_TABLE:
             return parse_table_node(ctx, parent_handle, indentation);
         case NODE_KEYVALUE:
@@ -359,7 +353,7 @@ PARSEFUNC(parse_node){
         case NODE_TITLE:
         case NODE_CONTAINER:
         case NODE_QUOTE:
-            break;
+            break; // do regular string parsing
         case NODE_STYLESHEETS:
             // kind of gross
             if(node_has_attribute(parent, SV("inline"))){
@@ -369,12 +363,13 @@ PARSEFUNC(parse_node){
         case NODE_TEXT:
             return parse_text_node(ctx, parent_handle, indentation);
         case NODE_LIST_ITEM:
-        case NODE_BULLET:
         case NODE_TABLE_ROW:
         case NODE_PARA:
         case NODE_STRING:
         case NODE_KEYVALUEPAIR:
         case NODE_INVALID:
+        case NODE_BULLETS:
+        case NODE_LIST:
             unreachable();
         }
     }
@@ -681,7 +676,7 @@ PARSEFUNC(parse_bullets_node){
         firstchar++;
         StringView bullet_text = stripped_view(firstchar, ctx->lineend - firstchar);
         auto bullet_node_handle = alloc_handle(ctx);
-        init_node(ctx, bullet_node_handle, ctx->linestart+ctx->nspaces, NODE_BULLET);
+        init_node(ctx, bullet_node_handle, ctx->linestart+ctx->nspaces, NODE_LIST_ITEM);
         append_child(ctx, parent_handle, bullet_node_handle);
         auto first_child_index = alloc_handle(ctx);
         init_string_node(ctx, first_child_index, bullet_text);
@@ -697,7 +692,7 @@ PARSEFUNC(parse_bullet_node){
     Errorable(void) result = {};
     {
         auto parent = get_node(ctx, parent_handle);
-        assert(parent->type == NODE_BULLET);
+        assert(parent->type == NODE_LIST_ITEM);
     }
     for(;ctx->cursor[0];){
         analyze_line(ctx);
@@ -782,12 +777,14 @@ PARSEFUNC(parse_md_node){
         LIST = 3,
         };
     enum MDSTATE state = NONE;
+    NodeHandle list_stack[8];
+    int indentation_stack[8];
+    int list_depth = 0;
+    int current_indentation = -1;
+    NodeHandle current_list_handle = INVALID_NODE_HANDLE;
+    NodeHandle current_list_item_handle = INVALID_NODE_HANDLE;
     NodeHandle para_handle      = INVALID_NODE_HANDLE;
-    NodeHandle bullets_handle   = INVALID_NODE_HANDLE;
-    NodeHandle bullet_handle    = INVALID_NODE_HANDLE;
-    NodeHandle list_handle      = INVALID_NODE_HANDLE;
-    NodeHandle list_item_handle = INVALID_NODE_HANDLE;
-    int normal_indent = 0;
+    int normal_indent = -1;
     Errorable(void) result = {};
     for(;ctx->cursor[0];){
         analyze_line(ctx);
@@ -797,15 +794,13 @@ PARSEFUNC(parse_md_node){
             advance_row(ctx);
             continue;
             }
-        if(!normal_indent){
+        if(normal_indent < 0){
             normal_indent = ctx->nspaces;
             }
         if(ctx->nspaces <= indentation)
             break;
         if(ctx->doublecolon){
             state = NONE;
-            // same comment as the table parser. Makes ::links and such work
-            // We'll flag those as errors in a later analysis
             auto e = parse_double_colon(ctx, parent_handle);
             if(e.errored) return e;
             continue;
@@ -813,9 +808,14 @@ PARSEFUNC(parse_md_node){
         enum MDSTATE newstate = NONE;
         const char* firstchar = ctx->linestart + ctx->nspaces;
         switch(*firstchar){
+            case '+':
+            case '-':
             case '*':
-                newstate = BULLET;
-                break;
+                if(firstchar[1] == ' ')
+                    newstate = BULLET;
+                else
+                    newstate = PARA;
+                goto after;
             case '0' ... '9':{
                 for(const char* c = firstchar+1;;c++){
                     switch(*c){
@@ -843,7 +843,7 @@ PARSEFUNC(parse_md_node){
                 append_child(ctx, parent_handle, bullets_handle);
                 }
             bullet_handle = alloc_handle(ctx);
-            init_node(ctx, bullet_handle, ctx->linestart+ctx->nspaces, NODE_BULLET);
+            init_node(ctx, bullet_handle, ctx->linestart+ctx->nspaces, NODE_LIST_ITEM);
             append_child(ctx, bullets_handle, bullet_handle);
 
             StringView content = stripped_view(ctx->linestart + ctx->nspaces+1, (ctx->lineend - ctx->linestart)-ctx->nspaces-1);

@@ -19,22 +19,21 @@
     apply(IMPORT,         13)\
     apply(IMAGE,          14)\
     apply(BULLETS,        15)\
-    apply(BULLET,         16)\
-    apply(PYTHON,         17)\
-    apply(RAW,            18)\
-    apply(PRE,            19)\
-    apply(LIST,           20)\
-    apply(LIST_ITEM,      21)\
-    apply(KEYVALUE,       22)\
-    apply(KEYVALUEPAIR,   23)\
-    apply(IMGLINKS,       24)\
-    apply(NAV,            25)\
-    apply(DATA,           26)\
-    apply(COMMENT,        27)\
-    apply(MD,             28)\
-    apply(CONTAINER,      29)\
-    apply(QUOTE,          30)\
-    apply(INVALID,        31)\
+    apply(PYTHON,         16)\
+    apply(RAW,            17)\
+    apply(PRE,            18)\
+    apply(LIST,           19)\
+    apply(LIST_ITEM,      20)\
+    apply(KEYVALUE,       21)\
+    apply(KEYVALUEPAIR,   22)\
+    apply(IMGLINKS,       23)\
+    apply(NAV,            24)\
+    apply(DATA,           25)\
+    apply(COMMENT,        26)\
+    apply(MD,             27)\
+    apply(CONTAINER,      28)\
+    apply(QUOTE,          29)\
+    apply(INVALID,        30)\
 
 typedef enum NodeType {
     #define X(a, b) NODE_##a = b,

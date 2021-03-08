@@ -159,12 +159,11 @@ Convenience::md
       IMPORT       | import       | ---           | ---     | No
       IMAGE        | img          | <div><img>    | Yes     | No
       BULLETS      | bullets      | <div><ul>     | Yes     | No
-      BULLET       | ---          | <li>          | ---     | No
+      LIST         | list         | <div><ol>     | Yes     | No
+      LIST_ITEM    | ---          | <li>          | No      | No
       PYTHON       | python       | ---           | No      | No
       RAW          | raw          |               | No      | No
       PRE          | pre          | <div><pre>    | Yes     | No
-      LIST         | list         | <div><ol>     | Yes     | No
-      LIST_ITEM    | ---          | <li>          | No      | No
       KEYVALUE     | kv           | <div><table>  | Yes     | No
       KEYVALUEPAIR | ---          | <tr>          | No      | No
       IMGLINKS     | imglinks     | <div><svg>    | Yes     | No

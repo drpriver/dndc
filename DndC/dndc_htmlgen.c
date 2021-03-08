@@ -224,7 +224,6 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
         case NODE_DATA: // this is a little sketchy
         case NODE_ROOT:
         case NODE_IMPORT:
-        case NODE_BULLET:
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:{
             build_nav_block_children(ctx, handle, sb, depth);
@@ -803,24 +802,6 @@ RENDERFUNC(QUOTE){
         if(e.errored) return e;
         }
     msb_write_literal(sb, "</blockquote>\n</div>\n");
-    return (Errorable(void)){};
-    }
-RENDERFUNC(BULLET){
-    msb_write_literal(sb, "<li>\n");
-    if(unlikely(node->header.length))
-        node_print_warning(ctx, node, "Ignoring header on bullet");
-    if(unlikely(node->classes.count))
-        node_print_warning(ctx, node, "Ignoring classes on bullet");
-    auto count = node->children.count;
-    auto children = node->children.data;
-    for(size_t i = 0; i < count; i++){
-        if(i != 0)
-            msb_write_char(sb, ' ');
-        auto child = get_node(ctx, children[i]);
-        auto e = render_node(ctx, sb, child, header_depth);
-        if(e.errored) return e;
-        }
-    msb_write_literal(sb, "</li>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(PYTHON){
