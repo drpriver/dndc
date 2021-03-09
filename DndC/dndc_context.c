@@ -257,7 +257,6 @@ load_processed_binary_file(Nonnull(Base64Cache*)cache, StringView binarypath, No
     return (Errorable(LongString)){.result=base64ed};
     }
 
-
 static inline
 Nullable(StringView*)
 find_link_target(Nonnull(DndcContext*)ctx, StringView kebabed){
@@ -374,13 +373,6 @@ get_node(Nonnull(DndcContext*)ctx, NodeHandle handle){
     assert(handle.index < ctx->nodes.count);
     auto result = &ctx->nodes.data[handle.index];
     return result;
-    }
-
-static inline
-NodeHandle
-force_inline
-get_parent_handle(Nonnull(DndcContext*)ctx, NodeHandle handle){
-    return get_node(ctx, handle)->parent;
     }
 
 // for debugging
