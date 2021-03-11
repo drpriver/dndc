@@ -13,6 +13,8 @@
 //
 // The money function.
 // Basically executes the whole thing from end to end.
+// Parses the data referenced by source and converts it into html, formatted,
+// .dnd, etc.
 //
 // Arguments
 // ---------
@@ -26,7 +28,7 @@
 //    Can be the empty string, in which case paths are left as is.
 //    Absolute paths in the document are left unaltered.
 //
-// source_path:
+// source:
 //    As controlled by the flags, this can be the data to parse, a path
 //    to a file to parse, or if .length is 0, stdin will be read instead.
 //    This path is adjusted by the base_directory argument.
@@ -56,7 +58,7 @@
 //
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, Nullable(LongString*) output_path, LongString depends_path, Nullable(Base64Cache*)b64cache);
+run_the_dndc(uint64_t flags, StringView base_directory, LongString source, Nullable(LongString*) output_path, LongString depends_path, Nullable(Base64Cache*)b64cache);
 
 //
 // The following functions are for reporting errors and warnings.
@@ -75,7 +77,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
 // This is a printf-like function, so additionally supply a format string and
 // varargs.
 //
-printf_func(3, 4) static
+static
+printf_func(3, 4)
 void
 parse_set_err(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, Nonnull(const char*) fmt, ...);
 
@@ -85,7 +88,8 @@ parse_set_err(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, Nonnull
 //
 // printf-like function.
 //
-printf_func(3, 4) static
+static
+printf_func(3, 4)
 void
 node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
 
@@ -95,7 +99,8 @@ node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), Nonnull(const char*
 //
 // printf-like function
 //
-printf_func(3, 4) static
+static
+printf_func(3, 4)
 void
 node_print_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
 
@@ -105,8 +110,8 @@ node_print_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), Nonnull(const cha
 //
 // printf-like function
 //
-printf_func(3, 4)
 static
+printf_func(3, 4)
 void
 node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...);
 
@@ -118,7 +123,8 @@ node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(c
 //
 // printf-like function
 //
-printf_func(2, 3) static
+static
+printf_func(2, 3)
 void
 report_stat(uint64_t flags, Nonnull(const char*) fmt, ...);
 
@@ -126,7 +132,8 @@ report_stat(uint64_t flags, Nonnull(const char*) fmt, ...);
 // Reports an error. Should only be called by run_the_dndc right before it
 // returns an error.
 //
-printf_func(2, 3) static
+static
+printf_func(2, 3)
 void
 report_error(uint64_t flags, Nonnull(const char*)fmt, ...);
 
@@ -138,13 +145,6 @@ report_error(uint64_t flags, Nonnull(const char*)fmt, ...);
 static inline
 Nonnull(Node*)
 get_node(Nonnull(DndcContext*), NodeHandle);
-
-//
-//
-//
-static inline
-NodeHandle
-get_parent_handle(Nonnull(DndcContext*), NodeHandle);
 
 //
 // Like get_node, but will be available in the debugger as it is extern.
@@ -222,7 +222,7 @@ ctx_load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath);
 //
 // This function provides caching and management of the text.
 // This is a lower level version of ctx_load_processed_binary_file. It allows
-// better control over re-using memory.
+// better control over re-using memory (in the ByteBuilder).
 //
 // binarypath is not adjusted by any implicit base directory. Thus, this function
 // should be called with a pre-adjusted path.
@@ -267,7 +267,8 @@ render_tree(Nonnull(DndcContext*), Nonnull(MStringBuilder*));
 //
 // The result is an html fragment.
 //
-static inline force_inline
+static inline
+force_inline
 Errorable_f(void)
 render_node(Nonnull(DndcContext*), Nonnull(MStringBuilder*) restrict, Nonnull(const Node*), int header_depth);
 
@@ -371,7 +372,6 @@ add_link_from_sv(Nonnull(DndcContext*)ctx, StringView str, bool check_valid);
 // Adds the link to the link map as derived from the header
 // The transmutation is:
 //   kebabed(str) = #kebabed(str)
-//
 //
 static inline
 void
