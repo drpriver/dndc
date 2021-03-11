@@ -5,6 +5,7 @@ tags
 .vimrc
 Objs
 *.o
+*.so
 .DS_Store
 compile_commands.json
 *.trace

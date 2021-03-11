@@ -46,7 +46,7 @@ convert:
 
 run-tests: clean-tests tests
 
-all: tests dndc dndcbench README.html
+all: tests dndc dndcbench README.html pydndc
 
 install: $(DNDC)
 	@$(INSTALL) -C $< $(INSTALLDIR)/dndc$(EXE)

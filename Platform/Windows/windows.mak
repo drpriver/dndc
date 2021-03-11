@@ -27,3 +27,6 @@ $(BINDIR)\python38.dll: $(PYDLL)
 	$(CP) $< $@
 $(BINDIR)\dndc.exe: $(BINDIR)\python38.dll
 TestDndC: | $(BINDIR)\python38.dll
+# idk
+PYEXTENSION=.dll
+PYEXTFLAGS=-shared -fPIC

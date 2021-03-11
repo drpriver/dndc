@@ -320,7 +320,7 @@ alloc_handle(Nonnull(DndcContext*));
 static
 Errorable_f(void)
 execute_python_string(Nonnull(DndcContext*), Nonnull(const char*), NodeHandle);
-
+#ifndef PYTHONMODULE
 //
 // Initialize the python interpreter and the dndc python data types.
 // Takes a flags argument, which is the same flags passed to run_the_dndc.
@@ -338,6 +338,7 @@ init_python_docparser(uint64_t);
 static
 void
 end_interpreter(void);
+#endif
 
 //
 // Add a node to be a child of another node. The child will have its parent node

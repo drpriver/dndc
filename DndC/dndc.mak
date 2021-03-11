@@ -29,3 +29,9 @@ $(BINDIR)/TestDndC_debug$(EXE): DndC/TestDndC.c $(DEPDIR)/TestDndC_debug.dep $(O
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndC_debug.dep $(OBJDIR)/frozenstdlib.o $< -o $@ -g  $(LINK_FLAGS) $(PYLDFLAGS)
 	$@
 TestDndC: $(BINDIR)/TestDndC_debug$(EXE) $(BINDIR)/TestDndC_fast$(EXE)
+
+$(BINDIR)/pydndc.cpython-38-darwin.so: DndC/pydndc.c
+
+$(BINDIR)/pydndc$(PYEXTENSION): DndC/pydndc.c
+	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -g $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) -arch x86_64 $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DNOMAIN
+pydndc: $(BINDIR)/pydndc$(PYEXTENSION)

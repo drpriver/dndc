@@ -114,12 +114,14 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
     if(!(flags & DNDC_NO_PYTHON) and ctx->python_nodes.count){
         auto before = get_t();
         // init_python_docparser handles the DNDC_PYTHON_IS_INIT flag.
+        #ifndef PYTHONMODULE
         auto e = init_python_docparser(flags);
         if(e.errored) {
             report_error(flags, "Failed to initialize python\n");
             result.errored = e.errored;
             goto cleanup;
             }
+        #endif
         auto after = get_t();
         report_stat(flags, "Python startup took: %.3fms", (after-before)/1000.);
         for(size_t i = 0; i < ctx->python_nodes.count; i++){
@@ -981,6 +983,7 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
 #include "dndc_context.c"
 #include "allocator.c"
 
+#ifndef PYTHONMODULE
 extern
 int
 dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongString*)output){
@@ -1028,3 +1031,4 @@ dndc_init_python_types(void){
     auto err = docparse_init_types();
     return err.errored;
     }
+#endif

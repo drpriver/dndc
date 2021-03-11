@@ -57,6 +57,18 @@ pystring_borrow_stringview(Nonnull(PyObject*)pyobj){
     unhandled_error_condition(!text);
     return (StringView){.text=text, .length=length};
     }
+PushDiagnostic();
+SuppressUnusedFunction();
+static inline
+LongString
+pystring_borrow_longstring(Nonnull(PyObject*)pyobj){
+    const char* text;
+    Py_ssize_t length;
+    text = PyUnicode_AsUTF8AndSize(pyobj, &length);
+    unhandled_error_condition(!text);
+    return (LongString){.text=text, .length=length};
+    }
+PopDiagnostic();
 
 
 typedef struct NodeTypeEnum {
@@ -1323,6 +1335,7 @@ static struct _inittab mods[] = {
     {NULL, 0}, // sentinel
     };
 
+#ifndef PYTHONMODULE
 static
 int
 init_python_interpreter(uint64_t flags){
@@ -1416,4 +1429,5 @@ end_interpreter(void){
     Py_Finalize();
     }
 PopDiagnostic();
+#endif
 #endif

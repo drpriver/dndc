@@ -26,3 +26,5 @@ MKDIR=mkdir
 CP=cp
 EXE=
 INSTALL=install
+PYEXTENSION=.cpython-38-linux.so
+PYEXTFLAGS=-shared -fPIC
