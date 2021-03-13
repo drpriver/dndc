@@ -13,14 +13,6 @@ static
 Nullable(PyObject*)
 pydndc_htmlgen(Nonnull(PyObject*), Nonnull(PyObject*), Nonnull(PyObject*));
 
-PyDoc_STRVAR(
-    draw_a_dungeon_doc,
-    "draw_a_dungeon(*, blocked='n', filename='dungeon_visualization', x_lim=0, y_lim=0, z_lim=0, num_rooms=0, void_probability=0, vert_probability=0, trim_distance=4, show_voids=False, maximagesize=4,)\n"
-    "--\n"
-    "\n"
-    "Randomly generates a dungeon graph using the Priver algorithm\n"
-    "Then, saves it to the file location as a bmp.\n");
-
 static 
 PyMethodDef pydndc_methods[] = {
     {

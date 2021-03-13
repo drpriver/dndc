@@ -28,6 +28,17 @@ node_has_attribute(Nonnull(const Node*) node, StringView attr){
     }
 
 static inline
+bool
+node_has_class(Nonnull(const Node*) node, StringView c){
+    auto classes = node->classes.data;
+    auto count = node->classes.count;
+    for(size_t i = 0; i < count; i++){
+        if(SV_equals(classes[i], c))
+            return true;
+        }
+    return false;
+    }
+static inline
 Nullable(StringView*)
 node_get_attribute(Nonnull(const Node*) node, StringView attr){
     // TODO: maybe use a dict? Idk how many attributes we actually use.

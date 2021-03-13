@@ -958,6 +958,92 @@ py_add_child_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*
     Py_RETURN_NONE;
     }
 
+static
+Nullable(PyObject*)
+py_select_nodes(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+    (void)handle;
+    NodeTypeEnum* type_ = NULL;
+    PyObject* result = NULL;
+    PyObject* attributes_ = NULL;
+    PyObject* classes_ = NULL;
+    PyObject* class_sq = NULL;
+    PyObject* attributes_sq = NULL;
+    Marray(StringView) attributes = {};
+    Marray(StringView) classes = {};
+    const char* const keywords[] = {"type", "classes", "attributes", NULL};
+    PushDiagnostic();
+    SuppressCastQual();
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "|O!OO:select_nodes", (char**)keywords, &NodeTypeEnumType, &type_, &classes_, &attributes_)){
+        return NULL;
+        }
+    PopDiagnostic();
+    NodeType type = type_? type_->type:NODE_INVALID;
+    if(classes_){
+        class_sq = PySequence_Fast(classes_, "select_nodes needs 'classes' to be a sequence of strings");
+        if(class_sq == NULL){
+            goto cleanup;
+            }
+        auto sq_length = PySequence_Fast_GET_SIZE(class_sq);
+        for(Py_ssize_t i = 0; i < sq_length; i++){
+            auto item = PySequence_Fast_GET_ITEM(class_sq, i);
+            if(!PyUnicode_Check(item)){
+                PyErr_SetString(PyExc_TypeError, "select_nodes needs 'classes' to be a sequence of strings. Non-string found.");
+                goto cleanup;
+                }
+            Marray_push(StringView)(&classes, ctx->temp_allocator, pystring_borrow_stringview(item));
+            }
+        }
+    if(attributes_){
+        attributes_sq = PySequence_Fast(attributes_, "select_nodes needs 'attributes' to be a sequence of strings");
+        if(attributes_sq == NULL){
+            goto cleanup;
+            }
+        auto sq_length = PySequence_Fast_GET_SIZE(attributes_sq);
+        for(Py_ssize_t i = 0; i < sq_length; i++){
+            auto item = PySequence_Fast_GET_ITEM(attributes_sq, i);
+            if(!PyUnicode_Check(item)){
+                PyErr_SetString(PyExc_TypeError, "select_nodes 'attributes' to be a sequence of strings. Non-string found.");
+                goto cleanup;
+                }
+            Marray_push(StringView)(&attributes, ctx->temp_allocator, pystring_borrow_stringview(item));
+            }
+        }
+    if(not classes_ and not attributes_ and not type_){
+        result = PyList_New(ctx->nodes.count);
+        for(size_t i = 0; i < ctx->nodes.count; i++){
+            PyObject* item = make_py_node(ctx, (NodeHandle){.index=i});
+            PyList_SetItem(result, i, item);
+            }
+        }
+    else {
+        result = PyList_New(0);
+        for(size_t i = 0; i < ctx->nodes.count; i++){
+            auto node = &ctx->nodes.data[i];
+            if(type != NODE_INVALID){
+                if(node->type != type)
+                    goto Continue;
+                }
+            for(size_t a = 0; a < attributes.count; a++){
+                auto attr = attributes.data[a];
+                if(not node_has_attribute(node, attr))
+                    goto Continue;
+                }
+            for(size_t c = 0; c < classes.count; c++){
+                if(not node_has_class(node, classes.data[c]))
+                    goto Continue;
+                }
+            PyList_Append(result, make_py_node(ctx, (NodeHandle){.index=i}));
+            Continue:;
+            }
+        }
+    cleanup:
+    Py_XDECREF(attributes_sq);
+    Py_XDECREF(class_sq);
+    Marray_cleanup(StringView)(&classes, ctx->temp_allocator);
+    Marray_cleanup(StringView)(&attributes, ctx->temp_allocator);
+    return result;
+    }
+
 static Nonnull(PyObject*) make_py_ctx(Nonnull(DndcContext*));
 
 static
@@ -1293,6 +1379,17 @@ DndContext_getattr(Nonnull(DndContext*)pyctx, Nonnull(const char*)attr){
         }
     if(CHECK("sourcepath")){
         return PyUnicode_FromStringAndSize(ctx->filename.text, ctx->filename.length);
+        }
+    if(CHECK("all_nodes")){
+        PyObject* result = PyList_New(ctx->nodes.count);
+        for(size_t i = 0; i < ctx->nodes.count; i++){
+            PyObject* item = make_py_node(ctx, (NodeHandle){.index=i});
+            PyList_SetItem(result, i, item);
+            }
+        return result;
+        }
+    if(CHECK("select_nodes")){
+        return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_select_nodes);
         }
 #undef CHECK
     PyErr_Format(PyExc_AttributeError, "Unknown attribute: '%s'", attr);

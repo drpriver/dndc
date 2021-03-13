@@ -313,12 +313,11 @@ static NSImage* appimage;
         SV("::python\n"),
         SV("  # this is an example of how to script the imglinks\n"),
         SV("  imglinks = node.parent\n"),
-        SV("  parent = imglinks.parent.parent\n"),
-        SV("  for c in parent.children:\n"),
-        SV("    if 'coord' in c.attributes:\n"),
-        SV("      lead = c.header  # change this probably\n"),
-        SV("      position = c.attributes['coord']\n"),
-        SV("      imglinks.add_child(f'{lead} = {ctx.outfile}#{c.id} @{position}')\n"),
+        SV("  coord_nodes = ctx.select_nodes(attributes=['coord'])\n"),
+        SV("  for c in coord_nodes:\n"),
+        SV("    lead = c.header  # change this probably\n"),
+        SV("    position = c.attributes['coord']\n"),
+        SV("    imglinks.add_child(f'{lead} = {ctx.outfile}#{c.id} @{position}')\n"),
         SV("  #endpython\n"),
     };
     for(int i = 0; i < arrlen(script); i++){

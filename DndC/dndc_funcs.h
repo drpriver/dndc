@@ -168,6 +168,13 @@ bool
 node_has_attribute(Nonnull(const Node*) node, StringView attr);
 
 //
+// Checks if the node has a class or not.
+//
+static inline
+bool
+node_has_class(Nonnull(const Node*) node, StringView class);
+
+//
 // Retrieves the value associate with attr key.
 // If the node does not have that attribute, returns NULL.
 // Many attributes will have empty strings. In that case, a pointer

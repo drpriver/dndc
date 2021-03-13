@@ -868,6 +868,7 @@ PARSEFUNC(parse_md_node){
                     s->indentation = ctx->nspaces;
                     s->state = newstate;
                     init_node(ctx, s->list, ctx->linestart+ctx->nspaces, newstate==BULLET?NODE_BULLETS:NODE_LIST);
+                    assert(si > 0);
                     append_child(ctx, stack[si-1].item, s->list);
                     }
                 // neighbors
@@ -875,13 +876,13 @@ PARSEFUNC(parse_md_node){
                     auto s = &stack[si];
                     if(s->state != newstate){
                         // neighbor of different type
-                        auto prev = &stack[si-1];
+                        NodeHandle prev = si>0? stack[si-1].item : parent_handle;
                         s->list = alloc_handle(ctx);
                         s->item = INVALID_NODE_HANDLE;
                         s->indentation = ctx->nspaces;
                         s->state = newstate;
                         init_node(ctx, s->list, ctx->linestart+ctx->nspaces, newstate==BULLET?NODE_BULLETS:NODE_LIST);
-                        append_child(ctx, prev->item, s->list);
+                        append_child(ctx, prev, s->list);
                         }
                     else {
                         // Neighbor of same type, do nothing
