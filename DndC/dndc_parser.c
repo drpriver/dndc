@@ -802,6 +802,7 @@ PARSEFUNC(parse_md_node){
             break;
         if(ctx->doublecolon){
             state = NONE;
+            si = -1;
             auto e = parse_double_colon(ctx, parent_handle);
             if(e.errored) return e;
             continue;
@@ -892,6 +893,10 @@ PARSEFUNC(parse_md_node){
                 else {
                     for(;;){
                         si--;
+                        if(si < 0){
+                            parse_set_err(ctx, ctx->linestart+ctx->nspaces, "Dedent does not match initial indent");
+                            Raise(PARSE_ERROR);
+                            }
                         assert(si >= 0);
                         auto indent = stack[si].indentation;
                         if(indent > ctx->nspaces)
@@ -941,6 +946,7 @@ PARSEFUNC(parse_md_node){
             init_string_node(ctx, new_node_handle, content);
             append_child(ctx, para_handle, new_node_handle);
             advance_row(ctx);
+            si = -1;
             state = newstate;
             continue;
             }

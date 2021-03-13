@@ -9,6 +9,7 @@ TestFunction(TestDndC3);
 TestFunction(TestDndcOutParam);
 TestFunction(TestDndcTableMultiline);
 TestFunction(TestFormatTable);
+TestFunction(TestCrashesFixed);
 
 static inline
 void
@@ -19,7 +20,8 @@ register_tests(void){
     RegisterTest(TestDndcOutParam);
     RegisterTest(TestDndcTableMultiline);
     RegisterTest(TestFormatTable);
-    }
+    RegisterTest(TestCrashesFixed);
+}
 
 TestFunction(TestDndC1){
     TESTBEGIN();
@@ -272,6 +274,32 @@ TestFunction(TestFormatTable){
             HEREPrint(outdata.text);
             }
         const_free(outdata.text);
+        }
+    TESTEND();
+    }
+
+TestFunction(TestCrashesFixed){
+    TESTBEGIN();
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_DONT_PRINT_ERRORS
+        | DNDC_DONT_WRITE
+        ;
+    struct {
+        LongString name;
+        bool error; // if we expect an error
+        } cases[] = {
+            {.name=LS("case1.dnd"), .error=false},
+            {.name=LS("case2.dnd"), .error=true},
+            };
+    for(size_t i = 0; i < arrlen(cases); i++){
+        auto e = run_the_dndc(flags, SV("TestCases"), cases[i].name, NULL, LS(""), NULL);
+        if(cases[i].error){
+            TestExpectFailure(e);
+            }
+        else {
+            TestExpectSuccess(e);
+            }
         }
     TESTEND();
     }

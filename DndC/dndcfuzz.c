@@ -19,9 +19,10 @@ int LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
         | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_NO_PYTHON
+        | DNDC_NO_THREADS
         ;
     LongString source = {.text=str, .length=size};
-    auto e = run_the_dndc(flags, source, NULL, LS(""));
+    auto e = run_the_dndc(flags, SV(""), source, NULL, LS(""), NULL);
     (void)e;
     free(str);
     return 0;

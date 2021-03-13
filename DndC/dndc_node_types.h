@@ -71,7 +71,6 @@ struct {
     {SV("js"),           NODE_SCRIPTS},
     {SV("image"),        NODE_IMAGE},
     {SV("img"),          NODE_IMAGE},
-    {SV("bullets"),      NODE_BULLETS},
     {SV("raw"),          NODE_RAW},
     {SV("pre"),          NODE_PRE},
     {SV("kv"),           NODE_KEYVALUE},
