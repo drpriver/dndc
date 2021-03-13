@@ -10,7 +10,6 @@ typedef long long ssize_t;
 
 enum {FORMAT_WIDTH=80};
 enum {FORMAT_INDENT=2};
-const char* _Nonnull const EIGHTYSPACES = "                                                                                ";
 typedef struct FormatState {
     // signed so it can go negative (simplifies things)
     // Check for <= 0, not == 0
@@ -196,7 +195,7 @@ void
 format_write_wrapped_string(Nonnull(MStringBuilder*)sb, Nonnull(FormatState*)state, StringView sv){
     FormatTokenized tokenized= {.rest=sv};
     if(state->col < state->lead){
-        msb_write_str(sb, EIGHTYSPACES, state->lead);
+        msb_write_nchar(sb, ' ', state->lead);
         state->col = state->lead;
         }
     while(tokenized.rest.length){
@@ -205,7 +204,7 @@ format_write_wrapped_string(Nonnull(MStringBuilder*)sb, Nonnull(FormatState*)sta
             break;
         if(state->col+tokenized.token.length > FORMAT_WIDTH){
             msb_write_char(sb, '\n');
-            msb_write_str(sb, EIGHTYSPACES, state->lead);
+            msb_write_nchar(sb, ' ', state->lead);
             state->col = state->lead;
             }
         else if(state->col != state->lead){
@@ -250,7 +249,7 @@ FORMATFUNC(md_bullets){
     for(size_t i = 0; i < node->children.count; i++){
         auto child = get_node(ctx, node->children.data[i]);
         assert(child->type == NODE_LIST_ITEM);
-        msb_write_str(sb, EIGHTYSPACES, indent);
+        msb_write_nchar(sb, ' ', indent);
         // FIXME: We actually need to preserve exactly which token was used
         //        as a bullet. We discard that info, so we currently just output a '*' unconditionally.
         msb_write_literal(sb, "* ");
@@ -284,7 +283,7 @@ FORMATFUNC(md_list){
     for(size_t i = 0; i < node->children.count; i++){
         auto child = get_node(ctx, node->children.data[i]);
         assert(child->type == NODE_LIST_ITEM);
-        msb_write_str(sb, EIGHTYSPACES, indent);
+        msb_write_nchar(sb, ' ', indent);
         msb_sprintf(sb, "%*d. ", numwidth, (int)i+1);
         FormatState state = {.lead = indent+numwidth+2, .col=indent+numwidth+2};
         for(size_t j = 0; j < child->children.count; j++){
@@ -416,11 +415,11 @@ FORMATFUNC(table_node){
                     msb_write_literal(sb, " | ");
                     }
                 else
-                    msb_write_str(sb, EIGHTYSPACES, indent);
+                    msb_write_nchar(sb, ' ', indent);
                 auto cell = get_node(ctx, row->children.data[j]);
                 auto writ = write_str_or_container(ctx, sb, cell);
                 if(j != row->children.count-1 && widths[j] > writ){
-                    msb_write_str(sb, EIGHTYSPACES, widths[j] - writ);
+                    msb_write_nchar(sb, ' ', widths[j] - writ);
                     }
                 }
             msb_write_char(sb, '\n');
@@ -439,11 +438,11 @@ FORMATFUNC(table_node){
                     msb_write_literal(sb, " | ");
                     }
                 else
-                    msb_write_str(sb, EIGHTYSPACES, indent);
+                    msb_write_nchar(sb, ' ', indent);
                 auto cell = get_node(ctx, row->children.data[j]);
                 auto writ = write_str_or_container(ctx, sb, cell);
                 if(j != row->children.count-1 && widths[j] > writ){
-                    msb_write_str(sb, EIGHTYSPACES, widths[j] - writ);
+                    msb_write_nchar(sb, ' ', widths[j] - writ);
                     }
                 }
             if(row->children.count > 1)
@@ -472,7 +471,7 @@ FORMATFUNC(kv_node){
             format_node(ctx, sb, child, indent);
             continue;
             }
-        msb_write_str(sb, EIGHTYSPACES, indent);
+        msb_write_nchar(sb, ' ', indent);
         assert(child->children.count == 2);
         auto key   = get_node(ctx, child->children.data[0])->header;
         auto value = get_node(ctx, child->children.data[1])->header;
@@ -495,7 +494,7 @@ FORMATFUNC(raw_node){
             }
         assert(child->type == NODE_STRING);
         if(child->header.length){
-            msb_write_str(sb, EIGHTYSPACES, nspace);
+            msb_write_nchar(sb, ' ', nspace);
             msb_write_str(sb, child->header.text, child->header.length);
             }
         msb_write_char(sb, '\n');

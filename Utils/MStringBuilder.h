@@ -143,6 +143,16 @@ msb_write_char(Nonnull(MStringBuilder*) msb, char c){
     _check_msb_size(msb, 1);
     msb->data[msb->cursor++] = c;
     }
+static inline
+force_inline
+void
+msb_write_nchar(Nonnull(MStringBuilder*) msb, char c, size_t n){
+    if(n == 0)
+        return;
+    _check_msb_size(msb, n);
+    memset(msb->data + msb->cursor, c, n);
+    msb->cursor += n;
+    }
 
 static inline
 void

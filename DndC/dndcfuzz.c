@@ -20,6 +20,7 @@ int LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_NO_PYTHON
         | DNDC_NO_THREADS
+        | DNDC_REFORMAT_ONLY
         ;
     LongString source = {.text=str, .length=size};
     auto e = run_the_dndc(flags, SV(""), source, NULL, LS(""), NULL);

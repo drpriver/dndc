@@ -551,7 +551,10 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
 
         auto str = msb_borrow(&msb);
         auto before_write = get_t();
-        if(flags & DNDC_OUTPUT_PATH_IS_OUT_PARAM){
+        if(flags & DNDC_DONT_WRITE){
+            goto success;
+            }
+        else if(flags & DNDC_OUTPUT_PATH_IS_OUT_PARAM){
             assert(output_path);
             // We don't use the allocator as this needs to outlive the recording
             // allocator.
