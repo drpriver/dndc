@@ -13,13 +13,13 @@ static
 Nullable(PyObject*)
 pydndc_htmlgen(Nonnull(PyObject*), Nonnull(PyObject*), Nonnull(PyObject*));
 
-static 
+static
 PyMethodDef pydndc_methods[] = {
     {
         .ml_name = "reformat",
         .ml_meth = (PyCFunction)pydndc_reformat,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
-        .ml_doc = 
+        .ml_doc =
         "reformat(text)\n"
         "--\n"
         "\n"
@@ -47,7 +47,7 @@ PyMethodDef pydndc_methods[] = {
         "Args:\n"
         "  text (str): The .dnd string\n"
         "  base_dir (str): For relative filepaths referenced in the document,\n"
-        "                 what those paths are relative to.\n" 
+        "                 what those paths are relative to.\n"
         "                 Defaults to the current directory.\n"
         "\n"
         "Returns: str\n"
@@ -62,7 +62,7 @@ PyMethodDef pydndc_methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
-static 
+static
 PyModuleDef pydndc = {
     PyModuleDef_HEAD_INIT,
     .m_name="pydndc",
@@ -75,7 +75,7 @@ PyModuleDef pydndc = {
     .m_free=NULL,
 };
 
-PyMODINIT_FUNC 
+PyMODINIT_FUNC
 PyInit_pydndc(void) {
     auto e = docparse_init_types();
     if(e.errored)

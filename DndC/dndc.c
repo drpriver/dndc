@@ -736,9 +736,6 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         report_stat(ctx.flags, "ctx.links.count = %zu", ctx.links.count);
     }
 
-    if(unlikely(flags & DNDC_DONT_WRITE))
-        goto success;
-
     // Render data nodes into the data blob.
     {
         auto before_data = get_t();
@@ -803,7 +800,11 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
             goto cleanup;
             }
         auto before_write = get_t();
-        if(flags & DNDC_OUTPUT_PATH_IS_OUT_PARAM){
+        if(flags & DNDC_DONT_WRITE){
+            msb_destroy(&output_sb);
+            goto success;
+            }
+        else if(flags & DNDC_OUTPUT_PATH_IS_OUT_PARAM){
             assert(output_path);
             // We don't use the allocator as this needs to outlive the recording
             // allocator.
