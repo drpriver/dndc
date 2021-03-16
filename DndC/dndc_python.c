@@ -1050,8 +1050,10 @@ static
 Errorable_f(void)
 execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHandle handle){
     PyCompilerFlags flags = {
+#if PY_MINOR_VERSION > 7
         .cf_flags = PyCF_SOURCE_IS_UTF8,
         .cf_feature_version = PY_MINOR_VERSION,
+#endif
         };
     PyObject* glbl = PyDict_New();
     PyObject* nodetypes = PyDict_New();
@@ -1440,6 +1442,7 @@ init_python_interpreter(uint64_t flags){
         Py_Initialize();
         return 0;
         }
+#if PY_MINOR_VERSION > 7
     PyStatus status;
     PyPreConfig preconfig;
     PyPreConfig_InitIsolatedConfig(&preconfig);
@@ -1492,6 +1495,10 @@ init_python_interpreter(uint64_t flags){
         return status.exitcode;
         }
     return 1;
+#else
+    Py_Initialize();
+    return 0;
+#endif
     }
 #include "frozenstdlib.h"
 static Errorable_f(void) docparse_init_types(void);

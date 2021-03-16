@@ -33,5 +33,5 @@ TestDndC: $(BINDIR)/TestDndC_debug$(EXE) $(BINDIR)/TestDndC_fast$(EXE)
 $(BINDIR)/pydndc.cpython-38-darwin.so: DndC/pydndc.c
 
 $(BINDIR)/pydndc$(PYEXTENSION): DndC/pydndc.c
-	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -g $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) -arch x86_64 $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DNOMAIN
+	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -g $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DNOMAIN
 pydndc: $(BINDIR)/pydndc$(PYEXTENSION)

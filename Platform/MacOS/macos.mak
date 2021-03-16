@@ -25,6 +25,6 @@ gdndc: $(BINDIR)/gdndc
 install-gdndc: $(BINDIR)/gdndc
 	$(INSTALL) -C $< $(INSTALLDIR)/gdndc
 PYEXTENSION=.cpython-38-darwin.so
-PYEXTFLAGS=-bundle -bundle_loader /usr/local/bin/python3
+PYEXTFLAGS=-bundle -bundle_loader /usr/local/bin/python3 -arch x86_64
 
 all: gdndc

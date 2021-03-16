@@ -108,11 +108,14 @@ typedef struct Node {
     // no padding in this struct
 }Node;
 
+
+#if UINTPTR_MAX != 0xFFFFFFFF
 _Static_assert(sizeof(Node) == 15*sizeof(size_t), "");
 // Damn these are fat.
 // As a huge number of nodes are string nodes, we need a different scheme
 // for storing children attributes and classes.
 _Static_assert(sizeof(Node) == 120, "");
+#endif
 
 #define MARRAY_T Node
 #include "Marray.h"

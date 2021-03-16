@@ -71,11 +71,17 @@ ifeq ($(OS),Windows_NT)
 UNAME:=Windows
 include Platform\Windows\windows.mak
 else
+# nasty hack
+ifeq ($(shell uname -m),armv7l)
+UNAME:=Rpi
+include Platform/RPi32/rpi.mak
+else
 UNAME := $(shell uname)
 ifeq ($(UNAME),Darwin)
 include Platform/MacOS/macos.mak
 else
 include Platform/Linux/linux.mak
+endif
 endif
 endif
 

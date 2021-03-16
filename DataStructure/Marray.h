@@ -10,13 +10,15 @@
 
 static inline
 size_t
-resize_to_some_weird_number(uint64_t x){
+resize_to_some_weird_number(size_t x){
 /**
  * If given a power of two number, gives that number roughly * 1.5
  * Any other number will give the next largest power of 2.
  * This leads to a growth rate of sort of sqrt(2)
  */
-    _Static_assert(sizeof(uint64_t) == sizeof(unsigned long long), "fuu");
+#if UINTPTR_MAX != 0xFFFFFFFF
+    _Static_assert(sizeof(size_t) == 8, "");
+    _Static_assert(sizeof(size_t) == sizeof(unsigned long long), "fuu");
     if(x < 4)
         return 4;
     if(x == 4)
@@ -26,7 +28,7 @@ resize_to_some_weird_number(uint64_t x){
     // grow by factor of approx sqrt(2)
     // I have no idea if this is ideal, but it has a nice elegance to it
     auto cnt = __builtin_popcountll(x);
-    uint64_t result;
+    size_t result;
     if(cnt == 1){
         result =  x | (x >> 1);
         }
@@ -34,6 +36,26 @@ resize_to_some_weird_number(uint64_t x){
         auto clz = __builtin_clzll(x);
         result = 1ull << (64 - clz);
         }
+#else
+    _Static_assert(sizeof(size_t) == sizeof(unsigned), "fuu");
+    if(x < 4)
+        return 4;
+    if(x == 4)
+        return 8;
+    if(x <= 8)
+        return 16;
+    // grow by factor of approx sqrt(2)
+    // I have no idea if this is ideal, but it has a nice elegance to it
+    auto cnt = __builtin_popcount(x);
+    size_t result;
+    if(cnt == 1){
+        result =  x | (x >> 1);
+        }
+    else {
+        auto clz = __builtin_clz(x);
+        result = 1u << (32 - clz);
+        }
+#endif
     return result;
     }
 

@@ -66,7 +66,7 @@ FROZEN_MODULES:=$(addprefix $(FROZENDIR)/,\
 	pdb.py.h\
 	)
 
-$(OBJDIR)/frozenstdlib.o: PythonEmbed/frozenstdlib.c $(DEPDIR)/frozenstdlib.dep  $(FROZEN_MODULES) | $(DIRECTORIES)
+$(OBJDIR)/frozenstdlib.o: PythonEmbed/frozenstdlib.c $(DEPDIR)/frozenstdlib.dep | $(DIRECTORIES)
 	$(CC) $(INCLUDE_FLAGS) $(PLATFORM_FLAGS) $(FAST_FLAGS) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/frozenstdlib.dep $< -c -o $@
 
 $(FROZENDIR)/%.py.h: $(PYVENDOR)/%.py | $(FREEZE) $(FROZENDIR)

@@ -1,4 +1,5 @@
 #include "pyhead.h"
+#if PY_MINOR_VERSION > 7
 #include "frozenstdlib.h"
 #include "frozen/abc.py.h"
 #include "frozen/importlib.py.h"
@@ -127,3 +128,9 @@ void
 set_frozen_modules(void){
     PyImport_FrozenModules = _PyImport_FrozenModules;
     }
+#else
+extern
+void
+set_frozen_modules(void){
+    }
+#endif

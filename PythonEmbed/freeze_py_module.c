@@ -47,6 +47,7 @@ main(int argc, char *argv[])
         }
     auto text = unwrap(insource);
 
+#if PY_MINOR_VERSION > 7
     PyConfig config;
     PyConfig_InitIsolatedConfig(&config);
 
@@ -60,7 +61,6 @@ main(int argc, char *argv[])
         fprintf(stderr, "status is bad\n");
         Py_ExitStatusException(status);
     }
-
     /* Don't install importlib, since it could execute outdated bytecode. */
     config._install_importlib = 0;
     config._init_main = 0;
@@ -71,6 +71,27 @@ main(int argc, char *argv[])
         fprintf(stderr, "status is bad\n");
         Py_ExitStatusException(status);
     }
+
+#else
+    _PyCoreConfig config = _PyCoreConfig_INIT;
+    config.program_name = L"./_freeze_importlib";
+    /* Don't install importlib, since it could execute outdated bytecode. */
+    config._disable_importlib = 1;
+
+    Py_NoUserSiteDirectory++;
+    Py_NoSiteFlag++;
+    Py_IgnoreEnvironmentFlag++;
+    Py_FrozenFlag++;
+
+
+    _PyInitError err = _Py_InitializeFromConfig(&config);
+    /* No need to call _PyCoreConfig_Clear() since we didn't allocate any
+       memory: program_name is a constant string. */
+    if (_Py_INIT_FAILED(err)) {
+        _Py_FatalInitError(err);
+    }
+
+#endif
 
     {
     char buf[100];
