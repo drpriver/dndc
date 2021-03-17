@@ -11,54 +11,30 @@
 // use, or else use them consistently!
 #define ERROR_CODES(apply) \
     apply(NO_ERROR, 0) \
-    /*Messages*/ \
-    apply(QUIT, 1) \
-    apply(BAD_EXIT, 2) \
-    /*Container errors*/ \
-    apply(NOT_FOUND, 3) \
-    apply(OUT_OF_SPACE, 4) \
+    apply(ALLOC_FAILURE, 1) \
     /*Parser Errors*/ \
-    apply(PARSE_ERROR, 5) \
-    apply(INVALID_SYMBOL, 6) \
-    apply(UNEXPECTED_END, 7) \
-    apply(INFIX_MISSING, 8) \
+    apply(PARSE_ERROR, 2) \
+    apply(INVALID_SYMBOL, 3) \
+    apply(UNEXPECTED_END, 4) \
     /*Buffer Errors*/ \
-    apply(UNDERFLOWED_BUFFER, 9) \
-    apply(OVERFLOWED_BUFFER, 10) \
-    apply(WOULD_OVERFLOW, 11) \
+    apply(WOULD_OVERFLOW, 5) \
     /* decoding error */ \
-    apply(ENCODING_ERROR, 12)\
-    apply(DECODING_ERROR, 13)\
+    apply(ENCODING_ERROR, 6)\
+    apply(DECODING_ERROR, 7)\
     /*Math Errors*/ \
-    apply(INVALID_VALUE, 14) \
-    apply(OVERFLOWED_VALUE, 15) \
+    apply(OVERFLOWED_VALUE, 8) \
     /*File IO Errors*/ \
-    apply(FILE_ERROR, 16) \
-    apply(FILE_NOT_OPENED, 17) \
-    apply(FILE_NOT_FOUND, 18) \
-    apply(FILE_CREATE_FAILED, 19) \
-    apply(NO_BYTES_WRITTEN, 20) \
-    apply(NO_BYTES_READ, 21) \
-    apply(INVALID_FILE_TYPE, 22) \
-    apply(ALREADY_EXISTS, 23) \
-    /*Pointer Errors*/ \
-    apply(UNEXPECTED_NULL, 24) \
-    apply(ALLOC_FAILURE, 25) \
-    apply(DEALLOC_FAILURE, 26) \
-    /*Initialization Errors*/ \
-    apply(ALREADY_INIT, 27) \
-    apply(FAILED_INIT, 28) \
+    apply(FILE_ERROR, 9) \
+    apply(FILE_NOT_OPENED, 10) \
     /*KWARG*/ \
-    apply(BAD_KWARG, 29) \
-    apply(MISSING_KWARG, 30) \
-    apply(EXCESS_KWARGS, 31) \
-    apply(DUPLICATE_KWARG, 32) \
-    apply(MISSING_ARG, 33) \
-    apply(EARLY_END, 34) \
+    apply(MISSING_KWARG, 11) \
+    apply(EXCESS_KWARGS, 12) \
+    apply(DUPLICATE_KWARG, 13) \
+    apply(MISSING_ARG, 14) \
     /*Some low level routine failed*/ \
-    apply(OS_ERROR, 35) \
+    apply(OS_ERROR, 15) \
     /*idk man*/ \
-    apply(GENERIC_ERROR, 36)\
+    apply(GENERIC_ERROR, 16)\
 
 #ifdef WINDOWS
 // Windows.h defines NO_ERROR. What a PITA.

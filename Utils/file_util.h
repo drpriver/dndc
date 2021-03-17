@@ -68,7 +68,7 @@ read_file(const Allocator a, Nonnull(const char*)filepath){
     auto nbytes = unwrap(size_e);
     char* text = Allocator_alloc(a, nbytes+1);
     if(!text){
-        result.errored = OUT_OF_SPACE;
+        result.errored = ALLOC_FAILURE;
         goto finally;
         }
     auto fread_result = fread(text, 1, nbytes, fp);
@@ -100,7 +100,7 @@ read_bin_file(const Allocator a, Nonnull(const char*)filepath){
     auto nbytes = unwrap(size_e);
     void* data = Allocator_alloc(a, nbytes);
     if(!data){
-        result.errored = OUT_OF_SPACE;
+        result.errored = ALLOC_FAILURE;
         goto finally;
         }
     assert(data);
@@ -167,7 +167,7 @@ read_file(const Allocator a, Nonnull(const char*)filepath){
     auto nbytes = unwrap(size_e);
     char* text = Allocator_alloc(a, nbytes+1);
     if(!text){
-        result.errored = OUT_OF_SPACE;
+        result.errored = ALLOC_FAILURE;
         goto finally;
         }
     auto read_result = read(fd, text, nbytes);
@@ -201,7 +201,7 @@ read_bin_file(const Allocator a, Nonnull(const char*)filepath){
     auto nbytes = unwrap(size_e);
     void* data = Allocator_alloc(a, nbytes);
     if(!data){
-        result.errored = OUT_OF_SPACE;
+        result.errored = ALLOC_FAILURE;
         goto finally;
         }
     assert(data);
@@ -270,7 +270,7 @@ read_file(const Allocator a, Nonnull(const char*)filepath){
     size_t nbytes = size.QuadPart;
     char* text = Allocator_alloc(a, nbytes+1);
     if(!text){
-        result.errored = OUT_OF_SPACE;
+        result.errored = ALLOC_FAILURE;
         goto finally;
         }
     DWORD nread;
@@ -316,7 +316,7 @@ read_bin_file(const Allocator a, Nonnull(const char*)filepath){
     size_t nbytes = size.QuadPart;
     void* data = Allocator_alloc(a, nbytes);
     if(!data){
-        result.errored = OUT_OF_SPACE;
+        result.errored = ALLOC_FAILURE;
         goto finally;
         }
     DWORD nread;

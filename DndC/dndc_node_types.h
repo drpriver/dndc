@@ -39,14 +39,14 @@ typedef enum NodeType {
     #define X(a, b) NODE_##a = b,
     NODETYPES(X)
     #undef X
-    } NodeType;
+} NodeType;
 
 static const
 LongString nodenames[] = {
     #define X(a, b) [NODE_##a] = LS(#a),
     NODETYPES(X)
     #undef X
-    };
+};
 //
 // These strings are how to refer to a kind of node from within a document.
 // It is intentional that not all nodes have an alias. Many nodes can not
@@ -79,7 +79,7 @@ struct {
     {SV("nav"),          NODE_NAV},
     {SV("data"),         NODE_DATA},
     {SV("quote"),        NODE_QUOTE},
-    };
+};
 
 static const
 StringView
@@ -106,6 +106,6 @@ nodetype_to_node_aliases[NODE_INVALID+1] = {
      [NODE_NAV]          = SV("nav"),
      [NODE_DATA]         = SV("data"),
      [NODE_QUOTE]        = SV("quote"),
-    };
+};
 
 #endif

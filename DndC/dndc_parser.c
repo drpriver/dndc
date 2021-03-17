@@ -775,7 +775,7 @@ PARSEFUNC(parse_md_node){
         PARA = 1,
         BULLET = 2,
         LIST = 3,
-        };
+    };
     enum MDSTATE state = NONE;
     struct {
         NodeHandle list;
