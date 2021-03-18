@@ -6,7 +6,7 @@
 #include "error_handling.h"
 
 // LongStrings and StringViews are very similar.
-// A LongString is basically a StringView with a guranteed nul-terminator.
+// A LongString is basically a StringView with a guaranteed nul-terminator.
 // It is unspecified if a StringView has a nul-terminator.
 typedef struct LongString {
     size_t length; // excludes the terminating NUL

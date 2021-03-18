@@ -811,11 +811,6 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
             //
             // We could do this without the extra copy, but this will work for now.
             *output_path = msb_detach(&output_sb);
-            // char* html_text = malloc(str.length+1);
-            // memcpy(html_text, str.text, str.length);
-            // html_text[str.length] = '\0';
-            // output_path->text = html_text;
-            // output_path->length = str.length;
             }
         else if(!output_path || outpath.length == 0){
             auto str = msb_borrow(&output_sb);

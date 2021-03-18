@@ -169,7 +169,6 @@ Marray_remove(MARRAY_T)(Nonnull(Marray(MARRAY_T)*)marray, size_t index){
     size_t n_move = marray->count - index - 1;
     (memmove)(marray->data+index, marray->data+index+1, n_move*(sizeof(marray->data[0])));
     marray->count--;
-    return;
     }
 
 static inline
@@ -178,7 +177,6 @@ Marray_extend(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator  a, N
     Marray_ensure(MARRAY_T)(marray, a, n_values);
     (memcpy)(marray->data+marray->count, values, n_values*(sizeof(MARRAY_T)));
     marray->count+=n_values;
-    return;
     }
 
 static inline
@@ -191,7 +189,6 @@ Marray_reserve(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator a, s
     marray->data = Allocator_realloc(a, marray->data, old_size, new_size);
     marray->capacity = n;
     unhandled_error_condition(!marray->data);
-    return;
     }
 
 static inline
@@ -201,7 +198,6 @@ Marray_cleanup(MARRAY_T)(Nonnull(Marray(MARRAY_T)*) marray, const Allocator a){
     marray->data = NULL;
     marray->count = 0;
     marray->capacity = 0;
-    return;
     }
 
 PopDiagnostic()

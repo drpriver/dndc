@@ -47,7 +47,7 @@ bool
 path_is_abspath(StringView path){
     if(!path.length)
         return false;
-    // FIXME: this is wrong on windows as you can inclue a drive letter.
+    // FIXME: this is wrong on windows as you can include a drive letter.
     return is_sep(path.text[0]);
     }
 

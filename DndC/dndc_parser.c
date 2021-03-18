@@ -159,7 +159,6 @@ eat_leading_tabspaces(Nonnull(StringView*)sv){
         sv->length--;
         sv->text++;
         }
-    return;
     }
 
 static inline
@@ -429,7 +428,6 @@ PARSEFUNC(parse_list_node){
                 case '.':
                     firstchar++;
                     goto after;
-                    break;
                 default:
                     parse_set_err(ctx, firstchar, "Non numeric found when parsing list: '%c'", *firstchar);
                     Raise(PARSE_ERROR);

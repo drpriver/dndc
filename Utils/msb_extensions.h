@@ -14,7 +14,7 @@
 
 //
 // Writes the string into the builder, but kebabs the string.
-// "Kebabs" the string, turning into something useable as an html id.
+// "Kebabs" the string, turning into something usable as an html id.
 // Preserves digits, lowercases alphabetical characters and turns
 // gaps between alphanumeric into a single hyphen (thus the kebab).
 //

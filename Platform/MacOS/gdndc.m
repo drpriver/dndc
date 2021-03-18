@@ -30,16 +30,32 @@ typedef enum GdndInsertTag{
 // Has a NSWindow* window
 @end
 
+//
+// Customized text view
+// Supports indent, dedent, inserting special blocks,
+// uses plain text for paste, smart indent, smart tab with smart backspace.
+//
 @interface DndTextView: NSTextView
 -(void)insert_file_block:(NSString*)path tag:(GdndInsertTag)tag size:(NSSize)size;
 @end
 
+//
+// Delegate for the above textview that provides syntax highlighting
+// for the .dnd file
+//
 @interface DndHighlighter: NSObject<NSTextStorageDelegate>
 @end
 
+//
+// Controls what urls to allow (basically makes it so links will open a new
+// .dnd document)
+//
 @interface WebNavDel : NSObject <WKNavigationDelegate>
 @end
 
+//
+// ViewController for the windwos of the app
+//
 @interface DndViewController: NSViewController{
 @public DndTextView* text;
 @public NSScrollView* scrollview; // contains the text
@@ -51,6 +67,9 @@ typedef enum GdndInsertTag{
 -(void)recalc_html:(id)sender;
 @end
 
+//
+// The Dnd document
+//
 @interface DndDocument: NSDocument{
 // this is kind of janky, but whatever
 DndViewController* view_controller;
@@ -58,16 +77,24 @@ DndViewController* view_controller;
 }
 @end
 
+// The App delegate!
 @interface DndAppDelegate : NSObject<NSApplicationDelegate>
 @end
 
+//
+// Setup menus without needing a nib (xib? whatever).
+//
 static void do_menus(void);
+//
+// This is for detecting indent for smart indent
 static NSString * const kIndentPatternString = @"^(\\t|\\s)+";
+// ditto
 static NSRegularExpression* indent_pattern;
+//
+// The app's image. We embed the png into the binary and decode it at startup.
 static NSImage* appimage;
 
 @implementation DndDocument
-
 +(BOOL)autosavesInPlace {
     return YES;
 }
@@ -126,6 +153,9 @@ static NSImage* appimage;
               range:(NSRange)editedRange
      changeInLength:(NSInteger)delta{
     NSString *string = textStorage.string;
+    // We take advantage of the fact that .dnd can mostly be tokenized
+    // linewise (technically you need to know what the parent node is, but
+    // that only affects python blocks really).
     NSRange currentLineRange = [string lineRangeForRange:editedRange];
     [textStorage removeAttribute:NSForegroundColorAttributeName range:currentLineRange];
     [textStorage removeAttribute:NSBackgroundColorAttributeName range:currentLineRange];
@@ -183,9 +213,9 @@ static NSImage* appimage;
         saw_double_colon = NO;
         saw_colon = NO;
     }
-    auto thing = (DndViewController*)[NSApp keyWindow].contentViewController;
-    if(thing){
-        [thing recalc_html:nil];
+    auto cvc = (DndViewController*)[NSApp keyWindow].contentViewController;
+    if(cvc){
+        [cvc recalc_html:nil];
     }
 }
 @end
@@ -730,9 +760,6 @@ static NSImage* appimage;
     [super keyDown:event];
 }
 @end
-
-
-static void do_menus(void);
 
 @implementation DndAppDelegate : NSObject
 -(void)applicationWillFinishLaunching:(NSNotification *)notification{
