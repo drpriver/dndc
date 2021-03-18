@@ -2,7 +2,7 @@ CC=clang
 PYTHON:=python3
 PYCFLAGS:=-F/Library/Frameworks -isystem /Library/Frameworks/Python.framework/Headers
 PYLDFLAGS:=-framework Python
-PLATFORM_FLAGS=-DDARWIN -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
+PLATFORM_FLAGS=-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
 DEBUG_FLAGS=-DLOG_LEVEL=4\
 	 -DDEBUG\
 	 -fsanitize=nullability\

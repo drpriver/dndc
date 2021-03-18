@@ -4,7 +4,7 @@
 #include "dndc_funcs.h"
 #include "str_util.h"
 
-#ifdef WINDOWS
+#ifdef _WIN32
 typedef long long ssize_t;
 #endif
 

@@ -135,7 +135,7 @@ write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_l
     return result;
     }
 
-#elif defined(LINUX) || defined(DARWIN)
+#elif defined(__linux__) || defined(__APPLE__)
 #include <unistd.h>
 #include <fcntl.h>
 static inline
@@ -241,7 +241,7 @@ write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_l
     return result;
     }
 
-#elif defined(WINDOWS)
+#elif defined(_WIN32)
 #include "windowsheader.h"
 static inline
 Errorable_f(LongString)

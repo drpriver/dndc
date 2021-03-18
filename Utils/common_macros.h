@@ -51,7 +51,7 @@
    structure initializer (or where-ever else comma expressions aren't
    permitted).
 */
-#ifndef WINDOWS
+#ifndef _WIN32
 // this is weird... on windows this evaluates to 4, while on linux/mac this is 0
 // TODO: a version that works on windows!
 // If I'm willing to use statement expressions I could just use a static
@@ -81,7 +81,7 @@
 // type in switches. Also, you really shouldn't use enums at ABI boundaries
 // as the size varies, the signedness is undefined, etc...
 #if defined(__GNUC__) || defined(__clang__)
-    #ifndef WINDOWS
+    #ifndef _WIN32
     #define SmallEnum enum __attribute__((__packed__))
         #if !defined(__clang__)
         #define FlagEnum enum

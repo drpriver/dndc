@@ -94,7 +94,7 @@
 // join_thread(ThreadHandle handle);
 
 
-#if defined(LINUX) || defined(DARWIN)
+#if defined(__linux__) || defined(__APPLE__)
 #include <pthread.h>
 #define THREADFUNC(name) Nullable(void*) (name)(Nullable(void*)thread_arg)
 typedef THREADFUNC(thread_func);
@@ -119,7 +119,7 @@ join_thread(ThreadHandle handle){
     unhandled_error_condition(err != 0);
     }
 
-#elif defined(WINDOWS)
+#elif defined(_WIN32)
 #define THREADFUNC(name) unsigned long (name)(Nullable(void*)thread_arg)
 typedef THREADFUNC(thread_func);
 

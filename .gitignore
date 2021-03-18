@@ -15,3 +15,5 @@ PythonEmbed/frozen
 FuzzCorpus
 opt.mak
 .cache
+build
+xcode

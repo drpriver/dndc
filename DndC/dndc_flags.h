@@ -2,7 +2,7 @@
 #define DNDC_FLAGS_H
 // I wish C offered a typesafe bitflags type, but we resort
 // to just making it a uint64 instead.
-#ifndef WINDOWS
+#ifndef _WIN32
 #include "common_macros.h"
 FlagEnum DndcFlags {
     DNDC_FLAGS_NONE        = 0x0,

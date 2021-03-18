@@ -1,10 +1,14 @@
 #import <Cocoa/Cocoa.h>
 #import <Webkit/WebKit.h>
 #include "measure_time.h"
-#include "DndC/dndc.h"
+#include "dndc.h"
 // fuck it, I need to build strings!
 #include "MStringBuilder.h"
 #include "mallocator.h"
+
+#if !__has_feature(objc_arc)
+#error "ARC is off"
+#endif
 
 //
 // So, each document has N window controllers (I guess 1 for me).
@@ -788,7 +792,11 @@ extern char _app_icon_end[];
 asm(".global __app_icon\n"
     ".global __app_icon_end\n"
     "__app_icon:\n"
+#ifdef APP_ICON_PATH
+    ".incbin \"" APP_ICON_PATH "\"\n"
+#else
     ".incbin \"Platform/MacOS/app_icon.png\"\n"
+#endif
     "__app_icon_end:\n");
 
 int main(int argc, const char * argv[]) {
@@ -970,7 +978,6 @@ static void do_menus(void){
     /* Create the help menu */
     {
         NSMenu* menu = [[NSMenu alloc] initWithTitle:@"Help"];
-
 
         /* Put menu into the menubar */
         NSMenuItem* menuItem = [[NSMenuItem alloc] initWithTitle:@"Help" action:nil keyEquivalent:@""];

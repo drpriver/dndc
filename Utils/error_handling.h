@@ -36,7 +36,7 @@
     /*idk man*/ \
     apply(GENERIC_ERROR, 16)\
 
-#ifdef WINDOWS
+#ifdef _WIN32
 // Windows.h defines NO_ERROR. What a PITA.
 #undef NO_ERROR
 typedef uint8_t ErrorCode;

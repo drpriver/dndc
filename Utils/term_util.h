@@ -11,7 +11,7 @@ typedef struct TermSize {
 //
 static inline TermSize get_terminal_size(void);
 
-#ifdef WINDOWS
+#ifdef _WIN32
 
 #ifndef _CRT_NONSTDC_NO_DEPRECATE
 #define _CRT_NONSTDC_NO_DEPRECATE

@@ -67,7 +67,7 @@ static inline void print_version(Nonnull(const ArgParser*));
     apply(ARG_STRING, LongString, "string") \
     apply(ARG_UINTEGER64, uint64_t, "uint64") \
 
-#ifdef WINDOWS
+#ifdef _WIN32
 // Packing doesn't work on enums with Windows.
 // Manually pack by not using the type.
 typedef uint8_t _ARG_TYPE;

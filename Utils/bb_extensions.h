@@ -43,7 +43,7 @@ finally:
     return result;
     }
 
-#elif defined(LINUX) || defined(DARWIN)
+#elif defined(__linux__) || defined(__APPLE__)
 static inline
 Errorable_f(void)
 bb_read_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const char*)filename){
@@ -71,7 +71,7 @@ finally:
     return result;
     }
 
-#elif defined(WINDOWS)
+#elif defined(_WIN32)
 static inline
 Errorable_f(void)
 bb_read_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const char*)filename){

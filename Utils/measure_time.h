@@ -8,7 +8,7 @@
 //
 static inline uint64_t get_t(void);
 
-#if defined(LINUX) || defined(DARWIN)
+#if defined(__linux__) || defined(__APPLE__)
 
 #include <time.h>
 #include <stdint.h>
@@ -22,7 +22,7 @@ get_t(void){
     return t.tv_sec * 1000000llu + t.tv_nsec/1000;
     }
 
-#elif defined(WINDOWS)
+#elif defined(_WIN32)
 
 #include "windowsheader.h"
 // Due to this static, we should call this very soon after entering main.

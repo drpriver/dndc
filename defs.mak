@@ -37,13 +37,11 @@ STD:=-std=gnu17
 
 #TODO: this should be generated
 INCLUDE_FLAGS=-I.\
-	-IData\
-	-IDataStructure\
 	-IPlatform\
-	-IRNG\
 	-IUtils\
 	-IPythonEmbed\
 	-IAllocators\
+	-IDndC\
 
 LINK_FLAGS=
 FAST_FLAGS=-Ofast

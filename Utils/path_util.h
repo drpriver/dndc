@@ -4,7 +4,7 @@
 #include "long_string.h"
 #include "MStringBuilder.h"
 
-#ifdef WINDOWS
+#ifdef _WIN32
 #ifndef BACKSLASH_IS_A_PATH_SEP
 #define BACKSLASH_IS_A_PATH_SEP
 #endif
@@ -137,14 +137,5 @@ msb_append_path(Nonnull(MStringBuilder*)sb, Nonnull(const char*) restrict path, 
     memcpy(sb->data + sb->cursor, path, length);
     sb->cursor += length;
     }
-
-#ifdef WINDOWS
-#include <direct.h>
-static inline
-int
-chdir(Nonnull(const char*) dirname){
-    return _chdir(dirname);
-    }
-#endif
 
 #endif
