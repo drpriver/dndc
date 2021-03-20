@@ -17,3 +17,5 @@ opt.mak
 .cache
 build
 xcode
+CMakeSettings.json
+.vs

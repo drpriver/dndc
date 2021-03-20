@@ -2,7 +2,13 @@
 #define TESTING_H
 #include <string.h>
 #include <stdio.h>
+#ifdef _WIN32
+// for chdir
+#include <direct.h>
+#define chdir _chdir
+#endif
 #include "common_macros.h"
+#include "argument_parsing.h"
 
 //
 // Macros for defining a test function.
@@ -318,14 +324,59 @@ PopDiagnostic();
         return 1;
         }
     const char* filename = argv[0];
+    bool no_colors = false;
+    LongString directory = {};
+    ArgToParse kw_args[] = {
+        {
+            .name = SV("-C"),
+            .altname1 = SV("--change-directory"),
+            .min_num = 0,
+            .max_num = 1,
+            .dest = ARGDEST(&directory),
+            .help = "Directory to change the working directory to",
+            .hide_default = true,
+        },
+        {
+            .name = SV("--no-colors"),
+            .min_num = 0,
+            .max_num = 1,
+            .dest = ARGDEST(&no_colors),
+            .help = "Dont use ansi-escape codes to print colors in reporting",
+            .hide_default = true,
+        },
+    };
+    ArgParser argparser = {
+        .name = argv[0],
+        .description = "A test runner.",
+        .keyword.args = kw_args,
+        .keyword.count = arrlen(kw_args),
+    };
+    Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
+    if(check_for_help(&args)){
+        print_help(&argparser);
+        return 1; // Return non-zero so this doesn't count as a successful test.
+        }
+    auto e = parse_args(&argparser, &args);
+    if(e.errored){
+        fprintf(stderr, "Error when parsing arguments.\n");
+        print_help(&argparser);
+        return e.errored;
+        }
+    if(directory.length){
+        int changed = chdir(directory.text);
+        if(changed != 0){
+            fprintf(stderr, "Failed to change directory to '%s'\n", directory.text);
+            return changed;
+            }
+        }
 
     filename = strrchr(filename, '/')? strrchr(filename, '/')+1 : filename;
-    bool interactive = isatty(fileno(stderr));
-    const char* gray  = interactive? "\033[97m"    : "";
-    const char* blue  = interactive? "\033[94m"    : "";
-    const char* green = interactive? "\033[92m"    : "";
-    const char* red   = interactive? "\033[91m"    : "";
-    const char* reset = interactive? "\033[39;49m" : "";
+    bool use_colors = not no_colors && isatty(fileno(stderr));
+    const char* gray  = use_colors? "\033[97m"    : "";
+    const char* blue  = use_colors? "\033[94m"    : "";
+    const char* green = use_colors? "\033[92m"    : "";
+    const char* red   = use_colors? "\033[91m"    : "";
+    const char* reset = use_colors? "\033[39;49m" : "";
     _test_color_gray = gray;
     _test_color_reset = reset;
 #if 0

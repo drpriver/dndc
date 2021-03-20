@@ -188,6 +188,7 @@
 #define SuppressMissingBraces()         _Pragma("clang diagnostic ignored \"-Wmissing-braces\"")
 #define SuppressDoublePromotion()       _Pragma("clang diagnostic ignored \"-Wdouble-promotion\"")
 #define SuppressCoveredSwitchDefault()  _Pragma("clang diagnostic ignored \"-Wcovered-switch-default\"")
+#define SuppressVisibility()            _Pragma("clang diagnostic ignored \"-Wvisibility\"")
 #define PushDiagnostic()                _Pragma("clang diagnostic push")
 #define PopDiagnostic()                 _Pragma("clang diagnostic pop")
 
@@ -201,6 +202,7 @@
 #define SuppressMissingBraces()         _Pragma("GCC diagnostic ignored \"-Wmissing-braces\"")
 #define SuppressDoublePromotion()       _Pragma("GCC diagnostic ignored \"-Wdouble-promotion\"")
 #define SuppressCoveredSwitchDefault()
+#define SuppressVisibility()            _Pragma("GCC diagnostic ignored \"-Wvisibility\"")
 #define PushDiagnostic()                _Pragma("GCC diagnostic push")
 #define PopDiagnostic()                 _Pragma("GCC diagnostic pop")
 
@@ -214,6 +216,7 @@
 #define SuppressMissingBraces()
 #define SuppressDoublePromotion()
 #define SuppressCoveredSwitchDefault()
+#define SuppressVisibility()
 #define PushDiagnostic()
 #define PopDiagnostic()
 

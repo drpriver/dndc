@@ -13,6 +13,7 @@ include_directories(Utils DndC PythonEmbed Allocators)
 
 if(WIN32)
 include_directories(Platform/Windows)
+add_compile_options("-D_CRT_NONSTDC_NO_DEPRECATE" "-D_CRT_SECURE_NO_WARNINGS")
 elseif(APPLE)
 elseif(UNIX)
 endif()
@@ -58,3 +59,15 @@ if(APPLE)
 	target_compile_options(gdndc PUBLIC "-fobjc-arc")
 	target_include_directories(gdndc PRIVATE ${Python3_INCLUDE_DIRS} DndC)
 endif()
+
+# tests
+add_executable(TestArgumentParsing Utils/TestArgumentParsing.c)
+add_executable(TestBase64 Utils/TestBase64.c)
+add_executable(TestByteBuilder Utils/TestByteBuilder.c)
+add_executable(TestMStringBuilder Utils/TestMStringBuilder.c)
+add_executable(TestPathUtil Utils/TestPathUtil.c)
+add_executable(TestStrUtils Utils/TestStrUtils.c)
+
+add_executable(TestDndC DndC/TestDndC.c PythonEmbed/frozenstdlib.c)
+target_link_libraries(TestDndC ${Python3_LIBRARIES})
+target_include_directories(TestDndC PRIVATE ${Python3_INCLUDE_DIRS})

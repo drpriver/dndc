@@ -165,7 +165,7 @@ typedef struct ArgParser {
     Nonnull(const char*) description;
     //
     // The text to be printed for --version.
-    Nonnull(const char*) version;
+    Nullable(const char*) version;
     //
     // The positional arguments. Create an array of these. The order in the
     // array will be the order they need to be parsed in.
@@ -264,13 +264,21 @@ print_help(Nonnull(const ArgParser*) p){
             putchar('\n');
             }
         }
-    puts("Keyword Arguments:\n"
-         "------------------\n"
-         "-h, --help: flag = false\n"
-         "    Print this help and exit.\n"
-         "\n"
-         "--version: flag = false\n"
-         "    Print version information and exit.");
+    if(p->version){
+        puts("Keyword Arguments:\n"
+             "------------------\n"
+             "-h, --help: flag = false\n"
+             "    Print this help and exit.\n"
+             "\n"
+             "--version: flag = false\n"
+             "    Print version information and exit.");
+        }
+    else {
+        puts("Keyword Arguments:\n"
+             "------------------\n"
+             "-h, --help: flag = false\n"
+             "    Print this help and exit.");
+        }
     for(size_t i = 0; i < p->keyword.count; i++){
         auto arg = &p->keyword.args[i];
         if(arg->hidden)
@@ -490,7 +498,10 @@ check_for_version(Nonnull(Args*) args){
 static inline
 void
 print_version(Nonnull(const ArgParser*)p){
-    printf("%s\n", p->version);
+    if(p->version)
+        printf("%s\n", p->version);
+    else
+        puts("No version information available.");
     }
 
 // See top of file.
