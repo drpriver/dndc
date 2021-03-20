@@ -239,6 +239,19 @@ Errorable_f(LongString)
 load_processed_binary_file(Nonnull(Base64Cache*)cache, StringView binarypath, Nonnull(ByteBuilder*)bb);
 
 //
+// Stores a file in the context as a special builtin file.
+//
+// Does not copy the data at all, so make sure these last long enough and
+// are appropriately allocated.
+//
+// The sourcepath will not be adjusted by the base directory, but neither
+// will lookups for builtin files.
+//
+static inline
+void
+ctx_store_builtin_file(Nonnull(DndcContext*)ctx, LongString sourcepath, LongString text);
+
+//
 // Parses the nul-terminated source text;
 // Resulting nodes will be added as children of the node indicated by
 // the given NodeHandle.

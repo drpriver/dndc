@@ -21,7 +21,7 @@
 
 #define DNC_MAJOR 0
 #define DNC_MINOR 3
-#define DNC_MICRO 5
+#define DNC_MICRO 6
 #define DNDC_VERSION STRINGIFY(DNC_MAJOR) "." STRINGIFY(DNC_MINOR) "." STRINGIFY(DNC_MICRO)
 
 // Unsure of where to put this. So, just putting it here for now.
@@ -59,6 +59,8 @@ THREADFUNC(binary_worker){
 
 // NOTE: we can have larger scope than this if we want.
 // Slicing the work here this way is not inherent.
+// However, care must be taken that the spawned thread is
+// joined by the time we exit.
 static
 Errorable_f(void)
 do_python_and_load_images(Nonnull(DndcContext*)ctx){
@@ -104,17 +106,15 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             binary_worker(&job);
             }
         else{
-            auto before = get_t();
             create_thread(&worker, &binary_worker, &job);
-            auto after = get_t();
-            report_stat(flags, "Launching binary data processing took: %.3fms", (after-before)/1000.);
             }
         }
     // Execute the python blocks.
     if(!(flags & DNDC_NO_PYTHON) and ctx->python_nodes.count){
         auto before = get_t();
-        // init_python_docparser handles the DNDC_PYTHON_IS_INIT flag.
+
         #ifndef PYTHONMODULE
+        // init_python_docparser handles the DNDC_PYTHON_IS_INIT flag.
         auto e = init_python_docparser(flags);
         if(e.errored) {
             report_error(flags, "Failed to initialize python\n");
@@ -122,6 +122,7 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             goto cleanup;
             }
         #endif
+
         auto after = get_t();
         report_stat(flags, "Python startup took: %.3fms", (after-before)/1000.);
         for(size_t i = 0; i < ctx->python_nodes.count; i++){
@@ -188,6 +189,7 @@ int main(int argc, char**argv){
     LongString source_path = {};
     LongString output_path = {};
     LongString depends_path = {};
+    LongString base_dir = LS("");
     bool report_orphans = false;
     bool no_python = false;
     bool print_tree = false;
@@ -221,7 +223,7 @@ int main(int argc, char**argv){
             .dest = ARGDEST(&output_path),
             .help = "output path (.html file) to write to.\n If not given, writes to stdout.",
             .hide_default = true,
-            },
+        },
         {
             .name = SV("-d"),
             .altname1 = SV("--depends-path"),
@@ -229,6 +231,16 @@ int main(int argc, char**argv){
             .max_num = 1,
             .dest = ARGDEST(&depends_path),
             .help = "If given, where to write a make-style dependency file.",
+            .hide_default = true,
+        },
+        {
+            .name = SV("-C"),
+            .altname1 = SV("--base-directory"),
+            .min_num = 0,
+            .max_num = 1,
+            .dest = ARGDEST(&base_dir),
+            .help = "Relative filepaths in source files will be relative to the given directory.\n"
+                    "If not given, everything is relative to cwd.",
             .hide_default = true,
         },
         {
@@ -438,7 +450,7 @@ int main(int argc, char**argv){
     end_interpreter();
     return 0;
     #else
-    auto e = run_the_dndc(flags, SV(""), source_path, output_path.length? &output_path : NULL, depends_path, NULL);
+    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, depends_path, NULL);
     return e.errored;
     #endif
     }
@@ -492,6 +504,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
     LongString source;
     if(flags & DNDC_SOURCE_PATH_IS_DATA_NOT_PATH){
         source = source_path;
+        ctx_store_builtin_file(&ctx, LS("(string input)"), source);
         }
     else if(!path.length){
         // read from stdin
@@ -506,11 +519,16 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
                 break;
             }
         source = msb_detach(&sb);
+        path = SV("(stdin)");
+        ctx_store_builtin_file(&ctx, LS("(stdin)"), source);
         }
     else {
         auto source_err = ctx_load_source_file(&ctx, path);
         if(source_err.errored){
-            report_error(flags, "Unable to open %.*s", (int)path.length, path.text);
+            if(ctx.base_directory.length)
+                report_error(flags, "Unable to open %.*s/%.*s", (int)ctx.base_directory.length, ctx.base_directory.text, (int)path.length, path.text);
+            else
+                report_error(flags, "Unable to open %.*s", (int)path.length, path.text);
             result.errored = source_err.errored;
             goto cleanup;
             }
@@ -608,7 +626,10 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
                 child->header = SV("");
                 auto imp_e = ctx_load_source_file(&ctx, filename);
                 if(imp_e.errored){
-                    node_print_err(&ctx, child, "Unable to open '%.*s'", (int)filename.length, filename.text);
+                    if(ctx.base_directory.length)
+                        node_print_err(&ctx, child, "Unable to open '%.*s/%.*s'", (int)ctx.base_directory.length, ctx.base_directory.text, (int)filename.length, filename.text);
+                    else
+                        node_print_err(&ctx, child, "Unable to open '%.*s'", (int)filename.length, filename.text);
                     result.errored = imp_e.errored;
                     goto cleanup;
                     }
@@ -898,7 +919,6 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
             Allocator_free_all(ctx.b64cache.allocator);
             shallow_free_recorded_mallocator(ctx.b64cache.allocator);
             }
-        // TEMP: move ownership to caller
         auto after = get_t();
         report_stat(ctx.flags, "Cleaning up memory took: %.3fms", (after-before)/1000.);
         }

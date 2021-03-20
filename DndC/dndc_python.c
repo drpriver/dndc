@@ -1044,6 +1044,43 @@ py_select_nodes(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)a
     return result;
     }
 
+static
+Nullable(PyObject*)
+py_read_file(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+    (void)handle;
+    const char* const keywords[] = {"path", NULL};
+    PyObject* arg;
+    PushDiagnostic();
+    SuppressCastQual();
+    // This call is guaranteed to not modify keywords, but it's declared as char**
+    // as const in C is kind of broken.
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!:read_file", (char**)keywords, &PyUnicode_Type, &arg)){
+        return NULL;
+        }
+    PopDiagnostic();
+    StringView path = pystring_borrow_stringview(arg);
+    auto e = ctx_load_source_file(ctx, path);
+    if(e.errored){
+        // Use a string builder as PyErr_Format doesn't handle '%.*s' as
+        // they roll their own sprintf.
+        MStringBuilder sb = {.allocator = ctx->temp_allocator};
+        msb_write_literal(&sb, "No such file: '");
+        if(ctx->base_directory.length){
+            msb_write_str(&sb, ctx->base_directory.text, ctx->base_directory.length);
+            msb_write_char(&sb, '/');
+            }
+        msb_write_str(&sb, path.text, path.length);
+        msb_write_char(&sb, '\'');
+        auto str = msb_borrow(&sb);
+        PyErr_SetString(PyExc_FileNotFoundError, str.text);
+        msb_destroy(&sb);
+        return NULL;
+        }
+    auto text = unwrap(e);
+    return PyUnicode_FromStringAndSize(text.text, text.length);
+    }
+
+
 static Nonnull(PyObject*) make_py_ctx(Nonnull(DndcContext*));
 
 static
@@ -1392,6 +1429,9 @@ DndContext_getattr(Nonnull(DndContext*)pyctx, Nonnull(const char*)attr){
         }
     if(CHECK("select_nodes")){
         return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_select_nodes);
+        }
+    if(CHECK("read_file")){
+        return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_read_file);
         }
 #undef CHECK
     PyErr_Format(PyExc_AttributeError, "Unknown attribute: '%s'", attr);

@@ -407,10 +407,8 @@ But Wait, There's More::md
     # `add_child` can accept two kinds of arguments: nodes and strings
     # strings are converted to STRING nodes.
     ctx.root.add_child(prenode)
-    with open('README.dnd', encoding='utf-8') as fp:
-    # with open(ctx.sourcepath, encoding='utf-8') as fp:
-      for line in fp:
-        prenode.add_child(line.rstrip())
+    for line in ctx.read_file(ctx.sourcepath).splitlines():
+      prenode.add_child(line.rstrip())
 
     # the endpython comment is not necessary. I only include it so that
     # vim knows when the python block ends for syntax highlighting purposes.

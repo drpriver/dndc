@@ -2,7 +2,7 @@
 # at writing a CMakeLists.txt
 # It is missing many targets.
 cmake_minimum_required(VERSION 3.16)
-project(Dndc VERSION 0.3.5)
+project(Dndc VERSION 0.3.6)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
