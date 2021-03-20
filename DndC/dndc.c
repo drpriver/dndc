@@ -905,10 +905,10 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         auto before = get_t();
         if(ctx.flags & DNDC_PRINT_STATS){
             RecordingAllocator* recorder = allocator._data;
-            report_stat(ctx.flags, "There were %zu allocations.", recorder->recorded.count);
+            report_stat(ctx.flags, "There were %zu allocations.", recorder->count);
             size_t total = 0;
-            for(size_t i = 0; i < recorder->recorded.count; i++){
-                total += recorder->recorded.allocation_sizes[i];
+            for(size_t i = 0; i < recorder->count; i++){
+                total += recorder->allocation_sizes[i];
                 }
             report_stat(ctx.flags, "Allocations outstanding total: %zu", total);
             }
