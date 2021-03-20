@@ -1,5 +1,10 @@
 #ifndef TERM_UTIL_H
 #define TERM_UTIL_H
+#ifdef _WIN32
+#ifndef _CRT_NONSTDC_NO_DEPRECATE
+#define _CRT_NONSTDC_NO_DEPRECATE
+#endif
+#endif
 #include <stdlib.h>
 
 typedef struct TermSize {
@@ -12,10 +17,6 @@ typedef struct TermSize {
 static inline TermSize get_terminal_size(void);
 
 #ifdef _WIN32
-
-#ifndef _CRT_NONSTDC_NO_DEPRECATE
-#define _CRT_NONSTDC_NO_DEPRECATE
-#endif
 
 #include <io.h>
 #include <stdio.h>

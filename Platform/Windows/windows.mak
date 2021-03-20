@@ -18,15 +18,15 @@ EXE=.exe
 INSTALL=$(PYTHON) -m Scripts.win_utils install
 
 ifeq ($(PYCFLAGS), )
-PYCFLAGS=-I$(LOCALAPPDATA)\Programs\Python\Python38\include -Wno-visibility
-PYLDFLAGS=$(LOCALAPPDATA)\Programs\Python\Python38\libs\python38.lib
-PYDLL=$(LOCALAPPDATA)\Programs\Python\Python38\python38.dll
+PYCFLAGS=-I$(LOCALAPPDATA)\Programs\Python\Python39\include -Wno-visibility
+PYLDFLAGS=$(LOCALAPPDATA)\Programs\Python\Python39\libs\python39.lib
+PYDLL=$(LOCALAPPDATA)\Programs\Python\Python39\python39.dll
 endif
 
-$(BINDIR)\python38.dll: $(PYDLL)
+$(BINDIR)\python39.dll: $(PYDLL)
 	$(CP) $< $@
-$(BINDIR)\dndc.exe: $(BINDIR)\python38.dll
-TestDndC: | $(BINDIR)\python38.dll
+$(BINDIR)\dndc.exe: $(BINDIR)\python39.dll
+TestDndC: | $(BINDIR)\python39.dll
 # idk
-PYEXTENSION=.dll
-PYEXTFLAGS=-shared -fPIC
+PYEXTENSION=.pyd
+PYEXTFLAGS=-shared
