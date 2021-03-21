@@ -24,7 +24,7 @@ static inline
 force_inline
 StringView
 LS_to_SV(LongString ls){
-    return (StringView){.text=ls.text, .length=ls.length};
+    return (StringView){.length=ls.length, .text=ls.text};
     }
 
 static inline
@@ -53,8 +53,8 @@ LS_equals(const LongString a, const LongString b){
 #error "LS defined"
 #endif
 
-#define LS(literal) ((LongString){.text=""literal, .length=sizeof(""literal)-1})
-#define SV(literal) ((StringView){.text=""literal, .length=sizeof(""literal)-1})
+#define LS(literal) ((LongString){.length=sizeof("" literal)-1, .text="" literal})
+#define SV(literal) ((StringView){.length=sizeof("" literal)-1, .text=""  literal})
 
 static inline
 bool
@@ -86,8 +86,8 @@ static inline
 int
 StringView_cmp(Nonnull(const void*)a, Nonnull(const void*) b){
     // TODO: There's probably a cleaner way to implement this.
-    Nonnull(const StringView*)lhs = a;
-    Nonnull(const StringView*)rhs = b;
+    auto lhs = (const StringView*)a;
+    auto rhs = (const StringView*)b;
     auto l1 = lhs->length;
     auto l2 = rhs->length;
     if(l1 == l2){

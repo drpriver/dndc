@@ -2,6 +2,10 @@
 #define DNDC_H
 #include "long_string.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //
 // This documents the external API.
 // For the internal API, see dndc_funcs.h.
@@ -103,5 +107,9 @@ dndc_init_python(void);
 extern
 int
 dndc_init_python_types(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
