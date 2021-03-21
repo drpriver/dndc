@@ -1,3 +1,5 @@
+#define UNICODE
+#define _UNICODE
 #include <windows.h>
 #include <stdlib.h>
 #include <string>
@@ -6,8 +8,8 @@
 #include <wil/com.h>
 #include <WebView2.h>
 #include <Richedit.h>
-#include <assert.h>
 #include <Stringapiset.h>
+#include <assert.h>
 #undef ERROR
 #include "dndc.h"
 #pragma comment(lib, "user32.lib")
@@ -28,18 +30,14 @@
 // #pragma comment(lib, "uuid.lib")
 // #pragma comment(lib, "winspool.lib")
 
-// The main window class name.
 static TCHAR win_class[] = _T("DesktopApp");
 
-// The string that appears in the application's title bar.
-static TCHAR title[] = _T("WebView sample");
+static TCHAR title[] = _T("Gdndc");
 
 static HINSTANCE app_instance;
 
-// Forward declarations of functions included in this code module:
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
-// Pointer to WebViewController
 static wil::com_ptr<ICoreWebView2Controller> webviewController;
 
 // Pointer to WebView window
@@ -121,7 +119,7 @@ thread_worker(void*){
             int fail = dndc_make_html(SV(""), source, &output);
             free(text);
             if(!fail){
-                auto fh = CreateFileW(L"html/foo.html", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+                auto fh = CreateFile(_T("html/foo.html"), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
                 if(fh != INVALID_HANDLE_VALUE){
                     DWORD bytes_written;
                     BOOL write_success = WriteFile(
@@ -134,7 +132,7 @@ thread_worker(void*){
                     (void)write_success;
                     CloseHandle(fh);
                     free((void*)output.text);
-                    PostMessageW(mainwindow, WM_USER, 0, 0);
+                    PostMessage(mainwindow, WM_USER, 0, 0);
                     }
                 }
             }
@@ -160,7 +158,7 @@ int main(){
     (void)res;
     wprintf(L"versionInfo: %s\n", versionInfo);
     app_instance = GetModuleHandle(NULL);
-    LoadLibraryW(L"Msftedit.dll");
+    LoadLibrary(_T("Msftedit.dll"));
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 	WNDCLASSEX wcex = {
         .cbSize = sizeof(WNDCLASSEX),
@@ -310,16 +308,16 @@ WndProc(HWND mainwindow_handle, UINT message, WPARAM wParam, LPARAM lParam){
     case WM_CREATE:{
         RECT bounds;
         GetClientRect(mainwindow_handle, &bounds);
-        textedit_handle = CreateWindowExW(0, MSFTEDIT_CLASS, NULL,
+        textedit_handle = CreateWindowEx(0, MSFTEDIT_CLASS, NULL,
             ES_MULTILINE | WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP,
             bounds.right - TEXTEDIT_WIDTH, 0, TEXTEDIT_WIDTH, 0,
             mainwindow_handle, (HMENU)ID_EDIT, ((CREATESTRUCT*)lParam)->hInstance, NULL);
         CHARFORMATW fmt = {
             .cbSize = sizeof(fmt),
             .dwMask = CFM_FACE,
-            .szFaceName = L"Consolas",
+            .szFaceName = _T("Consolas"),
             };
-        SendMessageW(textedit_handle, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&fmt);
+        SendMessage(textedit_handle, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&fmt);
         if(webviewController != nullptr){
             if(bounds.right > TEXTEDIT_WIDTH){
                 bounds.right -= TEXTEDIT_WIDTH;
@@ -333,7 +331,7 @@ WndProc(HWND mainwindow_handle, UINT message, WPARAM wParam, LPARAM lParam){
         }return 0;
     case WM_USER:{
         if(webviewWindow)
-            webviewWindow->ExecuteScript(L"location.reload();",NULL);
+            webviewWindow->ExecuteScript(_T("location.reload();"),NULL);
         }return 0;
     case WM_COMMAND:{
         if(LOWORD(wParam) == ID_EDIT){

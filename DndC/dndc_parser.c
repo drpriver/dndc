@@ -49,7 +49,7 @@ analyze_line(Nonnull(DndcContext*)ctx){
                     fprintf(stderr, "Encountered a tab. Counting as 1 space.\n");
                 nspace++;
                 }
-            else if(*cursor == ' '){
+            else if(*cursor == ' ' or *cursor == '\r'){
                 nspace++;
                 }
             else
