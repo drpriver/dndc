@@ -45,7 +45,7 @@ static wil::com_ptr<ICoreWebView2> webviewWindow;
 static wil::com_ptr<ICoreWebView2_3> webviewWindow_3;
 static HWND textedit_handle;
 // mutable on purpose
-static int TEXTEDIT_WIDTH = 800;
+static int TEXTEDIT_WIDTH = 1000;
 enum {ID_EDIT=1};
 
 static
@@ -103,7 +103,8 @@ thread_worker(void*){
     dndc_init_python();
     for(;;){
         EnterCriticalSection(&worker_data.lock);
-        SleepConditionVariableCS(&worker_data.cond, &worker_data.lock, INFINITE);
+        BOOL res = SleepConditionVariableCS(&worker_data.cond, &worker_data.lock, INFINITE);
+        assert(res);
         char* text = NULL;
         if(worker_data.text){
             text = worker_data.text;
@@ -117,9 +118,25 @@ thread_worker(void*){
             LongString source = {.length=strlen(text), .text=text};
             LongString output = {};
             int fail = dndc_make_html(SV(""), source, &output);
-            free(text);
             if(!fail){
-                auto fh = CreateFile(_T("html/foo.html"), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+                {
+                auto fh = CreateFileW(_T("html/foo.dnd"), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+                if(fh != INVALID_HANDLE_VALUE){
+                    DWORD bytes_written;
+                    BOOL write_success = WriteFile(
+                            fh,
+                            text,
+                            strlen(text),
+                            &bytes_written,
+                            NULL);
+                    assert(bytes_written == strlen(text));
+                    (void)bytes_written;
+                    (void)write_success;
+                    CloseHandle(fh);
+                    }
+                }
+                {
+                auto fh = CreateFileW(_T("html/foo.html"), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
                 if(fh != INVALID_HANDLE_VALUE){
                     DWORD bytes_written;
                     BOOL write_success = WriteFile(
@@ -128,6 +145,7 @@ thread_worker(void*){
                             output.length,
                             &bytes_written,
                             NULL);
+                    assert(bytes_written == output.length);
                     (void)bytes_written;
                     (void)write_success;
                     CloseHandle(fh);
@@ -135,6 +153,8 @@ thread_worker(void*){
                     PostMessage(mainwindow, WM_USER, 0, 0);
                     }
                 }
+                }
+            free(text);
             }
         }
     return 0;
@@ -309,7 +329,7 @@ WndProc(HWND mainwindow_handle, UINT message, WPARAM wParam, LPARAM lParam){
         RECT bounds;
         GetClientRect(mainwindow_handle, &bounds);
         textedit_handle = CreateWindowEx(0, MSFTEDIT_CLASS, NULL,
-            ES_MULTILINE | WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP,
+            ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP,
             bounds.right - TEXTEDIT_WIDTH, 0, TEXTEDIT_WIDTH, 0,
             mainwindow_handle, (HMENU)ID_EDIT, ((CREATESTRUCT*)lParam)->hInstance, NULL);
         CHARFORMATW fmt = {
@@ -318,6 +338,7 @@ WndProc(HWND mainwindow_handle, UINT message, WPARAM wParam, LPARAM lParam){
             .szFaceName = _T("Consolas"),
             };
         SendMessage(textedit_handle, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&fmt);
+        SendMessage(textedit_handle, EM_SETEVENTMASK, 0, ENM_CHANGE);
         if(webviewController != nullptr){
             if(bounds.right > TEXTEDIT_WIDTH){
                 bounds.right -= TEXTEDIT_WIDTH;
@@ -336,7 +357,7 @@ WndProc(HWND mainwindow_handle, UINT message, WPARAM wParam, LPARAM lParam){
     case WM_COMMAND:{
         if(LOWORD(wParam) == ID_EDIT){
             switch(HIWORD(wParam)){
-                case EN_UPDATE:{
+                case EN_CHANGE:{
                     char* text = get_utf8_string_from_window((HWND)lParam);
                     set_text(text);
                     }break;
