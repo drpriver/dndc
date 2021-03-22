@@ -9,7 +9,10 @@
 #include <WebView2.h>
 #include <Richedit.h>
 #include <Stringapiset.h>
+#include <commdlg.h>
 #include <assert.h>
+#include <wchar.h>
+// #include <wchar.h>
 #undef ERROR
 #include "dndc.h"
 #pragma comment(lib, "user32.lib")
@@ -19,6 +22,7 @@
 #pragma comment(lib, "Advapi32.lib")
 #pragma comment(lib, "Shell32.lib")
 #pragma comment(lib, "kernel32.lib")
+#pragma comment(lib, "Comdlg32.lib")
 // #pragma comment(lib, "Gdi32.lib")
 // #pragma comment(lib, "advapi32.lib")
 // #pragma comment(lib, "comdlg32.lib")
@@ -33,6 +37,7 @@
 static TCHAR win_class[] = _T("DesktopApp");
 
 static TCHAR title[] = _T("Gdndc");
+static TCHAR filepath[1024];
 
 static HINSTANCE app_instance;
 
@@ -49,7 +54,7 @@ static int TEXTEDIT_WIDTH = 1000;
 enum {ID_EDIT=1};
 
 static
-char*
+LongString
 get_utf8_string_from_window(HWND handle){
     // TODO: error handling
     int nchars = GetWindowTextLengthW(handle); // length in "characters"
@@ -58,7 +63,7 @@ get_utf8_string_from_window(HWND handle){
     size_t size = sizeof(*buffer)*nchars;
     buffer = (wchar_t*)malloc(size);
     if(!buffer)
-        return NULL;
+        return {};
     buffer[nchars-1] = 0;
     // TODO: error handling
     GetWindowTextW(handle, buffer, size);
@@ -68,14 +73,18 @@ get_utf8_string_from_window(HWND handle){
     // TODO: error handling
     WideCharToMultiByte(CP_UTF8, 0, buffer, -1, result, needed_size, NULL, NULL);
     free(buffer);
-    return result;
+    return {.length=needed_size-1, .text=result};
 }
 
 struct WinString {
     wchar_t* text;
-    int nchars; // includes terminating null character
+    size_t nchars; // includes terminating null character
 };
 
+static void choose_open_file(HWND);
+static bool save_file(HWND);
+static bool save_as_file(HWND);
+static bool sortof_atomically_write_file(LongString text, WinString path);
 static
 WinString
 make_windows_string_from_utf8_string(const char* text){
@@ -85,11 +94,11 @@ make_windows_string_from_utf8_string(const char* text){
         return {NULL, 0};
         }
     int n_written = MultiByteToWideChar(CP_UTF8, 0, text, -1, result, n_needed);
-    return {result, n_written};
+    return {result, (size_t)n_written};
 }
 
 static struct {
-    char* text;
+    const char* text;
     bool should_quit;
     CRITICAL_SECTION lock;
     CONDITION_VARIABLE cond;
@@ -105,7 +114,7 @@ thread_worker(void*){
         EnterCriticalSection(&worker_data.lock);
         BOOL res = SleepConditionVariableCS(&worker_data.cond, &worker_data.lock, INFINITE);
         assert(res);
-        char* text = NULL;
+        const char* text = NULL;
         if(worker_data.text){
             text = worker_data.text;
             worker_data.text = NULL;
@@ -154,7 +163,7 @@ thread_worker(void*){
                     }
                 }
                 }
-            free(text);
+            free((void*)text);
             }
         }
     return 0;
@@ -162,19 +171,36 @@ thread_worker(void*){
 
 static
 void
-set_text(char* text){
+set_text(const char* text){
     EnterCriticalSection(&worker_data.lock);
     if(worker_data.text){
-        free(worker_data.text);
+        free((void*)worker_data.text);
         }
     worker_data.text = text;
     LeaveCriticalSection(&worker_data.lock);
     WakeConditionVariable(&worker_data.cond);
     }
 
+enum {
+    IDM_MESSAGE_BASE = 40000,
+    IDM_FILE_NEW     ,
+    IDM_FILE_OPEN    ,
+    IDM_FILE_SAVE    ,
+    IDM_FILE_SAVE_AS ,
+    IDM_APP_EXIT     ,
+    IDM_EDIT_UNDO    ,
+    IDM_EDIT_REDO    ,
+    IDM_EDIT_CUT     ,
+    IDM_EDIT_COPY    ,
+    IDM_EDIT_PASTE   ,
+};
+
+static void make_menus(HWND);
+static void handle_edit(HWND);
 int main(){
     LPWSTR versionInfo;
     auto res = GetAvailableCoreWebView2BrowserVersionString(NULL, &versionInfo);
+    // TODO: tell user to install runtime
     (void)res;
     wprintf(L"versionInfo: %s\n", versionInfo);
     app_instance = GetModuleHandle(NULL);
@@ -192,17 +218,16 @@ int main(){
         .hIconSm = LoadIcon(app_instance, IDI_APPLICATION),
     };
 
-	if (!RegisterClassEx(&wcex)){
+	if(!RegisterClassEx(&wcex)){
 		MessageBox(NULL,
 			_T("Call to RegisterClassEx failed!"),
 			_T("Windows Desktop Guided Tour"),
 			NULL);
-
 		return 1;
 	}
 
 	// Store instance handle in our global variable
-	HWND hWnd = CreateWindow(
+	mainwindow = CreateWindow(
 		win_class,  // name of app
 		title,      // title bar text
 		WS_OVERLAPPEDWINDOW, // window style
@@ -213,15 +238,12 @@ int main(){
 		app_instance, // instance of this app
 		NULL // lpCreateParams member of CREATESTRUCT for WM_CREATE message
 	);
-    mainwindow = hWnd;
 
-	if (!hWnd)
-	{
+	if(!mainwindow){
 		MessageBox(NULL,
 			_T("Call to CreateWindow failed!"),
 			_T("Foo"),
 			NULL);
-
 		return 1;
 	}
 
@@ -229,22 +251,20 @@ int main(){
     InitializeConditionVariable(&worker_data.cond);
     HANDLE thread = CreateThread(NULL, 0, thread_worker, NULL, 0, NULL);
     (void)thread;
-
-	ShowWindow(hWnd, SW_SHOWDEFAULT);
-	UpdateWindow(hWnd);
-
+    make_menus(mainwindow);
+    HWND window = mainwindow;
     CreateCoreWebView2EnvironmentWithOptions(
         nullptr, // PCWSTR browserExecutableFolder
         nullptr, // PCWSTR userDataFolder: TODO: with NULL, this shits out stuff next to the exe, which is retarded
         nullptr, // ICoreWebView2EnvironmentOptions* environmentOptions
         // below is the environmentCreatedHandler argument
         Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
-            [hWnd](HRESULT result, ICoreWebView2Environment* env) -> HRESULT {
+            [window](HRESULT result, ICoreWebView2Environment* env) -> HRESULT {
                 (void)result;
                 // Create a CoreWebView2Controller and get the associated
                 // CoreWebView2 whose parent is the main window hWnd
-                env->CreateCoreWebView2Controller(hWnd, Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
-                    [hWnd](HRESULT result, ICoreWebView2Controller* controller) -> HRESULT {
+                env->CreateCoreWebView2Controller(window, Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
+                    [window](HRESULT result, ICoreWebView2Controller* controller) -> HRESULT {
                     (void)result;
                     if (controller != nullptr) {
                         webviewController = controller;
@@ -266,10 +286,8 @@ int main(){
 
                     // Resize WebView to fit the bounds of the parent window
                     RECT bounds;
-                    GetClientRect(hWnd, &bounds);
-                    if(bounds.right > TEXTEDIT_WIDTH){
-                        bounds.right -= TEXTEDIT_WIDTH;
-                    }
+                    GetClientRect(window, &bounds);
+                    bounds.left += TEXTEDIT_WIDTH;
                     webviewController->put_Bounds(bounds);
 
                     // Schedule an async task to navigate
@@ -328,9 +346,11 @@ WndProc(HWND mainwindow_handle, UINT message, WPARAM wParam, LPARAM lParam){
     case WM_CREATE:{
         RECT bounds;
         GetClientRect(mainwindow_handle, &bounds);
-        textedit_handle = CreateWindowEx(0, MSFTEDIT_CLASS, NULL,
+        textedit_handle = CreateWindowEx(0,
+                MSFTEDIT_CLASS,
+                NULL,
             ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP,
-            bounds.right - TEXTEDIT_WIDTH, 0, TEXTEDIT_WIDTH, 0,
+            0, 0, TEXTEDIT_WIDTH, 0,
             mainwindow_handle, (HMENU)ID_EDIT, ((CREATESTRUCT*)lParam)->hInstance, NULL);
         CHARFORMATW fmt = {
             .cbSize = sizeof(fmt),
@@ -340,40 +360,70 @@ WndProc(HWND mainwindow_handle, UINT message, WPARAM wParam, LPARAM lParam){
         SendMessage(textedit_handle, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&fmt);
         SendMessage(textedit_handle, EM_SETEVENTMASK, 0, ENM_CHANGE);
         if(webviewController != nullptr){
-            if(bounds.right > TEXTEDIT_WIDTH){
-                bounds.right -= TEXTEDIT_WIDTH;
-            }
+            bounds.left += TEXTEDIT_WIDTH;
             webviewController->put_Bounds(bounds);
         }
+        PostMessage(mainwindow_handle, WM_USER+1, 0, 0);
         }return 0;
 
     case WM_SETFOCUS:{
         SetFocus(textedit_handle);
+        }return 0;
+    case WM_USER+1:{
+        choose_open_file(textedit_handle);
         }return 0;
     case WM_USER:{
         if(webviewWindow)
             webviewWindow->ExecuteScript(_T("location.reload();"),NULL);
         }return 0;
     case WM_COMMAND:{
-        if(LOWORD(wParam) == ID_EDIT){
-            switch(HIWORD(wParam)){
-                case EN_CHANGE:{
-                    char* text = get_utf8_string_from_window((HWND)lParam);
-                    set_text(text);
-                    }break;
-                }
+        switch(LOWORD(wParam)){
+            case ID_EDIT:{
+                switch(HIWORD(wParam)){
+                    case EN_CHANGE:{
+                        handle_edit((HWND)lParam);
+                        }break;
+                    }
+                }break; // fallthrough to defwindowproc
+            case IDM_FILE_NEW:{
+                }return 0;
+            case IDM_FILE_OPEN:{
+                choose_open_file(textedit_handle);
+                }return 0;
+            case IDM_FILE_SAVE:{
+                save_file(textedit_handle);
+                }return 0;
+            case IDM_FILE_SAVE_AS:{
+                save_as_file(textedit_handle);
+                }return 0;
+            case IDM_EDIT_UNDO:
+                SendMessage(textedit_handle, WM_UNDO, 0, 0);
+                return 0 ;
+            case IDM_EDIT_REDO:
+                SendMessage(textedit_handle, EM_REDO, 0, 0);
+                return 0 ;
+            case IDM_EDIT_CUT:
+                SendMessage(textedit_handle, WM_CUT, 0, 0);
+                return 0 ;
+            case IDM_EDIT_COPY:
+                SendMessage(textedit_handle, WM_COPY, 0, 0);
+                return 0 ;
+            case IDM_EDIT_PASTE:
+                SendMessage(textedit_handle, WM_PASTE, 0, 0);
+                return 0 ;
+            case IDM_APP_EXIT:
+                SendMessage(mainwindow_handle, WM_CLOSE, 0, 0);
+                return 0;
             }
         }break; // default
 	case WM_SIZE:{
         RECT bounds;
         GetClientRect(mainwindow_handle, &bounds);
         if(webviewController != nullptr){
-            if(bounds.right > TEXTEDIT_WIDTH){
-                bounds.right -= TEXTEDIT_WIDTH;
-                }
+            bounds.left += TEXTEDIT_WIDTH;
             webviewController->put_Bounds(bounds);
         }
-        MoveWindow(textedit_handle, LOWORD(lParam) - TEXTEDIT_WIDTH, 0, TEXTEDIT_WIDTH, HIWORD(lParam), TRUE);
+        MoveWindow(textedit_handle, 0, 0, TEXTEDIT_WIDTH, HIWORD(lParam), TRUE);
         }return 0;
 	case WM_DESTROY:{
 		PostQuitMessage(0);
@@ -381,3 +431,197 @@ WndProc(HWND mainwindow_handle, UINT message, WPARAM wParam, LPARAM lParam){
     }
     return DefWindowProc(mainwindow_handle, message, wParam, lParam);
 }
+
+static
+void
+make_menus(HWND window){
+    HMENU menu = CreateMenu();
+    HMENU popup = CreateMenu();
+    AppendMenu(popup, MF_STRING,    IDM_FILE_NEW,     _T("&New"));
+    AppendMenu(popup, MF_STRING,    IDM_FILE_OPEN,    _T("&Open..."));
+    AppendMenu(popup, MF_STRING,    IDM_FILE_SAVE,    _T("&Save"));
+    AppendMenu(popup, MF_STRING,    IDM_FILE_SAVE_AS, _T("Save &As..."));
+    AppendMenu(popup, MF_SEPARATOR, 0,                NULL);
+    AppendMenu(popup, MF_STRING,    IDM_APP_EXIT,     _T("E&xit"));
+
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)popup, _T("&File"));
+
+    popup = CreateMenu();
+    AppendMenu(popup, MF_STRING,    IDM_EDIT_UNDO,  _T("&Undo"));
+    AppendMenu(popup, MF_STRING,    IDM_EDIT_REDO,  _T("Redo"));
+    AppendMenu(popup, MF_SEPARATOR, 0,              NULL);
+    AppendMenu(popup, MF_STRING,    IDM_EDIT_CUT,   _T("Cu&t"));
+    AppendMenu(popup, MF_STRING,    IDM_EDIT_COPY,  _T("&Copy"));
+    AppendMenu(popup, MF_STRING,    IDM_EDIT_PASTE, _T("&Paste"));
+
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)popup, _T("&Edit"));
+    SetMenu(window, menu);
+
+	ShowWindow(window, SW_SHOWDEFAULT);
+	UpdateWindow(window);
+    }
+
+static
+void
+handle_edit(HWND textedit){
+    auto text = get_utf8_string_from_window(textedit);
+    set_text(text.text);
+    }
+
+static
+void
+choose_open_file(HWND textedit){
+    wchar_t filestr[1024] = {};
+    OPENFILENAMEW openfilename = {
+        .lStructSize = sizeof(openfilename),
+        .hwndOwner = textedit,
+        // .hInstance =
+        .lpstrFilter = L"DND Files\0*.dnd\0\0",
+        // .lpstrCustomFilter =
+        // .nMaxCustFilter =
+        .nFilterIndex = 1,
+        .lpstrFile = filestr,
+        .nMaxFile = 1024,
+        // .lpstrFileTitle =
+        // .nMaxFileTitle =
+        // .lpstrInitialDir =
+        // .lpstrTitle =
+        .Flags = OFN_CREATEPROMPT | OFN_EXPLORER | OFN_NOREADONLYRETURN | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST,
+        // nFileOffset;
+        // nFileExtension;
+        .lpstrDefExt = L"dnd",
+        // .lCustData =
+        // .lpfnHook =
+        // .lpTemplateName =
+        // .lpEditInfo =
+        // .lpstrPrompt =
+        // .pvReserved =
+        // .dwReserved =
+        // .FlagsEx =
+        };
+    BOOL ok_clicked = GetOpenFileNameW(&openfilename);
+    if(ok_clicked){
+        auto handle = CreateFileW(
+            filestr,
+            GENERIC_READ,
+            FILE_SHARE_READ,
+            NULL,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL);
+        if(handle != INVALID_HANDLE_VALUE){
+            LARGE_INTEGER size;
+            BOOL size_success = GetFileSizeEx(handle, &size);
+            if(size_success){
+                char* text = (char*)malloc((size.QuadPart+1)*sizeof(*text));
+                if(text){
+                    DWORD nread;
+                    BOOL read_success = ReadFile(handle, text, size.QuadPart*sizeof(*text), &nread, NULL);
+                    if(read_success){
+                        text[size.QuadPart] = '\0';
+                        auto ws = make_windows_string_from_utf8_string(text);
+                        if(ws.text)
+                            SetWindowTextW(textedit, ws.text);
+                        else
+                            SetWindowTextW(textedit, L"\0");
+                        static_assert(sizeof(filepath) == sizeof(filestr));
+                        memcpy(filepath, filestr, sizeof(filestr));
+                        free(ws.text);
+                        }
+                    }
+                free(text);
+                }
+            }
+        CloseHandle(handle);
+        }
+    }
+
+static
+bool
+save_file(HWND textedit){
+    if(!filepath[0]){
+        return save_as_file(textedit);
+        }
+    auto text = get_utf8_string_from_window(textedit);
+    WinString path = {.text=filepath, .nchars = wcslen(filepath)+1};
+    auto result = sortof_atomically_write_file(text, path);
+    free(text.text);
+    return result;
+    }
+#if 0
+void print_error(LPTSTR lpszFunction){
+    // Retrieve the system error message for the last-error code
+    LPVOID lpMsgBuf;
+    LPVOID lpDisplayBuf;
+    DWORD dw = GetLastError();
+
+    FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        dw,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPTSTR) &lpMsgBuf,
+        0, NULL );
+
+    // Display the error message and exit the process
+
+    lpDisplayBuf = (LPVOID)LocalAlloc(LMEM_ZEROINIT,
+        (lstrlen((LPCTSTR)lpMsgBuf) + lstrlen((LPCTSTR)lpszFunction) + 40) * sizeof(TCHAR));
+    StringCchPrintf((LPTSTR)lpDisplayBuf,
+        LocalSize(lpDisplayBuf) / sizeof(TCHAR),
+        TEXT("%s failed with error %d: %s"),
+        lpszFunction, dw, lpMsgBuf);
+    MessageBox(NULL, (LPCTSTR)lpDisplayBuf, TEXT("Error"), MB_OK);
+
+    LocalFree(lpMsgBuf);
+    LocalFree(lpDisplayBuf);
+    }
+#endif
+static
+bool
+sortof_atomically_write_file(LongString text, WinString path){
+    wchar_t tmppath[1024];
+    wchar_t tmppath2[1024];
+    if(path.nchars > 1022){ // space for '\0' and trailing char
+        return false;
+        }
+    memcpy(tmppath, path.text, path.nchars*sizeof(path.text[0]));
+    memcpy(tmppath2, path.text, path.nchars*sizeof(path.text[0]));
+    // nchars includdes terminating null
+    tmppath[path.nchars-1] = L't';
+    tmppath[path.nchars] = L'\0';
+    tmppath2[path.nchars-1] = L'b';
+    tmppath2[path.nchars] = L'\0';
+    auto tmpfile = CreateFileW(
+            tmppath,
+            GENERIC_WRITE,
+            0,
+            NULL,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL);
+    if(tmpfile == INVALID_HANDLE_VALUE){
+        return false;
+        }
+    DWORD written;
+    auto success = WriteFile(tmpfile, text.text, text.length, &written, NULL);
+    CloseHandle(tmpfile);
+    if(!success){
+        return false;
+        }
+    auto replaced = ReplaceFileW(path.text, tmppath, tmppath2, 0, 0, 0);
+    if(replaced == 0){
+        return false;
+        }
+    DeleteFileW(tmppath2);
+    return true;
+    }
+
+static
+bool
+save_as_file(HWND textedit){
+    return false;
+    }
+
