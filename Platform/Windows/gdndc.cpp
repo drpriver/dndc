@@ -39,8 +39,6 @@ static TCHAR win_class[] = _T("DesktopApp");
 static TCHAR title[] = _T("Gdndc");
 static TCHAR filepath[1024];
 
-static HINSTANCE app_instance;
-
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
 static wil::com_ptr<ICoreWebView2Controller> webviewController;
@@ -111,15 +109,14 @@ DWORD
 thread_worker(void*){
     dndc_init_python();
     for(;;){
+        const char* text = NULL;
         EnterCriticalSection(&worker_data.lock);
         BOOL res = SleepConditionVariableCS(&worker_data.cond, &worker_data.lock, INFINITE);
         assert(res);
-        const char* text = NULL;
-        if(worker_data.text){
-            text = worker_data.text;
-            worker_data.text = NULL;
-            }
+        text = worker_data.text;
+        worker_data.text = NULL;
         if(worker_data.should_quit){
+            LeaveCriticalSection(&worker_data.lock);
             return 0;
             }
         LeaveCriticalSection(&worker_data.lock);
@@ -158,10 +155,10 @@ thread_worker(void*){
                     (void)bytes_written;
                     (void)write_success;
                     CloseHandle(fh);
-                    free((void*)output.text);
                     PostMessage(mainwindow, WM_USER, 0, 0);
                     }
                 }
+                free((void*)output.text);
                 }
             free((void*)text);
             }
@@ -197,13 +194,14 @@ enum {
 
 static void make_menus(HWND);
 static void handle_edit(HWND);
+static void make_webview(HWND);
+
 int main(){
     LPWSTR versionInfo;
     auto res = GetAvailableCoreWebView2BrowserVersionString(NULL, &versionInfo);
     // TODO: tell user to install runtime
     (void)res;
-    wprintf(L"versionInfo: %s\n", versionInfo);
-    app_instance = GetModuleHandle(NULL);
+    HINSTANCE app_instance = GetModuleHandle(NULL);
     LoadLibrary(_T("Msftedit.dll"));
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 	WNDCLASSEX wcex = {
@@ -219,10 +217,6 @@ int main(){
     };
 
 	if(!RegisterClassEx(&wcex)){
-		MessageBox(NULL,
-			_T("Call to RegisterClassEx failed!"),
-			_T("Windows Desktop Guided Tour"),
-			NULL);
 		return 1;
 	}
 
@@ -252,90 +246,12 @@ int main(){
     HANDLE thread = CreateThread(NULL, 0, thread_worker, NULL, 0, NULL);
     (void)thread;
     make_menus(mainwindow);
-    HWND window = mainwindow;
-    CreateCoreWebView2EnvironmentWithOptions(
-        nullptr, // PCWSTR browserExecutableFolder
-        nullptr, // PCWSTR userDataFolder: TODO: with NULL, this shits out stuff next to the exe, which is retarded
-        nullptr, // ICoreWebView2EnvironmentOptions* environmentOptions
-        // below is the environmentCreatedHandler argument
-        Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
-            [window](HRESULT result, ICoreWebView2Environment* env) -> HRESULT {
-                (void)result;
-                // Create a CoreWebView2Controller and get the associated
-                // CoreWebView2 whose parent is the main window hWnd
-                env->CreateCoreWebView2Controller(window, Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
-                    [window](HRESULT result, ICoreWebView2Controller* controller) -> HRESULT {
-                    (void)result;
-                    if (controller != nullptr) {
-                        webviewController = controller;
-                        webviewController->get_CoreWebView2(&webviewWindow);
-                    }
-                    auto qresult = webviewWindow->QueryInterface(__uuidof(ICoreWebView2_3), (void**)&webviewWindow_3);
-                    // assume it succeeds
-                    assert(qresult == S_OK);
-                    webviewWindow_3->SetVirtualHostNameToFolderMapping(L".invalid.", L"..\\html", COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY);
-
-
-                    // Add a few settings for the webview
-                    // The demo step is redundant since the values are the default settings
-                    ICoreWebView2Settings* Settings;
-                    webviewWindow->get_Settings(&Settings);
-                    Settings->put_IsScriptEnabled(TRUE);
-                    Settings->put_AreDefaultScriptDialogsEnabled(TRUE);
-                    Settings->put_IsWebMessageEnabled(TRUE);
-
-                    // Resize WebView to fit the bounds of the parent window
-                    RECT bounds;
-                    GetClientRect(window, &bounds);
-                    bounds.left += TEXTEDIT_WIDTH;
-                    webviewController->put_Bounds(bounds);
-
-                    // Schedule an async task to navigate
-                    // webviewWindow->Navigate(L"https://.invalid./README.html");
-                    webviewWindow->Navigate(L"https://.invalid./foo.html");
-                    // auto navigation = webviewWindow->NavigateToString(L"<h1>Hello World!</hi>");
-
-                    // Step 4 - Navigation events
-                    // register an ICoreWebView2NavigationStartingEventHandler to cancel any non-https navigation
-                    EventRegistrationToken token;
-                    webviewWindow->add_NavigationStarting(Microsoft::WRL::Callback<ICoreWebView2NavigationStartingEventHandler>(
-                        [](ICoreWebView2* webview, ICoreWebView2NavigationStartingEventArgs * args) -> HRESULT {
-                            (void)webview;
-                            PWSTR uri;
-                            args->get_Uri(&uri);
-                            std::wstring source(uri);
-                            if(source.length() < 18 or source.substr(0, 18) != L"https://.invalid./") {
-                                args->put_Cancel(true);
-                            }
-                            CoTaskMemFree(uri);
-                            return S_OK;
-                        }).Get(), &token);
-                    // Step 5 - Scripting
-                    // Schedule an async task to add initialization script that freezes the Object object
-                    // webviewWindow->AddScriptToExecuteOnDocumentCreated(L"Object.freeze(Object);", nullptr);
-                    // Schedule an async task to get the document URL
-                    // webviewWindow->ExecuteScript(L"location.reload();",NULL);
-                    // webviewWindow->ExecuteScript(L"window.document.URL;", Microsoft::WRL::Callback<ICoreWebView2ExecuteScriptCompletedHandler>(
-                        // [](HRESULT errorCode, LPCWSTR resultObjectAsJson) -> HRESULT {
-                            // LPCWSTR URL = resultObjectAsJson;
-                            //doSomethingWithURL(URL);
-                            // return S_OK;
-                        // }).Get());
-                    // Step 6 - Communication between host and web content
-
-                    return S_OK;
-                }).Get());
-            return S_OK;
-        }).Get());
-
-
+    make_webview(mainwindow);
 	MSG msg;
 	while(GetMessage(&msg, NULL, 0, 0)){
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
-    // DeleteCriticalSection(&worker_data.lock);
-
 	return (int)msg.wParam;
 }
 
@@ -398,19 +314,19 @@ WndProc(HWND mainwindow_handle, UINT message, WPARAM wParam, LPARAM lParam){
                 }return 0;
             case IDM_EDIT_UNDO:
                 SendMessage(textedit_handle, WM_UNDO, 0, 0);
-                return 0 ;
+                return 0;
             case IDM_EDIT_REDO:
                 SendMessage(textedit_handle, EM_REDO, 0, 0);
-                return 0 ;
+                return 0;
             case IDM_EDIT_CUT:
                 SendMessage(textedit_handle, WM_CUT, 0, 0);
-                return 0 ;
+                return 0;
             case IDM_EDIT_COPY:
                 SendMessage(textedit_handle, WM_COPY, 0, 0);
-                return 0 ;
+                return 0;
             case IDM_EDIT_PASTE:
                 SendMessage(textedit_handle, WM_PASTE, 0, 0);
-                return 0 ;
+                return 0;
             case IDM_APP_EXIT:
                 SendMessage(mainwindow_handle, WM_CLOSE, 0, 0);
                 return 0;
@@ -475,29 +391,12 @@ choose_open_file(HWND textedit){
     OPENFILENAMEW openfilename = {
         .lStructSize = sizeof(openfilename),
         .hwndOwner = textedit,
-        // .hInstance =
         .lpstrFilter = L"DND Files\0*.dnd\0\0",
-        // .lpstrCustomFilter =
-        // .nMaxCustFilter =
         .nFilterIndex = 1,
         .lpstrFile = filestr,
         .nMaxFile = 1024,
-        // .lpstrFileTitle =
-        // .nMaxFileTitle =
-        // .lpstrInitialDir =
-        // .lpstrTitle =
         .Flags = OFN_CREATEPROMPT | OFN_EXPLORER | OFN_NOREADONLYRETURN | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST,
-        // nFileOffset;
-        // nFileExtension;
         .lpstrDefExt = L"dnd",
-        // .lCustData =
-        // .lpfnHook =
-        // .lpTemplateName =
-        // .lpEditInfo =
-        // .lpstrPrompt =
-        // .pvReserved =
-        // .dwReserved =
-        // .FlagsEx =
         };
     BOOL ok_clicked = GetOpenFileNameW(&openfilename);
     if(ok_clicked){
@@ -622,6 +521,105 @@ sortof_atomically_write_file(LongString text, WinString path){
 static
 bool
 save_as_file(HWND textedit){
-    return false;
+    wchar_t filestr[1024] = {};
+    OPENFILENAMEW openfilename = {
+        .lStructSize = sizeof(openfilename),
+        .hwndOwner = textedit,
+        .lpstrFilter = L"DND Files\0*.dnd\0\0",
+        .nFilterIndex = 1,
+        .lpstrFile = filestr,
+        .nMaxFile = 1024,
+        .Flags =  OFN_EXPLORER | OFN_NOREADONLYRETURN,
+        .lpstrDefExt = L"dnd",
+        };
+    BOOL ok_clicked = GetSaveFileNameW(&openfilename);
+    if(!ok_clicked)
+        return false;
+    static_assert(sizeof(filepath) == sizeof(filestr));
+    memcpy(filepath, filestr, sizeof(filestr));
+    auto text = get_utf8_string_from_window(textedit);
+    WinString path = {.text=filepath, .nchars = wcslen(filepath)+1};
+    auto result = sortof_atomically_write_file(text, path);
+    free(text.text);
+    return result;
     }
 
+
+static
+void
+make_webview(HWND window){
+    CreateCoreWebView2EnvironmentWithOptions(
+        nullptr, // PCWSTR browserExecutableFolder
+        nullptr, // PCWSTR userDataFolder: TODO: with NULL, this shits out stuff next to the exe, which is retarded
+        nullptr, // ICoreWebView2EnvironmentOptions* environmentOptions
+        // below is the environmentCreatedHandler argument
+        Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
+            [window](HRESULT result, ICoreWebView2Environment* env) -> HRESULT {
+                (void)result;
+                // Create a CoreWebView2Controller and get the associated
+                // CoreWebView2 whose parent is the main window hWnd
+                env->CreateCoreWebView2Controller(window, Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
+                    [window](HRESULT result, ICoreWebView2Controller* controller) -> HRESULT {
+                    (void)result;
+                    if (controller != nullptr) {
+                        webviewController = controller;
+                        webviewController->get_CoreWebView2(&webviewWindow);
+                    }
+                    auto qresult = webviewWindow->QueryInterface(__uuidof(ICoreWebView2_3), (void**)&webviewWindow_3);
+                    // assume it succeeds
+                    assert(qresult == S_OK);
+                    webviewWindow_3->SetVirtualHostNameToFolderMapping(L".invalid.", L"..\\html", COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY);
+
+
+                    // Add a few settings for the webview
+                    // The demo step is redundant since the values are the default settings
+                    ICoreWebView2Settings* Settings;
+                    webviewWindow->get_Settings(&Settings);
+                    Settings->put_IsScriptEnabled(TRUE);
+                    Settings->put_AreDefaultScriptDialogsEnabled(TRUE);
+                    Settings->put_IsWebMessageEnabled(TRUE);
+
+                    // Resize WebView to fit the bounds of the parent window
+                    RECT bounds;
+                    GetClientRect(window, &bounds);
+                    bounds.left += TEXTEDIT_WIDTH;
+                    webviewController->put_Bounds(bounds);
+
+                    // Schedule an async task to navigate
+                    // webviewWindow->Navigate(L"https://.invalid./README.html");
+                    webviewWindow->Navigate(L"https://.invalid./foo.html");
+                    // auto navigation = webviewWindow->NavigateToString(L"<h1>Hello World!</hi>");
+
+                    // Step 4 - Navigation events
+                    // register an ICoreWebView2NavigationStartingEventHandler to cancel any non-https navigation
+                    EventRegistrationToken token;
+                    webviewWindow->add_NavigationStarting(Microsoft::WRL::Callback<ICoreWebView2NavigationStartingEventHandler>(
+                        [](ICoreWebView2* webview, ICoreWebView2NavigationStartingEventArgs * args) -> HRESULT {
+                            (void)webview;
+                            PWSTR uri;
+                            args->get_Uri(&uri);
+                            std::wstring source(uri);
+                            if(source.length() < 18 or source.substr(0, 18) != L"https://.invalid./") {
+                                args->put_Cancel(true);
+                            }
+                            CoTaskMemFree(uri);
+                            return S_OK;
+                        }).Get(), &token);
+                    // Step 5 - Scripting
+                    // Schedule an async task to add initialization script that freezes the Object object
+                    // webviewWindow->AddScriptToExecuteOnDocumentCreated(L"Object.freeze(Object);", nullptr);
+                    // Schedule an async task to get the document URL
+                    // webviewWindow->ExecuteScript(L"location.reload();",NULL);
+                    // webviewWindow->ExecuteScript(L"window.document.URL;", Microsoft::WRL::Callback<ICoreWebView2ExecuteScriptCompletedHandler>(
+                        // [](HRESULT errorCode, LPCWSTR resultObjectAsJson) -> HRESULT {
+                            // LPCWSTR URL = resultObjectAsJson;
+                            //doSomethingWithURL(URL);
+                            // return S_OK;
+                        // }).Get());
+                    // Step 6 - Communication between host and web content
+
+                    return S_OK;
+                }).Get());
+            return S_OK;
+        }).Get());
+    }
