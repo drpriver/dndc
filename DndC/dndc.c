@@ -183,7 +183,7 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
     return result;
     }
 
-#ifndef NOMAIN
+#ifdef DNDCMAIN
 int main(int argc, char**argv){
     auto t0 = get_t();
     LongString source_path = {};

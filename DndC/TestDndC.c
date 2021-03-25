@@ -1,5 +1,4 @@
 #include "testing.h"
-#define NOMAIN
 #include "dndc.c"
 
 // TODO: more interesting tests.

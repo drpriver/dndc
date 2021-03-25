@@ -1,9 +1,9 @@
 $(BINDIR)/dndc$(EXE): DndC/dndc.c $(DEPDIR)/dndc.dep  $(OBJDIR)/frozenstdlib.o opt.mak | $(DIRECTORIES)
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS)
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DDNDCMAIN
 dndc: $(BINDIR)/dndc$(EXE)
 
 $(OBJDIR)/dndc.o: DndC/dndc.c $(DEPDIR)/dndc_o.dep opt.mak | $(DIRECTORIES)
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc_o.dep $< -c -o $@ -DNOMAIN
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc_o.dep $< -c -o $@
 
 
 BENCHMARKINPUTPATH ?= surface.dnd
@@ -15,7 +15,7 @@ $(BINDIR)/dndcbench$(EXE): DndC/dndc.c $(DEPDIR)/dndcbench.dep DndC/dndc.mak $(O
 dndcbench: $(BINDIR)/dndcbench$(EXE)
 
 $(BINDIR)/dndcfuzz$(EXE): DndC/dndcfuzz.c $(DEPDIR)/dndcfuzz.dep $(OBJDIR)/frozenstdlib.o
-	$(CC) $(FLAGS) $(PLATFORM_FLAGS) -O1 -g $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/dndcfuzz.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DNOMAIN -fsanitize=fuzzer,address,undefined
+	$(CC) $(FLAGS) $(PLATFORM_FLAGS) -O1 -g $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/dndcfuzz.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -fsanitize=fuzzer,address,undefined
 dndcfuzz: $(BINDIR)/dndcfuzz$(EXE)
 
 FUZZDIR=FuzzCorpus
@@ -33,5 +33,5 @@ TestDndC: $(BINDIR)/TestDndC_debug$(EXE) $(BINDIR)/TestDndC_fast$(EXE)
 $(BINDIR)/pydndc.cpython-38-darwin.so: DndC/pydndc.c
 
 $(BINDIR)/pydndc$(PYEXTENSION): DndC/pydndc.c
-	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -g $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DNOMAIN
+	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -g $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS)
 pydndc: $(BINDIR)/pydndc$(PYEXTENSION)

@@ -341,12 +341,12 @@ PopDiagnostic();
             .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&no_colors),
-            .help = "Dont use ansi-escape codes to print colors in reporting",
+            .help = "Dont use ANSI escape codes to print colors in reporting",
             .hide_default = true,
         },
     };
     ArgParser argparser = {
-        .name = argv[0],
+        .name = argc?argv[0]:"(Unnamed program)",
         .description = "A test runner.",
         .keyword.args = kw_args,
         .keyword.count = arrlen(kw_args),

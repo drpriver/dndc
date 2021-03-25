@@ -25,12 +25,12 @@ add_executable(dndc
 
 target_link_libraries(dndc ${Python3_LIBRARIES})
 target_include_directories(dndc PRIVATE ${Python3_INCLUDE_DIRS})
+target_compile_definitions(dndc PRIVATE DNDCMAIN)
 
 Python3_add_library(pydndc
 		MODULE
 		DndC/pydndc.c
 		)
-target_compile_definitions(pydndc PRIVATE NOMAIN)
 
 if(APPLE)
 	# TODO: We want code signing, but whatever for now.
@@ -46,7 +46,6 @@ if(APPLE)
 	set_target_properties(gdndc PROPERTIES
 		MACOSX_BUNDLE YES
 		MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Platform/Macos/Info.plist)
-	target_compile_definitions(gdndc PRIVATE NOMAIN)
 	# this is kind of weird
 	target_compile_definitions(gdndc PRIVATE APP_ICON_PATH="../Platform/MacOS/app_icon.png")
 
@@ -58,6 +57,16 @@ if(APPLE)
 			)
 	target_compile_options(gdndc PUBLIC "-fobjc-arc")
 	target_include_directories(gdndc PRIVATE ${Python3_INCLUDE_DIRS} DndC)
+endif()
+
+if(WIN32)
+add_executable(gdndc
+		Platform/Windows/gdndc.cpp
+		DndC/dndc.c
+		PythonEmbed/frozenstdlib.c
+		)
+target_link_libraries(gdndc ${Python3_LIBRARIES})
+target_include_directories(gdndc PRIVATE ${Python3_INCLUDE_DIRS} DndC)
 endif()
 
 # tests
