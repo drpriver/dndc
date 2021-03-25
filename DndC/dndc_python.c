@@ -1419,6 +1419,12 @@ DndContext_getattr(Nonnull(DndContext*)pyctx, Nonnull(const char*)attr){
     if(CHECK("sourcepath")){
         return PyUnicode_FromStringAndSize(ctx->filename.text, ctx->filename.length);
         }
+    if(CHECK("base")){
+        auto base = ctx->base_directory;
+        if(!base.length)
+            base = SV(".");
+        return PyUnicode_FromStringAndSize(base.text, base.length);
+        }
     if(CHECK("all_nodes")){
         PyObject* result = PyList_New(ctx->nodes.count);
         for(size_t i = 0; i < ctx->nodes.count; i++){
