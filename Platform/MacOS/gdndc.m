@@ -50,11 +50,14 @@ typedef enum GdndInsertTag{
 @interface DndHighlighter: NSObject<NSTextStorageDelegate>
 @end
 
+@class DndViewController;
 //
 // Controls what urls to allow (basically makes it so links will open a new
 // .dnd document)
 //
-@interface WebNavDel : NSObject <WKNavigationDelegate>
+@interface WebNavDel : NSObject <WKNavigationDelegate>{
+@public DndViewController* controller;
+}
 @end
 
 //
@@ -107,6 +110,15 @@ static NSImage* appimage;
     self->view_controller = [[DndViewController alloc] init];
     return self;
 }
+- (instancetype)initForURL:(NSURL *)urlOrNil
+    withContentsOfURL:(NSURL *)contentsURL
+    ofType:(NSString *)typeName
+    error:(NSError * _Nullable *)outError{
+    self = [super initForURL:urlOrNil withContentsOfURL:contentsURL ofType:typeName error:outError];
+    view_controller->file_url = [self fileURL];
+    [view_controller recalc_html:nil];
+    return self;
+    }
 -(NSWindow*)make_window{
     auto screen = [NSScreen mainScreen];
     NSRect rect = screen? screen.visibleFrame : NSMakeRect(0, 0, 1400, 800);
@@ -311,9 +323,7 @@ static NSImage* appimage;
     MStringBuilder sb = {.allocator=get_mallocator()};
     msb_reserve(&sb, 256);
     msb_write_str(&sb, blockname.text, blockname.length);
-    for(size_t i = 0; i < indent_amount+2; i++){
-        msb_write_char(&sb, ' ');
-    }
+    msb_write_nchar(&sb, ' ', indent_amount+2);
     const char* cpath = [path UTF8String];
     msb_write_str(&sb, cpath, strlen(cpath));
     msb_write_char(&sb, '\n');
@@ -329,20 +339,14 @@ static NSImage* appimage;
     MStringBuilder sb = {.allocator = get_mallocator()};
     msb_reserve(&sb, 256);
     msb_write_literal(&sb, "::imglinks\n");
-#define DO_INDENT() do{\
-        msb_reserve(&sb, indent_amount+2); \
-        memset(sb.data+sb.cursor, ' ', indent_amount+2); \
-        sb.cursor += indent_amount+2; \
-    }while(0)
-
-    DO_INDENT();
+#define INDENT() msb_write_nchar(&sb, ' ', indent_amount+2)
     const char* imgpath = [path UTF8String];
-    msb_write_str(&sb, imgpath, strlen(imgpath));
+    INDENT(); msb_write_str(&sb, imgpath, strlen(imgpath));
     msb_write_char(&sb, '\n');
     double scale = Min(800.0/size.width, 800.0/size.height);
-    DO_INDENT(); msb_sprintf(&sb, "width = %d\n", (int)(size.width*scale));
-    DO_INDENT(); msb_sprintf(&sb, "height = %d\n", (int)(size.height*scale));
-    DO_INDENT(); msb_sprintf(&sb, "viewBox = 0 0 %d %d\n", (int)size.width, (int)size.height);
+    INDENT(); msb_sprintf(&sb, "width = %d\n", (int)(size.width*scale));
+    INDENT(); msb_sprintf(&sb, "height = %d\n", (int)(size.height*scale));
+    INDENT(); msb_sprintf(&sb, "viewBox = 0 0 %d %d\n", (int)size.width, (int)size.height);
     StringView script[] = {
         SV("::python\n"),
         SV("  # this is an example of how to script the imglinks\n"),
@@ -355,10 +359,10 @@ static NSImage* appimage;
         SV("  #endpython\n"),
     };
     for(int i = 0; i < arrlen(script); i++){
-        DO_INDENT();
+        INDENT();
         msb_write_str(&sb, script[i].text, script[i].length);
     }
-#undef DO_INDENT
+#undef INDENT
     auto strdata = msb_detach(&sb);
     PushDiagnostic();
     SuppressCastQual();
@@ -497,7 +501,10 @@ static NSImage* appimage;
             return;
         }
         if([path characterAtIndex:0] == '/'){
-            auto real_url = [[[NSURL fileURLWithPath:[path substringFromIndex:1]] URLByDeletingPathExtension] URLByAppendingPathExtension:@"dnd"];
+            // auto real_url = [[[NSURL fileURLWithPath:[path substringFromIndex:1]] URLByDeletingPathExtension] URLByAppendingPathExtension:@"dnd"];
+            // auto foo = self->controller->file_url.URLByDeletingLastPathComponent;
+            auto real_url = [self->controller->file_url.URLByDeletingLastPathComponent URLByAppendingPathComponent:[path substringFromIndex:1]];
+            real_url = [[real_url URLByDeletingPathExtension] URLByAppendingPathExtension:@"dnd"];
             // hack: too lazy to declare interfaces
             [[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:real_url display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
                 (void)documentWasAlreadyOpen;
@@ -632,6 +639,7 @@ static NSImage* appimage;
     webview = [[WKWebView alloc] initWithFrame:webrect configuration:config];
     webview.allowsMagnification = YES;
     webnavdel = [[WebNavDel alloc] init];
+    webnavdel->controller = self;
     webview.navigationDelegate = webnavdel;
     [self.view addSubview:webview];
     webview.autoresizingMask = NSViewHeightSizable | NSViewWidthSizable;
