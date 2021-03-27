@@ -51,6 +51,38 @@ static HWND textedit_handle;
 static int TEXTEDIT_WIDTH = 1000;
 enum {ID_EDIT=1};
 
+#if 0
+void print_error(LPTSTR lpszFunction){
+    // Retrieve the system error message for the last-error code
+    LPVOID lpMsgBuf;
+    LPVOID lpDisplayBuf;
+    DWORD dw = GetLastError();
+
+    FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        dw,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPTSTR) &lpMsgBuf,
+        0, NULL );
+
+    // Display the error message and exit the process
+
+    lpDisplayBuf = (LPVOID)LocalAlloc(LMEM_ZEROINIT,
+        (lstrlen((LPCTSTR)lpMsgBuf) + lstrlen((LPCTSTR)lpszFunction) + 40) * sizeof(TCHAR));
+    StringCchPrintf((LPTSTR)lpDisplayBuf,
+        LocalSize(lpDisplayBuf) / sizeof(TCHAR),
+        TEXT("%s failed with error %d: %s"),
+        lpszFunction, dw, lpMsgBuf);
+    MessageBox(NULL, (LPCTSTR)lpDisplayBuf, TEXT("Error"), MB_OK);
+
+    LocalFree(lpMsgBuf);
+    LocalFree(lpDisplayBuf);
+    }
+#endif
+
 static
 LongString
 get_utf8_string_from_window(HWND handle){
@@ -444,43 +476,32 @@ save_file(HWND textedit){
     auto text = get_utf8_string_from_window(textedit);
     WinString path = {.text=filepath, .nchars = wcslen(filepath)+1};
     auto result = sortof_atomically_write_file(text, path);
-    free(text.text);
+    free((void*)text.text);
     return result;
     }
-#if 0
-void print_error(LPTSTR lpszFunction){
-    // Retrieve the system error message for the last-error code
-    LPVOID lpMsgBuf;
-    LPVOID lpDisplayBuf;
-    DWORD dw = GetLastError();
-
-    FormatMessage(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER |
-        FORMAT_MESSAGE_FROM_SYSTEM |
-        FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL,
-        dw,
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPTSTR) &lpMsgBuf,
-        0, NULL );
-
-    // Display the error message and exit the process
-
-    lpDisplayBuf = (LPVOID)LocalAlloc(LMEM_ZEROINIT,
-        (lstrlen((LPCTSTR)lpMsgBuf) + lstrlen((LPCTSTR)lpszFunction) + 40) * sizeof(TCHAR));
-    StringCchPrintf((LPTSTR)lpDisplayBuf,
-        LocalSize(lpDisplayBuf) / sizeof(TCHAR),
-        TEXT("%s failed with error %d: %s"),
-        lpszFunction, dw, lpMsgBuf);
-    MessageBox(NULL, (LPCTSTR)lpDisplayBuf, TEXT("Error"), MB_OK);
-
-    LocalFree(lpMsgBuf);
-    LocalFree(lpDisplayBuf);
-    }
-#endif
 static
 bool
 sortof_atomically_write_file(LongString text, WinString path){
+    {
+    // First thing to do is to try to create the file if it does not exist.
+    // Only if it does exist do we try to overwrite it using ReplaceFile.
+    auto fh = CreateFileW(
+            path.text,
+            GENERIC_WRITE,
+            0,
+            NULL,
+            CREATE_NEW,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL);
+    if(fh != INVALID_HANDLE_VALUE){
+        DWORD written;
+        auto success = WriteFile(fh, text.text, text.length, &written, NULL);
+        CloseHandle(fh);
+        return success? true : false;
+        }
+    }
+    // Ok, so we tried to create the file and failed. Therefore it already
+    // exists. Write to a temp file and then replace the original.
     wchar_t tmppath[1024];
     wchar_t tmppath2[1024];
     if(path.nchars > 1022){ // space for '\0' and trailing char
@@ -489,10 +510,10 @@ sortof_atomically_write_file(LongString text, WinString path){
     memcpy(tmppath, path.text, path.nchars*sizeof(path.text[0]));
     memcpy(tmppath2, path.text, path.nchars*sizeof(path.text[0]));
     // nchars includdes terminating null
-    tmppath[path.nchars-1] = L't';
-    tmppath[path.nchars] = L'\0';
+    tmppath[path.nchars-1]  = L't';
+    tmppath[path.nchars]    = L'\0';
     tmppath2[path.nchars-1] = L'b';
-    tmppath2[path.nchars] = L'\0';
+    tmppath2[path.nchars]   = L'\0';
     auto tmpfile = CreateFileW(
             tmppath,
             GENERIC_WRITE,
@@ -512,6 +533,8 @@ sortof_atomically_write_file(LongString text, WinString path){
         }
     auto replaced = ReplaceFileW(path.text, tmppath, tmppath2, 0, 0, 0);
     if(replaced == 0){
+        // print_error(L"replace failed");
+        DeleteFileW(tmppath2);
         return false;
         }
     DeleteFileW(tmppath2);
@@ -540,7 +563,7 @@ save_as_file(HWND textedit){
     auto text = get_utf8_string_from_window(textedit);
     WinString path = {.text=filepath, .nchars = wcslen(filepath)+1};
     auto result = sortof_atomically_write_file(text, path);
-    free(text.text);
+    free((void*)text.text);
     return result;
     }
 
