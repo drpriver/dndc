@@ -23,7 +23,7 @@
 #pragma comment(lib, "Shell32.lib")
 #pragma comment(lib, "kernel32.lib")
 #pragma comment(lib, "Comdlg32.lib")
-// #pragma comment(lib, "Gdi32.lib")
+#pragma comment(lib, "Gdi32.lib")
 // #pragma comment(lib, "advapi32.lib")
 // #pragma comment(lib, "comdlg32.lib")
 // #pragma comment(lib, "odbc32.lib")
@@ -115,6 +115,7 @@ static void choose_open_file(HWND);
 static bool save_file(HWND);
 static bool save_as_file(HWND);
 static bool sortof_atomically_write_file(LongString text, WinString path);
+static bool choose_font(HWND);
 static
 WinString
 make_windows_string_from_utf8_string(const char* text){
@@ -222,6 +223,7 @@ enum {
     IDM_EDIT_CUT     ,
     IDM_EDIT_COPY    ,
     IDM_EDIT_PASTE   ,
+    IDM_FORMAT_FONT  ,
 };
 
 static void make_menus(HWND);
@@ -300,12 +302,21 @@ WndProc(HWND mainwindow_handle, UINT message, WPARAM wParam, LPARAM lParam){
             ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP,
             0, 0, TEXTEDIT_WIDTH, 0,
             mainwindow_handle, (HMENU)ID_EDIT, ((CREATESTRUCT*)lParam)->hInstance, NULL);
-        CHARFORMATW fmt = {
-            .cbSize = sizeof(fmt),
+        CHARFORMATW fmt1 = {
+            .cbSize = sizeof(fmt1),
             .dwMask = CFM_FACE,
-            .szFaceName = _T("Consolas"),
+            // .szFaceName = _T("Consolas"),
+            .szFaceName = _T("Cascadia Mono"),
             };
-        SendMessage(textedit_handle, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&fmt);
+        LRESULT font_success = SendMessage(textedit_handle, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&fmt1);
+        if(!font_success){
+            CHARFORMATW fmt2 = {
+                .cbSize = sizeof(fmt2),
+                .dwMask = CFM_FACE,
+                .szFaceName = _T("Consolas"),  // I think Consolas is guaranteed to be installed?
+                };
+            font_success = SendMessage(textedit_handle, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&fmt2);
+            }
         SendMessage(textedit_handle, EM_SETEVENTMASK, 0, ENM_CHANGE);
         if(webviewController != nullptr){
             bounds.left += TEXTEDIT_WIDTH;
@@ -362,6 +373,9 @@ WndProc(HWND mainwindow_handle, UINT message, WPARAM wParam, LPARAM lParam){
             case IDM_APP_EXIT:
                 SendMessage(mainwindow_handle, WM_CLOSE, 0, 0);
                 return 0;
+            case IDM_FORMAT_FONT:
+                choose_font(textedit_handle);
+                return 0;
             }
         }break; // default
 	case WM_SIZE:{
@@ -403,6 +417,12 @@ make_menus(HWND window){
     AppendMenu(popup, MF_STRING,    IDM_EDIT_PASTE, _T("&Paste"));
 
     AppendMenu(menu, MF_POPUP, (UINT_PTR)popup, _T("&Edit"));
+
+    popup = CreateMenu();
+    AppendMenu(popup, MF_STRING,    IDM_FORMAT_FONT, _T("F&ont"));
+
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)popup, _T("&Format"));
+
     SetMenu(window, menu);
 
 	ShowWindow(window, SW_SHOWDEFAULT);
@@ -645,4 +665,25 @@ make_webview(HWND window){
                 }).Get());
             return S_OK;
         }).Get());
+    }
+
+static
+bool
+choose_font(HWND textedit){
+    static LOGFONT font;
+    CHOOSEFONTW fontstruct = {
+        .lStructSize = sizeof(fontstruct),
+        .hwndOwner = textedit,
+        .lpLogFont = &font,
+        .Flags = CF_FIXEDPITCHONLY | CF_FORCEFONTEXIST | CF_INITTOLOGFONTSTRUCT | CF_SCALABLEONLY,
+        };
+    BOOL ok = ChooseFontW(&fontstruct);
+    if(!ok)
+        return false;
+    HFONT new_font_handle = CreateFontIndirect(&font);
+    SendMessage(textedit, WM_SETFONT, (WPARAM)new_font_handle, 0);
+    static HFONT font_handle;
+    DeleteObject(font_handle);
+    font_handle = new_font_handle;
+    return true;
     }
