@@ -61,7 +61,7 @@ typedef enum GdndInsertTag{
 @end
 
 //
-// ViewController for the windwos of the app
+// ViewController for the windows of the app
 //
 @interface DndViewController: NSViewController{
 @public DndTextView* text;
@@ -72,6 +72,7 @@ typedef enum GdndInsertTag{
 @public NSURL* file_url;
 }
 -(void)recalc_html:(id)sender;
+-(void)flop_editor:(id)sender;
 @end
 
 //
@@ -80,7 +81,6 @@ typedef enum GdndInsertTag{
 @interface DndDocument: NSDocument{
 // this is kind of janky, but whatever
 DndViewController* view_controller;
-
 }
 @end
 
@@ -100,6 +100,7 @@ static NSRegularExpression* indent_pattern;
 //
 // The app's image. We embed the png into the binary and decode it at startup.
 static NSImage* appimage;
+
 
 @implementation DndDocument
 +(BOOL)autosavesInPlace {
@@ -526,6 +527,59 @@ static NSImage* appimage;
 
 
 @implementation DndViewController
+-(instancetype)init{
+    self = [super init];
+    auto screen = [NSScreen mainScreen];
+    NSRect screenrect;
+    if(screen){
+        screenrect = screen.visibleFrame;
+    }
+    else{
+        screenrect = NSMakeRect(0, 0, 1400, 800);
+    }
+    auto font=[NSFont fontWithName:@"Menlo" size:11];
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:(id)font, NSFontAttributeName, nil];
+    auto Msize = [[NSAttributedString alloc] initWithString:@"M" attributes:attributes].size.width;
+    auto textwidth  = 84*Msize;
+    NSRect textrect = {.origin={screenrect.size.width-textwidth,0}, .size={textwidth,screenrect.size.height}};
+    text = [[DndTextView alloc] initWithFrame:textrect font:font];
+    highlighter = [[DndHighlighter alloc] init];
+    text.textStorage.delegate = highlighter;
+    text.minSize = NSMakeSize(0.0, textrect.size.height);
+    text.maxSize = NSMakeSize(1e9, 1e9);
+    text.verticallyResizable = YES;
+    text.horizontallyResizable = NO;
+    text.textContainer.containerSize = NSMakeSize(textrect.size.width, 1e9);
+    text.textContainer.widthTracksTextView = YES;
+    text.textContainerInset = NSMakeSize(4,4);
+
+    scrollview = [[NSScrollView alloc] initWithFrame:textrect];
+    // scrollview.borderType = NSNoBorder;
+    scrollview.hasVerticalScroller = YES;
+    scrollview.hasHorizontalScroller = NO;
+    scrollview.autoresizingMask = NSViewHeightSizable | NSViewMinXMargin;
+    scrollview.documentView = text;
+    scrollview.findBarPosition = NSScrollViewFindBarPositionAboveContent;
+
+    text.usesFindBar = YES;
+    text.incrementalSearchingEnabled = YES;
+
+    [self.view addSubview:scrollview];
+
+    NSRect webrect = {.origin={0, 0}, .size={screenrect.size.width-textwidth, screenrect.size.height}};
+    WKWebViewConfiguration* config = [[WKWebViewConfiguration alloc] init];
+    [config.preferences setValue:@YES forKey:@"developerExtrasEnabled"];
+    webview = [[WKWebView alloc] initWithFrame:webrect configuration:config];
+    webview.allowsMagnification = YES;
+    webnavdel = [[WebNavDel alloc] init];
+    webnavdel->controller = self;
+    webview.navigationDelegate = webnavdel;
+    [self.view addSubview:webview];
+    webview.autoresizingMask = NSViewHeightSizable | NSViewWidthSizable;
+    webview.allowsBackForwardNavigationGestures = YES;
+    [self recalc_html:nil];
+    return self;
+}
 -(void)insert_file:(id)sender{
     NSMenuItem* item = sender;
     NSOpenPanel* panel = [NSOpenPanel openPanel];
@@ -593,59 +647,6 @@ static NSImage* appimage;
 }
 -(void)zoom_normal:(id)sender{
     webview.magnification = 1.0;
-}
--(instancetype)init{
-    self = [super init];
-    auto screen = [NSScreen mainScreen];
-    NSRect screenrect;
-    if(screen){
-        screenrect = screen.visibleFrame;
-    }
-    else{
-        screenrect = NSMakeRect(0, 0, 1400, 800);
-    }
-    auto font=[NSFont fontWithName:@"Menlo" size:11];
-    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:(id)font, NSFontAttributeName, nil];
-    auto Msize = [[NSAttributedString alloc] initWithString:@"M" attributes:attributes].size.width;
-    auto textwidth  = 84*Msize;
-    NSRect textrect = {.origin={screenrect.size.width-textwidth,0}, .size={textwidth,screenrect.size.height}};
-    text = [[DndTextView alloc] initWithFrame:textrect font:font];
-    highlighter = [[DndHighlighter alloc] init];
-    text.textStorage.delegate = highlighter;
-    text.minSize = NSMakeSize(0.0, textrect.size.height);
-    text.maxSize = NSMakeSize(1e9, 1e9);
-    text.verticallyResizable = YES;
-    text.horizontallyResizable = NO;
-    text.textContainer.containerSize = NSMakeSize(textrect.size.width, 1e9);
-    text.textContainer.widthTracksTextView = YES;
-    text.textContainerInset = NSMakeSize(4,4);
-
-    scrollview = [[NSScrollView alloc] initWithFrame:textrect];
-    // scrollview.borderType = NSNoBorder;
-    scrollview.hasVerticalScroller = YES;
-    scrollview.hasHorizontalScroller = NO;
-    scrollview.autoresizingMask = NSViewHeightSizable | NSViewMinXMargin;
-    scrollview.documentView = text;
-    scrollview.findBarPosition = NSScrollViewFindBarPositionAboveContent;
-
-    text.usesFindBar = YES;
-    text.incrementalSearchingEnabled = YES;
-
-    [self.view addSubview:scrollview];
-
-    NSRect webrect = {.origin={0, 0}, .size={screenrect.size.width-textwidth, screenrect.size.height}};
-    WKWebViewConfiguration* config = [[WKWebViewConfiguration alloc] init];
-    [config.preferences setValue:@YES forKey:@"developerExtrasEnabled"];
-    webview = [[WKWebView alloc] initWithFrame:webrect configuration:config];
-    webview.allowsMagnification = YES;
-    webnavdel = [[WebNavDel alloc] init];
-    webnavdel->controller = self;
-    webview.navigationDelegate = webnavdel;
-    [self.view addSubview:webview];
-    webview.autoresizingMask = NSViewHeightSizable | NSViewWidthSizable;
-    webview.allowsBackForwardNavigationGestures = YES;
-    [self recalc_html:nil];
-    return self;
 }
 - (void)viewDidLoad {
     [super viewDidLoad];
@@ -722,11 +723,11 @@ static NSImage* appimage;
     // HERE("Total: %.3fms", (t5-t0)/1000.);
 }
 
-- (void)setRepresentedObject:(id)representedObject {
+-(void)setRepresentedObject:(id)representedObject {
     [super setRepresentedObject:representedObject];
 }
 
-- (void)loadView {
+-(void)loadView {
     auto screen = [NSScreen mainScreen];
     NSRect screenrect;
     if(screen){
@@ -736,6 +737,23 @@ static NSImage* appimage;
         screenrect = NSMakeRect(0, 0, 1400, 800);
     }
     self.view = [[NSView alloc] initWithFrame: screenrect];
+}
+-(void)flop_editor:(id)sender{
+    // TODO: disable this if scrollview is hidden
+    if(scrollview.hidden)
+        return;
+    if(scrollview.frame.origin.x < 1){
+        auto sf = scrollview.frame;
+        auto wf = webview.frame;
+        scrollview.frame = NSMakeRect(wf.size.width, sf.origin.y, sf.size.width, sf.size.height);
+        webview.frame = NSMakeRect(0, wf.origin.y, wf.size.width, wf.size.height);
+    }
+    else {
+        auto sf = scrollview.frame;
+        auto wf = webview.frame;
+        scrollview.frame = NSMakeRect(0, sf.origin.y, sf.size.width, sf.size.height);
+        webview.frame = NSMakeRect(sf.size.width, wf.origin.y, wf.size.width, wf.size.height);
+    }
 }
 -(void) toggle_editor:(id)sender{
     scrollview.hidden = !self->scrollview.hidden;
@@ -784,8 +802,17 @@ static NSImage* appimage;
 }
 
 
+-(void)flop_editors:(id)sender{
+    auto windows = [NSApp windows];
+    for(NSWindow* win in windows){
+        NSViewController* vc = win.contentViewController;
+        if([vc isKindOfClass:[DndViewController class]]){
+         [(DndViewController*)vc flop_editor:nil];
+        }
+    }
+}
 
-- (void)applicationDidFinishLaunching:(NSNotification *)notification {
+-(void)applicationDidFinishLaunching:(NSNotification *)notification{
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     [NSApp activateIgnoringOtherApps:YES];
     NSApp.applicationIconImage = appimage;
@@ -807,7 +834,8 @@ asm(".global __app_icon\n"
 #endif
     "__app_icon_end:\n");
 
-int main(int argc, const char * argv[]) {
+int
+main(int argc, const char * argv[]) {
     if(dndc_init_python() != 0)
         return 1;
     NSApplication* app = [NSApplication sharedApplication];
@@ -820,7 +848,9 @@ int main(int argc, const char * argv[]) {
     return NSApplicationMain(argc, argv);
 }
 
-static void do_menus(void){
+static
+void
+do_menus(void){
 
     if (NSApp == nil) {
         return;
@@ -954,6 +984,7 @@ static void do_menus(void){
     {
         NSMenu* menu = [[NSMenu alloc] initWithTitle:@"View"];
         [menu addItemWithTitle:@"Toggle Editor" action:@selector(toggle_editor:) keyEquivalent:@"j"];
+        [menu addItemWithTitle:@"Flop Editor" action:@selector(flop_editors:) keyEquivalent:@""];
         [menu addItem:[NSMenuItem separatorItem]];
         [menu addItemWithTitle:@"Zoom Out" action:@selector(zoom_out:) keyEquivalent:@"-"];
         [menu addItemWithTitle:@"Zoom In" action:@selector(zoom_in:) keyEquivalent:@"+"];
