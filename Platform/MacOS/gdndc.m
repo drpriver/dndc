@@ -659,7 +659,7 @@ static NSImage* appimage;
     // auto t1 = get_t();
     LongString html = {};
     auto len = strlen(source_text);
-    auto err = dndc_format((LongString){len, source_text}, &html);
+    auto err = dndc_format((LongString){len, source_text}, &html, stderr_error_func, NULL);
     // TODO: report?
     if(err){
         return;
@@ -702,7 +702,7 @@ static NSImage* appimage;
         // NSData and then borrowing the buffer?
         .length = strlen(source_text),
     };
-    auto err = dndc_make_html(base_dir, source, &html);
+    auto err = dndc_make_html(base_dir, source, &html, stderr_error_func, NULL);
     // auto t2 = get_t();
     if(err){
         // TODO: report errors to the user (need to figure out the UX though).

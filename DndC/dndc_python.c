@@ -211,7 +211,7 @@ py_parse_and_append_children(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnul
 
     auto parse_e = dndc_parse(ctx, handle, SV("(generated string from script)"), source_text.text);
     if(parse_e.errored){
-        PyErr_SetString(PyExc_ValueError, ctx->error_message.text);
+        PyErr_SetString(PyExc_ValueError, "Error while parsing");
         return NULL;
         }
 
@@ -1135,7 +1135,8 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHa
         PyObject *type, *value, *traceback;
         PyErr_Fetch(&type, &value, &traceback);
         PyErr_NormalizeException(&type, &value, &traceback);
-        if(ctx->error_message.length){
+        // FIXME: More robust signalling of errors.
+        if(ctx->error.message.length){
             }
         else{
             PyObject* exc_str = PyObject_Str(value);

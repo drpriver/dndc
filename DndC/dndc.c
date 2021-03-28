@@ -28,15 +28,15 @@
 typedef struct BinaryJob{
     Marray(StringView) sourcepaths;
     Nonnull(Base64Cache*)cache;
-    bool report_time;
 } BinaryJob;
 
 static
 THREADFUNC(binary_worker){
+#ifdef BINARY_WORKER_REPORT_TIME
     auto before = get_t();
+#endif
     BinaryJob* jobp = thread_arg;
     auto cache = *jobp->cache;
-    bool report_time = jobp->report_time;
     size_t count = jobp->sourcepaths.count;
     StringView* data = jobp->sourcepaths.data;
     ByteBuilder bb = {.allocator=cache.allocator};
@@ -50,10 +50,10 @@ THREADFUNC(binary_worker){
         }
     bb_destroy(&bb);
     memcpy(jobp->cache, &cache, sizeof(cache));
-    // *jobp->cache = cache;
+#ifdef BINARY_WORKER_REPORT_TIME
     auto after = get_t();
-    if(report_time)
-        fprintf(stderr, "Info: Binary worker took %.3fms\n", (after-before)/1000.);
+    fprintf(stderr, "Info: Binary worker took %.3fms\n", (after-before)/1000.);
+#endif
     return 0;
     }
 
@@ -69,7 +69,6 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
     auto flags = ctx->flags;
     BinaryJob job = {
         .cache = &ctx->b64cache,
-        .report_time = !!(flags & DNDC_PRINT_STATS),
         };
     if(not (ctx->flags & DNDC_DONT_INLINE_IMAGES)){
         Marray(NodeHandle)* img_nodes[] = {
@@ -117,14 +116,14 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
         // init_python_docparser handles the DNDC_PYTHON_IS_INIT flag.
         auto e = init_python_docparser(flags);
         if(e.errored) {
-            report_error(flags, "Failed to initialize python\n");
+            report_system_error(ctx, "Failed to initialize python\n");
             result.errored = e.errored;
             goto cleanup;
             }
         #endif
 
         auto after = get_t();
-        report_stat(flags, "Python startup took: %.3fms", (after-before)/1000.);
+        report_stat(ctx, "Python startup took: %.3fms", (after-before)/1000.);
         for(size_t i = 0; i < ctx->python_nodes.count; i++){
             auto handle = ctx->python_nodes.data[i];
             {
@@ -143,7 +142,7 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             auto str = msb_detach(&msb);
             auto py_err = execute_python_string(ctx, str.text, handle);
             if(py_err.errored){
-                report_error(flags, "%s", ctx->error_message.text);
+                report_set_error(ctx);
                 result.errored = py_err.errored;
                 goto cleanup;
                 }
@@ -162,8 +161,8 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             after:;
             }
         auto after_python = get_t();
-        report_stat(flags, "Python scripts took: %.3fms", (after_python-after)/1000.);
-        report_stat(flags, "Python total took: %.3fms", (after_python-before)/1000.);
+        report_stat(ctx, "Python scripts took: %.3fms", (after_python-after)/1000.);
+        report_stat(ctx, "Python total took: %.3fms", (after_python-before)/1000.);
         }
     // Python blocks are done, join with the base64 thread.
     // We could actually join later now that I think about it.
@@ -176,7 +175,7 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             join_thread(worker);
             auto after = get_t();
             // This is usually very fast as the worker thread finished before python.
-            report_stat(flags, "Joining took: %.3fms", (after-before)/1000.);
+            report_stat(ctx, "Joining took: %.3fms", (after-before)/1000.);
             }
         Marray_cleanup(StringView)(&job.sourcepaths, ctx->allocator);
         }
@@ -401,7 +400,7 @@ int main(int argc, char**argv){
         }
     auto after_parse_args = get_t();
     // this one has to be done manually as we don't have a ctx yet.
-    report_stat(print_stats?DNDC_PRINT_STATS:0, "Parsing args took: %.3fms", (after_parse_args-t0)/1000.);
+    report_stat_raw(print_stats?DNDC_PRINT_STATS:0, stderr_error_func, NULL, "Parsing args took: %.3fms", (after_parse_args-t0)/1000.);
     }
 
     uint64_t flags = DNDC_FLAGS_NONE;
@@ -440,17 +439,17 @@ int main(int argc, char**argv){
         output_path = LS(BENCHMARKOUTPUTPATH);
         }
     flags &= ~DNDC_NO_CLEANUP;
-    auto e = run_the_dndc(flags, SV(BENCHMARKDIRECTORY), source_path, &output_path, depends_path, NULL);
+    auto e = run_the_dndc(flags, SV(BENCHMARKDIRECTORY), source_path, &output_path, depends_path, NULL, stderr_error_func, NULL);
     assert(!e.errored);
     flags |= DNDC_PYTHON_IS_INIT;
     for(int i = 0; i < BENCHMARKITERS;i++){
-        e = run_the_dndc(flags, SV(BENCHMARKDIRECTORY), source_path, &output_path, depends_path, NULL);
+        e = run_the_dndc(flags, SV(BENCHMARKDIRECTORY), source_path, &output_path, depends_path, NULL, stderr_error_func, NULL);
         assert(!e.errored);
         }
     end_interpreter();
     return 0;
     #else
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, depends_path, NULL);
+    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, depends_path, NULL, stderr_error_func, NULL);
     return e.errored;
     #endif
     }
@@ -458,7 +457,7 @@ int main(int argc, char**argv){
 
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, Nullable(LongString*) output_path, LongString depends_path, Nullable(Base64Cache*)external_b64cache){
+run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, Nullable(LongString*) output_path, LongString depends_path, Nullable(Base64Cache*)external_b64cache, Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data){
     if(flags & DNDC_REFORMAT_ONLY)
         flags |= DNDC_NO_PYTHON;
     auto t0 = get_t();
@@ -498,6 +497,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
             const Allocator cache_allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
             (Base64Cache){.allocator = cache_allocator};
             }),
+        .error_func = error_func,
+        .error_user_data = error_user_data,
         };
     MStringBuilder msb = {.allocator=ctx.allocator};
     ctx_add_builtins(&ctx);
@@ -526,9 +527,9 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         auto source_err = ctx_load_source_file(&ctx, path);
         if(source_err.errored){
             if(ctx.base_directory.length)
-                report_error(flags, "Unable to open %.*s/%.*s", (int)ctx.base_directory.length, ctx.base_directory.text, (int)path.length, path.text);
+                report_system_error(&ctx, "Unable to open '%.*s/%.*s'", (int)ctx.base_directory.length, ctx.base_directory.text, (int)path.length, path.text);
             else
-                report_error(flags, "Unable to open %.*s", (int)path.length, path.text);
+                report_system_error(&ctx, "Unable to open '%.*s'", (int)path.length, path.text);
             result.errored = source_err.errored;
             goto cleanup;
             }
@@ -553,9 +554,9 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         auto before_parse = get_t();
         auto e = dndc_parse(&ctx, ctx.root_handle, path, source.text);
         auto after_parse = get_t();
-        report_stat(ctx.flags, "Initial parsing took: %.3fms", (after_parse-before_parse)/1000.);
+        report_stat(&ctx, "Initial parsing took: %.3fms", (after_parse-before_parse)/1000.);
         if(e.errored){
-            report_error(flags, "%s", ctx.error_message.text);
+            report_set_error(&ctx);
             result.errored = e.errored;
             goto cleanup;
             }
@@ -565,7 +566,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         auto before = get_t();
         format_tree(&ctx, &msb);
         auto after = get_t();
-        report_stat(ctx.flags, "Formatting took: %.3fms", (after-before)/1000.);
+        report_stat(&ctx, "Formatting took: %.3fms", (after-before)/1000.);
 
         auto str = msb_borrow(&msb);
         auto before_write = get_t();
@@ -598,8 +599,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
                 }
             }
         auto after_write = get_t();
-        report_stat(ctx.flags, "Writing took: %.3fms", (after_write-before_write)/1000.);
-        report_stat(ctx.flags, "Total output size: %zu bytes", str.length);
+        report_stat(&ctx, "Writing took: %.3fms", (after_write-before_write)/1000.);
+        report_stat(&ctx, "Total output size: %zu bytes", str.length);
         goto success;
         }
     // Handle imports. Imports can import more imports.
@@ -636,14 +637,14 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
                 LongString imp_text = unwrap(imp_e);
                 auto parse_e = dndc_parse(&ctx, child_handle, filename, imp_text.text);
                 if(parse_e.errored){
-                    report_error(flags, "%s", ctx.error_message.text);
+                    report_set_error(&ctx);
                     result.errored = parse_e.errored;
                     goto cleanup;
                     }
                 }
             }
         auto after_imports = get_t();
-        report_stat(ctx.flags, "Resolving imports took: %.3fms", (after_imports-before_imports)/1000.);
+        report_stat(&ctx, "Resolving imports took: %.3fms", (after_imports-before_imports)/1000.);
     }
 
     // Speculatively load imgs and imglinks and preprocess them.
@@ -663,12 +664,12 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
             }
     }
     // Do some reporting as we don't add any nodes after this.
-    report_stat(ctx.flags, "ctx.nodes.count = %zu", ctx.nodes.count);
-    report_stat(ctx.flags, "ctx.python_nodes.count = %zu", ctx.python_nodes.count);
-    report_stat(ctx.flags, "ctx.imports.count = %zu", ctx.imports.count);
-    report_stat(ctx.flags, "ctx.script_nodes.count = %zu", ctx.script_nodes.count);
-    report_stat(ctx.flags, "ctx.dependencies.count = %zu", ctx.dependencies_nodes.count);
-    report_stat(ctx.flags, "ctx.link_nodes.count = %zu", ctx.link_nodes.count);
+    report_stat(&ctx, "ctx.nodes.count = %zu", ctx.nodes.count);
+    report_stat(&ctx, "ctx.python_nodes.count = %zu", ctx.python_nodes.count);
+    report_stat(&ctx, "ctx.imports.count = %zu", ctx.imports.count);
+    report_stat(&ctx, "ctx.script_nodes.count = %zu", ctx.script_nodes.count);
+    report_stat(&ctx, "ctx.dependencies.count = %zu", ctx.dependencies_nodes.count);
+    report_stat(&ctx, "ctx.link_nodes.count = %zu", ctx.link_nodes.count);
     if(flags & DNDC_REPORT_ORPHANS){
         for(size_t i = 0; i < ctx.nodes.count; i++){
             auto node = &ctx.nodes.data[i];
@@ -681,7 +682,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
             }
         }
     if(NodeHandle_eq(ctx.root_handle, INVALID_NODE_HANDLE)){
-        report_error(flags, "ctx has no root Node.");
+        report_system_error(&ctx, "ctx has no root Node.");
         result.errored = PARSE_ERROR;
         goto cleanup;
         }
@@ -690,21 +691,23 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         auto before = get_t();
         auto e = check_depth(&ctx);
         if(e.errored){
-            report_error(flags, "%s", ctx.error_message.text);
+            report_set_error(&ctx);
             result.errored = e.errored;
             goto cleanup;
             }
         auto after = get_t();
-        report_stat(ctx.flags, "Checking depth took %.3fms", (after-before)/1000.);
+        report_stat(&ctx, "Checking depth took %.3fms", (after-before)/1000.);
     }
     // Create links from headers.
     {
         auto before = get_t();
         gather_anchors(&ctx);
         auto after = get_t();
-        report_stat(ctx.flags, "Link resolving took: %.3fms", (after-before)/1000.);
-        if(ctx.error_message.length){
-            report_error(flags, "%s", ctx.error_message.text);
+        report_stat(&ctx, "Link resolving took: %.3fms", (after-before)/1000.);
+        // FIXME: if an error can be set while gathering anchors, we should
+        // return an error!
+        if(ctx.error.message.length){
+            report_set_error(&ctx);
             result.errored = PARSE_ERROR;
             goto cleanup;
             }
@@ -721,7 +724,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         if(!NodeHandle_eq(ctx.navnode, INVALID_NODE_HANDLE))
             build_nav_block(&ctx);
         auto after =  get_t();
-        report_stat(ctx.flags, "Nav block building took: %.3fms", (after-before)/1000.);
+        report_stat(&ctx, "Nav block building took: %.3fms", (after-before)/1000.);
     }
 
     // Add in the links from explicit link blocks.
@@ -738,8 +741,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
                     // This looks weird, but I am formatting the error.
                     // FIXME: pass the node into the add_link_from_sv function?
                     // That way it can properly format the error itself?
-                    node_set_err(&ctx, link_str_node, "%s", ctx.error_message.text);
-                    report_error(flags, "%s", ctx.error_message.text);
+                    node_set_err(&ctx, link_str_node, "%s", ctx.error.message.text);
+                    report_set_error(&ctx);
                     result.errored = e.errored;
                     goto cleanup;
                     }
@@ -754,7 +757,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
                 printf("[%zu] key: '%.*s', value: '%.*s'\n", i, (int)li->key.length, li->key.text, (int)li->value.length, li->value.text);
                 }
             }
-        report_stat(ctx.flags, "ctx.links.count = %zu", ctx.links.count);
+        report_stat(&ctx, "ctx.links.count = %zu", ctx.links.count);
     }
 
     // Render data nodes into the data blob.
@@ -787,7 +790,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
                 msb_reset(&sb);
                 auto e = render_node(&ctx, &sb, child, 1);
                 if(e.errored){
-                    report_error(flags, "%s", ctx.error_message.text);
+                    report_set_error(&ctx);
                     result.errored = e.errored;
                     goto cleanup;
                     }
@@ -803,8 +806,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
                 }
             }
         auto after_data = get_t();
-        report_stat(ctx.flags, "Data blob rendering took: %.3fms", (after_data-before_data)/1000.);
-        report_stat(ctx.flags, "ctx.rendered_data.count = %zu", ctx.rendered_data.count);
+        report_stat(&ctx, "Data blob rendering took: %.3fms", (after_data-before_data)/1000.);
+        report_stat(&ctx, "ctx.rendered_data.count = %zu", ctx.rendered_data.count);
     }
     // Render the actual document into a string as html.
     {
@@ -813,10 +816,10 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         auto before_render = get_t();
         auto e = render_tree(&ctx, &output_sb);
         auto after_render = get_t();
-        report_stat(ctx.flags, "Rendering took: %.3fms", (after_render-before_render)/1000.);
+        report_stat(&ctx, "Rendering took: %.3fms", (after_render-before_render)/1000.);
 
         if(e.errored){
-            report_error(flags, "%s", ctx.error_message.text);
+            report_set_error(&ctx);
             result.errored = e.errored;
             goto cleanup;
             }
@@ -849,10 +852,10 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
                 result.errored = write_err.errored;
                 goto cleanup;
                 }
-        report_stat(ctx.flags, "Total output size: %zu bytes", str.length);
+        report_stat(&ctx, "Total output size: %zu bytes", str.length);
             }
         auto after_write = get_t();
-        report_stat(ctx.flags, "Writing took: %.3fms", (after_write-before_write)/1000.);
+        report_stat(&ctx, "Writing took: %.3fms", (after_write-before_write)/1000.);
     }
     // Write the make-style dependency file to the Dependency directory.
     if(depends_path.length){
@@ -900,17 +903,17 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
     success:;
     cleanup:;
     msb_destroy(&msb);
-    report_stat(ctx.flags, "la_.high_water = %zu", la_.high_water);
+    report_stat(&ctx, "la_.high_water = %zu", la_.high_water);
     if(!(flags & DNDC_NO_CLEANUP)){
         auto before = get_t();
         if(ctx.flags & DNDC_PRINT_STATS){
             RecordingAllocator* recorder = allocator._data;
-            report_stat(ctx.flags, "There were %zu allocations.", recorder->count);
+            report_stat(&ctx, "There were %zu allocations.", recorder->count);
             size_t total = 0;
             for(size_t i = 0; i < recorder->count; i++){
                 total += recorder->allocation_sizes[i];
                 }
-            report_stat(ctx.flags, "Allocations outstanding total: %zu", total);
+            report_stat(&ctx, "Allocations outstanding total: %zu", total);
             }
         Allocator_free_all(allocator);
         shallow_free_recorded_mallocator(allocator);
@@ -920,14 +923,14 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
             shallow_free_recorded_mallocator(ctx.b64cache.allocator);
             }
         auto after = get_t();
-        report_stat(ctx.flags, "Cleaning up memory took: %.3fms", (after-before)/1000.);
+        report_stat(&ctx, "Cleaning up memory took: %.3fms", (after-before)/1000.);
         }
     if(external_b64cache){
         DBG("Copying back");
         memcpy(external_b64cache, &ctx.b64cache, sizeof(ctx.b64cache));
         }
     auto t1 = get_t();
-    report_stat(ctx.flags, "Execution took: %.3fms", (t1-t0)/1000.);
+    report_stat(&ctx, "Execution took: %.3fms", (t1-t0)/1000.);
     return result;
     }
 
@@ -1005,7 +1008,7 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
 #ifndef PYTHONMODULE
 extern
 int
-dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongString*)output){
+dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongString*)output, Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data){
     uint64_t flags = 0;
     flags |= DNDC_SOURCE_PATH_IS_DATA_NOT_PATH;
     flags |= DNDC_OUTPUT_PATH_IS_OUT_PARAM;
@@ -1018,22 +1021,22 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
     // flags |= DNDC_PRINT_STATS;
     // gross, move to caller.
     static Base64Cache cache = {.allocator.type = ALLOCATOR_MALLOC};
-    auto e = run_the_dndc(flags, base_directory, source_text, output, LS(""), &cache);
+    auto e = run_the_dndc(flags, base_directory, source_text, output, LS(""), &cache, error_func, error_user_data);
     return e.errored;
     }
 
 extern
 int
-dndc_format(LongString source_text, Nonnull(LongString*)output){
+dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data){
     uint64_t flags = 0;
     flags |= DNDC_SOURCE_PATH_IS_DATA_NOT_PATH;
     flags |= DNDC_OUTPUT_PATH_IS_OUT_PARAM;
     flags |= DNDC_PYTHON_IS_INIT;
-    flags |= DNDC_DONT_PRINT_ERRORS;
+    // flags |= DNDC_DONT_PRINT_ERRORS;
     flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
     flags |= DNDC_REFORMAT_ONLY;
-    auto e = run_the_dndc(flags, SV(""), source_text, output, LS(""), NULL);
+    auto e = run_the_dndc(flags, SV(""), source_text, output, LS(""), NULL, error_func, error_user_data);
     return e.errored;
     }
 
@@ -1051,3 +1054,20 @@ dndc_init_python_types(void){
     return err.errored;
     }
 #endif
+
+extern
+void
+stderr_error_func(Nullable(void*)unused, int type, const char*_Nonnull filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
+    (void)unused;
+    if(type == DNDC_SYSTEM_MESSAGE){
+        fprintf(stderr, "Error: %s\n", message);
+        return;
+        }
+    if(type == DNDC_STATISTIC_MESSAGE){
+        fprintf(stderr, "Info: %s\n", message);
+        return;
+        }
+    (void)type;
+    (void)message_len;
+    fprintf(stderr, "%.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+    }

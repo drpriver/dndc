@@ -2,6 +2,8 @@
 #define DNDC_CONTEXT_C
 // This file is kind of a grab bag of random functionality
 // that directly interacts with nodes or with the context.
+#include "MStringBuilder.h"
+#include "dndc_flags.h"
 #include "dndc_types.h"
 #include "dndc_funcs.h"
 #include "measure_time.h"
@@ -71,12 +73,14 @@ void
 parse_set_err(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, Nonnull(const char*) fmt, ...){
     MStringBuilder msb = {.allocator = ctx->allocator};
     int col = (int)(errchar - ctx->linestart);
-    msb_sprintf(&msb, "%.*s:%d:%d: ", (int)ctx->filename.length, ctx->filename.text, ctx->lineno+1, col+1);
+    ctx->error.filename = ctx->filename;
+    ctx->error.line = ctx->lineno;
+    ctx->error.col = col;
     va_list args;
     va_start(args, fmt);
     msb_vsprintf(&msb, fmt, args);
     va_end(args);
-    ctx->error_message = msb_detach(&msb);
+    ctx->error.message = msb_detach(&msb);
     }
 
 printf_func(3, 4)
@@ -84,15 +88,29 @@ static
 void
 node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...){
     MStringBuilder msb = {.allocator=ctx->allocator};
-    auto filename = node->filename;
-    auto lineno = node->row;
-    int col = node->col;
-    msb_sprintf(&msb, "%.*s:%d:%d: ", (int)filename.length, filename.text, lineno+1, col+1);
+    ctx->error.filename = node->filename;
+    ctx->error.line = node->row;
+    ctx->error.col = node->col;
     va_list args;
     va_start(args, fmt);
     msb_vsprintf(&msb, fmt, args);
     va_end(args);
-    ctx->error_message = msb_detach(&msb);
+    ctx->error.message = msb_detach(&msb);
+    }
+
+printf_func(4, 5)
+static
+void
+node_set_err_offset(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, int offset, Nonnull(const char*) fmt, ...){
+    MStringBuilder msb = {.allocator=ctx->allocator};
+    ctx->error.filename = node->filename;
+    ctx->error.line = node->row;
+    ctx->error.col = node->col+offset;
+    va_list args;
+    va_start(args, fmt);
+    msb_vsprintf(&msb, fmt, args);
+    va_end(args);
+    ctx->error.message = msb_detach(&msb);
     }
 
 printf_func(3, 4)
@@ -101,17 +119,18 @@ void
 node_print_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...){
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
+    if(not ctx->error_func)
+        return;
     MStringBuilder msb = {.allocator=ctx->temp_allocator};
     auto filename = node->filename;
     auto lineno = node->row;
     int col = node->col;
-    msb_sprintf(&msb, "%.*s:%d:%d: ", (int)filename.length, filename.text, lineno+1, col+1);
     va_list args;
     va_start(args, fmt);
     msb_vsprintf(&msb, fmt, args);
     va_end(args);
     auto msg = msb_borrow(&msb);
-    fprintf(stderr, "%s\n", msg.text);
+    ctx->error_func(ctx->error_user_data, DNDC_WARNING_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
     msb_destroy(&msb);
     }
 
@@ -123,45 +142,84 @@ node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(c
         return;
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
+    if(not ctx->error_func)
+        return;
     MStringBuilder msb = {.allocator=ctx->temp_allocator};
     auto filename = node->filename;
     auto lineno = node->row;
     int col = node->col;
-    msb_sprintf(&msb, "%.*s:%d:%d: ", (int)filename.length, filename.text, lineno+1, col+1);
     va_list args;
     va_start(args, fmt);
     msb_vsprintf(&msb, fmt, args);
     va_end(args);
     auto msg = msb_borrow(&msb);
-    fprintf(stderr, "%s\n", msg.text);
+    ctx->error_func(ctx->error_user_data, DNDC_WARNING_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
     msb_destroy(&msb);
     }
 
-printf_func(2, 3)
-static
+printf_func(4, 5)
+static inline
 void
-report_stat(uint64_t flags, Nonnull(const char*) fmt, ...){
-    if(!(flags & DNDC_PRINT_STATS))
+report_stat_raw(uint64_t flags, Nullable(ErrorFunc*) error_func, Nullable(void*) error_user_data, Nonnull(const char*) fmt, ...){
+    if(not (flags & DNDC_PRINT_STATS))
         return;
-    fprintf(stderr, "Info: ");
+    if(not error_func)
+        return;
+    char buff[256];
     va_list args;
     va_start(args, fmt);
-    vfprintf(stderr, fmt, args);
-    fputc('\n', stderr);
+    int printed = vsnprintf(buff, sizeof(buff), fmt, args);
     va_end(args);
+    if(printed >= sizeof(buff))
+        printed = sizeof(buff)-1;
+    error_func(error_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, buff, printed);
     }
 
 printf_func(2, 3)
 static
 void
-report_error(uint64_t flags, Nonnull(const char*)fmt, ...){
-    if(flags & DNDC_DONT_PRINT_ERRORS)
+report_stat(Nonnull(DndcContext*)ctx, Nonnull(const char*) fmt, ...){
+    if(not (ctx->flags & DNDC_PRINT_STATS))
         return;
+    if(not ctx->error_func)
+        return;
+
+    MStringBuilder temp = {.allocator = ctx->temp_allocator};
     va_list args;
     va_start(args, fmt);
-    vfprintf(stderr, fmt, args);
-    fputc('\n', stderr);
+    msb_vsprintf(&temp, fmt, args);
     va_end(args);
+    auto msg = msb_borrow(&temp);
+    ctx->error_func(ctx->error_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, msg.text, msg.length);
+    msb_destroy(&temp);
+    }
+
+static
+void
+report_set_error(Nonnull(DndcContext*)ctx){
+    if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
+        return;
+    if(not ctx->error_func)
+        return;
+    ctx->error_func(ctx->error_user_data, DNDC_ERROR_MESSAGE, ctx->error.filename.text, ctx->error.filename.length, ctx->error.line, ctx->error.col, ctx->error.message.text, ctx->error.message.length);
+    }
+
+static
+printf_func(2, 3)
+void
+report_system_error(Nonnull(DndcContext*)ctx, Nonnull(const char*)fmt, ...){
+    if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
+        return;
+    if(not ctx->error_func)
+        return;
+    MStringBuilder temp = {.allocator = ctx->temp_allocator};
+    va_list args;
+    va_start(args, fmt);
+    msb_vsprintf(&temp, fmt, args);
+    va_end(args);
+    auto msg = msb_borrow(&temp);
+    ctx->error_func(ctx->error_user_data, DNDC_SYSTEM_MESSAGE, "", 0, 0, 0, msg.text, msg.length);
+    msb_destroy(&temp);
     }
 
 static inline
@@ -208,7 +266,7 @@ ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
     auto load_err = read_file(ctx->allocator, path);
     auto after = get_t();
     if(!load_err.errored){
-        report_stat(ctx->flags, "Loading '%.*s' took %.3fms", (int)sourcepath.length, sourcepath.text, (after-before)/1000.);
+        report_stat(ctx, "Loading '%.*s' took %.3fms", (int)sourcepath.length, sourcepath.text, (after-before)/1000.);
         auto loaded = Marray_alloc(LoadedSource)(&ctx->loaded_files, ctx->allocator);
         loaded->sourcepath.text = path;
         loaded->sourcepath.length = sourcepath.length;
@@ -312,25 +370,28 @@ add_link_from_sv(Nonnull(DndcContext*)ctx, StringView str, bool check_valid){
     const char* equals = memchr(str.text, '=', str.length);
     if(!equals){
         // TODO: print error from this node
-        ctx->error_message = LS("no '=' in a link node");
+        ctx->error.message = LS("no '=' in a link node");
         Raise(PARSE_ERROR);
         }
     MStringBuilder sb = {.allocator=ctx->allocator};
     msb_write_kebab(&sb, str.text, equals - str.text);
     if(!sb.cursor){
-        ctx->error_message = LS("key is empty");
+        // TODO: print error from this node
+        ctx->error.message = LS("key is empty");
         Raise(PARSE_ERROR);
         }
     auto key = LS_to_SV(msb_detach(&sb));
     StringView value = stripped_view(equals + 1, (str.text+str.length)-(equals+1));
     if(!value.length){
-        ctx->error_message = LS("link target is empty");
+        // TODO: print error from this node
+        ctx->error.message = LS("link target is empty");
         Raise(PARSE_ERROR);
         }
     if(check_valid and value.text[0] == '#'){
         StringView target = {.text = value.text+1, .length = value.length-1};
         if(!target.length){
-            ctx->error_message = LS("link target is empty after the '#'");
+            // TODO: print error from this node
+            ctx->error.message = LS("link target is empty after the '#'");
             Raise(PARSE_ERROR);
             }
         // TODO: keep a binary tree or something?
@@ -338,7 +399,8 @@ add_link_from_sv(Nonnull(DndcContext*)ctx, StringView str, bool check_valid){
             if(SV_equals(ctx->links.data[i].value, value))
                 goto foundit;
             }
-        ctx->error_message = LS("Anchor does not correspond to any link");
+        // TODO: print error from this node
+        ctx->error.message = LS("Anchor does not correspond to any link");
         Raise(PARSE_ERROR);
         foundit:;
         }

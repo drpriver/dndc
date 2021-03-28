@@ -1,5 +1,6 @@
 #ifndef DNDC_FUNCS_H
 #define DNDC_FUNCS_H
+#include "dndc.h"
 #include "MStringBuilder.h"
 #include "ByteBuilder.h"
 #include "dndc_types.h"
@@ -51,6 +52,15 @@
 //    If NULL, will internally create and then destroy one.
 //    Allows saving on io and computation if being run repeatedly.
 //
+// error_func:
+//   A function for reporting errors. See `ErrorFunc` in dndc.h. If NULL, errors will
+//   not be printed. Use `stderr_error_func` for a function that just prints to
+//   stderr.
+//
+// error_user_data:
+//   A pointer that will be passed to the error_func. For `stderr_error_func`, this
+//   should be NULL. For a function you've defined, pass an appropriate pointer!
+//
 // Returns
 // -------
 // Nothing is returned upon success (.errored == NO_ERROR).
@@ -58,7 +68,7 @@
 //
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, StringView base_directory, LongString source, Nullable(LongString*) output_path, LongString depends_path, Nullable(Base64Cache*)b64cache);
+run_the_dndc(uint64_t flags, StringView base_directory, LongString source, Nullable(LongString*) output_path, LongString depends_path, Nullable(Base64Cache*)b64cache, Nullable(ErrorFunc*) error_func, Nullable(void*)error_user_data);
 
 //
 // The following functions are for reporting errors and warnings.
@@ -94,6 +104,18 @@ void
 node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
 
 //
+// Like node_set_err, but with an offset to the column.
+// Sets an error message originating from the source location that corresponds
+// to the given node.
+//
+// printf-like function.
+//
+static
+printf_func(4, 5)
+void
+node_set_err_offset(Nonnull(DndcContext*)ctx, Nonnull(const Node*), int, Nonnull(const char*) fmt, ...);
+
+//
 // Like node_set_err, but immediately prints the message instead of setting
 // a string. Only use this in the body of run_the_dndc.
 //
@@ -123,19 +145,36 @@ node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(c
 //
 // printf-like function
 //
-static
-printf_func(2, 3)
+printf_func(4, 5)
+static inline
 void
-report_stat(uint64_t flags, Nonnull(const char*) fmt, ...);
+report_stat_raw(uint64_t flags, Nullable(ErrorFunc*) error_func, Nullable(void*) error_user_data, Nonnull(const char*) fmt, ...);
 
 //
-// Reports an error. Should only be called by run_the_dndc right before it
-// returns an error.
+// Reports some informative message, such as time to execute some component.
+//
+// printf-like function
+//
+printf_func(2, 3)
+static
+void
+report_stat(Nonnull(DndcContext*), Nonnull(const char*) fmt, ...);
+
+//
+// Reports an error that was set by a different part of the system.
+//
+static
+void
+report_set_error(Nonnull(DndcContext*));
+
+//
+// Reports an error that did not originate from the source text. Should only be
+// called by run_the_dndc right before it returns an error.
 //
 static
 printf_func(2, 3)
 void
-report_error(uint64_t flags, Nonnull(const char*)fmt, ...);
+report_system_error(Nonnull(DndcContext*)ctx, Nonnull(const char*)fmt, ...);
 
 //
 // Getter function to turn a node handle to an acual pointer to a Node.

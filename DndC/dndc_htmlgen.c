@@ -309,9 +309,7 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
                 msb_write_literal(sb, "<a href=\"");
                 const char* closing_brace = memchr(text+i, ']', length-i);
                 if(!closing_brace){
-                    MStringBuilder eb = {.allocator=ctx->allocator};
-                    msb_sprintf(&eb, "%.*s:%d:%d: Unterminated '['", (int)node->filename.length, node->filename.text, node->row+1, node->col+1+(int)i);
-                    ctx->error_message = msb_detach(&eb);
+                    node_set_err_offset(ctx, node, i, "Unterminated '[']");
                     Raise(PARSE_ERROR);
                     }
                 size_t link_length = closing_brace - (text+i);
@@ -1079,7 +1077,7 @@ RENDERFUNC(IMGLINKS){
         assert(imgdatab64.length);
         msb_write_str(sb, imgdatab64.text, imgdatab64.length);
         auto after = get_t();
-        report_stat(ctx->flags, "Base64ing an imglinks took %.3fms", (after-before)/1000.);
+        report_stat(ctx, "Base64ing an imglinks took %.3fms", (after-before)/1000.);
         msb_write_literal(sb, "');\">\n");
         }
     for(size_t i = 4; i < node->children.count; i++){

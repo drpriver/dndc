@@ -45,8 +45,9 @@ analyze_line(Nonnull(DndcContext*)ctx){
             }
         if(!nonspace){
             if(*cursor == '\t'){
-                if(!(ctx->flags & DNDC_SUPPRESS_WARNINGS))
-                    fprintf(stderr, "Encountered a tab. Counting as 1 space.\n");
+                // TODO: report this for real
+                // if(!(ctx->flags & DNDC_SUPPRESS_WARNINGS))
+                    // fprintf(stderr, "Encountered a tab. Counting as 1 space.\n");
                 nspace++;
                 }
             else if(*cursor == ' ' or *cursor == '\r'){

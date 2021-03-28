@@ -1,5 +1,6 @@
 #ifndef DNDC_TYPES_H
 #define DNDC_TYPES_H
+#include "dndc.h"
 #include "long_string.h"
 #include "dndc_flags.h"
 #include "dndc_node_types.h"
@@ -143,8 +144,6 @@ typedef struct DndcContext {
         int nspaces;
         int lineno;
     };
-    // Only set if an error has occurred.
-    LongString error_message;
     // current file we are parsing. When not parsing, it is the entry point.
     StringView filename;
     // Base directory. All filepaths are relative to this directory.
@@ -195,6 +194,15 @@ typedef struct DndcContext {
     LongString outputfile;
     // See DndcFlags.
     uint64_t flags;
+    // See dndc.h
+    Nullable(ErrorFunc*) error_func;
+    Nullable(void*) error_user_data;
+    struct {
+        StringView filename;
+        int line; // 0-based
+        int col; // 0-based
+        LongString message;
+    } error;
 } DndcContext;
 
 #endif

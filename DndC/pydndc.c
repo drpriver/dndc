@@ -105,7 +105,7 @@ pydndc_reformat(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*
     flags |= DNDC_ALLOW_BAD_LINKS;
     flags |= DNDC_REFORMAT_ONLY;
     LongString output = {};
-    auto e = run_the_dndc(flags, SV(""), source, &output, LS(""), NULL);
+    auto e = run_the_dndc(flags, SV(""), source, &output, LS(""), NULL, NULL, NULL);
     if(e.errored){
         PyErr_SetString(PyExc_ValueError, "Format error (wow I need real error reporting)");
         return NULL;
@@ -138,7 +138,7 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
     flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
     LongString output = {};
-    auto e = run_the_dndc(flags, base_str, source, &output, LS(""), NULL);
+    auto e = run_the_dndc(flags, base_str, source, &output, LS(""), NULL, NULL, NULL);
     if(e.errored){
         PyErr_SetString(PyExc_ValueError, "Format error (wow I need real error reporting)");
         return NULL;

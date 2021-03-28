@@ -2,7 +2,10 @@ CC=clang
 PYTHON:=python3
 PYCFLAGS:=-F/Library/Frameworks -isystem /Library/Frameworks/Python.framework/Headers
 PYLDFLAGS:=-framework Python
-PLATFORM_FLAGS=-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
+# I get codegen bugs in MStringBuilder with this flag
+# It isn't able to properly track the size of buffers
+#PLATFORM_FLAGS=-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
+PLATFORM_FLAGS=-U_FORTIFY_SOURCE
 DEBUG_FLAGS=-DLOG_LEVEL=4\
 	 -DDEBUG\
 	 -fsanitize=nullability\
