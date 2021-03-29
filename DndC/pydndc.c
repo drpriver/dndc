@@ -20,19 +20,28 @@ PyMethodDef pydndc_methods[] = {
         .ml_meth = (PyCFunction)pydndc_reformat,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
-        "reformat(text)\n"
+        "reformat(text, error_reporter=None)\n"
         "--\n"
         "\n"
         "Reformat the given .dnd string into a nicely formatted representation.\n"
         "\n"
         "Args:\n"
-        "  text (str): The .dnd string\n"
+        "-----\n"
+        "text: str\n"
+        "    The .dnd string.\n"
         "\n"
-        "Returns: str\n"
-        "  The reformatted string\n"
+        "Optional Args:\n"
+        "--------------\n"
+        "error_reporter: Callable(int, str, int, int, str)\n"
+        "    A callable for reporting errors. See the discussion in htmlgen.\n"
         "\n"
-        "Throws: ValueError\n"
-        "  Throws ValueError if there is a syntax error in the given string\n"
+        "Returns:\n"
+        "--------\n"
+        "str: The reformatted string.\n"
+        "\n"
+        "Throws:\n"
+        "-------\n"
+        "Throws ValueError if there is a syntax error in the given string.\n"
         ,
     },
     {
@@ -40,23 +49,68 @@ PyMethodDef pydndc_methods[] = {
         .ml_meth = (PyCFunction)pydndc_htmlgen,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
-        "htmlgen(text, base_dir='.')\n"
+        "htmlgen(text, base_dir='.', error_reporter=None)\n"
         "--\n"
         "\n"
         "Parses and converts the .dnd string into html, returning as a string.\n"
+        "\n"
         "Args:\n"
-        "  text (str): The .dnd string\n"
-        "  base_dir (str): For relative filepaths referenced in the document,\n"
-        "                 what those paths are relative to.\n"
-        "                 Defaults to the current directory.\n"
+        "-----\n"
+        "text: str\n"
+        "    The .dnd string.\n"
         "\n"
-        "Returns: str\n"
-        "  The html\n"
+        "Optional Args:\n"
+        "--------------\n"
+        "base_dir: str\n"
+        "    For relative filepaths referenced in the document, what those paths\n"
+        "    are relative to. Defaults to the current directory.\n"
         "\n"
-        "Throws: ValueError\n"
-        "  Throws ValueError if there is a syntax error in the given string.\n"
-        "  Can also throw due to missing files.\n"
-        "  Can also throw due to errors in embedded python blocks.\n"
+        "error_reporter: Callable(int, str, int, int, str)\n"
+        "    A callable for reporting errors. See the extended discussion below.\n"
+        "\n"
+        "Returns:\n"
+        "--------\n"
+        "str: The html.\n"
+        "\n"
+        "Throws:\n"
+        "-------\n"
+        "Throws ValueError if there is a syntax error in the given string.\n"
+        "Can also throw due to missing files.\n"
+        "Can also throw due to errors in embedded python blocks.\n"
+        "\n"
+        "\n"
+        "If the error_reporter is given, it will be called with the following\n"
+        "arguments:\n"
+        "\n"
+        "Error Reporter Arguments:\n"
+        "-------------------------\n"
+        "message_type: int\n"
+        "    The values are as follows:\n"
+        "        0: Error. An error that caused parsing to fail.\n"
+        "        1: Warning. Something is fishy or otherwise not good.\n"
+        "        2: SystemError. Originated from the system, not the text.\n"
+        "        3: Info. Not an error, a statistic like timing.\n"
+        "\n"
+        "filename: str\n"
+        "    This will be '(string input)' for the primary text.\n"
+        "\n"
+        "line: int\n"
+        "    0-based. For SystemError and Info this will be 0.\n"
+        "\n"
+        "col: int\n"
+        "    0-based, byte index. For SystemError and Info this will be 0.\n"
+        "\n"
+        "message: str\n"
+        "    The error message.\n"
+        "\n"
+        "\n"
+        "The error reporter will be called even if an exception is thrown from\n"
+        "parsing. The error_reporter will be called on each error and warning\n"
+        "encountered while parsing, and then the exception will be thrown. If\n"
+        "the error reporter throws, the remaining errors will be skipped and\n"
+        "that exception will be propagated in place of the ValueError from the\n"
+        "parse error. Thus, if the error reporter throws, whether the parsing\n"
+        "encountered any syntax errors will not be reported.\n"
         ,
     },
     {NULL, NULL, 0, NULL}
@@ -109,6 +163,8 @@ pydndc_reformat(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*
         return NULL;
         }
     PopDiagnostic();
+    if(error_reporter and error_reporter == Py_None)
+        error_reporter = NULL;
     if(error_reporter and !PyCallable_Check(error_reporter)){
         PyErr_SetString(PyExc_TypeError, "error_reporter must be a callable");
         return NULL;
@@ -165,6 +221,8 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
         return NULL;
         }
     PopDiagnostic();
+    if(error_reporter and error_reporter == Py_None)
+        error_reporter = NULL;
     if(error_reporter and !PyCallable_Check(error_reporter)){
         PyErr_SetString(PyExc_TypeError, "error_reporter must be a callable");
         return NULL;
