@@ -432,18 +432,12 @@ int main(int argc, char**argv){
         flags |= DNDC_DONT_INLINE_IMAGES;
 
     #ifdef BENCHMARKING
-    if(!source_path.length){
-        source_path = LS(BENCHMARKINPUTPATH);
-        }
-    if(!output_path.length){
-        output_path = LS(BENCHMARKOUTPUTPATH);
-        }
     flags &= ~DNDC_NO_CLEANUP;
-    auto e = run_the_dndc(flags, SV(BENCHMARKDIRECTORY), source_path, &output_path, depends_path, NULL, stderr_error_func, NULL);
+    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends_path, NULL, stderr_error_func, NULL);
     assert(!e.errored);
     flags |= DNDC_PYTHON_IS_INIT;
     for(int i = 0; i < BENCHMARKITERS;i++){
-        e = run_the_dndc(flags, SV(BENCHMARKDIRECTORY), source_path, &output_path, depends_path, NULL, stderr_error_func, NULL);
+        e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends_path, NULL, stderr_error_func, NULL);
         assert(!e.errored);
         }
     end_interpreter();
