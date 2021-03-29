@@ -50,6 +50,22 @@ window.setCentralWidget(tabwidget)
 # recognized app domain.
 APPHOST = 'invalid.'
 
+class DndSyntaxHighlighter(QSyntaxHighlighter):
+    def highlightBlock(self, text:str) -> None:
+        doublecolon = text.find('::')
+        if doublecolon == -1:
+            return
+        fmt = QTextCharFormat()
+        color = QColor()
+        color.setNamedColor('blue')
+        fmt.setForeground(color)
+        self.setFormat(0, doublecolon, fmt)
+        color.setNamedColor('gray')
+        fmt.setForeground(color)
+        self.setFormat(doublecolon, 2, fmt)
+        color.setNamedColor('darkgray')
+        fmt.setForeground(color)
+        self.setFormat(doublecolon+2, len(text)-doublecolon+1, fmt)
 
 class LineNumberArea(QWidget):
     def __init__(self, editor) -> None:
@@ -71,6 +87,7 @@ class DndEditor(QPlainTextEdit):
         self.cursorPositionChanged.connect(self.highlightCurrentLine)
         self.updateLineNumberAreaWidth(0)
         self.error_line = None
+        self.highlight = DndSyntaxHighlighter(self.document())
 
     def lineNumberAreaWidth(self) -> int:
         digits = 1
