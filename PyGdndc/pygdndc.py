@@ -12,8 +12,9 @@ import re
 whitespace_re = re.compile(r'^\s+')
 
 app = QApplication(sys.argv)
-app.setApplicationName('PyGdndc')
-app.setApplicationDisplayName('PyGdndc')
+APPNAME = 'PyGdndc'
+app.setApplicationName(APPNAME)
+app.setApplicationDisplayName(APPNAME)
 all_windows: Dict[str, 'Page'] = {}
 
 FONT = QFont()
@@ -42,7 +43,6 @@ class LineNumberArea(QWidget):
 
     def paintEvent(self, event) -> None:
         self.codeEditor.lineNumberAreaPaintEvent(event)
-
 
 class DndEditor(QPlainTextEdit):
     def __init__(self, parent=None):
@@ -130,19 +130,18 @@ class DndEditor(QPlainTextEdit):
         while block.isValid() and (top <= event.rect().bottom()):
             if block.isVisible() and (bottom >= event.rect().top()):
                 if blockNumber == cursor_number:
-                    painter.fillRect(QRect(0, top, self.lineNumberArea.width(), height), Qt.yellow)
+                    painter.fillRect(QRect(0, top, self.lineNumberArea.width(), height), Qt.yellow)  # type: ignore
                 if blockNumber == self.error_line:
-                    painter.fillRect(QRect(0, top, self.lineNumberArea.width(), height), Qt.red)
+                    painter.fillRect(QRect(0, top, self.lineNumberArea.width(), height), Qt.red)  # type: ignore
                 
                 number = str(blockNumber + 1)
                 painter.setPen(Qt.black)
-                painter.drawText(0, top, self.lineNumberArea.width(), height, Qt.AlignRight, number)
+                painter.drawText(0, top, self.lineNumberArea.width(), height, Qt.AlignRight, number)  # type: ignore
 
             block = block.next()
             top = bottom
             bottom = top + self.blockBoundingRect(block).height()
             blockNumber += 1
-
 
 class DndWebPage(QWebEnginePage):
     def __init__(self, *args, **kwargs) -> None:
@@ -179,7 +178,7 @@ class Page(QSplitter):
         self.web.resize(400, 400)
         self.textedit = DndEditor('')
         self.textedit.setFont(FONT)
-        self.textedit.setMinimumSize(EIGHTYCHARS*1.05, 200)
+        self.textedit.setMinimumSize(EIGHTYCHARS*1.05, 200)  # type: ignore
         self.dirname = '.'
         self.textedit.textChanged.connect(self.update_html)
         self.error_display = QPlainTextEdit()
@@ -254,14 +253,14 @@ class Page(QSplitter):
         self.error_display.hide()
         self.show_errors = False
     def put_editor_right(self) -> None:
-        self.editor_holder.setParent(None)
-        self.web.setParent(None)
+        self.editor_holder.setParent(None)  # type: ignore
+        self.web.setParent(None)  # type: ignore
         self.addWidget(self.web)
         self.addWidget(self.editor_holder)
         self.editor_is_on_left = False
     def put_editor_left(self) -> None:
-        self.editor_holder.setParent(None)
-        self.web.setParent(None)
+        self.editor_holder.setParent(None)  # type: ignore
+        self.web.setParent(None)  # type: ignore
         self.addWidget(self.editor_holder)
         self.addWidget(self.web)
         self.editor_is_on_left = True
@@ -344,7 +343,6 @@ if 0:
         print_condense(path, False)
     exit(0)
 
-        
 def add_tab(filename:str, focus=True) -> None:
     if sys.platform == 'windows':
         filename = filename.replace('/', '\\')
@@ -369,7 +367,7 @@ def new_file(*args) -> None:
     options = QFileDialog.Options()
     options |= QFileDialog.DontConfirmOverwrite
     options |= QFileDialog.DontUseNativeDialog
-    fname, _ = QFileDialog.getSaveFileName(None, 'Choose or Create a dnd file', '', 'Dnd Files (*.dnd)', initialFilter="*.dnd", options=options)
+    fname, _ = QFileDialog.getSaveFileName(None, 'Choose or Create a dnd file', '', 'Dnd Files (*.dnd)', initialFilter="*.dnd", options=options)  # type: ignore
     if not fname:
         return
     add_tab(fname)
@@ -403,7 +401,6 @@ def flop_editors(*args) -> None:
     else:
         for w in all_windows.values():
             w.put_editor_left()
-
 
 def add_menus() -> None:
     menubar = window.menuBar()
@@ -439,9 +436,6 @@ def add_menus() -> None:
     action = QAction('&Flop Editors', window)
     action.triggered.connect(flop_editors)
     viewmenu.addAction(action)
-
-
-
 
 add_menus()
 # add_tab('/Users/drpriver/Documents/Dungeons/BarrowMaze/index.dnd')
