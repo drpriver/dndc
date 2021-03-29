@@ -84,33 +84,69 @@ PyInit_pydndc(void) {
 }
 
 static
+void
+pydndc_collect_errors(Nullable(void*)user_data, int type, const char* _Nonnull filename, int filename_len, int line, int col, const char* _Nonnull message, int message_len){
+    PyObject* tup = Py_BuildValue("is#iis#", type, filename, (Py_ssize_t)filename_len, line, col, message, (Py_ssize_t)message_len);
+    if(!tup){
+        return;
+        }
+    PyObject* list = user_data;
+    auto fail = PyList_Append(list, tup);
+    (void)fail;
+    Py_XDECREF(tup);
+    }
+
+static
 Nullable(PyObject*)
 pydndc_reformat(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)kwargs){
     (void)mod;
     PyObject* text;
-    const char* const keywords[] = { "text", NULL, };
+    PyObject* error_reporter = NULL;
+    const char* const keywords[] = { "text", "error_reporter", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!:parse_and_append_children", (char**)keywords, &PyUnicode_Type, &text)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O:reformat", (char**)keywords, &PyUnicode_Type, &text, &error_reporter)){
         return NULL;
         }
     PopDiagnostic();
+    if(error_reporter and !PyCallable_Check(error_reporter)){
+        PyErr_SetString(PyExc_TypeError, "error_reporter must be a callable");
+        return NULL;
+        }
     LongString source = pystring_borrow_longstring(text);
     uint64_t flags = 0;
     flags |= DNDC_SOURCE_PATH_IS_DATA_NOT_PATH;
     flags |= DNDC_OUTPUT_PATH_IS_OUT_PARAM;
     flags |= DNDC_PYTHON_IS_INIT;
-    flags |= DNDC_DONT_PRINT_ERRORS;
-    flags |= DNDC_SUPPRESS_WARNINGS;
+    // flags |= DNDC_DONT_PRINT_ERRORS;
+    // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
     flags |= DNDC_REFORMAT_ONLY;
     LongString output = {};
-    auto e = run_the_dndc(flags, SV(""), source, &output, LS(""), NULL, NULL, NULL);
-    if(e.errored){
-        PyErr_SetString(PyExc_ValueError, "Format error (wow I need real error reporting)");
-        return NULL;
+    ErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
+    PyObject* error_list = func? PyList_New(0) : NULL;
+    PyObject* result = NULL;
+    auto e = run_the_dndc(flags, SV(""), source, &output, LS(""), NULL, func, error_list);
+    if(PyErr_Occurred()){
+        goto finally;
         }
-    PyObject* result = PyUnicode_FromStringAndSize(output.text, output.length);
+    if(error_reporter){
+        Py_ssize_t length = PyList_Size(error_list);
+        for(Py_ssize_t i = 0; i < length; i++){
+            PyObject* list_item = PyList_GetItem(error_list, i);
+            PyObject* call_result = PyObject_Call(error_reporter, list_item, NULL);
+            if(call_result == NULL)
+                goto finally;
+            Py_XDECREF(call_result);
+            }
+        }
+    if(e.errored){
+        PyErr_SetString(PyExc_ValueError, "Format error.");
+        goto finally;
+        }
+    result = PyUnicode_FromStringAndSize(output.text, output.length);
+    finally:
+    Py_XDECREF(error_list);
     const_free(output.text);
     return result;
     }
@@ -121,29 +157,53 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
     (void)mod;
     PyObject* text;
     PyObject* base_dir = NULL;
-    const char* const keywords[] = {"text", "base_dir", NULL, };
+    PyObject* error_reporter = NULL;
+    const char* const keywords[] = {"text", "base_dir", "error_reporter", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!:parse_and_append_children", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter)){
         return NULL;
         }
     PopDiagnostic();
+    if(error_reporter and !PyCallable_Check(error_reporter)){
+        PyErr_SetString(PyExc_TypeError, "error_reporter must be a callable");
+        return NULL;
+        }
     LongString source = pystring_borrow_longstring(text);
     StringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
     uint64_t flags = 0;
     flags |= DNDC_SOURCE_PATH_IS_DATA_NOT_PATH;
     flags |= DNDC_OUTPUT_PATH_IS_OUT_PARAM;
     flags |= DNDC_PYTHON_IS_INIT;
-    flags |= DNDC_DONT_PRINT_ERRORS;
-    flags |= DNDC_SUPPRESS_WARNINGS;
+    // flags |= DNDC_DONT_PRINT_ERRORS;
+    // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
     LongString output = {};
-    auto e = run_the_dndc(flags, base_str, source, &output, LS(""), NULL, NULL, NULL);
-    if(e.errored){
-        PyErr_SetString(PyExc_ValueError, "Format error (wow I need real error reporting)");
-        return NULL;
+    ErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
+    PyObject* error_list = func? PyList_New(0) : NULL;
+    PyObject* result = NULL;
+    auto e = run_the_dndc(flags, base_str, source, &output, LS(""), NULL, func, error_list);
+    if(PyErr_Occurred()){
+        result = NULL;
+        goto finally;
         }
-    PyObject* result = PyUnicode_FromStringAndSize(output.text, output.length);
+    if(error_reporter){
+        Py_ssize_t length = PyList_Size(error_list);
+        for(Py_ssize_t i = 0; i < length; i++){
+            PyObject* list_item = PyList_GetItem(error_list, i);
+            PyObject* call_result = PyObject_Call(error_reporter, list_item, NULL);
+            if(call_result == NULL)
+                goto finally;
+            Py_XDECREF(call_result);
+            }
+        }
+    if(e.errored){
+        PyErr_SetString(PyExc_ValueError, "html error.");
+        goto finally;
+        }
+    result = PyUnicode_FromStringAndSize(output.text, output.length);
+    finally:
+    Py_XDECREF(error_list);
     const_free(output.text);
     return result;
     }

@@ -7,6 +7,11 @@ extern "C" {
 #endif
 
 //
+// This documents the external API.
+// For the internal API, see dndc_funcs.h.
+//
+
+//
 // The type of the error message.
 //
 enum DndCErrorMessageType {
@@ -22,11 +27,6 @@ enum DndCErrorMessageType {
     // filename will be "", line, col, etc will be 0, etc.
     DNDC_STATISTIC_MESSAGE = 3,
 };
-
-//
-// This documents the external API.
-// For the internal API, see dndc_funcs.h.
-//
 
 //
 // A function type for reporting errors. For use with one of the dndc entry
