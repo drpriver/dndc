@@ -1,4 +1,5 @@
 import os
+os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
 import sys
 from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit
 from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
@@ -345,6 +346,8 @@ if 0:
 
         
 def add_tab(filename:str, focus=True) -> None:
+    if sys.platform == 'windows':
+        filename = filename.replace('/', '\\')
     if filename in all_windows:
         if focus:
             tabwidget.setCurrentWidget(all_windows[filename])

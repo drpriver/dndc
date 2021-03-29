@@ -23,7 +23,7 @@ PYLDFLAGS=$(LOCALAPPDATA)\Programs\Python\Python39\libs\python39.lib
 PYDLL=$(LOCALAPPDATA)\Programs\Python\Python39\python39.dll
 endif
 
-$(BINDIR)/python39.dll: $(PYDLL)
+$(BINDIR)\python39.dll: $(PYDLL)
 	$(CP) $< $@
 $(BINDIR)/dndc.exe: $(BINDIR)\python39.dll
 TestDndC: | $(BINDIR)\python39.dll
