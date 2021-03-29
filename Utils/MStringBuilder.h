@@ -178,7 +178,7 @@ msb_sprintf(Nonnull(MStringBuilder*)msb, Nonnull(const char*) restrict fmt, ...)
     auto _msg_size = vsnprintf(NULL, 0, fmt, args)+1;
     va_end(args);
     _check_msb_size(msb, _msg_size);
-    auto result = (vsnprintf)(msb->data + msb->cursor, _msg_size, fmt, args2);
+    auto result = vsnprintf(msb->data + msb->cursor, _msg_size, fmt, args2);
     msb->cursor += result;
     va_end(args2);
     return result;
@@ -190,10 +190,10 @@ int
 msb_vsprintf(Nonnull(MStringBuilder*)msb, Nonnull(const char*)restrict fmt, va_list args){
     va_list args2;
     va_copy(args2, args);
-    auto _msg_size = (vsnprintf)(NULL, 0, fmt, args)+1;
+    auto _msg_size = vsnprintf(NULL, 0, fmt, args)+1;
     va_end(args);
     _check_msb_size(msb, _msg_size);
-    int result = (vsnprintf)(msb->data + msb->cursor, _msg_size, fmt, args2);
+    int result = vsnprintf(msb->data + msb->cursor, _msg_size, fmt, args2);
     va_end(args2);
     msb->cursor += result;
     return result;

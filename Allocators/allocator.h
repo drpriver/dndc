@@ -25,7 +25,6 @@ typedef struct Allocator {
 
 
 MALLOC_FUNC
-ALLOCATOR_SIZE(2)
 static inline
 warn_unused
 // force_inline
@@ -33,22 +32,18 @@ Nonnull(void*)
 Allocator_alloc(const Allocator allocator, size_t size);
 
 MALLOC_FUNC
-ALLOCATOR_SIZE(2)
 static inline
 warn_unused
 // force_inline
 Nonnull(void*)
 Allocator_zalloc(const Allocator allocator, size_t size);
 
-ALLOCATOR_SIZE(4)
 static inline
 // force_inline
 warn_unused
 Nonnull(void*)
 Allocator_realloc(const Allocator allocator, Nullable(void*) data, size_t orig_size, size_t size);
 
-// MALLOC_FUNC
-ALLOCATOR_SIZE(3)
 static inline
 warn_unused
 // force_inline
@@ -65,7 +60,6 @@ void
 Allocator_free_all(const Allocator a);
 
 MALLOC_FUNC
-ALLOCATOR_SIZE(3)
 static inline
 warn_unused
 Nonnull(char*)
