@@ -3,8 +3,8 @@ os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
 import sys
 from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit
 from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
-from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent
-from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl
+from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat
+from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings
 import pydndc
 from typing import Optional, List, Dict, Optional
 import time
@@ -24,7 +24,25 @@ FONT.setFamilies(['Menlo','Cascadia Mono', 'Consolas',])
 fontmetrics = QFontMetrics(FONT)
 EIGHTYCHARS = fontmetrics.horizontalAdvance('M')*80
 
-window = QMainWindow()
+class DndMainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.settings = QSettings('DavidTechnology', APPNAME)
+
+    def restore_everything(self):
+        filenames = self.settings.value('filenames')
+        if filenames:
+            for filename in filenames:
+                add_tab(filename)
+
+    def closeEvent(self, e) -> None:
+        filenames = list(all_windows.keys())
+        self.settings.setValue('filenames', filenames)
+        for page in all_windows.values():
+            page.save()
+        e.accept()
+
+window = DndMainWindow()
 tabwidget = QTabWidget()
 window.setCentralWidget(tabwidget)
 
@@ -264,7 +282,18 @@ class Page(QSplitter):
         self.addWidget(self.editor_holder)
         self.addWidget(self.web)
         self.editor_is_on_left = True
-    
+    def save(self) -> None:
+        if not self.filename:
+            return
+        savefile = QSaveFile(self)
+        savefile.setFileName(self.filename)
+        savefile.open(savefile.WriteOnly)
+        text = self.textedit.toPlainText().encode('utf-8')
+        if not text.endswith(b'\n'):
+            text += b'\n'
+        savefile.write(text)  # type: ignore
+        savefile.commit()
+
             
 def make_page_widget(filename:str) -> Optional[QWidget]:
     if filename in all_windows:
@@ -372,6 +401,10 @@ def new_file(*args) -> None:
         return
     add_tab(fname)
 
+def save_file(*args) -> None:
+    page = tabwidget.currentWidget()
+    page.save()
+
 def toggle_editors(*args) -> None:
     if not all_windows:
         return
@@ -417,6 +450,11 @@ def add_menus() -> None:
     action.setShortcut(QKeySequence('Ctrl+n'))
     filemenu.addAction(action)
 
+    action = QAction('&Save', window)
+    action.triggered.connect(save_file)
+    action.setShortcut(QKeySequence('Ctrl+s'))
+    filemenu.addAction(action)
+
     editmenu = menubar.addMenu('Edit')
 
     action = QAction('&Format', window)
@@ -438,8 +476,9 @@ def add_menus() -> None:
     viewmenu.addAction(action)
 
 add_menus()
-# add_tab('/Users/drpriver/Documents/Dungeons/BarrowMaze/index.dnd')
-open_file()
+window.restore_everything()
+if not tabwidget.currentWidget():
+    open_file()
 if not tabwidget.currentWidget():
     sys.exit(0)
 window.showMaximized()
