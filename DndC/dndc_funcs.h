@@ -12,54 +12,56 @@
 //
 
 //
-// The money function.
-// Basically executes the whole thing from end to end.
+// The money function.  Basically executes the whole thing from end to end.
 // Parses the data referenced by source and converts it into html, formatted,
 // .dnd, etc.
 //
 // Arguments
 // ---------
 // flags:
-//    Bitflags controlling behavior of execution. Consult the flags header
-//    for the meanings of individual values. Is a bitwise-or combination
-//    of the different options.
+//    Bitflags controlling behavior of execution. Consult the flags header for
+//    the meanings of individual values. Is a bitwise-or combination of the
+//    different options.
 //
 // base_directory:
-//    Base directory that is the root of all relative paths.
-//    Can be the empty string, in which case paths are left as is.
-//    Absolute paths in the document are left unaltered.
+//    Base directory that is the root of all relative paths. Can be the empty
+//    string, in which case paths are left as is. Absolute paths in the
+//    document are left unaltered.
 //
 // source:
-//    As controlled by the flags, this can be the data to parse, a path
-//    to a file to parse, or if .length is 0, stdin will be read instead.
-//    This path is adjusted by the base_directory argument.
+//    As controlled by the flags, this can be the data to parse, a path to a
+//    file to parse, or if .length is 0, stdin will be read instead. This path
+//    is adjusted by the base_directory argument.
 //
 // output_path:
-//    A filepath to write the generated html to. If NULL, the html
-//    will be printed to stdout instead. Printing at all can be suppressed
-//    by flags.
+//    A filepath to write the generated html to. If NULL, the html will be
+//    printed to stdout instead. Printing at all can be suppressed by flags.
+//
 //    Flags can make this an out param instead, in which case a malloced string
 //    that is the generated html will be stored in this instead.
+//
 //    This path is *NOT* adjusted by the base_directory argument.
 //
 // depends_dir:
-//    A path to a directory to write a make-style dependency file.
-//    If not given, no such file is written.
+//    A path to a directory to write a make-style dependency file. If not
+//    given, no such file is written.
+//
 //    This path is *NOT* adjusted by the base_directory argument.
 //
 // b64cache:
-//    An optional pointer to an external cache for base64 images.
-//    If NULL, will internally create and then destroy one.
-//    Allows saving on io and computation if being run repeatedly.
+//    An optional pointer to an external cache for base64 images. If NULL,
+//    will internally create and then destroy one. Allows saving on io and
+//    computation if being run repeatedly.
 //
 // error_func:
-//   A function for reporting errors. See `ErrorFunc` in dndc.h. If NULL, errors will
-//   not be printed. Use `stderr_error_func` for a function that just prints to
-//   stderr.
+//   A function for reporting errors. See `ErrorFunc` in dndc.h. If NULL,
+//   errors will not be printed. Use `dndc_stderr_error_func` for a function
+//   that just prints to stderr.
 //
 // error_user_data:
-//   A pointer that will be passed to the error_func. For `stderr_error_func`, this
-//   should be NULL. For a function you've defined, pass an appropriate pointer!
+//   A pointer that will be passed to the error_func. For
+//   `dndc_stderr_error_func`, this should be NULL. For a function you've
+//   defined, pass an appropriate pointer!
 //
 // Returns
 // -------
@@ -71,18 +73,17 @@ Errorable_f(void)
 run_the_dndc(uint64_t flags, StringView base_directory, LongString source, Nullable(LongString*) output_path, LongString depends_path, Nullable(Base64Cache*)b64cache, Nullable(ErrorFunc*) error_func, Nullable(void*)error_user_data);
 
 //
-// The following functions are for reporting errors and warnings.
-// ONLY use these functions for that purpose. Do not directly use printf,
-// fprintf or a log function. These functions will report the error as
-// originating from a specific file, line, column and will handle suppressing
-// them based on the flags given to run_the_dndc.
+// The following functions are for reporting errors and warnings. ONLY use
+// these functions for that purpose. Do not directly use printf, fprintf or a
+// log function. These functions will report the error as originating from a
+// specific file, line, column and will handle suppressing them based on the
+// flags given to run_the_dndc.
 //
 
 //
-// Sets an error message on the context during parsing.
-// errchar is a pointer to the first character where the error occurred.
-// Pointer arithmetic is then used to determine the column of the error (file
-// and line are implicit).
+// Sets an error message on the context during parsing. errchar is a pointer
+// to the first character where the error occurred. Pointer arithmetic is then
+// used to determine the column of the error (file and line are implicit).
 //
 // This is a printf-like function, so additionally supply a format string and
 // varargs.
@@ -105,6 +106,7 @@ node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), Nonnull(const char*
 
 //
 // Like node_set_err, but with an offset to the column.
+//
 // Sets an error message originating from the source location that corresponds
 // to the given node.
 //
@@ -117,7 +119,9 @@ node_set_err_offset(Nonnull(DndcContext*)ctx, Nonnull(const Node*), int, Nonnull
 
 //
 // Like node_set_err, but immediately prints the message instead of setting
-// a string. Only use this in the body of run_the_dndc.
+// a string.
+//
+// Only use this in the body of run_the_dndc.
 //
 // printf-like function
 //
@@ -127,8 +131,8 @@ void
 node_print_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
 
 //
-// Like node_set_err, but immediately prints the message instead of setting
-// a string and is intended for non-fatal warning messages.
+// Like node_set_err, but immediately prints the message instead of setting a
+// string and is intended for non-fatal warning messages.
 //
 // printf-like function
 //
@@ -139,9 +143,9 @@ node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(c
 
 //
 // Reports some informative message, such as time to execute some component.
-// Flags is the same flags as given to run_the_dndc and controls
-// whether the message is actually printed, allowing this function
-// to be called unconditionally.
+// Flags is the same flags as given to run_the_dndc and controls whether the
+// message is actually printed, allowing this function to be called
+// unconditionally.
 //
 // printf-like function
 //
@@ -178,8 +182,8 @@ report_system_error(Nonnull(DndcContext*)ctx, Nonnull(const char*)fmt, ...);
 
 //
 // Getter function to turn a node handle to an acual pointer to a Node.
-// Keep the scopes on these pointers as tight as possible as allocating
-// new nodes can trigger pointer invalidation.
+// Keep the scopes on these pointers as tight as possible as allocating new
+// nodes can trigger pointer invalidation.
 //
 static inline
 Nonnull(Node*)
@@ -196,6 +200,7 @@ get_node_e(Nonnull(DndcContext*), NodeHandle);
 
 //
 // Checks if the node has an attribute or not.
+//
 // For example:
 //
 //    if(node_has_attribute(mynode, SV("noid"))){
@@ -215,21 +220,21 @@ node_has_class(Nonnull(const Node*) node, StringView class);
 
 //
 // Retrieves the value associate with attr key.
-// If the node does not have that attribute, returns NULL.
-// Many attributes will have empty strings. In that case, a pointer
-// to an empty string view is returned.
 //
-// Note that this pointer returned by this function is unstable.
-// Adding attributes can invalidate the pointer.
+// If the node does not have that attribute, returns NULL. Many attributes
+// will have empty strings. In that case, a pointer to an empty string view is
+// returned.
+//
+// Note that this pointer returned by this function is unstable. Adding
+// attributes can invalidate the pointer.
 //
 static inline
 Nullable(StringView*)
 node_get_attribute(Nonnull(const Node*) node, StringView attr);
 
 //
-// Retrieves the id of the node.
-// Handles the id being set via attribute.
-// If the node has empty header, returns NULL.
+// Retrieves the id of the node. Handles the id being set via attribute. If
+// the node has empty header, returns NULL.
 //
 // Note that the pointer returned by this function is unstable.
 // Adding attributes can invalidate the pointer.
@@ -373,25 +378,25 @@ NodeHandle
 alloc_handle(Nonnull(DndcContext*));
 
 //
-// Execute a string representing python code. The string should be nul terminated.
-// The NodeHandle will be present in the locals of the executed python code
-// as "node".
+// Execute a string representing python code. The string should be nul
+// terminated. The NodeHandle will be present in the locals of the executed
+// python code as "node".
 //
 static
 Errorable_f(void)
 execute_python_string(Nonnull(DndcContext*), Nonnull(const char*), NodeHandle);
 #ifndef PYTHONMODULE
 //
-// Initialize the python interpreter and the dndc python data types.
-// Takes a flags argument, which is the same flags passed to run_the_dndc.
-// This handles the PYTHON_IS_INIT flag.
+// Initialize the python interpreter and the dndc python data types. Takes a
+// flags argument, which is the same flags passed to run_the_dndc. This handles
+// the PYTHON_IS_INIT flag.
 //
 static
 Errorable_f(void)
 init_python_docparser(uint64_t);
 
 //
-// Shutsdown the python interpreter, mostly freeing any resources it allocated.
+// Shutdown the python interpreter, mostly freeing any resources it allocated.
 // This is mostly for detecting memory leaks. There's some reference leaks
 // somewhere it seems.
 //
@@ -401,8 +406,8 @@ end_interpreter(void);
 #endif
 
 //
-// Add a node to be a child of another node. The child will have its parent node
-// set to this parent node and the child will be appended to the parent's
+// Add a node to be a child of another node. The child will have its parent
+// node set to this parent node and the child will be appended to the parent's
 // children array.
 //
 static
@@ -420,8 +425,9 @@ find_link_target(Nonnull(DndcContext*)ctx, StringView kebabed);
 //
 // Parses a line of a ::links block, which is of the form "link = target"
 //
-// The check_valid parameter means for targets that start with a '#', aka anchor
-// links, to check that this is actually a valid anchor link in the document.
+// The check_valid parameter means for targets that start with a '#', aka
+// anchor links, to check that this is actually a valid anchor link in the
+// document.
 //
 static inline
 Errorable_f(void)

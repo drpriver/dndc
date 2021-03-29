@@ -148,7 +148,7 @@ pydndc_collect_errors(Nullable(void*)user_data, int type, const char* _Nonnull f
     auto fail = PyList_Append(list, tup);
     (void)fail;
     Py_XDECREF(tup);
-    }
+}
 
 static
 Nullable(PyObject*)
@@ -205,7 +205,7 @@ pydndc_reformat(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*
     Py_XDECREF(error_list);
     const_free(output.text);
     return result;
-    }
+}
 
 static
 Nullable(PyObject*)
@@ -264,4 +264,4 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
     Py_XDECREF(error_list);
     const_free(output.text);
     return result;
-    }
+}

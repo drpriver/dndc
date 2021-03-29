@@ -168,7 +168,7 @@ class DndEditor(QPlainTextEdit):
                     painter.fillRect(QRect(0, top, self.lineNumberArea.width(), height), Qt.yellow)  # type: ignore
                 if blockNumber == self.error_line:
                     painter.fillRect(QRect(0, top, self.lineNumberArea.width(), height), Qt.red)  # type: ignore
-                
+
                 number = str(blockNumber + 1)
                 painter.setPen(Qt.black)
                 painter.drawText(0, top, self.lineNumberArea.width(), height, Qt.AlignRight, number)  # type: ignore
@@ -277,7 +277,7 @@ class Page(QSplitter):
         self.textedit.setPlainText(text)
     def hide_editor(self) -> None:
         self.editor_holder.hide()
-        
+
     def show_editor(self) -> None:
         self.editor_holder.show()
     def show_error(self) -> None:
@@ -311,7 +311,7 @@ class Page(QSplitter):
         savefile.write(text)  # type: ignore
         savefile.commit()
 
-            
+
 def make_page_widget(filename:str) -> Optional[QWidget]:
     if filename in all_windows:
         return None

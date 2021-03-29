@@ -659,7 +659,7 @@ static NSImage* appimage;
     // auto t1 = get_t();
     LongString html = {};
     auto len = strlen(source_text);
-    auto err = dndc_format((LongString){len, source_text}, &html, stderr_error_func, NULL);
+    auto err = dndc_format((LongString){len, source_text}, &html, dndc_stderr_error_func, NULL);
     // TODO: report?
     if(err){
         return;
@@ -678,10 +678,8 @@ static NSImage* appimage;
 -(void)recalc_html:(id)sender {
     // FIXME: don't do this synchronously
     // FIXME: where the fuck are you supposed to put this stuff.
-    // auto t0 = get_t();
     NSString *string = self->text.string;
     const char* source_text = [string UTF8String];
-    // auto t1 = get_t();
     LongString html = {};
     NSString* dir = [[self->file_url URLByDeletingLastPathComponent] path];
     StringView base_dir;
@@ -702,8 +700,7 @@ static NSImage* appimage;
         // NSData and then borrowing the buffer?
         .length = strlen(source_text),
     };
-    auto err = dndc_make_html(base_dir, source, &html, stderr_error_func, NULL);
-    // auto t2 = get_t();
+    auto err = dndc_make_html(base_dir, source, &html, dndc_stderr_error_func, NULL);
     if(err){
         // TODO: report errors to the user (need to figure out the UX though).
         return;
@@ -712,15 +709,8 @@ static NSImage* appimage;
     SuppressCastQual();
     NSData* htmldata = [NSData dataWithBytesNoCopy:(void*)html.text length:html.length+1 freeWhenDone:YES];
     PopDiagnostic();
-    // auto t4 = get_t();
     NSURL* url = [NSURL URLWithString:@"https://./this.html"];
     [webview loadData:htmldata MIMEType:@"text/html" characterEncodingName:@"UTF-8" baseURL:url];
-    // auto t5 = get_t();
-    // HERE("Getting string: %.3fms", (t1-t0)/1000.);
-    // HERE("dndc: %.3fms", (t2-t1)/1000.);
-    // HERE("Storing NSString: %.3fms", (t4-t2)/1000.);
-    // HERE("Loading in webview: %.3fms", (t5-t4)/1000.);
-    // HERE("Total: %.3fms", (t5-t0)/1000.);
 }
 
 -(void)setRepresentedObject:(id)representedObject {

@@ -400,7 +400,7 @@ int main(int argc, char**argv){
         }
     auto after_parse_args = get_t();
     // this one has to be done manually as we don't have a ctx yet.
-    report_stat_raw(print_stats?DNDC_PRINT_STATS:0, stderr_error_func, NULL, "Parsing args took: %.3fms", (after_parse_args-t0)/1000.);
+    report_stat_raw(print_stats?DNDC_PRINT_STATS:0, dndc_stderr_error_func, NULL, "Parsing args took: %.3fms", (after_parse_args-t0)/1000.);
     }
 
     uint64_t flags = DNDC_FLAGS_NONE;
@@ -433,17 +433,17 @@ int main(int argc, char**argv){
 
     #ifdef BENCHMARKING
     flags &= ~DNDC_NO_CLEANUP;
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends_path, NULL, stderr_error_func, NULL);
+    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends_path, NULL, dndc_stderr_error_func, NULL);
     assert(!e.errored);
     flags |= DNDC_PYTHON_IS_INIT;
     for(int i = 0; i < BENCHMARKITERS;i++){
-        e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends_path, NULL, stderr_error_func, NULL);
+        e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends_path, NULL, dndc_stderr_error_func, NULL);
         assert(!e.errored);
         }
     end_interpreter();
     return 0;
     #else
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, depends_path, NULL, stderr_error_func, NULL);
+    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, depends_path, NULL, dndc_stderr_error_func, NULL);
     return e.errored;
     #endif
     }
@@ -1051,7 +1051,7 @@ dndc_init_python_types(void){
 
 extern
 void
-stderr_error_func(Nullable(void*)unused, int type, const char*_Nonnull filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
+dndc_stderr_error_func(Nullable(void*)unused, int type, const char*_Nonnull filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
     (void)unused;
     if(type == DNDC_SYSTEM_MESSAGE){
         fprintf(stderr, "Error: %s\n", message);

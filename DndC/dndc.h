@@ -56,8 +56,8 @@ enum DndCErrorMessageType {
 //    This is 0-based and is a byte-offset from the beginning of the line.
 //
 // message:
-//    The error message. This string is nul-terminated, but a length is provided for
-//    convenience.
+//    The error message. This string is nul-terminated, but a length is
+//    provided for convenience.
 //
 // message_len:
 //    The length of the error message (excluding the terminating nul character)
@@ -67,7 +67,7 @@ typedef void ErrorFunc(void* _Nullable error_user_data, int type, const char* _N
 //
 // An error reporting function that prints to stderr. For use with the dndc
 //
-extern ErrorFunc stderr_error_func;
+extern ErrorFunc dndc_stderr_error_func;
 
 //
 // You *must* call dndc_init_python before calling this function.
@@ -80,14 +80,14 @@ extern ErrorFunc stderr_error_func;
 // base_directory:
 //    The base directory from which imports and other file references are
 //    relative to. This can be the empty string, in which case it will not be
-//    prepended to anything. Absolute paths in the source will never be adjusted.
-//    This allows you to use relative filepaths without having to chdir, as chdir
-//    sucks. This string does not need to be nul-terminated.
+//    prepended to anything. Absolute paths in the source will never be
+//    adjusted. This allows you to use relative filepaths without having to
+//    chdir, as chdir sucks. This string does not need to be nul-terminated.
 //    No references to this are retained afterwards.
 //
 // source_text:
-//    The actual source .dnd string. This string does need to be nul-terminated.
-//    No references to this are retained afterwards.
+//    The actual source .dnd string. This string does need to be
+//    nul-terminated. No references to this are retained afterwards.
 //
 // output:
 //    A pointer to a string to store the html into. The output is allocated by
@@ -95,13 +95,14 @@ extern ErrorFunc stderr_error_func;
 //    If there is an error, the output is not written to.
 //
 // error_func:
-//   A function for reporting errors. See `ErrorFunc` above. If NULL, errors will
-//   not be printed. Use `stderr_error_func` for a function that just prints to
-//   stderr.
+//   A function for reporting errors. See `ErrorFunc` above. If NULL, errors
+//   will not be printed. Use `dndc_stderr_error_func` for a function that just
+//   prints to stderr.
 //
 // error_user_data:
-//   A pointer that will be passed to the error_func. For `stderr_error_func`, this
-//   should be NULL. For a function you've defined, pass an appropriate pointer!
+//   A pointer that will be passed to the error_func. For
+//   `dndc_stderr_error_func`, this should be NULL. For a function you've
+//   defined, pass an appropriate pointer!
 //
 // Returns
 // -------
@@ -137,13 +138,14 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
 //    If there is an error, the output is not written to.
 //
 // error_func:
-//   A function for reporting errors. See `ErrorFunc` above. If NULL, errors will
-//   not be printed. Use `stderr_error_func` for a function that just prints to
-//   stderr.
+//   A function for reporting errors. See `ErrorFunc` above. If NULL, errors
+//   will not be printed. Use `dndc_stderr_error_func` for a function that just
+//   prints to stderr.
 //
 // error_user_data:
-//   A pointer that will be passed to the error_func. For `stderr_error_func`, this
-//   should be NULL. For a function you've defined, pass an appropriate pointer!
+//   A pointer that will be passed to the error_func. For
+//   `dndc_stderr_error_func`, this should be NULL. For a function you've
+//   defined, pass an appropriate pointer!
 //
 // Returns
 // -------
@@ -156,9 +158,9 @@ dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(ErrorFu
 
 //
 // Initializes the python interpreter and imports the dndc types.
-// This should be called before dndc_make_html.
-// If you already have a python interpreter, call dndc_init_python_types
-// instead.
+//
+// This should be called before dndc_make_html. If you already have a python
+// interpreter, call dndc_init_python_types instead.
 //
 // Returns
 // -------
@@ -170,11 +172,11 @@ dndc_init_python(void);
 
 //
 // Initializes and imports the dndc types.
-// A Python interpreter should have been initialized by you beforehand.
-// This should be called before dndc_make_html if you already have a python
-// interpreter.
-// If you do not already have a python interpreter, call dndc_init_python
-// instead.
+//
+// A Python interpreter should have been initialized by you beforehand. This
+// should be called before dndc_make_html if you already have a python
+// interpreter. If you do not already have a python interpreter, call
+// dndc_init_python instead.
 //
 // Returns
 // -------
