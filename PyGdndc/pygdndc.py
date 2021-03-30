@@ -20,7 +20,7 @@ all_windows: Dict[str, 'Page'] = {}
 FONT = QFont()
 FONT.setPointSize(11)
 FONT.setFixedPitch(True)
-FONT.setFamilies(['Menlo','Cascadia Mono', 'Consolas',])
+FONT.setFamilies(['Menlo','Cascadia Mono', 'Consolas','Ubuntu Mono'])
 fontmetrics = QFontMetrics(FONT)
 EIGHTYCHARS = fontmetrics.horizontalAdvance('M')*80
 
@@ -32,8 +32,11 @@ class DndMainWindow(QMainWindow):
     def restore_everything(self):
         filenames = self.settings.value('filenames')
         if filenames:
-            for filename in filenames:
-                add_tab(filename)
+            if isinstance(filenames, str):
+                add_tab(filenames)
+            else:
+                for filename in filenames:
+                    add_tab(filename)
 
     def closeEvent(self, e) -> None:
         filenames = list(all_windows.keys())
@@ -452,6 +455,15 @@ def flop_editors(*args) -> None:
         for w in all_windows.values():
             w.put_editor_left()
 
+def close_current_tab(*args) -> None:
+    current_tab: Optional[Page] = tabwidget.currentWidget()
+    if not current_tab:
+        window.close()
+        return
+    current_tab.save()
+    del all_windows[current_tab.filename]
+    current_tab.setParent(None)
+
 def add_menus() -> None:
     menubar = window.menuBar()
 
@@ -470,6 +482,11 @@ def add_menus() -> None:
     action = QAction('&Save', window)
     action.triggered.connect(save_file)
     action.setShortcut(QKeySequence('Ctrl+s'))
+    filemenu.addAction(action)
+
+    action = QAction('&Close', window)
+    action.triggered.connect(close_current_tab)
+    action.setShortcut(QKeySequence('Ctrl+w'))
     filemenu.addAction(action)
 
     editmenu = menubar.addMenu('Edit')
