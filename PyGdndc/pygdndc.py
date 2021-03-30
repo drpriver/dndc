@@ -22,7 +22,13 @@ app.setApplicationDisplayName(APPNAME)
 all_windows: Dict[str, 'Page'] = {}
 
 FONT = QFont()
-FONT.setPointSize(11)
+if sys.platform == 'windows':
+    # Windows use 96 "ppi" whereas MacOS uses 72.
+    # Use a smaller point size on windows or it looks way too big.
+    pointsize = int(11*72/96)
+else:
+    pointsize = 11
+FONT.setPointSize(pointsize)
 FONT.setFixedPitch(True)
 FONT.setFamilies(['Menlo','Cascadia Mono', 'Consolas','Ubuntu Mono', 'Mono'])
 fontmetrics = QFontMetrics(FONT)
@@ -336,6 +342,10 @@ def make_page_widget(filename:str) -> Optional[QWidget]:
         text = open(filename).read()
     except:
         text = ''
+    # Qt uses newlines as separators, not terminators.
+    # We'll add a newline back when we save.
+    if text.endswith('\n'):
+        text = text[:-1]
     result.textedit.setPlainText(text)
     dirname = os.path.dirname(filename)
     result.dirname = dirname
@@ -515,7 +525,7 @@ def add_menus() -> None:
     filemenu.addAction(action)
 
     if sys.platform != 'darwin':
-        action = QAction('&Quit', window)
+        action = QAction('&Exit', window)
         action.triggered.connect(window.close)
         filemenu.addAction(action)
 
