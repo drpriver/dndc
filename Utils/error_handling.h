@@ -39,19 +39,12 @@
 #ifdef _WIN32
 // Windows.h defines NO_ERROR. What a PITA.
 #undef NO_ERROR
-typedef uint8_t ErrorCode;
+#endif
 enum {
     #define X(x, v) x = v,
     ERROR_CODES(X)
     #undef X
-    };
-#else
-typedef SmallEnum ErrorCode {
-    #define X(x, v) x = v,
-    ERROR_CODES(X)
-    #undef X
-    } ErrorCode;
-#endif
+};
 
 #define X(x, v) [x] = #x,
 static const char* const ERROR_NAMES[] = {
@@ -70,11 +63,11 @@ static const char* const ERROR_NAMES[] = {
 // This one is for functions. It will make the caller get a warning if
 // they ignore the value.
 #define Errorable_f(T) warn_unused struct _Errorable_impl(T)
-#define Errorable_declare(T) Errorable(T) { T result; ErrorCode errored; }
+#define Errorable_declare(T) Errorable(T) { T result; uint8_t errored; }
 // Declare some common types
 // Errorable(void) is specialized to not have a result field.
 struct _Errorable_impl(void) {
-    ErrorCode errored;
+    uint8_t errored;
     };
 Errorable_declare(bool);
 Errorable_declare(int);

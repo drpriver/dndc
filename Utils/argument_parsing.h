@@ -78,7 +78,7 @@ enum {
 };
 #else
 // On linux and macos, packing enums works fine.
-typedef SmallEnum _ARG_TYPE {
+typedef enum __attribute__((__packed__)) _ARG_TYPE {
     #define X(enumname, b, c) enumname,
     ARGS(X)
     #undef X

@@ -4,7 +4,7 @@
 // to just making it a uint64 instead.
 #ifndef _WIN32
 #include "common_macros.h"
-FlagEnum DndcFlags {
+enum DndcFlags {
     DNDC_FLAGS_NONE        = 0x0,
     // Don't error on bad links.
     DNDC_ALLOW_BAD_LINKS   = 0x0001,

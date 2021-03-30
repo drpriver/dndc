@@ -68,34 +68,6 @@
 // which is not at all what you want, yet still compiles!
 #define arrlen(arr) (sizeof(arr) / sizeof((arr)[0]) + __must_be_array(arr))
 
-// Different enum types.
-// Flag Enum says it's supposed to be bit-flags that can be combined together,
-// so things like switches won't complain if you are checking for values
-// not in the enum.
-//
-// Small enum packs the enum into a size smaller than int. It doesn't work
-// at all on windows, clang on windows ignores it and makes the enums the size
-// of an int. On windows, just use #defines.
-// I've been trending away from SmallEnum lately as it doesn't work with bitfields
-// so you might as well just have a specific integer type and cast to the enum
-// type in switches. Also, you really shouldn't use enums at ABI boundaries
-// as the size varies, the signedness is undefined, etc...
-#if defined(__GNUC__) || defined(__clang__)
-    #ifndef _WIN32
-    #define SmallEnum enum __attribute__((__packed__))
-        #if !defined(__clang__)
-        #define FlagEnum enum
-        #else
-        #define FlagEnum enum __attribute__((flag_enum))
-        #endif
-    #else
-    // leave SmallEnum undefined as this doesn't work on windows
-    #define FlagEnum enum
-    #endif
-#else
-// leave both undefined as things are going to be broken
-#endif
-
 #ifdef DEBUG
 #define unreachable() do{assert(0);__builtin_unreachable();} while(0)
 #else
