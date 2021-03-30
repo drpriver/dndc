@@ -1,6 +1,22 @@
 import os
 os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
 import sys
+def qt_not_installed(e) -> None:
+    if sys.platform == 'win32':
+        from ctypes import windll
+        response = windll.user32.MessageBoxW(0, "Qt is not installed, install Qt?", "Missing Install", 4 | 0x00000030 )
+        if response == 6:
+            import subprocess
+            subprocess.run([sys.executable, '-m', 'pip', 'install', 'PySide2==5.15.2', 'shiboken2==5.15.2',], check=True)
+        else:
+            raise e
+    else:
+        raise e
+try:
+    import PySide2
+except ImportError as e:
+    qt_not_installed(e)
+
 from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit
 from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat
