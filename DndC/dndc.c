@@ -21,7 +21,7 @@
 
 #define DNC_MAJOR 0
 #define DNC_MINOR 3
-#define DNC_MICRO 6
+#define DNC_MICRO 7
 #define DNDC_VERSION STRINGIFY(DNC_MAJOR) "." STRINGIFY(DNC_MINOR) "." STRINGIFY(DNC_MICRO)
 
 // Unsure of where to put this. So, just putting it here for now.
@@ -204,203 +204,203 @@ int main(int argc, char**argv){
     bool hidden_help = false;
     bool dont_inline_images = false;
     {
-    ArgToParse pos_args[] = {
-        [0] = {
-            .name = SV("source"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&source_path),
-            .help = "Source file (.dnd file) to read from.\nIf not given, reads from stdin.",
+        ArgToParse pos_args[] = {
+            [0] = {
+                .name = SV("source"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&source_path),
+                .help = "Source file (.dnd file) to read from.\nIf not given, reads from stdin.",
+                },
+            };
+        ArgToParse kw_args[] = {
+            {
+                .name = SV("-o"),
+                .altname1 = SV("--output"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&output_path),
+                .help = "output path (.html file) to write to.\n If not given, writes to stdout.",
+                .hide_default = true,
             },
-        };
-    ArgToParse kw_args[] = {
-        {
-            .name = SV("-o"),
-            .altname1 = SV("--output"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&output_path),
-            .help = "output path (.html file) to write to.\n If not given, writes to stdout.",
-            .hide_default = true,
-        },
-        {
-            .name = SV("-d"),
-            .altname1 = SV("--depends-path"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&depends_path),
-            .help = "If given, where to write a make-style dependency file.",
-            .hide_default = true,
-        },
-        {
-            .name = SV("-C"),
-            .altname1 = SV("--base-directory"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&base_dir),
-            .help = "Relative filepaths in source files will be relative to the given directory.\n"
-                    "If not given, everything is relative to cwd.",
-            .hide_default = true,
-        },
-        {
-            .name = SV("--report-orphans"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&report_orphans),
-            .help = "Report orphaned nodes (for debugging scripts).",
-            .hidden = true,
-        },
-        {
-            .name = SV("--no-python"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&no_python),
-            .help = "Don't execute python nodes.",
-            .hidden = true,
-        },
-        {
-            .name = SV("--print-tree"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&print_tree),
-            .help = "Print out the entire document tree.",
-            .hidden = true,
-        },
-        {
-            .name = SV("--print-links"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&print_links),
-            .help = "Print out all links (and what they target) known by the system.",
-            .hidden = true,
-        },
-        {
-            .name = SV("--print-stats"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&print_stats),
-            .help = "Log some informative statistics.",
-            .hidden = true,
-        },
-        {
-            .name = SV("--allow-bad-links"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&allow_bad_links),
-            .help = "Warn instead of erroring if a link can't be resolved.",
-            .hidden = true,
-        },
-        {
-            .name = SV("--suppress-warnings"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&suppress_warnings),
-            .help = "Don't report non-fatal errors.",
-            .hidden = true,
-        },
-        {
-            .name = SV("--dont-write"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&dont_write),
-            .help = "Don't write out the document.",
-            .hidden = true,
-        },
-        {
-            .name = SV("--singled-threaded"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&no_threads),
-            .help = "Do not create worker threads, do everything in the same thread.",
-            .hidden = true,
-        },
-        {
-            .name = SV("--cleanup"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&cleanup),
-            .help = "Cleanup all resources (memory allocations, etc.).\n"
-                "    Development debugging tool, useless in regular cli use.",
-            .hidden = true,
-        },
-        {
-            .name = SV("--use-site"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&use_site),
-            .help = "Don't isolate python, import site, etc.\n"
-                "   Greatly slows startup, but allows importing user installed packages.",
-        },
-        {
-            .name = SV("--format"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&reformat_only),
-            .help = "Instead of rendering to html, render to .dnd with trailing  "
-                    "spaces removed, text wrapped to 80 columns (if semantically "
-                    "equivalent), etc. Imports will not be resolved - only the "
-                    "given input file will be imported."
-                    ,
-        },
-        {
-            .name = SV("-H"),
-            .altname1 = SV("--hidden-help"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&hidden_help),
-            .help = "Print out help for the hidden arguments.",
-        },
-        {
-            .name = SV("--dont-inline-images"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&dont_inline_images),
-            .help = "Instead of base64ing the images, use a link.",
-            .hidden = true,
-        },
-        };
-    ArgParser argparser = {
-        .name = argv[0],
-        .description = "A .dnd to .html parser and compiler.",
-        .version = "dndc version " DNDC_VERSION ". Compiled " __TIMESTAMP__,
-        .positional.args = pos_args,
-        .positional.count = arrlen(pos_args),
-        .keyword.args = kw_args,
-        .keyword.count = arrlen(kw_args),
-        };
-    Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
-    if(check_for_help(&args)){
-        print_help(&argparser);
-        return 0;
-        }
-    if(check_for_version(&args)){
-        print_version(&argparser);
-        return 0;
-        }
-    auto e = parse_args(&argparser, &args);
-    if(e.errored){
-        fprintf(stderr, "Error when parsing arguments.\n");
-        print_help(&argparser);
-        return e.errored;
-        }
-    if(hidden_help){
-        fputs(
-            "Hidden Arguments:\n"
-            "-----------------", stdout);
-        auto term_size = get_terminal_size();
-        for(int i = 0; i < arrlen(kw_args); i++){
-            auto arg = &kw_args[i];
-            if(!arg->hidden){
-                continue;
-                }
-            putchar('\n');
-            print_arg_help(arg, term_size);
+            {
+                .name = SV("-d"),
+                .altname1 = SV("--depends-path"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&depends_path),
+                .help = "If given, where to write a make-style dependency file.",
+                .hide_default = true,
+            },
+            {
+                .name = SV("-C"),
+                .altname1 = SV("--base-directory"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&base_dir),
+                .help = "Relative filepaths in source files will be relative to the given directory.\n"
+                        "If not given, everything is relative to cwd.",
+                .hide_default = true,
+            },
+            {
+                .name = SV("--report-orphans"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&report_orphans),
+                .help = "Report orphaned nodes (for debugging scripts).",
+                .hidden = true,
+            },
+            {
+                .name = SV("--no-python"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&no_python),
+                .help = "Don't execute python nodes.",
+                .hidden = true,
+            },
+            {
+                .name = SV("--print-tree"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&print_tree),
+                .help = "Print out the entire document tree.",
+                .hidden = true,
+            },
+            {
+                .name = SV("--print-links"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&print_links),
+                .help = "Print out all links (and what they target) known by the system.",
+                .hidden = true,
+            },
+            {
+                .name = SV("--print-stats"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&print_stats),
+                .help = "Log some informative statistics.",
+                .hidden = true,
+            },
+            {
+                .name = SV("--allow-bad-links"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&allow_bad_links),
+                .help = "Warn instead of erroring if a link can't be resolved.",
+                .hidden = true,
+            },
+            {
+                .name = SV("--suppress-warnings"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&suppress_warnings),
+                .help = "Don't report non-fatal errors.",
+                .hidden = true,
+            },
+            {
+                .name = SV("--dont-write"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&dont_write),
+                .help = "Don't write out the document.",
+                .hidden = true,
+            },
+            {
+                .name = SV("--singled-threaded"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&no_threads),
+                .help = "Do not create worker threads, do everything in the same thread.",
+                .hidden = true,
+            },
+            {
+                .name = SV("--cleanup"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&cleanup),
+                .help = "Cleanup all resources (memory allocations, etc.).\n"
+                    "    Development debugging tool, useless in regular cli use.",
+                .hidden = true,
+            },
+            {
+                .name = SV("--use-site"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&use_site),
+                .help = "Don't isolate python, import site, etc.\n"
+                    "   Greatly slows startup, but allows importing user installed packages.",
+            },
+            {
+                .name = SV("--format"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&reformat_only),
+                .help = "Instead of rendering to html, render to .dnd with trailing  "
+                        "spaces removed, text wrapped to 80 columns (if semantically "
+                        "equivalent), etc. Imports will not be resolved - only the "
+                        "given input file will be imported."
+                        ,
+            },
+            {
+                .name = SV("-H"),
+                .altname1 = SV("--hidden-help"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&hidden_help),
+                .help = "Print out help for the hidden arguments.",
+            },
+            {
+                .name = SV("--dont-inline-images"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&dont_inline_images),
+                .help = "Instead of base64ing the images, use a link.",
+                .hidden = true,
+            },
+            };
+        ArgParser argparser = {
+            .name = argv[0],
+            .description = "A .dnd to .html parser and compiler.",
+            .version = "dndc version " DNDC_VERSION ". Compiled " __TIMESTAMP__,
+            .positional.args = pos_args,
+            .positional.count = arrlen(pos_args),
+            .keyword.args = kw_args,
+            .keyword.count = arrlen(kw_args),
+            };
+        Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
+        if(check_for_help(&args)){
+            print_help(&argparser);
+            return 0;
             }
-        return 0;
-        }
-    auto after_parse_args = get_t();
-    // this one has to be done manually as we don't have a ctx yet.
-    report_stat_raw(print_stats?DNDC_PRINT_STATS:0, dndc_stderr_error_func, NULL, "Parsing args took: %.3fms", (after_parse_args-t0)/1000.);
+        if(check_for_version(&args)){
+            print_version(&argparser);
+            return 0;
+            }
+        auto e = parse_args(&argparser, &args);
+        if(e.errored){
+            fprintf(stderr, "Error when parsing arguments.\n");
+            print_help(&argparser);
+            return e.errored;
+            }
+        if(hidden_help){
+            fputs(
+                "Hidden Arguments:\n"
+                "-----------------", stdout);
+            auto term_size = get_terminal_size();
+            for(int i = 0; i < arrlen(kw_args); i++){
+                auto arg = &kw_args[i];
+                if(!arg->hidden){
+                    continue;
+                    }
+                putchar('\n');
+                print_arg_help(arg, term_size);
+                }
+            return 0;
+            }
+        auto after_parse_args = get_t();
+        // this one has to be done manually as we don't have a ctx yet.
+        report_stat_raw(print_stats?DNDC_PRINT_STATS:0, dndc_stderr_error_func, NULL, "Parsing args took: %.3fms", (after_parse_args-t0)/1000.);
     }
 
     uint64_t flags = DNDC_FLAGS_NONE;
