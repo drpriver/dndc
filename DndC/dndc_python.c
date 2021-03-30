@@ -1076,7 +1076,7 @@ py_read_file(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args
         msb_destroy(&sb);
         return NULL;
         }
-    auto text = unwrap(e);
+    auto text = e.result;
     return PyUnicode_FromStringAndSize(text.text, text.length);
     }
 

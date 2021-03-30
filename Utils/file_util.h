@@ -65,7 +65,7 @@ read_file(const Allocator a, Nonnull(const char*)filepath){
         fclose(fp);
         Raise(FILE_ERROR);
         }
-    auto nbytes = unwrap(size_e);
+    auto nbytes = size_e.result;
     char* text = Allocator_alloc(a, nbytes+1);
     if(!text){
         result.errored = ALLOC_FAILURE;
@@ -97,7 +97,7 @@ read_bin_file(const Allocator a, Nonnull(const char*)filepath){
         result.errored = FILE_ERROR;
         goto finally;
         }
-    auto nbytes = unwrap(size_e);
+    auto nbytes = size_e.result;
     void* data = Allocator_alloc(a, nbytes);
     if(!data){
         result.errored = ALLOC_FAILURE;
@@ -164,7 +164,7 @@ read_file(const Allocator a, Nonnull(const char*)filepath){
         result.errored = FILE_ERROR;
         goto finally;
         }
-    auto nbytes = unwrap(size_e);
+    auto nbytes = size_e.result;
     char* text = Allocator_alloc(a, nbytes+1);
     if(!text){
         result.errored = ALLOC_FAILURE;
@@ -198,7 +198,7 @@ read_bin_file(const Allocator a, Nonnull(const char*)filepath){
         result.errored = FILE_ERROR;
         goto finally;
         }
-    auto nbytes = unwrap(size_e);
+    auto nbytes = size_e.result;
     void* data = Allocator_alloc(a, nbytes);
     if(!data){
         result.errored = ALLOC_FAILURE;

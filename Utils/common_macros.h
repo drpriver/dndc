@@ -105,26 +105,6 @@
 // TODO: breakpoints on arm
 #define breakpoint()  asm("int $3")
 
-// These all use GNU statement expressions, so I'll have to address those later
-// if I want to port to MSVC, but screw that crappy compiler.
-
-#define Max(a, b) ({ 	auto max_temp_a__ = (a);\
-			auto max_temp_b__ = (b);\
-			max_temp_a__ > max_temp_b__ ? max_temp_a__: max_temp_b__;})
-
-#define Max_literal(a, literal) ({ auto _a = a;\
-            auto _b = (typeof(_a)) literal;\
-            _a > _b ? _a : _b;})
-
-#define Min(a, b) ({ 	auto min_temp_a__ = (a);\
-			auto min_temp_b__ = (b);\
-			min_temp_a__ < min_temp_b__ ? min_temp_a__: min_temp_b__;})
-
-#define Min_literal(a, literal) ({ auto _a = a;\
-            auto _b = (typeof(_a)) literal;\
-            _a < _b ? _a : _b;})
-
-
 // There's a bug in the c spec that free's prototype is
 //
 // void free(void*);

@@ -516,12 +516,14 @@ PARSEFUNC(parse_raw_node){
             if(ctx->nspaces <= indentation)
                 break;
             length = ctx->lineend - ctx->linestart;
-            auto effective_indent = Min(leading_indent, ctx->nspaces);
+            auto effective_indent = leading_indent < ctx->nspaces?leading_indent: ctx->nspaces;
             length -= effective_indent;
             text = ctx->linestart + effective_indent;
             }
         else {
-            length = Max(ctx->nspaces - leading_indent, 0);
+            length = ctx->nspaces - leading_indent;
+            if(length < 0)
+                length = 0;
             text = ctx->linestart + ctx->nspaces - length;
             }
         // default: string node

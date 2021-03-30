@@ -35,7 +35,8 @@ force_inline
 _check_bb_size(Nonnull(ByteBuilder*) bb, size_t len){
     if(bb->cursor + len <= bb->capacity)
         return;
-    size_t new_size = Max_literal((bb->capacity*3)/2, 32);
+    size_t new_size = (bb->capacity*3)/2;
+    if(new_size < 32) new_size = 32;
     while(new_size < bb->cursor+len){
         new_size *= 2;
         }

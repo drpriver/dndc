@@ -487,10 +487,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         .navnode = INVALID_NODE_HANDLE,
         .outputfile = outpath,
         .base_directory = base_directory,
-        .b64cache = external_b64cache? *external_b64cache : ({
-            const Allocator cache_allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
-            (Base64Cache){.allocator = cache_allocator};
-            }),
+        .b64cache = external_b64cache? *external_b64cache :
+            ((Base64Cache){.allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator()}),
         .error_func = error_func,
         .error_user_data = error_user_data,
         };
@@ -527,7 +525,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
             result.errored = source_err.errored;
             goto cleanup;
             }
-        source = unwrap(source_err);
+        source = source_err.result;
         }
     Marray_reserve(Node)(&ctx.nodes, ctx.allocator, source.length/10+1);
 
@@ -628,7 +626,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
                     result.errored = imp_e.errored;
                     goto cleanup;
                     }
-                LongString imp_text = unwrap(imp_e);
+                LongString imp_text = imp_e.result;
                 auto parse_e = dndc_parse(&ctx, child_handle, filename, imp_text.text);
                 if(parse_e.errored){
                     report_set_error(&ctx);

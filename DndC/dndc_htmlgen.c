@@ -111,7 +111,7 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                         node_set_err(ctx, child, "Unable to load %.*s\n", (int)child->header.length, child->header.text);
                         Raise(style_e.errored);
                         }
-                    auto style = unwrap(style_e);
+                    auto style = style_e.result;
                     msb_write_str(msb, style.text, style.length);
                     }
                 }
@@ -153,7 +153,7 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                     node_set_err(ctx, child, "Unable to load %.*s\n", (int)child->header.length, child->header.text);
                     Raise(script_e.errored);
                     }
-                auto script = unwrap(script_e);
+                auto script = script_e.result;
                 msb_write_str(msb, script.text, script.length);
                 }
             msb_write_literal(msb, "</script>\n");
@@ -744,7 +744,7 @@ RENDERFUNC(IMAGE){
             }
         else {
             msb_write_literal(sb, "<img src=\"data:image/png;base64,");
-            auto b64 = unwrap(processed_e);
+            auto b64 = processed_e.result;
             msb_write_str(sb, b64.text, b64.length);
             }
         msb_write_literal(sb, "\">");
@@ -936,7 +936,7 @@ RENDERFUNC(IMGLINKS){
             node_set_err(ctx, imgpath_node, "Unable to read '%.*s'", (int)header.length, header.text);
             Raise(processed_e.errored);
             }
-        imgdatab64 = unwrap(processed_e);
+        imgdatab64 = processed_e.result;
     }
     int width;
     {
@@ -960,7 +960,7 @@ RENDERFUNC(IMGLINKS){
             node_set_err(ctx, width_node, "Unable to parse an int from '%.*s'", (int)pair.tail.length, pair.tail.text);
             Raise(PARSE_ERROR);
             }
-        width = unwrap(e);
+        width = e.result;
     }
     int height;
     {
@@ -984,7 +984,7 @@ RENDERFUNC(IMGLINKS){
             node_set_err(ctx, height_node, "Unable to parse an int from '%.*s'", (int)pair.tail.length, pair.tail.text);
             Raise(PARSE_ERROR);
             }
-        height = unwrap(e);
+        height = e.result;
     }
     int viewbox[4];
     {
@@ -1041,7 +1041,7 @@ RENDERFUNC(IMGLINKS){
                 node_set_err(ctx, viewBox_node, "Failed to parse an int from '%.*s'", (int)num_length, cursor);
                 Raise(PARSE_ERROR);
                 }
-            viewbox[which++] = unwrap(e);
+            viewbox[which++] = e.result;
             cursor = after_number;
             if(which == 4)
                 break;
@@ -1116,13 +1116,13 @@ RENDERFUNC(IMGLINKS){
             node_set_err(ctx, child, "Unable to parse an int from '%.*s'", (int)third.length, third.text);
             Raise(x_err.errored);
             }
-        auto x = unwrap(x_err);
+        auto x = x_err.result;
         auto y_err = parse_int(fourth.text, fourth.length);
         if(y_err.errored){
             node_set_err(ctx, child, "Unable to parse an int from '%.*s'", (int)third.length, third.text);
             Raise(y_err.errored);
             }
-        auto y = unwrap(y_err);
+        auto y = y_err.result;
         msb_sprintf(sb,
                 "<a href=\"%.*s\"><text style=\"text-anchor:middle;\" transform=\"translate(%d,%d)\">\n"
                 "%.*s\n"

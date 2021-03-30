@@ -344,7 +344,7 @@ static NSImage* appimage;
     const char* imgpath = [path UTF8String];
     INDENT(); msb_write_str(&sb, imgpath, strlen(imgpath));
     msb_write_char(&sb, '\n');
-    double scale = Min(800.0/size.width, 800.0/size.height);
+    double scale = size.width > size.height? 800.0/size.width : 800.0/size.height;
     INDENT(); msb_sprintf(&sb, "width = %d\n", (int)(size.width*scale));
     INDENT(); msb_sprintf(&sb, "height = %d\n", (int)(size.height*scale));
     INDENT(); msb_sprintf(&sb, "viewBox = 0 0 %d %d\n", (int)size.width, (int)size.height);

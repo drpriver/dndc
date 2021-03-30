@@ -114,7 +114,7 @@ TestFunction(TestArgumentParsing1){
         };
     auto e = test_parse_args(arrlen(argv), argv);
     TestAssert(not e.errored);
-    auto const h = unwrap(e);
+    auto const h = e.result;
     TestExpectEquals(h.x, 1);
     TestExpectEquals(h.y, 0x00f02);
     TestAssertEquals(h.z_count, 3);
@@ -163,7 +163,7 @@ TestFunction(TestArgumentParsing6){
     const char* argv[] = {"bin", "--f"};
     auto e = test_parse_args(arrlen(argv), argv);
     TestAssert(not e.errored);
-    auto const h = unwrap(e);
+    auto const h = e.result;
     TestExpectEquals(h.flag, true);
     TESTEND();
     }
@@ -176,14 +176,14 @@ TestFunction(TestArgumentParsing7){
     }
 TestFunction(TestArgumentParsing8){
     TESTBEGIN();
-    #define HexTest(hexval) ({\
+    #define HexTest(hexval) do{\
             char argstring[] = #hexval;\
             auto e = parse_hex(argstring, sizeof(argstring)-1);\
             TestExpect(not e.errored);\
             if(not e.errored) {\
                 TestExpectEquals(e.result, hexval);\
             }\
-            })
+            }while(0)
     HexTest(0xff);
     HexTest(0xf1b4);
     HexTest(0x88888);
@@ -195,11 +195,11 @@ TestFunction(TestArgumentParsing8){
     HexTest(0XFffF);
     HexTest(0XF0fa);
     #undef HexTest
-    #define FailHexTest(hexstr, error_code) ({\
+    #define FailHexTest(hexstr, error_code) do{\
             char argstring[] = hexstr;\
             auto e = parse_hex(argstring, sizeof(argstring)-1);\
             TestExpectEquals(e.errored, error_code);\
-            })
+            }while(0)
     FailHexTest("0 xff", INVALID_SYMBOL);
     FailHexTest("0xff ", INVALID_SYMBOL);
     FailHexTest("0xff 0x", INVALID_SYMBOL);
@@ -238,20 +238,20 @@ TestFunction(TestIntegerParsing){
     char digits[6] = {'1', '3', '4', '5', '6', '2'};
     auto e = parse_int(digits, 6);
     TestAssertSuccess(e);
-    auto val = unwrap(e);
+    auto val = e.result;
     TestExpectEquals(val, 134562);
     }
 
     {
     auto e2 = parse_int64("9223372036854775807", sizeof("9223372036854775807")-1);
     TestAssertSuccess(e2);
-    auto val2 = unwrap(e2);
+    auto val2 = e2.result;
     TestExpectEquals(val2, 9223372036854775807);
     }
     {
     auto e2 = parse_int64("-9223372036854775808", sizeof("-9223372036854775808")-1);
     TestAssertSuccess(e2);
-    auto val2 = unwrap(e2);
+    auto val2 = e2.result;
     // Bizarrely, C source code can't properly represent
     // INT64_MIN! So, use the macro!
     TestExpectEquals(val2, INT64_MIN);
@@ -271,7 +271,7 @@ TestFunction(TestIntegerParsing){
 #define TESTINT(N) do { \
     auto e = parse_int64(#N, sizeof(#N)-3); \
     TestAssertSuccess(e); \
-    auto val = unwrap(e); \
+    auto val = e.result; \
     TestExpectEquals(val, N); \
     }while(0)
     TESTINT(128ll);
@@ -286,7 +286,7 @@ TestFunction(TestIntegerParsing){
 #define TESTUINT(N) do { \
     auto e = parse_uint64(#N, sizeof(#N)-4); \
     TestAssertSuccess(e); \
-    auto val = unwrap(e); \
+    auto val = e.result; \
     TestExpectEquals(val, N); \
     }while(0)
     TESTUINT(128llu);
@@ -313,21 +313,21 @@ TestFunction(TestHumanIntegers){
     char digits[6] = {'1', '3', '4', '5', '6', '2'};
     auto e = parse_unsigned_human(digits, 6);
     TestAssertSuccess(e);
-    auto val = unwrap(e);
+    auto val = e.result;
     TestExpectEquals(val, 134562);
     }
     {
     char digits[6] = {'#', '3', '4', '5', '6', '2'};
     auto e = parse_unsigned_human(digits, 6);
     TestAssertSuccess(e);
-    auto val = unwrap(e);
+    auto val = e.result;
     TestExpectEquals(val, 0x34562);
     }
     {
     char digits[6] = {'0', 'b', '1', '1', '0', '1'};
     auto e = parse_unsigned_human(digits, 6);
     TestAssertSuccess(e);
-    auto val = unwrap(e);
+    auto val = e.result;
     TestExpectEquals(val, 0b1101);
     }
     TESTEND();

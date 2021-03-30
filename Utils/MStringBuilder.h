@@ -111,7 +111,8 @@ force_inline
 void
 _check_msb_size(Nonnull(MStringBuilder*) msb, size_t len){
     if (msb->cursor + len > msb->capacity){
-        size_t new_size = Max_literal((msb->capacity*3)/2, 32);
+        size_t new_size = (msb->capacity*3)/2;
+        if(new_size < 32) new_size = 32;
         while(new_size < msb->cursor+len){
             new_size *= 2;
             }

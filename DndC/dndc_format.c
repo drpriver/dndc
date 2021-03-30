@@ -485,7 +485,7 @@ FORMATFUNC(kv_node){
 FORMATFUNC(raw_node){
     format_header(sb, node, indent);
     indent += FORMAT_INDENT;
-    auto nspace = Min(indent, 80);
+    auto nspace = indent < 80? indent: 80;
     for(size_t i = 0; i < node->children.count; i++){
         auto child = get_node(ctx, node->children.data[i]);
         if(child->type != NODE_STRING){

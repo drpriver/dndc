@@ -421,21 +421,27 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
     // that what we are pointing to is an array.
     switch(arg->dest.type){
         case ARG_INTEGER64:{
-            auto value = attempt(parse_int64(s.text, s.length));
+            auto e = parse_int64(s.text, s.length);
+            if(unlikely(e.errored)) Raise(e.errored);
+            auto value = e.result;
             int64_t* dest = arg->dest.pointer;
             dest += arg->num_parsed;
             *dest = value;
             arg->num_parsed += 1;
             }break;
         case ARG_UINTEGER64:{
-            auto value = attempt(parse_unsigned_human(s.text, s.length));
+            auto e = parse_unsigned_human(s.text, s.length);
+            if(unlikely(e.errored)) Raise(e.errored);
+            auto value = e.result;
             uint64_t* dest = arg->dest.pointer;
             dest += arg->num_parsed;
             *dest = value;
             arg->num_parsed += 1;
             }break;
         case ARG_INT: {
-            auto value = attempt(parse_int(s.text, s.length));
+            auto e = parse_int(s.text, s.length);
+            if(unlikely(e.errored)) Raise(e.errored);
+            auto value = e.result;
             int* dest = arg->dest.pointer;
             dest += arg->num_parsed;
             *dest = value;

@@ -68,8 +68,7 @@ static const char* const ERROR_NAMES[] = {
 // Errorable(void) is specialized to not have a result field.
 struct _Errorable_impl(void) {
     uint8_t errored;
-    };
-Errorable_declare(bool);
+};
 Errorable_declare(int);
 Errorable_declare(char);
 Errorable_declare(short);
@@ -85,30 +84,11 @@ Errorable_declare(int32_t);
 Errorable_declare(int64_t);
 Errorable_declare(float);
 Errorable_declare(double);
-typedef void* void_ptr;
-Errorable_declare(void_ptr);
 //
 // Assumes there is an Errorable named result in the local scope.
 // Sets the errored field to the given value and then returns result.
 // Saves a bit of repetition.
 //
-#define Raise(error_value) ({result.errored = error_value; return result;})
+#define Raise(error_value) do{result.errored = error_value; return result;}while(0)
 
-//
-// Extracts the inner value from the errorable. Asserts that the error field is
-// set to NO_ERROR.
-//
-#define unwrap(error_holder) ({auto err_ = error_holder;\
-                            assert(!err_.errored); \
-                            err_.result;})
-//
-// If the value of "maybe" is an errorable with errored set, Raises that error.
-// Otherwise, unwraps the value.
-//
-#define attempt(maybe) ({   auto const maybe_ = maybe;\
-                            if(unlikely(maybe_.errored)) {\
-                                result.errored = maybe_.errored;\
-                                return result;\
-                                }\
-                            maybe_.result;})
 #endif

@@ -106,8 +106,11 @@ static inline
 Errorable_f(int)
 parse_int(Nonnull(const char*) str, size_t length){
     Errorable(int) result = {};
-    auto val = attempt(parse_int64(str, length));
-    if (val > INT_MAX or val < INT_MIN){
+    auto e = parse_int64(str, length);
+    if(unlikely(e.errored))
+        Raise(e.errored);
+    int64_t val = e.result;
+    if(val > INT_MAX or val < INT_MIN){
         Raise (OVERFLOWED_VALUE);
         }
     result.result = (int)val;

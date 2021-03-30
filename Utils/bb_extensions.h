@@ -28,7 +28,7 @@ bb_read_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const char*)filename){
         result.errored = FILE_ERROR;
         goto finally;
         }
-    auto nbytes = unwrap(size_e);
+    auto nbytes = size_e.result;
     bb_reserve(bb, nbytes);
     void* data = bb->data + bb->cursor;
     auto fread_result = fread(data, 1, nbytes, fp);
@@ -56,7 +56,7 @@ bb_read_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const char*)filename){
         result.errored = FILE_ERROR;
         goto finally;
         }
-    auto nbytes = unwrap(size_e);
+    auto nbytes = size_e.result;
     bb_reserve(bb, nbytes);
     void* data = bb->data + bb->cursor;
     auto read_result = read(fd, data, nbytes);

@@ -45,7 +45,7 @@ main(int argc, char *argv[])
         fprintf(stderr, "cannot open '%s' for reading\n", inpath);
         goto error;
         }
-    auto text = unwrap(insource);
+    auto text = insource.result;
 
 #if PY_MINOR_VERSION > 7
     PyConfig config;

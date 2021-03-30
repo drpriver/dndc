@@ -270,7 +270,7 @@ ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
         auto loaded = Marray_alloc(LoadedSource)(&ctx->loaded_files, ctx->allocator);
         loaded->sourcepath.text = path;
         loaded->sourcepath.length = sourcepath.length;
-        loaded->sourcetext = unwrap(load_err);
+        loaded->sourcetext = load_err.result;
         }
     else {
         Allocator_free(ctx->allocator, path, sourcepath.length+1);
@@ -314,11 +314,11 @@ load_processed_binary_file(Nonnull(Base64Cache*)cache, StringView binarypath, No
     auto path = msb_borrow(&sb);
 
     auto base64ed_e = read_and_base64_bin_file(bb, a, path.text);
-    if(base64ed_e.errored){
+    if(unlikely(base64ed_e.errored)){
         msb_destroy(&sb);
         return (Errorable(LongString)){.errored = base64ed_e.errored};
         }
-    auto base64ed = unwrap(base64ed_e);
+    auto base64ed = base64ed_e.result;
     auto sourcepath = msb_detach(&sb);
     auto loaded = Marray_alloc(LoadedSource)(&cache->processed_binary_files, a);
     loaded->sourcepath = sourcepath;
