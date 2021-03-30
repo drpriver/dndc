@@ -14,6 +14,7 @@
 // So here it is.
 //
 // Example Usage:
+//
 //      THREADFUNC(worker);
 //
 //      typedef struct JobData {
@@ -108,14 +109,14 @@ PopDiagnostic();
 static
 void
 create_thread(Nonnull(ThreadHandle*)handle, Nonnull(thread_func*) func, Nullable(void*)thread_arg){
-    auto err = pthread_create(&handle->thread, NULL, func, thread_arg);
+    int err = pthread_create(&handle->thread, NULL, func, thread_arg);
     unhandled_error_condition(err != 0);
     }
 
 static
 void
 join_thread(ThreadHandle handle){
-    auto err = pthread_join(handle.thread, NULL);
+    int err = pthread_join(handle.thread, NULL);
     unhandled_error_condition(err != 0);
     }
 

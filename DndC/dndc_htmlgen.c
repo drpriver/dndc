@@ -111,7 +111,7 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                         node_set_err(ctx, child, "Unable to load %.*s\n", (int)child->header.length, child->header.text);
                         Raise(style_e.errored);
                         }
-                    auto style = style_e.result;
+                    LongString style = style_e.result;
                     msb_write_str(msb, style.text, style.length);
                     }
                 }
@@ -153,7 +153,7 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                     node_set_err(ctx, child, "Unable to load %.*s\n", (int)child->header.length, child->header.text);
                     Raise(script_e.errored);
                     }
-                auto script = script_e.result;
+                LongString script = script_e.result;
                 msb_write_str(msb, script.text, script.length);
                 }
             msb_write_literal(msb, "</script>\n");
@@ -343,10 +343,10 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
                 }break;
             case '-':{
                 if(i < length - 1){
-                    auto peek1 = text[i+1];
+                    char peek1 = text[i+1];
                     if(peek1 == '-'){
                         if(i < length - 2){
-                            auto peek2 = text[i+2];
+                            char peek2 = text[i+2];
                             if(peek2 == '-'){
                                 msb_write_literal(sb, "&mdash;");
                                 i += 2;
@@ -366,7 +366,7 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
             case '<':{
                 // we allow inline <b>, <s>, <i>, </b>, </s>, </i>
                 if(i < length - 1){
-                    auto peek1 = text[i+1];
+                    char peek1 = text[i+1];
                     switch(peek1){
                         case 'b':
                         case 's':
@@ -378,7 +378,7 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
                             continue;
                         }
                     if(i < length - 2){
-                        auto peek2 = text[i+2];
+                        char peek2 = text[i+2];
                         if(peek1 != '/'){
                             if(peek2 == '>'){
                                 msb_write_char(sb, c);
@@ -400,7 +400,7 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
                                 continue;
                             }
                         if(i < length - 3){
-                            auto peek3 = text[i+3];
+                            char peek3 = text[i+3];
                             if(peek3 == '>'){
                                 msb_write_char(sb, c);
                                 msb_write_char(sb, peek1);

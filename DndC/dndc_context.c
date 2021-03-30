@@ -343,7 +343,7 @@ find_link_target(Nonnull(DndcContext*)ctx, StringView kebabed){
         return &data[high].value;
     while(low < high){
         mid = (low+high)/2;
-        auto c = StringView_cmp(&data[mid].key, &kebabed);
+        int c = StringView_cmp(&data[mid].key, &kebabed);
         if(c == 0)
             return &data[mid].value;
         if(c > 0){
@@ -432,7 +432,7 @@ static inline
 force_inline
 NodeHandle
 alloc_handle(Nonnull(DndcContext*)ctx){
-    auto index = Marray_alloc_index(Node)(&ctx->nodes, ctx->allocator);
+    size_t index = Marray_alloc_index(Node)(&ctx->nodes, ctx->allocator);
     ctx->nodes.data[index] = (Node){};
     // debug to help find nodes without parents
     ctx->nodes.data[index].parent = INVALID_NODE_HANDLE;

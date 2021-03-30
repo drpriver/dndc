@@ -36,7 +36,7 @@ THREADFUNC(binary_worker){
     auto before = get_t();
 #endif
     BinaryJob* jobp = thread_arg;
-    auto cache = *jobp->cache;
+    Base64Cache cache = *jobp->cache;
     size_t count = jobp->sourcepaths.count;
     StringView* data = jobp->sourcepaths.data;
     ByteBuilder bb = {.allocator=cache.allocator};
@@ -478,7 +478,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
     // constantly - this means we don't have to keep hitting malloc
     // just for temporary strings of arbitrary size.
     LinearAllocator la_ = new_linear_storage(1024*1024, "temp storage");
-    auto la = allocator_from_la(&la_);
+    Allocator la = allocator_from_la(&la_);
     DndcContext ctx = {
         .flags = flags,
         .allocator = allocator,

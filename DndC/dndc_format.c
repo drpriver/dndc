@@ -357,7 +357,7 @@ write_str_or_container(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Non
             msb_write_char(sb, ' ');
             writ++;
             }
-        auto str = get_node(ctx, node->children.data[i]);
+        Node* str = get_node(ctx, node->children.data[i]);
         msb_write_str(sb, str->header.text, str->header.length);
         writ += str->header.length;
         }
@@ -370,14 +370,14 @@ FORMATFUNC(table_node){
     ssize_t widths[100] = {};
     // pre-pass to figure out widths
     for(size_t i = 0; i < node->children.count; i++){
-        auto row = get_node(ctx, node->children.data[i]);
+        Node* row = get_node(ctx, node->children.data[i]);
         if(row->type != NODE_TABLE_ROW)
             continue;
         unhandled_error_condition(row->children.count > arrlen(widths));
         if(row->children.count > n_cells)
             n_cells = row->children.count;
         for(size_t j = 0; j < row->children.count; j++){
-            auto cell = get_node(ctx, row->children.data[j]);
+            Node* cell = get_node(ctx, row->children.data[j]);
             if(cell->type == NODE_STRING){
                 if(cell->header.length > widths[j])
                     widths[j] = cell->header.length;
@@ -386,7 +386,7 @@ FORMATFUNC(table_node){
                 assert(cell->type == NODE_CONTAINER);
                 size_t this_width = 0;
                 for(size_t k = 0; k < cell->children.count; k++){
-                    auto str = get_node(ctx, cell->children.data[k]);
+                    Node* str = get_node(ctx, cell->children.data[k]);
                     this_width += 1 + str->header.length;
                     }
                 this_width -= 1;
@@ -405,7 +405,7 @@ FORMATFUNC(table_node){
     if(total < effective_space || total_except_last > effective_space){
         // do them all as a single line
         for(size_t i = 0; i < node->children.count; i++){
-            auto row = get_node(ctx, node->children.data[i]);
+            Node* row = get_node(ctx, node->children.data[i]);
             if(row->type != NODE_TABLE_ROW){
                 format_node(ctx, sb, row, indent);
                 continue;
@@ -416,8 +416,8 @@ FORMATFUNC(table_node){
                     }
                 else
                     msb_write_nchar(sb, ' ', indent);
-                auto cell = get_node(ctx, row->children.data[j]);
-                auto writ = write_str_or_container(ctx, sb, cell);
+                Node* cell = get_node(ctx, row->children.data[j]);
+                size_t writ = write_str_or_container(ctx, sb, cell);
                 if(j != row->children.count-1 && widths[j] > writ){
                     msb_write_nchar(sb, ' ', widths[j] - writ);
                     }
@@ -428,7 +428,7 @@ FORMATFUNC(table_node){
     else {
         // we need to wrap just the last line
         for(size_t i = 0; i < node->children.count; i++){
-            auto row = get_node(ctx, node->children.data[i]);
+            Node* row = get_node(ctx, node->children.data[i]);
             if(row->type != NODE_TABLE_ROW){
                 format_node(ctx, sb, row, indent);
                 continue;
@@ -439,22 +439,22 @@ FORMATFUNC(table_node){
                     }
                 else
                     msb_write_nchar(sb, ' ', indent);
-                auto cell = get_node(ctx, row->children.data[j]);
-                auto writ = write_str_or_container(ctx, sb, cell);
+                Node* cell = get_node(ctx, row->children.data[j]);
+                size_t writ = write_str_or_container(ctx, sb, cell);
                 if(j != row->children.count-1 && widths[j] > writ){
                     msb_write_nchar(sb, ' ', widths[j] - writ);
                     }
                 }
             if(row->children.count > 1)
                 msb_write_literal(sb, " | ");
-            auto last_cell = get_node(ctx, row->children.data[row->children.count-1]);
+            Node* last_cell = get_node(ctx, row->children.data[row->children.count-1]);
             FormatState state = {.lead = total_except_last, .col=total_except_last};
             if(last_cell->type == NODE_STRING){
                 format_write_wrapped_string(sb, &state, last_cell->header);
                 }
             else {
                 for(size_t j = 0; j < last_cell->children.count; j++){
-                    auto str = get_node(ctx, last_cell->children.data[j]);
+                    Node* str = get_node(ctx, last_cell->children.data[j]);
                     format_write_wrapped_string(sb, &state, str->header);
                     }
                 }
