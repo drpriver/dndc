@@ -11,6 +11,10 @@ import time
 import re
 whitespace_re = re.compile(r'^\s+')
 
+# https://tools.ietf.org/html/rfc6761 says we can use invalid. as a specially
+# recognized app domain.
+APPHOST = 'invalid.'
+
 app = QApplication(sys.argv)
 APPNAME = 'PyGdndc'
 app.setApplicationName(APPNAME)
@@ -49,9 +53,6 @@ window = DndMainWindow()
 tabwidget = QTabWidget()
 window.setCentralWidget(tabwidget)
 
-# https://tools.ietf.org/html/rfc6761 says we can use invalid. as a specially
-# recognized app domain.
-APPHOST = 'invalid.'
 
 class DndSyntaxHighlighter(QSyntaxHighlighter):
     def highlightBlock(self, text:str) -> None:
@@ -462,7 +463,7 @@ def close_current_tab(*args) -> None:
         return
     current_tab.save()
     del all_windows[current_tab.filename]
-    current_tab.setParent(None)
+    current_tab.setParent(None)  # type: ignore
 
 def add_menus() -> None:
     menubar = window.menuBar()
@@ -488,6 +489,11 @@ def add_menus() -> None:
     action.triggered.connect(close_current_tab)
     action.setShortcut(QKeySequence('Ctrl+w'))
     filemenu.addAction(action)
+
+    if sys.platform != 'darwin':
+        action = QAction('&Quit', window)
+        action.triggered.connect(window.close)
+        filemenu.addAction(action)
 
     editmenu = menubar.addMenu('Edit')
 
