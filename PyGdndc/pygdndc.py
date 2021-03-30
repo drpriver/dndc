@@ -24,16 +24,26 @@ all_windows: Dict[str, 'Page'] = {}
 FONT = QFont()
 FONT.setPointSize(11)
 FONT.setFixedPitch(True)
-FONT.setFamilies(['Menlo','Cascadia Mono', 'Consolas','Ubuntu Mono'])
+FONT.setFamilies(['Menlo','Cascadia Mono', 'Consolas','Ubuntu Mono', 'Mono'])
 fontmetrics = QFontMetrics(FONT)
 EIGHTYCHARS = fontmetrics.horizontalAdvance('M')*80
+EDITOR_ON_LEFT = True
 
 class DndMainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self)->None:
         super().__init__()
         self.settings = QSettings('DavidTechnology', APPNAME)
 
-    def restore_everything(self):
+    def restore_everything(self)->None:
+        global EDITOR_ON_LEFT
+        geometry = self.settings.value('window_geometry')
+        if geometry is not None:
+            self.restoreGeometry(geometry)
+        else:
+            self.showMaximized()
+        on_left = self.settings.value('editor_on_left')
+        if on_left is not None:
+            EDITOR_ON_LEFT = on_left
         filenames = self.settings.value('filenames')
         if filenames:
             if isinstance(filenames, str):
@@ -45,6 +55,8 @@ class DndMainWindow(QMainWindow):
     def closeEvent(self, e) -> None:
         filenames = list(all_windows.keys())
         self.settings.setValue('filenames', filenames)
+        self.settings.setValue('editor_on_left', EDITOR_ON_LEFT)
+        self.settings.setValue('window_geometry', self.saveGeometry())
         for page in all_windows.values():
             page.save()
         e.accept()
@@ -229,7 +241,7 @@ class Page(QSplitter):
         self.editor_holder.setStretchFactor(0, 8)
         self.editor_holder.setStretchFactor(1, 1)
         self.filename = ''
-        left = True
+        left = EDITOR_ON_LEFT
         show_errors = True
         self.show_errors = True
         self.editor_is_on_left = True
@@ -447,12 +459,15 @@ def toggle_errors(*args) -> None:
             w.show_error()
 
 def flop_editors(*args) -> None:
+    global EDITOR_ON_LEFT
     if not all_windows:
         return
     if next(iter(all_windows.values())).editor_is_on_left:
+        EDITOR_ON_LEFT = False
         for w in all_windows.values():
             w.put_editor_right()
     else:
+        EDITOR_ON_LEFT = True
         for w in all_windows.values():
             w.put_editor_left()
 
@@ -467,7 +482,7 @@ def close_current_tab(*args) -> None:
 
 def pickfont(*args) -> None:
     global FONT
-    ok, font = QFontDialog(FONT).getFont()
+    ok, font = QFontDialog.getFont(FONT)
     if ok:
         FONT = font
         for page in all_windows.values():
@@ -534,5 +549,5 @@ if not tabwidget.currentWidget():
     open_file()
 if not tabwidget.currentWidget():
     sys.exit(0)
-window.showMaximized()
+window.show()
 app.exec_()
