@@ -1497,10 +1497,8 @@ init_python_interpreter(uint64_t flags){
     preconfig.utf8_mode = 1;
     status = Py_PreInitialize(&preconfig);
     if(PyStatus_Exception(status)){
-        // ERROR("pre init fail");
         goto fail;
         }
-
     PyConfig config;
     PyConfig_InitIsolatedConfig(&config);
     config.buffered_stdio = 0;
@@ -1525,12 +1523,10 @@ init_python_interpreter(uint64_t flags){
     PyConfig_SetString(&config, &config.base_exec_prefix, L"");
     int import_fail = PyImport_ExtendInittab(&mods[0]);
     if(import_fail < 0){
-        // ERROR("import fail");
         goto fail;
         }
     status = Py_InitializeFromConfig(&config);
     if(PyStatus_Exception(status)){
-        // ERROR("init fail");
         goto fail;
         }
     PyConfig_Clear(&config);
