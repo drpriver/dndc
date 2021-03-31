@@ -80,7 +80,8 @@ executable(
   frozen_modules,
   include_directories: includes,
   dependencies:[pydep],
-  c_args: ['-DDNDCMAIN']
+  c_args: ['-DDNDCMAIN'],
+  install: true,
   )
 
 pyinstall.extension_module(
@@ -101,7 +102,8 @@ if host_machine.system() == 'darwin'
     dependencies:[pydep, dependency('appleframeworks', modules: ['Cocoa', 'WebKit'])],
     include_directories: includes,
     objc_args: ['-fobjc-arc'],
-    link_args: '-Wl,-sectcreate,__TEXT,__info_plist,'+meson.source_root() + '/Platform/MacOS/Info.plist'
+    link_args: '-Wl,-sectcreate,__TEXT,__info_plist,'+meson.source_root() + '/Platform/MacOS/Info.plist',
+    install: true,
     )
 endif
 
@@ -124,6 +126,6 @@ t = executable('TestDndC',
   'PythonEmbed/frozenstdlib.c',
   frozen_modules,
   include_directories:includes,
-  dependencies:pydep)
+  dependencies:pydep,
+  )
 test('dndc', t, args:['-C', meson.source_root()])
-
