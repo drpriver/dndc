@@ -51,7 +51,6 @@ if(APPLE)
     target_link_libraries(gdndc
         ${Python3_LIBRARIES}
         "-framework Cocoa"
-        "-framework AppKit"
         "-framework WebKit"
         )
     target_compile_options(gdndc PUBLIC "-fobjc-arc")

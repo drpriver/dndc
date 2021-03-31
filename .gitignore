@@ -19,3 +19,7 @@ build
 xcode
 CMakeSettings.json
 .vs
+.clangd
+venv
+builddir
+build2
