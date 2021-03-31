@@ -8,7 +8,7 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 
 find_package(Python3 3.8 COMPONENTS Development)
 
-include_directories(Utils DndC PythonEmbed Allocators)
+include_directories(Utils DndC PythonEmbed Allocators PythonEmbed/frozen)
 
 if(WIN32)
 include_directories(Platform/Windows)

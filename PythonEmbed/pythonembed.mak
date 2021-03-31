@@ -12,8 +12,8 @@ frozen-modules: $(FROZEN_MODULES)
 
 FROZEN_MODULES:=$(addprefix $(FROZENDIR)/,\
 	abc.py.h\
-	importlib.py.h \
-	importlib_external.py.h \
+	importlib_bootstrap.py.h \
+	importlib_bootstrap_external.py.h \
 	zipimport.py.h \
 	io.py.h \
 	codecs.py.h \
@@ -67,13 +67,7 @@ FROZEN_MODULES:=$(addprefix $(FROZENDIR)/,\
 	)
 
 $(OBJDIR)/frozenstdlib.o: PythonEmbed/frozenstdlib.c $(DEPDIR)/frozenstdlib.dep $(FROZEN_MODULES) | $(DIRECTORIES)
-	$(CC) $(INCLUDE_FLAGS) $(PLATFORM_FLAGS) $(FAST_FLAGS) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/frozenstdlib.dep $< -c -o $@
+	$(CC) $(INCLUDE_FLAGS) -IPythonEmbed/frozen $(PLATFORM_FLAGS) $(FAST_FLAGS) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/frozenstdlib.dep $< -c -o $@
 
 $(FROZENDIR)/%.py.h: $(PYVENDOR)/%.py | $(FREEZE) $(FROZENDIR)
 	$(FREEZE) $* $< $@
-
-# needs weird name
-$(FROZENDIR)/importlib.py.h: $(PYVENDOR)/importlib_bootstrap.py
-	$(FREEZE) importlib_bootstrap $< $@
-$(FROZENDIR)/importlib_external.py.h: $(PYVENDOR)/importlib_bootstrap_external.py
-	$(FREEZE) importlib_bootstrap_external $< $@
