@@ -157,6 +157,18 @@ node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(c
     msb_destroy(&msb);
     }
 
+
+static
+void
+vreport_stat_raw(Nullable(ErrorFunc*) error_func, Nullable(void*) error_user_data, Nonnull(const char*) fmt, va_list args){
+    char buff[256];
+    int printed = vsnprintf(buff, sizeof(buff), fmt, args);
+    // just truncate the message. These are short anyway.
+    if(printed >= sizeof(buff))
+        printed = sizeof(buff)-1;
+    error_func(error_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, buff, printed);
+}
+
 printf_func(4, 5)
 static inline
 void
@@ -165,14 +177,10 @@ report_stat_raw(uint64_t flags, Nullable(ErrorFunc*) error_func, Nullable(void*)
         return;
     if(not error_func)
         return;
-    char buff[256];
     va_list args;
     va_start(args, fmt);
-    int printed = vsnprintf(buff, sizeof(buff), fmt, args);
+    vreport_stat_raw(error_func, error_user_data, fmt, args);
     va_end(args);
-    if(printed >= sizeof(buff))
-        printed = sizeof(buff)-1;
-    error_func(error_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, buff, printed);
     }
 
 printf_func(2, 3)
@@ -183,16 +191,11 @@ report_stat(Nonnull(DndcContext*)ctx, Nonnull(const char*) fmt, ...){
         return;
     if(not ctx->error_func)
         return;
-
-    MStringBuilder temp = {.allocator = ctx->temp_allocator};
     va_list args;
     va_start(args, fmt);
-    msb_vsprintf(&temp, fmt, args);
+    vreport_stat_raw(ctx->error_func, ctx->error_user_data, fmt, args);
     va_end(args);
-    auto msg = msb_borrow(&temp);
-    ctx->error_func(ctx->error_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, msg.text, msg.length);
-    msb_destroy(&temp);
-    }
+}
 
 static
 void
