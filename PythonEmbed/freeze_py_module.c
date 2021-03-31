@@ -96,7 +96,7 @@ main(int argc, char *argv[])
     {
     char buf[100];
     snprintf(buf, sizeof(buf), "<frozen %s>", name);
-    code = Py_CompileStringExFlags(text.text, buf, Py_file_input, NULL, 0);
+    code = Py_CompileStringExFlags(text.text, buf, Py_file_input, NULL, 2);
     if(code == NULL){
         ERROR("code is NULL (%p)\n", code);
         goto error;

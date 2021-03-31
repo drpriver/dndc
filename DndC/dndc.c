@@ -185,9 +185,9 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
 #ifdef DNDCMAIN
 int main(int argc, char**argv){
     auto t0 = get_t();
-    LongString source_path = {};
-    LongString output_path = {};
-    LongString depends_path = {};
+    LongString source_path = LS("");
+    LongString output_path = LS("");
+    LongString depends_path = LS("");
     LongString base_dir = LS("");
     bool report_orphans = false;
     bool no_python = false;

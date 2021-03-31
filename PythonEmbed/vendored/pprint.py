@@ -482,20 +482,23 @@ class PrettyPrinter:
 
     _dispatch[_collections.deque.__repr__] = _pprint_deque
 
-    def _pprint_user_dict(self, object, stream, indent, allowance, context, level):
-        self._format(object.data, stream, indent, allowance, context, level - 1)
+    # FROZENHACKS: Who actually uses UserDict??
+    #def _pprint_user_dict(self, object, stream, indent, allowance, context, level):
+    #    self._format(object.data, stream, indent, allowance, context, level - 1)
 
-    _dispatch[_collections.UserDict.__repr__] = _pprint_user_dict
+    #_dispatch[_collections.UserDict.__repr__] = _pprint_user_dict
 
-    def _pprint_user_list(self, object, stream, indent, allowance, context, level):
-        self._format(object.data, stream, indent, allowance, context, level - 1)
+    # FROZENHACKS: Who actually uses UserList??
+    #def _pprint_user_list(self, object, stream, indent, allowance, context, level):
+    #    self._format(object.data, stream, indent, allowance, context, level - 1)
 
-    _dispatch[_collections.UserList.__repr__] = _pprint_user_list
+    #_dispatch[_collections.UserList.__repr__] = _pprint_user_list
 
-    def _pprint_user_string(self, object, stream, indent, allowance, context, level):
-        self._format(object.data, stream, indent, allowance, context, level - 1)
+    # FROZENHACKS: Who actually uses UserString??
+    #def _pprint_user_string(self, object, stream, indent, allowance, context, level):
+    #    self._format(object.data, stream, indent, allowance, context, level - 1)
 
-    _dispatch[_collections.UserString.__repr__] = _pprint_user_string
+    #_dispatch[_collections.UserString.__repr__] = _pprint_user_string
 
 # Return triple (repr_string, isreadable, isrecursive).
 

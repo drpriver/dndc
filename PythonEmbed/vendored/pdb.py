@@ -1635,31 +1635,31 @@ def pm():
 
 
 # Main program for testing
-
-TESTCMD = 'import x; x.main()'
-
-def test():
-    run(TESTCMD)
-
+#
+#TESTCMD = 'import x; x.main()'
+#
+#def test():
+#    run(TESTCMD)
+#
 # print help
-def help():
-    import pydoc
-    pydoc.pager(__doc__)
-
-_usage = """\
-usage: pdb.py [-c command] ... [-m module | pyfile] [arg] ...
-
-Debug the Python program given by pyfile. Alternatively,
-an executable module or package to debug can be specified using
-the -m switch.
-
-Initial commands are read from .pdbrc files in your home directory
-and in the current directory, if they exist.  Commands supplied with
--c are executed after commands from .pdbrc files.
-
-To let the script run until an exception occurs, use "-c continue".
-To let the script run up to a given line X in the debugged file, use
-"-c 'until X'"."""
+#def help():
+#    import pydoc
+#    pydoc.pager(__doc__)
+#
+#_usage = """\
+#usage: pdb.py [-c command] ... [-m module | pyfile] [arg] ...
+#
+#Debug the Python program given by pyfile. Alternatively,
+#an executable module or package to debug can be specified using
+#the -m switch.
+#
+#Initial commands are read from .pdbrc files in your home directory
+#and in the current directory, if they exist.  Commands supplied with
+#-c are executed after commands from .pdbrc files.
+#
+#To let the script run until an exception occurs, use "-c continue".
+#To let the script run up to a given line X in the debugged file, use
+#"-c 'until X'"."""
 # FROZENHACKS: unneeded
 # def main():
     # import getopt

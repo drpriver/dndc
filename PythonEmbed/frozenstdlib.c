@@ -126,6 +126,14 @@ static const struct _frozen _PyImport_FrozenModules[] = {
 extern
 void
 set_frozen_modules(void){
+#if 0
+    // Code for monitoring the size of the frozen modules
+    for(int i = 0;i < arrlen(_PyImport_FrozenModules);i++){
+        auto f = &_PyImport_FrozenModules[i];
+        HEREPrint(f->name);
+        HEREPrint(f->size);
+    }
+#endif
     PyImport_FrozenModules = _PyImport_FrozenModules;
     }
 #else
