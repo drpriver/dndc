@@ -21,7 +21,7 @@
 
 #define DNC_MAJOR 0
 #define DNC_MINOR 3
-#define DNC_MICRO 7
+#define DNC_MICRO 8
 #define DNDC_VERSION STRINGIFY(DNC_MAJOR) "." STRINGIFY(DNC_MINOR) "." STRINGIFY(DNC_MICRO)
 
 // Unsure of where to put this. So, just putting it here for now.
