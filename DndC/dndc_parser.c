@@ -521,9 +521,8 @@ PARSEFUNC(parse_raw_node){
             text = ctx->linestart + effective_indent;
             }
         else {
-            length = ctx->nspaces - leading_indent;
-            if(length < 0)
-                length = 0;
+            int diff = ctx->nspaces - leading_indent;
+            length = diff < 0 ? 0 : diff;
             text = ctx->linestart + ctx->nspaces - length;
             }
         // default: string node
