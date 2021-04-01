@@ -1,14 +1,20 @@
+#!/usr/bin/env python3
 import os
 os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+import install_deps
+have_deps = install_deps.ensure_deps(False)
 import sys
-from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog
+if not have_deps:
+    sys.exit(0)
+from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog, QMessageBox
 from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
-from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat
+from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage
 from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings
 import pydndc
 from typing import Optional, List, Dict, Optional
 import time
 import re
+import textwrap
 whitespace_re = re.compile(r'^\s+')
 
 # https://tools.ietf.org/html/rfc6761 says we can use invalid. as a specially
@@ -199,6 +205,52 @@ class DndEditor(QPlainTextEdit):
             top = bottom
             bottom = top + self.blockBoundingRect(block).height()
             blockNumber += 1
+    def insert_dnd_block(self, dndtext:str) -> None:
+        block = self.textCursor().block()
+        text = block.text()
+        leading_space = re.match(whitespace_re, text)
+        if leading_space:
+            lead = leading_space[0]
+            dndtext = textwrap.indent(dndtext, lead)
+            if len(lead) == len(text):
+                dndtext = dndtext.lstrip()
+            else:
+                dndtext = '\n' + dndtext
+        elif text:
+            dndtext = '\n' + dndtext
+        self.insertPlainText(dndtext)
+
+    def insert_image(self, fname:str) -> None:
+        self.insert_dnd_block('::img\n  ' + fname + '\n')
+    def insert_dnd(self, fname:str) -> None:
+        self.insert_dnd_block('::import\n  ' + fname + '\n')
+    def insert_css(self, fname:str) -> None:
+        self.insert_dnd_block('::css\n  ' + fname + '\n')
+    def insert_js(self, fname:str) -> None:
+        self.insert_dnd_block('::js\n  ' + fname + '\n')
+    def insert_image_links(self, fullname:str, fname:str) -> None:
+        img = QImage()
+        img.load(fullname)
+        size = img.size()
+        w = size.width()
+        h = size.height()
+        scale = 800/w if w > h else 800/h
+        self.insert_dnd_block('\n'.join((
+            '::imglinks',
+            f'  {fname}',
+            f'  width = {int(w*scale)}',
+            f'  height = {int(h*scale)}',
+            f'  viewBox = 0 0 {w} {h}',
+            r"  ::python",
+            r"    # this is an example of how to script the imglinks",
+            r"    imglinks = node.parent",
+            r"    coord_nodes = ctx.select_nodes(attributes=['coord'])",
+            r"    for c in coord_nodes:",
+            r"      lead = c.header  # change this probably",
+            r"      position = c.attributes['coord']",
+            r"      imglinks.add_child(f'{lead} = {ctx.outfile}#{c.id} @{position}')",
+            )))
+
 
 class DndWebPage(QWebEnginePage):
     def __init__(self, *args, **kwargs) -> None:
@@ -332,6 +384,98 @@ class Page(QSplitter):
             text += b'\n'
         savefile.write(text)  # type: ignore
         savefile.commit()
+    def insert_image(self) -> None:
+        fname, _ = QFileDialog.getOpenFileName(None, 'Choose an image file', '', 'PNG images (*.png)')
+        if not fname:
+            return
+        if self.dirname:
+            try:
+                relative = os.path.relpath(fname, self.dirname)
+            except: # this can throw on Windows
+                pass
+            else:
+                if '..' not in relative:
+                    fname = relative
+        self.textedit.insert_image(fname)
+    def insert_image_links(self)-> None:
+        fullname, _ = QFileDialog.getOpenFileName(None, 'Choose an image file', '', 'PNG images (*.png)')
+        if not fullname:
+            return
+        if self.dirname:
+            try:
+                relative = os.path.relpath(fullname, self.dirname)
+            except: # this can throw on Windows
+                fname = fullname
+            else:
+                if '..' not in relative:
+                    fname = relative
+                else:
+                    fname = fullname
+        else:
+            fname = fullname
+        self.textedit.insert_image_links(fullname, fname)
+    def insert_dnd(self) -> None:
+        fname, _ = QFileDialog.getOpenFileName(None, 'Choose a dnd file', '', 'Dnd files (*.dnd)')
+        if not fname:
+            return
+        if self.dirname:
+            try:
+                relative = os.path.relpath(fname, self.dirname)
+            except: # this can throw on Windows
+                pass
+            else:
+                if '..' not in relative:
+                    fname = relative
+        self.textedit.insert_dnd(fname)
+    def insert_css(self) -> None:
+        fname, _ = QFileDialog.getOpenFileName(None, 'Choose a css file', '', 'CSS files (*.css)')
+        if not fname:
+            return
+        if self.dirname:
+            try:
+                relative = os.path.relpath(fname, self.dirname)
+            except: # this can throw on Windows
+                pass
+            else:
+                if '..' not in relative:
+                    fname = relative
+        self.textedit.insert_css(fname)
+    def insert_js(self) -> None:
+        fname, _ = QFileDialog.getOpenFileName(None, 'Choose a JavaScript file', '', 'JS files (*.js)')
+        if not fname:
+            return
+        if self.dirname:
+            try:
+                relative = os.path.relpath(fname, self.dirname)
+            except: # this can throw on Windows
+                pass
+            else:
+                if '..' not in relative:
+                    fname = relative
+        self.textedit.insert_js(fname)
+    def export_as_html(self):
+        try:
+            html = pydndc.htmlgen(self.textedit.toPlainText(), base_dir=self.dirname)
+        except ValueError:
+            mbox = QMessageBox()
+            mbox.critical(None, 'Unable to convert current document', 'Unable to convert current document to html.\n\nSyntax Error in document (see error output).')
+            return
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontConfirmOverwrite
+        options |= QFileDialog.DontUseNativeDialog
+        fname, _ = QFileDialog.getSaveFileName(None, 'Choose where to save html', '', 'HTML files (*.html)', initialFilter="*.html", options=options)  # type: ignore
+        if not fname:
+            return
+        if not fname.endswith('.html'):
+            fname += '.html'
+        savefile = QSaveFile(self)
+        savefile.setFileName(fname)
+        savefile.open(savefile.WriteOnly)
+        text = html.encode('utf-8')
+        if not text.endswith(b'\n'):
+            text += b'\n'
+        savefile.write(text)  # type: ignore
+        savefile.commit()
 
 
 def make_page_widget(filename:str) -> Optional[QWidget]:
@@ -446,7 +590,16 @@ def new_file(*args) -> None:
 
 def save_file(*args) -> None:
     page = tabwidget.currentWidget()
+    if not page:
+        return
     page.save()
+
+def export_file(*args) -> None:
+    page: Optional[Page] = tabwidget.currentWidget()
+    if not page:
+        return
+    page.export_as_html()
+
 
 def toggle_editors(*args) -> None:
     if not all_windows:
@@ -498,6 +651,13 @@ def pickfont(*args) -> None:
         for page in all_windows.values():
             page.textedit.setFont(FONT)
 
+def insert_func(method):
+    def insert_foo(*args) -> None:
+        current_tab: Optional[Page] = tabwidget.currentWidget()
+        if not current_tab:
+            return
+        method(current_tab)
+    return insert_foo
 
 def add_menus() -> None:
     menubar = window.menuBar()
@@ -519,6 +679,11 @@ def add_menus() -> None:
     action.setShortcut(QKeySequence('Ctrl+s'))
     filemenu.addAction(action)
 
+    action = QAction('&Export As HTML', window)
+    action.triggered.connect(export_file)
+    action.setShortcut(QKeySequence('Ctrl+e'))
+    filemenu.addAction(action)
+
     action = QAction('&Close', window)
     action.triggered.connect(close_current_tab)
     action.setShortcut(QKeySequence('Ctrl+w'))
@@ -538,6 +703,28 @@ def add_menus() -> None:
     action = QAction('F&ont', window)
     action.triggered.connect(pickfont)
     editmenu.addAction(action)
+
+    insert = menubar.addMenu('Insert')
+
+    action = QAction('&Image', window)
+    action.triggered.connect(insert_func(Page.insert_image))
+    insert.addAction(action)
+
+    action = QAction('Image &Links', window)
+    action.triggered.connect(insert_func(Page.insert_image_links))
+    insert.addAction(action)
+
+    action = QAction('&Dnd Import', window)
+    action.triggered.connect(insert_func(Page.insert_dnd))
+    insert.addAction(action)
+
+    action = QAction('&JS', window)
+    action.triggered.connect(insert_func(Page.insert_js))
+    insert.addAction(action)
+
+    action = QAction('&CSS', window)
+    action.triggered.connect(insert_func(Page.insert_css))
+    insert.addAction(action)
 
     viewmenu = menubar.addMenu('View')
 
