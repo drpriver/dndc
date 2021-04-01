@@ -308,11 +308,11 @@ load_processed_binary_file(Nonnull(Base64Cache*)cache, StringView binarypath, No
     for(size_t i = 0; i < cache->processed_binary_files.count; i++){
         auto loaded = &cache->processed_binary_files.data[i];
         if(LS_SV_equals(loaded->sourcepath, binarypath)){
-            DBG("Returning cached b64: '%.*s'", (int)binarypath.length, binarypath.text);
+            // DBG("Returning cached b64: '%.*s'", (int)binarypath.length, binarypath.text);
             return (Errorable(LongString)){.result=loaded->sourcetext};
             }
         }
-    DBG("Not cached, processing b64: '%.*s'", (int)binarypath.length, binarypath.text);
+    // DBG("Not cached, processing b64: '%.*s'", (int)binarypath.length, binarypath.text);
 
     // We don't have it, try to load it ourselves.
     auto a = cache->allocator;

@@ -1,0 +1,466 @@
+Mechanics::title @hide
+::import
+  rules.dnd
+Spell Recovery::md
+  After 24 hours of resting and light activity, 1st level spells are regained.
+  Another 24 hours later, 2nd level spells, etc.
+
+  Some special abilities (for example, healing devotion) will be ruled to be
+  spell-like and recharge by like a spell of an appropriate level.
+
+Recruiting NPCs::md
+  Hirelings are limited by local availability. Hirelings can be recruited from
+  taverns, from mercenary companies, or from paying for an announcement from the
+  village crier. You can do more than one at once. Each attempt will cost 5-ish
+  gp and result in a random pool of candidates. You don't have to hire everyone.
+
+  There are generally 4 types of characters that can be recruited to help the
+  party: classed NPCs, men-at-arms, unskilled hirelings and skilled experts. If
+  too many hirelings die, base morale for hirelings may be reduced and/or higher
+  wages may be demanded. Fear points are not tracked for men-at-arms and
+  unskilled hirelings, as that concept is rolled into morale.
+
+  Classed NPCs::md
+    Classed NPCs are adventurers, equal in status to the PCs. These characters
+    will generally join an adventure for a share of the loot and will contribute
+    to shared expenses, but others might negotiate better deals, especially if
+    their skills are rare or they are higher level than the party. Generally,
+    this will be roleplayed in person. These characters do not need to roll
+    morale.
+
+  Men-at-arms::md
+    Men-at-arms are warrior-types with average stats for their race (ex: all 10s
+    for a human). They are typically level 1 warriors, but higher level
+    men-at-arms exist. They must be paid a fortnight's wage up-front, even if the
+    adventure is shorter. The minimum wage for men-at-arms is 1gp per day, but a
+    bad reputation may drive this price higher. If the men-at-arms are to go in
+    the dungeon, they must be paid double as hazard pay. The 1gp/day is for
+    mercenaries who are just hired to protect the party in overland travel or to
+    guard the campsite, etc. Additionally, higher wages will boost the morale of
+    men-at-arms, making them less likely to abandon the party, flee in the face
+    of supernatural monsters or when outnumbered, etc.
+
+    Men-at-arms have 8hp, proficiency in simple, martial weapons, armor, shields.
+    They have +1 bab, +2 fort save and no significant secondary skills. They also
+    get a special ability (usually a feat which they shouldn't qualify for, but
+    YOLO).
+
+    In this region, men-at-arms fall into the following equipment load-outs.
+
+    Glavier::md .def
+      * Glaive, Scale Mail
+      * AC 14, 1d10 damage, reach, 8 hp
+      * Mobility feat
+      * 5 free slots
+    Crossbowman::md .def
+      * Light Crossbow, Leather Armor, 20 bolts
+      * AC 12, 1d8 damage, ranged, 8 hp
+      * Precise shot feat
+      * 6 free slots
+    Defender::md .def
+      * Scale Mail, Heavy Wooden Shield, Longsword
+      * AC 16, 1d8 damage, 11 hp
+      * Toughness feat
+      * 4 free slots
+    Reaver::md .def
+      * Scale Mail, Greataxe
+      * AC 14, 1d12 damage, 8 hp
+      * Cleave feat
+      * 5 free slots
+    Dwarf::md .def
+      * Scale Mail, Dwarven Waraxe, Heavy Steel Shield
+      * AC 16, 1d10 damage, 9 hp
+      * Weapon Focus: Axes
+      * 4 free slots (note that dwarves suffer reduced heavy encumbrance
+        penalties)
+      * Double wages
+    Elf::md .def
+      * Leather, Longbow, 20 arrows
+      * AC: 13, 1d8 damage, 7 hp
+      * +1 to ranged attack due to dex
+      * Precise shot feat
+      * 6 free slots
+      * Double wages
+    You can change out a men-at-arms equipment, but you must provide it. It must
+    fit their style or they will be annoyed at you, lowering their morale
+    (defenders don't want to use greataxes). They will not pay for it. Their
+    money is for food, drugs, alcohol and women. You can loan them equipment.
+    Note that if a character dies, it is assumed their armor is badly
+    damaged/destroyed.
+
+  Unskilled Hirelings::md
+    Unskilled hirelings are commoner-types with average stats for their race.
+    They have no signficant combat skill and will choose to run or cower instead
+    of fighting. They are useful for holding torches, carrying supplies, lifting
+    things, cooking meals, etc. 3sp/day is the minimum wage for them. Unskilled
+    hirelings are also paid a fortnight's wages up front if going on an adventure
+    (day laborers for tasks in town are paid daily). If they are to go in the
+    dungeon, they should be paid double as hazard pay.
+
+    Hirelings will generally not do dangerous things willingly and will not fight
+    in combat. If forced to fight, they will instead flee or cower. They still
+    occupy space in the party's ranks and may be targeted by monsters. In the
+    face of the supernatural or otherwise particulary scary monsters, they must
+    check morale. Higher wages and good treatment improves their morale.
+
+    Unskilled hirelings have 3 hp, no weapon or armor proficiencies, no save
+    bonuses.
+
+  Skilled Experts::md
+    These are characters who possess a particular skill, but are not otherwise
+    adventurers. They generally will not fight. Payment is negotiated based on
+    the task.
+
+Some Tomb Robbing Rules::md
+  Dungeon Turn::md
+    The below rules refer to "turns" in an exploration context. These should be
+    interpreted as 10 minute intervals.
+
+  Bricked-Up Walls::md
+    You might encountered walls that have been bricked up. These walls are
+    breakable with the right tools and some time.
+
+    ::table
+      No. of Sledge Hammers | Time Spent
+      1 Character           | 3 turns
+      2 Characters          | 2 turns
+      3 Characters          | 1 turn
+    Breaking down a brick wall is quite loud and will likely attract the
+    attention of any monsters wandering nearby.
+
+  Sealed Mounds::md
+    Some Burial Mounds are sealed with stone doors. A Sledge Hammer and spike
+    will be needed to break it open. This takes 2 turns and makes a hell of a lot
+    of noise, or 1 turn with two working at it (each needs tools).
+
+  Buried Mounds::md
+    Some burial mounds have been buried in dirt over the years and will need to
+    be excavated to be entered.
+
+    Excavation requires 3d4+4 hours (1 hour equals 6 turns) of digging with
+    appropriate digging tools (shovels, etc) and equipment purchased in town. For
+    each 2 PCs or hirelings devoted to the task the result will be reduced by 1
+    hour to a minimum of 2 hours to excavate the entrance to the mound.
+
+  Searching a lot of small containers::md
+    There are locations with a huge number of small containers or alcoves to
+    search. A character can search 10 such containers in 10 minutes. For example,
+    5 characters searching 145 alcoves will take 3 turns (5 * 10 * 3 = 150).
+
+Character Upkeep::md
+  When staying in town, characters need to either rent rooms at the inn
+  (2gp/day), purchase a house to stay in or befriend locals. Additionally, they
+  must eat at the cost of 5sp/day. These costs represent good meals and good
+  rooms. If a character cannot afford this, they do not lose fear points.
+  Additionally, until they spend a week in good living conditions they suffer a
+  -1 penalty to attacks, saving throws and skill checks.
+
+Fear Points::md
+  <s>Encounters with spooky monsters and other events will cause accumulation of
+  fear points. Each encounter with the undead causes each party member to gain 1
+  fear point. A failed save against a fear effect from an undead causes that
+  party member to gain 3 fear points. A character who has 20 fear points goes
+  insane. Spending a week in town reduces the character’s fear points by 3.</s>
+
+  These rules have been superceded by the stress rules. All current fear points
+  are converted to stress points.
+
+Stress Points::md
+  The following event result in all characters gaining 1 stress:
+
+  * Encounter with undead
+  * Encountering an extra spooky undead (in addition to above)
+  * An undead dropping a character to below 0
+  * A character dies
+  * Getting lost
+  An individual character will gain 1 stress when:
+
+  * Failing a fear save
+  * Going below 0 HP (stacks with above)
+  * Flees from combat
+  These reduce stress:
+
+  * Indluging a craving (the weekly craving upkeep, once a week)
+  * 1 week of binging (-10 stress) (pay weekly craving upkeep every single day
+    for 1 week)
+  * Winning a fight without taking damage (the big balls rule)
+  Consequences:
+
+  * Characters with 10 stress have -1 to all actions
+  * Characters with 20 stress die
+Resurrection::md
+  Major Temples can cast raise dead for 10,000gp. A raised character loses a
+  level.
+
+  Druid Groves can cast reincarnate. You reincarnate into a random humanoid, lose
+  a level, but is free. This requires the druids to like you.
+
+Supplies::md
+  ::comment
+    This has regressed, used to be like this:
+    I got annoyed with the existence of the bullets node in addition
+    to md as it just makes things a little simpler for parsing instead
+    of being consistent or anything.
+    * Supplies can be purchased for 5sp.
+    * Supplies represent food, clean water, dry socks, etc.
+    * You need supplies or you die.
+      * After 1 day without supplies, you become fatigued.
+      * Half a day later you become exhausted.
+      * Half a day after that you die.
+    * Supplies take up a slot for a single day and are consumed in the morning
+      when in the wilderness.
+
+  * Supplies can be purchased for 5sp.
+  * Supplies represent food, clean water, dry socks, etc.
+  * You need supplies or you die.
+  * After 1 day without supplies, you become fatigued.
+  * Half a day later you become exhausted.
+  * Half a day after that you die.
+  * Supplies take up a slot for a single day and are consumed in the morning when
+    in the wilderness.
+Encumbrance::md
+  You can carry your strength score in slots without being encumbered
+
+  * Assume hirelings have 10 in all stats.
+  * You can carry up to double this amount and be heavily encumbered
+  Heavily Encumbered means:
+
+  * Move at half speed (unless you're a dwarf)
+  * -4 penalty to dex (unless you're a dwarf)
+  * Extra -4 penalty to ACP (especially if you're a dwarf)
+  Weapons::kv @id(encumbrance-weapons)
+    1-handed: 1 slot
+    2-handed: 2 slots
+    Javelin: 5 per slot
+    40 ammo (bullets/arrows/bolts): 1 slot
+  Armors::kv @id(encumbrance-armors)
+    Light Armor: 1 slot
+    Medium: 3 slots
+    Heavy: 5 slots
+    Light Shields: 1
+    Heavy Shields: 2
+    Tower Shield: 5
+  Gear::kv @id(encumbrance-gear)
+    Things like rope: 1 slot
+    Lockpicks: hand waved
+    10 torches: 1 slot
+    Sledge Hammer: 2 slots
+    Shovel: 2 slots
+    Tent: 4 slots
+  Supplies::kv @id(encumbrance-supplies)
+    Day of supplies: 1 slot
+  Potions::kv @id(encubmrance-potions)
+    4 potions: 1 slot
+  Scrolls::kv @id(encumbrance-scrolls)
+    10 to a case: 1 slot
+  Coins::kv @id(encumbrance-coins)
+    250 coins: 1 slot
+  Misc::kv @id(encumbrance-misc)
+    Incapacitated person: 10 slots
+Misc Gear Rules::md
+  Tent::md .def
+    A tent can fit 6 people.
+
+Combat::md
+  * Movement is 5e-style, though you still have to spend a move action to be
+    granted that movement in the first place
+    * In other words, you can move, take an action then finish your move
+  * 5-ft step cannot move you out of someone’s threatened zone (can move into
+    someones threatened zone though)
+  * Side-based initiative, with interleaved turns, but without rerolling each
+    round
+  * At beginning of combat, roll a d20 + median initiative modifier vs their same
+    roll to see who goes first.
+  * Really basic grid +battlemaps + abstract tokens
+  * No concentration Skill
+    * If you take damage while casting, there is a flat 50% chance you fizzle the
+      spell.
+  * Casting while engaged in melee ordinarily provokes (with the usual caveats
+    for swift-action casting, etc.)
+  * Melee range attack spells (such as inflict wounds) do not provoke and area
+    spells originating from you (like burning hands) do not provoke.
+  * No Touch AC (things that target touch instead target AC, but at +4)
+  * Melee full attacking is a standard action, ranged full attacking is
+    full-action as normal
+  * Spell Resistance works on all spells (including nonsense SR: no spells)
+  * Spell Resistance = Psionic Resistance
+  * Undead/Constructs can be critically-hit/snuck attacked
+  * Flanking is gone, except thieves can flank
+    * That one stance is its own thing that gives +2 with adjacent allies
+  * Bull rush doesn’t provoke
+  * Touch Spells discharge after 4 hours (or per spell description)
+  * Sunder, bull rush, trip doesn’t provoke attacks of opportunity
+  * Grapple doesn’t need a touch attack
+  * Grapple can be defended against by strength (bab+str+other), dex
+    (bab+dex+other), or escape artist (escape ranks + dex + other)
+  * Soft Cover is reduced to +2 AC instead of +4. We'll be flexible on whether or
+    not you can get a clear shot in theater-of-the-mind combats
+    * Soft cover still prevents attacks of opportunity (aka spears from the second
+      rank).
+  * Targeting is from center of square to center of square for cover, line of
+    sight, etc. in combat.
+  * Reserve Feats are spell-like abilities
+  * Damage reduction N/- stacks with everything
+  * If you have lost your action at the start of the round (say you are stunned
+    or dying), if the status is removed (say you are healed or hold magic is
+    dispelled), you still lose your turn that round.
+  Running Away::md
+    The party can run away by creating an opportunity for such.
+
+    Heroic Sacrifice::md
+      A player sacrifices his character holding off the enemy. This is always
+      succesful.
+
+Overland Travel::md
+  When traveling on the overland hexmap (6 mile scale), each day is played out as
+  follows.
+
+  Each day the party has 4 movement points. The referee will rule on partial
+  days. Moving 1 clear six mile hex costs 1 movement point. If the terrain is
+  difficult, it costs 2 and some terrain costs 3.
+
+  ::table
+    Terrain                                            | Movement Cost
+    Clear (plains, steppe, farmland)                   | 1
+    Rough (Hills, woods, desert, marsh)                | 2
+    Brutal (Mountains, Jungle, particulary bad swamps) | 3
+  ::table
+    Hex Condition                             | Cost Modifier
+    Bad Weather (heavy rain, snow, thick fog) | +1
+    Temperature Extremes                      | +1
+    Good Roads                                | -1 (see below)
+    Encumbered                                | x2
+  ::table
+    Daily Modifiers                              | Movement modifier
+    Large Party (>12 characters)                 | -1 movement
+    Characters unable to move on their own       | -1
+    Characters all have speeds of 40' or greater | +1
+  Good roads bonus is applied at most once per day and at least two hexes of good
+  roads must be covered that day.
+
+  When exploring uncharted terrain, a blank hexmap is used. When you enter a hex,
+  adjacent hexes are revealed. Mountains and some hill hexes might be revealed
+  from farther away depending on general conditions.
+
+  Generally, every 3 hours of adventuring and dungeon-crawling counts as 1
+  overland movement point.
+
+  Forced March::md
+    A forced march allows the party to add one movement point for that day. A
+    forced march causes you to become fatigued. A full day of rest is needed to
+    recover. NPCs don't like forced marching and will ask for rest. Refusal can
+    provoke morale checks.
+
+  Partial Movement::md
+    If the party has leftover movement points at the end of the day, they can
+    partially move into the next hex. They remain in their current hex, but they
+    are credited with moving towards that hex. This credit is not transferrable
+    --- if they decide during the night they need to go a different direction,
+    the points are wasted, and if you need to go the opposite way they are
+    actually subtracted from the next day's allowance to get back to neutral.
+
+  Navigation::md
+    Each time the party attempts to move into a hex, the referee determines if
+    they get lost by rolling dice based on the hex and local conditions. If it is
+    determined they would get lost, the party navigator can make a reactive
+    survival check at DC 20 to instead not get lost. You cannot take 5 on this
+    check. If you get lost, you did not move to your target hex.
+
+    A party that has passed through a hex before does not chance getting lost
+    from just moving through the hex. This represents remembering natural
+    landmarks, where to turn, etc. The referee may determine that enough time has
+    passed and the hex changed enough that the party is at risk of getting lost
+    again (perhaps at reduced probability). For example, traveling through a
+    deciduous forest in winter is very different than in the summer - almost
+    nothing looks the same.
+
+  Being Lost::md
+    When you get lost, you are lost in your current hex. To find their way, the
+    party must spend hex points equal to the cost spent to enter the hex they are
+    in, and then make a survival check to stop being lost. Failure means that the
+    party is still lost. Repeat this process until the party finds their way
+    (either by a successful roll or by some other process). After each failure,
+    the referee will roll to see if the party has wandered into a different hex.
+
+  Scouting::md
+    There are generally 3 kinds of features in a hex: overt, non-obvious and
+    secret. An overt feature is something like a town that would be encountered
+    by anyone passing through the area and is automatically encountered. A
+    non-obvious feature is something off the beaten path, but would be found if
+    you scouted the area, like a haunted mansion. Secret features are things that
+    can only be found if you know to look for them, like following tracks to an
+    ogre's lair or an ancient temple hidden by overgrown vines. Secret features
+    can generally only be found if the party knows they exist or have some clues
+    that point them towards it.
+
+    To scout a hex, spend the same number of movement points as if you were
+    entering the hex. Additionally, a check is made to see if the party has
+    gotten lost, with a reactive survival check allowed if they have. Failure
+    means the party is lost, which is resolved in the same manner as above. A
+    success reveals the non-obvious features of the hex. Some hexes have no
+    features, some hexes have several.
+
+    Lost characters may randomly stumble into features.
+
+  Random Encounters::md
+    Each movement into a hex will require a check for wandering monsters, as will
+    scouting a hex and attempts to cease being lost. If you are just moving and
+    the navigator has achieved competency for that hex, a reactive survival check
+    is allowed to avoid the encounter.
+
+    The base encounter chance is 1-in-6, but the referee may adjust this
+    probability based on party actions, party size, conditions on the ground,
+    etc. A suitably large mercenary force may scare away encounters.
+
+  Camping::md
+    When camping in the wilderness, the referee will check to see if something
+    happens. Finding a good campsite in a hex is DC 15 and can be done at the
+    cost of 1 movement point. The DC can be adjusted based on local conditions.
+    Once a campsite in a hex is found, you can return to that campsite when in
+    that hex at no additional movement cost. A good campsite halves the chance of
+    a nighttime encounter.
+
+  Mounts::md
+    Mounts have their own movement allowance. If the entire party is mounted, the
+    party can move at this higher allowance. Mounts have restrictions on what
+    terrain they can enter. Also consult this if you have pack animals. A party
+    travels at the rate of its slowest member.
+
+    ::table
+      Creature            | Movement Points
+      Donkey/Mule         | 5
+      Giant Riding Lizard | 5
+      Draught Horse       | 5
+      Riding Horse        | 6
+      War Horse           | 5
+      Ox                  | 4
+Skill Checks::md
+  In normal 3e, you can almost always take 10 outside of combat or time-sensitive
+  encounters. However, you also are not supposed to know the DC before you roll,
+  so that taking 10 is a hidden information game. This is incompatible with my
+  style, so taking 10 is replaced with taking 5 and instead represents competency
+  --- if you would succeed with a below average result, you succeed in normal
+  circumstances.
+
+  Taking 5::md
+    When you need to make a skill check, if you would succeed on a roll of 5, you
+    don't need to roll and instead succeed. This can be applied after rolling as
+    the DM doesn't always know your bonuses. This rule does not apply in
+    stressful or distracting situations like combat and does not apply to
+    knowledge checks. You cannot take 5 on "reactive" skill checks.
+
+  Survival::md
+    The check to avoid getting lost is superceded by the [Overland Travel] rules
+    above.
+
+  Gather Information::md
+    An evening at the tavern yields a common rumor (you can receive the same
+    rumor more than once). An evening at the tavern and a DC 15 gather
+    information check yields a rare rumor in addition to the common rumor. A
+    player can only gather rumors once per session, even if they have multiple
+    characters.
+
+Crafting Times::md
+  This is just collecting misc. crafting times.
+
+  * The smith in Velyx takes 6 workdays to craft a suit of splint armor.

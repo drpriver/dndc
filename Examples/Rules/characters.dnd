@@ -1,0 +1,233 @@
+Characters::title@hide
+::import
+  rules.dnd
+Stats::md
+  Pick one of these:
+  1. 15, 14, 13, 10, 9, 8;
+  2. 4d6kh3 in order, clamp to 7-16, reroll one stat.
+Multiple characters::md
+  You can play a character + 1 pure-class fighter. Secondary character must use
+  the 15, 14, etc. array.
+Perception Saves::md
+  A new saving throw category, perception saves are made when you would trigger
+  a trap and against illusions. See [class tweaks] for whether it is a good save
+  or not for you. Perception saves key off Int. This is a last-chance check to
+  avoid a trap - detecting a trap in the first place is done through searching
+  or player logic.
+Xp and Stuff::md
+  XP for gold (coins, gems, jewelry). This treasure must be gained by risking
+  life and limb. Gems and jewelry must be sold to gain XP. Magic items do not
+  grant XP, but can be sold. They do not grant xp when sold.
+
+  100xp per level for journal entries. You can only write one journal entry per
+  session.  If you have more than one character, pick one.
+
+  Level table::table
+    Level   | Total XP
+    Level 1 | 0 xp
+    Level 2 | 2000xp
+    Level 3 | 4000xp
+    Level 4 | 8000xp
+    Level 5 | 16,000xp
+    Level 6 | 32,000xp
+
+  After level 6, a character receives a bonus feat every 32,000xp. You then go
+  back to 32,000xp. You are still level 6 and if you lose a level, you go to
+  level 5.
+
+  If a level is lost for whatever reason (level drain, raise dead, etc.), your
+  xp is set to the minimum xp of the previous level. If you lose a level at
+  level 6, you become level 5.
+
+  For multiclass characters, they require twice as much XP at each level and
+  cap out at level 5 instead of level 6. They still gain a bonus feat every
+  32,000 XP after reaching level 5.
+Magic Item Acquistion::md
+  Magic items are normally found as treasure, but can also be traded from NPCs.
+
+  There is a magic item shops, with random inventory that changes occasionally.
+
+  Magic Items can’t be crafted. Any feature that grants a crafting feat or
+  requires a crafting feat instead grants/requires a similarity themed feat.
+  For example, wizards get a metamagic feat instead of scribe scroll.
+
+Favored Class::md
+  does nothing.
+
+Skills::md
+  * No class skills (all skills can be purchased at 1 point per rank), with the exception of speak language.
+  * All classes get an extra 2 skill points per level (8 extra points at level 1).
+  * Hide/move silently merged into stealth. Monster’s have CR-dependant perception
+    DC. “Sneaky” monsters have x% chance to surprise, modified by circumstance,
+    player choices (such as posting guards), etc.
+  * Spot/listen dropped.
+  * Searching is done in 10’ cubes or 20’ x 5’ x 10’ volumes. Searching such a volume takes 5 minutes and will reveal traps/secrets/hidden compartments.
+  * Craft(alchemy) can be used to identify potions (DC 25).
+Class Tweaks::md
+  * No trading away familiars.
+  * PHB classes only.
+  * Warrior classes can purchase maneuvers with feats (no restrictions on martial
+    study or whatever it is called). They count as full initiator level.
+  * Tome of battle things that target allies that don't specify you, don't affect you.
+  Fighters::md
+    * Fighters have all good saves
+    * Fighters get a bonus feat every level instead of the fighter bonus feat schedule.
+  Monks::md
+    * Monks get an extra +4 ac but do not add wisdom to their AC
+    * Monks have full BAB, Good perception save.
+  Paladins::md
+    * Paladin warhorses are immortal but take 1 week to reform when slain. Warhorses can cast cure light wounds 1/paladin level per day.
+    * Good will saves (was bad will save)
+    * Bad Perception save
+  Druids::md
+    * Druids are banned
+  Rangers::md
+    * Rangers get animal companions at the progression that druids would in normal 3e (but still at level 4).
+    * Rangers have d10 hit dice.
+    * Good perception save
+  Rogue::md
+    * Good perception save.
+    * Rogues can flank.
+    * Rogues must be members of the thieves guild or else be ex-thieves guild member
+      and be enemies of the thieves guild. Highlights include being attacked by thugs.
+    * Sneak attacks can crit, but no auto crit spells.
+    * When rogues sneak, they actually turn invisible. When they get within 10 feet of someone, that person can roll to see them. When they attack, it ends. If the rogue takes damage, it ends.
+    * In a dungeon scenario, a thief is assumed to be sneaking when the party is
+      generically walking through the dungeon, when the party is preparing to open a
+      door and then opening the door and in general when the thief is not doing
+      much.  The thief is not sneaking when he is searching, opening locks, talking
+      to the party about what to do and other active activities.
+  Bard::md
+    * Bards are banned for sucking and I don’t want to homebrew a fix unless you really want to play a bard.
+  Sorcerer::md
+    * Bad Perception save
+    * Shift their spell-progression and spells known table down one level (so they have 4 level 1 spells at level 1, can cast 2nd level spells at level 3, etc.)
+
+  Barbarian::md
+    * Good perception save, trap sense adds to perception saves.
+    * Good Reflex save (was bad)
+    * Improved Uncanny dodge: additionally, grants blind-fight feat.
+  Wizard::md
+    * Bad perception save
+    * Instead of scribe scroll, any metamagic feat.
+  Cleric::md
+    * Bad Perception save.
+    * Domains that grant unusual forms of turning do not grant separate uses: they instead provide an alternative use for normal turning.
+    * Turn undead recharges like a 1st level spell.
+
+Prestige Classes::md
+  No prestige classes.
+Multiclassing::md
+  Classes are categorized into metaclasses. You can only multiclass across
+  metaclasses. Multiclassing begins at level 1. You pick either 2 or 3 classes
+  to multiclass. You evenly divide your xp across your classes. Your hit dice
+  is the average of the classe’s hit dice. For example, a Barbarian/Sorcerer
+  (d12 and d4) would be a d8. A  muticlass character cannot reach level 6. Upon
+  reaching level 5 they receive a bonus feat every 32,000xp.
+
+  You get the better of the classes’ skill points, BAB, saves. Other features
+  are acquired like a character of that level (but in general you will be one
+  level lower than a pure class character).
+
+  This is probably imba, so we will spot-check specific combos.
+
+  Warrior/Mages can cast in elven chain mail with no spell failure chance.
+
+  Paladins and Monks can’t multiclass. Barbarians can’t multiclass.
+  Warrior::md
+    Fighter, Ranger
+  Priest::md
+    Cleric
+  Mage::md
+    Sorcerer, Wizard
+  Thief::md
+    Rogue
+Races::md
+  PHB races + 1 goofy one that people request.
+Spells::md
+  Srd and phb2 spells
+
+  Failure to use a scroll for any reason still uses the scroll (the magic
+  starts discharging when you start using it, the question is whether it has
+  the spell effect, a mishap or no effect).
+
+  Summoning spells are banned.
+
+  Buffs must be measured in tens of minutes or longer to be pre-cast. No
+  pre-casting buffs with a duration shorter than that.
+
+  Magic Weapon lasts 1 hr/level.
+Feats::md
+  Feat Tweaks::md
+    * No persist spell
+    * No shock trooper
+    * No invisible spell
+    * No Scribe Scroll and no magic item crafting feats
+    * Feats that reduce the cost of metamagic cannot reduce the spell’s level
+      adjustment to 0 or less, calculated independently.
+    * Dodge is just +1 dodge bonus to AC instead of what it does.
+    * Rapid shot and rapid reload merged into one feat with rapid shot’s prerequisites.
+  If the campaign lasts long enough to get towards level cap, I'll add some
+  level-cap only feats.
+Homebrew Feats::md
+
+Starting Gold::md
+  ::table
+    Class      | Gold
+    Barbarian  | (4d4) x 10gp
+    Cleric     | (5d4) x 10gp
+    Fighter    | (6d4) x 10gp
+    Monk       | 5d4gp
+    Paladin    | (6d4) x 10gp
+    Ranger     | (6d4) x 10gp
+    Rogue      | (5d4) x 10gp
+    Sorcerer   | (3d4) x 10gp
+    Wizard     | (3d4) x 10gp
+    Multiclass | Higher of the two
+
+  You can buy anything in the PHB. You’ll probably want to buy some number of
+  shovels and pickaxes and sacks. There will be equipment for sale in town, but
+  it will be more limited and vary in stock.
+
+Languages::md
+  * Dwarven
+  * Elven
+  * Goblin
+  * Draconic
+  * Sylvan
+  * Demonic
+  * Celestial
+  * Orc
+  * The Black Tongue
+  * Common
+  * Old Common
+  * Giant
+  * Gnome
+Character Cravings::md
+  Your character has some kind of craving: choose or roll on the table below.
+  You can't choose Special.
+
+  Failure to satisfy this craving will lead to negative outcomes per the
+  referee's discretion. Your craving must be satisfied an average of once
+  a day and you can go no longer than a week before suffering withdrawl.
+
+  Since you are a degenerate, you can't purchase more than a week's supply
+  ahead of time. You would just binge on your supply.
+
+  Normal Cravings::table
+    d6 | Craving       | Weekly Cost
+    1  | Opium         | 5gp/level
+    2  | Alcohol       | 5gp/level
+    3  | Women         | 5gp/level
+    4  | Fine Cheese   | 5gp/level
+    5  | Fancy Clothes | 5gp/level
+    6  | Special       | Special
+
+  Special::table
+    d6 | Craving                  | Weekly Cost
+    1  | Shoes                    | 10gp/level
+    2  | Jewelry and Trinkets     | 25gp/level
+    3  | Killing (human)          | Once a month instead of once a week.
+    4  | Bread                    | 1gp/level
+    5  | No Craving               | ---
+    6  | Referee's Special Choice | Special

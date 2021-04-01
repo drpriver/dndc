@@ -1,0 +1,99 @@
+*{
+    box-sizing:border-box;
+    scrollbar-width: none;
+}
+::-webkit-scrollbar {
+    display:none;
+}
+a, img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+}
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: "Tahoma";
+}
+p {
+    text-align: justify;
+}
+
+body > div {
+    margin: 1em 2em 1em 2em;
+    max-width: 80em;
+}
+
+h1,h2,h3,h4,h5,h6 {
+    font-family: "Tahoma";
+}
+
+h3,h4,h5 {
+    color: rgb(88,24,13);
+}
+h1, h2, h3 {
+    border-bottom: 1px solid #aaaaaa;
+    max-width: 50em;
+}
+
+a {
+    text-decoration: none;
+    color: black;
+    border-bottom: 1px grey dotted;
+}
+
+div.cal {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+div.calday {
+  text-align: right;
+  border: 1px solid black;
+  margin-top: -1px;
+  margin-left: -1px;
+  padding: 0 0.3em;
+  min-height: 6em;
+  width: auto;
+}
+div.calday h4 {
+  border: 0;
+  margin-top: 0.2em;
+  margin-bottom: 0.1em;
+  color: black;
+}
+div.calday div{
+  font-size: 60%;
+}
+
+div.calday div p:nth-child(1) {
+  margin-top: 0;
+}
+
+div.caldayname {
+  text-align: center;
+}
+div.caldayname h4{
+  border: 0;
+  color: black;
+}
+
+div.nonday {
+  background-color: lightgray;
+}
+
+div.calday *{
+  margin-left: 0;
+  margin-right: 0;
+  text-justify: left;
+}
+div.calday ul {
+  padding-left: 4px;
+  padding-right: 4px;
+  list-style-type: none;
+}
+div.calday ul li {
+  margin-bottom: 4px;
+  text-align: left;
+}

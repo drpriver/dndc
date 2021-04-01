@@ -1,0 +1,323 @@
+::css
+  dungeon.css
+::python
+  # I think this is wrong actually.
+  root = ctx.root
+  make_node = ctx.make_node
+  left_node = next((n for n in root.children if 'left' in n.classes), None)
+  if left_node is not None:
+    left_node.detach()
+  container = make_node(NodeType.DIV, classes=['center'])
+  new_root = make_node(NodeType.DIV, classes=['grid_container'])
+  new_root.add_child(container)
+  root.detach()
+  if left_node is not None:
+    new_root.add_child(left_node)
+  container.add_child(root)
+  ctx.set_root(new_root)
+  #endpython
+::div .left
+  Explanation of imglinks::comment
+    The first line is the path to the image.
+    The second line is the width, in px, that the image should be displayed at.
+    The third line is the height, like width.
+    The viewBox is the section of the image that should actually be displayed,
+    in pixels of the original image. In general, you want '0 0 width height' where
+    width and height are the actual width and height of the image, not the scaled
+    ones. If you do an "Insert -> Image Links", it will calculate these numbers
+    for you.
+  
+    The following lines are then in the form of
+      textonmap = page#anchor @ x, y
+    Where textonmap is the string to be displayed, page is the page to go to
+    (it can be left out, but if you put it means you can link to other pages),
+    anchor is the id of a node on the page (inspect the page for ids or
+    do it programmatically) and (x,y) are the coordinates to be displayed at.
+    Note that the string is centered on the x,y coordinate.
+    
+    If you need help calculating the coordinates on the map, use this special
+    builtin js block (as a child of a non-commented block).
+    ::js
+      builtins/coords.js
+    It will add a coordinate readout below the image when you move your pointer
+    over it.
+    
+    Having the nodes and where they are positioned be separated is annoying,
+    so below is an example of how to get all the nodes that have the .room class
+    and the @coord attribute and then programatically adding them to the imglinks
+    node.
+  ::imglinks
+    imgs/cells.png
+    width = 600
+    height = 450
+    viewBox = 0 0 800 600
+    ::python
+      imglinks = node.parent
+      outfile = ctx.outfile
+      coords = ctx.select_nodes(attributes=['coord'], classes=['room'])
+      for node in coords:
+        lead = node.header[:node.header.index('.')]
+        position = node.attributes['coord']
+        imglinks.add_child(f'{lead} = {outfile}#{node.id} @{position}')
+      #endpython
+  Wandering Monsters::table
+    d6 | Monster
+    1  | d12 skeletons + 1d6 zombies
+    2  | Snakemen encounter - see snakemen
+    3  | Orc encounter - see orcs
+    4  | Giant Snake
+    5  | Lost Adventurer - see adventurer table
+    6  | Fungoid
+Level 1 - The Cells::title
+Here the previous evil deities held captives, had barracks etc. Some evil deities
+held their magical armaments here for ease of keeping and sealed them by
+rituals/puzzles.
+
+1. Fountain and Entrance::md .room @coord(362,290)
+  This is the way back to the real world, back into Krugrock.
+
+  In the center of the room is a fountain, glowing pink. The water is magical and
+  drinking from it will have a single effect. Each character can only drink from
+  it once.
+
+  Fountain::table
+    d8 | Effect
+    1  | +1 to all stats
+    2  | -1 to all stats
+    3  | -1 to prime requisite
+    4  | +2 to least prime requisite
+    5  | Gain 30 temporary HP
+    6  | Forked Tongue: tongue splits in twain, gain ability to talk to snakess
+    7  | Cowardice: Whenever a monster is encountered, roll a wisdom save vs DC
+         12. On a failure, they are frightened of the monster. Treat a group as a
+         single monster. This effect last for until your long rest. Even on a
+         successful save you are more cautious than normal.
+    8  | Bravery: Whenever a monster is encountered, roll a wisdom save vs DC 12.
+         On a failure, they are emboldened (advantage to attacks, will not run
+         away) of the monster. Treat a group as a single monster. This effect
+         last for until your long rest. Even on a successful save you are braver
+         than normal.
+2. Poison Gas::md .room @coord(359,412) @id(poison-gas)
+  There is a large cloud of poisonous gas. The vapors are thick heavy and milky
+  and more or less stick together. Entering the room people get some small whiffs
+  off it, burning some of their nose hairs. Running through it without holding
+  your breath is DC 16 con save for half damage, 6d10 poison damage. Holding your
+  breath reduces it to 3d10 poison damage and being poisoned for 2 dungeon turns.
+
+3. Smashed Room::md .room @coord(404,324) @id(smashed-room)
+  Overturned bunks, torn sheets and smashed trunks fill this room. In the center
+  of the room is a large bit of shed snake-skin.
+
+4. Smashed Room II::md .room @coord(410,214)
+  See [smashed room], above.
+
+5. Statue of Primordial god::md .room @coord(459,92)
+  This statue changs to the most recent deity to occupy the pyramid. It is
+  currently a Statue of Vollassa – a huge coiled snake with a woman's head.
+
+  Looking into the eyes of the statue requires a save vs charm, DC 14. On a
+  failure, the character's attitude towards snake-folk remarkably improves for a
+  month. He will desire to help them.
+
+  At the foot of the statue is a large viper. Its mouth is open and its fangs are
+  missing. Replacing the fangs (which are in Room 15, in the pile of the monster)
+  will reveal a chest and treasure.
+
+6. Orange Gas::md .room @coord(350,126) @id(orange-gas)
+  A strange thin orange gas fills this room, transforming anyone in it into an
+  animal. DC 10 cha save or be transmuted, rolled each round and changing form
+  each round.
+
+  ::table
+    1 | Squirrel
+    2 | Bear
+    3 | Wolf
+    4 | Rabbit
+    5 | Housecat
+    6 | Lion
+    7 | Dolphin
+    8 | Capybara
+  While an animal, AC is 13. Use your HP and saves.
+
+  * Bear: Bite + 2 claws, 1d6+2 each
+  * Lion: Bite + 2 claws, 1d6+2 each
+  * Wolf: bite, 1d6 +2 + trip
+  * All others, 1d6 damage if justifying attack.
+  Additionally, two ogre zombies are in here, around the crook.
+
+  There is a pile of refuse where the ogre zombies were, pulverized victims: 125
+  silver coins, 393 gold coins, 1 potion of healing.
+
+7. Banquet Hall::md .room @coord(338, 70)
+  This is a former banquet hall. Several large chandeliers hang above, their
+  candles out. In the center of the room is a zombified eye of terror.
+
+  The plates and silverware are still in reasonable shape. They are made of
+  silver and inlaid with gold and platinum the total weight is 50 pounds and the
+  total value is 1700gp
+
+  Additionally, the [orange gas] from room 6 will spread into this room, but
+  dissipate after approx. 10'.
+
+8. Crone's Head::md .room @coord(513, 167)
+  At the southern side of this room there is some writing inscribed on the wall
+  underneath what appears to be a horribly ugly woman's head. Her hair is
+  braided, long, black and greasy, her skin pale and greenish. When the party
+  comes near her at all, she animates.
+
+  She asks the party to bring her an object of magical power – almost any will
+  do. She will make them rich if they do so.
+
+  If they do, she opens the secret door the unmarked room on the map. There is a
+  big treasure (note to self, roll a few times for treasure).
+
+  She will then disappear.
+
+  She does ping as fungus.
+
+  The double doors are barred from the other side, but are made of rotting wood.
+  A DC 15 str check will break them in one go, otherwise the thing on the other
+  side will know the party is coming
+
+9. Fire-breathing ape::md .room @coord(617,156)
+  A Fire breathing ape
+
+  That big splotch in the middle is oozing oil.
+
+  The ground is quite greasy, DC 10 dex saves if travelling more than 15 ft in a
+  turn.
+
+  D2: leads downstairs to the Sanguitorium, ape room.
+
+10. Curtain room::md .room @coord(554,279)
+  The rooms are covered in curtains that are pulled back. Pushing on a brick in
+  the right spot will open the secret door in the north.
+
+  The room appears to be half as big as it really is. An illusionary wall cuts
+  the room in half. (hiding is automatically succesful here).
+
+11. High Priest's Crypt::md .room @coord(670,270)
+  Crypt for a high priest or similar figure, hidden and heavily guarded. : "Do
+  not disturbe the high priest's slumbre!"
+
+  Door is guarded by a slay living trap (DC 13 con save or be knocked to 0 HP).
+  Also deals 3d6+10 necrotic (potentially killing). The trap has 20 charges.
+
+  The door is unlocked/disarmed by the Basalt Skull.
+
+  The High Priest::kv .monster
+    HP: 40
+    AC: 15
+    At will: shield, counterspell, ghoul touch -- 3d10 necrotic, can't be healed
+    DC: 14
+    Circle of death: (con save vs 8d6 necrotic)
+  Assisted by swarms of crawling claws. A hideous wave of human hands starts
+  pouring out of the pots. In the swarm: make a strength save at beginning of
+  your turn or be restrained. On a success, still slowed.
+
+  In the priest's sarcophagus: Scroll in an ivory tube (circle of death, fear,
+  animate dead) +1 studded of necrotic resistance, staff of healing (cursed, adds
+  that much damage to the next wound suffered), 4 jewelery 5,000 each.
+
+12. Fungal Colossoids::md .room @coord(530,444)
+  2 Fungus Collosoids.
+
+  Walls and floors are covered in mushrooms. Hitting one (50% chance on a miss
+  with missiles) release poison spores, DC 10 con save or take 1d12 poison
+  damage.
+
+  In the mushrooms: 600 sp, 300gp, 2 gems, malachites worth 100gp each
+
+  If the combat goes more than 3 rounds, there is a 1 in 6 chance monsters from
+  room 14 will come in each round.
+
+13. Urns and Shutoff Valve::md .room @coord(453, 443)
+  A Heavy, stone door to get in.
+
+  2x boneknits
+
+  Treasure: A pile of broken urns lines the walls and the floor. Each round the
+  monster is alive it will smash an urn (toss it?). There are 8 urns to start and
+  each urn is worth 200gp. Each urn weighs 20 pounds.
+
+  There is a wheel on the western wall, some kind of valve. Additionally, large
+  brass chambers. Turning the valve turns off the [poison gas] in room 2. Messing
+  with the chambers causes them to spill the gas into this room, each round save
+  vs 6d10 poison damage.
+
+14. Zombie Orcs::md .room @coord(533,505)
+  Zombified orcs are here (6 of them).
+
+  Orcs have: Chill touch of the grave: Adds an extra attack, +6, 1d10+2 necrotic
+  damage, DC 13 con or have max HP reduced by that amount until a long rest.
+
+  An orcish idol, sacred to gruumsh. When held in the hand of one devout to
+  Gruumsh, it bestows his blessing if the blood of his enemies is used as
+  warpaint beneath his eyes.
+
+15. Experimentation room::md .room @coord(522,550)
+  2 boneknits stalk this room
+
+  Two Large experimentation tables, complete with reinforced leather straps stand
+  in the center of this room.
+
+  Also, a table, filled with corroding tools and ancient containers. There are 3
+  intact containers.
+
+  * One, filled with greenish powder. Inhalation necessitates DC 14 con save vs
+    6d10 poison damage. Can be tossed up to 5' + 5' per point of str +.
+  * 2nd, filled with blue fluid. Pictograms on the outside of the container
+    depict needles being stabbed into the obviously dead. Injecting this blue
+    fluid into the recently deceased will cause the body to animate briefly to
+    answer a single question. It will do so with one word. 4 uses.
+  * 3rd, filled with orange peanut things. These animate when the jar is opened.
+    They will swarm if the lid is not closed. They deal 2d8 automatic damage
+    every turn to those they are swarming on. Fire or other means can destroy
+    them.
+16. Stone Eye of Terror::md .room @coord(405,557)
+  An illusion of a stone eye of terror floats over a stone sarcophagus. It
+  appears to be asleep - it's eyes are closed
+
+  Within the stone Sarcophagus is the illusion of a "dracolich" that will rise
+  "miss" the closest player and attempt to drive them off.
+
+  Inside the sarcophagus is a pristine set of robes, stitched with silver, in the
+  pattern of a right triangle. A Greasy Onyx is set in the collar. Value: 3000gp
+  total, Greasy onyx is worth 2000 of that.
+
+17. Portcullis::md .room @coord(185,431)
+  Portcullis blocks way down. The lever controlling it is in 22
+
+18. Cells::md .room @coord(286,420)
+  The cells
+
+19. More Cells::md .room @coord(262, 285)
+  More cells.
+
+  A young boy sits in one of the cells. He is half-starved and nearly mad. He
+  apparently has been surviving on bugs/rats etc.
+
+20. Skeletal Jailkeeper::md .room @coord(149,282)
+  Cells line the northern walls. Jailkeeper and his guards are reanimated here.
+  They are now skeletons.
+
+  "Veteran" skeleton for jailkeeper, 7 other skeletons armed in chainmail and
+  shortswords. He has a keyring. It opens all cells.
+
+21. Ghost::md .room @coord(88,572)
+  Ghost lives here.
+
+22. Garbage monster::md .room @coord(38,372)
+  Lever for portcullis in 17 is here. Room is filled with rotting garbage.
+
+  Hezrou. If it looks like it is losing when it gets to half HP, it teleports
+  out.
+
+23. Trick room::md .room @coord(61,169)
+  Walking through the room leads to walking back the way you came.
+
+24. Huge, Bleeding Skeleton::md .room @coord(86,46)
+  Huge, Bleeding Skeleton
+
+  Hole in floor leads to room 6 on 2nd level.
+

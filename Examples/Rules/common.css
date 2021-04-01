@@ -1,0 +1,159 @@
+*{
+    box-sizing:border-box;
+    scrollbar-width: none;
+}
+::-webkit-scrollbar {
+    display:none;
+}
+a, img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+}
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: "Tahoma";
+}
+body {
+    /*background-color: rgb(228,223,204);*/
+}
+p {
+    text-align: justify;
+}
+
+
+h1,h2,h3,h4,h5,h6 {
+    font-family: "Tahoma";
+
+}
+
+h3,h4,h5 {
+color: rgb(88,24,13);
+}
+h1, h2, h3 {
+    border-bottom: 1px solid #aaaaaa;
+    max-width: 50em;
+}
+
+
+a {
+    text-decoration: none;
+    color: black;
+    border-bottom: 1px grey dotted;
+}
+
+
+table {
+    border-collapse: collapse;
+    margin: 2rem;
+    margin-top: 0;
+    text-align: left;
+    }
+th, td {
+    padding: .2em 1em;
+    border: 1px solid black;
+    text-align: left;
+    }
+table ul {
+    -webkit-margin-before: 0;
+    -webkit-margin-after: 0;
+}
+div.boxed {
+    border: 1px solid black;
+    max-width: 30em;
+    padding: 0 1em;
+}
+
+div.horizontal {
+    display: flex;
+}
+.def h3, .def h4 {
+    margin-bottom: 0;
+}
+.def p{
+    padding-left: 1em;
+    margin-top: 0;
+}
+.def ul {
+    margin-top: 0;
+}
+
+
+div.grid_container{
+    display: grid;
+    grid-template-columns: 15% 85%;
+    grid-template-rows: 10% 90%;
+    grid-column-gap: 4em;
+    }
+
+nav {
+    font-size: .7em;
+    height:100%;
+    overflow:auto;
+}
+.center li {
+    text-align: justify;
+}
+
+.left a {
+    font-size: 14px;
+    display: block;
+    border-bottom: none;
+}
+.left {
+    grid-column: 1;
+    grid-row: 1;
+    position:fixed;
+    width: 15%;
+    height:100%;
+    overflow: scroll;
+}
+.center {
+    padding: 0 10px;
+    max-width: 44em;
+    /* max-width: 100%; */
+    grid-column: 2;
+    grid-row:1;
+    position:fixed;
+    overflow: scroll;
+    left: calc(15% + 2em);
+    padding-bottom: 20em;
+    height: 100%;
+}
+.center p, .center ol, .center ul {
+    max-width: 40em;
+}
+@media only screen and (max-width: 800px) {
+.center {
+    max-width: 100%;
+    padding-left:16px;
+    padding-right:16px;
+    margin:0;
+    position: initial;
+    left: 0;
+}
+nav li ul {
+    display: none;
+}
+.left, .top {
+    display:none;
+}
+div.grid_container{
+    display: block;
+    height:100%;
+    width:100%;
+    }
+table{
+    overflow-x: scroll;
+    margin:16px;
+}
+th, td {
+    padding: 4px 4px;
+    border: 1px solid black;
+    text-align: left;
+}
+
+}
