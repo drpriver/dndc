@@ -160,7 +160,7 @@ node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(c
 
 static
 void
-vreport_stat_raw(Nullable(ErrorFunc*) error_func, Nullable(void*) error_user_data, Nonnull(const char*) fmt, va_list args){
+vreport_stat_raw(Nonnull(ErrorFunc*) error_func, Nullable(void*) error_user_data, Nonnull(const char*) fmt, va_list args){
     char buff[256];
     int printed = vsnprintf(buff, sizeof(buff), fmt, args);
     // just truncate the message. These are short anyway.
@@ -177,11 +177,13 @@ report_stat_raw(uint64_t flags, Nullable(ErrorFunc*) error_func, Nullable(void*)
         return;
     if(not error_func)
         return;
+    // remove nullable qualifier
+    ErrorFunc* func = error_func;
     va_list args;
     va_start(args, fmt);
-    vreport_stat_raw(error_func, error_user_data, fmt, args);
+    vreport_stat_raw(func, error_user_data, fmt, args);
     va_end(args);
-    }
+}
 
 printf_func(2, 3)
 static
@@ -191,9 +193,11 @@ report_stat(Nonnull(DndcContext*)ctx, Nonnull(const char*) fmt, ...){
         return;
     if(not ctx->error_func)
         return;
+    // remove nullable qualifier
+    ErrorFunc* func = ctx->error_func;
     va_list args;
     va_start(args, fmt);
-    vreport_stat_raw(ctx->error_func, ctx->error_user_data, fmt, args);
+    vreport_stat_raw(func, ctx->error_user_data, fmt, args);
     va_end(args);
 }
 
@@ -493,22 +497,12 @@ check_node_depth(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
     }
 
 static void gather_anchor(Nonnull(DndcContext*)ctx, NodeHandle handle);
+
 static
 void
 gather_anchors(Nonnull(DndcContext*)ctx){
     auto root = ctx->root_handle;
     return gather_anchor(ctx, root);
-    }
-
-static inline
-force_inline
-void
-gather_anchor_children(Nonnull(DndcContext*)ctx, Nonnull(Node*)node){
-    auto count = node->children.count;
-    auto children = node->children.data;
-    for(size_t i = 0; i < count; i++){
-        gather_anchor(ctx, children[i]);
-        }
     }
 
 static
@@ -541,7 +535,11 @@ gather_anchor(Nonnull(DndcContext*)ctx, NodeHandle handle){
         case NODE_IMPORT:
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:{
-            gather_anchor_children(ctx, node);
+            auto count = node->children.count;
+            auto children = node->children.data;
+            for(size_t i = 0; i < count; i++){
+                gather_anchor(ctx, children[i]);
+                }
             }break;
         case NODE_TABLE_ROW:
         case NODE_STYLESHEETS:
