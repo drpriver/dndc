@@ -48,7 +48,17 @@ path_is_abspath(StringView path){
     if(!path.length)
         return false;
     // FIXME: this is wrong on windows as you can include a drive letter.
+#ifndef _WIN32
     return is_sep(path.text[0]);
+#else
+    if(is_sep(path.text[0]))
+        return true;
+    if(path.length > 2){
+        if(path.text[1] == ':')
+            return true;
+        }
+    return false;
+#endif
     }
 
 //
