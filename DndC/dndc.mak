@@ -27,8 +27,17 @@ $(BINDIR)/TestDndC_debug$(EXE): DndC/TestDndC.c $(DEPDIR)/TestDndC_debug.dep $(O
 	$@
 TestDndC: $(BINDIR)/TestDndC_debug$(EXE) $(BINDIR)/TestDndC_fast$(EXE)
 
-$(BINDIR)/pydndc.cpython-38-darwin.so: DndC/pydndc.c
-
 $(BINDIR)/pydndc$(PYEXTENSION): DndC/pydndc.c
 	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -g $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS)
 pydndc: $(BINDIR)/pydndc$(PYEXTENSION)
+
+DNDCVERSION = 0.3.11
+RELEASEFILES = $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pygdndc.pyw PyGdndc/changelog.dnd PyGdndc/install_deps.py PyGdndc/README.txt
+.PHONY: release
+release: $(RELEASEFILES)
+	$(RM) PyGdndcRelease
+	$(MKDIR) -p PyGdndcRelease/DndC
+	$(CP) $(RELEASEFILES) PyGdndcRelease/DndC
+	$(CP) -r Examples PyGdndcRelease/DndC
+	$(PYTHON) -m zipfile -c DndC.$(DNDCVERSION).zip PyGdndcRelease/DndC
+	$(RM) PyGdndcRelease

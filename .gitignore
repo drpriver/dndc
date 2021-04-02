@@ -23,3 +23,4 @@ CMakeSettings.json
 venv
 builddir
 build2
+*.zip

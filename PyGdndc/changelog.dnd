@@ -1,0 +1,10 @@
+Version 0.3.11::md
+  * Closing a tab with the button now closes the associated file.
+  * The splitter between the editor and the html display can now be
+    double-clicked in order to collapse/expand it.
+    - If you weren't aware before, the splitters could be dragged to change
+      their size and would collapse/expand based on that.
+  * Failures to open files no longer leads to an empty document being opened
+    (which would then get auto-saved, generating a new document or overwriting
+    the real document!).
+

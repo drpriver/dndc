@@ -79,10 +79,12 @@ class DndMainWindow(QMainWindow):
 window = DndMainWindow()
 tabwidget = QTabWidget()
 tabwidget.setTabsClosable(True)
-def close_tab(index:int):
+def close_tab(index:int) -> None:
     page = tabwidget.widget(index)
     page.close()
     tabwidget.removeTab(index)
+    del all_windows[page.filename]
+    page.setParent(None)  # type: ignore
 
 tabwidget.tabCloseRequested.connect(close_tab)
 window.setCentralWidget(tabwidget)
