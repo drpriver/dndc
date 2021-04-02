@@ -1,4 +1,5 @@
 Version 0.3.11::md
+  * Added this changelog
   * Closing a tab with the button now closes the associated file.
   * The splitter between the editor and the html display can now be
     double-clicked in order to collapse/expand it.
@@ -7,4 +8,16 @@ Version 0.3.11::md
   * Failures to open files no longer leads to an empty document being opened
     (which would then get auto-saved, generating a new document or overwriting
     the real document!).
+  * There is now logging.
+    - Logs are written to logfiles.
+    - Use Help -> Open Logs Folder to see where they are logged.
+    - Use Help -> Compress Logs to zip the current log and open that same folder.
+    - Logs are per day.
+    - You can delete the old logs if they get too fat.
 
+::css @inline
+  body > div {
+    margin: auto;
+    max-width: 50em;
+    font-family: Sans;
+  }

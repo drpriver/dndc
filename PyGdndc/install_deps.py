@@ -65,7 +65,7 @@ def win_already_installed() -> None:
     MB_OK = 0
     windll.user32.MessageBoxW(0, 'Dependencies are already installed', 'Already Installed', MB_OK)
 
-def unix_install_qt() -> None:
+def unix_install_qt() -> bool:
     import subprocess
     import sys
     try:

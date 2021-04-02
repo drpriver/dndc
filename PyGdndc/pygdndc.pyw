@@ -6,15 +6,65 @@ have_deps = install_deps.ensure_deps(False)
 import sys
 if not have_deps:
     sys.exit(0)
-from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog, QMessageBox
+from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle
 from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
-from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage
-from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings
+from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices
+from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent
 import pydndc
-from typing import Optional, List, Dict, Optional
+from typing import Optional, List, Dict, Optional, Callable
 import time
 import re
 import textwrap
+import sys
+import logging
+import datetime
+import zipfile
+APPLOCAL = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation)
+APPNAME = 'PyGdndc'
+APPFOLDER = os.path.join(APPLOCAL, APPNAME)
+LOGS_FOLDER = os.path.join(APPFOLDER, 'Logs')
+os.makedirs(LOGS_FOLDER, exist_ok=True)
+LOGFILE_LOCATION = os.path.join(LOGS_FOLDER, datetime.datetime.now().strftime('%Y-%m-%d.txt'))
+PYGDNDC_VERSION = '0.3.11'
+
+class Logs:
+    def __init__(self) -> None:
+        self.old_hook: Optional[Callable] = None
+        try:
+            self.stream = open(LOGFILE_LOCATION, 'a')
+        except:
+            self.stream = sys.stderr
+        self.logger = logging.getLogger('pygdndc')
+        self.logger.setLevel(logging.DEBUG)
+        handler = logging.StreamHandler(stream=self.stream)
+        handler.setFormatter(logging.Formatter(
+            fmt='[%(levelname)s] %(asctime)s L%(lineno)d: %(message)s',
+            datefmt='%H:%M:%S',
+            ))
+        self.logger.addHandler(handler)
+        self.error = self.logger.error
+        self.info = self.logger.info
+        self.warn = self.logger.warn
+        self.debug = self.logger.debug
+        self.info('New Session')
+        self.info('pydndc: version is %s', pydndc.__version__)
+        self.info('pygdndc: version is %s', PYGDNDC_VERSION)
+    def hook(self, exctype, value, traceback):
+        self.error('Uncaught exception', exc_info=(exctype, value, traceback))
+        # self.old_hook(exctype, value, traceback)
+    def install(self) -> None:
+        self.old_hook = sys.excepthook
+        sys.excepthook = self.hook
+    def uninstall(self) -> None:
+        if self.old_hook is not None:
+            sys.excepthook = self.old_hook
+    def close(self):
+        self.stream.flush()
+        self.stream.close()
+
+logger = Logs()
+logger.install()
+
 whitespace_re = re.compile(r'^\s+')
 
 # https://tools.ietf.org/html/rfc6761 says we can use invalid. as a specially
@@ -22,7 +72,6 @@ whitespace_re = re.compile(r'^\s+')
 APPHOST = 'invalid.'
 
 app = QApplication(sys.argv)
-APPNAME = 'PyGdndc'
 app.setApplicationName(APPNAME)
 app.setApplicationDisplayName(APPNAME)
 all_windows: Dict[str, 'Page'] = {}
@@ -50,19 +99,19 @@ class DndMainWindow(QMainWindow):
         global EDITOR_ON_LEFT
         geometry = self.settings.value('window_geometry')
         if geometry is not None:
-            self.restoreGeometry(geometry)
+            self.restoreGeometry(geometry) # type: ignore
         else:
             self.showMaximized()
         on_left = self.settings.value('editor_on_left')
         if on_left is not None:
-            EDITOR_ON_LEFT = on_left
+            EDITOR_ON_LEFT = on_left # type: ignore
         filenames = self.settings.value('filenames')
         if filenames:
             if isinstance(filenames, str):
                 if os.path.isfile(filenames):
                     add_tab(filenames)
             else:
-                for filename in filenames:
+                for filename in filenames:  # type: ignore
                     if not os.path.isfile(filename):
                         continue
                     add_tab(filename)
@@ -288,6 +337,16 @@ class DndWebPage(QWebEnginePage):
         result = super().acceptNavigationRequest(url, navtype, isMainFrame)
         return result
 
+class SplitterHandler(QObject):
+    def eventFilter(self, watched:QObject, event:QEvent) -> bool:
+        if event.type() == QEvent.MouseButtonDblClick:
+            handle: QSplitterHandle = watched
+            if handle.splitter().widget(0).width():
+                handle.splitter().setSizes([0, 1])
+            else:
+                handle.splitter().setSizes([1,10000])
+            return True
+        return False
 class Page(QSplitter):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -327,6 +386,7 @@ class Page(QSplitter):
             self.show_error()
         else:
             self.hide_error()
+        self.handle(1).installEventFilter(SplitterHandler(self))
 
     def clear_errors(self):
         self.error_display.setPlainText('')
@@ -347,7 +407,6 @@ class Page(QSplitter):
         self.error_display.appendPlainText(f'{et}:{row+1}:{col+1}: {message}')
 
     def update_html(self) -> None:
-        position = self.textedit.textCursor().position()
         self.clear_errors()
         try:
             html = pydndc.htmlgen(self.textedit.toPlainText(), base_dir=self.dirname, error_reporter=self.display_dndc_error)
@@ -356,6 +415,7 @@ class Page(QSplitter):
         self.webpage.setHtml(html, baseUrl=QUrl(f'https://{APPHOST}/this.html'))
 
     def format(self) -> None:
+        raise Exception('lmao')
         try:
             text = pydndc.reformat(self.textedit.toPlainText(), error_reporter=self.display_dndc_error)
         except ValueError:
@@ -491,14 +551,20 @@ class Page(QSplitter):
         savefile.commit()
 
 
-def make_page_widget(filename:str) -> Optional[QWidget]:
+def make_page_widget(filename:str, allow_fail:bool) -> Optional[QWidget]:
     if filename in all_windows:
         return None
     result = Page()
     try:
-        text = open(filename).read()
+        fp = open(filename, 'r')
     except:
+        if not allow_fail:
+            logger.debug("Failed to open: '%s'", filename)
+            return None
         text = ''
+    else:
+        text = fp.read()
+        fp.close()
     # Qt uses newlines as separators, not terminators.
     # We'll add a newline back when we save.
     if text.endswith('\n'):
@@ -572,14 +638,15 @@ if 0:
         print_condense(path, False)
     exit(0)
 
-def add_tab(filename:str, focus=True) -> None:
+def add_tab(filename:str, focus=True, allow_fail:bool=False) -> None:
     if sys.platform == 'win32':
         filename = filename.replace('/', '\\')
+    logger.debug("adding_tab: '%s'", filename)
     if filename in all_windows:
         if focus:
             tabwidget.setCurrentWidget(all_windows[filename])
         return
-    page = make_page_widget(filename)
+    page = make_page_widget(filename, allow_fail)
     if page is None:
         return
     tabwidget.addTab(page, condense(filename))
@@ -600,7 +667,7 @@ def new_file(*args) -> None:
     fname, _ = QFileDialog.getSaveFileName(None, 'Choose or Create a dnd file', '', 'Dnd Files (*.dnd)', initialFilter="*.dnd", options=options)  # type: ignore
     if not fname:
         return
-    add_tab(fname)
+    add_tab(fname, allow_fail=True)
 
 def save_file(*args) -> None:
     page = tabwidget.currentWidget()
@@ -754,6 +821,31 @@ def add_menus() -> None:
     action.triggered.connect(flop_editors)
     viewmenu.addAction(action)
 
+    helpmenu = menubar.addMenu('Help')
+    action = QAction('&Version', window)
+    def show_version(*args) -> None:
+        QMessageBox.about(window, 'Version',
+                f'GUI version: {PYGDNDC_VERSION}\n'
+                f'dndc version: {pydndc.__version__}\n')
+    action.triggered.connect(show_version)
+    helpmenu.addAction(action)
+
+    action = QAction('&Open Logs Folder', window)
+    def open_log_folder(*args) -> None:
+        url = QUrl('file://'+LOGS_FOLDER)
+        success = QDesktopServices.openUrl(url)
+    action.triggered.connect(open_log_folder)
+    helpmenu.addAction(action)
+
+    action = QAction('&Compress Logs', window)
+    def compress_logs(*args) -> None:
+        with zipfile.ZipFile(LOGFILE_LOCATION+'.zip', compression=zipfile.ZIP_DEFLATED, mode='w') as z:
+            z.write(LOGFILE_LOCATION)
+        url = QUrl('file://'+LOGS_FOLDER)
+        success = QDesktopServices.openUrl(url)
+    action.triggered.connect(compress_logs)
+    helpmenu.addAction(action)
+
 add_menus()
 window.restore_everything()
 if not tabwidget.currentWidget():
@@ -762,3 +854,4 @@ if not tabwidget.currentWidget():
     sys.exit(0)
 window.show()
 app.exec_()
+logger.close()
