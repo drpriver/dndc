@@ -134,7 +134,11 @@ PyInit_pydndc(void) {
     auto e = docparse_init_types();
     if(e.errored)
         return NULL;
-    return PyModule_Create(&pydndc);
+    PyObject* mod = PyModule_Create(&pydndc);
+    if(not mod)
+        return NULL;
+    PyModule_AddStringConstant(mod, "__version__", DNDC_VERSION);
+    return mod;
 }
 
 static
