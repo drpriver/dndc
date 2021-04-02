@@ -1,9 +1,13 @@
-project('DndC', 'c', version: '0.3.8')
+project('DndC', 'c', version: '0.3.10')
 
 pymod = import('python')
 pyinstall = pymod.find_installation()
 pydep = pyinstall.dependency(embed: true)
+if host_machine.system() == 'windows'
+includes = include_directories('Allocators', 'Utils', 'PythonEmbed', 'DndC', 'Platform/Windows')
+else
 includes = include_directories('Allocators', 'Utils', 'PythonEmbed', 'DndC')
+endif
 
 freeze_exec = executable(
   'freeze_py_module',

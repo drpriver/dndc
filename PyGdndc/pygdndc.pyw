@@ -28,7 +28,7 @@ app.setApplicationDisplayName(APPNAME)
 all_windows: Dict[str, 'Page'] = {}
 
 FONT = QFont()
-if sys.platform == 'windows':
+if sys.platform == 'win32':
     # Windows use 96 "ppi" whereas MacOS uses 72.
     # Use a smaller point size on windows or it looks way too big.
     pointsize = int(11*72/96)
@@ -514,7 +514,7 @@ def format_dnd(*args) -> None:
     current = tabwidget.currentWidget()
     current.format()
 
-def condense(filename:str, IS_WINDOWS=sys.platform=='windows') -> str:
+def condense(filename:str, IS_WINDOWS=sys.platform=='win32') -> str:
     BUDGET = 32
     sep = '\\' if IS_WINDOWS else '/'
     user = os.path.expanduser('~')
@@ -571,7 +571,7 @@ if 0:
     exit(0)
 
 def add_tab(filename:str, focus=True) -> None:
-    if sys.platform == 'windows':
+    if sys.platform == 'win32':
         filename = filename.replace('/', '\\')
     if filename in all_windows:
         if focus:
