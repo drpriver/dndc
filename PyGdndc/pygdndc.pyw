@@ -59,9 +59,12 @@ class DndMainWindow(QMainWindow):
         filenames = self.settings.value('filenames')
         if filenames:
             if isinstance(filenames, str):
-                add_tab(filenames)
+                if os.path.isfile(filenames):
+                    add_tab(filenames)
             else:
                 for filename in filenames:
+                    if not os.path.isfile(filename):
+                        continue
                     add_tab(filename)
 
     def closeEvent(self, e) -> None:
@@ -75,6 +78,13 @@ class DndMainWindow(QMainWindow):
 
 window = DndMainWindow()
 tabwidget = QTabWidget()
+tabwidget.setTabsClosable(True)
+def close_tab(index:int):
+    page = tabwidget.widget(index)
+    page.close()
+    tabwidget.removeTab(index)
+
+tabwidget.tabCloseRequested.connect(close_tab)
 window.setCentralWidget(tabwidget)
 
 
@@ -462,7 +472,8 @@ class Page(QSplitter):
             return
         options = QFileDialog.Options()
         options |= QFileDialog.DontConfirmOverwrite
-        options |= QFileDialog.DontUseNativeDialog
+        if sys.platform == 'darwin':
+            options |= QFileDialog.DontUseNativeDialog
         fname, _ = QFileDialog.getSaveFileName(None, 'Choose where to save html', '', 'HTML files (*.html)', initialFilter="*.html", options=options)  # type: ignore
         if not fname:
             return
@@ -582,7 +593,8 @@ def open_file(*args) -> None:
 def new_file(*args) -> None:
     options = QFileDialog.Options()
     options |= QFileDialog.DontConfirmOverwrite
-    options |= QFileDialog.DontUseNativeDialog
+    if sys.platform == 'darwin':
+        options |= QFileDialog.DontUseNativeDialog
     fname, _ = QFileDialog.getSaveFileName(None, 'Choose or Create a dnd file', '', 'Dnd Files (*.dnd)', initialFilter="*.dnd", options=options)  # type: ignore
     if not fname:
         return

@@ -1,6 +1,6 @@
 def win_install_qt() -> bool:
     import sys
-    assert sys.platform == 'windows'
+    assert sys.platform == 'win32'
     import subprocess
     from ctypes import windll
     from ctypes import pointer
@@ -87,13 +87,13 @@ def ensure_deps(report_installed:bool=False) -> bool:
     try:
         import PySide2
     except ImportError:
-        if sys.platform == 'windows':
+        if sys.platform == 'win32':
             return win_install_qt()
         else:
             return unix_install_qt()
     else:
         if report_installed:
-            if sys.platform == 'windows':
+            if sys.platform == 'win32':
                 win_already_installed()
             else:
                 unix_already_installed()
