@@ -25,3 +25,4 @@ venv
 builddir
 build2
 *.zip
+Release
