@@ -6,6 +6,7 @@ tags
 Objs
 *.o
 *.so
+*.pyd
 .DS_Store
 compile_commands.json
 *.trace

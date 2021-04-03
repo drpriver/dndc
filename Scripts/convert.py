@@ -7,7 +7,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('files', nargs='*')
     parser.add_argument('--strip_only', action='store_true')
-    parser.add_argument('--extensions', default=('.h', '.c', '.hpp', '.cpp', '.d', '.m', '.py', '.pyi',  '.dave', '.mak', 'Makefile', '.dasm', 'CMakeLists.txt'), nargs='*')
+    parser.add_argument('--extensions', default=('.h', '.c', '.hpp', '.cpp', '.d', '.m', '.py', '.pyi', '.pyw', '.dave', '.mak', 'Makefile', '.dasm', 'CMakeLists.txt'), nargs='*')
     args = parser.parse_args()
     run(**vars(args))
 

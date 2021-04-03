@@ -52,12 +52,17 @@ def mkdir(dirs:List[str], p:bool) -> None:
 def mv(src: str, dst:str) -> None:
     shutil.move(src, dst)
 
-def cp(src_dsts:List[str]) -> None:
+def cp(src_dsts:List[str], recursive:bool=False) -> None:
     src_dsts = expand(src_dsts)
     dst = src_dsts[-1]
     srcs = src_dsts[:-1]
-    for src in srcs:
-        shutil.copy(src, dst)
+    if recursive:
+        for src in srcs:
+            basename = os.path.basename(src)
+            shutil.copytree(src, os.path.join(dst, src))
+    else:
+        for src in srcs:
+            shutil.copy(src, dst)
 
 def install(src_dsts:List[str], C:bool=False) -> None:
     src_dsts = expand(src_dsts)
@@ -94,6 +99,7 @@ def main() -> None:
 
     cp_parser = subparsers.add_parser('cp')
     cp_parser.add_argument('src_dsts', nargs='+')
+    cp_parser.add_argument('-r', '--recursive', action='store_true')
     cp_parser.set_defaults(func=cp)
 
     install_parser = subparsers.add_parser('install')
