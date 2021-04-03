@@ -19,7 +19,10 @@ import sys
 import logging
 import datetime
 import zipfile
+IS_WINDOWS = sys.platform == 'win32'
 APPLOCAL = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation)
+if IS_WINDOWS:
+    APPLOCAL = APPLOCAL.replace('/', '\\')
 APPNAME = 'PyGdndc'
 APPFOLDER = os.path.join(APPLOCAL, APPNAME)
 LOGS_FOLDER = os.path.join(APPFOLDER, 'Logs')
@@ -77,7 +80,7 @@ app.setApplicationDisplayName(APPNAME)
 all_windows: Dict[str, 'Page'] = {}
 
 FONT = QFont()
-if sys.platform == 'win32':
+if IS_WINDOWS:
     # Windows use 96 "ppi" whereas MacOS uses 72.
     # Use a smaller point size on windows or it looks way too big.
     pointsize = int(11*72/96)
@@ -582,18 +585,18 @@ def format_dnd(*args) -> None:
     current = tabwidget.currentWidget()
     current.format()
 
-def condense(filename:str, IS_WINDOWS=sys.platform=='win32') -> str:
+def condense(filename:str, is_windows=IS_WINDOWS) -> str:
     BUDGET = 32
-    sep = '\\' if IS_WINDOWS else '/'
+    sep = '\\' if is_windows else '/'
     user = os.path.expanduser('~')
     if filename.startswith(user):
         filename = sep.join(['~', filename[len(user)+1:]])
-    elif IS_WINDOWS:
+    elif is_windows:
         drive = filename[0]
     if len(filename) < BUDGET:
         return filename
     components = filename.split(sep)
-    if IS_WINDOWS and filename[0] != '~':
+    if is_windows and filename[0] != '~':
         components = components[1:]
     parts = []
     budget = BUDGET
@@ -619,7 +622,7 @@ def condense(filename:str, IS_WINDOWS=sys.platform=='win32') -> str:
             break
         parts.append(p[0])
     name = sep.join(reversed(parts))
-    if IS_WINDOWS and name[0] != '~':
+    if is_windows and name[0] != '~':
         name = drive + ':\\' + name
     return name
 
@@ -832,8 +835,13 @@ def add_menus() -> None:
 
     action = QAction('&Open Logs Folder', window)
     def open_log_folder(*args) -> None:
-        url = QUrl('file://'+LOGS_FOLDER)
+        if IS_WINDOWS:
+            url = QUrl('file:///' + LOGS_FOLDER.replace('\\', '/'))
+        else:
+            url = QUrl('file://'+LOGS_FOLDER)
         success = QDesktopServices.openUrl(url)
+        if not success:
+            logger.error("Failed to open: '%s'", url)
     action.triggered.connect(open_log_folder)
     helpmenu.addAction(action)
 
@@ -841,8 +849,13 @@ def add_menus() -> None:
     def compress_logs(*args) -> None:
         with zipfile.ZipFile(LOGFILE_LOCATION+'.zip', compression=zipfile.ZIP_DEFLATED, mode='w') as z:
             z.write(LOGFILE_LOCATION)
-        url = QUrl('file://'+LOGS_FOLDER)
+        if IS_WINDOWS:
+            url = QUrl('file:///' + LOGS_FOLDER.replace('\\', '/'))
+        else:
+            url = QUrl('file://'+LOGS_FOLDER)
         success = QDesktopServices.openUrl(url)
+        if not success:
+            logger.error("Failed to open: '%s'", url)
     action.triggered.connect(compress_logs)
     helpmenu.addAction(action)
 
