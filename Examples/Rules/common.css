@@ -1,9 +1,5 @@
 *{
     box-sizing:border-box;
-    scrollbar-width: none;
-}
-::-webkit-scrollbar {
-    display:none;
 }
 a, img {
   -webkit-user-drag: none;
@@ -109,7 +105,7 @@ nav {
     position:fixed;
     width: 15%;
     height:100%;
-    overflow: scroll;
+    overflow: auto;
 }
 .center {
     padding: 0 10px;
@@ -117,11 +113,7 @@ nav {
     /* max-width: 100%; */
     grid-column: 2;
     grid-row:1;
-    position:fixed;
-    overflow: scroll;
-    left: calc(15% + 2em);
     padding-bottom: 20em;
-    height: 100%;
 }
 .center p, .center ol, .center ul {
     max-width: 40em;

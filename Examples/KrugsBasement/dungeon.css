@@ -81,7 +81,7 @@ div.grid_container{
 	position:fixed;
 	width: 50%;
 	height: 100%;
-	overflow: scroll;
+	overflow: auto;
 	padding-left: 1em;
 }
 .center {
@@ -89,7 +89,7 @@ div.grid_container{
 	max-width: 100%;
 	grid-column: 2;
 	position:fixed;
-	overflow: scroll;
+	overflow: auto;
 	left: 50%;
 	padding-left: 2em;
 	padding-bottom: 20em;
