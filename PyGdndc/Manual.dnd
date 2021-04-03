@@ -88,8 +88,8 @@ Getting Help::md
 ::css @inline
   body > div {
     margin:auto;
-    font-family: Sans;
-    font-size: 24px;
+    font-family: Tahoma, Sans;
+    font-size: 18px;
   }
   div.grid_container{
     display: grid;
