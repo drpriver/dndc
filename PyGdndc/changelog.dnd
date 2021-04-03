@@ -1,3 +1,13 @@
+Version 0.3.13::md
+  * Fixed bug that closing a tab with the button would not save the file.
+  * Implemented Indent/Dedent actions.
+    * These actions can indent or dedent the selected text (or the current line if no text is selected).
+    * They can be triggered in one of the following ways:
+      * By using Ctrl-> or Ctrl-< hotkeys.
+      * By the context menu when right clicking the text editor
+      * By selecting the actions in the Edit menu.
+Version 0.3.12::md
+  * Fixed bug that prevented the Format action of Edit from doing anything.
 Version 0.3.11::md
   * Added this changelog
   * Closing a tab with the button now closes the associated file.

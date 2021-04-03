@@ -24,6 +24,11 @@ Menus::md
 
     <b><i>Font</i></b> allows picking a different font for the text editor.
 
+    <b><i>Indent</i></b> and <b><i>Dedent</i></b> allows indentation and
+    dedentation of the text, respectively. If text is selected, the lines that
+    include that selection will be indented or dedented. If no text is selected,
+    the line that the cursor is currently on will be indented or dedented.
+
   The Insert Menu::md
     The insert menu allows convenient insertion of elements. They duplicate
     things you could type yourself. The import thing they do is bring up a file

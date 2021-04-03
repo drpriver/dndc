@@ -8,7 +8,7 @@ if not have_deps:
     sys.exit(0)
 from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle
 from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
-from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices
+from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent
 from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent
 import pydndc
 from typing import Optional, List, Dict, Optional, Callable
@@ -19,6 +19,7 @@ import sys
 import logging
 import datetime
 import zipfile
+import io
 IS_WINDOWS = sys.platform == 'win32'
 APPLOCAL = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation)
 if IS_WINDOWS:
@@ -28,7 +29,7 @@ APPFOLDER = os.path.join(APPLOCAL, APPNAME)
 LOGS_FOLDER = os.path.join(APPFOLDER, 'Logs')
 os.makedirs(LOGS_FOLDER, exist_ok=True)
 LOGFILE_LOCATION = os.path.join(LOGS_FOLDER, datetime.datetime.now().strftime('%Y-%m-%d.txt'))
-PYGDNDC_VERSION = '0.3.12'
+PYGDNDC_VERSION = '0.3.13'
 
 class Logs:
     def __init__(self) -> None:
@@ -133,6 +134,7 @@ tabwidget = QTabWidget()
 tabwidget.setTabsClosable(True)
 def close_tab(index:int) -> None:
     page = tabwidget.widget(index)
+    page.save()
     page.close()
     tabwidget.removeTab(index)
     del all_windows[page.filename]
@@ -205,6 +207,9 @@ class DndEditor(QPlainTextEdit):
 
     def keyPressEvent(self, event:QKeyEvent) -> None:
         if event.key() == Qt.Key.Key_Tab:
+            if self.textCursor().hasSelection():
+                self.alter_indent(indent=True)
+                return
             self.insertPlainText('  ')
             return
         if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
@@ -314,6 +319,41 @@ class DndEditor(QPlainTextEdit):
             r"      position = c.attributes['coord']",
             r"      imglinks.add_child(f'{lead} = {ctx.outfile}#{c.id} @{position}')",
             )))
+    def alter_indent(self, indent:bool) -> None:
+        cursor = self.textCursor()
+        start = cursor.selectionStart()
+        end = cursor.selectionEnd()
+        doc = self.document()
+        first_block = doc.findBlock(start)
+        end_block = doc.findBlock(end)
+        block = first_block
+        s = io.StringIO()
+        for i in range(10000): # paranoia, use bounded loop instead of infinite loop in case of mistake
+            if indent:
+                s.write('  '); s.write(block.text()); s.write('\n')
+            else:
+                text = block.text()
+                if text.startswith('  '):
+                    text = text[2:]
+                s.write(text); s.write('\n')
+            if block.position() == end_block.position():
+                break
+            block = block.next()
+        cursor.setPosition(first_block.position())
+        cursor.setPosition(end_block.position() + len(end_block.text()), cursor.KeepAnchor)
+        cursor.insertText(s.getvalue().rstrip())
+    def contextMenuEvent(self, event:QContextMenuEvent) -> None:
+        menu = self.createStandardContextMenu()
+        action = QAction('Indent', menu)
+        action.triggered.connect(lambda: self.alter_indent(True))
+        action.setShortcut(QKeySequence('Ctrl+>'))
+        menu.insertAction(menu.actions()[7], action)
+
+        action = QAction('Dedent', menu)
+        action.triggered.connect(lambda: self.alter_indent(False))
+        action.setShortcut(QKeySequence('Ctrl+<'))
+        menu.insertAction(menu.actions()[8], action)
+        menu.exec_(event.globalPos())
 
 
 class DndWebPage(QWebEnginePage):
@@ -450,6 +490,7 @@ class Page(QSplitter):
     def save(self) -> None:
         if not self.filename:
             return
+        logger.debug("Saving '%s'", self.filename)
         savefile = QSaveFile(self)
         savefile.setFileName(self.filename)
         savefile.open(savefile.WriteOnly)
@@ -458,6 +499,8 @@ class Page(QSplitter):
             text += b'\n'
         savefile.write(text)  # type: ignore
         savefile.commit()
+        logger.debug("Saved '%s'", self.filename)
+        savefile = QSaveFile(self)
     def insert_image(self) -> None:
         fname, _ = QFileDialog.getOpenFileName(None, 'Choose an image file', '', 'PNG images (*.png)')
         if not fname:
@@ -671,19 +714,6 @@ def new_file(*args) -> None:
         return
     add_tab(fname, allow_fail=True)
 
-def save_file(*args) -> None:
-    page = tabwidget.currentWidget()
-    if not page:
-        return
-    page.save()
-
-def export_file(*args) -> None:
-    page: Optional[Page] = tabwidget.currentWidget()
-    if not page:
-        return
-    page.export_as_html()
-
-
 def toggle_editors(*args) -> None:
     if not all_windows:
         return
@@ -758,11 +788,18 @@ def add_menus() -> None:
     filemenu.addAction(action)
 
     action = QAction('&Save', window)
+    def save_file(*args) -> None:
+        page = tabwidget.currentWidget()
+        if page:
+            page.save()
     action.triggered.connect(save_file)
     action.setShortcut(QKeySequence('Ctrl+s'))
     filemenu.addAction(action)
 
     action = QAction('&Export As HTML', window)
+    def export_file(*args) -> None:
+        page: Optional[Page] = tabwidget.currentWidget()
+        if page: page.export_as_html()
     action.triggered.connect(export_file)
     action.setShortcut(QKeySequence('Ctrl+e'))
     filemenu.addAction(action)
@@ -785,6 +822,26 @@ def add_menus() -> None:
 
     action = QAction('F&ont', window)
     action.triggered.connect(pickfont)
+    editmenu.addAction(action)
+
+    def indent(*args) -> None:
+        current_tab: Optional[Page] = tabwidget.currentWidget()
+        if not current_tab:
+            return
+        current_tab.textedit.alter_indent(indent=True)
+    action = QAction('&Indent', window)
+    action.setShortcut(QKeySequence('Ctrl+>'))
+    action.triggered.connect(indent)
+    editmenu.addAction(action)
+
+    def dedent(*args) -> None:
+        current_tab: Optional[Page] = tabwidget.currentWidget()
+        if not current_tab:
+            return
+        current_tab.textedit.alter_indent(indent=False)
+    action = QAction('&Dedent', window)
+    action.setShortcut(QKeySequence('Ctrl+<'))
+    action.triggered.connect(dedent)
     editmenu.addAction(action)
 
     insert = menubar.addMenu('Insert')
@@ -863,7 +920,10 @@ window.restore_everything()
 if not tabwidget.currentWidget():
     open_file()
 if not tabwidget.currentWidget():
+    logger.info('Exiting due to user canceling open file')
+    logger.close()
     sys.exit(0)
 window.show()
 app.exec_()
+logger.info('Exiting normally')
 logger.close()
