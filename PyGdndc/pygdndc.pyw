@@ -28,7 +28,7 @@ APPFOLDER = os.path.join(APPLOCAL, APPNAME)
 LOGS_FOLDER = os.path.join(APPFOLDER, 'Logs')
 os.makedirs(LOGS_FOLDER, exist_ok=True)
 LOGFILE_LOCATION = os.path.join(LOGS_FOLDER, datetime.datetime.now().strftime('%Y-%m-%d.txt'))
-PYGDNDC_VERSION = '0.3.11'
+PYGDNDC_VERSION = '0.3.12'
 
 class Logs:
     def __init__(self) -> None:
@@ -418,7 +418,6 @@ class Page(QSplitter):
         self.webpage.setHtml(html, baseUrl=QUrl(f'https://{APPHOST}/this.html'))
 
     def format(self) -> None:
-        raise Exception('lmao')
         try:
             text = pydndc.reformat(self.textedit.toPlainText(), error_reporter=self.display_dndc_error)
         except ValueError:

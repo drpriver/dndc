@@ -1,0 +1,149 @@
+GUI Manual::title
+Menus::md
+  The Files Menu::md
+    This program offers the usual operations under the file menu.
+    <b><i>Open</i></b> for pre-existing files, <b><i>New</b></i> to create a new
+    file.
+
+    <b><i>Save</i></b> immediately saves the file. Doing this is usually
+    unnecessary as the file will be automatically saved every time the file is
+    closed. All files will be saved when the program exits.
+
+    <b><i>Close</i></b> closes that file (and thus its associated tab). As noted
+    above, this saves the file.
+
+    <b><i>Export As HTML</i></b> translates the dnd file to html and saves it at
+    the specified location. It will be what is shown in [the HTML display].
+
+    <b><i>Exit</i></b> exits the program (which saves all files as noted above).
+
+  The Edit Menu::md
+    <b><i>Format</i></b> applies a formatter to the dnd file, wrapping lines to
+    80 characters, removing unnececsary whitespace and newlines. The semantics of
+    the document will remain unaltered.
+
+    <b><i>Font</i></b> allows picking a different font for the text editor.
+
+  The Insert Menu::md
+    The insert menu allows convenient insertion of elements. They duplicate
+    things you could type yourself. The import thing they do is bring up a file
+    browsing dialog so you can navigate to the files.
+
+  The View Menu::md
+    <b><i>Toggle Editors</i></b> will hide or show the text editor.
+
+    <b><i>Toggle Error</i></b> will hide or show the error output box that is at
+    the bottom of the text editor (which is where syntax errors are reported).
+
+    <b><i>Flop Editors</i></b> will change which side the text editor is on (left
+    or right).
+
+  The Help Menu::md
+    <b><i>Version</i></b> shows version information. If you are encountering a
+    problem, make sure you share the versions listed in this dialog.
+
+    <b><i>Open Logs Folder</b></i> will open the folder where the log files are
+    recorded. When encountering an issue, you should share the most recent log.
+    The logs are named by the day the program was opened. If you leave the
+    program open for multiple days (or even just open before midnight and use it
+    after midnight), it will continue logging into the log for the first day it
+    was opened.
+
+    <b><i>Compress Logs</i></b> will zip the logfile of the current running
+    session and open the logs folder. This is the easiest way to share logs with
+    David.
+
+The Main Panels::md
+  The Text Editor::md
+    On the left (or right, depending on your settings), there is a plain text
+    editor where you can type in the dnd file. All the regular plain text
+    operations are supported, like copy, paste, undo, redo, etc. Keyboard
+    shortcuts only for these operations.
+
+    As you type in the plain text, the html display will immediately update with
+    the new contents. If there is a syntax error in the text, the first syntax
+    error will have a red indicator in the line number column and an error
+    message will be shown in the area below the text editor. This error message
+    is removed as soon as the problem is resolved.
+
+    The text editor can be resized by the use of the splitter between the editor
+    and the html display. Additionally, double clicking that splitter will cause
+    the text editor to collapse. You can drag the splitter out to show it again,
+    or simply double click it.
+
+  The HTML Display::md
+    Next to the text editor is the html display. It shows a live preview of what
+    the dnd text will be translated into. It should look identical to if you
+    export the html and open it with your favorite browser. There can be small
+    differences, as the preview uses Chrome's rendering engine as its underlying
+    engine --- there may be small differences when opening it with Firefox,
+    Safari, or Internet Explorer (not Edge). It is possible, although sometimes
+    annoying to write css that works in the major browsers. Or maybe you don't
+    care, as these are just for personal notes.
+
+Getting Help::md
+  If something in the GUI misbehaves or seems to be working strangely, don't
+  hestitate to contact David.
+
+::css @inline
+  body > div {
+    margin:auto;
+    font-family: Sans;
+    font-size: 24px;
+  }
+  div.grid_container{
+    display: grid;
+    grid-template-columns: 15% 85%;
+    grid-template-rows: 10% 90%;
+    grid-column-gap: 4em;
+  }
+  nav {
+    font-size: .7em;
+    height:100%;
+    overflow:auto;
+  }
+  .center li {
+    text-align: justify;
+  }
+  a {
+    text-decoration: none;
+    color: black;
+    border-bottom: 1px grey dotted;
+  }
+
+  .left a {
+    display: block;
+    border-bottom: none;
+  }
+  .left {
+    grid-column: 1;
+    grid-row: 1;
+    position:fixed;
+    width: 15%;
+    height:100%;
+    overflow: auto;
+  }
+  .center {
+    padding: 0 10px;
+    max-width: 44em;
+    /* max-width: 100%; */
+    grid-column: 2;
+    grid-row:1;
+    padding-bottom: 50em;
+  }
+
+::python
+  # This block makes it so the above document is nested within a grid container,
+  # with a nav on the left.
+  # This allows us to have it nested for display purposes,
+  # while writing it in a linear manner.
+  root = ctx.root
+  root.detach()
+  container = ctx.make_node(NodeType.DIV, classes=('center',))
+  container.add_child(root)
+  new_root = ctx.make_node(NodeType.DIV, classes=('grid_container',))
+  new_root.add_child(container)
+  left = ctx.make_node(NodeType.DIV, classes=('left',))
+  new_root.add_child(left)
+  left.add_child(ctx.make_node(NodeType.NAV))
+  ctx.set_root(new_root)
