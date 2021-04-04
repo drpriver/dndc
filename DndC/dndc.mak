@@ -31,7 +31,7 @@ $(BINDIR)/pydndc$(PYEXTENSION): DndC/pydndc.c
 	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -g $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS)
 pydndc: $(BINDIR)/pydndc$(PYEXTENSION)
 
-DNDCVERSION = 0.3.13
+DNDCVERSION = 0.3.14
 RELEASEFILES = $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pygdndc.pyw PyGdndc/changelog.dnd PyGdndc/install_deps.py PyGdndc/README.txt EXAMPLE.dnd PyGdndc/Manual.dnd
 .PHONY: release
 release: $(RELEASEFILES)

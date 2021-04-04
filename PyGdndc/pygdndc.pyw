@@ -29,13 +29,13 @@ APPFOLDER = os.path.join(APPLOCAL, APPNAME)
 LOGS_FOLDER = os.path.join(APPFOLDER, 'Logs')
 os.makedirs(LOGS_FOLDER, exist_ok=True)
 LOGFILE_LOCATION = os.path.join(LOGS_FOLDER, datetime.datetime.now().strftime('%Y-%m-%d.txt'))
-PYGDNDC_VERSION = '0.3.13'
+PYGDNDC_VERSION = '0.3.14'
 
 class Logs:
     def __init__(self) -> None:
         self.old_hook: Optional[Callable] = None
         try:
-            self.stream = open(LOGFILE_LOCATION, 'a')
+            self.stream = open(LOGFILE_LOCATION, 'a', encoding='utf-8')
         except:
             self.stream = sys.stderr
         self.logger = logging.getLogger('pygdndc')
@@ -50,6 +50,7 @@ class Logs:
         self.info = self.logger.info
         self.warn = self.logger.warn
         self.debug = self.logger.debug
+        self.exception = self.logger.exception
         self.info('New Session')
         self.info('pydndc: version is %s', pydndc.__version__)
         self.info('pygdndc: version is %s', PYGDNDC_VERSION)
@@ -601,15 +602,25 @@ def make_page_widget(filename:str, allow_fail:bool) -> Optional[QWidget]:
         return None
     result = Page()
     try:
-        fp = open(filename, 'r')
+        fp = open(filename, 'r', encoding='utf-8')
     except:
         if not allow_fail:
             logger.debug("Failed to open: '%s'", filename)
             return None
         text = ''
     else:
-        text = fp.read()
-        fp.close()
+        try:
+            text = fp.read()
+        except Exception as e:
+            logger.exception('Problem when reading text file')
+            fp.close()
+            error_message = f'Unable to read data from {filename}'
+            if isinstance(e, UnicodeDecodeError):
+                error_message += '\n' + 'The file contains invalid utf-8 data.\nConvert the file to utf-8 first (Notepad can do this)'
+            QMessageBox.critical(window, 'Problem when reading file', error_message)
+            return None
+        else:
+            fp.close()
     # Qt uses newlines as separators, not terminators.
     # We'll add a newline back when we save.
     if text.endswith('\n'):

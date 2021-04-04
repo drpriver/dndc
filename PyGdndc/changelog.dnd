@@ -1,3 +1,8 @@
+Version 0.3.14::md
+  * Files are now explicitly decoded as utf-8 instead of guessing based on the user's locale settings.
+    This caused issues when weebs set their locale to some japanese locale.
+    - All .dnd files must now be utf-8 encoded. If you somehow have a non-utf-8 encoded plain text file,
+      you will need to save it as utf-8. Notepad can do this.
 Version 0.3.13::md
   * Fixed bug that closing a tab with the button would not save the file.
   * Implemented Indent/Dedent actions.

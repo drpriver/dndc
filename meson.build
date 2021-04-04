@@ -1,4 +1,4 @@
-project('DndC', 'c', version: '0.3.13')
+project('DndC', 'c', version: '0.3.14')
 
 pymod = import('python')
 pyinstall = pymod.find_installation()
