@@ -1,3 +1,15 @@
+Syntax Highlighting::md
+  For guis, we need to be able to syntax analyze the document.
+
+  We would use a callback mechanism so that the gui can cache the result.
+
+  The syntax analyzer would need to be more robust to parse errors than the
+  regular parser.
+
+  Update::md
+    Implemented half of the solution. Working on integrating it into python
+    and the gui apps now.
+
 Tables::md
   Tables need to allow line breaks for the last item in a row. This would make
   things like

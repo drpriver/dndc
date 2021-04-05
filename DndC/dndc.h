@@ -74,6 +74,7 @@ extern ErrorFunc dndc_stderr_error_func;
 //
 // Turns the given .dnd string into html, storing the result in output.
 // The output is allocated by malloc. You take ownership of the result.
+// On Windows and if loaded from a dll, you should use dndc_free_string.
 //
 // Arguments
 // ---------
@@ -125,6 +126,7 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
 // files.
 //
 // The output is allocated by malloc. You take ownership of the result.
+// On Windows and if loaded from a dll, you should use dndc_free_string.
 //
 // Arguments
 // ---------
@@ -138,14 +140,14 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
 //    If there is an error, the output is not written to.
 //
 // error_func:
-//   A function for reporting errors. See `ErrorFunc` above. If NULL, errors
-//   will not be printed. Use `dndc_stderr_error_func` for a function that just
-//   prints to stderr.
+//    A function for reporting errors. See `ErrorFunc` above. If NULL, errors
+//    will not be printed. Use `dndc_stderr_error_func` for a function that just
+//    prints to stderr.
 //
 // error_user_data:
-//   A pointer that will be passed to the error_func. For
-//   `dndc_stderr_error_func`, this should be NULL. For a function you've
-//   defined, pass an appropriate pointer!
+//    A pointer that will be passed to the error_func. For
+//    `dndc_stderr_error_func`, this should be NULL. For a function you've
+//    defined, pass an appropriate pointer!
 //
 // Returns
 // -------
@@ -155,6 +157,15 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
 extern
 int
 dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(ErrorFunc*)error_func, Nullable(void*) error_user_data);
+
+//
+// On windows, if you load a dll, it will have its own crt and thus its own heap.
+// This function is provided so you can free the returned string with the right heap.
+// On Linux or MacOS this is unnecessary as dynamic linking works differently.
+//
+extern
+void
+dndc_free_string(LongString);
 
 //
 // Initializes the python interpreter and imports the dndc types.
@@ -186,6 +197,88 @@ extern
 int
 dndc_init_python_types(void);
 
+enum DndCSyntax {
+    // DNDC_SYNTAX_NONE,
+    DNDC_SYNTAX_DOUBLE_COLON,
+    DNDC_SYNTAX_HEADER,
+    DNDC_SYNTAX_NODE_TYPE,
+    DNDC_SYNTAX_ATTRIBUTE,
+    DNDC_SYNTAX_ATTRIBUTE_ARGUMENT,
+    DNDC_SYNTAX_CLASS,
+    // DNDC_SYNTAX_BULLET,
+    // DNDC_SYNTAX_COMMENT,
+    DNDC_SYNTAX_RAW_STRING,
+};
+
+//
+// A function type for marking syntactic regions, for use with
+// dndc_analyze_syntax.
+//
+// Arguments:
+// ----------
+// user_data:
+//    A pointer to user-defined data. The pointer will be the same one provided
+//    to dndc_analyze_syntax.
+//
+// type:
+//    The type of the syntactic region. See DndCSyntaxType.
+//
+// line:
+//    Which line of the file the error originated from. This is 0-based.
+//    Newlines increment the line count.
+//
+// col:
+//    The column the error occurred in, on the line specified by line.
+//    This is 0-based and is a byte-offset from the beginning of the line.
+//
+// begin:
+//    The beginning of the syntactic region. This is a pointer derived from
+//    the source string.
+//
+// length:
+//    The length of the syntactic region, in bytes.
+//
+typedef void SyntaxFunc(void* _Nullable user_data, int type, int line, int col, Nonnull(const char*)begin, size_t length);
+
+//
+// Analyzes a string, identifiying the syntax of parts of the string.
+//
+// When the function recognizes an entire syntactic region, it will invoke
+// the syntax func on that region. You can do whatever you want with the syntax.
+// This syntax func will never be invoked with DNDC_SYNTAX_NONE. The function is
+// not invoked on every single piece of the string - "regular" string nodes
+// and such will not be called on (as implicitly everything is a string node unless
+// otherwise).
+//
+// This function does not execute any python blocks and does not read any
+// files.
+//
+// Note: this function is looser with parsing than the other dndc funcs. In the
+// interest of providing syntax highlighting to an entire document,
+// unrecognized node types will be treated as regular nodes.
+//
+// Arguments
+// ---------
+// source_text:
+//    The actual source .dnd string. This string does *not* need to be
+//    nul-terminated (which means it substrings can be analyzed).
+//    No references to this are retained.
+//
+// syntax_func:
+//    A function for marking syntactic regions. See SyntaxFunc. Whenever
+//    a syntactic region is identified, this function will be invoked on it.
+//
+// syntax_data:
+//    A pointer that will be passed to the syntax_func. Pass an appropriate
+//    pointer as defined by your syntax func.
+//
+// Returns
+// -------
+// Returns 0 on success, a non-zero error code otherwise.
+//
+extern
+int
+dndc_analyze_syntax(StringView source_text, Nonnull(SyntaxFunc*) syntax_func, Nullable(void*) syntax_data);
 #ifdef __cplusplus
 }
 #endif

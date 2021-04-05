@@ -1,3 +1,5 @@
+#include "dndc_flags.h"
+#include "dndc_node_types.h"
 #ifdef LOG_LEVEL
 #undef LOG_LEVEL
 #endif
@@ -182,6 +184,10 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
     return result;
     }
 
+static
+void
+dndc_print_out_syntax(LongString source_path);
+
 #ifdef DNDCMAIN
 int main(int argc, char**argv){
     auto t0 = get_t();
@@ -203,6 +209,7 @@ int main(int argc, char**argv){
     bool reformat_only = false;
     bool hidden_help = false;
     bool dont_inline_images = false;
+    bool print_syntax = false;
     {
         ArgToParse pos_args[] = {
             [0] = {
@@ -272,6 +279,14 @@ int main(int argc, char**argv){
                 .max_num = 1,
                 .dest = ARGDEST(&print_links),
                 .help = "Print out all links (and what they target) known by the system.",
+                .hidden = true,
+            },
+            {
+                .name = SV("--print-syntax"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&print_syntax),
+                .help = "Print out the input document with syntax highlighting.",
                 .hidden = true,
             },
             {
@@ -401,6 +416,10 @@ int main(int argc, char**argv){
         auto after_parse_args = get_t();
         // this one has to be done manually as we don't have a ctx yet.
         report_stat_raw(print_stats?DNDC_PRINT_STATS:0, dndc_stderr_error_func, NULL, "Parsing args took: %.3fms", (after_parse_args-t0)/1000.);
+    }
+    if(print_syntax){
+        dndc_print_out_syntax(source_path);
+        return 0;
     }
 
     uint64_t flags = DNDC_FLAGS_NONE;
@@ -1045,6 +1064,12 @@ dndc_init_python_types(void){
     auto err = docparse_init_types();
     return err.errored;
     }
+
+extern
+void
+dndc_free_string(LongString str){
+    const_free(str.text);
+}
 #endif
 
 extern
@@ -1062,4 +1087,214 @@ dndc_stderr_error_func(Nullable(void*)unused, int type, const char*_Nonnull file
     (void)type;
     (void)message_len;
     fprintf(stderr, "%.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+    }
+
+extern
+int
+dndc_analyze_syntax(StringView source_text, Nonnull(SyntaxFunc*) syntax_func, Nullable(void*)syntax_data){
+    // this is only needed for raw nodes
+    ptrdiff_t raw_indentation = 0;
+    int line = 0;
+    const char* begin = source_text.text;
+    const char* const end = begin + source_text.length;
+    enum WhichNode {
+        RAW,
+        GENERIC,
+        };
+    enum WhichNode which = GENERIC;
+    for(;begin != end;line++){
+        const char* endline = memchr(begin, '\n', end-begin);
+        if(not endline)
+            endline = end;
+        StringView stripped = stripped_view(begin, endline-begin);
+        ptrdiff_t indent = stripped.text - begin;
+        if(stripped.length and indent <= raw_indentation)
+            which = GENERIC;
+        if(which == RAW){
+            syntax_func(syntax_data, DNDC_SYNTAX_RAW_STRING, line, indent, stripped.text, stripped.length);
+            }
+        else {
+            const char* doublecolon = memmem(stripped.text, stripped.length, "::", 2);
+            if(not doublecolon){
+                }
+            else {
+                StringView header = stripped_view(stripped.text, doublecolon - stripped.text);
+                if(header.length){
+                    syntax_func(syntax_data, DNDC_SYNTAX_HEADER, line, header.text - begin, header.text, header.length);
+                    }
+                syntax_func(syntax_data, DNDC_SYNTAX_DOUBLE_COLON, line, doublecolon-begin, doublecolon, 2);
+                StringView aftercolon = stripped_view(doublecolon+2, endline-(doublecolon+2));
+                const char* nodenameend = aftercolon.text;
+                for(;nodenameend != aftercolon.text+aftercolon.length;nodenameend++){
+                    switch(*nodenameend){
+                        case 'a' ... 'z':
+                            continue;
+                        default:
+                            break;
+                        }
+                    break;
+                    }
+                if(nodenameend != aftercolon.text){
+                    StringView nodename = {.text=aftercolon.text, .length=nodenameend-aftercolon.text};
+                    syntax_func(syntax_data, DNDC_SYNTAX_NODE_TYPE, line, nodename.text-begin, nodename.text, nodename.length);
+                    for(size_t i = 0; i < arrlen(raw_nodes); i++){
+                        if(SV_equals(nodename, raw_nodes[i])){
+                            which = RAW;
+                            raw_indentation = stripped.text - begin;
+                            break;
+                            }
+                        }
+                    }
+                const char* postnodename = nodenameend;
+                for(;postnodename != endline;){
+                    switch(*postnodename){
+                        case '@':{
+                            const char* attrfirst = postnodename;
+                            postnodename++;
+                            for(;postnodename != endline;postnodename++){
+                                char c = *postnodename;
+                                switch(c){
+                                    case 'a' ... 'z':
+                                    case 'A' ... 'Z':
+                                    case '0' ... '9':
+                                    case '-': case '_':
+                                        continue;
+                                    default:
+                                        break;
+                                    }
+                                break;
+                                }
+                            syntax_func(syntax_data, DNDC_SYNTAX_ATTRIBUTE, line, attrfirst-begin, attrfirst, postnodename-attrfirst);
+                            if(postnodename != endline and *postnodename == '('){
+                                int parens = 1;
+                                postnodename++;
+                                const char* argfirst = postnodename;
+                                for(;postnodename != endline;postnodename++){
+                                    if(*postnodename == '(')
+                                        parens++;
+                                    if(*postnodename == ')')
+                                        parens--;
+                                    if(!parens)
+                                        break;
+                                    }
+                                syntax_func(syntax_data, DNDC_SYNTAX_ATTRIBUTE_ARGUMENT, line, argfirst-begin, argfirst, postnodename-argfirst);
+                                if(postnodename != endline)
+                                    postnodename++;
+                                }
+                            }break;
+                        case '.':{
+                            const char* classfirst = postnodename;
+                            postnodename++;
+                            for(;postnodename != endline;postnodename++){
+                                char c = *postnodename;
+                                switch(c){
+                                    case 'a' ... 'z':
+                                    case 'A' ... 'Z':
+                                    case '0' ... '9':
+                                    case '-': case '_':
+                                        continue;
+                                    default:
+                                        break;
+                                    }
+                                break;
+                                }
+                            syntax_func(syntax_data, DNDC_SYNTAX_CLASS, line, classfirst-begin, classfirst, postnodename-classfirst);
+                            }break;
+                        default:
+                            postnodename++;
+                            continue;
+                        }
+                    }
+                }
+            }
+        if(endline == end)
+            break;
+        begin = endline+1;
+        }
+    return 0;
+}
+
+static
+void
+dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(const char*)begin, size_t length){
+    (void)line;
+    (void)col;
+    const char** where = data;
+    if(begin != *where){
+        fwrite(*where, 1, begin - *where, stdout);
+        }
+    const char* gray    = "\033[97m";
+    const char* blue    = "\033[94m";
+    const char* green   = "\033[92m";
+    const char* red     = "\033[91m";
+    const char* yellow  = "\033[93m";
+    const char* magenta = "\033[95m";
+    const char* cyan    = "\033[96m";
+    const char* white   = "\033[37m";
+    const char* reset   = "\033[39;49m";
+    switch((enum DndCSyntax)type){
+        // case DNDC_SYNTAX_NONE:
+            // break;
+        case DNDC_SYNTAX_DOUBLE_COLON:
+            fputs(gray, stdout);
+            break;
+        case DNDC_SYNTAX_HEADER:
+            fputs(blue, stdout);
+            break;
+        case DNDC_SYNTAX_NODE_TYPE:
+            fputs(red, stdout);
+            break;
+        case DNDC_SYNTAX_ATTRIBUTE:
+            fputs(white, stdout);
+            break;
+        case DNDC_SYNTAX_ATTRIBUTE_ARGUMENT:
+            fputs(magenta, stdout);
+            break;
+        case DNDC_SYNTAX_CLASS:
+            fputs(cyan, stdout);
+            break;
+        // case DNDC_SYNTAX_BULLET:
+            // break;
+        // case DNDC_SYNTAX_COMMENT:
+            // break;
+        case DNDC_SYNTAX_RAW_STRING:
+            fputs(green, stdout);
+            break;
+        }
+    fwrite(begin, 1, length, stdout);
+    *where = begin + length;
+    fputs(reset, stdout);
+    }
+
+static
+void
+dndc_print_out_syntax(LongString source_path){
+    LongString source_text;
+    Allocator allocator = get_mallocator();
+    if(!source_path.length){
+        MStringBuilder sb = {.allocator=allocator};
+        for(;;){
+            enum {N = 4096};
+            msb_reserve(&sb, N);
+            char* buff = sb.data + sb.cursor;
+            auto numread = fread(buff, 1, N, stdin);
+            sb.cursor += numread;
+            if(numread != N)
+                break;
+            }
+        source_text = msb_detach(&sb);
+        }
+    else {
+        auto load_err = read_file(allocator, source_path.text);
+        if(load_err.errored){
+            fprintf(stderr, "Unable to read: '%s'\n", source_path.text);
+            return;
+            }
+        source_text = load_err.result;
+        }
+    const char* where = source_text.text;
+    dndc_analyze_syntax(LS_to_SV(source_text), dndc_syntax_func, &where);
+    if(where != source_text.text+source_text.length){
+        fwrite(where, 1, (source_text.text+source_text.length) - where, stdout);
+        }
     }

@@ -82,6 +82,14 @@ struct {
 };
 
 static const
+StringView raw_nodes[] = {
+    SV("python"),
+    SV("raw"),
+    SV("comment"),
+    SV("pre"),
+};
+
+static const
 StringView
 nodetype_to_node_aliases[NODE_INVALID+1] = {
      [NODE_MD]           = SV("md"),
