@@ -184,11 +184,12 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
     return result;
     }
 
+
+#ifdef DNDCMAIN
 static
 void
 dndc_print_out_syntax(LongString source_path);
 
-#ifdef DNDCMAIN
 int main(int argc, char**argv){
     auto t0 = get_t();
     LongString source_path = LS("");
@@ -1089,6 +1090,25 @@ dndc_stderr_error_func(Nullable(void*)unused, int type, const char*_Nonnull file
     fprintf(stderr, "%.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
     }
 
+
+static
+Nullable(const char*)
+find_double_colon(Nonnull(const char*) haystack, size_t length){
+    if(length <= 2)
+        return NULL;
+    const char* end = haystack + length;
+    for(;;){
+        const char* first = memchr(haystack, ':', end - haystack);
+        if(!first)
+            return NULL;
+        if(end - first < 2)
+            return NULL;
+        if(first[1] == ':')
+            return first;
+        haystack = first+2;
+        }
+    }
+
 extern
 int
 dndc_analyze_syntax(StringView source_text, Nonnull(SyntaxFunc*) syntax_func, Nullable(void*)syntax_data){
@@ -1114,7 +1134,7 @@ dndc_analyze_syntax(StringView source_text, Nonnull(SyntaxFunc*) syntax_func, Nu
             syntax_func(syntax_data, DNDC_SYNTAX_RAW_STRING, line, indent, stripped.text, stripped.length);
             }
         else {
-            const char* doublecolon = memmem(stripped.text, stripped.length, "::", 2);
+            const char* doublecolon = find_double_colon(stripped.text, stripped.length);
             if(not doublecolon){
                 }
             else {
@@ -1214,6 +1234,7 @@ dndc_analyze_syntax(StringView source_text, Nonnull(SyntaxFunc*) syntax_func, Nu
     return 0;
 }
 
+#ifdef DNDCMAIN
 static
 void
 dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(const char*)begin, size_t length){
@@ -1227,7 +1248,7 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
     const char* blue    = "\033[94m";
     const char* green   = "\033[92m";
     const char* red     = "\033[91m";
-    const char* yellow  = "\033[93m";
+    // const char* yellow  = "\033[93m";
     const char* magenta = "\033[95m";
     const char* cyan    = "\033[96m";
     const char* white   = "\033[37m";
@@ -1298,3 +1319,4 @@ dndc_print_out_syntax(LongString source_path){
         fwrite(where, 1, (source_text.text+source_text.length) - where, stdout);
         }
     }
+#endif

@@ -26,3 +26,4 @@ builddir
 build2
 *.zip
 Release
+PyGdndc/pydndc.pyi

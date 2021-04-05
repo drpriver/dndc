@@ -1,5 +1,6 @@
 #include "dndc.c"
 
+#if 0
 // Libfuzz calls this function to do its fuzzing.
 // Generally ascii-only is more interesting.
 // You can turn that off if you want.
@@ -30,3 +31,22 @@ int LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
     free(str);
     return 0;
     }
+#else
+void
+dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(const char*)begin, size_t length){
+    long long val = 0;
+    for(size_t i = 0; i < length; i++){
+        val += begin[i];
+        }
+    long long* d = data;
+    *d = val;
+    }
+int LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
+    // We only accept null-terminated and I can't find any indication that that
+    // we can get fuzzer to give us nul-terminated, so do it ourselves I guess.
+    long long d = 0;
+    StringView source = {.text = (const char*)data, .length=size};
+    dndc_analyze_syntax(source, dndc_syntax_func, &d);
+    return 0;
+    }
+#endif

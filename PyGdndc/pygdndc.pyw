@@ -11,7 +11,7 @@ from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent
 from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent
 import pydndc
-from typing import Optional, List, Dict, Optional, Callable
+from typing import Optional, List, Dict, Optional, Callable, Tuple
 import time
 import re
 import textwrap
@@ -144,14 +144,62 @@ def close_tab(index:int) -> None:
 tabwidget.tabCloseRequested.connect(close_tab)
 window.setCentralWidget(tabwidget)
 
+# this is stupid and slow and I hate it and hate everything about unicode
+def byte_index_to_character_index(s:str, index:int) -> int:
+    b = 0
+    for n, c, in enumerate(s):
+        if b == index:
+            return n
+        b += len(c.encode('utf-8'))
+    return n
+
 
 class DndSyntaxHighlighter(QSyntaxHighlighter):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.highlight_regions = {}  # type: Dict[int, List[Tuple[int, int, int, int]]]
+        self.color_names = {
+            pydndc.ATTRIBUTE: 'lightsteelblue',
+            pydndc.ATTRIBUTE_ARGUMENT: 'darkkhaki',
+            pydndc.CLASS: 'burlywood',
+            pydndc.DOUBLE_COLON: 'darkgray',
+            pydndc.HEADER: 'blue',
+            pydndc.NODE_TYPE: 'lightslategray',
+            # pydndc.RAW_STRING: '#000', # I should really break this up into more types
+        }
+    def update_regions(self, regions):
+        self.highlight_regions = regions
     def highlightBlock(self, text:str) -> None:
-        doublecolon = text.find('::')
-        if doublecolon == -1:
+        block = self.currentBlock()
+        line = block.blockNumber()
+        if line not in self.highlight_regions:
             return
         fmt = QTextCharFormat()
         color = QColor()
+        names = self.color_names
+        if len(text.encode('utf-8')) != len(text):
+            for region in self.highlight_regions[line]:
+                region_type, bytecol, _, bytelength = region
+                if region_type not in names:
+                    continue
+                start = byte_index_to_character_index(text, bytecol)
+                length = byte_index_to_character_index(text, bytecol+bytelength-1) - start + 1
+                color.setNamedColor(names[region_type])
+                fmt.setForeground(color)
+                self.setFormat(start, length, fmt)
+        else: # all ascii
+            for region in self.highlight_regions[line]:
+                region_type, bytecol, _, bytelength = region
+                if region_type not in names:
+                    continue
+                color.setNamedColor(names[region_type])
+                fmt.setForeground(color)
+                self.setFormat(bytecol, bytelength, fmt)
+        return
+
+        doublecolon = text.find('::')
+        if doublecolon == -1:
+            return
         color.setNamedColor('blue')
         fmt.setForeground(color)
         self.setFormat(0, doublecolon, fmt)
@@ -405,6 +453,7 @@ class Page(QSplitter):
         self.textedit.setMinimumSize(EIGHTYCHARS*1.05, 200)  # type: ignore
         self.dirname = '.'
         self.textedit.textChanged.connect(self.update_html)
+        self.textedit.textChanged.connect(self.update_syntax)
         self.error_display = QPlainTextEdit()
         self.error_display.setFont(FONT)
         self.editor_holder = QSplitter()
@@ -449,7 +498,13 @@ class Page(QSplitter):
             self.textedit.error_line = row
         et = error_types[error_type]
         self.error_display.appendPlainText(f'{et}:{row+1}:{col+1}: {message}')
-
+    def update_syntax(self) -> None:
+        logger.debug('updating syntax')
+        highlighter = self.textedit.highlight
+        highlighter.update_regions(pydndc.analyze_syntax_for_highlight(self.textedit.toPlainText()))
+        self.textedit.blockSignals(True)
+        highlighter.rehighlight()
+        self.textedit.blockSignals(False)
     def update_html(self) -> None:
         self.clear_errors()
         try:
@@ -630,6 +685,7 @@ def make_page_widget(filename:str, allow_fail:bool) -> Optional[QWidget]:
     result.dirname = dirname
     result.filename = filename
     result.webpage.basedir = dirname
+    result.update_syntax()
     result.update_html()
     all_windows[filename]= result
     return result

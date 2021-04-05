@@ -199,15 +199,15 @@ dndc_init_python_types(void);
 
 enum DndCSyntax {
     // DNDC_SYNTAX_NONE,
-    DNDC_SYNTAX_DOUBLE_COLON,
-    DNDC_SYNTAX_HEADER,
-    DNDC_SYNTAX_NODE_TYPE,
-    DNDC_SYNTAX_ATTRIBUTE,
-    DNDC_SYNTAX_ATTRIBUTE_ARGUMENT,
-    DNDC_SYNTAX_CLASS,
+    DNDC_SYNTAX_DOUBLE_COLON = 1,
+    DNDC_SYNTAX_HEADER = 2,
+    DNDC_SYNTAX_NODE_TYPE = 3,
+    DNDC_SYNTAX_ATTRIBUTE = 4,
+    DNDC_SYNTAX_ATTRIBUTE_ARGUMENT = 5,
+    DNDC_SYNTAX_CLASS = 6,
     // DNDC_SYNTAX_BULLET,
     // DNDC_SYNTAX_COMMENT,
-    DNDC_SYNTAX_RAW_STRING,
+    DNDC_SYNTAX_RAW_STRING = 7,
 };
 
 //
@@ -261,7 +261,7 @@ typedef void SyntaxFunc(void* _Nullable user_data, int type, int line, int col, 
 // ---------
 // source_text:
 //    The actual source .dnd string. This string does *not* need to be
-//    nul-terminated (which means it substrings can be analyzed).
+//    nul-terminated (which means substrings can be analyzed).
 //    No references to this are retained.
 //
 // syntax_func:

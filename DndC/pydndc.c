@@ -14,6 +14,10 @@ Nullable(PyObject*)
 pydndc_htmlgen(Nonnull(PyObject*), Nonnull(PyObject*), Nonnull(PyObject*));
 
 static
+Nullable(PyObject*)
+pydndc_anaylze_syntax_for_highlight(Nonnull(PyObject*), Nonnull(PyObject*), Nonnull(PyObject*));
+
+static
 PyMethodDef pydndc_methods[] = {
     {
         .ml_name = "reformat",
@@ -113,6 +117,39 @@ PyMethodDef pydndc_methods[] = {
         "encountered any syntax errors will not be reported.\n"
         ,
     },
+    {
+        .ml_name = "analyze_syntax_for_highlight",
+        .ml_meth = (PyCFunction)pydndc_anaylze_syntax_for_highlight,
+        .ml_flags = METH_VARARGS|METH_KEYWORDS,
+        .ml_doc =
+        "analyze_syntax_for_highlight(text)\n"
+        "--\n"
+        "\n"
+        "Analyzes the .dnd string and returns a dictionary of syntactic regions.\n"
+        "\n"
+        "Args:\n"
+        "-----\n"
+        "text: str\n"
+        "    The .dnd string.\n"
+        "\n"
+        "Returns:\n"
+        "--------\n"
+        "dict: The dict of syntactic regions.\n"
+        "The dictionary a mapping of lines (0-based) as the keys to a tuple of\n"
+        "(type, col, byteoffset, length)\n"
+        "col, byteoffeset and length are all in bytes of utf-8.\n"
+        "The type is one of the following:\n"
+        "  DOUBLE_COLON       = 1\n"
+        "  HEADER             = 2\n"
+        "  NODE_TYPE          = 3\n"
+        "  ATTRIBUTE          = 4\n"
+        "  ATTRIBUTE_ARGUMENT = 5\n"
+        "  CLASS              = 6\n"
+        "  RAW_STRING         = 7\n"
+        "These have been exported as module globals so you can refer to them by\n"
+        "name instead of magic numbers.\n"
+        ,
+    },
     {NULL, NULL, 0, NULL}
 };
 
@@ -129,6 +166,7 @@ PyModuleDef pydndc = {
     .m_free=NULL,
 };
 
+
 PyMODINIT_FUNC
 PyInit_pydndc(void) {
     auto e = docparse_init_types();
@@ -137,7 +175,15 @@ PyInit_pydndc(void) {
     PyObject* mod = PyModule_Create(&pydndc);
     if(not mod)
         return NULL;
+
     PyModule_AddStringConstant(mod, "__version__", DNDC_VERSION);
+    PyModule_AddIntConstant(mod, "DOUBLE_COLON", DNDC_SYNTAX_DOUBLE_COLON);
+    PyModule_AddIntConstant(mod, "HEADER", DNDC_SYNTAX_HEADER);
+    PyModule_AddIntConstant(mod, "NODE_TYPE", DNDC_SYNTAX_NODE_TYPE);
+    PyModule_AddIntConstant(mod, "ATTRIBUTE", DNDC_SYNTAX_ATTRIBUTE);
+    PyModule_AddIntConstant(mod, "ATTRIBUTE_ARGUMENT", DNDC_SYNTAX_ATTRIBUTE_ARGUMENT);
+    PyModule_AddIntConstant(mod, "CLASS", DNDC_SYNTAX_CLASS);
+    PyModule_AddIntConstant(mod, "RAW_STRING", DNDC_SYNTAX_RAW_STRING);
     return mod;
 }
 
@@ -268,4 +314,72 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
     Py_XDECREF(error_list);
     const_free(output.text);
     return result;
+}
+
+struct CollectData {
+    Nonnull(const char*) begin;
+    Nonnull(PyObject*) dict;
+};
+
+static
+void
+pydndc_collect_syntax_tokens(Nullable(void*)user_data, int type, int line, int col, Nonnull(const char*)begin, size_t length){
+    assert(user_data);
+    struct CollectData* cd = user_data;
+    PyObject* d = cd->dict;
+    if(PyErr_Occurred())
+        return;
+    PyObject* key = PyLong_FromLong(line);
+    PyObject* value = Py_BuildValue("iinn", type, col, (Py_ssize_t)(begin - cd->begin), (Py_ssize_t)length);
+    // TODO: handle allocation failures I guess.
+    assert(key);
+    assert(value);
+    PyObject * list;
+    if(PyDict_Contains(d, key)){
+        list = PyDict_GetItem(d, key); // borrow
+        assert(list);
+        }
+    else {
+        list = PyList_New(0);
+        assert(list);
+        auto fail = PyDict_SetItem(d, key, list); // does not steal
+        assert(fail == 0);
+        Py_XDECREF(list);
+        }
+    auto fail = PyList_Append(list, value);
+    assert(fail == 0);
+    Py_XDECREF(key);
+    Py_XDECREF(value);
+}
+
+static
+Nullable(PyObject*)
+pydndc_anaylze_syntax_for_highlight(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)kwargs){
+    (void)mod;
+    PyObject* text;
+    const char* const keywords[] = {"text", NULL};
+    PushDiagnostic();
+    SuppressCastQual();
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!:analyze_syntax_for_highlight", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type)){
+        return NULL;
+        }
+    PopDiagnostic();
+    StringView source = pystring_borrow_stringview(text);
+    struct CollectData cd = {
+        .dict = PyDict_New(),
+        .begin = source.text,
+        };
+    if(!cd.dict)
+        return NULL;
+    auto error = dndc_analyze_syntax(source, pydndc_collect_syntax_tokens, &cd);
+    if(error){
+        PyErr_SetString(PyExc_RuntimeError, "Unknown error while collecting tokens");
+        Py_XDECREF(cd.dict);
+        return NULL;
+        }
+    if(PyErr_Occurred()){
+        Py_XDECREF(cd.dict);
+        return NULL;
+        }
+    return cd.dict;
 }
