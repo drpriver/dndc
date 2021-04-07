@@ -209,6 +209,7 @@ enum DndCSyntax {
     // DNDC_SYNTAX_COMMENT,
     DNDC_SYNTAX_RAW_STRING = 7,
 };
+enum{DNDC_SYNTAX_MAX=8};
 
 //
 // A function type for marking syntactic regions, for use with
@@ -239,6 +240,8 @@ enum DndCSyntax {
 //    The length of the syntactic region, in bytes.
 //
 typedef void SyntaxFunc(void* _Nullable user_data, int type, int line, int col, Nonnull(const char*)begin, size_t length);
+// Ditto, but for utf-16 code units in native endian-ness
+typedef void SyntaxFuncUtf16(void* _Nullable user_data, int type, int line, int col, Nonnull(const uint16_t*)begin, size_t length);
 
 //
 // Analyzes a string, identifiying the syntax of parts of the string.
@@ -279,6 +282,12 @@ typedef void SyntaxFunc(void* _Nullable user_data, int type, int line, int col, 
 extern
 int
 dndc_analyze_syntax(StringView source_text, Nonnull(SyntaxFunc*) syntax_func, Nullable(void*) syntax_data);
+//
+// ditto, but for utf-16 code units of native endianness
+//
+extern
+int
+dndc_analyze_syntax_utf16(StringViewUtf16 source_text, Nonnull(SyntaxFuncUtf16*) syntax_func, Nullable(void*) syntax_data);
 #ifdef __cplusplus
 }
 #endif

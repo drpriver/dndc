@@ -34,6 +34,29 @@ stripped_view(Nonnull(const char*)str, size_t len){
     return (StringView){.text=str, .length=len};
     }
 
+static inline
+StringViewUtf16
+stripped_view_utf16(Nonnull(const uint16_t*)str, size_t len){
+    for(;len;len--, str++){
+        switch(*str){
+            case ' ': case '\t': case '\r': case '\n': case '\f': case '\v':
+                continue;
+            default:
+                break;
+            }
+        break;
+        }
+    for(;len;len--){
+        switch(str[len-1]){
+            case ' ': case '\t': case '\r': case '\n': case '\f': case '\v':
+                continue;
+            default:
+                break;
+            }
+        break;
+        }
+    return (StringViewUtf16){.text=str, .length=len};
+    }
 //
 // Like stripped_view, but only strips from the right.
 //
@@ -69,6 +92,20 @@ lstripped_view(Nonnull(const char*)str, size_t len){
     return (StringView){.text=str, .length=len};
     }
 
+static inline
+StringViewUtf16
+lstripped_view_utf16(Nonnull(const uint16_t*)str, size_t len){
+    for(;len;len--, str++){
+        switch(*str){
+            case ' ': case '\t': case '\r': case '\n': case '\f': case '\v':
+                continue;
+            default:
+                break;
+            }
+        break;
+        }
+    return (StringViewUtf16){.text=str, .length=len};
+    }
 typedef struct SplitPair {
     StringView head;
     StringView tail;

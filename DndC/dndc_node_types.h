@@ -88,6 +88,13 @@ StringView raw_nodes[] = {
     SV("comment"),
     SV("pre"),
 };
+static const
+StringViewUtf16 raw_nodes_utf16[] = {
+    {.text=u"python", .length=6},
+    {.text=u"raw", .length=3},
+    {.text=u"comment", .length=7},
+    {.text=u"pre", .length=3},
+};
 
 static const
 StringView

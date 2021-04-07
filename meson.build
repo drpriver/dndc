@@ -1,4 +1,4 @@
-project('DndC', 'c', version: '0.3.14')
+project('DndC', 'c', version: '0.3.15')
 
 pymod = import('python')
 pyinstall = pymod.find_installation()
@@ -100,7 +100,6 @@ if host_machine.system() == 'darwin'
   executable(
     'gdndc',
     'Platform/MacOS/gdndc.m',
-    'DndC/dndc.c',
     'PythonEmbed/frozenstdlib.c',
     frozen_modules,
     dependencies:[pydep, dependency('appleframeworks', modules: ['Cocoa', 'WebKit'])],

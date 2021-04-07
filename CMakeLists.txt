@@ -1,7 +1,7 @@
 # I just use the makefiles, but here is my attempt
 # at writing a CMakeLists.txt
 cmake_minimum_required(VERSION 3.16)
-project(Dndc VERSION 0.3.14)
+project(Dndc VERSION 0.3.15)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
@@ -39,7 +39,6 @@ if(APPLE)
     add_executable(gdndc
         MACOSX_BUNDLE
         Platform/MacOS/gdndc.m
-        DndC/dndc.c
         PythonEmbed/frozenstdlib.c
         )
     set_target_properties(gdndc PROPERTIES

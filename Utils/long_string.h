@@ -20,6 +20,12 @@ typedef struct StringView {
 } StringView;
 Errorable_declare(StringView);
 
+typedef struct StringViewUtf16 {
+    size_t length; // in code units
+    Nonnull(const uint16_t*) text;
+} StringViewUtf16;
+Errorable_declare(StringViewUtf16);
+
 static inline
 force_inline
 StringView
@@ -66,6 +72,17 @@ SV_equals(const StringView a, const StringView b){
     assert(a.text);
     assert(b.text);
     return memcmp(a.text, b.text, a.length) == 0;
+    }
+static inline
+bool
+SV_utf16_equals(const StringViewUtf16 a, const StringViewUtf16 b){
+    if(a.length != b.length)
+        return false;
+    if(a.text == b.text)
+        return true;
+    assert(a.text);
+    assert(b.text);
+    return memcmp(a.text, b.text, a.length*sizeof(uint16_t)) == 0;
     }
 
 static inline

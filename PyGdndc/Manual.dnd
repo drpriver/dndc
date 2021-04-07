@@ -43,6 +43,9 @@ Menus::md
     <b><i>Flop Editors</i></b> will change which side the text editor is on (left
     or right).
 
+    <b><i>Refresh Highlighting</i></b> will recalculate the highlighting for
+    the entire document.
+
   The Help Menu::md
     <b><i>Version</i></b> shows version information. If you are encountering a
     problem, make sure you share the versions listed in this dialog.

@@ -360,7 +360,7 @@ pydndc_anaylze_syntax_for_highlight(Nonnull(PyObject*)mod, Nonnull(PyObject*)arg
     const char* const keywords[] = {"text", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!:analyze_syntax_for_highlight", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!:analyze_syntax_for_highlight", (char**)keywords, &PyUnicode_Type, &text)){
         return NULL;
         }
     PopDiagnostic();

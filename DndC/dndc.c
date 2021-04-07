@@ -23,7 +23,7 @@
 
 #define DNC_MAJOR 0
 #define DNC_MINOR 3
-#define DNC_MICRO 14
+#define DNC_MICRO 15
 #define DNDC_VERSION STRINGIFY(DNC_MAJOR) "." STRINGIFY(DNC_MINOR) "." STRINGIFY(DNC_MICRO)
 
 // Unsure of where to put this. So, just putting it here for now.
@@ -1094,11 +1094,155 @@ dndc_stderr_error_func(Nullable(void*)unused, int type, const char*_Nonnull file
 static
 Nullable(const char*)
 find_double_colon(Nonnull(const char*) haystack, size_t length){
-    if(length <= 2)
+    if(length < 2)
         return NULL;
     const char* end = haystack + length;
     for(;;){
         const char* first = memchr(haystack, ':', end - haystack);
+        if(!first)
+            return NULL;
+        if(end - first < 2)
+            return NULL;
+        if(first[1] == ':')
+            return first;
+        haystack = first+2;
+        }
+    }
+
+#ifdef DNDCMAIN
+static
+void
+dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(const char*)begin, size_t length){
+    (void)line;
+    (void)col;
+    const char** where = data;
+    if(begin != *where){
+        fwrite(*where, 1, begin - *where, stdout);
+        }
+    const char* gray    = "\033[97m";
+    const char* blue    = "\033[94m";
+    const char* green   = "\033[92m";
+    const char* red     = "\033[91m";
+    // const char* yellow  = "\033[93m";
+    const char* magenta = "\033[95m";
+    const char* cyan    = "\033[96m";
+    const char* white   = "\033[37m";
+    const char* reset   = "\033[39;49m";
+    switch((enum DndCSyntax)type){
+        // case DNDC_SYNTAX_NONE:
+            // break;
+        case DNDC_SYNTAX_DOUBLE_COLON:
+            fputs(gray, stdout);
+            break;
+        case DNDC_SYNTAX_HEADER:
+            fputs(blue, stdout);
+            break;
+        case DNDC_SYNTAX_NODE_TYPE:
+            fputs(red, stdout);
+            break;
+        case DNDC_SYNTAX_ATTRIBUTE:
+            fputs(white, stdout);
+            break;
+        case DNDC_SYNTAX_ATTRIBUTE_ARGUMENT:
+            fputs(magenta, stdout);
+            break;
+        case DNDC_SYNTAX_CLASS:
+            fputs(cyan, stdout);
+            break;
+        // case DNDC_SYNTAX_BULLET:
+            // break;
+        // case DNDC_SYNTAX_COMMENT:
+            // break;
+        case DNDC_SYNTAX_RAW_STRING:
+            fputs(green, stdout);
+            break;
+        }
+    fwrite(begin, 1, length, stdout);
+    *where = begin + length;
+    fputs(reset, stdout);
+    }
+
+static
+void
+dndc_print_out_syntax(LongString source_path){
+    LongString source_text;
+    Allocator allocator = get_mallocator();
+    if(!source_path.length){
+        MStringBuilder sb = {.allocator=allocator};
+        for(;;){
+            enum {N = 4096};
+            msb_reserve(&sb, N);
+            char* buff = sb.data + sb.cursor;
+            auto numread = fread(buff, 1, N, stdin);
+            sb.cursor += numread;
+            if(numread != N)
+                break;
+            }
+        source_text = msb_detach(&sb);
+        }
+    else {
+        auto load_err = read_file(allocator, source_path.text);
+        if(load_err.errored){
+            fprintf(stderr, "Unable to read: '%s'\n", source_path.text);
+            return;
+            }
+        source_text = load_err.result;
+        }
+    const char* where = source_text.text;
+    dndc_analyze_syntax(LS_to_SV(source_text), dndc_syntax_func, &where);
+    if(where != source_text.text+source_text.length){
+        fwrite(where, 1, (source_text.text+source_text.length) - where, stdout);
+        }
+    }
+#endif
+
+static inline
+force_inline
+const uint16_t* _Nullable
+mem_utf16(const uint16_t* _Nonnull haystack, uint16_t needle, size_t ncode_units){
+    // A 1 in each utf-16 code unit slot.
+    const uint64_t ones = 0x0001000100010001;
+    const uint64_t needle_ = needle; // Basically a cast.
+    // Repeat the needle in the 4 utf-16 code unit slots.
+    const uint64_t needles = (needle_ << 48) | (needle_ << 32) | (needle_ << 16) | needle_;
+    // Skip 4 code units at a time if the needle is not present.
+    while(ncode_units > 4){
+        uint64_t tmp1;
+        // Pray that efficient code is generated.
+        (memcpy)(&tmp1, haystack, 4*sizeof(*haystack));
+        // After this, each code unit is all zeros iif that code unit == needle
+        const uint64_t tmp2 = tmp1 ^ needles;
+        // Subtract one from all of the code units,
+        // Thus those that are zeros become all ones.
+        const uint64_t tmp3 = tmp2 - ones;
+        // Apply a mask to the high bit. The only way the highest bit in each
+        // code point can be set is if it was a zero and we subtracted one.
+        const uint64_t tmp4 = tmp3 & (ones << 15);
+        // Check if any are set, thus a match.
+        if(tmp4)
+            break;
+        haystack += 4;
+        ncode_units -= 4;
+    }
+    // We're either at the tail end of the haystack or this block of
+    // 4 units has the needle.
+    // Just do a unit at a time search for it.
+    for(;ncode_units > 0; --ncode_units, ++haystack){
+        if(*haystack == needle)
+            return haystack;
+    }
+    return NULL;
+}
+
+static inline
+force_inline
+Nullable(const uint16_t*)
+find_double_colon_utf16(Nonnull(const uint16_t*) haystack, size_t ncode_units){
+    if(ncode_units < 2)
+        return NULL;
+    const uint16_t* end = haystack + ncode_units;
+    for(;;){
+        const uint16_t* first = mem_utf16(haystack, ':', end - haystack);
         if(!first)
             return NULL;
         if(end - first < 2)
@@ -1126,7 +1270,7 @@ dndc_analyze_syntax(StringView source_text, Nonnull(SyntaxFunc*) syntax_func, Nu
         const char* endline = memchr(begin, '\n', end-begin);
         if(not endline)
             endline = end;
-        StringView stripped = stripped_view(begin, endline-begin);
+        StringView stripped = lstripped_view(begin, endline-begin);
         ptrdiff_t indent = stripped.text - begin;
         if(stripped.length and indent <= raw_indentation)
             which = GENERIC;
@@ -1138,12 +1282,12 @@ dndc_analyze_syntax(StringView source_text, Nonnull(SyntaxFunc*) syntax_func, Nu
             if(not doublecolon){
                 }
             else {
-                StringView header = stripped_view(stripped.text, doublecolon - stripped.text);
+                StringView header = lstripped_view(stripped.text, doublecolon - stripped.text);
                 if(header.length){
                     syntax_func(syntax_data, DNDC_SYNTAX_HEADER, line, header.text - begin, header.text, header.length);
                     }
                 syntax_func(syntax_data, DNDC_SYNTAX_DOUBLE_COLON, line, doublecolon-begin, doublecolon, 2);
-                StringView aftercolon = stripped_view(doublecolon+2, endline-(doublecolon+2));
+                StringView aftercolon = lstripped_view(doublecolon+2, endline-(doublecolon+2));
                 const char* nodenameend = aftercolon.text;
                 for(;nodenameend != aftercolon.text+aftercolon.length;nodenameend++){
                     switch(*nodenameend){
@@ -1234,89 +1378,131 @@ dndc_analyze_syntax(StringView source_text, Nonnull(SyntaxFunc*) syntax_func, Nu
     return 0;
 }
 
-#ifdef DNDCMAIN
-static
-void
-dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(const char*)begin, size_t length){
-    (void)line;
-    (void)col;
-    const char** where = data;
-    if(begin != *where){
-        fwrite(*where, 1, begin - *where, stdout);
-        }
-    const char* gray    = "\033[97m";
-    const char* blue    = "\033[94m";
-    const char* green   = "\033[92m";
-    const char* red     = "\033[91m";
-    // const char* yellow  = "\033[93m";
-    const char* magenta = "\033[95m";
-    const char* cyan    = "\033[96m";
-    const char* white   = "\033[37m";
-    const char* reset   = "\033[39;49m";
-    switch((enum DndCSyntax)type){
-        // case DNDC_SYNTAX_NONE:
-            // break;
-        case DNDC_SYNTAX_DOUBLE_COLON:
-            fputs(gray, stdout);
-            break;
-        case DNDC_SYNTAX_HEADER:
-            fputs(blue, stdout);
-            break;
-        case DNDC_SYNTAX_NODE_TYPE:
-            fputs(red, stdout);
-            break;
-        case DNDC_SYNTAX_ATTRIBUTE:
-            fputs(white, stdout);
-            break;
-        case DNDC_SYNTAX_ATTRIBUTE_ARGUMENT:
-            fputs(magenta, stdout);
-            break;
-        case DNDC_SYNTAX_CLASS:
-            fputs(cyan, stdout);
-            break;
-        // case DNDC_SYNTAX_BULLET:
-            // break;
-        // case DNDC_SYNTAX_COMMENT:
-            // break;
-        case DNDC_SYNTAX_RAW_STRING:
-            fputs(green, stdout);
-            break;
-        }
-    fwrite(begin, 1, length, stdout);
-    *where = begin + length;
-    fputs(reset, stdout);
-    }
-
-static
-void
-dndc_print_out_syntax(LongString source_path){
-    LongString source_text;
-    Allocator allocator = get_mallocator();
-    if(!source_path.length){
-        MStringBuilder sb = {.allocator=allocator};
-        for(;;){
-            enum {N = 4096};
-            msb_reserve(&sb, N);
-            char* buff = sb.data + sb.cursor;
-            auto numread = fread(buff, 1, N, stdin);
-            sb.cursor += numread;
-            if(numread != N)
-                break;
+//
+// copy-paste and slight alterations from dndc_analyze_syntax
+// Will need to keep these in sync. This is where static if would come in handy.
+//
+extern
+int
+dndc_analyze_syntax_utf16(StringViewUtf16 source_text, Nonnull(SyntaxFuncUtf16*) syntax_func, Nullable(void*)syntax_data){
+    // this is only needed for raw nodes
+    ptrdiff_t raw_indentation = 0;
+    int line = 0;
+    const uint16_t* begin = source_text.text;
+    const uint16_t* const end = begin + source_text.length;
+    enum WhichNode {
+        RAW,
+        GENERIC,
+        };
+    enum WhichNode which = GENERIC;
+    for(;begin != end;line++){
+        const uint16_t* endline = mem_utf16(begin, '\n', end-begin);
+        if(not endline)
+            endline = end;
+        StringViewUtf16 stripped = lstripped_view_utf16(begin, endline-begin);
+        ptrdiff_t indent = stripped.text - begin;
+        if(stripped.length and indent <= raw_indentation)
+            which = GENERIC;
+        if(which == RAW){
+            syntax_func(syntax_data, DNDC_SYNTAX_RAW_STRING, line, indent, stripped.text, stripped.length);
             }
-        source_text = msb_detach(&sb);
-        }
-    else {
-        auto load_err = read_file(allocator, source_path.text);
-        if(load_err.errored){
-            fprintf(stderr, "Unable to read: '%s'\n", source_path.text);
-            return;
+        else {
+            const uint16_t* doublecolon = find_double_colon_utf16(stripped.text, stripped.length);
+            if(not doublecolon){
+                }
+            else {
+                StringViewUtf16 header = lstripped_view_utf16(stripped.text, doublecolon - stripped.text);
+                if(header.length){
+                    syntax_func(syntax_data, DNDC_SYNTAX_HEADER, line, header.text - begin, header.text, header.length);
+                    }
+                syntax_func(syntax_data, DNDC_SYNTAX_DOUBLE_COLON, line, doublecolon-begin, doublecolon, 2);
+                StringViewUtf16 aftercolon = lstripped_view_utf16(doublecolon+2, endline-(doublecolon+2));
+                const uint16_t* nodenameend = aftercolon.text;
+                for(;nodenameend != aftercolon.text+aftercolon.length;nodenameend++){
+                    switch(*nodenameend){
+                        case 'a' ... 'z':
+                            continue;
+                        default:
+                            break;
+                        }
+                    break;
+                    }
+                if(nodenameend != aftercolon.text){
+                    StringViewUtf16 nodename = {.text=aftercolon.text, .length=nodenameend-aftercolon.text};
+                    syntax_func(syntax_data, DNDC_SYNTAX_NODE_TYPE, line, nodename.text-begin, nodename.text, nodename.length);
+                    for(size_t i = 0; i < arrlen(raw_nodes); i++){
+                        if(SV_utf16_equals(nodename, raw_nodes_utf16[i])){
+                            which = RAW;
+                            raw_indentation = stripped.text - begin;
+                            break;
+                            }
+                        }
+                    }
+                const uint16_t* postnodename = nodenameend;
+                for(;postnodename != endline;){
+                    switch(*postnodename){
+                        case '@':{
+                            const uint16_t* attrfirst = postnodename;
+                            postnodename++;
+                            for(;postnodename != endline;postnodename++){
+                                uint16_t c = *postnodename;
+                                switch(c){
+                                    case 'a' ... 'z':
+                                    case 'A' ... 'Z':
+                                    case '0' ... '9':
+                                    case '-': case '_':
+                                        continue;
+                                    default:
+                                        break;
+                                    }
+                                break;
+                                }
+                            syntax_func(syntax_data, DNDC_SYNTAX_ATTRIBUTE, line, attrfirst-begin, attrfirst, postnodename-attrfirst);
+                            if(postnodename != endline and *postnodename == '('){
+                                int parens = 1;
+                                postnodename++;
+                                const uint16_t* argfirst = postnodename;
+                                for(;postnodename != endline;postnodename++){
+                                    if(*postnodename == '(')
+                                        parens++;
+                                    if(*postnodename == ')')
+                                        parens--;
+                                    if(!parens)
+                                        break;
+                                    }
+                                syntax_func(syntax_data, DNDC_SYNTAX_ATTRIBUTE_ARGUMENT, line, argfirst-begin, argfirst, postnodename-argfirst);
+                                if(postnodename != endline)
+                                    postnodename++;
+                                }
+                            }break;
+                        case '.':{
+                            const uint16_t* classfirst = postnodename;
+                            postnodename++;
+                            for(;postnodename != endline;postnodename++){
+                                uint16_t c = *postnodename;
+                                switch(c){
+                                    case 'a' ... 'z':
+                                    case 'A' ... 'Z':
+                                    case '0' ... '9':
+                                    case '-': case '_':
+                                        continue;
+                                    default:
+                                        break;
+                                    }
+                                break;
+                                }
+                            syntax_func(syntax_data, DNDC_SYNTAX_CLASS, line, classfirst-begin, classfirst, postnodename-classfirst);
+                            }break;
+                        default:
+                            postnodename++;
+                            continue;
+                        }
+                    }
+                }
             }
-        source_text = load_err.result;
+        if(endline == end)
+            break;
+        begin = endline+1;
         }
-    const char* where = source_text.text;
-    dndc_analyze_syntax(LS_to_SV(source_text), dndc_syntax_func, &where);
-    if(where != source_text.text+source_text.length){
-        fwrite(where, 1, (source_text.text+source_text.length) - where, stdout);
-        }
-    }
-#endif
+    return 0;
+}

@@ -29,7 +29,7 @@ APPFOLDER = os.path.join(APPLOCAL, APPNAME)
 LOGS_FOLDER = os.path.join(APPFOLDER, 'Logs')
 os.makedirs(LOGS_FOLDER, exist_ok=True)
 LOGFILE_LOCATION = os.path.join(LOGS_FOLDER, datetime.datetime.now().strftime('%Y-%m-%d.txt'))
-PYGDNDC_VERSION = '0.3.14'
+PYGDNDC_VERSION = '0.3.15'
 
 class Logs:
     def __init__(self) -> None:
@@ -230,7 +230,18 @@ class DndEditor(QPlainTextEdit):
         self.cursorPositionChanged.connect(self.highlightCurrentLine)
         self.updateLineNumberAreaWidth(0)
         self.error_line = None
+        # Idk if this is guaranteed, but it is important that we can
+        # update the syntax analysis before the highlighter
+        # is called on a line.
+        self.document().contentsChange.connect(self.update_syntax)
         self.highlight = DndSyntaxHighlighter(self.document())
+
+    def update_syntax(self, *args) -> None:
+        # t0 = time.time()
+        new = pydndc.analyze_syntax_for_highlight(self.toPlainText())
+        self.highlight.update_regions(new)
+        # t1 = time.time()
+        # print(f'update_syntax = {(t1-t0)*1000:.3f}ms')
 
     def lineNumberAreaWidth(self) -> int:
         digits = 1
@@ -452,8 +463,7 @@ class Page(QSplitter):
         self.textedit.setFont(FONT)
         self.textedit.setMinimumSize(EIGHTYCHARS*1.05, 200)  # type: ignore
         self.dirname = '.'
-        self.textedit.textChanged.connect(self.update_html)
-        self.textedit.textChanged.connect(self.update_syntax)
+        self.textedit.document().contentsChanged.connect(self.update_html)
         self.error_display = QPlainTextEdit()
         self.error_display.setFont(FONT)
         self.editor_holder = QSplitter()
@@ -498,13 +508,6 @@ class Page(QSplitter):
             self.textedit.error_line = row
         et = error_types[error_type]
         self.error_display.appendPlainText(f'{et}:{row+1}:{col+1}: {message}')
-    def update_syntax(self) -> None:
-        logger.debug('updating syntax')
-        highlighter = self.textedit.highlight
-        highlighter.update_regions(pydndc.analyze_syntax_for_highlight(self.textedit.toPlainText()))
-        self.textedit.blockSignals(True)
-        highlighter.rehighlight()
-        self.textedit.blockSignals(False)
     def update_html(self) -> None:
         self.clear_errors()
         try:
@@ -685,7 +688,6 @@ def make_page_widget(filename:str, allow_fail:bool) -> Optional[QWidget]:
     result.dirname = dirname
     result.filename = filename
     result.webpage.basedir = dirname
-    result.update_syntax()
     result.update_html()
     all_windows[filename]= result
     return result
@@ -945,6 +947,16 @@ def add_menus() -> None:
 
     action = QAction('&Flop Editors', window)
     action.triggered.connect(flop_editors)
+    viewmenu.addAction(action)
+
+    action = QAction('&Refresh Highlighting', window)
+    def refresh_highlight(*args) -> None:
+        current_tab: Optional[Page] = tabwidget.currentWidget()
+        if not current_tab:
+            return
+        current_tab.textedit.highlight.rehighlight()
+
+    action.triggered.connect(refresh_highlight)
     viewmenu.addAction(action)
 
     helpmenu = menubar.addMenu('Help')

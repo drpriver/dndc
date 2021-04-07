@@ -1,3 +1,12 @@
+Version 0.3.15::md
+  * Implemented new syntax highlighter, is actually accurate now.
+    - The colors are kind of wonky. Idk I'm not a graphic designer.
+  * There are some narrow circumstances where the highlighting can become stale.
+    The underlying gui library only applies new syntax to lines that have been edited.
+    The highlighting of a line of text can actually depend on previous lines.
+    If those lines change, dependent lines won't be updated, as they did not change.
+    To ameliorate this, a new action has been added to the View menu to refresh
+    the highlighting of the entire document.
 Version 0.3.14::md
   * Files are now explicitly decoded as utf-8 instead of guessing based on the user's locale settings.
     This caused issues when weebs set their locale to some japanese locale.

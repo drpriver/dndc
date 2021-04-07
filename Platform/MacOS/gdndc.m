@@ -55,9 +55,8 @@ typedef enum GdndInsertTag{
 // Controls what urls to allow (basically makes it so links will open a new
 // .dnd document)
 //
-@interface WebNavDel : NSObject <WKNavigationDelegate>{
-@public DndViewController* controller;
-}
+@interface WebNavDel : NSObject <WKNavigationDelegate>
+@property(weak, nonatomic) DndViewController* controller;
 @end
 
 //
@@ -71,7 +70,8 @@ typedef enum GdndInsertTag{
 @public WebNavDel* webnavdel; // for the webview
 @public NSURL* file_url;
 }
--(void)recalc_html:(id)sender;
+-(LongString)get_text;
+-(void)recalc_html:(LongString)text;
 -(void)flop_editor:(id)sender;
 @end
 
@@ -117,7 +117,7 @@ static NSImage* appimage;
     error:(NSError * _Nullable *)outError{
     self = [super initForURL:urlOrNil withContentsOfURL:contentsURL ofType:typeName error:outError];
     view_controller->file_url = [self fileURL];
-    [view_controller recalc_html:nil];
+    [view_controller recalc_html:[view_controller get_text]];
     return self;
     }
 -(NSWindow*)make_window{
@@ -158,21 +158,123 @@ static NSImage* appimage;
     if(str){
         view_controller->text.string = str;
         view_controller->file_url = [self fileURL];
-        [view_controller recalc_html:nil];
+        [view_controller recalc_html:[view_controller get_text]];
     }
     return YES;
 }
 @end
+
+static NSColor* SYNTAX_COLORS[DNDC_SYNTAX_MAX] = {};
+#define U16SYNTAX
+#ifdef U16SYNTAX
+struct SyntaxData {
+    NSTextStorage* storage;
+    const uint16_t* begin;
+    const uint16_t* begin_edited_line;
+    const uint16_t* end_edited_lines;
+};
+static
+void
+dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(const uint16_t*)begin, size_t length){
+    (void)line;
+    (void)col;
+    struct SyntaxData* sd = data;
+    if(begin + length < sd->begin_edited_line)
+        return;
+    if(begin > sd->end_edited_lines)
+        return;
+    if(type == DNDC_SYNTAX_RAW_STRING)
+        return;
+    [sd->storage addAttribute:NSForegroundColorAttributeName value:SYNTAX_COLORS[type] range:NSMakeRange(begin-sd->begin, length)];
+    return;
+}
+#else
+struct SyntaxData {
+    NSTextStorage* storage;
+    const char* begin;
+    const char* begin_edited_line;
+    const char* end_edited_lines;
+};
+static
+void
+dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(const char*)begin, size_t length){
+    (void)line;
+    (void)col;
+    struct SyntaxData* sd = data;
+    if(begin + length < sd->begin_edited_line)
+        return;
+    if(begin > sd->end_edited_lines)
+        return;
+    if(type == DNDC_SYNTAX_RAW_STRING)
+        return;
+    [sd->storage addAttribute:NSForegroundColorAttributeName value:SYNTAX_COLORS[type] range:NSMakeRange(begin-sd->begin, length)];
+    return;
+}
+#endif
 
 @implementation DndHighlighter
 - (void)textStorage:(NSTextStorage *)textStorage
   didProcessEditing:(NSTextStorageEditActions)editedMask
               range:(NSRange)editedRange
      changeInLength:(NSInteger)delta{
+    auto cvc = (DndViewController*)[NSApp keyWindow].contentViewController;
     NSString *string = textStorage.string;
+    LongString text;
+    text.text = [string UTF8String];
+    text.length = strlen(text.text);
+    if(cvc){
+        [cvc recalc_html: text];
+    }
+#if 1
+    // NSRange currentLineRange = NSMakeRange(0, [string length]);
+    NSRange currentLineRange = [string lineRangeForRange:editedRange];
+    auto before= get_t();
+    [textStorage removeAttribute:NSForegroundColorAttributeName range:currentLineRange];
+    [textStorage removeAttribute:NSBackgroundColorAttributeName range:currentLineRange];
+    // HERE("Clearing syntax costs: %.3fms", (get_t()-before)/1000.);
+#ifdef U16SYNTAX
+    auto len = [string length];
+    // gross!
+    static unichar* chars;
+    static size_t chars_length;
+    if(chars_length < len){
+        chars = realloc(chars, sizeof(*chars)*len);
+        chars_length = len;
+    }
+    [string getCharacters:chars range:NSMakeRange(0, len)];
+    struct SyntaxData sd = {
+        .storage = textStorage,
+        .begin = chars,
+        .begin_edited_line = currentLineRange.location + chars,
+        .end_edited_lines = currentLineRange.location+currentLineRange.length+chars,
+    };
+    StringViewUtf16 text16 = {
+        .text = chars,
+        .length = len,
+    };
+    // auto t0 = get_t();
+    // for(int i = 0; i < 1000; i++)
+        dndc_analyze_syntax_utf16(text16, dndc_syntax_func, &sd);
+    auto t1 = get_t();
+#else
+    struct SyntaxData sd = {
+        .storage = textStorage,
+        .begin = text.text,
+        .begin_edited_line = currentLineRange.location + text.text,
+        .end_edited_lines = currentLineRange.location+currentLineRange.length+text.text,
+    };
+    // auto t0 = get_t();
+    // for(int i = 0; i < 1000; i++)
+        dndc_analyze_syntax(LS_to_SV(text), dndc_syntax_func, &sd);
+    auto t1 = get_t();
+#endif
+    // HERE("dndc_analyze_syntax: %.3fms", (t1-t0)/1000.);
+    return;
+#else
     // We take advantage of the fact that .dnd can mostly be tokenized
     // linewise (technically you need to know what the parent node is, but
     // that only affects python blocks really).
+    // NSRange currentLineRange = NSMakeRange(0, [string length]);
     NSRange currentLineRange = [string lineRangeForRange:editedRange];
     [textStorage removeAttribute:NSForegroundColorAttributeName range:currentLineRange];
     [textStorage removeAttribute:NSBackgroundColorAttributeName range:currentLineRange];
@@ -182,7 +284,7 @@ static NSImage* appimage;
     BOOL all_spaces = YES;
     NSUInteger double_colon = 0;
     auto end = currentLineRange.location + currentLineRange.length;
-    for (NSUInteger i = currentLineRange.location; i < end; i++) {
+    for (NSUInteger i = currentLineRange.location; i < end; i++){
         unichar c = [string characterAtIndex:i];
         if(all_spaces && c != ' '){
             all_spaces = NO;
@@ -230,10 +332,9 @@ static NSImage* appimage;
         saw_double_colon = NO;
         saw_colon = NO;
     }
-    auto cvc = (DndViewController*)[NSApp keyWindow].contentViewController;
-    if(cvc){
-        [cvc recalc_html:nil];
-    }
+    auto t1 = get_t();
+    HERE("dndc_analyze_syntax: %.3fms", (t1-t0)/1000.);
+#endif
 }
 @end
 
@@ -504,7 +605,7 @@ static NSImage* appimage;
         if([path characterAtIndex:0] == '/'){
             // auto real_url = [[[NSURL fileURLWithPath:[path substringFromIndex:1]] URLByDeletingPathExtension] URLByAppendingPathExtension:@"dnd"];
             // auto foo = self->controller->file_url.URLByDeletingLastPathComponent;
-            auto real_url = [self->controller->file_url.URLByDeletingLastPathComponent URLByAppendingPathComponent:[path substringFromIndex:1]];
+            auto real_url = [self.controller->file_url.URLByDeletingLastPathComponent URLByAppendingPathComponent:[path substringFromIndex:1]];
             real_url = [[real_url URLByDeletingPathExtension] URLByAppendingPathExtension:@"dnd"];
             // hack: too lazy to declare interfaces
             [[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:real_url display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
@@ -572,12 +673,12 @@ static NSImage* appimage;
     webview = [[WKWebView alloc] initWithFrame:webrect configuration:config];
     webview.allowsMagnification = YES;
     webnavdel = [[WebNavDel alloc] init];
-    webnavdel->controller = self;
+    webnavdel.controller = self;
     webview.navigationDelegate = webnavdel;
     [self.view addSubview:webview];
     webview.autoresizingMask = NSViewHeightSizable | NSViewWidthSizable;
     webview.allowsBackForwardNavigationGestures = YES;
-    [self recalc_html:nil];
+    [self recalc_html:[self get_text]];
     return self;
 }
 -(void)insert_file:(id)sender{
@@ -635,7 +736,7 @@ static NSImage* appimage;
 
             have_path:;
             [self->text insert_file_block:path tag:item.tag size:size];
-            [self recalc_html:nil];
+            [self recalc_html: [self get_text]];
         }
     }];
 }
@@ -675,11 +776,22 @@ static NSImage* appimage;
     [self->scrollview setLineScroll:before];
 }
 
--(void)recalc_html:(id)sender {
-    // FIXME: don't do this synchronously
-    // FIXME: where the fuck are you supposed to put this stuff.
+-(LongString)get_text{
     NSString *string = self->text.string;
     const char* source_text = [string UTF8String];
+    LongString source = {
+        .text = source_text,
+        // this is so dumb. Is there an API to get the length of the utf-8 string?
+        // Maybe I should be turning NSString into
+        // NSData and then borrowing the buffer?
+        .length = strlen(source_text),
+    };
+    return source;
+}
+-(void)recalc_html:(LongString)source{
+    // FIXME: don't do this synchronously
+    // FIXME: where the fuck are you supposed to put this stuff.
+
     LongString html = {};
     NSString* dir = [[self->file_url URLByDeletingLastPathComponent] path];
     StringView base_dir;
@@ -693,14 +805,10 @@ static NSImage* appimage;
     else {
         base_dir = SV("");
     }
-    LongString source = {
-        .text = source_text,
-        // this is so dumb. Is there an API to get the length of the utf-8 string?
-        // Maybe I should be turning NSString into
-        // NSData and then borrowing the buffer?
-        .length = strlen(source_text),
-    };
+    // auto t0 = get_t();
     auto err = dndc_make_html(base_dir, source, &html, dndc_stderr_error_func, NULL);
+    // auto t1 = get_t();
+    // HERE("dndc_make_html: %.3fms", (t1-t0)/1000.);
     if(err){
         // TODO: report errors to the user (need to figure out the UX though).
         return;
@@ -835,6 +943,15 @@ main(int argc, const char * argv[]) {
     NSData* imagedata = [NSData dataWithBytesNoCopy:(void*)_app_icon length:icon_size freeWhenDone:NO];
     appimage = [[NSImage alloc] initWithData:imagedata];
     app.applicationIconImage = appimage;
+    SYNTAX_COLORS[DNDC_SYNTAX_DOUBLE_COLON]       = [NSColor lightGrayColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_HEADER]             = [NSColor systemBlueColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_NODE_TYPE]          = [NSColor darkGrayColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_ATTRIBUTE]          = [NSColor systemBrownColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_ATTRIBUTE_ARGUMENT] = [NSColor systemBrownColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_CLASS]              = [NSColor systemGrayColor];
+    // SYNTAX_COLORS[DNDC_SYNTAX_BULLET]          =
+    // SYNTAX_COLORS[DNDC_SYNTAX_COMMENT]         =
+    SYNTAX_COLORS[DNDC_SYNTAX_RAW_STRING]         = [NSColor greenColor]; // currently unused
     return NSApplicationMain(argc, argv);
 }
 
@@ -1018,3 +1135,4 @@ do_menus(void){
 }
 
 #include "allocator.c"
+#include "dndc.c"
