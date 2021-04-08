@@ -36,9 +36,19 @@
 #endif
 
 #ifndef __clang__
+
+#ifndef _Nonnull
 #define _Nonnull
+#endif
+
+#ifndef _Nullable
 #define _Nullable
+#endif
+
+#ifndef _Null_unspecified
 #define _Null_unspecified
+#endif
+
 #endif
 
 #define Nonnull(x) x _Nonnull

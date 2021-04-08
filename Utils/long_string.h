@@ -2,28 +2,14 @@
 #define LONG_STRING_H
 #include <stdlib.h>
 #include <string.h>
+#include "long_string_type.h"
 #include "common_macros.h"
 #include "error_handling.h"
 
-// LongStrings and StringViews are very similar.
-// A LongString is basically a StringView with a guaranteed nul-terminator.
-// It is unspecified if a StringView has a nul-terminator.
-typedef struct LongString {
-    size_t length; // excludes the terminating NUL
-    NullUnspec(const char*) text;
-} LongString;
 Errorable_declare(LongString);
 
-typedef struct StringView {
-    size_t length;
-    Nonnull(const char*) text;
-} StringView;
 Errorable_declare(StringView);
 
-typedef struct StringViewUtf16 {
-    size_t length; // in code units
-    Nonnull(const uint16_t*) text;
-} StringViewUtf16;
 Errorable_declare(StringViewUtf16);
 
 static inline

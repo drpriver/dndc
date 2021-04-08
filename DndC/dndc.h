@@ -1,6 +1,6 @@
 #ifndef DNDC_H
 #define DNDC_H
-#include "long_string.h"
+#include "long_string_type.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -112,7 +112,7 @@ extern ErrorFunc dndc_stderr_error_func;
 //
 extern
 int
-dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongString*)output, Nullable(ErrorFunc*) error_func, Nullable(void*) error_user_data);
+dndc_make_html(StringView base_directory, LongString source_text, LongString*_Nonnull output, ErrorFunc*_Nullable error_func, void*_Nullable error_user_data);
 
 //
 // You do *not* need to call dndc_init_python before calling this function.
@@ -156,7 +156,7 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
 //
 extern
 int
-dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(ErrorFunc*)error_func, Nullable(void*) error_user_data);
+dndc_format(LongString source_text, LongString* _Nonnull output, ErrorFunc* _Nullable error_func, void*_Nullable error_user_data);
 
 //
 // On windows, if you load a dll, it will have its own crt and thus its own heap.
@@ -205,9 +205,9 @@ enum DndCSyntax {
     DNDC_SYNTAX_ATTRIBUTE = 4,
     DNDC_SYNTAX_ATTRIBUTE_ARGUMENT = 5,
     DNDC_SYNTAX_CLASS = 6,
+    DNDC_SYNTAX_RAW_STRING = 7,
     // DNDC_SYNTAX_BULLET,
     // DNDC_SYNTAX_COMMENT,
-    DNDC_SYNTAX_RAW_STRING = 7,
 };
 enum{DNDC_SYNTAX_MAX=8};
 
@@ -239,9 +239,9 @@ enum{DNDC_SYNTAX_MAX=8};
 // length:
 //    The length of the syntactic region, in bytes.
 //
-typedef void SyntaxFunc(void* _Nullable user_data, int type, int line, int col, Nonnull(const char*)begin, size_t length);
+typedef void SyntaxFunc(void* _Nullable user_data, int type, int line, int col, const char* _Nonnull begin, size_t length);
 // Ditto, but for utf-16 code units in native endian-ness
-typedef void SyntaxFuncUtf16(void* _Nullable user_data, int type, int line, int col, Nonnull(const uint16_t*)begin, size_t length);
+typedef void SyntaxFuncUtf16(void* _Nullable user_data, int type, int line, int col, const uint16_t*_Nonnull begin, size_t length);
 
 //
 // Analyzes a string, identifiying the syntax of parts of the string.
@@ -281,13 +281,13 @@ typedef void SyntaxFuncUtf16(void* _Nullable user_data, int type, int line, int 
 //
 extern
 int
-dndc_analyze_syntax(StringView source_text, Nonnull(SyntaxFunc*) syntax_func, Nullable(void*) syntax_data);
+dndc_analyze_syntax(StringView source_text, SyntaxFunc*_Nonnull syntax_func, void*_Nullable syntax_data);
 //
 // ditto, but for utf-16 code units of native endianness
 //
 extern
 int
-dndc_analyze_syntax_utf16(StringViewUtf16 source_text, Nonnull(SyntaxFuncUtf16*) syntax_func, Nullable(void*) syntax_data);
+dndc_analyze_syntax_utf16(StringViewUtf16 source_text, SyntaxFuncUtf16*_Nonnull syntax_func, void*_Nullable syntax_data);
 #ifdef __cplusplus
 }
 #endif
