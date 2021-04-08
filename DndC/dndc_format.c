@@ -1,5 +1,6 @@
 #ifndef DNDC_FORMAT_C
 #define DNDC_FORMAT_C
+#include "dndc_node_types.h"
 #include "dndc_types.h"
 #include "dndc_funcs.h"
 #include "str_util.h"
@@ -26,9 +27,10 @@ FORMATFUNC(table_node);
 FORMATFUNC(text_node);
 FORMATFUNC(kv_node);
 FORMATFUNC(raw_node);
-FORMATFUNC(md_bullets);
 FORMATFUNC(md_list);
 FORMATFUNC(para_node);
+
+static void format_md_bullets(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)node, int indent, int bullet_depth);
 
 static inline
 void
@@ -64,7 +66,7 @@ format_node(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)
         case NODE_LIST:
             return format_md_list(ctx, sb, node, indent);
         case NODE_BULLETS:
-            return format_md_bullets(ctx, sb, node, indent);
+            return format_md_bullets(ctx, sb, node, indent, 0);
         case NODE_ROOT:
             unreachable();
             // return format_raw_node(ctx, sb, node, indent);
@@ -95,7 +97,7 @@ format_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb){
                 format_para_node(ctx, sb, child, 0);
                 break;
             case NODE_BULLETS:
-                format_md_bullets(ctx, sb, child, 0);
+                format_md_bullets(ctx, sb, child, 0, 0);
                 break;
             case NODE_LIST:
                 format_md_list(ctx, sb, child, 0);
@@ -245,14 +247,24 @@ FORMATFUNC(para_node){
         msb_write_char(sb, '\n');
     msb_write_char(sb, '\n');
     }
-FORMATFUNC(md_bullets){
+static void format_md_bullets(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)node, int indent, int bullet_depth){
     for(size_t i = 0; i < node->children.count; i++){
         auto child = get_node(ctx, node->children.data[i]);
         assert(child->type == NODE_LIST_ITEM);
         msb_write_nchar(sb, ' ', indent);
         // FIXME: We actually need to preserve exactly which token was used
         //        as a bullet. We discard that info, so we currently just output a '*' unconditionally.
-        msb_write_literal(sb, "* ");
+        switch(bullet_depth){
+            case 0:
+                msb_write_literal(sb, "* ");
+                break;
+            case 1:
+                msb_write_literal(sb, "- ");
+                break;
+            default:
+                msb_write_literal(sb, "+ ");
+                break;
+            }
         FormatState state = {.lead = indent+2, .col=indent+2};
         for(size_t j = 0; j < child->children.count; j++){
             auto subchild = get_node(ctx, child->children.data[j]);
@@ -260,6 +272,13 @@ FORMATFUNC(md_bullets){
             // format_write_wrapped_string(sb, &state, subchild->header);
             if(subchild->type == NODE_STRING){
                 format_write_wrapped_string(sb, &state, subchild->header);
+                }
+            else if(subchild->type == NODE_BULLETS){
+                if(state.col != state.lead)
+                    msb_write_char(sb, '\n');
+                format_md_bullets(ctx, sb, subchild, indent+2, bullet_depth+1);
+                // FIXME: this is sketch - we shouldn't have strings after a nested list.
+                state = (FormatState){.lead=indent+2, .col=indent+2};
                 }
             else {
                 if(state.col != state.lead)
@@ -314,7 +333,7 @@ FORMATFUNC(md_node){
                 format_para_node(ctx, sb, child, indent);
                 break;
             case NODE_BULLETS:
-                format_md_bullets(ctx, sb, child, indent);
+                format_md_bullets(ctx, sb, child, indent, 0);
                 break;
             case NODE_LIST:
                 format_md_list(ctx, sb, child, indent);
