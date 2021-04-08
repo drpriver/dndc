@@ -205,4 +205,12 @@ typedef struct DndcContext {
     } error;
 } DndcContext;
 
+typedef union DependsArg {
+    LongString path;
+    struct {
+        void (*_Nullable callback)(void*_Nullable, StringView);
+        void*_Nullable user_data;
+    };
+}DependsArg;
+
 #endif

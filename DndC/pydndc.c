@@ -2,6 +2,7 @@
 // Exposes dndc as a c-extension for python.
 //
 
+#include "dndc_flags.h"
 #define PYTHONMODULE
 #include "dndc.c"
 
@@ -57,6 +58,7 @@ PyMethodDef pydndc_methods[] = {
         "--\n"
         "\n"
         "Parses and converts the .dnd string into html, returning as a string.\n"
+        "Additionally, returns a list of what files the string depends upon.\n"
         "\n"
         "Args:\n"
         "-----\n"
@@ -75,6 +77,7 @@ PyMethodDef pydndc_methods[] = {
         "Returns:\n"
         "--------\n"
         "str: The html.\n"
+        "List[str]: the files the string depends on (such as an import).\n"
         "\n"
         "Throws:\n"
         "-------\n"
@@ -232,7 +235,7 @@ pydndc_reformat(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*
     ErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
-    auto e = run_the_dndc(flags, SV(""), source, &output, LS(""), NULL, func, error_list);
+    auto e = run_the_dndc(flags, SV(""), source, &output, (DependsArg){.path=LS("")}, NULL, func, error_list);
     if(PyErr_Occurred()){
         goto finally;
         }
@@ -255,6 +258,17 @@ pydndc_reformat(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*
     Py_XDECREF(error_list);
     const_free(output.text);
     return result;
+}
+
+static
+void
+pydndc_add_dependency(Nullable(void*)user_data, StringView path){
+    if(PyErr_Occurred())
+        return;
+    PyObject* list = user_data;
+    PyObject* str = PyUnicode_FromStringAndSize(path.text, path.length);
+    PyList_Append(list, str);
+    Py_XDECREF(str);
 }
 
 static
@@ -286,11 +300,17 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
     // flags |= DNDC_DONT_PRINT_ERRORS;
     // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
+    flags |= DNDC_DEPENDS_IS_CALLBACK;
     LongString output = {};
     ErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
-    auto e = run_the_dndc(flags, base_str, source, &output, LS(""), NULL, func, error_list);
+    PyObject* depends_list = PyList_New(0);
+    DependsArg depends = {
+        .callback = pydndc_add_dependency,
+        .user_data = depends_list,
+        };
+    auto e = run_the_dndc(flags, base_str, source, &output, depends, NULL, func, error_list);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
@@ -309,8 +329,9 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
         PyErr_SetString(PyExc_ValueError, "html error.");
         goto finally;
         }
-    result = PyUnicode_FromStringAndSize(output.text, output.length);
+    result = Py_BuildValue("s#O", output.text, (Py_ssize_t)output.length, depends_list);
     finally:
+    Py_XDECREF(depends_list);
     Py_XDECREF(error_list);
     const_free(output.text);
     return result;

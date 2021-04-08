@@ -1,0 +1,42 @@
+::comment
+  A links block allows you to specify what a [link] should resolve to.
+  The syntax is "text = URL".
+  You can use anchor links to refer to internal targets, like:
+      foo = #foo-bar
+
+  You can also refer to relative targets:
+      level2 = dungeon-level2.html#the-madmans-lair
+
+  Relative targets are special in the GUI. When clicked, they try to open the
+  corresponding .dnd file. So with the above example, it would try to open a
+  dungeon-level2.dnd file that is in the same directory as this file. You can
+  refer to subdirectories as well, but note that you need to use '/' not '\',
+  as they are url paths. So:
+      level3 = dungeons/dungeon-level3.html
+
+  Note: your link should refer to a .html file, not to a .dnd file.
+  Also, as these are urls, using spaces is a pain. You can do it, but you will
+  need to percent encode the spaces in the links block. I suggest just not 
+  using spaces in file names.
+  
+  You can also refer to external sites, using regular https:// urls.
+  For example:
+    wikipedia = https://en.wikipedia.org/wiki/Main_Page
+::links
+  krugs-basement = KrugsBasement/krugs-basement.html
+  mechanics = Rules/mechanics.html
+  characters = Rules/characters.html
+  religion = Rules/religion.html
+  calendar = Calendar/calendar.html
+
+* Dungeon Example: [Krug's basement]
+* Rules document examples:
+  - [Mechanics]
+  - [Characters]
+  - [Religion]
+* Calendar example: [Calendar]
+
+::css @inline
+  html, body {
+      font-family: "Tahoma";
+  }

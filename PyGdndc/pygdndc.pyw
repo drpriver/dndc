@@ -8,10 +8,10 @@ if not have_deps:
     sys.exit(0)
 from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle
 from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
-from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent
-from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent
+from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices
+from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher
 import pydndc
-from typing import Optional, List, Dict, Optional, Callable, Tuple
+from typing import Optional, List, Dict, Optional, Callable, Tuple, Set
 import time
 import re
 import textwrap
@@ -29,7 +29,7 @@ APPFOLDER = os.path.join(APPLOCAL, APPNAME)
 LOGS_FOLDER = os.path.join(APPFOLDER, 'Logs')
 os.makedirs(LOGS_FOLDER, exist_ok=True)
 LOGFILE_LOCATION = os.path.join(LOGS_FOLDER, datetime.datetime.now().strftime('%Y-%m-%d.txt'))
-PYGDNDC_VERSION = '0.3.15'
+PYGDNDC_VERSION = '0.4.0'
 
 class Logs:
     def __init__(self) -> None:
@@ -54,7 +54,7 @@ class Logs:
         self.info('New Session')
         self.info('pydndc: version is %s', pydndc.__version__)
         self.info('pygdndc: version is %s', PYGDNDC_VERSION)
-    def hook(self, exctype, value, traceback):
+    def hook(self, exctype, value, traceback) -> None:
         self.error('Uncaught exception', exc_info=(exctype, value, traceback))
         # self.old_hook(exctype, value, traceback)
     def install(self) -> None:
@@ -63,7 +63,7 @@ class Logs:
     def uninstall(self) -> None:
         if self.old_hook is not None:
             sys.excepthook = self.old_hook
-    def close(self):
+    def close(self) -> None:
         self.stream.flush()
         self.stream.close()
 
@@ -99,6 +99,12 @@ class DndMainWindow(QMainWindow):
     def __init__(self)->None:
         super().__init__()
         self.settings = QSettings('DavidTechnology', APPNAME)
+        self.watcher = QFileSystemWatcher(self)
+        self.watcher.fileChanged.connect(self.file_changed)
+
+    def file_changed(self, path:str) -> None:
+        for page in all_windows.values():
+            page.file_changed(path)
 
     def restore_everything(self)->None:
         global EDITOR_ON_LEFT
@@ -167,7 +173,7 @@ class DndSyntaxHighlighter(QSyntaxHighlighter):
             pydndc.NODE_TYPE: 'lightslategray',
             # pydndc.RAW_STRING: '#000', # I should really break this up into more types
         }
-    def update_regions(self, regions):
+    def update_regions(self, regions) -> None:
         self.highlight_regions = regions
     def highlightBlock(self, text:str) -> None:
         block = self.currentBlock()
@@ -195,20 +201,6 @@ class DndSyntaxHighlighter(QSyntaxHighlighter):
                 color.setNamedColor(names[region_type])
                 fmt.setForeground(color)
                 self.setFormat(bytecol, bytelength, fmt)
-        return
-
-        doublecolon = text.find('::')
-        if doublecolon == -1:
-            return
-        color.setNamedColor('blue')
-        fmt.setForeground(color)
-        self.setFormat(0, doublecolon, fmt)
-        color.setNamedColor('gray')
-        fmt.setForeground(color)
-        self.setFormat(doublecolon, 2, fmt)
-        color.setNamedColor('darkgray')
-        fmt.setForeground(color)
-        self.setFormat(doublecolon+2, len(text)-doublecolon+1, fmt)
 
 class LineNumberArea(QWidget):
     def __init__(self, editor) -> None:
@@ -222,7 +214,7 @@ class LineNumberArea(QWidget):
         self.codeEditor.lineNumberAreaPaintEvent(event)
 
 class DndEditor(QPlainTextEdit):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.lineNumberArea = LineNumberArea(self)
         self.blockCountChanged.connect(self.updateLineNumberAreaWidth)
@@ -428,6 +420,7 @@ class DndWebPage(QWebEnginePage):
             path = url.path()
             host = url.host()
             if host != APPHOST:
+                QDesktopServices.openUrl(url)
                 return False
             if path.endswith('.html'):
                 path = path.lstrip('/').replace('/', os.path.sep)
@@ -450,6 +443,7 @@ class SplitterHandler(QObject):
                 handle.splitter().setSizes([1,10000])
             return True
         return False
+
 class Page(QSplitter):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -473,6 +467,7 @@ class Page(QSplitter):
         self.editor_holder.setStretchFactor(0, 8)
         self.editor_holder.setStretchFactor(1, 1)
         self.filename = ''
+        self.dependencies = set()  # type: Set[str]
         left = EDITOR_ON_LEFT
         show_errors = True
         self.show_errors = True
@@ -491,7 +486,13 @@ class Page(QSplitter):
             self.hide_error()
         self.handle(1).installEventFilter(SplitterHandler(self))
 
-    def clear_errors(self):
+    def file_changed(self, path:str) -> None:
+        if path not in self.dependencies:
+            return
+        logger.debug("dependency '%s' changed", path)
+        self.update_html()
+
+    def clear_errors(self) -> None:
         self.error_display.setPlainText('')
         self.textedit.error_line = None
     def display_dndc_error(self, error_type:int, filename:str, row:int, col:int, message:str) -> None:
@@ -511,10 +512,13 @@ class Page(QSplitter):
     def update_html(self) -> None:
         self.clear_errors()
         try:
-            html = pydndc.htmlgen(self.textedit.toPlainText(), base_dir=self.dirname, error_reporter=self.display_dndc_error)
+            html, depends = pydndc.htmlgen(self.textedit.toPlainText(), base_dir=self.dirname, error_reporter=self.display_dndc_error)
         except ValueError:
             return
         self.webpage.setHtml(html, baseUrl=QUrl(f'https://{APPHOST}/this.html'))
+        self.dependencies = set(depends)
+        if depends:
+            window.watcher.addPaths(depends)
 
     def format(self) -> None:
         try:
@@ -560,10 +564,10 @@ class Page(QSplitter):
         savefile.commit()
         logger.debug("Saved '%s'", self.filename)
         savefile = QSaveFile(self)
-    def insert_image(self) -> None:
-        fname, _ = QFileDialog.getOpenFileName(None, 'Choose an image file', '', 'PNG images (*.png)')
+    def get_fname(self, title:str, filter:str)->Optional[str]:
+        fname, _ = QFileDialog.getOpenFileName(None, title, '', filter)
         if not fname:
-            return
+            return None
         if self.dirname:
             try:
                 relative = os.path.relpath(fname, self.dirname)
@@ -572,6 +576,11 @@ class Page(QSplitter):
             else:
                 if '..' not in relative:
                     fname = relative
+        return fname
+    def insert_image(self) -> None:
+        fname = self.get_fname('Choose an image file', 'PNG images (*.png)')
+        if not fname:
+            return
         self.textedit.insert_image(fname)
     def insert_image_links(self)-> None:
         fullname, _ = QFileDialog.getOpenFileName(None, 'Choose an image file', '', 'PNG images (*.png)')
@@ -591,50 +600,26 @@ class Page(QSplitter):
             fname = fullname
         self.textedit.insert_image_links(fullname, fname)
     def insert_dnd(self) -> None:
-        fname, _ = QFileDialog.getOpenFileName(None, 'Choose a dnd file', '', 'Dnd files (*.dnd)')
+        fname = self.get_fname('Choose a dnd file', 'Dnd files (*.dnd)')
         if not fname:
             return
-        if self.dirname:
-            try:
-                relative = os.path.relpath(fname, self.dirname)
-            except: # this can throw on Windows
-                pass
-            else:
-                if '..' not in relative:
-                    fname = relative
         self.textedit.insert_dnd(fname)
     def insert_css(self) -> None:
-        fname, _ = QFileDialog.getOpenFileName(None, 'Choose a css file', '', 'CSS files (*.css)')
+        fname = self.get_fname('Choose a css file', 'CSS files (*.css)')
         if not fname:
             return
-        if self.dirname:
-            try:
-                relative = os.path.relpath(fname, self.dirname)
-            except: # this can throw on Windows
-                pass
-            else:
-                if '..' not in relative:
-                    fname = relative
         self.textedit.insert_css(fname)
     def insert_js(self) -> None:
-        fname, _ = QFileDialog.getOpenFileName(None, 'Choose a JavaScript file', '', 'JS files (*.js)')
+        fname = self.get_fname('Choose a JavaScript file', 'JS files (*.js)')
         if not fname:
             return
-        if self.dirname:
-            try:
-                relative = os.path.relpath(fname, self.dirname)
-            except: # this can throw on Windows
-                pass
-            else:
-                if '..' not in relative:
-                    fname = relative
         self.textedit.insert_js(fname)
-    def export_as_html(self):
+    def export_as_html(self) -> None:
         try:
-            html = pydndc.htmlgen(self.textedit.toPlainText(), base_dir=self.dirname)
+            html, _ = pydndc.htmlgen(self.textedit.toPlainText(), base_dir=self.dirname)
         except ValueError:
             mbox = QMessageBox()
-            mbox.critical(None, 'Unable to convert current document', 'Unable to convert current document to html.\n\nSyntax Error in document (see error output).')
+            mbox.critical(None, 'Unable to convert current document', 'Unable to convert current document to html.\n\nSyntax Error in document (see error output).')  # type: ignore
             return
         options = QFileDialog.Options()
         options |= QFileDialog.DontConfirmOverwrite
@@ -692,10 +677,6 @@ def make_page_widget(filename:str, allow_fail:bool) -> Optional[QWidget]:
     all_windows[filename]= result
     return result
 
-def format_dnd(*args) -> None:
-    current = tabwidget.currentWidget()
-    current.format()
-
 def condense(filename:str, is_windows=IS_WINDOWS) -> str:
     BUDGET = 32
     sep = '\\' if is_windows else '/'
@@ -737,21 +718,6 @@ def condense(filename:str, is_windows=IS_WINDOWS) -> str:
         name = drive + ':\\' + name
     return name
 
-if 0:
-    def print_condense(s, is_windows):
-        print(f'          {s=}')
-        print(f'{is_windows=}')
-        print(f'{condense(s, is_windows)=}')
-        print('-------------')
-
-    for path in [
-            '/Users/drpriver/Advanced_David_Dungeon_2nd_Edition/adventurerclass.md',
-            r'C:\Users\David\Documents\Hello\World\This\Is\Long\Path\But this is a document.dnd',
-            ]:
-        print_condense(path, True)
-        print_condense(path, False)
-    exit(0)
-
 def add_tab(filename:str, focus=True, allow_fail:bool=False) -> None:
     if sys.platform == 'win32':
         filename = filename.replace('/', '\\')
@@ -773,74 +739,6 @@ def open_file(*args) -> None:
         return
     add_tab(fname)
 
-def new_file(*args) -> None:
-    options = QFileDialog.Options()
-    options |= QFileDialog.DontConfirmOverwrite
-    if sys.platform == 'darwin':
-        options |= QFileDialog.DontUseNativeDialog
-    fname, _ = QFileDialog.getSaveFileName(None, 'Choose or Create a dnd file', '', 'Dnd Files (*.dnd)', initialFilter="*.dnd", options=options)  # type: ignore
-    if not fname:
-        return
-    add_tab(fname, allow_fail=True)
-
-def toggle_editors(*args) -> None:
-    if not all_windows:
-        return
-    if next(iter(all_windows.values())).editor_holder.isHidden():
-        for w in all_windows.values():
-            w.show_editor()
-    else:
-        for w in all_windows.values():
-            w.hide_editor()
-
-def toggle_errors(*args) -> None:
-    if not all_windows:
-        return
-    if next(iter(all_windows.values())).show_errors:
-        for w in all_windows.values():
-            w.hide_error()
-    else:
-        for w in all_windows.values():
-            w.show_error()
-
-def flop_editors(*args) -> None:
-    global EDITOR_ON_LEFT
-    if not all_windows:
-        return
-    if next(iter(all_windows.values())).editor_is_on_left:
-        EDITOR_ON_LEFT = False
-        for w in all_windows.values():
-            w.put_editor_right()
-    else:
-        EDITOR_ON_LEFT = True
-        for w in all_windows.values():
-            w.put_editor_left()
-
-def close_current_tab(*args) -> None:
-    current_tab: Optional[Page] = tabwidget.currentWidget()
-    if not current_tab:
-        window.close()
-        return
-    current_tab.save()
-    del all_windows[current_tab.filename]
-    current_tab.setParent(None)  # type: ignore
-
-def pickfont(*args) -> None:
-    global FONT
-    ok, font = QFontDialog.getFont(FONT)
-    if ok:
-        FONT = font
-        for page in all_windows.values():
-            page.textedit.setFont(FONT)
-
-def insert_func(method):
-    def insert_foo(*args) -> None:
-        current_tab: Optional[Page] = tabwidget.currentWidget()
-        if not current_tab:
-            return
-        method(current_tab)
-    return insert_foo
-
 def add_menus() -> None:
     menubar = window.menuBar()
 
@@ -852,6 +750,15 @@ def add_menus() -> None:
     filemenu.addAction(action)
 
     action = QAction('&New', window)
+    def new_file(*args) -> None:
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontConfirmOverwrite
+        if sys.platform == 'darwin':
+            options |= QFileDialog.DontUseNativeDialog
+        fname, _ = QFileDialog.getSaveFileName(None, 'Choose or Create a dnd file', '', 'Dnd Files (*.dnd)', initialFilter="*.dnd", options=options)  # type: ignore
+        if not fname:
+            return
+        add_tab(fname, allow_fail=True)
     action.triggered.connect(new_file)
     action.setShortcut(QKeySequence('Ctrl+n'))
     filemenu.addAction(action)
@@ -874,6 +781,14 @@ def add_menus() -> None:
     filemenu.addAction(action)
 
     action = QAction('&Close', window)
+    def close_current_tab(*args) -> None:
+        current_tab: Optional[Page] = tabwidget.currentWidget()
+        if not current_tab:
+            window.close()
+            return
+        current_tab.save()
+        del all_windows[current_tab.filename]
+        current_tab.setParent(None)  # type: ignore
     action.triggered.connect(close_current_tab)
     action.setShortcut(QKeySequence('Ctrl+w'))
     filemenu.addAction(action)
@@ -886,10 +801,22 @@ def add_menus() -> None:
     editmenu = menubar.addMenu('Edit')
 
     action = QAction('&Format', window)
+    def format_dnd(*args) -> None:
+        current_tab: Optional[Page] = tabwidget.currentWidget()
+        if not current_tab:
+            return
+        current_tab.format()
     action.triggered.connect(format_dnd)
     editmenu.addAction(action)
 
     action = QAction('F&ont', window)
+    def pickfont(*args) -> None:
+        global FONT
+        ok, font = QFontDialog.getFont(FONT)
+        if ok:
+            FONT = font
+            for page in all_windows.values():
+                page.textedit.setFont(FONT)
     action.triggered.connect(pickfont)
     editmenu.addAction(action)
 
@@ -914,6 +841,13 @@ def add_menus() -> None:
     editmenu.addAction(action)
 
     insert = menubar.addMenu('Insert')
+    def insert_func(method):
+        def insert_foo(*args) -> None:
+            current_tab: Optional[Page] = tabwidget.currentWidget()
+            if not current_tab:
+                return
+            method(current_tab)
+        return insert_foo
 
     action = QAction('&Image', window)
     action.triggered.connect(insert_func(Page.insert_image))
@@ -938,14 +872,45 @@ def add_menus() -> None:
     viewmenu = menubar.addMenu('View')
 
     action = QAction('&Toggle Editors', window)
+    def toggle_editors(*args) -> None:
+        if not all_windows:
+            return
+        if next(iter(all_windows.values())).editor_holder.isHidden():
+            for w in all_windows.values():
+                w.show_editor()
+        else:
+            for w in all_windows.values():
+                w.hide_editor()
     action.triggered.connect(toggle_editors)
     viewmenu.addAction(action)
 
     action = QAction('Toggle &Error', window)
+    def toggle_errors(*args) -> None:
+        if not all_windows:
+            return
+        if next(iter(all_windows.values())).show_errors:
+            for w in all_windows.values():
+                w.hide_error()
+        else:
+            for w in all_windows.values():
+                w.show_error()
     action.triggered.connect(toggle_errors)
     viewmenu.addAction(action)
 
     action = QAction('&Flop Editors', window)
+    def flop_editors(*args) -> None:
+        global EDITOR_ON_LEFT
+        if not all_windows:
+            return
+        if next(iter(all_windows.values())).editor_is_on_left:
+            EDITOR_ON_LEFT = False
+            for w in all_windows.values():
+                w.put_editor_right()
+        else:
+            EDITOR_ON_LEFT = True
+            for w in all_windows.values():
+                w.put_editor_left()
+
     action.triggered.connect(flop_editors)
     viewmenu.addAction(action)
 

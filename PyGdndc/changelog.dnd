@@ -1,25 +1,41 @@
+Version 0.4.0::md
+  * Implemented file watching. Before, if you changed a file that your dnd
+    document depended on (such as the img it loaded as the map), the program
+    would not redisplay until you made a change in the dnd file itself. Now,
+    through the magic of modern technology, we get notifications from the OS if
+    those files change and so can redisplay without the user doing anything.
+  * Added new examples:
+    - index.dnd in the root of the Examples. It shows using links to link
+      to other .dnd files
+    - Rules/religion.dnd. It shows linking to external sites.
+  * Clicking links to external urls now opens them in your system's default
+    browser instead of blocking the request.
 Version 0.3.15::md
   * Implemented new syntax highlighter, is actually accurate now.
     - The colors are kind of wonky. Idk I'm not a graphic designer.
   * There are some narrow circumstances where the highlighting can become stale.
-    The underlying gui library only applies new syntax to lines that have been edited.
-    The highlighting of a line of text can actually depend on previous lines.
-    If those lines change, dependent lines won't be updated, as they did not change.
-    To ameliorate this, a new action has been added to the View menu to refresh
-    the highlighting of the entire document.
+    The underlying gui library only applies new syntax to lines that have been
+    edited. The highlighting of a line of text can actually depend on previous
+    lines. If those lines change, dependent lines won't be updated, as they did
+    not change. To ameliorate this, a new action has been added to the View menu
+    to refresh the highlighting of the entire document. In practice, this is
+    rare, so you probably won't notice.
 Version 0.3.14::md
-  * Files are now explicitly decoded as utf-8 instead of guessing based on the user's locale settings.
-    This caused issues when weebs set their locale to some japanese locale.
-    - All .dnd files must now be utf-8 encoded. If you somehow have a non-utf-8 encoded plain text file,
-      you will need to save it as utf-8. Notepad can do this.
+  * Files are now explicitly decoded as utf-8 instead of guessing based on the
+    user's locale settings. This caused issues when weebs set their locale to
+    some japanese locale.
+    - All .dnd files must now be utf-8 encoded. If you somehow have a non-utf-8
+      encoded plain text file, you will need to save it as utf-8. Notepad can do
+      this.
 Version 0.3.13::md
   * Fixed bug that closing a tab with the button would not save the file.
   * Implemented Indent/Dedent actions.
-    * These actions can indent or dedent the selected text (or the current line if no text is selected).
-    * They can be triggered in one of the following ways:
-      * By using Ctrl-> or Ctrl-< hotkeys.
-      * By the context menu when right clicking the text editor
-      * By selecting the actions in the Edit menu.
+    - These actions can indent or dedent the selected text (or the current line
+      if no text is selected).
+    - They can be triggered in one of the following ways:
+      + By using Ctrl-> or Ctrl-< hotkeys.
+      + By the context menu when right clicking the text editor
+      + By selecting the actions in the Edit menu.
 Version 0.3.12::md
   * Fixed bug that prevented the Format action of Edit from doing anything.
 Version 0.3.11::md
@@ -27,8 +43,8 @@ Version 0.3.11::md
   * Closing a tab with the button now closes the associated file.
   * The splitter between the editor and the html display can now be
     double-clicked in order to collapse/expand it.
-    - If you weren't aware before, the splitters could be dragged to change
-      their size and would collapse/expand based on that.
+    - If you weren't aware before, the splitters could be dragged to change their
+      size and would collapse/expand based on that.
   * Failures to open files no longer leads to an empty document being opened
     (which would then get auto-saved, generating a new document or overwriting
     the real document!).
@@ -38,7 +54,6 @@ Version 0.3.11::md
     - Use Help -> Compress Logs to zip the current log and open that same folder.
     - Logs are per day.
     - You can delete the old logs if they get too fat.
-
 ::css @inline
   body > div {
     margin: auto;

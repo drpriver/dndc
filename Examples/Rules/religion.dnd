@@ -1,0 +1,180 @@
+::import
+  rules.dnd
+Religion, Faith, and The Gods::title
+Old and New Gods: Anganach and Futurus::md
+  The Ancient Ones, called the Anganach by the folk of the region, represent the
+  elder gods. Whether they preexisted in the forests, swamps, and old streams of
+  the land, or whether they were brought with the first humans, few can say. The
+  humans who founded Ironguard Motte, Velyx, and Bogtown (called the Second
+  Settlement by local sages) found protection in the worship of [Silvanus] (Green
+  Man), [Herne the Hunter], [Crom], [Impurax], and to a lesser extent, [Nergal].
+  Through respect and reverence for the wilderness and its deities, the human
+  settlers learned to survive and established their villages. With the migration
+  of the new gods from the civilized kingdoms after the invasion by the
+  Karynthian empire, the Anganach were in decline. They have been on the rise
+  recently due to the withdrawl of imperial forces from the region.
+
+  The New Gods, called the Futurus, include the faiths of [St. Ygg] and
+  [Arcantryl], and the more clandestine cults devoted to [Orcus] and [Set]. Their
+  followers arrived with the Karynthians, who banned worship of the old gods.
+  These laws are no longer enforced.
+
+  Although the cults of Orcus and Set are not openly worshipped their influence
+  has started to grow in the dark corners of the region.
+
+  Despite its isolation from the outside world, the people of the moor
+  (particularly those in Ironguard Motte) have heard tales of foreign religions
+  including Kor the Sun God, Athena the Goddess of Military Strategy, Thor the
+  God of Thunder and Lightning, and others.
+
+  Only St. Ygg, Crom, Arcantryl support general player character clerics.
+  Additionally, dwarven clerics can worship Moradin (Alignment: Lawful Neutral,
+  domains: [earth], [law], [protection], [dwarf]), elven and half-elven clerics
+  can worship Corellon (Alignment: Neutral, domains: [magic], [protection],
+  [war], [elf], favored weapon: Longbow).
+
+  ::links
+    law        = https://www.d20srd.org/srd/spellLists/clericDomains.htm#lawDomain
+    dwarf      = https://www.realmshelps.net/deities/domain/Dwarf
+    earth      = https://www.d20srd.org/srd/spellLists/clericDomains.htm#earthDomain
+    protection = https://www.d20srd.org/srd/spellLists/clericDomains.htm#protectionDomain
+    war        = https://www.d20srd.org/srd/spellLists/clericDomains.htm#warDomain
+    magic      = https://www.d20srd.org/srd/spellLists/clericDomains.htm#magicDomain
+    elf        = https://www.realmshelps.net/deities/domain/Elf
+    strength   = https://www.d20srd.org/srd/spellLists/clericDomains.htm#strengthDomain
+    glory      = https://www.d20srd.org/srd/divine/domains.htm#gloryDomain
+    good       = https://www.d20srd.org/srd/spellLists/clericDomains.htm#goodDomain
+    healing    = https://www.d20srd.org/srd/spellLists/clericDomains.htm#healingDomain
+Deities::md
+  Herne the Hunter (Venator Cervus)::md
+    * also called the Horned God
+    * Demi-God of the Hunt, Swamps and Forests
+    * Lawful Neutral (Good)
+    * Symbol: An antlered human face or stag head
+    Herne is one of the Anganach or Ancient Ones. The worship of St. Ygg has
+    replaced Herne in recent years, but there are those who still pray and offer
+    sacrifices to him. Herne is the god of the northern woodlands, swamps, and
+    the creatures that inhabit them. He prefers to take the form of a deer, or a
+    man with an antlered deer’s head. Herne chooses a favoured son, a druid,
+    barbarian, ranger, or warrior, to serve him as the Guardian of the Forest.
+    Some believe Herne is the son of Silvanus. The people of the region often use
+    the phrase “Herne protect us” or “Herne protect you” as a toast or
+    when parting company.
+
+  Silvanus (Virdiis Voltus)::md
+    * also called Green Man
+    * God of Nature and the Balance
+    * Neutral
+    * Symbol: A face carved of leaves
+    As one of the Anganach, Silvanus’ faith arrived with the first human
+    settlements. His religion has been largely, but not exclusively, replaced by
+    the worship of St. Ygg. Silvanus, also called Green Man, oversees the balance
+    in nature: law and chaos, light and dark, growth and decay, life and death.
+    For generations the rangers and druids looked to Silvanus for guidance and
+    protection. He is also considered by some to oversee the spheres of rebirth
+    and fertility. Faces of Silvanus have been carved into trees and rocks for
+    centuries in the region. Tales say good fortune befalls those who chance upon
+    his face in the wild.
+
+  Crom (Cromm Cruach)::md
+    * God of Strength and Battle
+    * Chaotic Good
+    * Symbol: A silver crown over a white capped mountain
+    * Domains: [Protection], [War], [Strength]
+    * Favored Weapon: battleaxe
+    An Ancient One, Crom is worshipped largely by fighters, rangers, barbarians,
+    and clerics. Due to the constant threat of monsters and monstrous humanoids
+    from the Barrowmoor and the surrounding forests, Crom’s faith among
+    warriors and mercenaries has remained steady in comparison to that of
+    Silvanus and Herne. The clerics of Crom seek to advance their faith through
+    strength of arms and feats of daring in battle.
+
+  Arcantryl (Magus)::md
+    * Goddess of Magic
+    * Lawful Neutral
+    * Symbol: A star within a star
+    * Domains: magic, knowledge, law.
+    Arcantryl is one of the new gods or Futurus. Arcantryl derives her power from
+    knowledge of the laws of the universe and existence. She believes in
+    understanding the structure of the cosmos and harnessing (and bending) that
+    knowledge to express magical energies. Instead of branching out immediately
+    to the smaller villages of Velyx and Bogtown, the clerics of Arcantryl have
+    focused on developing followers at Ironguard Motte where they have
+    established a small shrine. A large stone temple is currently under
+    construction and will facilitate the instruction of both clerics and
+    magic-users when complete.
+
+  St. Ygg (Veridicus)::md
+    * God of Righteousness
+    * Lawful Good
+    * Domains: [Law], [Good], [Healing], [Glory]
+    * Symbol: A red cross on a white field
+    St. Ygg is the lawful deity of righteousness and light. St. Ygg believes in
+    the highest moral standards. He is self-righteous and possesses an indignant
+    temper with those who fail to see the just nature of his actions. St. Ygg is
+    the most influential of the “civilized” or Futurus deities in the region.
+    His clerics have been aggressive to convert the followers of Herne and
+    Silvanus to the faith. St. Ygg demands his followers destroy undead as he
+    views them as an abomination of the highest order. His followers include
+    clerics and a rare group of paladins known as the Order of the Crimson Cross.
+    Paladins are very rare in the region but are more common in the Karynthian
+    empire.
+
+  Impurax (Impuratus)::md
+    * God of Decay, Corruption, and Pestilence
+    * Neutral Evil
+    * Symbol: A rotting raven’s head
+    Little is known about the ancient deity Impurax. It is believed his faithful
+    consisted of a secret order of corrupt druids. These witches and warlocks
+    lived in the Barrowmoor and possessed a strange power over select creatures
+    and monsters, but little has been heard of his faith for decades. Impurax is
+    the natural enemy of Silvanus and Herne the Hunter. Folk tales say Herne’s
+    favoured son died decades ago in a great battle against the followers of
+    Impurax. Impurax aligns himself with Nergal, historically.
+
+  Set (Jakuul Mortis)::md
+    * God of Serpents, Death, and the Underworld
+    * Lawful Evil
+    * Symbol: Two snake heads facing each other
+    Set and his brother Orcus deposed their father Nergal for control of the
+    underworld. After completing the task they turned on each other to establish
+    complete control over their father’s spheres of power. A war for control of
+    the underworld began. A stalemate ensued with each son controlling a portion
+    of Nergal’s power. Followers of Set are committed to the destruction of
+    Orcus and his faithful. Set and Orcus currently share the spheres of Death
+    and the Underworld.
+
+  Orcus (Malum Mortis)::md
+    * God of the Undead, Death, and the Underworld
+    * Chaotic Evil
+    * Symbol: A white ram head on a black field
+    Orcus and his brother Set combined their power to overthrow Nergal. A civil
+    war resulted with both brothers possessing a portion of their father’s
+    power. The acolytes of Orcus are committed to annihilation of Set and his
+    followers. Set and Orcus currently share the spheres of Death and the
+    Underworld.
+
+  Nergal (Ossum Mortis)::md
+    * Greater God of Death, Undead, and the Underworld (Presumed Dead)
+    * Chaotic Evil
+    * Symbol: A single white skull
+    One of the Anganach, Nergal once ruled the Underworld and the spheres of
+    Death and the Undead. He was deposed and presumably destroyed by his sons
+    Orcus and Set. Legends tell of his most powerful artifacts: the Tablet of
+    Chaos and the Pit of Chaos, which grant vast power over the underworld.
+    Whether they still exist or were destroyed long ago is unknown. Whether
+    Nergal still exists is unknown.
+
+  ::python
+    kebab = ctx.kebab
+    root = ctx.root
+    links = []
+    parent = node.parent
+    for child in parent.children:
+      if child.type != NodeType.MD:
+        continue
+      header = child.header
+      i = header.index('(')
+      links.append(f'  {kebab(header[:i])} = #{child.id}')
+    root.parse('::links\n' + '\n'.join(links))
+    #endpython

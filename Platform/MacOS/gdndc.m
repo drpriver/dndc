@@ -228,7 +228,7 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
 #if 1
     // NSRange currentLineRange = NSMakeRange(0, [string length]);
     NSRange currentLineRange = [string lineRangeForRange:editedRange];
-    auto before= get_t();
+    // auto before= get_t();
     [textStorage removeAttribute:NSForegroundColorAttributeName range:currentLineRange];
     [textStorage removeAttribute:NSBackgroundColorAttributeName range:currentLineRange];
     // HERE("Clearing syntax costs: %.3fms", (get_t()-before)/1000.);
@@ -255,7 +255,7 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
     // auto t0 = get_t();
     // for(int i = 0; i < 1000; i++)
         dndc_analyze_syntax_utf16(text16, dndc_syntax_func, &sd);
-    auto t1 = get_t();
+    // auto t1 = get_t();
 #else
     struct SyntaxData sd = {
         .storage = textStorage,

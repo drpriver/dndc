@@ -21,10 +21,10 @@
 #include "dndc_funcs.h"
 #include "dndc.h"
 
-#define DNC_MAJOR 0
-#define DNC_MINOR 3
-#define DNC_MICRO 15
-#define DNDC_VERSION STRINGIFY(DNC_MAJOR) "." STRINGIFY(DNC_MINOR) "." STRINGIFY(DNC_MICRO)
+#define DNDC_MAJOR 0
+#define DNDC_MINOR 4
+#define DNDC_MICRO 0
+#define DNDC_VERSION STRINGIFY(DNDC_MAJOR) "." STRINGIFY(DNDC_MINOR) "." STRINGIFY(DNDC_MICRO)
 
 // Unsure of where to put this. So, just putting it here for now.
 typedef struct BinaryJob{
@@ -190,11 +190,12 @@ static
 void
 dndc_print_out_syntax(LongString source_path);
 
+static void depends_print_callback(void*_Nullable, StringView);
 int main(int argc, char**argv){
     auto t0 = get_t();
     LongString source_path = LS("");
     LongString output_path = LS("");
-    LongString depends_path = LS("");
+    DependsArg depends = {.path=LS("")};
     LongString base_dir = LS("");
     bool report_orphans = false;
     bool no_python = false;
@@ -211,6 +212,7 @@ int main(int argc, char**argv){
     bool hidden_help = false;
     bool dont_inline_images = false;
     bool print_syntax = false;
+    bool print_depends = false;
     {
         ArgToParse pos_args[] = {
             [0] = {
@@ -236,7 +238,7 @@ int main(int argc, char**argv){
                 .altname1 = SV("--depends-path"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&depends_path),
+                .dest = ARGDEST(&depends.path),
                 .help = "If given, where to write a make-style dependency file.",
                 .hide_default = true,
             },
@@ -296,6 +298,14 @@ int main(int argc, char**argv){
                 .max_num = 1,
                 .dest = ARGDEST(&print_stats),
                 .help = "Log some informative statistics.",
+                .hidden = true,
+            },
+            {
+                .name = SV("--print-depends"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&print_depends),
+                .help = "Print out what paths the document depends on.",
                 .hidden = true,
             },
             {
@@ -438,6 +448,10 @@ int main(int argc, char**argv){
         flags |= DNDC_PRINT_TREE;
     if(print_links)
         flags |= DNDC_PRINT_LINKS;
+    if(print_depends){
+        flags |= DNDC_DEPENDS_IS_CALLBACK;
+        depends.callback = depends_print_callback;
+        }
     if(no_threads)
         flags |= DNDC_NO_THREADS;
     if(dont_write)
@@ -453,25 +467,31 @@ int main(int argc, char**argv){
 
     #ifdef BENCHMARKING
     flags &= ~DNDC_NO_CLEANUP;
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends_path, NULL, dndc_stderr_error_func, NULL);
+    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends, NULL, dndc_stderr_error_func, NULL);
     assert(!e.errored);
     flags |= DNDC_PYTHON_IS_INIT;
     for(int i = 0; i < BENCHMARKITERS;i++){
-        e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends_path, NULL, dndc_stderr_error_func, NULL);
+        e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends, NULL, dndc_stderr_error_func, NULL);
         assert(!e.errored);
         }
     end_interpreter();
     return 0;
     #else
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, depends_path, NULL, dndc_stderr_error_func, NULL);
+    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, depends, NULL, dndc_stderr_error_func, NULL);
     return e.errored;
     #endif
+    }
+static
+void
+depends_print_callback(void*_Nullable unused, StringView path){
+    (void)unused;
+    printf("%.*s\n", (int)path.length, path.text);
     }
 #endif
 
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, Nullable(LongString*) output_path, LongString depends_path, Nullable(Base64Cache*)external_b64cache, Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data){
+run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, Nullable(LongString*) output_path, DependsArg depends, Nullable(Base64Cache*)external_b64cache, Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data){
     if(flags & DNDC_REFORMAT_ONLY)
         flags |= DNDC_NO_PYTHON;
     auto t0 = get_t();
@@ -870,9 +890,12 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         report_stat(&ctx, "Writing took: %.3fms", (after_write-before_write)/1000.);
     }
     // Write the make-style dependency file to the Dependency directory.
-    if(depends_path.length){
+    if((flags & DNDC_DEPENDS_IS_CALLBACK) or depends.path.length){
         for(size_t i = 0; i < ctx.loaded_files.count; i++){
             Marray_push(StringView)(&ctx.dependencies, ctx.allocator, LS_to_SV(ctx.loaded_files.data[i].sourcepath));
+            }
+        for(size_t i = 0; i < ctx.b64cache.processed_binary_files.count; i++){
+            Marray_push(StringView)(&ctx.dependencies, ctx.allocator, LS_to_SV(ctx.b64cache.processed_binary_files.data[i].sourcepath));
             }
         for(size_t i = 0; i < ctx.dependencies_nodes.count; i++){
             auto handle = ctx.dependencies_nodes.data[i];
@@ -888,28 +911,38 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
                 Marray_push(StringView)(&ctx.dependencies, ctx.allocator, child->header);
                 }
             }
-        msb_reset(&msb);
-        msb_write_str(&msb, outpath.text, outpath.length);
-        msb_write_char(&msb, ':');
-        for(size_t i = 0; i < ctx.dependencies.count; i++){
-            auto dep = &ctx.dependencies.data[i];
-            msb_write_char(&msb, ' ');
-            msb_write_str(&msb, dep->text, dep->length);
+        if(flags & DNDC_DEPENDS_IS_CALLBACK){
+            // Technically we could do this without building up this array,
+            // but this is easier to maintain and I doubt it matters very much.
+            for(size_t i = 0; i < ctx.dependencies.count; i++){
+                auto dep = ctx.dependencies.data[i];
+                depends.callback(depends.user_data, dep);
+                }
             }
-        msb_write_char(&msb, '\n');
-        // generate empty rules so deleted files don't fail the build
-        for(size_t i = 0; i < ctx.dependencies.count; i++){
-            auto dep = &ctx.dependencies.data[i];
-            msb_write_str(&msb, dep->text, dep->length);
-            msb_write_literal(&msb, ":\n");
-            }
-        auto deptext = msb_borrow(&msb);
-        auto write_err = write_file(depends_path.text, deptext.text, deptext.length);
-        if(write_err.errored){
-            ERROR("Error on write: %s", get_error_name(write_err));
-            perror("Error on write");
-            result.errored = write_err.errored;
-            goto cleanup;
+        else {
+            msb_reset(&msb);
+            msb_write_str(&msb, outpath.text, outpath.length);
+            msb_write_char(&msb, ':');
+            for(size_t i = 0; i < ctx.dependencies.count; i++){
+                auto dep = &ctx.dependencies.data[i];
+                msb_write_char(&msb, ' ');
+                msb_write_str(&msb, dep->text, dep->length);
+                }
+            msb_write_char(&msb, '\n');
+            // generate empty rules so deleted files don't fail the build
+            for(size_t i = 0; i < ctx.dependencies.count; i++){
+                auto dep = &ctx.dependencies.data[i];
+                msb_write_str(&msb, dep->text, dep->length);
+                msb_write_literal(&msb, ":\n");
+                }
+            auto deptext = msb_borrow(&msb);
+            auto write_err = write_file(depends.path.text, deptext.text, deptext.length);
+            if(write_err.errored){
+                ERROR("Error on write: %s", get_error_name(write_err));
+                perror("Error on write");
+                result.errored = write_err.errored;
+                goto cleanup;
+                }
             }
         }
     success:;
@@ -1033,7 +1066,7 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
     // flags |= DNDC_PRINT_STATS;
     // gross, move to caller.
     static Base64Cache cache = {.allocator.type = ALLOCATOR_MALLOC};
-    auto e = run_the_dndc(flags, base_directory, source_text, output, LS(""), &cache, error_func, error_user_data);
+    auto e = run_the_dndc(flags, base_directory, source_text, output, (DependsArg){.path=LS("")}, &cache, error_func, error_user_data);
     return e.errored;
     }
 
@@ -1048,7 +1081,7 @@ dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(ErrorFu
     flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
     flags |= DNDC_REFORMAT_ONLY;
-    auto e = run_the_dndc(flags, SV(""), source_text, output, LS(""), NULL, error_func, error_user_data);
+    auto e = run_the_dndc(flags, SV(""), source_text, output, (DependsArg){.path=LS("")}, NULL, error_func, error_user_data);
     return e.errored;
     }
 

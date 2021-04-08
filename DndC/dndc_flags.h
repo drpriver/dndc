@@ -43,7 +43,10 @@ enum DndcFlags {
     // etc.
     DNDC_REFORMAT_ONLY      = 0x08000,
     // Instead of base64-ing the image, use a link.
-    DNDC_DONT_INLINE_IMAGES = 0x10000,
+    DNDC_DONT_INLINE_IMAGES =  0x10000,
+    // The depends argument of dndc is a callback to be called with each
+    // of the document's dependencies.
+    DNDC_DEPENDS_IS_CALLBACK = 0x20000,
 };
 #else
 //
@@ -66,6 +69,7 @@ enum DndcFlags {
 #define DNDC_OUTPUT_PATH_IS_OUT_PARAM     0x04000
 #define DNDC_REFORMAT_ONLY                0x08000
 #define DNDC_DONT_INLINE_IMAGES           0x10000
+#define DNDC_DEPENDS_IS_CALLBACK          0x20000
 #endif
 
 

@@ -40,7 +40,7 @@ TestFunction(TestDndC1){
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         ;
-    auto e = run_the_dndc(flags, SV(""), source, NULL, LS(""), NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, NULL, (DependsArg){.path=LS("")}, NULL, NULL, NULL);
     TestExpectSuccess(e);
     TESTEND();
     }
@@ -61,7 +61,7 @@ TestFunction(TestDndC2){
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         ;
-    auto e = run_the_dndc(flags, SV(""), source, NULL, LS(""), NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, NULL, (DependsArg){.path=LS("")}, NULL, NULL, NULL);
     TestExpectSuccess(e);
     TESTEND();
     }
@@ -81,7 +81,7 @@ TestFunction(TestDndC3){
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         ;
-    auto e = run_the_dndc(flags, SV(""), source, NULL, LS(""), NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, NULL, (DependsArg){.path=LS("")}, NULL, NULL, NULL);
     TestExpectFailure(e);
     TESTEND();
     }
@@ -102,7 +102,7 @@ TestFunction(TestDndcOutParam){
         | DNDC_OUTPUT_PATH_IS_OUT_PARAM
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, SV(""), source, &outdata, LS(""), NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, &outdata, (DependsArg){.path=LS("")}, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -165,7 +165,7 @@ TestFunction(TestDndcTableMultiline){
         | DNDC_OUTPUT_PATH_IS_OUT_PARAM
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, SV(""), source, &outdata, LS(""), NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, &outdata, (DependsArg){.path=LS("")}, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -255,7 +255,7 @@ TestFunction(TestFormatTable){
         | DNDC_REFORMAT_ONLY
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, SV(""), source, &outdata, LS(""), NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, &outdata, (DependsArg){.path=LS("")}, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -295,7 +295,7 @@ TestFunction(TestCrashesFixed){
             {.name=LS("case2.dnd"), .error=true},
             };
     for(size_t i = 0; i < arrlen(cases); i++){
-        auto e = run_the_dndc(flags, SV("TestCases"), cases[i].name, NULL, LS(""), NULL, NULL, NULL);
+        auto e = run_the_dndc(flags, SV("TestCases"), cases[i].name, NULL, (DependsArg){.path=LS("")}, NULL, NULL, NULL);
         if(cases[i].error){
             TestExpectFailure(e);
             }
@@ -326,7 +326,7 @@ TestFunction(TestExamplesWork){
         };
     _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
     for(size_t i = 0; i < arrlen(examples); i++){
-        auto e = run_the_dndc(flags, base_dirs[i], examples[i], NULL, LS(""), NULL, dndc_stderr_error_func, NULL);
+        auto e = run_the_dndc(flags, base_dirs[i], examples[i], NULL, (DependsArg){.path=LS("")}, NULL, dndc_stderr_error_func, NULL);
         TestExpectSuccess(e);
         }
     TESTEND();

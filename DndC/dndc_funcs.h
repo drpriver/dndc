@@ -42,11 +42,16 @@
 //
 //    This path is *NOT* adjusted by the base_directory argument.
 //
-// depends_dir:
-//    A path to a directory to write a make-style dependency file. If not
-//    given, no such file is written.
+// depends:
+//    This union's active member depends on the flags argument.
 //
-//    This path is *NOT* adjusted by the base_directory argument.
+//    If DNDC_DEPENDS_IS_CALLBACK is set, then this is a callback function
+//    that will be called with each dependency.
+//
+//    If it is not set, then this is a path to a directory to write a
+//    make-style dependency file. If not given, no such file is written.
+//
+//    This path *is* adjusted by the base_directory argument.
 //
 // b64cache:
 //    An optional pointer to an external cache for base64 images. If NULL,
@@ -70,7 +75,7 @@
 //
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, StringView base_directory, LongString source, Nullable(LongString*) output_path, LongString depends_path, Nullable(Base64Cache*)b64cache, Nullable(ErrorFunc*) error_func, Nullable(void*)error_user_data);
+run_the_dndc(uint64_t flags, StringView base_directory, LongString source, Nullable(LongString*) output_path, DependsArg depends, Nullable(Base64Cache*)b64cache, Nullable(ErrorFunc*) error_func, Nullable(void*)error_user_data);
 
 //
 // The following functions are for reporting errors and warnings. ONLY use
