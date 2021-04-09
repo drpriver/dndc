@@ -75,7 +75,7 @@
 //
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, StringView base_directory, LongString source, Nullable(LongString*) output_path, DependsArg depends, Nullable(Base64Cache*)b64cache, Nullable(ErrorFunc*) error_func, Nullable(void*)error_user_data);
+run_the_dndc(uint64_t flags, StringView base_directory, LongString source, Nullable(LongString*) output_path, DependsArg depends, Nullable(FileCache*)b64cache, Nullable(ErrorFunc*) error_func, Nullable(void*)error_user_data);
 
 //
 // The following functions are for reporting errors and warnings. ONLY use
@@ -285,7 +285,7 @@ ctx_load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath);
 //
 static
 Errorable_f(LongString)
-load_processed_binary_file(Nonnull(Base64Cache*)cache, StringView binarypath, Nonnull(ByteBuilder*)bb);
+load_processed_binary_file(Nonnull(FileCache*)cache, StringView binarypath, Nonnull(ByteBuilder*)bb);
 
 //
 // Stores a file in the context as a special builtin file.
@@ -299,6 +299,13 @@ load_processed_binary_file(Nonnull(Base64Cache*)cache, StringView binarypath, No
 static inline
 void
 ctx_store_builtin_file(Nonnull(DndcContext*)ctx, LongString sourcepath, LongString text);
+
+//
+// Marks a file as being a dependency of the document. Deduplicates.
+//
+static inline
+void
+ctx_note_dependency(Nonnull(DndcContext*)ctx, StringView path);
 
 //
 // Parses the nul-terminated source text;
