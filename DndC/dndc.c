@@ -467,17 +467,17 @@ int main(int argc, char**argv){
 
     #ifdef BENCHMARKING
     flags &= ~DNDC_NO_CLEANUP;
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends, NULL, dndc_stderr_error_func, NULL);
+    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends, NULL, NULL, dndc_stderr_error_func, NULL);
     assert(!e.errored);
     flags |= DNDC_PYTHON_IS_INIT;
     for(int i = 0; i < BENCHMARKITERS;i++){
-        e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends, NULL, dndc_stderr_error_func, NULL);
+        e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends, NULL, NULL, dndc_stderr_error_func, NULL);
         assert(!e.errored);
         }
     end_interpreter();
     return 0;
     #else
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, depends, NULL, dndc_stderr_error_func, NULL);
+    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, depends, NULL, NULL, dndc_stderr_error_func, NULL);
     return e.errored;
     #endif
     }
@@ -491,7 +491,11 @@ depends_print_callback(void*_Nullable unused, StringView path){
 
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, Nullable(LongString*) output_path, DependsArg depends, Nullable(FileCache*)external_b64cache, Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data){
+run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
+        Nullable(LongString*) output_path, DependsArg depends,
+        Nullable(FileCache*)external_b64cache,
+        Nullable(FileCache*)external_textcache,
+        Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data){
     if(flags & DNDC_REFORMAT_ONLY)
         flags |= DNDC_NO_PYTHON;
     auto t0 = get_t();
@@ -527,8 +531,12 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         .navnode = INVALID_NODE_HANDLE,
         .outputfile = outpath,
         .base_directory = base_directory,
+        // The base64 cache is moved to another thread and then moved back, so
+        // it needs an independent allocator so it can run concurrently.
         .b64cache = external_b64cache? *external_b64cache :
             ((FileCache){.allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator()}),
+        // The text cache only runs on this thread so we can just use the general allocator.
+        .textcache = external_textcache?*external_textcache:((FileCache){.allocator=allocator}),
         .error_func = error_func,
         .error_user_data = error_user_data,
         };
@@ -966,6 +974,9 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         DBG("Copying back");
         memcpy(external_b64cache, &ctx.b64cache, sizeof(ctx.b64cache));
         }
+    if(external_textcache){
+        memcpy(external_textcache, &ctx.textcache, sizeof(ctx.textcache));
+        }
     auto t1 = get_t();
     report_stat(&ctx, "Execution took: %.3fms", (t1-t0)/1000.);
     return result;
@@ -1058,7 +1069,7 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
     // flags |= DNDC_PRINT_STATS;
     // gross, move to caller.
     static FileCache cache = {.allocator.type = ALLOCATOR_MALLOC};
-    auto e = run_the_dndc(flags, base_directory, source_text, output, (DependsArg){.path=LS("")}, &cache, error_func, error_user_data);
+    auto e = run_the_dndc(flags, base_directory, source_text, output, (DependsArg){.path=LS("")}, &cache, NULL, error_func, error_user_data);
     return e.errored;
     }
 
@@ -1073,7 +1084,7 @@ dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(ErrorFu
     flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
     flags |= DNDC_REFORMAT_ONLY;
-    auto e = run_the_dndc(flags, SV(""), source_text, output, (DependsArg){.path=LS("")}, NULL, error_func, error_user_data);
+    auto e = run_the_dndc(flags, SV(""), source_text, output, (DependsArg){.path=LS("")}, NULL, NULL, error_func, error_user_data);
     return e.errored;
     }
 

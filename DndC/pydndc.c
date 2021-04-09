@@ -235,7 +235,7 @@ pydndc_reformat(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*
     ErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
-    auto e = run_the_dndc(flags, SV(""), source, &output, (DependsArg){.path=LS("")}, NULL, func, error_list);
+    auto e = run_the_dndc(flags, SV(""), source, &output, (DependsArg){.path=LS("")}, NULL, NULL, func, error_list);
     if(PyErr_Occurred()){
         goto finally;
         }
@@ -310,7 +310,7 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
         .callback = pydndc_add_dependency,
         .user_data = depends_list,
         };
-    auto e = run_the_dndc(flags, base_str, source, &output, depends, NULL, func, error_list);
+    auto e = run_the_dndc(flags, base_str, source, &output, depends, NULL, NULL, func, error_list);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;

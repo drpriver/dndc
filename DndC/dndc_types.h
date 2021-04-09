@@ -172,8 +172,8 @@ typedef struct DndcContext {
     struct {
         // Cached strings that are from loaded files.
         // We also copy the filename as we need those on our nodes.
-        Marray(LoadedSource) loaded_files;
         Marray(LoadedSource) builtin_files;
+        FileCache textcache;
         FileCache b64cache;
     };
     Marray(StringView) dependencies;

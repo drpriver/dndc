@@ -274,28 +274,28 @@ ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
         }
     ctx_note_dependency(ctx, sourcepath);
     // check if we already have it.
-    for(size_t i = 0; i < ctx->loaded_files.count; i++){
-        auto loaded = &ctx->loaded_files.data[i];
+    for(size_t i = 0; i < ctx->textcache.files.count; i++){
+        auto loaded = &ctx->textcache.files.data[i];
         if(LS_SV_equals(loaded->sourcepath, sourcepath)){
             msb_destroy(&temp_builder);
             return (Errorable(LongString)){.result=loaded->sourcetext};
             }
         }
-    char* path = Allocator_strndup(ctx->allocator, sourcepath.text, sourcepath.length);
+    char* path = Allocator_strndup(ctx->textcache.allocator, sourcepath.text, sourcepath.length);
     msb_destroy(&temp_builder);
 
     auto before = get_t();
-    auto load_err = read_file(ctx->allocator, path);
+    auto load_err = read_file(ctx->textcache.allocator, path);
     auto after = get_t();
     if(!load_err.errored){
         report_stat(ctx, "Loading '%.*s' took %.3fms", (int)sourcepath.length, sourcepath.text, (after-before)/1000.);
-        auto loaded = Marray_alloc(LoadedSource)(&ctx->loaded_files, ctx->allocator);
+        auto loaded = Marray_alloc(LoadedSource)(&ctx->textcache.files, ctx->textcache.allocator);
         loaded->sourcepath.text = path;
         loaded->sourcepath.length = sourcepath.length;
         loaded->sourcetext = load_err.result;
         }
     else {
-        Allocator_free(ctx->allocator, path, sourcepath.length+1);
+        Allocator_free(ctx->textcache.allocator, path, sourcepath.length+1);
         }
     return load_err;
     }
