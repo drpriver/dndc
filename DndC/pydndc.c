@@ -33,7 +33,6 @@ DndcPyFileCache_remove(Nonnull(PyObject*)self, Nonnull(PyObject*)str){
 #endif
     FileCache_maybe_remove(&cache->text_cache, path);
     FileCache_maybe_remove(&cache->b64_cache, path);
-    done:;
     Py_RETURN_NONE;
     }
 

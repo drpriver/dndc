@@ -6,7 +6,7 @@ have_deps = install_deps.ensure_deps(False)
 import sys
 if not have_deps:
     sys.exit(0)
-from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle
+from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox
 from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices
 from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher
@@ -29,7 +29,7 @@ APPFOLDER = os.path.join(APPLOCAL, APPNAME)
 LOGS_FOLDER = os.path.join(APPFOLDER, 'Logs')
 os.makedirs(LOGS_FOLDER, exist_ok=True)
 LOGFILE_LOCATION = os.path.join(LOGS_FOLDER, datetime.datetime.now().strftime('%Y-%m-%d.txt'))
-PYGDNDC_VERSION = '0.4.0'
+PYGDNDC_VERSION = '0.4.1'
 
 class Logs:
     def __init__(self) -> None:
@@ -261,12 +261,16 @@ class DndEditor(QPlainTextEdit):
 
     def keyPressEvent(self, event:QKeyEvent) -> None:
         if event.key() == Qt.Key.Key_Tab:
+            if self.isReadOnly():
+                return
             if self.textCursor().hasSelection():
                 self.alter_indent(indent=True)
                 return
             self.insertPlainText('  ')
             return
         if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
+            if self.isReadOnly():
+                return
             block = self.textCursor().block()
             text = block.text()
             leading_space = re.match(whitespace_re, text)
@@ -276,6 +280,8 @@ class DndEditor(QPlainTextEdit):
                 self.insertPlainText('\n')
             return
         if event.key() == Qt.Key.Key_Backspace:
+            if self.isReadOnly():
+                return
             cursor = self.textCursor()
             block = cursor.block()
             text = block.text()
@@ -329,6 +335,8 @@ class DndEditor(QPlainTextEdit):
             bottom = top + self.blockBoundingRect(block).height()
             blockNumber += 1
     def insert_dnd_block(self, dndtext:str) -> None:
+        if self.isReadOnly():
+            return
         block = self.textCursor().block()
         text = block.text()
         leading_space = re.match(whitespace_re, text)
@@ -374,6 +382,8 @@ class DndEditor(QPlainTextEdit):
             r"      imglinks.add_child(f'{lead} = {ctx.outfile}#{c.id} @{position}')",
             )))
     def alter_indent(self, indent:bool) -> None:
+        if self.isReadOnly():
+            return
         cursor = self.textCursor()
         start = cursor.selectionStart()
         end = cursor.selectionEnd()
@@ -459,15 +469,32 @@ class Page(QSplitter):
         self.textedit.setFont(FONT)
         self.textedit.setMinimumSize(EIGHTYCHARS*1.05, 200)  # type: ignore
         self.dirname = '.'
-        self.textedit.document().contentsChanged.connect(self.update_html)
+        self.textedit.document().contentsChanged.connect(self.contents_changed)
         self.error_display = QPlainTextEdit()
         self.error_display.setFont(FONT)
+        self.error_display.setReadOnly(True)
         self.editor_holder = QSplitter()
         self.editor_holder.setOrientation(Qt.Orientation().Vertical)
         self.editor_holder.addWidget(self.textedit)
         self.editor_holder.addWidget(self.error_display)
-        self.editor_holder.setStretchFactor(0, 8)
+        self.checks = [
+            QCheckBox('Auto-apply changes', self),
+            QCheckBox('Read-only', self),
+            ]
+        self.checks[0].setCheckState(Qt.CheckState.Checked)
+        self.auto_apply = True
+        self.checks[0].stateChanged.connect(self.auto_apply_changed)
+        self.checks[1].stateChanged.connect(self.read_only_changed)
+        self.checkholder = QWidget(self)
+        self.checkholder_layout = QHBoxLayout(self.checkholder)
+        for check in self.checks:
+            self.checkholder_layout.addWidget(check)
+        self.checkholder_layout.addStretch()
+        self.checkholder.setLayout(self.checkholder_layout)
+        self.editor_holder.addWidget(self.checkholder)
+        self.editor_holder.setStretchFactor(0, 16)
         self.editor_holder.setStretchFactor(1, 1)
+        self.editor_holder.setStretchFactor(2, 1)
         self.filename = ''
         self.dependencies = set()  # type: Set[str]
         left = EDITOR_ON_LEFT
@@ -488,6 +515,23 @@ class Page(QSplitter):
             self.hide_error()
         self.handle(1).installEventFilter(SplitterHandler(self))
 
+    def contents_changed(self) -> None:
+        if self.auto_apply:
+            self.update_html()
+
+    def auto_apply_changed(self, state:int) -> None:
+        if state == Qt.CheckState.Unchecked:
+            self.auto_apply = False
+        if state == Qt.CheckState.Checked:
+            self.auto_apply = True
+            self.update_html()
+
+    def read_only_changed(self, state:int) -> None:
+        if state == Qt.CheckState.Unchecked:
+            self.textedit.setReadOnly(False)
+        if state == Qt.CheckState.Checked:
+            self.textedit.setReadOnly(True)
+
     def file_changed(self, path:str) -> None:
         if path not in self.dependencies:
             return
@@ -497,6 +541,7 @@ class Page(QSplitter):
     def clear_errors(self) -> None:
         self.error_display.setPlainText('')
         self.textedit.error_line = None
+
     def display_dndc_error(self, error_type:int, filename:str, row:int, col:int, message:str) -> None:
         error_types = (
             'Error',
@@ -511,6 +556,7 @@ class Page(QSplitter):
             self.textedit.error_line = row
         et = error_types[error_type]
         self.error_display.appendPlainText(f'{et}:{row+1}:{col+1}: {message}')
+
     def update_html(self) -> None:
         self.clear_errors()
         try:
@@ -585,6 +631,8 @@ class Page(QSplitter):
                     fname = relative
         return fname
     def insert_image(self) -> None:
+        if self.isReadOnly():
+            return
         fname = self.get_fname('Choose an image file', 'PNG images (*.png)')
         if not fname:
             return
