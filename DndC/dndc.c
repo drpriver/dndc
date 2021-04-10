@@ -86,15 +86,24 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
                 auto child = get_node(ctx, node->children.data[0]);
                 if(!child->header.length)
                     continue;
-                auto sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
                 if(path_is_abspath(child->header) or !ctx->base_directory.length){
-                    *sv = child->header;
+                    if(not FileCache_has_file(job.b64cache, child->header)){
+                        auto sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
+                        *sv = child->header;
+                        }
                     }
                 else {
                     MStringBuilder path_builder = {.allocator=ctx->allocator};
                     msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
                     msb_append_path(&path_builder, child->header.text, child->header.length);
-                    *sv = LS_to_SV(msb_detach(&path_builder));
+                    auto path = msb_borrow(&path_builder);
+                    if(not FileCache_has_file(job.b64cache, path)){
+                        auto sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
+                        *sv = LS_to_SV(msb_detach(&path_builder));
+                        }
+                    else {
+                        msb_destroy(&path_builder);
+                        }
                     }
                 }
             }
@@ -180,6 +189,9 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             report_stat(ctx, "Joining took: %.3fms", (after-before)/1000.);
             }
         Marray_cleanup(StringView)(&job.sourcepaths, ctx->allocator);
+        }
+    else {
+        report_stat(ctx, "No binary work was to be done.");
         }
     return result;
     }
@@ -971,7 +983,6 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
         report_stat(&ctx, "Cleaning up memory took: %.3fms", (after-before)/1000.);
         }
     if(external_b64cache){
-        DBG("Copying back");
         memcpy(external_b64cache, &ctx.b64cache, sizeof(ctx.b64cache));
         }
     if(external_textcache){

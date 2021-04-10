@@ -6,6 +6,101 @@
 #define PYTHONMODULE
 #include "dndc.c"
 
+typedef struct DndcPyFileCache {
+    PyObject_HEAD
+    FileCache text_cache;
+    FileCache b64_cache;
+} DndcPyFileCache;
+
+static
+Nullable(PyObject*)
+DndcPyFileCache_remove(Nonnull(PyObject*)self, Nonnull(PyObject*)str){
+    if(!PyUnicode_Check(str)){
+        PyErr_SetString(PyExc_TypeError, "Argument to remove must be a string");
+        return NULL;
+        }
+    auto path = pystring_borrow_stringview(str);
+    auto cache = (DndcPyFileCache*)self;
+#if 0
+    for(size_t i = 0; i < cache->text_cache.files.count; i++){
+        auto file = &cache->text_cache.files.data[i].sourcepath;
+        HERE("text: %.*s", (int)file->length, file->text);
+        }
+    for(size_t i = 0; i < cache->b64_cache.files.count; i++){
+        auto file = &cache->b64_cache.files.data[i].sourcepath;
+        HERE("b64: %.*s", (int)file->length, file->text);
+        }
+#endif
+    FileCache_maybe_remove(&cache->text_cache, path);
+    FileCache_maybe_remove(&cache->b64_cache, path);
+    done:;
+    Py_RETURN_NONE;
+    }
+
+static
+Nullable(PyObject*)
+DndcPyFileCache_clear(Nonnull(PyObject*)self){
+    auto cache = (DndcPyFileCache*)self;
+    FileCache_clear(&cache->text_cache);
+    FileCache_clear(&cache->b64_cache);
+    Py_RETURN_NONE;
+    }
+
+static
+Nullable(PyObject*)
+DndcPyFileCache_new(Nonnull(PyTypeObject*)subtype, PyObject *_Null_unspecified args, PyObject *_Null_unspecified kwds){
+    (void)args;
+    (void)kwds;
+    auto obj = (DndcPyFileCache*)subtype->tp_alloc(subtype, 1);
+    if(!obj)
+        return NULL;
+    obj->b64_cache = (FileCache){.allocator = get_mallocator()};
+    obj->text_cache = (FileCache){.allocator = get_mallocator()};
+    return (PyObject*)obj;
+}
+
+static
+void
+DndcPyFileCache_dealloc(Nonnull(PyObject*)self){
+    auto cache = (DndcPyFileCache*)self;
+    FileCache_clear(&cache->text_cache);
+    FileCache_clear(&cache->b64_cache);
+    }
+
+static
+PyMethodDef DndcPyFileCache_methods[] = {
+    {
+        .ml_name = "remove",
+        .ml_meth = (PyCFunction)DndcPyFileCache_remove,
+        .ml_flags = METH_O,
+        .ml_doc = "remove(filepath)\n"
+                  "--\n"
+                  "\n"
+                  "Remove the given filepath (str) from the cache.\n",
+    },
+    {
+        .ml_name = "clear",
+        .ml_meth = (PyCFunction)DndcPyFileCache_clear,
+        .ml_flags = METH_NOARGS,
+        .ml_doc = "clear()\n"
+                  "--\n"
+                  "\n"
+                  "Removes all cached files.\n",
+    },
+    {},
+};
+
+
+PyTypeObject DndcPyFileCache_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "pydndc.FileCache",
+    .tp_basicsize = sizeof(DndcPyFileCache),
+    .tp_doc = "An object that manages a cache of files to avoid io between repeated invocations.",
+    .tp_new = DndcPyFileCache_new,
+    .tp_dealloc = (destructor)DndcPyFileCache_dealloc,
+    .tp_methods = DndcPyFileCache_methods,
+};
+
 static
 Nullable(PyObject*)
 pydndc_reformat(Nonnull(PyObject*), Nonnull(PyObject*), Nonnull(PyObject*));
@@ -54,7 +149,7 @@ PyMethodDef pydndc_methods[] = {
         .ml_meth = (PyCFunction)pydndc_htmlgen,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
-        "htmlgen(text, base_dir='.', error_reporter=None)\n"
+        "htmlgen(text, base_dir='.', error_reporter=None, file_cache=None)\n"
         "--\n"
         "\n"
         "Parses and converts the .dnd string into html, returning as a string.\n"
@@ -73,6 +168,12 @@ PyMethodDef pydndc_methods[] = {
         "\n"
         "error_reporter: Callable(int, str, int, int, str)\n"
         "    A callable for reporting errors. See the extended discussion below.\n"
+        "\n"
+        "file_cache: FileCache\n"
+        "    The file cache for caching files in between invocations.\n"
+        "    Create a new one and pass it in between calls.\n"
+        "    It is your responsibility to remove stales files by calling .remove on it.\n"
+        "    If you don't pass one in, no caching will be done.\n"
         "\n"
         "Returns:\n"
         "--------\n"
@@ -178,7 +279,15 @@ PyInit_pydndc(void) {
     PyObject* mod = PyModule_Create(&pydndc);
     if(not mod)
         return NULL;
+    if(PyType_Ready(&DndcPyFileCache_Type) != 0)
+        return NULL;
 
+    Py_INCREF(&DndcPyFileCache_Type);
+    if(PyModule_AddObject(mod, "FileCache", (PyObject*)&DndcPyFileCache_Type) < 0){
+        Py_DECREF(&DndcPyFileCache_Type);
+        Py_DECREF(mod);
+        return NULL;
+    }
     PyModule_AddStringConstant(mod, "__version__", DNDC_VERSION);
     PyModule_AddIntConstant(mod, "DOUBLE_COLON", DNDC_SYNTAX_DOUBLE_COLON);
     PyModule_AddIntConstant(mod, "HEADER", DNDC_SYNTAX_HEADER);
@@ -278,10 +387,11 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
     PyObject* text;
     PyObject* base_dir = NULL;
     PyObject* error_reporter = NULL;
-    const char* const keywords[] = {"text", "base_dir", "error_reporter", NULL};
+    PyObject* file_cache = NULL;
+    const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OO:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter, &file_cache)){
         return NULL;
         }
     PopDiagnostic();
@@ -289,6 +399,12 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
         error_reporter = NULL;
     if(error_reporter and !PyCallable_Check(error_reporter)){
         PyErr_SetString(PyExc_TypeError, "error_reporter must be a callable");
+        return NULL;
+        }
+    if(file_cache and file_cache == Py_None)
+        file_cache = NULL;
+    if(file_cache and !PyObject_IsInstance(file_cache, (PyObject*)&DndcPyFileCache_Type)){
+        PyErr_SetString(PyExc_TypeError, "file_cache must be a FileCache");
         return NULL;
         }
     LongString source = pystring_borrow_longstring(text);
@@ -301,6 +417,8 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
     // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
     flags |= DNDC_DEPENDS_IS_CALLBACK;
+    // flags |= DNDC_PRINT_STATS;
+    // flags |= DNDC_DONT_INLINE_IMAGES;
     LongString output = {};
     ErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
@@ -310,7 +428,14 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
         .callback = pydndc_add_dependency,
         .user_data = depends_list,
         };
-    auto e = run_the_dndc(flags, base_str, source, &output, depends, NULL, NULL, func, error_list);
+    FileCache* textcache = NULL;
+    FileCache* b64cache = NULL;
+    if(file_cache){
+        auto cache = (DndcPyFileCache*)file_cache;
+        textcache = &cache->text_cache;
+        b64cache = &cache->b64_cache;
+        }
+    auto e = run_the_dndc(flags, base_str, source, &output, depends, b64cache, textcache, func, error_list);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;

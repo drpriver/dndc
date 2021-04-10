@@ -94,6 +94,7 @@ FONT.setFamilies(['Menlo','Cascadia Mono', 'Consolas','Ubuntu Mono', 'Mono'])
 fontmetrics = QFontMetrics(FONT)
 EIGHTYCHARS = fontmetrics.horizontalAdvance('M')*80
 EDITOR_ON_LEFT = True
+FILE_CACHE = pydndc.FileCache()
 
 class DndMainWindow(QMainWindow):
     def __init__(self)->None:
@@ -103,6 +104,7 @@ class DndMainWindow(QMainWindow):
         self.watcher.fileChanged.connect(self.file_changed)
 
     def file_changed(self, path:str) -> None:
+        FILE_CACHE.remove(path)
         for page in all_windows.values():
             page.file_changed(path)
 
@@ -512,7 +514,12 @@ class Page(QSplitter):
     def update_html(self) -> None:
         self.clear_errors()
         try:
-            html, depends = pydndc.htmlgen(self.textedit.toPlainText(), base_dir=self.dirname, error_reporter=self.display_dndc_error)
+            html, depends = pydndc.htmlgen(
+                self.textedit.toPlainText(),
+                base_dir=self.dirname,
+                error_reporter=self.display_dndc_error,
+                file_cache=FILE_CACHE,
+                )
         except ValueError:
             return
         self.webpage.setHtml(html, baseUrl=QUrl(f'https://{APPHOST}/this.html'))
