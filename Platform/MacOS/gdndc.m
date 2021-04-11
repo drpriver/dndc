@@ -2,14 +2,21 @@
 #import <Webkit/WebKit.h>
 #include "measure_time.h"
 #include "dndc.h"
-// fuck it, I need to build strings!
+// I need to build strings!
 #include "MStringBuilder.h"
 #include "mallocator.h"
+// Use the internal API.
+#include "dndc_flags.h"
+#include "dndc_types.h"
+#include "dndc_funcs.h"
 
 #if !__has_feature(objc_arc)
 #error "ARC is off"
 #endif
 
+static FileCache BASE64CACHE = {
+    .allocator.type = ALLOCATOR_MALLOC,
+};
 //
 // So, each document has N window controllers (I guess 1 for me).
 // Each window controller has a window.
@@ -806,10 +813,17 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
         base_dir = SV("");
     }
     // auto t0 = get_t();
-    auto err = dndc_make_html(base_dir, source, &html, dndc_stderr_error_func, NULL);
+    uint64_t flags = 0;
+    flags |= DNDC_SOURCE_PATH_IS_DATA_NOT_PATH;
+    flags |= DNDC_OUTPUT_PATH_IS_OUT_PARAM;
+    flags |= DNDC_PYTHON_IS_INIT;
+    flags |= DNDC_SUPPRESS_WARNINGS;
+    flags |= DNDC_ALLOW_BAD_LINKS;
+    // flags |= DNDC_PRINT_STATS;
+    auto err = run_the_dndc(flags, base_dir, source, &html, (DependsArg){.path=LS("")}, &BASE64CACHE, NULL, dndc_stderr_error_func, NULL);
     // auto t1 = get_t();
     // HERE("dndc_make_html: %.3fms", (t1-t0)/1000.);
-    if(err){
+    if(err.errored){
         // TODO: report errors to the user (need to figure out the UX though).
         return;
     }
@@ -819,6 +833,8 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
     PopDiagnostic();
     NSURL* url = [NSURL URLWithString:@"https://./this.html"];
     [webview loadData:htmldata MIMEType:@"text/html" characterEncodingName:@"UTF-8" baseURL:url];
+    // auto t2 = get_t();
+    // HERE("load the page: %.3fms", (t2-t1)/1000.);
 }
 
 -(void)setRepresentedObject:(id)representedObject {
@@ -908,6 +924,9 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
          [(DndViewController*)vc flop_editor:nil];
         }
     }
+}
+-(void)purge_img_cache:(id)sender{
+    FileCache_clear(&BASE64CACHE);
 }
 
 -(void)applicationDidFinishLaunching:(NSNotification *)notification{
@@ -1019,6 +1038,8 @@ do_menus(void){
         [fileMenu addItemWithTitle:@"Close Window" action:@selector(performClose:) keyEquivalent:@"w"];
         [fileMenu addItemWithTitle:@"Save" action:@selector(saveDocument:) keyEquivalent:@"s"];
         [fileMenu addItemWithTitle:@"Revert to Saved" action:@selector(revertDocumentToSaved:) keyEquivalent:@"r"];
+        [fileMenu addItem:[NSMenuItem separatorItem]];
+        [fileMenu addItemWithTitle:@"Empty Image Cache" action:@selector(purge_img_cache:) keyEquivalent:@""];
         NSMenuItem* menuItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
         [menuItem setSubmenu:fileMenu];
         [[NSApp mainMenu] addItem:menuItem];
