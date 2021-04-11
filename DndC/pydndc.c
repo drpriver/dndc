@@ -216,7 +216,7 @@ PyMethodDef pydndc_methods[] = {
         "flags: int\n"
         "    Bit flags controlling some behavior. The allowed flags are\n"
         "    exported on the module and are as follows:\n"
-        "
+        "\n"
         "    DONT_INLINE_IMAGES: If set, don't embed images as base64 urls.\n"
         "                        This is overruled by USE_DND_URL_SCHEME.\n"
         "    NO_THREADS:         Do all work on the calling thread.\n"

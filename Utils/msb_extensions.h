@@ -140,4 +140,19 @@ msb_write_json_escaped_str(Nonnull(MStringBuilder*)restrict sb, Nonnull(const ch
         }
     sb->cursor = cursor;
     }
+static inline
+void
+msb_write_str_with_backslashes_as_forward_slashes(Nonnull(MStringBuilder*)sb, Nonnull(const char*)restrict str, size_t length){
+    _check_msb_size(sb, length);
+    auto data = sb->data;
+    auto cursor = sb->cursor;
+    for(size_t i = 0; i < length; i++){
+        char c = str[i];
+        if(c == '\\'){
+            c = '/';
+            }
+        data[cursor++] = c;
+        }
+    sb->cursor = cursor;
+    }
 #endif

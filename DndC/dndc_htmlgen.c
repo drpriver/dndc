@@ -724,11 +724,12 @@ RENDERFUNC(IMAGE){
         auto header = imgpath_node->header;
         msb_write_literal(sb, "<img src=\"dnd:");
         if((not path_is_abspath(header)) and ctx->base_directory.length){
-            msb_write_str(sb, ctx->base_directory.text, ctx->base_directory.length);
-            msb_append_path(sb, header.text, header.length);
+            msb_write_str_with_backslashes_as_forward_slashes(sb, ctx->base_directory.text, ctx->base_directory.length);
+            msb_write_char(sb, '/');
+            msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
             }
         else {
-            msb_write_str(sb, header.text, header.length);
+            msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
             }
         msb_write_literal(sb, "\">");
         }
@@ -745,7 +746,7 @@ RENDERFUNC(IMAGE){
             }
         auto header = imgpath_node->header;
         msb_write_literal(sb, "<img src=\"");
-        msb_write_str(sb, header.text, header.length);
+        msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
         msb_write_literal(sb, "\">");
         }
     else{
@@ -1092,11 +1093,12 @@ RENDERFUNC(IMGLINKS){
             }
         auto header = imgpath_node->header;
         if((not path_is_abspath(header)) and ctx->base_directory.length){
-            msb_write_str(sb, ctx->base_directory.text, ctx->base_directory.length);
-            msb_append_path(sb, header.text, header.length);
+            msb_write_str_with_backslashes_as_forward_slashes(sb, ctx->base_directory.text, ctx->base_directory.length);
+            msb_write_char(sb, '/');
+            msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
             }
         else {
-            msb_write_str(sb, header.text, header.length);
+            msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
             }
         msb_write_literal(sb, "');\">\n");
         }
@@ -1108,7 +1110,7 @@ RENDERFUNC(IMGLINKS){
             Raise(PARSE_ERROR);
             }
         auto header = imgpath_node->header;
-        msb_write_str(sb, header.text, header.length);
+        msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
         msb_write_literal(sb, "');\">\n");
         }
     else {
