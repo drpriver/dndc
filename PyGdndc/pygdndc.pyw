@@ -600,7 +600,7 @@ class Page(QSplitter):
             self.error_display.appendPlainText(f'{et}:{row+1}:{col+1}: {message}')
 
     def update_html(self) -> None:
-        t0 = time.time()
+        # t0 = time.time()
         self.clear_errors()
         before_paths = set(FILE_CACHE.paths())
         try:
@@ -623,18 +623,18 @@ class Page(QSplitter):
                 if path not in before_paths:
                     window.watched.addPath(path)
             after = time.time()
-            print(f'addPaths: {(after-before)*1000:.3f}ms')
+            # print(f'addPaths: {(after-before)*1000:.3f}ms')
             return
-        t1 = time.time()
+        # t1 = time.time()
         self.webpage.setHtml(html, baseUrl=QUrl(f'https://{APPHOST}/this.html'))
-        t2 = time.time()
+        # t2 = time.time()
         self.dependencies = set(depends)
         if depends:
             window.watcher.addPaths(depends)
-        t3 = time.time()
-        print(f'htmlgen = {(t1-t0)*1000:.3f}ms')
-        print(f'sethtml = {(t2-t1)*1000:.3f}ms')
-        print(f'total   = {(t3-t0)*1000:.3f}ms')
+        # t3 = time.time()
+        # print(f'htmlgen = {(t1-t0)*1000:.3f}ms')
+        # print(f'sethtml = {(t2-t1)*1000:.3f}ms')
+        # print(f'total   = {(t3-t0)*1000:.3f}ms')
 
     def format(self) -> None:
         try:
