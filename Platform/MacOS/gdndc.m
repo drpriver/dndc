@@ -50,14 +50,15 @@ typedef enum GdndInsertTag{
 -(void)insert_file_block:(NSString*)path tag:(GdndInsertTag)tag size:(NSSize)size;
 @end
 
+@class DndViewController;
 //
 // Delegate for the above textview that provides syntax highlighting
 // for the .dnd file
 //
 @interface DndHighlighter: NSObject<NSTextStorageDelegate>
+@property(weak, nonatomic) DndViewController* controller;
 @end
 
-@class DndViewController;
 //
 // Controls what urls to allow (basically makes it so links will open a new
 // .dnd document)
@@ -224,13 +225,12 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
   didProcessEditing:(NSTextStorageEditActions)editedMask
               range:(NSRange)editedRange
      changeInLength:(NSInteger)delta{
-    auto cvc = (DndViewController*)[NSApp keyWindow].contentViewController;
     NSString *string = textStorage.string;
     LongString text;
     text.text = [string UTF8String];
     text.length = strlen(text.text);
-    if(cvc){
-        [cvc recalc_html: text];
+    if(self.controller){
+        [self.controller recalc_html: text];
     }
 #if 1
     // NSRange currentLineRange = NSMakeRange(0, [string length]);
@@ -652,6 +652,7 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
     NSRect textrect = {.origin={screenrect.size.width-textwidth,0}, .size={textwidth,screenrect.size.height}};
     text = [[DndTextView alloc] initWithFrame:textrect font:font];
     highlighter = [[DndHighlighter alloc] init];
+    highlighter.controller = self;
     text.textStorage.delegate = highlighter;
     text.minSize = NSMakeSize(0.0, textrect.size.height);
     text.maxSize = NSMakeSize(1e9, 1e9);
