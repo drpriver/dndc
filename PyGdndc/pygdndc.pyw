@@ -7,9 +7,10 @@ import sys
 if not have_deps:
     sys.exit(0)
 from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox
-from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
+from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
+from PySide2.QtWebEngineCore import QWebEngineUrlScheme, QWebEngineUrlSchemeHandler, QWebEngineUrlRequestJob
 from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices
-from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher
+from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher, QFile
 import pydndc
 from typing import Optional, List, Dict, Optional, Callable, Tuple, Set
 import time
@@ -30,6 +31,39 @@ LOGS_FOLDER = os.path.join(APPFOLDER, 'Logs')
 os.makedirs(LOGS_FOLDER, exist_ok=True)
 LOGFILE_LOCATION = os.path.join(LOGS_FOLDER, datetime.datetime.now().strftime('%Y-%m-%d.txt'))
 PYGDNDC_VERSION = '0.4.1'
+SCHEME = QWebEngineUrlScheme(b'dnd')  # type: ignore
+SCHEME.setFlags(
+        QWebEngineUrlScheme.Flag.SecureScheme
+        | QWebEngineUrlScheme.Flag.LocalAccessAllowed # type: ignore
+      )
+SCHEME.setSyntax(QWebEngineUrlScheme.Syntax.Path)
+QWebEngineUrlScheme.registerScheme(SCHEME)
+class SCHEME_Handler(QWebEngineUrlSchemeHandler):
+    def requestStarted(self, request:QWebEngineUrlRequestJob) -> None:
+        if request.requestMethod() != b'GET':
+            logger.debug(f'Not GET: {request.requestMethod()=}')
+            request.fail(QWebEngineUrlRequestJob.Error.RequestDenied)
+            return
+        url = request.requestUrl()
+        imgpath = url.path()
+        if not os.path.isfile(imgpath):
+            request.fail(QWebEngineUrlRequestJob.Error.UrlNotFound)
+            return
+        parts = imgpath.split('.')
+        if parts:
+            imgtype = parts[-1]
+            types = {
+                    'png' : b'image/png',
+                    'jpg' : b'image/jpeg',
+                    'jpeg': b'image/jpeg',
+                    'gif' : b'image/gif',
+                    }
+            if imgtype in types:
+                file = QFile(imgpath, request)
+                request.reply(types[imgtype], file)  # type: ignore
+                return
+        request.fail(QWebEngineUrlRequestJob.Error().RequestDenied)
+
 
 class Logs:
     def __init__(self) -> None:
@@ -79,6 +113,8 @@ APPHOST = 'invalid.'
 app = QApplication(sys.argv)
 app.setApplicationName(APPNAME)
 app.setApplicationDisplayName(APPNAME)
+handler = SCHEME_Handler()
+QWebEngineProfile.defaultProfile().installUrlSchemeHandler(b'dnd', handler)  # type: ignore
 all_windows: Dict[str, 'Page'] = {}
 
 FONT = QFont()
@@ -94,6 +130,7 @@ FONT.setFamilies(['Menlo','Cascadia Mono', 'Consolas','Ubuntu Mono', 'Mono'])
 fontmetrics = QFontMetrics(FONT)
 EIGHTYCHARS = fontmetrics.horizontalAdvance('M')*80
 EDITOR_ON_LEFT = True
+PRINT_STATS = False
 FILE_CACHE = pydndc.FileCache()
 
 class DndMainWindow(QMainWindow):
@@ -104,6 +141,8 @@ class DndMainWindow(QMainWindow):
         self.watcher.fileChanged.connect(self.file_changed)
 
     def file_changed(self, path:str) -> None:
+        if path.endswith('png'):
+            QWebEngineProfile.defaultProfile().clearHttpCache()
         FILE_CACHE.remove(path)
         for page in all_windows.values():
             page.file_changed(path)
@@ -223,7 +262,7 @@ class DndEditor(QPlainTextEdit):
         self.updateRequest.connect(self.updateLineNumberArea)
         self.cursorPositionChanged.connect(self.highlightCurrentLine)
         self.updateLineNumberAreaWidth(0)
-        self.error_line = None
+        self.error_line: Optional[int] = None
         # Idk if this is guaranteed, but it is important that we can
         # update the syntax analysis before the highlighter
         # is called on a line.
@@ -555,23 +594,47 @@ class Page(QSplitter):
         if error_type == 0:
             self.textedit.error_line = row
         et = error_types[error_type]
-        self.error_display.appendPlainText(f'{et}:{row+1}:{col+1}: {message}')
+        if et == 'Info':
+            self.error_display.appendPlainText(f'{et}: {message}')
+        else:
+            self.error_display.appendPlainText(f'{et}:{row+1}:{col+1}: {message}')
 
     def update_html(self) -> None:
+        t0 = time.time()
         self.clear_errors()
+        before_paths = set(FILE_CACHE.paths())
         try:
+            flags = pydndc.USE_DND_URL_SCHEME
+            if PRINT_STATS:
+                flags |= pydndc.PRINT_STATS
             html, depends = pydndc.htmlgen(
                 self.textedit.toPlainText(),
                 base_dir=self.dirname,
                 error_reporter=self.display_dndc_error,
                 file_cache=FILE_CACHE,
+                flags=flags,
                 )
         except ValueError:
+            # On error, the file cache can have loaded things, but we don't get those
+            # dependencies.
+            before = time.time()
+            paths = FILE_CACHE.paths()
+            for path in paths:
+                if path not in before_paths:
+                    window.watched.addPath(path)
+            after = time.time()
+            print(f'addPaths: {(after-before)*1000:.3f}ms')
             return
+        t1 = time.time()
         self.webpage.setHtml(html, baseUrl=QUrl(f'https://{APPHOST}/this.html'))
+        t2 = time.time()
         self.dependencies = set(depends)
         if depends:
             window.watcher.addPaths(depends)
+        t3 = time.time()
+        print(f'htmlgen = {(t1-t0)*1000:.3f}ms')
+        print(f'sethtml = {(t2-t1)*1000:.3f}ms')
+        print(f'total   = {(t3-t0)*1000:.3f}ms')
 
     def format(self) -> None:
         try:
@@ -581,7 +644,6 @@ class Page(QSplitter):
         self.textedit.setPlainText(text)
     def hide_editor(self) -> None:
         self.editor_holder.hide()
-
     def show_editor(self) -> None:
         self.editor_holder.show()
     def show_error(self) -> None:
@@ -804,7 +866,6 @@ def add_menus() -> None:
     action.setShortcut(QKeySequence('Ctrl+o'))
     filemenu.addAction(action)
 
-    action = QAction('&New', window)
     def new_file(*args) -> None:
         options = QFileDialog.Options()
         options |= QFileDialog.DontConfirmOverwrite
@@ -814,28 +875,28 @@ def add_menus() -> None:
         if not fname:
             return
         add_tab(fname, allow_fail=True)
+    action = QAction('&New', window)
     action.triggered.connect(new_file)
     action.setShortcut(QKeySequence('Ctrl+n'))
     filemenu.addAction(action)
 
-    action = QAction('&Save', window)
     def save_file(*args) -> None:
         page = tabwidget.currentWidget()
         if page:
             page.save()
+    action = QAction('&Save', window)
     action.triggered.connect(save_file)
     action.setShortcut(QKeySequence('Ctrl+s'))
     filemenu.addAction(action)
 
-    action = QAction('&Export As HTML', window)
     def export_file(*args) -> None:
         page: Optional[Page] = tabwidget.currentWidget()
         if page: page.export_as_html()
+    action = QAction('&Export As HTML', window)
     action.triggered.connect(export_file)
     action.setShortcut(QKeySequence('Ctrl+e'))
     filemenu.addAction(action)
 
-    action = QAction('&Close', window)
     def close_current_tab(*args) -> None:
         current_tab: Optional[Page] = tabwidget.currentWidget()
         if not current_tab:
@@ -844,6 +905,7 @@ def add_menus() -> None:
         current_tab.save()
         del all_windows[current_tab.filename]
         current_tab.setParent(None)  # type: ignore
+    action = QAction('&Close', window)
     action.triggered.connect(close_current_tab)
     action.setShortcut(QKeySequence('Ctrl+w'))
     filemenu.addAction(action)
@@ -855,16 +917,15 @@ def add_menus() -> None:
 
     editmenu = menubar.addMenu('Edit')
 
-    action = QAction('&Format', window)
     def format_dnd(*args) -> None:
         current_tab: Optional[Page] = tabwidget.currentWidget()
         if not current_tab:
             return
         current_tab.format()
+    action = QAction('&Format', window)
     action.triggered.connect(format_dnd)
     editmenu.addAction(action)
 
-    action = QAction('F&ont', window)
     def pickfont(*args) -> None:
         global FONT
         ok, font = QFontDialog.getFont(FONT)
@@ -872,6 +933,7 @@ def add_menus() -> None:
             FONT = font
             for page in all_windows.values():
                 page.textedit.setFont(FONT)
+    action = QAction('F&ont', window)
     action.triggered.connect(pickfont)
     editmenu.addAction(action)
 
@@ -926,7 +988,6 @@ def add_menus() -> None:
 
     viewmenu = menubar.addMenu('View')
 
-    action = QAction('&Toggle Editors', window)
     def toggle_editors(*args) -> None:
         if not all_windows:
             return
@@ -936,10 +997,10 @@ def add_menus() -> None:
         else:
             for w in all_windows.values():
                 w.hide_editor()
+    action = QAction('&Toggle Editors', window)
     action.triggered.connect(toggle_editors)
     viewmenu.addAction(action)
 
-    action = QAction('Toggle &Error', window)
     def toggle_errors(*args) -> None:
         if not all_windows:
             return
@@ -949,10 +1010,10 @@ def add_menus() -> None:
         else:
             for w in all_windows.values():
                 w.show_error()
+    action = QAction('Toggle &Error', window)
     action.triggered.connect(toggle_errors)
     viewmenu.addAction(action)
 
-    action = QAction('&Flop Editors', window)
     def flop_editors(*args) -> None:
         global EDITOR_ON_LEFT
         if not all_windows:
@@ -965,30 +1026,29 @@ def add_menus() -> None:
             EDITOR_ON_LEFT = True
             for w in all_windows.values():
                 w.put_editor_left()
-
+    action = QAction('&Flop Editors', window)
     action.triggered.connect(flop_editors)
     viewmenu.addAction(action)
 
-    action = QAction('&Refresh Highlighting', window)
     def refresh_highlight(*args) -> None:
         current_tab: Optional[Page] = tabwidget.currentWidget()
         if not current_tab:
             return
         current_tab.textedit.highlight.rehighlight()
 
+    action = QAction('&Refresh Highlighting', window)
     action.triggered.connect(refresh_highlight)
     viewmenu.addAction(action)
 
     helpmenu = menubar.addMenu('Help')
-    action = QAction('&Version', window)
     def show_version(*args) -> None:
         QMessageBox.about(window, 'Version',
                 f'GUI version: {PYGDNDC_VERSION}\n'
                 f'dndc version: {pydndc.__version__}\n')
+    action = QAction('&Version', window)
     action.triggered.connect(show_version)
     helpmenu.addAction(action)
 
-    action = QAction('&Open Logs Folder', window)
     def open_log_folder(*args) -> None:
         if IS_WINDOWS:
             url = QUrl('file:///' + LOGS_FOLDER.replace('\\', '/'))
@@ -997,10 +1057,10 @@ def add_menus() -> None:
         success = QDesktopServices.openUrl(url)
         if not success:
             logger.error("Failed to open: '%s'", url)
+    action = QAction('&Open Logs Folder', window)
     action.triggered.connect(open_log_folder)
     helpmenu.addAction(action)
 
-    action = QAction('&Compress Logs', window)
     def compress_logs(*args) -> None:
         with zipfile.ZipFile(LOGFILE_LOCATION+'.zip', compression=zipfile.ZIP_DEFLATED, mode='w') as z:
             z.write(LOGFILE_LOCATION)
@@ -1011,8 +1071,35 @@ def add_menus() -> None:
         success = QDesktopServices.openUrl(url)
         if not success:
             logger.error("Failed to open: '%s'", url)
+    action = QAction('&Compress Logs', window)
     action.triggered.connect(compress_logs)
     helpmenu.addAction(action)
+
+    developmenu = menubar.addMenu('Developer')
+
+    def clear_caches(*args) -> None:
+        FILE_CACHE.clear()
+        QWebEngineProfile.defaultProfile().clearHttpCache()
+        for window in all_windows.values():
+            window.update_html()
+    action = QAction('&Clear Caches', window)
+    action.triggered.connect(clear_caches)
+    developmenu.addAction(action)
+
+    def recalculate_html(*args) -> None:
+        for window in all_windows.values():
+            window.update_html()
+    action = QAction('&Recalculate HTML', window)
+    action.triggered.connect(recalculate_html)
+    developmenu.addAction(action)
+
+    def toggle_timings(*args) -> None:
+        global PRINT_STATS
+        PRINT_STATS = not PRINT_STATS
+    action = QAction('&Toggle Timings', window)
+    action.triggered.connect(toggle_timings)
+    developmenu.addAction(action)
+    return
 
 add_menus()
 window.restore_everything()

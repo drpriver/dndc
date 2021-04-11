@@ -72,7 +72,7 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
     BinaryJob job = {
         .b64cache = &ctx->b64cache,
         };
-    if(not (ctx->flags & DNDC_DONT_INLINE_IMAGES)){
+    if(not (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME))){
         Marray(NodeHandle)* img_nodes[] = {
             &ctx->img_nodes,
             &ctx->imglinks_nodes,

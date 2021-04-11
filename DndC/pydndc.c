@@ -47,6 +47,35 @@ DndcPyFileCache_clear(Nonnull(PyObject*)self){
 
 static
 Nullable(PyObject*)
+DndcPyFileCache_paths(Nonnull(PyObject*)self){
+    auto cache = (DndcPyFileCache*)self;
+    Py_ssize_t nfiles = cache->b64_cache.files.count + cache->text_cache.files.count;
+    PyObject* result = PyList_New(nfiles);
+    if(!result)
+        goto error;
+    Py_ssize_t index = 0;
+    for(size_t i = 0; i < cache->b64_cache.files.count; i++, index++){
+        auto path = &cache->b64_cache.files.data[i].sourcepath;
+        PyObject* s = PyUnicode_FromStringAndSize(path->text, path->length);
+        if(!s)
+            goto error;
+        PyList_SET_ITEM(result, index, s); // steals the reference
+        }
+    for(size_t i = 0; i < cache->text_cache.files.count; i++, index++){
+        auto path = &cache->text_cache.files.data[i].sourcepath;
+        PyObject* s = PyUnicode_FromStringAndSize(path->text, path->length);
+        if(!s)
+            goto error;
+        PyList_SET_ITEM(result, index, s); // steals the reference
+        }
+    return result;
+    error:
+    Py_XDECREF(result);
+    return NULL;
+}
+
+static
+Nullable(PyObject*)
 DndcPyFileCache_new(Nonnull(PyTypeObject*)subtype, PyObject *_Null_unspecified args, PyObject *_Null_unspecified kwds){
     (void)args;
     (void)kwds;
@@ -85,6 +114,15 @@ PyMethodDef DndcPyFileCache_methods[] = {
                   "--\n"
                   "\n"
                   "Removes all cached files.\n",
+    },
+    {
+        .ml_name = "paths",
+        .ml_meth = (PyCFunction)DndcPyFileCache_paths,
+        .ml_flags = METH_NOARGS,
+        .ml_doc = "paths()\n"
+                  "--\n"
+                  "\n"
+                  "Returns a list of the paths in the file cache.\n",
     },
     {},
 };
@@ -148,7 +186,7 @@ PyMethodDef pydndc_methods[] = {
         .ml_meth = (PyCFunction)pydndc_htmlgen,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
-        "htmlgen(text, base_dir='.', error_reporter=None, file_cache=None)\n"
+        "htmlgen(text, base_dir='.', error_reporter=None, file_cache=None, flags=0)\n"
         "--\n"
         "\n"
         "Parses and converts the .dnd string into html, returning as a string.\n"
@@ -171,8 +209,24 @@ PyMethodDef pydndc_methods[] = {
         "file_cache: FileCache\n"
         "    The file cache for caching files in between invocations.\n"
         "    Create a new one and pass it in between calls.\n"
-        "    It is your responsibility to remove stales files by calling .remove on it.\n"
+        "    It is your responsibility to remove stales files by calling\n"
+        "    .remove on it.\n"
         "    If you don't pass one in, no caching will be done.\n"
+        "\n"
+        "flags: int\n"
+        "    Bit flags controlling some behavior. The allowed flags are\n"
+        "    exported on the module and are as follows:\n"
+        "
+        "    DONT_INLINE_IMAGES: If set, don't embed images as base64 urls.\n"
+        "                        This is overruled by USE_DND_URL_SCHEME.\n"
+        "    NO_THREADS:         Do all work on the calling thread.\n"
+        "    USE_DND_URL_SCHEME: Don't embed images as base64 urls. Instead\n"
+        "                        Use a dnd:absolute/path/to/img url instead.\n"
+        "                        This is for applications.\n"
+        "    PRINT_STATS:        Generate Info messages for the error_reporter.\n"
+        "                        These are mostly information about timings of\n"
+        "                        various stages of execution. Info messages are\n"
+        "                        not generated if this is not set.\n"
         "\n"
         "Returns:\n"
         "--------\n"
@@ -193,10 +247,11 @@ PyMethodDef pydndc_methods[] = {
         "-------------------------\n"
         "message_type: int\n"
         "    The values are as follows:\n"
-        "        0: Error. An error that caused parsing to fail.\n"
-        "        1: Warning. Something is fishy or otherwise not good.\n"
-        "        2: SystemError. Originated from the system, not the text.\n"
-        "        3: Info. Not an error, a statistic like timing.\n"
+        "\n"
+        "    0: Error. An error that caused parsing to fail.\n"
+        "    1: Warning. Something is fishy or otherwise not good.\n"
+        "    2: SystemError. Originated from the system, not the text.\n"
+        "    3: Info. Not an error, a statistic like timing.\n"
         "\n"
         "filename: str\n"
         "    This will be '(string input)' for the primary text.\n"
@@ -242,6 +297,7 @@ PyMethodDef pydndc_methods[] = {
         "(type, col, byteoffset, length)\n"
         "col, byteoffeset and length are all in bytes of utf-8.\n"
         "The type is one of the following:\n"
+        "\n"
         "  DOUBLE_COLON       = 1\n"
         "  HEADER             = 2\n"
         "  NODE_TYPE          = 3\n"
@@ -249,6 +305,7 @@ PyMethodDef pydndc_methods[] = {
         "  ATTRIBUTE_ARGUMENT = 5\n"
         "  CLASS              = 6\n"
         "  RAW_STRING         = 7\n"
+        "\n"
         "These have been exported as module globals so you can refer to them by\n"
         "name instead of magic numbers.\n"
         ,
@@ -295,6 +352,10 @@ PyInit_pydndc(void) {
     PyModule_AddIntConstant(mod, "ATTRIBUTE_ARGUMENT", DNDC_SYNTAX_ATTRIBUTE_ARGUMENT);
     PyModule_AddIntConstant(mod, "CLASS", DNDC_SYNTAX_CLASS);
     PyModule_AddIntConstant(mod, "RAW_STRING", DNDC_SYNTAX_RAW_STRING);
+    PyModule_AddIntConstant(mod, "DONT_INLINE_IMAGES", DNDC_DONT_INLINE_IMAGES);
+    PyModule_AddIntConstant(mod, "NO_THREADS", DNDC_NO_THREADS);
+    PyModule_AddIntConstant(mod, "USE_DND_URL_SCHEME", DNDC_USE_DND_URL_SCHEME);
+    PyModule_AddIntConstant(mod, "PRINT_STATS", DNDC_PRINT_STATS);
     return mod;
 }
 
@@ -387,13 +448,22 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
     PyObject* base_dir = NULL;
     PyObject* error_reporter = NULL;
     PyObject* file_cache = NULL;
-    const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", NULL};
+    unsigned long long flags = 0;
+    _Static_assert(sizeof(flags) == sizeof(uint64_t), "");
+    enum {WHITELIST = 0
+        | DNDC_DONT_INLINE_IMAGES
+        | DNDC_NO_THREADS
+        | DNDC_USE_DND_URL_SCHEME
+        | DNDC_PRINT_STATS
+        };
+    const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OO:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter, &file_cache)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOK:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter, &file_cache, &flags)){
         return NULL;
         }
     PopDiagnostic();
+    flags &= WHITELIST; // clear out any flags that python callers shouldn't be able to set.
     if(error_reporter and error_reporter == Py_None)
         error_reporter = NULL;
     if(error_reporter and !PyCallable_Check(error_reporter)){
@@ -408,7 +478,6 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
         }
     LongString source = pystring_borrow_longstring(text);
     StringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
-    uint64_t flags = 0;
     flags |= DNDC_SOURCE_PATH_IS_DATA_NOT_PATH;
     flags |= DNDC_OUTPUT_PATH_IS_OUT_PARAM;
     flags |= DNDC_PYTHON_IS_INIT;
@@ -416,8 +485,6 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
     // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
     flags |= DNDC_DEPENDS_IS_CALLBACK;
-    // flags |= DNDC_PRINT_STATS;
-    // flags |= DNDC_DONT_INLINE_IMAGES;
     LongString output = {};
     ErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;

@@ -8,12 +8,15 @@ class FileCache:
         ...
     def clear(self) -> None:
         ...
+    def paths(self) -> List[str]:
+        ...
 
 def htmlgen(
     text:str,
     base_dir:str='.',
     error_reporter:ErrorReporter=None,
-    file_cache:Optional[FileCache]=None
+    file_cache:Optional[FileCache]=None,
+    flags:int=0,
     ) -> Tuple[str, List[str]]:
     ...
 
@@ -30,3 +33,7 @@ ATTRIBUTE: int
 ATTRIBUTE_ARGUMENT: int
 CLASS: int
 RAW_STRING: int
+DONT_INLINE_IMAGES: int
+NO_THREADS: int
+USE_DND_URL_SCHEME: int
+PRINT_STATS: int
