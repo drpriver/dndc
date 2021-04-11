@@ -121,10 +121,47 @@ _Static_assert(sizeof(Node) == 120, "");
 #define MARRAY_T Node
 #include "Marray.h"
 
-typedef struct Base64Cache {
-    const Allocator allocator;
-    Marray(LoadedSource) processed_binary_files;
-} Base64Cache;
+typedef struct FileCache {
+    Allocator allocator;
+    Marray(LoadedSource) files;
+} FileCache;
+
+static inline
+void
+FileCache_clear(Nonnull(FileCache*)cache){
+    for(size_t i = 0; i < cache->files.count; i++){
+        auto src = &cache->files.data[i];
+        Allocator_free(cache->allocator, src->sourcepath.text, src->sourcepath.length+1);
+        Allocator_free(cache->allocator, src->sourcetext.text, src->sourcetext.length+1);
+        }
+    Marray_cleanup(LoadedSource)(&cache->files, cache->allocator);
+    }
+
+static inline
+void
+FileCache_maybe_remove(Nonnull(FileCache*)cache, StringView path){
+    for(size_t i = 0; i < cache->files.count; i++){
+        auto src = cache->files.data[i];
+        if(LS_SV_equals(src.sourcepath, path)){
+            Marray_remove(LoadedSource)(&cache->files, i);
+            Allocator_free(cache->allocator, src.sourcepath.text, src.sourcepath.length+1);
+            Allocator_free(cache->allocator, src.sourcetext.text, src.sourcetext.length+1);
+            return;
+            }
+        }
+    }
+
+static inline
+bool
+FileCache_has_file(Nonnull(FileCache*)cache, StringView path){
+    for(size_t i = 0; i < cache->files.count; i++){
+        auto src = cache->files.data[i];
+        if(LS_SV_equals(src.sourcepath, path)){
+            return true;
+            }
+        }
+    return false;
+    }
 
 typedef struct DndcContext {
     // The actual storage for all the nodes.
@@ -172,9 +209,9 @@ typedef struct DndcContext {
     struct {
         // Cached strings that are from loaded files.
         // We also copy the filename as we need those on our nodes.
-        Marray(LoadedSource) loaded_files;
         Marray(LoadedSource) builtin_files;
-        Base64Cache b64cache;
+        FileCache textcache;
+        FileCache b64cache;
     };
     Marray(StringView) dependencies;
     // Mapping of shorthand for a link to its actual link.

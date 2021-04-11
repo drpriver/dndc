@@ -6,6 +6,7 @@
 #include "dndc_flags.h"
 #include "dndc_types.h"
 #include "dndc_funcs.h"
+#include "long_string.h"
 #include "measure_time.h"
 #include "file_util.h"
 #include "ByteBuilder.h"
@@ -231,6 +232,19 @@ report_system_error(Nonnull(DndcContext*)ctx, Nonnull(const char*)fmt, ...){
 
 static inline
 void
+ctx_note_dependency(Nonnull(DndcContext*)ctx, StringView path){
+    // FIXME: O(n^2) deduplication
+    for(size_t i = 0; i < ctx->dependencies.count; i++){
+        auto dep = ctx->dependencies.data[i];
+        if(SV_equals(dep, path))
+            return;
+        }
+    StringView pathcpy = {.text = Allocator_strndup(ctx->allocator, path.text, path.length), .length=path.length};
+    Marray_push(StringView)(&ctx->dependencies, ctx->allocator, pathcpy);
+    }
+
+static inline
+void
 ctx_store_builtin_file(Nonnull(DndcContext*)ctx, LongString sourcepath, LongString text){
     auto loaded = Marray_alloc(LoadedSource)(&ctx->builtin_files, ctx->allocator);
     loaded->sourcepath = sourcepath;
@@ -258,29 +272,30 @@ ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
         msb_append_path(&temp_builder, sourcepath.text, sourcepath.length);
         sourcepath = msb_borrow(&temp_builder);
         }
+    ctx_note_dependency(ctx, sourcepath);
     // check if we already have it.
-    for(size_t i = 0; i < ctx->loaded_files.count; i++){
-        auto loaded = &ctx->loaded_files.data[i];
+    for(size_t i = 0; i < ctx->textcache.files.count; i++){
+        auto loaded = &ctx->textcache.files.data[i];
         if(LS_SV_equals(loaded->sourcepath, sourcepath)){
             msb_destroy(&temp_builder);
             return (Errorable(LongString)){.result=loaded->sourcetext};
             }
         }
-    char* path = Allocator_strndup(ctx->allocator, sourcepath.text, sourcepath.length);
+    char* path = Allocator_strndup(ctx->textcache.allocator, sourcepath.text, sourcepath.length);
     msb_destroy(&temp_builder);
 
     auto before = get_t();
-    auto load_err = read_file(ctx->allocator, path);
+    auto load_err = read_file(ctx->textcache.allocator, path);
     auto after = get_t();
     if(!load_err.errored){
         report_stat(ctx, "Loading '%.*s' took %.3fms", (int)sourcepath.length, sourcepath.text, (after-before)/1000.);
-        auto loaded = Marray_alloc(LoadedSource)(&ctx->loaded_files, ctx->allocator);
+        auto loaded = Marray_alloc(LoadedSource)(&ctx->textcache.files, ctx->textcache.allocator);
         loaded->sourcepath.text = path;
         loaded->sourcepath.length = sourcepath.length;
         loaded->sourcetext = load_err.result;
         }
     else {
-        Allocator_free(ctx->allocator, path, sourcepath.length+1);
+        Allocator_free(ctx->textcache.allocator, path, sourcepath.length+1);
         }
     return load_err;
     }
@@ -294,6 +309,7 @@ ctx_load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath){
         msb_append_path(&path_builder, binarypath.text, binarypath.length);
         binarypath = LS_to_SV(msb_detach(&path_builder));
         }
+    ctx_note_dependency(ctx, binarypath);
     ByteBuilder bb = {.allocator = ctx->allocator};
     auto result = load_processed_binary_file(&ctx->b64cache, binarypath, &bb);
     bb_destroy(&bb);
@@ -303,10 +319,10 @@ ctx_load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath){
 
 static
 Errorable_f(LongString)
-load_processed_binary_file(Nonnull(Base64Cache*)cache, StringView binarypath, Nonnull(ByteBuilder*)bb){
+load_processed_binary_file(Nonnull(FileCache*)cache, StringView binarypath, Nonnull(ByteBuilder*)bb){
     // check if we already have it.
-    for(size_t i = 0; i < cache->processed_binary_files.count; i++){
-        auto loaded = &cache->processed_binary_files.data[i];
+    for(size_t i = 0; i < cache->files.count; i++){
+        auto loaded = &cache->files.data[i];
         if(LS_SV_equals(loaded->sourcepath, binarypath)){
             // DBG("Returning cached b64: '%.*s'", (int)binarypath.length, binarypath.text);
             return (Errorable(LongString)){.result=loaded->sourcetext};
@@ -327,7 +343,7 @@ load_processed_binary_file(Nonnull(Base64Cache*)cache, StringView binarypath, No
         }
     auto base64ed = base64ed_e.result;
     auto sourcepath = msb_detach(&sb);
-    auto loaded = Marray_alloc(LoadedSource)(&cache->processed_binary_files, a);
+    auto loaded = Marray_alloc(LoadedSource)(&cache->files, a);
     loaded->sourcepath = sourcepath;
     loaded->sourcetext = base64ed;
     return (Errorable(LongString)){.result=base64ed};

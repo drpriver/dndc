@@ -1,3 +1,11 @@
+Version 0.4.1::md
+  * Implemented file caching so things like images don't have to be-read
+    as often. The cache is invalidated based on the file watching from last
+    version.
+  * Added a checkbox to enable/disable auto-updating of the rendered content as
+    you type.
+  * Added a checkbox to make a file read-only to help with accidental typing.
+  * Added a developer menu. It is undocumented.
 Version 0.4.0::md
   * Implemented file watching. Before, if you changed a file that your dnd
     document depended on (such as the img it loaded as the map), the program

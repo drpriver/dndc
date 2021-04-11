@@ -47,6 +47,10 @@ enum DndcFlags {
     // The depends argument of dndc is a callback to be called with each
     // of the document's dependencies.
     DNDC_DEPENDS_IS_CALLBACK = 0x20000,
+    // For imgs, don't base64 them and don't use regular links.
+    // Instead, use a dnd:absolute/path/to/img url instead.
+    // Applications can then implement custom url handlers for this url scheme.
+    DNDC_USE_DND_URL_SCHEME  = 0x40000,
 };
 #else
 //
@@ -70,6 +74,7 @@ enum DndcFlags {
 #define DNDC_REFORMAT_ONLY                0x08000
 #define DNDC_DONT_INLINE_IMAGES           0x10000
 #define DNDC_DEPENDS_IS_CALLBACK          0x20000
+#define DNDC_USE_DND_URL_SCHEME           0x40000
 #endif
 
 

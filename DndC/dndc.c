@@ -23,13 +23,13 @@
 
 #define DNDC_MAJOR 0
 #define DNDC_MINOR 4
-#define DNDC_MICRO 0
+#define DNDC_MICRO 1
 #define DNDC_VERSION STRINGIFY(DNDC_MAJOR) "." STRINGIFY(DNDC_MINOR) "." STRINGIFY(DNDC_MICRO)
 
 // Unsure of where to put this. So, just putting it here for now.
 typedef struct BinaryJob{
     Marray(StringView) sourcepaths;
-    Nonnull(Base64Cache*)cache;
+    Nonnull(FileCache*)b64cache;
 } BinaryJob;
 
 static
@@ -38,7 +38,7 @@ THREADFUNC(binary_worker){
     auto before = get_t();
 #endif
     BinaryJob* jobp = thread_arg;
-    Base64Cache cache = *jobp->cache;
+    FileCache cache = *jobp->b64cache;
     size_t count = jobp->sourcepaths.count;
     StringView* data = jobp->sourcepaths.data;
     ByteBuilder bb = {.allocator=cache.allocator};
@@ -51,7 +51,7 @@ THREADFUNC(binary_worker){
         bb_reset(&bb);
         }
     bb_destroy(&bb);
-    memcpy(jobp->cache, &cache, sizeof(cache));
+    memcpy(jobp->b64cache, &cache, sizeof(cache));
 #ifdef BINARY_WORKER_REPORT_TIME
     auto after = get_t();
     fprintf(stderr, "Info: Binary worker took %.3fms\n", (after-before)/1000.);
@@ -70,9 +70,9 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
     // Setup for the worker thread.
     auto flags = ctx->flags;
     BinaryJob job = {
-        .cache = &ctx->b64cache,
+        .b64cache = &ctx->b64cache,
         };
-    if(not (ctx->flags & DNDC_DONT_INLINE_IMAGES)){
+    if(not (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME))){
         Marray(NodeHandle)* img_nodes[] = {
             &ctx->img_nodes,
             &ctx->imglinks_nodes,
@@ -86,15 +86,24 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
                 auto child = get_node(ctx, node->children.data[0]);
                 if(!child->header.length)
                     continue;
-                auto sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
                 if(path_is_abspath(child->header) or !ctx->base_directory.length){
-                    *sv = child->header;
+                    if(not FileCache_has_file(job.b64cache, child->header)){
+                        auto sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
+                        *sv = child->header;
+                        }
                     }
                 else {
                     MStringBuilder path_builder = {.allocator=ctx->allocator};
                     msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
                     msb_append_path(&path_builder, child->header.text, child->header.length);
-                    *sv = LS_to_SV(msb_detach(&path_builder));
+                    auto path = msb_borrow(&path_builder);
+                    if(not FileCache_has_file(job.b64cache, path)){
+                        auto sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
+                        *sv = LS_to_SV(msb_detach(&path_builder));
+                        }
+                    else {
+                        msb_destroy(&path_builder);
+                        }
                     }
                 }
             }
@@ -180,6 +189,9 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             report_stat(ctx, "Joining took: %.3fms", (after-before)/1000.);
             }
         Marray_cleanup(StringView)(&job.sourcepaths, ctx->allocator);
+        }
+    else {
+        report_stat(ctx, "No binary work was to be done.");
         }
     return result;
     }
@@ -467,17 +479,17 @@ int main(int argc, char**argv){
 
     #ifdef BENCHMARKING
     flags &= ~DNDC_NO_CLEANUP;
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends, NULL, dndc_stderr_error_func, NULL);
+    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends, NULL, NULL, dndc_stderr_error_func, NULL);
     assert(!e.errored);
     flags |= DNDC_PYTHON_IS_INIT;
     for(int i = 0; i < BENCHMARKITERS;i++){
-        e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends, NULL, dndc_stderr_error_func, NULL);
+        e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends, NULL, NULL, dndc_stderr_error_func, NULL);
         assert(!e.errored);
         }
     end_interpreter();
     return 0;
     #else
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, depends, NULL, dndc_stderr_error_func, NULL);
+    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, depends, NULL, NULL, dndc_stderr_error_func, NULL);
     return e.errored;
     #endif
     }
@@ -491,7 +503,11 @@ depends_print_callback(void*_Nullable unused, StringView path){
 
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, Nullable(LongString*) output_path, DependsArg depends, Nullable(Base64Cache*)external_b64cache, Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data){
+run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
+        Nullable(LongString*) output_path, DependsArg depends,
+        Nullable(FileCache*)external_b64cache,
+        Nullable(FileCache*)external_textcache,
+        Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data){
     if(flags & DNDC_REFORMAT_ONLY)
         flags |= DNDC_NO_PYTHON;
     auto t0 = get_t();
@@ -527,8 +543,12 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         .navnode = INVALID_NODE_HANDLE,
         .outputfile = outpath,
         .base_directory = base_directory,
+        // The base64 cache is moved to another thread and then moved back, so
+        // it needs an independent allocator so it can run concurrently.
         .b64cache = external_b64cache? *external_b64cache :
-            ((Base64Cache){.allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator()}),
+            ((FileCache){.allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator()}),
+        // The text cache only runs on this thread so we can just use the general allocator.
+        .textcache = external_textcache?*external_textcache:((FileCache){.allocator=allocator}),
         .error_func = error_func,
         .error_user_data = error_user_data,
         };
@@ -700,7 +720,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
     report_stat(&ctx, "ctx.python_nodes.count = %zu", ctx.python_nodes.count);
     report_stat(&ctx, "ctx.imports.count = %zu", ctx.imports.count);
     report_stat(&ctx, "ctx.script_nodes.count = %zu", ctx.script_nodes.count);
-    report_stat(&ctx, "ctx.dependencies.count = %zu", ctx.dependencies_nodes.count);
+    report_stat(&ctx, "ctx.dependencies_nodes.count = %zu", ctx.dependencies_nodes.count);
     report_stat(&ctx, "ctx.link_nodes.count = %zu", ctx.link_nodes.count);
     if(flags & DNDC_REPORT_ORPHANS){
         for(size_t i = 0; i < ctx.nodes.count; i++){
@@ -891,12 +911,6 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
     }
     // Write the make-style dependency file to the Dependency directory.
     if((flags & DNDC_DEPENDS_IS_CALLBACK) or depends.path.length){
-        for(size_t i = 0; i < ctx.loaded_files.count; i++){
-            Marray_push(StringView)(&ctx.dependencies, ctx.allocator, LS_to_SV(ctx.loaded_files.data[i].sourcepath));
-            }
-        for(size_t i = 0; i < ctx.b64cache.processed_binary_files.count; i++){
-            Marray_push(StringView)(&ctx.dependencies, ctx.allocator, LS_to_SV(ctx.b64cache.processed_binary_files.data[i].sourcepath));
-            }
         for(size_t i = 0; i < ctx.dependencies_nodes.count; i++){
             auto handle = ctx.dependencies_nodes.data[i];
             auto node = get_node(&ctx, handle);
@@ -912,8 +926,6 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
                 }
             }
         if(flags & DNDC_DEPENDS_IS_CALLBACK){
-            // Technically we could do this without building up this array,
-            // but this is easier to maintain and I doubt it matters very much.
             for(size_t i = 0; i < ctx.dependencies.count; i++){
                 auto dep = ctx.dependencies.data[i];
                 depends.callback(depends.user_data, dep);
@@ -971,8 +983,10 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path, 
         report_stat(&ctx, "Cleaning up memory took: %.3fms", (after-before)/1000.);
         }
     if(external_b64cache){
-        DBG("Copying back");
         memcpy(external_b64cache, &ctx.b64cache, sizeof(ctx.b64cache));
+        }
+    if(external_textcache){
+        memcpy(external_textcache, &ctx.textcache, sizeof(ctx.textcache));
         }
     auto t1 = get_t();
     report_stat(&ctx, "Execution took: %.3fms", (t1-t0)/1000.);
@@ -1065,8 +1079,8 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
     // flags |= DNDC_DONT_INLINE_IMAGES;
     // flags |= DNDC_PRINT_STATS;
     // gross, move to caller.
-    static Base64Cache cache = {.allocator.type = ALLOCATOR_MALLOC};
-    auto e = run_the_dndc(flags, base_directory, source_text, output, (DependsArg){.path=LS("")}, &cache, error_func, error_user_data);
+    static FileCache cache = {.allocator.type = ALLOCATOR_MALLOC};
+    auto e = run_the_dndc(flags, base_directory, source_text, output, (DependsArg){.path=LS("")}, &cache, NULL, error_func, error_user_data);
     return e.errored;
     }
 
@@ -1081,7 +1095,7 @@ dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(ErrorFu
     flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
     flags |= DNDC_REFORMAT_ONLY;
-    auto e = run_the_dndc(flags, SV(""), source_text, output, (DependsArg){.path=LS("")}, NULL, error_func, error_user_data);
+    auto e = run_the_dndc(flags, SV(""), source_text, output, (DependsArg){.path=LS("")}, NULL, NULL, error_func, error_user_data);
     return e.errored;
     }
 
