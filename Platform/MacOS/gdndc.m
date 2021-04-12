@@ -164,9 +164,8 @@ static NSImage* appimage;
 - (BOOL)readFromData:(NSData *)data ofType:(NSString *)typeName error:(NSError **)outError {
     NSString* str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     if(str){
-        view_controller->text.string = str;
         view_controller->file_url = [self fileURL];
-        [view_controller recalc_html:[view_controller get_text]];
+        view_controller->text.string = str;
     }
     return YES;
 }
@@ -634,9 +633,12 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
 @end
 
 
-@implementation DndViewController
+@implementation DndViewController {
+BOOL editor_on_left;
+}
 -(instancetype)init{
     self = [super init];
+    editor_on_left = NO;
     auto screen = [NSScreen mainScreen];
     NSRect screenrect;
     if(screen){
@@ -645,6 +647,8 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
     else{
         screenrect = NSMakeRect(0, 0, 1400, 800);
     }
+    auto split_view = [[NSSplitView alloc] initWithFrame:screenrect];
+    split_view.vertical = YES;
     auto font=[NSFont fontWithName:@"Menlo" size:11];
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:(id)font, NSFontAttributeName, nil];
     auto Msize = [[NSAttributedString alloc] initWithString:@"M" attributes:attributes].size.width;
@@ -673,7 +677,6 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
     text.usesFindBar = YES;
     text.incrementalSearchingEnabled = YES;
 
-    [self.view addSubview:scrollview];
 
     NSRect webrect = {.origin={0, 0}, .size={screenrect.size.width-textwidth, screenrect.size.height}};
     WKWebViewConfiguration* config = [[WKWebViewConfiguration alloc] init];
@@ -683,10 +686,12 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
     webnavdel = [[WebNavDel alloc] init];
     webnavdel.controller = self;
     webview.navigationDelegate = webnavdel;
-    [self.view addSubview:webview];
+    [split_view addSubview:webview];
+    [split_view addSubview:scrollview];
     webview.autoresizingMask = NSViewHeightSizable | NSViewWidthSizable;
     webview.allowsBackForwardNavigationGestures = YES;
-    [self recalc_html:[self get_text]];
+    [split_view adjustSubviews];
+    self.view = split_view;
     return self;
 }
 -(void)insert_file:(id)sender{
@@ -854,21 +859,22 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
     self.view = [[NSView alloc] initWithFrame: screenrect];
 }
 -(void)flop_editor:(id)sender{
-    // TODO: disable this if scrollview is hidden
     if(scrollview.hidden)
         return;
-    if(scrollview.frame.origin.x < 1){
-        auto sf = scrollview.frame;
-        auto wf = webview.frame;
-        scrollview.frame = NSMakeRect(wf.size.width, sf.origin.y, sf.size.width, sf.size.height);
-        webview.frame = NSMakeRect(0, wf.origin.y, wf.size.width, wf.size.height);
+    if(editor_on_left){
+        [(NSSplitView*)self.view removeArrangedSubview:scrollview];
+        [(NSSplitView*)self.view removeArrangedSubview:webview];
+        [self.view addSubview:webview];
+        [self.view addSubview:scrollview];
     }
     else {
-        auto sf = scrollview.frame;
-        auto wf = webview.frame;
-        scrollview.frame = NSMakeRect(0, sf.origin.y, sf.size.width, sf.size.height);
-        webview.frame = NSMakeRect(sf.size.width, wf.origin.y, wf.size.width, wf.size.height);
+        [(NSSplitView*)self.view removeArrangedSubview:scrollview];
+        [(NSSplitView*)self.view removeArrangedSubview:webview];
+        [self.view addSubview:scrollview];
+        [self.view addSubview:webview];
     }
+    editor_on_left = not editor_on_left;
+    return;
 }
 -(void) toggle_editor:(id)sender{
     scrollview.hidden = !self->scrollview.hidden;
