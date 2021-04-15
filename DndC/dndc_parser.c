@@ -353,6 +353,7 @@ PARSEFUNC(parse_node){
         case NODE_TITLE:
         case NODE_CONTAINER:
         case NODE_QUOTE:
+        case NODE_HR:
             break; // do regular string parsing
         case NODE_STYLESHEETS:
             // kind of gross

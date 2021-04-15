@@ -33,7 +33,8 @@
     apply(MD,             27)\
     apply(CONTAINER,      28)\
     apply(QUOTE,          29)\
-    apply(INVALID,        30)\
+    apply(HR,             30)\
+    apply(INVALID,        31)\
 
 typedef enum NodeType {
     #define X(a, b) NODE_##a = b,
@@ -79,6 +80,7 @@ struct {
     {SV("nav"),          NODE_NAV},
     {SV("data"),         NODE_DATA},
     {SV("quote"),        NODE_QUOTE},
+    {SV("hr"),           NODE_HR},
 };
 
 static const
@@ -121,6 +123,7 @@ nodetype_to_node_aliases[NODE_INVALID+1] = {
      [NODE_NAV]          = SV("nav"),
      [NODE_DATA]         = SV("data"),
      [NODE_QUOTE]        = SV("quote"),
+     [NODE_HR]           = SV("hr"),
 };
 
 #endif

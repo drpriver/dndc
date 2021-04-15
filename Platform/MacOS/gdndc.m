@@ -1007,7 +1007,7 @@ do_menus(void){
         [menu addItem:[NSMenuItem separatorItem]];
 
         NSMenu* serviceMenu = [[NSMenu alloc] initWithTitle:@""];
-        NSMenuItem *menu_item = (NSMenuItem *)[menu addItemWithTitle:@"Services" action:nil keyEquivalent:@""];
+        NSMenuItem* menu_item = [menu addItemWithTitle:@"Services" action:nil keyEquivalent:@""];
         [menu_item setSubmenu:serviceMenu];
 
         [NSApp setServicesMenu:serviceMenu];
@@ -1017,7 +1017,7 @@ do_menus(void){
         title = [@"Hide " stringByAppendingString:appName];
         [menu addItemWithTitle:title action:@selector(hide:) keyEquivalent:@"h"];
 
-        menu_item = (NSMenuItem *)[menu addItemWithTitle:@"Hide Others" action:@selector(hideOtherApplications:) keyEquivalent:@"h"];
+        menu_item = [menu addItemWithTitle:@"Hide Others" action:@selector(hideOtherApplications:) keyEquivalent:@"h"];
         [menu_item setKeyEquivalentModifierMask:(NSEventModifierFlagOption|NSEventModifierFlagCommand)];
 
         [menu addItemWithTitle:@"Show All" action:@selector(unhideAllApplications:) keyEquivalent:@""];
@@ -1062,7 +1062,6 @@ do_menus(void){
         [menu addItem:[NSMenuItem separatorItem]];
         [menu addItemWithTitle:@"Select All" action:@selector(selectAll:) keyEquivalent:@"a"];
         [menu addItemWithTitle:@"Format" action:@selector(format_dnd:) keyEquivalent:@"J"];
-        // Idk how to do this.
         NSMenuItem* mi = [[NSMenuItem alloc] initWithTitle:@"Find..." action:@selector(performTextFinderAction:) keyEquivalent:@"f"];
         mi.tag = NSTextFinderActionShowFindInterface;
         [menu addItem:mi];
@@ -1079,7 +1078,6 @@ do_menus(void){
         mi.tag = NSTextFinderActionPreviousMatch;
         [menu addItem:mi];
 
-        // [menu addItemWithTitle:@"Find..." action:@selector(performTextFinderAction:) keyEquivalent:@"f"];
         NSMenuItem* menu_item = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
         [menu_item setSubmenu:menu];
         [[NSApp mainMenu] addItem:menu_item];

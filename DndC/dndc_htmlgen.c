@@ -239,6 +239,7 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
         case NODE_NAV:
         case NODE_COMMENT:
         case NODE_INVALID:
+        case NODE_HR:
             break;
         case NODE_PRE:
         case NODE_RAW:{
@@ -579,7 +580,7 @@ RENDERFUNC(TITLE){
     return (Errorable(void)){};
     }
 RENDERFUNC(HEADING){
-    auto e = write_header(ctx, sb, node, header_depth);
+    auto e = write_header(ctx, sb, node, header_depth+1);
     if(e.errored) return e;
     msb_write_char(sb, '\n');
     if(node->children.count){
@@ -588,6 +589,18 @@ RENDERFUNC(HEADING){
     if(node->classes.count){
         node_print_warning(ctx, node, "UNIMPLEMENTED: classes on the heading");
         }
+    return (Errorable(void)){};
+    }
+RENDERFUNC(HR){
+    (void)header_depth;
+    if(node->header.length){
+        node_print_warning(ctx, node, "Ignoring header of hr");
+        }
+    if(node->children.count){
+        node_print_warning(ctx, node, "Ignoring children of hr");
+        }
+    msb_write_char(sb, '\n');
+    msb_write_literal(sb, "<hr>\n");
     return (Errorable(void)){};
     }
 RENDERFUNC(TABLE){

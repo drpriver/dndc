@@ -1033,6 +1033,7 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
         case NODE_CONTAINER:
         case NODE_INVALID:
         case NODE_QUOTE:
+        case NODE_HR:
         case NODE_DIV:{
             printf(" '%.*s' ", (int)node->header.length, node->header.text);
             for(size_t i = 0; i < node->classes.count; i++){

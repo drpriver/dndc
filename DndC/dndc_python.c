@@ -1307,6 +1307,7 @@ DndNode_setattr(Nonnull(DndNode*)obj, Nonnull(const char*)name, Nullable(PyObjec
                 case NODE_STRING:
                 case NODE_PARA:
                 case NODE_HEADING:
+                case NODE_HR:
                 case NODE_TABLE:
                 case NODE_TABLE_ROW:
                 case NODE_IMAGE:

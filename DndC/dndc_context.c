@@ -567,6 +567,7 @@ gather_anchor(Nonnull(DndcContext*)ctx, NodeHandle handle){
         case NODE_NAV:
         case NODE_COMMENT:
         case NODE_INVALID:
+        case NODE_HR:
             break;
         case NODE_PRE:
         case NODE_RAW:

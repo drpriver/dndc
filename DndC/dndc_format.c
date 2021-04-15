@@ -42,6 +42,7 @@ format_node(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)
         case NODE_NAV:
         case NODE_DATA:
         case NODE_QUOTE:
+        case NODE_HR:
             return format_regular_node(ctx, sb, node, indent);
         case NODE_TEXT:
             return format_text_node(ctx, sb, node, indent);
@@ -113,10 +114,7 @@ format_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb){
 static inline
 void
 format_header(Nonnull(MStringBuilder*)sb, Nonnull(Node*)node, int indent){
-    msb_reserve(sb, indent);
-    for(int i = 0; i < indent; i++){
-        sb->data[sb->cursor++] = ' ';
-        }
+    msb_write_nchar(sb, ' ', indent);
     if(node->header.length){
         msb_write_str(sb, node->header.text,node->header.length);
         }
@@ -228,6 +226,8 @@ FORMATFUNC(regular_node){
             format_write_wrapped_string(sb, &state, child->header);
             }
         else {
+            if(state.col)
+                msb_write_char(sb, '\n');
             state.col = 0;
             format_node(ctx, sb, child, indent);
             }
@@ -252,8 +252,6 @@ static void format_md_bullets(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)
         auto child = get_node(ctx, node->children.data[i]);
         assert(child->type == NODE_LIST_ITEM);
         msb_write_nchar(sb, ' ', indent);
-        // FIXME: We actually need to preserve exactly which token was used
-        //        as a bullet. We discard that info, so we currently just output a '*' unconditionally.
         switch(bullet_depth){
             case 0:
                 msb_write_literal(sb, "* ");
