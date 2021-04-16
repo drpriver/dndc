@@ -1,3 +1,12 @@
+Version 0.4.2::md
+  * Added coord helper to make working with the map easier.
+    - Activate it by checking the new Coord Helper checkbox at the bottom of
+      the editor.
+    - When active and Read-only is not checked, you can click on the map
+      and you will be prompted to give a name to what you are adding. Afterwards,
+      it will append that room to your .dnd file, with the appropriate @coord
+      set.
+  * Added an hr block type. It is for adding <hr> elements.
 Version 0.4.1::md
   * Implemented file caching so things like images don't have to be-read
     as often. The cache is invalidated based on the file watching from last

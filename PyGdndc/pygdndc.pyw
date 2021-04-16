@@ -5,12 +5,12 @@ import install_deps
 have_deps = install_deps.ensure_deps(False)
 import sys
 if not have_deps:
-    sys.exit(0)
+    sys.exit(1)
 from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox
 from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
 from PySide2.QtWebEngineCore import QWebEngineUrlScheme, QWebEngineUrlSchemeHandler, QWebEngineUrlRequestJob
 from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices
-from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher, QFile
+from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher, QFile, QThread, QTimer
 import pydndc
 from typing import Optional, List, Dict, Optional, Callable, Tuple, Set
 import time
@@ -30,7 +30,7 @@ APPFOLDER = os.path.join(APPLOCAL, APPNAME)
 LOGS_FOLDER = os.path.join(APPFOLDER, 'Logs')
 os.makedirs(LOGS_FOLDER, exist_ok=True)
 LOGFILE_LOCATION = os.path.join(LOGS_FOLDER, datetime.datetime.now().strftime('%Y-%m-%d.txt'))
-PYGDNDC_VERSION = '0.4.1'
+PYGDNDC_VERSION = '0.4.2'
 SCHEME = QWebEngineUrlScheme(b'dnd')  # type: ignore
 SCHEME.setFlags(
         QWebEngineUrlScheme.Flag.SecureScheme
@@ -38,8 +38,36 @@ SCHEME.setFlags(
       )
 SCHEME.setSyntax(QWebEngineUrlScheme.Syntax.Path)
 QWebEngineUrlScheme.registerScheme(SCHEME)
+
+def append_room_with_name_at(name:str, x:int, y:int) -> None:
+    page: Optional[Page] = tabwidget.currentWidget()
+    if not page:
+        return
+    if page.textedit.isReadOnly():
+        return
+    if '.' not in name:
+        name = name + '.'
+    page.textedit.appendPlainText(f'\n{name}. ::md .room @coord({x}, {y})\n')
+    page.textedit.setFocus(Qt.FocusReason.NoFocusReason)
+
+
 class SCHEME_Handler(QWebEngineUrlSchemeHandler):
     def requestStarted(self, request:QWebEngineUrlRequestJob) -> None:
+        if request.requestMethod() == b'PUT':
+            path = request.requestUrl().path()[1:]
+            # I'm not sure if this is necessary, but I didn't want to trigger
+            # any requests from within the scheme handler, so I wanted to add text
+            # later.
+            try:
+                *name_, x_, y_ = path.split(',')
+                x = int(x_)
+                y = int(y_)
+                name = ','.join(name_)
+            except:
+                logger.exception('Unable to parse room name from PUT: {path=}')
+                return
+            QTimer.singleShot(0, lambda: append_room_with_name_at(name, x, y))
+            return
         if request.requestMethod() != b'GET':
             logger.debug(f'Not GET: {request.requestMethod()=}')
             request.fail(QWebEngineUrlRequestJob.Error.RequestDenied)
@@ -254,6 +282,31 @@ class LineNumberArea(QWidget):
     def paintEvent(self, event) -> None:
         self.codeEditor.lineNumberAreaPaintEvent(event)
 
+COORD_HELPER_SCRIPT='''
+::js @inline
+  document.addEventListener('DOMContentLoaded', function(){
+    const svgs = document.getElementsByTagName('svg');
+    for(let i = 0; i < svgs.length; i++){
+      const svg = svgs[i];
+      const first_text = svg.getElementsByTagName('text')[0];
+      const text_height = first_text.getBBox().height || 0;
+      svg.addEventListener('click', function(e){
+        const number = prompt('Enter Room Name');
+        if(number){
+          const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;
+          const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height;
+          const rect = e.currentTarget.getBoundingClientRect();
+          const true_x = ((e.clientX - rect.x)/ x_scale) | 0;
+          const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;
+          let request = new XMLHttpRequest();
+          const combined = number + ',' + true_x + ',' + true_y;
+          request.open('PUT', 'dnd:///'+combined, true);
+          request.send();
+        }
+      });
+    }
+  });
+'''
 class DndEditor(QPlainTextEdit):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -519,11 +572,13 @@ class Page(QSplitter):
         self.checks = [
             QCheckBox('Auto-apply changes', self),
             QCheckBox('Read-only', self),
+            QCheckBox('Coord helper', self),
             ]
         self.checks[0].setCheckState(Qt.CheckState.Checked)
         self.auto_apply = True
         self.checks[0].stateChanged.connect(self.auto_apply_changed)
         self.checks[1].stateChanged.connect(self.read_only_changed)
+        self.checks[2].stateChanged.connect(self.coord_helper_changed)
         self.checkholder = QWidget(self)
         self.checkholder_layout = QHBoxLayout(self.checkholder)
         for check in self.checks:
@@ -540,6 +595,7 @@ class Page(QSplitter):
         show_errors = True
         self.show_errors = True
         self.editor_is_on_left = True
+        self.coord_helper = False
         if all_windows:
             first_window = next(iter(all_windows.values()))
             left = first_window.editor_is_on_left
@@ -571,6 +627,13 @@ class Page(QSplitter):
         if state == Qt.CheckState.Checked:
             self.textedit.setReadOnly(True)
 
+    def coord_helper_changed(self, state:int) -> None:
+        if state == Qt.CheckState.Unchecked:
+            self.coord_helper = False
+        if state == Qt.CheckState.Checked:
+            self.coord_helper = True
+            self.update_html()
+
     def file_changed(self, path:str) -> None:
         if path not in self.dependencies:
             return
@@ -599,6 +662,12 @@ class Page(QSplitter):
         else:
             self.error_display.appendPlainText(f'{et}:{row+1}:{col+1}: {message}')
 
+    def get_text_for_preview(self) -> str:
+        text = self.textedit.toPlainText()
+        if self.coord_helper and not self.textedit.isReadOnly():
+            text += COORD_HELPER_SCRIPT
+        return text
+
     def update_html(self) -> None:
         # t0 = time.time()
         self.clear_errors()
@@ -608,7 +677,7 @@ class Page(QSplitter):
             if PRINT_STATS:
                 flags |= pydndc.PRINT_STATS
             html, depends = pydndc.htmlgen(
-                self.textedit.toPlainText(),
+                self.get_text_for_preview(),
                 base_dir=self.dirname,
                 error_reporter=self.display_dndc_error,
                 file_cache=FILE_CACHE,
@@ -881,7 +950,7 @@ def add_menus() -> None:
     filemenu.addAction(action)
 
     def save_file(*args) -> None:
-        page = tabwidget.currentWidget()
+        page: Optional[Page]= tabwidget.currentWidget()
         if page:
             page.save()
     action = QAction('&Save', window)
