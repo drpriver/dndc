@@ -345,6 +345,10 @@ PARSEFUNC(parse_node){
         case NODE_DEPENDENCIES:
         case NODE_LINKS:
         case NODE_SCRIPTS:
+            // kind of gross
+            if(node_has_attribute(parent, SV("inline"))){
+                return parse_raw_node(ctx, parent_handle, indentation);
+                }
         case NODE_IMPORT:
         case NODE_IMAGE:
         case NODE_ROOT:

@@ -56,9 +56,6 @@ class SCHEME_Handler(QWebEngineUrlSchemeHandler):
     def requestStarted(self, request:QWebEngineUrlRequestJob) -> None:
         if request.requestMethod() == b'PUT':
             path = request.requestUrl().path()[1:]
-            # I'm not sure if this is necessary, but I didn't want to trigger
-            # any requests from within the scheme handler, so I wanted to add text
-            # later.
             try:
                 *name_, x_, y_ = path.split(',')
                 x = int(x_)
@@ -67,6 +64,9 @@ class SCHEME_Handler(QWebEngineUrlSchemeHandler):
             except:
                 logger.exception('Unable to parse room name from PUT: {path=}')
                 return
+            # I'm not sure if this is necessary, but I didn't want to trigger
+            # any requests from within the scheme handler, so I wanted to add text
+            # later.
             QTimer.singleShot(0, lambda: append_room_with_name_at(name, x, y))
             return
         if request.requestMethod() != b'GET':
