@@ -665,10 +665,53 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
 
 @implementation DndViewController {
 BOOL editor_on_left;
+BOOL auto_recalc;
+BOOL coord_helper;
+}
+#define DND_AUTO_APPLY_CHANGES_LABEL @"Auto-apply changes"
+#define DND_READ_ONLY_LABEL @"Read-only"
+#define DND_COORD_HELPER_LABEL @"Coord helper"
+-(void)button_click:(id)a{
+    // Being lazy and just doing string comparisons
+    NSButton* button = a;
+    auto title = [button title];
+    auto state = [button state];
+    if([title isEqualToString:DND_AUTO_APPLY_CHANGES_LABEL]){
+        if(state == NSControlStateValueOn){
+            auto_recalc = YES;
+            [self recalc_html:[self get_text]];
+        }
+        else {
+            auto_recalc = NO;
+        }
+    }
+    else if([title isEqualToString:DND_READ_ONLY_LABEL]){
+        if(state == NSControlStateValueOn){
+            self->text.editable = NO;
+        }
+        else {
+            self->text.editable = YES;
+        }
+    }
+    else if([title isEqualToString:DND_COORD_HELPER_LABEL]){
+        if(state == NSControlStateValueOn){
+            coord_helper = YES;
+            [self recalc_html:[self get_text]];
+        }
+        else {
+            coord_helper = NO;
+            [self recalc_html:[self get_text]];
+        }
+    }
+    else {
+        NSLog(@"Unknown button title:%@", title);
+    }
 }
 -(instancetype)init{
     self = [super init];
     editor_on_left = NO;
+    coord_helper = NO;
+    auto_recalc = YES;
     auto screen = [NSScreen mainScreen];
     NSRect screenrect;
     if(screen){
@@ -696,6 +739,9 @@ BOOL editor_on_left;
     text.textContainer.widthTracksTextView = YES;
     text.textContainerInset = NSMakeSize(4,4);
 
+    auto editor_container = [[NSSplitView alloc] initWithFrame:textrect];
+    editor_container.vertical = NO;
+
     scrollview = [[NSScrollView alloc] initWithFrame:textrect];
     // scrollview.borderType = NSNoBorder;
     scrollview.hasVerticalScroller = YES;
@@ -720,7 +766,17 @@ BOOL editor_on_left;
     webnavdel.controller = self;
     webview.navigationDelegate = webnavdel;
     [split_view addSubview:webview];
-    [split_view addSubview:scrollview];
+    [editor_container addSubview:scrollview];
+    auto button = [NSButton checkboxWithTitle:DND_AUTO_APPLY_CHANGES_LABEL target:self action:@selector(button_click:)];
+    button.state = NSControlStateValueOn;
+    auto button_view = [[NSStackView alloc] init];
+    [button_view addView:button inGravity:NSStackViewGravityLeading];
+    button = [NSButton checkboxWithTitle:DND_READ_ONLY_LABEL target:self action:@selector(button_click:)];
+    [button_view addView:button inGravity:NSStackViewGravityLeading];
+    button = [NSButton checkboxWithTitle:DND_COORD_HELPER_LABEL target:self action:@selector(button_click:)];
+    [button_view addView:button inGravity:NSStackViewGravityLeading];
+    [editor_container addSubview:button_view];
+    [split_view addSubview:editor_container];
     webview.autoresizingMask = NSViewHeightSizable | NSViewWidthSizable;
     webview.allowsBackForwardNavigationGestures = YES;
     webview.UIDelegate = self;
@@ -825,6 +881,40 @@ BOOL editor_on_left;
 
 -(LongString)get_text{
     NSString *string = self->text.string;
+    if(coord_helper){
+        string = [string stringByAppendingString:
+            @"\n"
+            "::js @inline\n"
+            "  document.addEventListener('DOMContentLoaded', function(){\n"
+            "    const svgs = document.getElementsByTagName('svg');\n"
+            "    for(let i = 0; i < svgs.length; i++){\n"
+            "      const svg = svgs[i];\n"
+            "      const texts = svg.getElementsByTagName('text');\n"
+            "      var text_height = 0;\n"
+            "      if(texts.length){\n"
+            "        const first_text = texts[0];\n"
+            "        const text_height = first_text.getBBox().height || 0;\n"
+            "      }\n"
+            "      svg.addEventListener('click', function(e){\n"
+            "      var name = prompt('Enter Room Name');\n"
+            "      if(name){\n"
+            "        const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;\n"
+            "        const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height;\n"
+            "        const rect = e.currentTarget.getBoundingClientRect();\n"
+            "        const true_x = ((e.clientX - rect.x)/ x_scale) | 0;\n"
+            "        const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;\n"
+            "        let request = new XMLHttpRequest();\n"
+            "        if(!name.includes('.')){\n"
+            "          name += '.';\n"
+            "          }\n"
+            "        const combined = '\\n'+name+':'+':md .room @coord('+true_x+','+true_y+')\\n';\n"
+            "        request.open('POST', 'dnd:///roomclick', true);\n"
+            "        request.send(combined);\n"
+            "        }\n"
+            "      });\n"
+            "    }\n"
+            "  });\n"];
+    }
     const char* source_text = [string UTF8String];
     LongString source = {
         .text = source_text,
@@ -838,7 +928,8 @@ BOOL editor_on_left;
 -(void)recalc_html:(LongString)source{
     // FIXME: don't do this synchronously
     // FIXME: where the fuck are you supposed to put this stuff.
-
+    if(!auto_recalc)
+        return;
     LongString html = {};
     NSString* dir = [[self->file_url URLByDeletingLastPathComponent] path];
     StringView base_dir;
