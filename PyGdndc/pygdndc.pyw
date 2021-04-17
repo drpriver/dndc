@@ -35,6 +35,7 @@ SCHEME = QWebEngineUrlScheme(b'dnd')  # type: ignore
 SCHEME.setFlags(
         QWebEngineUrlScheme.Flag.SecureScheme
         | QWebEngineUrlScheme.Flag.LocalAccessAllowed # type: ignore
+        | QWebEngineUrlScheme.Flag().CorsEnabled # type: ignore
       )
 SCHEME.setSyntax(QWebEngineUrlScheme.Syntax.Path)
 QWebEngineUrlScheme.registerScheme(SCHEME)
