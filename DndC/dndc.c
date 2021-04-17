@@ -23,7 +23,7 @@
 
 #define DNDC_MAJOR 0
 #define DNDC_MINOR 4
-#define DNDC_MICRO 3
+#define DNDC_MICRO 4
 #define DNDC_VERSION STRINGIFY(DNDC_MAJOR) "." STRINGIFY(DNDC_MINOR) "." STRINGIFY(DNDC_MICRO)
 
 // Unsure of where to put this. So, just putting it here for now.

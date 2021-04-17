@@ -30,7 +30,7 @@ APPFOLDER = os.path.join(APPLOCAL, APPNAME)
 LOGS_FOLDER = os.path.join(APPFOLDER, 'Logs')
 os.makedirs(LOGS_FOLDER, exist_ok=True)
 LOGFILE_LOCATION = os.path.join(LOGS_FOLDER, datetime.datetime.now().strftime('%Y-%m-%d.txt'))
-PYGDNDC_VERSION = '0.4.3'
+PYGDNDC_VERSION = '0.4.4'
 SCHEME = QWebEngineUrlScheme(b'dnd')  # type: ignore
 SCHEME.setFlags(
         QWebEngineUrlScheme.Flag.SecureScheme
