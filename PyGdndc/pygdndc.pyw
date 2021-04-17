@@ -30,7 +30,7 @@ APPFOLDER = os.path.join(APPLOCAL, APPNAME)
 LOGS_FOLDER = os.path.join(APPFOLDER, 'Logs')
 os.makedirs(LOGS_FOLDER, exist_ok=True)
 LOGFILE_LOCATION = os.path.join(LOGS_FOLDER, datetime.datetime.now().strftime('%Y-%m-%d.txt'))
-PYGDNDC_VERSION = '0.4.2'
+PYGDNDC_VERSION = '0.4.3'
 SCHEME = QWebEngineUrlScheme(b'dnd')  # type: ignore
 SCHEME.setFlags(
         QWebEngineUrlScheme.Flag.SecureScheme
@@ -48,7 +48,7 @@ def append_room_with_name_at(name:str, x:int, y:int) -> None:
         return
     if '.' not in name:
         name = name + '.'
-    page.textedit.appendPlainText(f'\n{name}. ::md .room @coord({x}, {y})\n')
+    page.textedit.appendPlainText(f'\n{name} ::md .room @coord({x}, {y})\n')
     page.textedit.setFocus(Qt.FocusReason.NoFocusReason)
 
 

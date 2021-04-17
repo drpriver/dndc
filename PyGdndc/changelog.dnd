@@ -1,3 +1,5 @@
+Version 0.4.3::md
+  * Fixed minor bug in new coord helper.
 Version 0.4.2::md
   * Added coord helper to make working with the map easier.
     - Activate it by checking the new Coord Helper checkbox at the bottom of
