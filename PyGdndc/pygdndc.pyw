@@ -289,8 +289,12 @@ COORD_HELPER_SCRIPT='''
     const svgs = document.getElementsByTagName('svg');
     for(let i = 0; i < svgs.length; i++){
       const svg = svgs[i];
-      const first_text = svg.getElementsByTagName('text')[0];
-      const text_height = first_text.getBBox().height || 0;
+      const texts = svg.getElementsByTagName('text');
+      var text_height = 0;
+      if(texts.length){
+          const first_text = texts[0];
+          const text_height = first_text.getBBox().height || 0;
+          }
       svg.addEventListener('click', function(e){
         const number = prompt('Enter Room Name');
         if(number){

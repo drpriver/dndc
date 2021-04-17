@@ -67,16 +67,21 @@ typedef enum GdndInsertTag{
 @property(weak, nonatomic) DndViewController* controller;
 @end
 
+@interface DndUrlHandler: NSObject <WKURLSchemeHandler>
+@property(weak, nonatomic) DndViewController* controller;
+@end
+
 //
 // ViewController for the windows of the app
 //
-@interface DndViewController: NSViewController{
+@interface DndViewController: NSViewController <WKUIDelegate>{
 @public DndTextView* text;
 @public NSScrollView* scrollview; // contains the text
 @public DndHighlighter* highlighter; // for the text
 @public WKWebView* webview;
 @public WebNavDel* webnavdel; // for the webview
 @public NSURL* file_url;
+@public DndUrlHandler* handler;
 }
 -(LongString)get_text;
 -(void)recalc_html:(LongString)text;
@@ -620,15 +625,40 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
                 if(error){
                     NSLog(@"%@", error);
                     decisionHandler(WKNavigationActionPolicyAllow);
-                }
+                    }
                 else {
                     decisionHandler(WKNavigationActionPolicyCancel);
-                }
+                    }
                 }];
             return;
         }
         decisionHandler(WKNavigationActionPolicyCancel);
         return;
+}
+@end
+
+@implementation DndUrlHandler
+-(void)webView:(WKWebView*)webView startURLSchemeTask:(id<WKURLSchemeTask>)urlSchemeTask{
+    auto response = [[NSURLResponse alloc]
+        initWithURL:(NSURL*)[NSURL URLWithString:@"dnd://./this.html"]
+        MIMEType:@"text/plain"
+        expectedContentLength:0
+        textEncodingName:nil];
+    [urlSchemeTask didReceiveResponse:response];
+    auto request = [urlSchemeTask request];
+    NSURL* url = request.URL;
+    auto method = [request HTTPMethod];
+    if([method isEqualToString:@"POST"] and [url isEqual:[NSURL URLWithString:@"dnd:///roomclick"]]){
+        NSString* body = [[NSString alloc] initWithData:(NSData*)[request HTTPBody] encoding:NSUTF8StringEncoding];
+        [urlSchemeTask didFinish];
+        [self.controller->text insertText:body replacementRange:NSMakeRange([[self.controller->text textStorage] length], 0)];
+        // HEREPrint([body UTF8String]);
+    }
+    else {
+        [urlSchemeTask didFailWithError:[NSError errorWithDomain:@"denied" code:1 userInfo:nil]];
+    }
+}
+-(void)webView:(WKWebView*)webView stopURLSchemeTask:(id<WKURLSchemeTask>)urlSchemeTask{
 }
 @end
 
@@ -680,7 +710,10 @@ BOOL editor_on_left;
 
     NSRect webrect = {.origin={0, 0}, .size={screenrect.size.width-textwidth, screenrect.size.height}};
     WKWebViewConfiguration* config = [[WKWebViewConfiguration alloc] init];
+    handler = [[DndUrlHandler alloc] init];
+    handler.controller = self;
     [config.preferences setValue:@YES forKey:@"developerExtrasEnabled"];
+    [config setURLSchemeHandler:handler forURLScheme:@"dnd"];
     webview = [[WKWebView alloc] initWithFrame:webrect configuration:config];
     webview.allowsMagnification = YES;
     webnavdel = [[WebNavDel alloc] init];
@@ -690,6 +723,7 @@ BOOL editor_on_left;
     [split_view addSubview:scrollview];
     webview.autoresizingMask = NSViewHeightSizable | NSViewWidthSizable;
     webview.allowsBackForwardNavigationGestures = YES;
+    webview.UIDelegate = self;
     [split_view adjustSubviews];
     self.view = split_view;
     return self;
@@ -837,7 +871,7 @@ BOOL editor_on_left;
     SuppressCastQual();
     NSData* htmldata = [NSData dataWithBytesNoCopy:(void*)html.text length:html.length+1 freeWhenDone:YES];
     PopDiagnostic();
-    NSURL* url = [NSURL URLWithString:@"https://./this.html"];
+    NSURL* url = [NSURL URLWithString:@"dnd://./this.html"];
     [webview loadData:htmldata MIMEType:@"text/html" characterEncodingName:@"UTF-8" baseURL:url];
     // auto t2 = get_t();
     // HERE("load the page: %.3fms", (t2-t1)/1000.);
@@ -886,6 +920,30 @@ BOOL editor_on_left;
     }
     else{
         webview.frame = NSMakeRect(webview.frame.origin.x, webview.frame.origin.y, webview.frame.size.width - scrollview.frame.size.width, webview.frame.size.height);
+    }
+}
+
+- (void)webView:(WKWebView *)webView
+runJavaScriptTextInputPanelWithPrompt:(NSString *)prompt
+    defaultText:(NSString *)defaultText
+initiatedByFrame:(WKFrameInfo *)frame
+completionHandler:(void (^)(NSString *result))completionHandler{
+    auto alert = [[NSAlert alloc] init];
+    // [alert setTitle:@"Room"];
+    alert.messageText = prompt;
+    [alert addButtonWithTitle:@"Submit"];
+    [alert addButtonWithTitle:@"Cancel"];
+    alert.icon = nil;
+    auto input_frame = NSMakeRect(0, 0, 300, 24);
+    auto text_field = [[NSTextField alloc] initWithFrame:input_frame];
+    alert.accessoryView = text_field;
+    [[alert window] setInitialFirstResponder:text_field];
+    auto response = [alert runModal];
+    if(response == NSAlertFirstButtonReturn){
+        completionHandler([text_field stringValue]);
+    }
+    else {
+        completionHandler(@"");
     }
 }
 
