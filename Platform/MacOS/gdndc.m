@@ -77,6 +77,7 @@ typedef enum GdndInsertTag{
 @interface DndViewController: NSViewController <WKUIDelegate>{
 @public DndTextView* text;
 @public NSScrollView* scrollview; // contains the text
+@public NSSplitView* editor_container;
 @public DndHighlighter* highlighter; // for the text
 @public WKWebView* webview;
 @public WebNavDel* webnavdel; // for the webview
@@ -739,7 +740,7 @@ BOOL coord_helper;
     text.textContainer.widthTracksTextView = YES;
     text.textContainerInset = NSMakeSize(4,4);
 
-    auto editor_container = [[NSSplitView alloc] initWithFrame:textrect];
+    editor_container = [[NSSplitView alloc] initWithFrame:textrect];
     editor_container.vertical = NO;
 
     scrollview = [[NSScrollView alloc] initWithFrame:textrect];
@@ -857,6 +858,7 @@ BOOL coord_helper;
 }
 
 -(void)format_dnd:(id)sender {
+    // FIXME: restoring the scroll position doesn't work
     auto before = [self->scrollview lineScroll];
     NSString *string = self->text.string;
     const char* source_text = [string UTF8String];
@@ -1002,11 +1004,8 @@ BOOL coord_helper;
     return;
 }
 -(void) toggle_editor:(id)sender{
-    scrollview.hidden = !self->scrollview.hidden;
-    // Why does the size keep changing if I do this?
-    // [(NSSplitView*)self.view adjustSubviews];
-    // return;
-    if(scrollview.hidden){
+    editor_container.hidden = !self->editor_container.hidden;
+    if(editor_container.hidden){
         webview.frame = NSMakeRect(webview.frame.origin.x, webview.frame.origin.y, webview.frame.size.width + scrollview.frame.size.width, webview.frame.size.height);
     }
     else{
