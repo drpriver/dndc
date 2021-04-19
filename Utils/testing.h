@@ -116,7 +116,7 @@ Nonnull(const char*) _test_color_red   = ""
 //
 // Expects lhs == rhs, using the == operator
 //
-#define TestExpectEquals(lhs, rhs)do{\
+#define TestExpectEquals(lhs, rhs) do{\
         auto _lhs = lhs; \
         auto _rhs = rhs; \
         TEST_stats.executed++;\
@@ -307,7 +307,6 @@ test_main(void){
         }
     return result;
     }
-#endif
 
 //
 // The default main implementation if you don't suppress it.
@@ -417,4 +416,6 @@ PopDiagnostic();
     }
 
 #include "terminal_logger.c"
+#endif
+
 #endif
