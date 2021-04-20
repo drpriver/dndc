@@ -311,7 +311,7 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
             case '[':{
                 msb_write_literal(sb, "<a href=\"");
                 const char* closing_brace = memchr(text+i, ']', length-i);
-                if(!closing_brace){
+                if(unlikely(!closing_brace)){
                     node_set_err_offset(ctx, node, i, LS("Unterminated '[']"));
                     Raise(PARSE_ERROR);
                     }
@@ -321,7 +321,7 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
                     msb_write_kebab(&temp, text+i+1, link_length-1);
                     auto temp_str = msb_borrow(&temp);
                     auto value = find_link_target(ctx, temp_str);
-                    if(!value){
+                    if(unlikely(!value)){
                         if(ctx->flags & DNDC_ALLOW_BAD_LINKS){
                             node_print_warning2(ctx, node, SV("Unable to resolve link: "), temp_str);
                             msb_write_str(sb, temp_str.text, temp_str.length);

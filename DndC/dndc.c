@@ -980,7 +980,6 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
             }
         Allocator_free_all(allocator);
         shallow_free_recorded_mallocator(allocator);
-        destroy_linear_storage(&la_);
         if(!external_b64cache){
             Allocator_free_all(ctx.b64cache.allocator);
             shallow_free_recorded_mallocator(ctx.b64cache.allocator);
@@ -996,6 +995,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
         }
     auto t1 = get_t();
     report_time(&ctx, SV("Execution took: "), t1-t0);
+    if(!(flags & DNDC_NO_CLEANUP))
+        destroy_linear_storage(&la_);
     return result;
     }
 
