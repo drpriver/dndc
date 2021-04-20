@@ -3,6 +3,7 @@
 #include "dndc_funcs.h"
 #include "dndc_types.h"
 #include "msb_extensions.h"
+#include "msb_format.h"
 #include "path_util.h"
 
 /* Python */
@@ -601,14 +602,14 @@ DndNode_repr(Nonnull(DndNode*)self){
     // format a buffer as python apparently doesn't support %.*s
     MStringBuilder msb = {.allocator=self->ctx->temp_allocator};
     if(not node->classes.count)
-        msb_sprintf(&msb, "Node(%s, '%.*s', [%d children])",  nodenames[node->type].text, (int)node->header.length, node->header.text, (int)node->children.count);
+        MSB_FORMAT(&msb, "Node(", nodenames[node->type], ", '", node->header, "', [", (int)node->children.count, "children])");
     else {
-        msb_sprintf(&msb, "Node(%s", nodenames[node->type].text);
+        MSB_FORMAT(&msb, "Node(", nodenames[node->type].text);
         for(size_t i = 0; i < node->classes.count;i++){
             auto class = &node->classes.data[i];
-            msb_sprintf(&msb, ".%.*s", (int)class->length, class->text);
+            MSB_FORMAT(&msb, ".", *class);
             }
-        msb_sprintf(&msb, ", '%.*s', [%d children])",   (int)node->header.length, node->header.text, (int)node->children.count);
+        MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node->children.count, "children])");
     }
     auto text = msb_borrow(&msb);
     auto result = PyUnicode_FromStringAndSize(text.text, text.length);
@@ -635,7 +636,9 @@ py_node_set_err(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)a
         return NULL;
         }
     PopDiagnostic();
-    node_set_err(ctx, node, "%.*s", (int)length, msg);
+    MStringBuilder sb = {.allocator=ctx->allocator};
+    msb_write_str(&sb, msg, length);
+    node_set_err(ctx, node, msb_detach(&sb));
     PyErr_SetString(PyExc_Exception, "Node threw error.");
     return NULL;
     }
@@ -1115,7 +1118,14 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHa
 
     auto node = get_node(ctx, handle);
     char buff[1024];
-    snprintf(buff, sizeof(buff), "%.*s", (int)node->filename.length, node->filename.text);
+    if(node->filename.length < 1024){
+        memcpy(buff, node->filename.text, node->filename.length);
+        buff[node->filename.length] = 0;
+        }
+    else {
+        memcpy(buff, node->filename.text, 1023);
+        buff[1023] = 0;
+        }
     PyObject* code = Py_CompileStringExFlags(text, buff, Py_file_input, &flags, 0);
     auto c = (PyCodeObject*)code;
     PyObject* result;
@@ -1163,7 +1173,10 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHa
             unhandled_error_condition(!type_text);
             // NASTY: modding the line number
             python_block->row = new_row;
-            node_set_err(ctx, python_block, "%s: %s", type_text, exc_text);
+            MStringBuilder sb = {.allocator=ctx->allocator};
+            msb_write_str(&sb, type_text, strlen(type_text));
+            msb_write_str(&sb, exc_text, strlen(exc_text));
+            node_set_err(ctx, python_block, msb_detach(&sb));
             python_block->row = old_row;
             Py_XDECREF(exc_str);
             }

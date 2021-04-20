@@ -4,6 +4,7 @@
 #include "dndc_types.h"
 #include "dndc_funcs.h"
 #include "str_util.h"
+#include "msb_format.h"
 
 #ifdef _WIN32
 typedef long long ssize_t;
@@ -301,7 +302,7 @@ FORMATFUNC(md_list){
         auto child = get_node(ctx, node->children.data[i]);
         assert(child->type == NODE_LIST_ITEM);
         msb_write_nchar(sb, ' ', indent);
-        msb_sprintf(sb, "%*d. ", numwidth, (int)i+1);
+        MSB_FORMAT(sb, padded_int_fmt(i+1, numwidth), ". ");
         FormatState state = {.lead = indent+numwidth+2, .col=indent+numwidth+2};
         for(size_t j = 0; j < child->children.count; j++){
             auto subchild = get_node(ctx, child->children.data[j]);

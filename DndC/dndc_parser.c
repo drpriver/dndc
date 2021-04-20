@@ -33,9 +33,19 @@ analyze_line(Nonnull(DndcContext*)ctx){
     const char* doublecolon = NULL;
     const char* endline = NULL;
     const char* cursor = ctx->cursor;
-    bool nonspace = false;
     int nspace = 0;
-    for(;;){
+    for(;;cursor++){
+        char ch = *cursor;
+        switch(ch){
+            case ' ': case '\r': case '\t':
+                nspace++;
+                continue;
+            default:
+                break;
+            }
+        break;
+        }
+    for(;;cursor++){
         if(!doublecolon){
             if(unlikely(*cursor == ':')){
                 if(cursor[1] == ':'){
@@ -43,24 +53,10 @@ analyze_line(Nonnull(DndcContext*)ctx){
                     }
                 }
             }
-        if(!nonspace){
-            if(*cursor == '\t'){
-                // TODO: report this for real
-                // if(!(ctx->flags & DNDC_SUPPRESS_WARNINGS))
-                    // fprintf(stderr, "Encountered a tab. Counting as 1 space.\n");
-                nspace++;
-                }
-            else if(*cursor == ' ' or *cursor == '\r'){
-                nspace++;
-                }
-            else
-                nonspace = true;
-            }
         if(unlikely(*cursor == '\n' || *cursor == '\0')){
             endline = cursor;
             break;
             }
-        cursor++;
         }
     ctx->doublecolon = doublecolon;
     ctx->lineend = endline;
@@ -187,7 +183,7 @@ parse_post_colon(Nonnull(DndcContext*)ctx, StringView postcolon, NodeHandle node
         break;
         }
     if(!boundary){
-        parse_set_err(ctx, postcolon.text, "no node type found after '::'");
+        parse_set_err(ctx, postcolon.text, LS("no node type found after '::'"));
         Raise(PARSE_ERROR);
         }
     for(size_t i = 0; i < arrlen(nodealiases); i++){
@@ -235,7 +231,7 @@ parse_post_colon(Nonnull(DndcContext*)ctx, StringView postcolon, NodeHandle node
                 }
             }
         }
-    parse_set_err(ctx, postcolon.text, "Unrecognized node name: '%.*s'", (int)boundary, postcolon.text);
+    parse_set_err_q(ctx, postcolon.text, SV("Unrecognized node name: "), (StringView){.text=postcolon.text,.length=boundary});
     Raise(PARSE_ERROR);
     foundit:;
     StringView aftertype = {.text=postcolon.text + boundary, .length=postcolon.length-boundary};
@@ -256,7 +252,7 @@ parse_post_colon(Nonnull(DndcContext*)ctx, StringView postcolon, NodeHandle node
                     }
                 size_t class_length = aftertype.text - class_start;
                 if(!class_length){
-                    parse_set_err(ctx, aftertype.text, "Empty class name after a '.'");
+                    parse_set_err(ctx, aftertype.text, LS("Empty class name after a '.'"));
                     Raise(PARSE_ERROR);
                     }
                 auto class_ = Marray_alloc(StringView)(&node->classes, ctx->allocator);
@@ -275,7 +271,7 @@ parse_post_colon(Nonnull(DndcContext*)ctx, StringView postcolon, NodeHandle node
                     }
                 size_t attribute_length = aftertype.text - attribute_start;
                 if(!attribute_length){
-                    parse_set_err(ctx, aftertype.text, "Empty attribute name after a '@'");
+                    parse_set_err(ctx, aftertype.text, LS("Empty attribute name after a '@'"));
                     Raise(PARSE_ERROR);
                     }
                 auto attr = Marray_alloc(Attribute)(&node->attributes, ctx->allocator);
@@ -290,7 +286,7 @@ parse_post_colon(Nonnull(DndcContext*)ctx, StringView postcolon, NodeHandle node
                         const char* valstart = aftertype.text;
                         for(;;){
                             if(!aftertype.length){
-                                parse_set_err(ctx, aftertype.text, "End of line when expecting a closing ')'");
+                                parse_set_err(ctx, aftertype.text, LS("End of line when expecting a closing ')'"));
                                 Raise(PARSE_ERROR);
                                 }
                             char first = aftertype.text[0];
@@ -311,7 +307,7 @@ parse_post_colon(Nonnull(DndcContext*)ctx, StringView postcolon, NodeHandle node
                     }
                 }break;
             default:
-                parse_set_err(ctx, aftertype.text, "illegal character when parsing type, classes and attributes: '%c'", aftertype.text[0]);
+                parse_set_err_q(ctx, aftertype.text, SV("illegal character when parsing type, classes and attributes: "), (StringView){.text=aftertype.text, .length=1});
                 Raise(PARSE_ERROR);
             }
         }
@@ -323,7 +319,7 @@ PARSEFUNC(parse_node){
     {
     auto parent = get_node(ctx, parent_handle);
     if(unlikely(indentation > 64)){
-        node_set_err(ctx, parent, "Too deep! Indentation greater than 64 is unsupported.");
+        node_set_err(ctx, parent, LS("Too deep! Indentation greater than 64 is unsupported."));
 
         return (Errorable(void)){.errored=PARSE_ERROR};
         }
@@ -435,7 +431,7 @@ PARSEFUNC(parse_list_node){
                     firstchar++;
                     goto after;
                 default:
-                    parse_set_err(ctx, firstchar, "Non numeric found when parsing list: '%c'", *firstchar);
+                    parse_set_err_q(ctx, firstchar, SV("Non numeric found when parsing list: "), (StringView){.text=firstchar, .length=1});
                     Raise(PARSE_ERROR);
                 }
             }
@@ -468,7 +464,7 @@ PARSEFUNC(parse_list_item){
         if(ctx->nspaces <= indentation)
             break;
         if(ctx->doublecolon){
-            parse_set_err(ctx, ctx->doublecolon, "This node type cannot contain subnodes, only strings");
+            parse_set_err(ctx, ctx->doublecolon, LS("This node type cannot contain subnodes, only strings"));
             Raise(PARSE_ERROR);
             }
         const char* firstchar = ctx->linestart + ctx->nspaces;
@@ -633,7 +629,7 @@ PARSEFUNC(parse_keyvalue_node){
         const char* cursor = ctx->linestart+ctx->nspaces;
         const char* colon = memchr(cursor, ':', ctx->lineend - cursor);
         if(!colon){
-            parse_set_err(ctx, cursor, "Expected a colon for key value pairs");
+            parse_set_err(ctx, cursor, LS("Expected a colon for key value pairs"));
             Raise(PARSE_ERROR);
             }
         const char* pre_text = ctx->linestart+ctx->nspaces;
@@ -675,7 +671,7 @@ PARSEFUNC(parse_bullets_node){
         const char* firstchar = ctx->linestart+ctx->nspaces;
         char first = *firstchar;
         if(first != '*' and first != '+' and first != '-'){
-            parse_set_err(ctx, firstchar, "Bullets must begin with one of *-+, got '%c'", first);
+            parse_set_err_q(ctx, firstchar, SV("Bullets must begin with one of *-+, got "), (StringView){.text=firstchar, .length=1});
             Raise(PARSE_ERROR);
             }
         firstchar++;
@@ -708,7 +704,7 @@ PARSEFUNC(parse_bullet_node){
         if(ctx->nspaces <= indentation)
             break;
         if(ctx->doublecolon){
-            parse_set_err(ctx, ctx->doublecolon,"This node type cannot contain subnodes, only strings");
+            parse_set_err(ctx, ctx->doublecolon,LS("This node type cannot contain subnodes, only strings"));
             Raise(PARSE_ERROR);
             }
         const char* firstchar = ctx->linestart + ctx->nspaces;
@@ -865,7 +861,7 @@ PARSEFUNC(parse_md_node){
                 if(ctx->nspaces > stack[si].indentation){
                     si++;
                     if(si == arrlen(stack)){
-                        parse_set_err(ctx, ctx->linestart+ctx->nspaces, "Only up to 8 levels of nested lists are supported.");
+                        parse_set_err(ctx, ctx->linestart+ctx->nspaces, LS("Only up to 8 levels of nested lists are supported."));
                         Raise(PARSE_ERROR);
                         }
                     auto s = &stack[si];
@@ -899,7 +895,7 @@ PARSEFUNC(parse_md_node){
                     for(;;){
                         si--;
                         if(si < 0){
-                            parse_set_err(ctx, ctx->linestart+ctx->nspaces, "Dedent does not match initial indent");
+                            parse_set_err(ctx, ctx->linestart+ctx->nspaces, LS("Dedent does not match initial indent"));
                             Raise(PARSE_ERROR);
                             }
                         assert(si >= 0);
@@ -909,7 +905,7 @@ PARSEFUNC(parse_md_node){
                         if(indent == ctx->nspaces)
                             break;
                         if(indent < ctx->nspaces){
-                            parse_set_err(ctx, ctx->linestart+ctx->nspaces, "Ambiguous dedent inside a list");
+                            parse_set_err(ctx, ctx->linestart+ctx->nspaces, LS("Ambiguous dedent inside a list"));
                             Raise(PARSE_ERROR);
                             }
                         }
@@ -956,7 +952,7 @@ PARSEFUNC(parse_md_node){
             continue;
             }
         if(ctx->nspaces <= stack[si].indentation){
-            parse_set_err(ctx, ctx->linestart+ctx->nspaces, "Ambiguous dedent inside a list");
+            parse_set_err(ctx, ctx->linestart+ctx->nspaces, LS("Ambiguous dedent inside a list"));
             Raise(PARSE_ERROR);
             }
         // don't change state for these

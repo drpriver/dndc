@@ -9,6 +9,7 @@
 #include "dndc_flags.h"
 #include "dndc_types.h"
 #include "dndc_funcs.h"
+#include "msb_format.h"
 
 #if !__has_feature(objc_arc)
 #error "ARC is off"
@@ -458,9 +459,9 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
     INDENT(); msb_write_str(&sb, imgpath, strlen(imgpath));
     msb_write_char(&sb, '\n');
     double scale = size.width > size.height? 800.0/size.width : 800.0/size.height;
-    INDENT(); msb_sprintf(&sb, "width = %d\n", (int)(size.width*scale));
-    INDENT(); msb_sprintf(&sb, "height = %d\n", (int)(size.height*scale));
-    INDENT(); msb_sprintf(&sb, "viewBox = 0 0 %d %d\n", (int)size.width, (int)size.height);
+    INDENT(); MSB_FORMAT(&sb, "width = ", (int)(size.width*scale), "\n");
+    INDENT(); MSB_FORMAT(&sb, "height = \n", (int)(size.height*scale), "\n");
+    INDENT(); MSB_FORMAT(&sb, "viewBox = 0 0 ", (int)size.width, " ", (int)size.height, "\n");
     StringView script[] = {
         SV("::python\n"),
         SV("  # this is an example of how to script the imglinks\n"),

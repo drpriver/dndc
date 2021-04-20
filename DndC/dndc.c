@@ -4,7 +4,6 @@
 #undef LOG_LEVEL
 #endif
 #define LOG_LEVEL LOG_LEVEL_INFO
-#include <stdarg.h>
 #include "dndc_format.c"
 #include "path_util.h"
 #include "allocator.h"
@@ -34,9 +33,6 @@ typedef struct BinaryJob{
 
 static
 THREADFUNC(binary_worker){
-#ifdef BINARY_WORKER_REPORT_TIME
-    auto before = get_t();
-#endif
     BinaryJob* jobp = thread_arg;
     FileCache cache = *jobp->b64cache;
     size_t count = jobp->sourcepaths.count;
@@ -52,10 +48,6 @@ THREADFUNC(binary_worker){
         }
     bb_destroy(&bb);
     memcpy(jobp->b64cache, &cache, sizeof(cache));
-#ifdef BINARY_WORKER_REPORT_TIME
-    auto after = get_t();
-    fprintf(stderr, "Info: Binary worker took %.3fms\n", (after-before)/1000.);
-#endif
     return 0;
     }
 
@@ -127,14 +119,14 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
         // init_python_docparser handles the DNDC_PYTHON_IS_INIT flag.
         auto e = init_python_docparser(flags);
         if(e.errored) {
-            report_system_error(ctx, "Failed to initialize python\n");
+            report_system_error(ctx, SV("Failed to initialize python"));
             result.errored = e.errored;
             goto cleanup;
             }
         #endif
 
         auto after = get_t();
-        report_stat(ctx, "Python startup took: %.3fms", (after-before)/1000.);
+        report_time(ctx, SV("Python startup took: "), after-before);
         for(size_t i = 0; i < ctx->python_nodes.count; i++){
             auto handle = ctx->python_nodes.data[i];
             {
@@ -172,8 +164,8 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             after:;
             }
         auto after_python = get_t();
-        report_stat(ctx, "Python scripts took: %.3fms", (after_python-after)/1000.);
-        report_stat(ctx, "Python total took: %.3fms", (after_python-before)/1000.);
+        report_time(ctx, SV("Python scripts took: "), after_python-after);
+        report_time(ctx, SV("Python total took: "), after_python-before);
         }
     // Python blocks are done, join with the base64 thread.
     // We could actually join later now that I think about it.
@@ -186,12 +178,12 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             join_thread(worker);
             auto after = get_t();
             // This is usually very fast as the worker thread finished before python.
-            report_stat(ctx, "Joining took: %.3fms", (after-before)/1000.);
+            report_time(ctx, SV("Joining took: "), after-before);
             }
         Marray_cleanup(StringView)(&job.sourcepaths, ctx->allocator);
         }
     else {
-        report_stat(ctx, "No binary work was to be done.");
+        report_info(ctx, SV("No binary work was to be done."));
         }
     return result;
     }
@@ -204,7 +196,6 @@ dndc_print_out_syntax(LongString source_path);
 
 static void depends_print_callback(void*_Nullable, StringView);
 int main(int argc, char**argv){
-    auto t0 = get_t();
     LongString source_path = LS("");
     LongString output_path = LS("");
     DependsArg depends = {.path=LS("")};
@@ -436,9 +427,6 @@ int main(int argc, char**argv){
                 }
             return 0;
             }
-        auto after_parse_args = get_t();
-        // this one has to be done manually as we don't have a ctx yet.
-        report_stat_raw(print_stats?DNDC_PRINT_STATS:0, dndc_stderr_error_func, NULL, "Parsing args took: %.3fms", (after_parse_args-t0)/1000.);
     }
     if(print_syntax){
         dndc_print_out_syntax(source_path);
@@ -578,10 +566,18 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
     else {
         auto source_err = ctx_load_source_file(&ctx, path);
         if(source_err.errored){
-            if(ctx.base_directory.length)
-                report_system_error(&ctx, "Unable to open '%.*s/%.*s'", (int)ctx.base_directory.length, ctx.base_directory.text, (int)path.length, path.text);
-            else
-                report_system_error(&ctx, "Unable to open '%.*s'", (int)path.length, path.text);
+            if(ctx.base_directory.length){
+                MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
+                MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", path);
+                report_system_error(&ctx, msb_borrow(&err_builder));
+                msb_destroy(&err_builder);
+                }
+            else{
+                MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
+                MSB_FORMAT(&err_builder, "Unable to open '", path);
+                report_system_error(&ctx, msb_borrow(&err_builder));
+                msb_destroy(&err_builder);
+                }
             result.errored = source_err.errored;
             goto cleanup;
             }
@@ -606,7 +602,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
         auto before_parse = get_t();
         auto e = dndc_parse(&ctx, ctx.root_handle, path, source.text);
         auto after_parse = get_t();
-        report_stat(&ctx, "Initial parsing took: %.3fms", (after_parse-before_parse)/1000.);
+        report_time(&ctx, SV("Initial parsing took: "), after_parse-before_parse);
         if(e.errored){
             report_set_error(&ctx);
             result.errored = e.errored;
@@ -618,7 +614,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
         auto before = get_t();
         format_tree(&ctx, &msb);
         auto after = get_t();
-        report_stat(&ctx, "Formatting took: %.3fms", (after-before)/1000.);
+        report_time(&ctx, SV("Formatting took: "), after-before);
 
         auto str = msb_borrow(&msb);
         auto before_write = get_t();
@@ -651,8 +647,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
                 }
             }
         auto after_write = get_t();
-        report_stat(&ctx, "Writing took: %.3fms", (after_write-before_write)/1000.);
-        report_stat(&ctx, "Total output size: %zu bytes", str.length);
+        report_time(&ctx, SV("Writing took: "), after_write-before_write);
+        report_size(&ctx, SV("Total output size (bytes): "), str.length);
         goto success;
         }
     // Handle imports. Imports can import more imports.
@@ -662,7 +658,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
             auto handle = ctx.imports.data[i];
             auto node = get_node(&ctx, handle);
             if(ctx.imports.count > 1000){
-                node_print_err(&ctx, node, "More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)");
+                node_print_err(&ctx, node, SV("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)"));
                 result.errored = PARSE_ERROR;
                 goto cleanup;
                 }
@@ -670,7 +666,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
                 auto child_handle = node->children.data[j];
                 auto child = get_node(&ctx, child_handle);
                 if(child->type != NODE_STRING){
-                    node_print_err(&ctx, child, "import child is not a string");
+                    node_print_err(&ctx, child, SV("import child is not a string"));
                     result.errored = PARSE_ERROR;
                     goto cleanup;
                     }
@@ -679,10 +675,18 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
                 child->header = SV("");
                 auto imp_e = ctx_load_source_file(&ctx, filename);
                 if(imp_e.errored){
-                    if(ctx.base_directory.length)
-                        node_print_err(&ctx, child, "Unable to open '%.*s/%.*s'", (int)ctx.base_directory.length, ctx.base_directory.text, (int)filename.length, filename.text);
-                    else
-                        node_print_err(&ctx, child, "Unable to open '%.*s'", (int)filename.length, filename.text);
+                    if(ctx.base_directory.length){
+                        MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
+                        MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", filename, "'");
+                        node_print_err(&ctx, child, msb_borrow(&err_builder));
+                        msb_destroy(&err_builder);
+                        }
+                    else{
+                        MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
+                        MSB_FORMAT(&err_builder, "Unable to open '", filename, "'");
+                        node_print_err(&ctx, child, msb_borrow(&err_builder));
+                        msb_destroy(&err_builder);
+                        }
                     result.errored = imp_e.errored;
                     goto cleanup;
                     }
@@ -696,7 +700,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
                 }
             }
         auto after_imports = get_t();
-        report_stat(&ctx, "Resolving imports took: %.3fms", (after_imports-before_imports)/1000.);
+        report_time(&ctx, SV("Resolving imports took: "), after_imports-before_imports);
     }
 
     // Speculatively load imgs and imglinks and preprocess them.
@@ -716,12 +720,12 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
             }
     }
     // Do some reporting as we don't add any nodes after this.
-    report_stat(&ctx, "ctx.nodes.count = %zu", ctx.nodes.count);
-    report_stat(&ctx, "ctx.python_nodes.count = %zu", ctx.python_nodes.count);
-    report_stat(&ctx, "ctx.imports.count = %zu", ctx.imports.count);
-    report_stat(&ctx, "ctx.script_nodes.count = %zu", ctx.script_nodes.count);
-    report_stat(&ctx, "ctx.dependencies_nodes.count = %zu", ctx.dependencies_nodes.count);
-    report_stat(&ctx, "ctx.link_nodes.count = %zu", ctx.link_nodes.count);
+    report_size(&ctx, SV("ctx.nodes.count = "), ctx.nodes.count);
+    report_size(&ctx, SV("ctx.python_nodes.count = "), ctx.python_nodes.count);
+    report_size(&ctx, SV("ctx.imports.count = "), ctx.imports.count);
+    report_size(&ctx, SV("ctx.script_nodes.count = "), ctx.script_nodes.count);
+    report_size(&ctx, SV("ctx.dependencies_nodes.count = "), ctx.dependencies_nodes.count);
+    report_size(&ctx, SV("ctx.link_nodes.count = "), ctx.link_nodes.count);
     if(flags & DNDC_REPORT_ORPHANS){
         for(size_t i = 0; i < ctx.nodes.count; i++){
             auto node = &ctx.nodes.data[i];
@@ -729,12 +733,12 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
             if(node->type == NODE_PYTHON)
                 continue;
             if(NodeHandle_eq(node->parent, INVALID_NODE_HANDLE)){
-                node_print_warning(&ctx, node, "Orphaned node (invalid parent node handle)");
+                node_print_warning(&ctx, node, SV("Orphaned node (invalid parent node handle)"));
                 }
             }
         }
     if(NodeHandle_eq(ctx.root_handle, INVALID_NODE_HANDLE)){
-        report_system_error(&ctx, "ctx has no root Node.");
+        report_system_error(&ctx, SV("ctx has no root Node."));
         result.errored = PARSE_ERROR;
         goto cleanup;
         }
@@ -748,14 +752,14 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
             goto cleanup;
             }
         auto after = get_t();
-        report_stat(&ctx, "Checking depth took %.3fms", (after-before)/1000.);
+        report_time(&ctx, SV("Checking depth took "), after-before);
     }
     // Create links from headers.
     {
         auto before = get_t();
         gather_anchors(&ctx);
         auto after = get_t();
-        report_stat(&ctx, "Link resolving took: %.3fms", (after-before)/1000.);
+        report_time(&ctx, SV("Link resolving took: "), after-before);
         // FIXME: if an error can be set while gathering anchors, we should
         // return an error!
         if(ctx.error.message.length){
@@ -776,7 +780,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
         if(!NodeHandle_eq(ctx.navnode, INVALID_NODE_HANDLE))
             build_nav_block(&ctx);
         auto after =  get_t();
-        report_stat(&ctx, "Nav block building took: %.3fms", (after-before)/1000.);
+        report_time(&ctx, SV("Nav block building took: "), after-before);
     }
 
     // Add in the links from explicit link blocks.
@@ -793,7 +797,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
                     // This looks weird, but I am formatting the error.
                     // FIXME: pass the node into the add_link_from_sv function?
                     // That way it can properly format the error itself?
-                    node_set_err(&ctx, link_str_node, "%s", ctx.error.message.text);
+                    node_set_err(&ctx, link_str_node, ctx.error.message);
                     report_set_error(&ctx);
                     result.errored = e.errored;
                     goto cleanup;
@@ -809,7 +813,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
                 printf("[%zu] key: '%.*s', value: '%.*s'\n", i, (int)li->key.length, li->key.text, (int)li->value.length, li->value.text);
                 }
             }
-        report_stat(&ctx, "ctx.links.count = %zu", ctx.links.count);
+        report_size(&ctx, SV("ctx.links.count = "), ctx.links.count);
     }
 
     // Render data nodes into the data blob.
@@ -825,7 +829,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
             for(size_t j = 0; j < data_node->children.count; j++){
                 auto child = get_node(&ctx, data_node->children.data[j]);
                 if(!child->header.length){
-                    node_print_warning(&ctx, child, "Missing header from data child?");
+                    node_print_warning(&ctx, child, SV("Missing header from data child?"));
                     }
                 // FIXME:
                 // A maliciously crafted python block could bypass our depth check
@@ -848,7 +852,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
                     }
                 }
                 if(!sb.cursor){
-                    node_print_warning(&ctx, child, "Rendered a data node with no data. Not outputting it.");
+                    node_print_warning(&ctx, child, SV("Rendered a data node with no data. Not outputting it."));
                     continue;
                     }
                 auto text = msb_detach(&sb);
@@ -858,8 +862,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
                 }
             }
         auto after_data = get_t();
-        report_stat(&ctx, "Data blob rendering took: %.3fms", (after_data-before_data)/1000.);
-        report_stat(&ctx, "ctx.rendered_data.count = %zu", ctx.rendered_data.count);
+        report_time(&ctx, SV("Data blob rendering took: "), after_data-before_data);
+        report_size(&ctx, SV("ctx.rendered_data.count = "), ctx.rendered_data.count);
     }
     // Render the actual document into a string as html.
     {
@@ -868,7 +872,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
         auto before_render = get_t();
         auto e = render_tree(&ctx, &output_sb);
         auto after_render = get_t();
-        report_stat(&ctx, "Rendering took: %.3fms", (after_render-before_render)/1000.);
+        report_time(&ctx, SV("Rendering took: "), after_render-before_render);
 
         if(e.errored){
             report_set_error(&ctx);
@@ -904,10 +908,10 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
                 result.errored = write_err.errored;
                 goto cleanup;
                 }
-        report_stat(&ctx, "Total output size: %zu bytes", str.length);
+            report_size(&ctx, SV("Total output size (bytes): "), str.length);
             }
         auto after_write = get_t();
-        report_stat(&ctx, "Writing took: %.3fms", (after_write-before_write)/1000.);
+        report_time(&ctx, SV("Writing took: "), after_write-before_write);
     }
     // Write the make-style dependency file to the Dependency directory.
     if((flags & DNDC_DEPENDS_IS_CALLBACK) or depends.path.length){
@@ -919,7 +923,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
                 auto child = get_node(&ctx, child_handle);
                 if(child->type != NODE_STRING){
                     // just warn, don't want to fail the build
-                    node_print_warning(&ctx, child, "Non-string node found as a child node: %s", nodenames[child->type].text);
+                    node_print_warning2(&ctx, child, SV("Non-string node found as a child node: "), LS_to_SV(nodenames[child->type]));
                     continue;
                     }
                 Marray_push(StringView)(&ctx.dependencies, ctx.allocator, child->header);
@@ -960,17 +964,17 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
     success:;
     cleanup:;
     msb_destroy(&msb);
-    report_stat(&ctx, "la_.high_water = %zu", la_.high_water);
+    report_size(&ctx, SV("la_.high_water = "), la_.high_water);
     if(!(flags & DNDC_NO_CLEANUP)){
         auto before = get_t();
         if(ctx.flags & DNDC_PRINT_STATS){
             RecordingAllocator* recorder = allocator._data;
-            report_stat(&ctx, "There were %zu allocations.", recorder->count);
+            report_size(&ctx, SV("N allocations: "), recorder->count);
             size_t total = 0;
             for(size_t i = 0; i < recorder->count; i++){
                 total += recorder->allocation_sizes[i];
                 }
-            report_stat(&ctx, "Allocations outstanding total: %zu", total);
+            report_size(&ctx, SV("Allocations outstanding total (bytes): "), total);
             }
         Allocator_free_all(allocator);
         shallow_free_recorded_mallocator(allocator);
@@ -980,7 +984,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
             shallow_free_recorded_mallocator(ctx.b64cache.allocator);
             }
         auto after = get_t();
-        report_stat(&ctx, "Cleaning up memory took: %.3fms", (after-before)/1000.);
+        report_time(&ctx, SV("Cleaning up memory took: "), after-before);
         }
     if(external_b64cache){
         memcpy(external_b64cache, &ctx.b64cache, sizeof(ctx.b64cache));
@@ -989,7 +993,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
         memcpy(external_textcache, &ctx.textcache, sizeof(ctx.textcache));
         }
     auto t1 = get_t();
-    report_stat(&ctx, "Execution took: %.3fms", (t1-t0)/1000.);
+    report_time(&ctx, SV("Execution took: "), t1-t0);
     return result;
     }
 

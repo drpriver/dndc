@@ -103,24 +103,26 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
 // to the first character where the error occurred. Pointer arithmetic is then
 // used to determine the column of the error (file and line are implicit).
 //
-// This is a printf-like function, so additionally supply a format string and
-// varargs.
 //
 static
-printf_func(3, 4)
 void
-parse_set_err(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, Nonnull(const char*) fmt, ...);
+parse_set_err(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, LongString);
+
+static
+void
+parse_set_err_q(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, StringView, StringView);
 
 //
 // Sets an error message originating from the source location that corresponds
 // to the given node.
 //
-// printf-like function.
-//
 static
-printf_func(3, 4)
 void
-node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
+node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), LongString);
+
+static
+void
+node_set_err_q(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView msg, StringView quoted);
 
 //
 // Like node_set_err, but with an offset to the column.
@@ -128,12 +130,9 @@ node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), Nonnull(const char*
 // Sets an error message originating from the source location that corresponds
 // to the given node.
 //
-// printf-like function.
-//
 static
-printf_func(4, 5)
 void
-node_set_err_offset(Nonnull(DndcContext*)ctx, Nonnull(const Node*), int, Nonnull(const char*) fmt, ...);
+node_set_err_offset(Nonnull(DndcContext*)ctx, Nonnull(const Node*), int, LongString);
 
 //
 // Like node_set_err, but immediately prints the message instead of setting
@@ -141,46 +140,41 @@ node_set_err_offset(Nonnull(DndcContext*)ctx, Nonnull(const Node*), int, Nonnull
 //
 // Only use this in the body of run_the_dndc.
 //
-// printf-like function
-//
 static
-printf_func(3, 4)
 void
-node_print_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), Nonnull(const char*) fmt, ...);
+node_print_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), StringView);
 
 //
 // Like node_set_err, but immediately prints the message instead of setting a
 // string and is intended for non-fatal warning messages.
 //
-// printf-like function
-//
-static
-printf_func(3, 4)
-void
-node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...);
-
-//
-// Reports some informative message, such as time to execute some component.
-// Flags is the same flags as given to run_the_dndc and controls whether the
-// message is actually printed, allowing this function to be called
-// unconditionally.
-//
-// printf-like function
-//
-printf_func(4, 5)
-static inline
-void
-report_stat_raw(uint64_t flags, Nullable(ErrorFunc*) error_func, Nullable(void*) error_user_data, Nonnull(const char*) fmt, ...);
-
-//
-// Reports some informative message, such as time to execute some component.
-//
-// printf-like function
-//
-printf_func(2, 3)
 static
 void
-report_stat(Nonnull(DndcContext*), Nonnull(const char*) fmt, ...);
+node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView msg);
+static
+void
+node_print_warning2(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView, StringView);
+
+//
+// Reports time to execute some component.
+//
+static
+void
+report_time(Nonnull(DndcContext*), StringView msg, uint64_t microseconds);
+
+//
+// Reports size of some component.
+//
+static
+void
+report_size(Nonnull(DndcContext*), StringView msg, uint64_t microseconds);
+
+//
+// Reports some information.
+//
+static
+void
+report_info(Nonnull(DndcContext*), StringView msg);
 
 //
 // Reports an error that was set by a different part of the system.
@@ -194,9 +188,8 @@ report_set_error(Nonnull(DndcContext*));
 // called by run_the_dndc right before it returns an error.
 //
 static
-printf_func(2, 3)
 void
-report_system_error(Nonnull(DndcContext*)ctx, Nonnull(const char*)fmt, ...);
+report_system_error(Nonnull(DndcContext*)ctx, StringView msg);
 
 //
 // Getter function to turn a node handle to an acual pointer to a Node.

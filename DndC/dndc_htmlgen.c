@@ -7,6 +7,7 @@
 #include "str_util.h"
 #include "parse_numbers.h"
 #include "measure_time.h"
+#include "msb_format.h"
 //
 // For some reason I refer to generating html as rendering.
 //
@@ -71,7 +72,7 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
         }
     if(!NodeHandle_eq(ctx->titlenode, INVALID_NODE_HANDLE)){
         auto n = get_node(ctx, ctx->titlenode);
-        msb_sprintf(msb, "<title>%.*s</title>\n", (int)n->header.length, n->header.text);
+        MSB_FORMAT(msb, "<title>", n->header, "</title>\n");
         }
     else {
         auto filename = path_basename(path_strip_extension(LS_to_SV(ctx->outputfile)));
@@ -90,7 +91,7 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                 for(size_t j = 0; j < node->children.count; j++){
                     auto child = get_node(ctx, node->children.data[j]);
                     if(unlikely(child->type != NODE_STRING)){
-                        node_print_warning(ctx, child, "Non-string child of a style sheet is being ignored.");
+                        node_print_warning(ctx, child, SV("Non-string child of a style sheet is being ignored."));
                         continue;
                         }
                     msb_write_str(msb, child->header.text, child->header.length);
@@ -101,14 +102,14 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                 for(size_t j = 0; j < node->children.count; j++){
                     auto child = get_node(ctx, node->children.data[j]);
                     if(unlikely(child->type != NODE_STRING)){
-                        node_print_warning(ctx, child, "Non-string child of a style sheet.");
+                        node_print_warning(ctx, child, SV("Non-string child of a style sheet."));
                         continue;
                         }
                     if(!child->header.length)
                         continue;
                     auto style_e = ctx_load_source_file(ctx, child->header);
                     if(style_e.errored){
-                        node_set_err(ctx, child, "Unable to load %.*s\n", (int)child->header.length, child->header.text);
+                        node_set_err_q(ctx, child, SV("Unable to load "), child->header); 
                         Raise(style_e.errored);
                         }
                     LongString style = style_e.result;
@@ -129,7 +130,7 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                 for(size_t j = 0; j < node->children.count; j++){
                     auto child = get_node(ctx, node->children.data[j]);
                     if(unlikely(child->type != NODE_STRING)){
-                        node_print_warning(ctx, child, "script with a non-string child is being ignored");
+                        node_print_warning(ctx, child, SV("script with a non-string child is being ignored"));
                         continue;
                         }
                     auto header = child->header;
@@ -143,14 +144,14 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
             for(size_t j = 0; j < node->children.count; j++){
                 auto child = get_node(ctx, node->children.data[j]);
                 if(unlikely(child->type != NODE_STRING)){
-                    node_print_warning(ctx, child, "script with a non-string child is being ignored");
+                    node_print_warning(ctx, child, SV("script with a non-string child is being ignored"));
                     continue;
                     }
                 if(!child->header.length)
                     continue;
                 auto script_e = ctx_load_source_file(ctx, child->header);
                 if(script_e.errored){
-                    node_set_err(ctx, child, "Unable to load %.*s\n", (int)child->header.length, child->header.text);
+                    node_set_err_q(ctx, child, SV("Unable to load "), child->header);
                     Raise(script_e.errored);
                     }
                 LongString script = script_e.result;
@@ -206,7 +207,7 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
             if(id){
                 msb_write_literal(sb, "<li><a href=\"#");
                 msb_write_kebab(sb, id->text, id->length);
-                msb_sprintf(sb, "\">%.*s</a>\n<ul>\n", (int)node->header.length, node->header.text);
+                MSB_FORMAT(sb, "\">", node->header, "</a>\n<ul>\n");
                 // kind of a hack
                 auto cursor = sb->cursor;
                 build_nav_block_children(ctx, handle, sb, depth+1);
@@ -247,7 +248,7 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
             if(id){
                 msb_write_literal(sb, "<li><a href=\"#");
                 msb_write_kebab(sb, id->text, id->length);
-                msb_sprintf(sb, "\">%.*s</a>", (int)node->header.length, node->header.text);
+                MSB_FORMAT(sb, "\">", node->header, "</a>");
                 msb_write_literal(sb, "</li>\n");
                 }
             }break;
@@ -310,7 +311,7 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
                 msb_write_literal(sb, "<a href=\"");
                 const char* closing_brace = memchr(text+i, ']', length-i);
                 if(!closing_brace){
-                    node_set_err_offset(ctx, node, i, "Unterminated '[']");
+                    node_set_err_offset(ctx, node, i, LS("Unterminated '[']"));
                     Raise(PARSE_ERROR);
                     }
                 size_t link_length = closing_brace - (text+i);
@@ -321,11 +322,11 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
                     auto value = find_link_target(ctx, temp_str);
                     if(!value){
                         if(ctx->flags & DNDC_ALLOW_BAD_LINKS){
-                            node_print_warning(ctx, node, "Unable to resolve link '%.*s'", (int)temp_str.length, temp_str.text);
+                            node_print_warning2(ctx, node, SV("Unable to resolve link: "), temp_str);
                             msb_write_str(sb, temp_str.text, temp_str.length);
                             }
                         else {
-                            node_set_err(ctx, node, "Unable to resolve link '%.*s'", (int)temp_str.length, temp_str.text);
+                            node_set_err_q(ctx, node, SV("Unable to resolve link: "), temp_str);
                             msb_destroy(&temp);
                             Raise(PARSE_ERROR);
                             }
@@ -440,16 +441,16 @@ Errorable_f(void)
 write_header(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(const Node*)node, int header_level){
     auto id = node_get_id(node);
     if(!id){
-        msb_sprintf(sb, "<h%d>", header_level);
+        MSB_FORMAT(sb, "<h", header_level, ">");
         }
     else{
-        msb_sprintf(sb, "<h%d id=\"", header_level);
+        MSB_FORMAT(sb, "<h", header_level, " id=\"");
         msb_write_kebab(sb, id->text, id->length);
         msb_write_literal(sb, "\">");
         }
     auto e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
     if(e.errored) return e;
-    msb_sprintf(sb, "</h%d>", header_level);
+    MSB_FORMAT(sb, "</h", header_level, ">");
     return (Errorable(void)){};
     }
 
@@ -487,9 +488,9 @@ RENDERFUNC(ROOT){
 RENDERFUNC(STRING){
     (void)header_depth;
     if(unlikely(node->classes.count))
-        node_print_warning(ctx, node, "Ignoring classes on string node");
+        node_print_warning(ctx, node, SV("Ignoring classes on string node"));
     if(unlikely(node->children.count))
-        node_print_warning(ctx, node, "Ignoring children of string node");
+        node_print_warning(ctx, node, SV("Ignoring children of string node"));
     auto e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
     if(e.errored) return e;
     msb_write_char(sb, '\n');
@@ -539,10 +540,10 @@ RENDERFUNC(DIV){
 RENDERFUNC(NAV){
     (void)header_depth;
     if(node->header.length){
-        node_print_warning(ctx, node, "Headers on navs unsupported");
+        node_print_warning(ctx, node, SV("Headers on navs unsupported"));
         }
     if(node->children.count){
-        node_print_warning(ctx, node, "Children on navs unsupported");
+        node_print_warning(ctx, node, SV("Children on navs unsupported"));
         }
     msb_write_str(sb, ctx->renderednav.text, ctx->renderednav.length);
     return (Errorable(void)){};
@@ -550,10 +551,10 @@ RENDERFUNC(NAV){
 RENDERFUNC(PARA){
     if(node->classes.count){
         // maybe we should allow classes though?
-        node_print_warning(ctx, node, "Ignoring classes on paragraph node");
+        node_print_warning(ctx, node, SV("Ignoring classes on paragraph node"));
         }
     if(node->header.length){
-        node_print_warning(ctx, node, "Ignoring header on paragraph node");
+        node_print_warning(ctx, node, SV("Ignoring header on paragraph node"));
         }
     msb_write_literal(sb, "<p>\n");
     auto count = node->children.count;
@@ -572,10 +573,10 @@ RENDERFUNC(TITLE){
     if(e.errored) return e;
     msb_write_char(sb, '\n');
     if(node->children.count){
-        node_print_warning(ctx, node, "Ignoring children of title");
+        node_print_warning(ctx, node, SV("Ignoring children of title"));
         }
     if(node->classes.count){
-        node_print_warning(ctx, node, "UNIMPLEMENTED: classes on the title");
+        node_print_warning(ctx, node, SV("UNIMPLEMENTED: classes on the title"));
         }
     return (Errorable(void)){};
     }
@@ -584,20 +585,20 @@ RENDERFUNC(HEADING){
     if(e.errored) return e;
     msb_write_char(sb, '\n');
     if(node->children.count){
-        node_print_warning(ctx, node, "Ignoring children of heading");
+        node_print_warning(ctx, node, SV("Ignoring children of heading"));
         }
     if(node->classes.count){
-        node_print_warning(ctx, node, "UNIMPLEMENTED: classes on the heading");
+        node_print_warning(ctx, node, SV("UNIMPLEMENTED: classes on the heading"));
         }
     return (Errorable(void)){};
     }
 RENDERFUNC(HR){
     (void)header_depth;
     if(node->header.length){
-        node_print_warning(ctx, node, "Ignoring header of hr");
+        node_print_warning(ctx, node, SV("Ignoring header of hr"));
         }
     if(node->children.count){
-        node_print_warning(ctx, node, "Ignoring children of hr");
+        node_print_warning(ctx, node, SV("Ignoring children of hr"));
         }
     msb_write_char(sb, '\n');
     msb_write_literal(sb, "<hr>\n");
@@ -618,7 +619,7 @@ RENDERFUNC(TABLE){
     if(count){
         auto child = get_node(ctx, children[0]);
         if(child->type != NODE_TABLE_ROW){
-            node_set_err(ctx, child, "children of a table ought to be table rows...");
+            node_set_err(ctx, child, LS("children of a table ought to be table rows..."));
             return (Errorable(void)){.errored=GENERIC_ERROR};
             }
         // inline rendering table row here so we can do heads
@@ -695,7 +696,7 @@ RENDERFUNC(IMPORT){
     // they imported.
     // Don't render the import itself though.
     if(node->header.length){
-        node_print_warning(ctx, node, "Ignoring import header");
+        node_print_warning(ctx, node, SV("Ignoring import header"));
         }
     auto count = node->children.count;
     auto children = node->children.data;
@@ -718,7 +719,7 @@ RENDERFUNC(IMAGE){
         msb_write_char(sb, '\n');
         }
     if(!node->children.count){
-        node_set_err(ctx, node, "Image node missing any children (first should be a string that is path to the image");
+        node_set_err(ctx, node, LS("Image node missing any children (first should be a string that is path to the image"));
         Raise(PARSE_ERROR);
         }
     auto children = &node->children;
@@ -726,12 +727,12 @@ RENDERFUNC(IMAGE){
     if(ctx->flags & DNDC_USE_DND_URL_SCHEME){
         auto first_child = get_node(ctx, children->data[0]);
         if(first_child->type != NODE_STRING){
-            node_set_err(ctx, first_child, "First child of an image node should be a string that is path to the image.");
+            node_set_err(ctx, first_child, LS("First child of an image node should be a string that is path to the image."));
             Raise(PARSE_ERROR);
             }
         auto imgpath_node = get_node(ctx, node->children.data[0]);
         if(imgpath_node->type != NODE_STRING){
-            node_set_err(ctx, imgpath_node, "First should be a string and be the path to the image.");
+            node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image."));
             Raise(PARSE_ERROR);
             }
         auto header = imgpath_node->header;
@@ -749,12 +750,12 @@ RENDERFUNC(IMAGE){
     else if(ctx->flags & DNDC_DONT_INLINE_IMAGES){
         auto first_child = get_node(ctx, children->data[0]);
         if(first_child->type != NODE_STRING){
-            node_set_err(ctx, first_child, "First child of an image node should be a string that is path to the image.");
+            node_set_err(ctx, first_child, LS("First child of an image node should be a string that is path to the image."));
             Raise(PARSE_ERROR);
             }
         auto imgpath_node = get_node(ctx, node->children.data[0]);
         if(imgpath_node->type != NODE_STRING){
-            node_set_err(ctx, imgpath_node, "First should be a string and be the path to the image.");
+            node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image."));
             Raise(PARSE_ERROR);
             }
         auto header = imgpath_node->header;
@@ -765,18 +766,18 @@ RENDERFUNC(IMAGE){
     else{
         auto first_child = get_node(ctx, children->data[0]);
         if(first_child->type != NODE_STRING){
-            node_set_err(ctx, first_child, "First child of an image node should be a string that is path to the image.");
+            node_set_err(ctx, first_child, LS("First child of an image node should be a string that is path to the image."));
             Raise(PARSE_ERROR);
             }
         auto imgpath_node = get_node(ctx, node->children.data[0]);
         if(imgpath_node->type != NODE_STRING){
-            node_set_err(ctx, imgpath_node, "First should be a string and be the path to the image.");
+            node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image."));
             Raise(PARSE_ERROR);
             }
         auto header = imgpath_node->header;
         auto processed_e = ctx_load_processed_binary_file(ctx, header);
         if(processed_e.errored){
-            node_set_err(ctx, imgpath_node, "Unable to read '%.*s'", (int)header.length, header.text);
+            node_set_err_q(ctx, imgpath_node, SV("Unable to read "), header);
             Raise(processed_e.errored);
             }
         else {
@@ -830,7 +831,7 @@ RENDERFUNC(RAW){
     for(size_t i = 0; i < count; i++){
         auto child = get_node(ctx, children[i]);
         if(unlikely(child->type != NODE_STRING))
-            node_print_warning(ctx, child, "Raw node with a non-string child");
+            node_print_warning(ctx, child, SV("Raw node with a non-string child"));
         msb_write_str(sb, child->header.text, child->header.length);
         msb_write_char(sb, '\n');
         }
@@ -852,7 +853,7 @@ RENDERFUNC(PRE){
     for(size_t i = 0; i < count; i++){
         auto child = get_node(ctx, children[i]);
         if(unlikely(child->type != NODE_STRING))
-            node_print_warning(ctx, child, "pre node with a non-string child");
+            node_print_warning(ctx, child, SV("pre node with a non-string child"));
         write_tag_escaped_str(sb, child->header.text, child->header.length);
         msb_write_char(sb, '\n');
         }
@@ -861,9 +862,9 @@ RENDERFUNC(PRE){
     }
 RENDERFUNC(BULLETS){
     if(unlikely(node->header.length))
-        node_print_warning(ctx, node, "ignoring header on bullet list");
+        node_print_warning(ctx, node, SV("ignoring header on bullet list"));
     if(unlikely(node->classes.count))
-        node_print_warning(ctx, node, "Ignoring classes on bullet list");
+        node_print_warning(ctx, node, SV("Ignoring classes on bullet list"));
     msb_write_literal(sb, "<ul>\n");
     auto count = node->children.count;
     auto children = node->children.data;
@@ -877,9 +878,9 @@ RENDERFUNC(BULLETS){
     }
 RENDERFUNC(LIST){
     if(unlikely(node->header.length))
-        node_print_warning(ctx, node, "ignoring header on list");
+        node_print_warning(ctx, node, SV("ignoring header on list"));
     if(unlikely(node->classes.count))
-        node_print_warning(ctx, node, "Ignoring classes on list");
+        node_print_warning(ctx, node, SV("Ignoring classes on list"));
     msb_write_literal(sb, "<ol>\n");
     auto count = node->children.count;
     auto children = node->children.data;
@@ -894,9 +895,9 @@ RENDERFUNC(LIST){
 RENDERFUNC(LIST_ITEM){
     msb_write_literal(sb, "<li>\n");
     if(unlikely(node->header.length))
-        node_print_warning(ctx, node, "ignoring header on list item");
+        node_print_warning(ctx, node, SV("ignoring header on list item"));
     if(unlikely(node->classes.count))
-        node_print_warning(ctx, node, "Ignoring classes on list item");
+        node_print_warning(ctx, node, SV("Ignoring classes on list item"));
     auto count = node->children.count;
     auto children = node->children.data;
     for(size_t i = 0; i < count; i++){
@@ -956,7 +957,7 @@ RENDERFUNC(IMGLINKS){
         if(e.errored) return e;
         }
     if(node->children.count < 4){
-        node_set_err(ctx, node, "Too few children of an imglinks node (expected path to the image, width, height, viewBox in that order)");
+        node_set_err(ctx, node, LS("Too few children of an imglinks node (expected path to the image, width, height, viewBox in that order)"));
         Raise(PARSE_ERROR);
         }
 
@@ -964,13 +965,13 @@ RENDERFUNC(IMGLINKS){
     if(not (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME))){
         auto imgpath_node = get_node(ctx, node->children.data[0]);
         if(imgpath_node->type != NODE_STRING){
-            node_set_err(ctx, imgpath_node, "First should be a string and be the path to the image");
+            node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
             Raise(PARSE_ERROR);
             }
         auto header = imgpath_node->header;
         auto processed_e = ctx_load_processed_binary_file(ctx, header);
         if(processed_e.errored){
-            node_set_err(ctx, imgpath_node, "Unable to read '%.*s'", (int)header.length, header.text);
+            node_set_err_q(ctx, imgpath_node, SV("Unable to read "), header);
             Raise(processed_e.errored);
             }
         imgdatab64 = processed_e.result;
@@ -979,22 +980,22 @@ RENDERFUNC(IMGLINKS){
     {
         auto width_node = get_node(ctx, node->children.data[1]);
         if(width_node->type != NODE_STRING){
-            node_set_err(ctx, width_node, "Second should be a string and be 'width = WIDTH'");
+            node_set_err(ctx, width_node, LS("Second should be a string and be 'width = WIDTH'"));
             Raise(PARSE_ERROR);
             }
         auto header = width_node->header;
         auto pair = stripped_split(header.text, header.length, '=');
         if(pair.head.length == header.length){
-            node_set_err(ctx, width_node, "Missing a '='");
+            node_set_err(ctx, width_node, LS("Missing a '='"));
             Raise(PARSE_ERROR);
             }
         if(!SV_equals(pair.head, SV("width"))){
-            node_set_err(ctx, width_node, "Expected 'width', got '%.*s'", (int)pair.head.length, pair.head.text);
+            node_set_err_q(ctx, width_node, SV("Expected 'width', got "), pair.head);
             Raise(PARSE_ERROR);
             }
         auto e = parse_int(pair.tail.text, pair.tail.length);
         if(e.errored){
-            node_set_err(ctx, width_node, "Unable to parse an int from '%.*s'", (int)pair.tail.length, pair.tail.text);
+            node_set_err_q(ctx, width_node, SV("Unable to parse an int from "), pair.tail);
             Raise(PARSE_ERROR);
             }
         width = e.result;
@@ -1003,22 +1004,22 @@ RENDERFUNC(IMGLINKS){
     {
         auto height_node  = get_node(ctx, node->children.data[2]);
         if(height_node->type != NODE_STRING){
-            node_set_err(ctx, height_node, "Third should be a string and be 'height = HEIGHT'");
+            node_set_err(ctx, height_node, LS("Third should be a string and be 'height = HEIGHT'"));
             Raise(PARSE_ERROR);
             }
         auto header = height_node->header;
         auto pair = stripped_split(header.text, header.length, '=');
         if(pair.head.length == header.length){
-            node_set_err(ctx, height_node, "Missing a '='");
+            node_set_err(ctx, height_node, LS("Missing a '='"));
             Raise(PARSE_ERROR);
             }
         if(!SV_equals(pair.head, SV("height"))){
-            node_set_err(ctx, height_node, "Expected 'height', got '%.*s'", (int)pair.head.length, pair.head.text);
+            node_set_err_q(ctx, height_node, SV("Expected 'height', got "), pair.head);
             Raise(PARSE_ERROR);
             }
         auto e = parse_int(pair.tail.text, pair.tail.length);
         if(e.errored){
-            node_set_err(ctx, height_node, "Unable to parse an int from '%.*s'", (int)pair.tail.length, pair.tail.text);
+            node_set_err_q(ctx, height_node, SV("Unable to parse an int from "), pair.tail);
             Raise(PARSE_ERROR);
             }
         height = e.result;
@@ -1027,18 +1028,18 @@ RENDERFUNC(IMGLINKS){
     {
         auto viewBox_node = get_node(ctx, node->children.data[3]);
         if(viewBox_node->type != NODE_STRING){
-            node_set_err(ctx, viewBox_node, "Fourth should be a string and be 'viewbox = x0 y0 x1 y1'");
+            node_set_err(ctx, viewBox_node, LS("Fourth should be a string and be 'viewbox = x0 y0 x1 y1'"));
             Raise(PARSE_ERROR);
             }
         auto header = viewBox_node->header;
         const char* equals = memchr(header.text, '=', header.length);
         if(!equals){
-            node_set_err(ctx, viewBox_node, "Missing a '='");
+            node_set_err(ctx, viewBox_node, LS("Missing a '='"));
             Raise(PARSE_ERROR);
             }
         StringView lead = stripped_view(header.text, equals - header.text);
         if(!SV_equals(lead, SV("viewBox"))){
-            node_set_err(ctx, viewBox_node, "Expected 'viewBox', got '%.*s'", (int)lead.length, lead.text);
+            node_set_err_q(ctx, viewBox_node, SV("Expected 'viewBox', got "), lead);
             Raise(PARSE_ERROR);
             }
         const char* cursor = equals+1;
@@ -1046,7 +1047,7 @@ RENDERFUNC(IMGLINKS){
         const char* end = header.text + header.length;
         for(;;){
             if(cursor == end){
-                node_set_err(ctx, viewBox_node, "Unexpected end of line before we finished parsing the ints");
+                node_set_err(ctx, viewBox_node, LS("Unexpected end of line before we finished parsing the ints"));
                 Raise(PARSE_ERROR);
                 }
             switch(*cursor){
@@ -1056,7 +1057,7 @@ RENDERFUNC(IMGLINKS){
                 case '0' ... '9':
                     break;
                 default:
-                    node_set_err(ctx, viewBox_node, "Found non-numeric when trying to parse the viewBox");
+                    node_set_err(ctx, viewBox_node, LS("Found non-numeric when trying to parse the viewBox"));
                     Raise(PARSE_ERROR);
                 }
             const char* after_number = cursor+1;
@@ -1075,7 +1076,7 @@ RENDERFUNC(IMGLINKS){
             auto num_length = after_number - cursor;
             auto e = parse_int(cursor, num_length);
             if(e.errored){
-                node_set_err(ctx, viewBox_node, "Failed to parse an int from '%.*s'", (int)num_length, cursor);
+                node_set_err_q(ctx, viewBox_node, SV("Failed to parse an int from "), (StringView){.length=num_length, .text=cursor});
                 Raise(PARSE_ERROR);
                 }
             viewbox[which++] = e.result;
@@ -1091,17 +1092,18 @@ RENDERFUNC(IMGLINKS){
                     cursor++;
                     continue;
                 default:
-                    node_set_err(ctx, viewBox_node, "Found trailing text after successfully parsing 4 ints: '%.*s'", (int)(end - cursor), cursor);
+                    node_set_err_q(ctx, viewBox_node, SV("Found trailing text after successfully parsing 4 ints: "), (StringView){.text=cursor, .length = end-cursor});
                     Raise(PARSE_ERROR);
                 }
             }
     }
-    msb_sprintf(sb, "<svg width=\"%d\" height=\"%d\" viewbox=\"%d %d %d %d\" style=\"background-size: 100%% 100%%; ", width, height, viewbox[0], viewbox[1], viewbox[2], viewbox[3]);
+    MSB_FORMAT(sb, "<svg width=\"", width, "\" height=\"", height, "\" viewbox=\"", viewbox[0], " ", viewbox[1], " ", viewbox[2], " ", viewbox[3], "\" style=\"background-size: 100% 100%; ");
+
     if(ctx->flags & DNDC_USE_DND_URL_SCHEME){
         msb_write_literal(sb, "background-image: url('dnd:");
         auto imgpath_node = get_node(ctx, node->children.data[0]);
         if(imgpath_node->type != NODE_STRING){
-            node_set_err(ctx, imgpath_node, "First should be a string and be the path to the image");
+            node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
             Raise(PARSE_ERROR);
             }
         auto header = imgpath_node->header;
@@ -1119,7 +1121,7 @@ RENDERFUNC(IMGLINKS){
         msb_write_literal(sb, "background-image: url('");
         auto imgpath_node = get_node(ctx, node->children.data[0]);
         if(imgpath_node->type != NODE_STRING){
-            node_set_err(ctx, imgpath_node, "First should be a string and be the path to the image");
+            node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
             Raise(PARSE_ERROR);
             }
         auto header = imgpath_node->header;
@@ -1132,7 +1134,7 @@ RENDERFUNC(IMGLINKS){
         assert(imgdatab64.length);
         msb_write_str(sb, imgdatab64.text, imgdatab64.length);
         auto after = get_t();
-        report_stat(ctx, "Base64ing an imglinks took %.3fms", (after-before)/1000.);
+        report_time(ctx, SV("Base64ing an imglinks took "), after-before);
         msb_write_literal(sb, "');\">\n");
         }
     for(size_t i = 4; i < node->children.count; i++){
@@ -1142,24 +1144,24 @@ RENDERFUNC(IMGLINKS){
             // error on other nodes probably.
             if(child->type == NODE_PYTHON)
                 continue;
-            node_print_warning(ctx, child, "Non-string node child of imglinks node: '%s'", nodenames[child->type].text);
+            node_print_warning2(ctx, child, SV("Non-string node child of imglinks node: "), LS_to_SV(nodenames[child->type]));
             continue;
             }
         auto header = child->header;
         auto end = header.text + header.length;
         const char* equals = memchr(header.text, '=', header.length);
         if(!equals){
-            node_set_err(ctx, child, "No '=' found in an imglinks line");
+            node_set_err(ctx, child, LS("No '=' found in an imglinks line"));
             Raise(PARSE_ERROR);
             }
         const char* at = memchr(equals, '@', end - equals);
         if(!at){
-            node_set_err(ctx, child, "No '@' found in an imglinks line");
+            node_set_err(ctx, child, LS("No '@' found in an imglinks line"));
             Raise(PARSE_ERROR);
             }
         const char* comma = memchr(at, ',', end - at);
         if(!comma){
-            node_set_err(ctx, child, "No ',' found in an imglinks line separating the coordinates");
+            node_set_err(ctx, child, LS("No ',' found in an imglinks line separating the coordinates"));
             Raise(PARSE_ERROR);
             }
         auto first = stripped_view(header.text, equals - header.text);
@@ -1168,20 +1170,18 @@ RENDERFUNC(IMGLINKS){
         auto fourth = stripped_view(comma+1, end - (comma+1));
         auto x_err = parse_int(third.text, third.length);
         if(x_err.errored){
-            node_set_err(ctx, child, "Unable to parse an int from '%.*s'", (int)third.length, third.text);
+            node_set_err_q(ctx, child, SV("Unable to parse an int from "), third);
             Raise(x_err.errored);
             }
         auto x = x_err.result;
         auto y_err = parse_int(fourth.text, fourth.length);
         if(y_err.errored){
-            node_set_err(ctx, child, "Unable to parse an int from '%.*s'", (int)third.length, third.text);
+            node_set_err_q(ctx, child, SV("Unable to parse an int from "), fourth);
             Raise(y_err.errored);
             }
         auto y = y_err.result;
-        msb_sprintf(sb,
-                "<a href=\"%.*s\"><text style=\"text-anchor:middle;\" transform=\"translate(%d,%d)\">\n"
-                "%.*s\n"
-                "</text></a>\n", (int)second.length, second.text, x, y, (int)first.length, first.text);
+        MSB_FORMAT(sb, "<a href=\"", second, "\"><text style=\"text-anchor:middle;\" transform=\"translate(",x,",",y,")\">\n",
+                first, "\n</text></a>\n");
         }
     msb_write_literal(sb, "</svg>\n");
     msb_write_literal(sb, "</div>\n");
@@ -1226,7 +1226,7 @@ RENDERFUNC(MD){
     }
 RENDERFUNC(CONTAINER){
     if(node->header.length){
-        node_print_warning(ctx, node, "Ignoring container header.");
+        node_print_warning(ctx, node, SV("Ignoring container header."));
         }
     auto count = node->children.count;
     auto children = node->children.data;
@@ -1238,7 +1238,7 @@ RENDERFUNC(CONTAINER){
     return (Errorable(void)){};
     }
 RENDERFUNC(INVALID){
-    node_set_err(ctx, node, "Invalid node when rendering.");
+    node_set_err(ctx, node, LS("Invalid node when rendering."));
     (void)ctx;
     (void)sb;
     (void)node;

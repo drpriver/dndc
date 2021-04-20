@@ -3,12 +3,12 @@
 #include "string_testing.h"
 #include "MStringBuilder.h"
 #include "mallocator.h"
-#include "msb_sprintf.h"
+#include "msb_format.h"
 
 TestFunction(TestMStringBuilder1){
     TESTBEGIN();
     MStringBuilder sb = {.allocator=get_mallocator()};
-    msb_sprintf(&sb, "%s = %d\n", "hello there", 5);
+    MSB_FORMAT(&sb, "hello there", " = ", 5, "\n");
     auto s = msb_borrow(&sb);
     TestExpectSvEquals(s, SV("hello there = 5\n"));
     msb_destroy(&sb);

@@ -5,7 +5,6 @@
 // memcpy, memset
 #include <string.h>
 #include <stdbool.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include "common_macros.h"
 

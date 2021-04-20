@@ -12,6 +12,7 @@
 #include "ByteBuilder.h"
 #include "bb_extensions.h"
 #include "msb_extensions.h"
+#include "msb_format.h"
 #include "str_util.h"
 #include "path_util.h"
 
@@ -68,139 +69,148 @@ node_get_id(Nonnull(const Node*) node){
         }
     return id;
     }
-printf_func(3, 4)
 static
 void
-parse_set_err(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, Nonnull(const char*) fmt, ...){
-    MStringBuilder msb = {.allocator = ctx->allocator};
+parse_set_err(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, LongString msg){
     int col = (int)(errchar - ctx->linestart);
     ctx->error.filename = ctx->filename;
     ctx->error.line = ctx->lineno;
     ctx->error.col = col;
-    va_list args;
-    va_start(args, fmt);
-    msb_vsprintf(&msb, fmt, args);
-    va_end(args);
+    ctx->error.message = msg;
+    }
+
+static
+void
+parse_set_err_q(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, StringView msg, StringView quoted){
+    int col = (int)(errchar - ctx->linestart);
+    ctx->error.filename = ctx->filename;
+    ctx->error.line = ctx->lineno;
+    ctx->error.col = col;
+    MStringBuilder msb = {.allocator = ctx->allocator};
+    msb_write_str(&msb, msg.text, msg.length);
+    msb_write_char(&msb, '\'');
+    msb_write_str(&msb, quoted.text, quoted.length);
+    msb_write_char(&msb, '\'');
     ctx->error.message = msb_detach(&msb);
     }
 
-printf_func(3, 4)
 static
 void
-node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...){
+node_set_err_q(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView msg, StringView quoted){
     MStringBuilder msb = {.allocator=ctx->allocator};
     ctx->error.filename = node->filename;
     ctx->error.line = node->row;
     ctx->error.col = node->col;
-    va_list args;
-    va_start(args, fmt);
-    msb_vsprintf(&msb, fmt, args);
-    va_end(args);
+    msb_write_str(&msb, msg.text, msg.length);
+    msb_write_char(&msb, '\'');
+    msb_write_str(&msb, quoted.text, quoted.length);
+    msb_write_char(&msb, '\'');
     ctx->error.message = msb_detach(&msb);
     }
 
-printf_func(4, 5)
 static
 void
-node_set_err_offset(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, int offset, Nonnull(const char*) fmt, ...){
-    MStringBuilder msb = {.allocator=ctx->allocator};
+node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, LongString ls){
+    ctx->error.filename = node->filename;
+    ctx->error.line = node->row;
+    ctx->error.col = node->col;
+    ctx->error.message = ls;
+    }
+
+static
+void
+node_set_err_offset(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, int offset, LongString message){
     ctx->error.filename = node->filename;
     ctx->error.line = node->row;
     ctx->error.col = node->col+offset;
-    va_list args;
-    va_start(args, fmt);
-    msb_vsprintf(&msb, fmt, args);
-    va_end(args);
-    ctx->error.message = msb_detach(&msb);
+    ctx->error.message = message;
     }
 
-printf_func(3, 4)
 static
 void
-node_print_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...){
+node_print_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView msg){
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
     if(not ctx->error_func)
         return;
-    MStringBuilder msb = {.allocator=ctx->temp_allocator};
     auto filename = node->filename;
     auto lineno = node->row;
     int col = node->col;
-    va_list args;
-    va_start(args, fmt);
-    msb_vsprintf(&msb, fmt, args);
-    va_end(args);
-    auto msg = msb_borrow(&msb);
     ctx->error_func(ctx->error_user_data, DNDC_WARNING_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
-    msb_destroy(&msb);
     }
 
-printf_func(3, 4)
 static
 void
-node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, Nonnull(const char*) fmt, ...){
+node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView msg){
     if(ctx->flags & DNDC_SUPPRESS_WARNINGS)
         return;
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
     if(not ctx->error_func)
         return;
-    MStringBuilder msb = {.allocator=ctx->temp_allocator};
     auto filename = node->filename;
     auto lineno = node->row;
     int col = node->col;
-    va_list args;
-    va_start(args, fmt);
-    msb_vsprintf(&msb, fmt, args);
-    va_end(args);
+    ctx->error_func(ctx->error_user_data, DNDC_WARNING_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
+    }
+static
+void
+node_print_warning2(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView a, StringView b){
+    if(ctx->flags & DNDC_SUPPRESS_WARNINGS)
+        return;
+    if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
+        return;
+    if(not ctx->error_func)
+        return;
+    auto filename = node->filename;
+    auto lineno = node->row;
+    int col = node->col;
+    MStringBuilder msb = {.allocator = ctx->temp_allocator};
+    msb_write_str(&msb, a.text, a.length);
+    msb_write_str(&msb, b.text, b.length);
     auto msg = msb_borrow(&msb);
     ctx->error_func(ctx->error_user_data, DNDC_WARNING_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
     msb_destroy(&msb);
     }
 
-
 static
 void
-vreport_stat_raw(Nonnull(ErrorFunc*) error_func, Nullable(void*) error_user_data, Nonnull(const char*) fmt, va_list args){
-    char buff[256];
-    int printed = vsnprintf(buff, sizeof(buff), fmt, args);
-    // just truncate the message. These are short anyway.
-    if(printed >= sizeof(buff))
-        printed = sizeof(buff)-1;
-    error_func(error_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, buff, printed);
-}
-
-printf_func(4, 5)
-static inline
-void
-report_stat_raw(uint64_t flags, Nullable(ErrorFunc*) error_func, Nullable(void*) error_user_data, Nonnull(const char*) fmt, ...){
-    if(not (flags & DNDC_PRINT_STATS))
-        return;
-    if(not error_func)
-        return;
-    // remove nullable qualifier
-    ErrorFunc* func = error_func;
-    va_list args;
-    va_start(args, fmt);
-    vreport_stat_raw(func, error_user_data, fmt, args);
-    va_end(args);
-}
-
-printf_func(2, 3)
-static
-void
-report_stat(Nonnull(DndcContext*)ctx, Nonnull(const char*) fmt, ...){
+report_time(Nonnull(DndcContext*)ctx, StringView msg, uint64_t microseconds){
     if(not (ctx->flags & DNDC_PRINT_STATS))
         return;
     if(not ctx->error_func)
         return;
-    // remove nullable qualifier
-    ErrorFunc* func = ctx->error_func;
-    va_list args;
-    va_start(args, fmt);
-    vreport_stat_raw(func, ctx->error_user_data, fmt, args);
-    va_end(args);
-}
+    MStringBuilder temp = {.allocator=ctx->temp_allocator};
+    msb_write_str(&temp, msg.text, msg.length);
+    msb_write_us_as_ms(&temp, microseconds);
+    auto str = msb_borrow(&temp);
+    ctx->error_func(ctx->error_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, str.text, str.length);
+    msb_destroy(&temp);
+    }
+
+static
+void
+report_info(Nonnull(DndcContext*)ctx, StringView msg){
+    if(not (ctx->flags & DNDC_PRINT_STATS))
+        return;
+    if(not ctx->error_func)
+        return;
+    ctx->error_func(ctx->error_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, msg.text, msg.length);
+    }
+static
+void
+report_size(Nonnull(DndcContext*)ctx, StringView msg, uint64_t size){
+    if(not (ctx->flags & DNDC_PRINT_STATS))
+        return;
+    if(not ctx->error_func)
+        return;
+    MStringBuilder temp = {.allocator=ctx->temp_allocator};
+    msb_write_str(&temp, msg.text, msg.length);
+    msb_write_uint64(&temp, size);
+    auto str = msb_borrow(&temp);
+    ctx->error_func(ctx->error_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, str.text, str.length);
+    msb_destroy(&temp);
+    }
 
 static
 void
@@ -213,21 +223,13 @@ report_set_error(Nonnull(DndcContext*)ctx){
     }
 
 static
-printf_func(2, 3)
 void
-report_system_error(Nonnull(DndcContext*)ctx, Nonnull(const char*)fmt, ...){
+report_system_error(Nonnull(DndcContext*)ctx, StringView msg){
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
     if(not ctx->error_func)
         return;
-    MStringBuilder temp = {.allocator = ctx->temp_allocator};
-    va_list args;
-    va_start(args, fmt);
-    msb_vsprintf(&temp, fmt, args);
-    va_end(args);
-    auto msg = msb_borrow(&temp);
     ctx->error_func(ctx->error_user_data, DNDC_SYSTEM_MESSAGE, "", 0, 0, 0, msg.text, msg.length);
-    msb_destroy(&temp);
     }
 
 static inline
@@ -288,7 +290,7 @@ ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
     auto load_err = read_file(ctx->textcache.allocator, path);
     auto after = get_t();
     if(!load_err.errored){
-        report_stat(ctx, "Loading '%.*s' took %.3fms", (int)sourcepath.length, sourcepath.text, (after-before)/1000.);
+        report_time(ctx, SV("Loading a file took "), after-before);
         auto loaded = Marray_alloc(LoadedSource)(&ctx->textcache.files, ctx->textcache.allocator);
         loaded->sourcepath.text = path;
         loaded->sourcepath.length = sourcepath.length;
@@ -502,7 +504,7 @@ check_node_depth(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
     auto node = get_node(ctx, handle);
     enum {MAX_DEPTH=64};
     if(unlikely(depth > MAX_DEPTH)){
-        node_set_err(ctx, node, "Tree depth exceeded: %d > %d", depth, MAX_DEPTH);
+        node_set_err(ctx, node, LS("Tree depth exceeded: greater than 64"));
         return (Errorable(void)){.errored=PARSE_ERROR};
         }
     for(size_t i = 0; i < node->children.count; i++){

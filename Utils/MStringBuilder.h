@@ -2,7 +2,6 @@
 #define MSTRING_BUILDER_H
 #include <string.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <assert.h>
 #include "common_macros.h"
@@ -165,39 +164,6 @@ msb_erase(Nonnull(MStringBuilder*) msb, size_t len){
         }
     msb->cursor -= len;
     msb->data[msb->cursor] = '\0';
-    }
-
-// Sprintf into the builder. The builder figures out how long the resulting
-// string will be and ensures that much additional space.
-printf_func(2, 3)
-static inline
-int
-msb_sprintf(Nonnull(MStringBuilder*)msb, Nonnull(const char*) restrict fmt, ...){
-    va_list args, args2;
-    va_start(args, fmt);
-    va_copy(args2, args);
-    auto _msg_size = vsnprintf(NULL, 0, fmt, args)+1;
-    va_end(args);
-    _check_msb_size(msb, _msg_size);
-    auto result = vsnprintf(msb->data + msb->cursor, _msg_size, fmt, args2);
-    msb->cursor += result;
-    va_end(args2);
-    return result;
-    }
-
-// Like msb_sprintf, but for a va_list.
-static inline
-int
-msb_vsprintf(Nonnull(MStringBuilder*)msb, Nonnull(const char*)restrict fmt, va_list args){
-    va_list args2;
-    va_copy(args2, args);
-    auto _msg_size = vsnprintf(NULL, 0, fmt, args)+1;
-    va_end(args);
-    _check_msb_size(msb, _msg_size);
-    int result = vsnprintf(msb->data + msb->cursor, _msg_size, fmt, args2);
-    va_end(args2);
-    msb->cursor += result;
-    return result;
     }
 
 // Writes a string literal into the builder. Avoids the need to strlen

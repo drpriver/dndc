@@ -1,5 +1,5 @@
-#ifndef MSB_SPRINTF_H
-#define MSB_SPRINTF_H
+#ifndef MSB_FORMAT_H
+#define MSB_FORMAT_H
 
 #include <stdint.h>
 #include "MStringBuilder.h"
@@ -231,6 +231,17 @@ msb_write_uint(Nonnull(MStringBuilder*) sb, uint32_t value){
     }
 
 static inline
+void
+msb_write_uint64(Nonnull(MStringBuilder*) sb, uint64_t value){
+    char buff[20];
+    char* p = uint32_to_str_buffer(buff, value);
+    ptrdiff_t size = (buff+20) - p;
+    _check_msb_size(sb, size);
+    memcpy(sb->data+sb->cursor, p, size);
+    sb->cursor += size;
+    }
+
+static inline
 force_inline
 void
 msb_apply_format(Nonnull(MStringBuilder*)sb, FormatArg arg){
@@ -318,7 +329,7 @@ msb_format(Nonnull(MStringBuilder*)sb, size_t n_items, Nonnull(const FormatArg*)
     msb_apply_format(sb, FMT(f));\
     msb_apply_format(sb, FMT(g));\
 }while(0)
-#define MSB_FORMAT_IMPL8(sb, a, b, c, d, e, f, g, h) \ do {\
+#define MSB_FORMAT_IMPL8(sb, a, b, c, d, e, f, g, h) do {\
     msb_apply_format(sb, FMT(a));\
     msb_apply_format(sb, FMT(b));\
     msb_apply_format(sb, FMT(c));\
@@ -328,11 +339,69 @@ msb_format(Nonnull(MStringBuilder*)sb, size_t n_items, Nonnull(const FormatArg*)
     msb_apply_format(sb, FMT(g));\
     msb_apply_format(sb, FMT(h));\
 }while(0)
+#define MSB_FORMAT_IMPL9(sb, a, b, c, d, e, f, g, h, i) do {\
+    msb_apply_format(sb, FMT(a));\
+    msb_apply_format(sb, FMT(b));\
+    msb_apply_format(sb, FMT(c));\
+    msb_apply_format(sb, FMT(d));\
+    msb_apply_format(sb, FMT(e));\
+    msb_apply_format(sb, FMT(f));\
+    msb_apply_format(sb, FMT(g));\
+    msb_apply_format(sb, FMT(h));\
+    msb_apply_format(sb, FMT(i));\
+}while(0)
+#define MSB_FORMAT_IMPL10(sb, a, b, c, d, e, f, g, h, i, j) do {\
+    msb_apply_format(sb, FMT(a));\
+    msb_apply_format(sb, FMT(b));\
+    msb_apply_format(sb, FMT(c));\
+    msb_apply_format(sb, FMT(d));\
+    msb_apply_format(sb, FMT(e));\
+    msb_apply_format(sb, FMT(f));\
+    msb_apply_format(sb, FMT(g));\
+    msb_apply_format(sb, FMT(h));\
+    msb_apply_format(sb, FMT(i));\
+    msb_apply_format(sb, FMT(j));\
+}while(0)
+#define MSB_FORMAT_IMPL13(sb, a, b, c, d, e, f, g, h, i, j,k,l,m) do {\
+    msb_apply_format(sb, FMT(a));\
+    msb_apply_format(sb, FMT(b));\
+    msb_apply_format(sb, FMT(c));\
+    msb_apply_format(sb, FMT(d));\
+    msb_apply_format(sb, FMT(e));\
+    msb_apply_format(sb, FMT(f));\
+    msb_apply_format(sb, FMT(g));\
+    msb_apply_format(sb, FMT(h));\
+    msb_apply_format(sb, FMT(i));\
+    msb_apply_format(sb, FMT(j));\
+    msb_apply_format(sb, FMT(k));\
+    msb_apply_format(sb, FMT(l));\
+    msb_apply_format(sb, FMT(m));\
+}while(0)
 
-#define GET_ARG_11(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,N,...) N
-#define COUNT_MACRO_ARGS(...) GET_ARG_11( __VA_ARGS__, 10,9,8,7,6,5,4,3,2,1,I_CANNOT_SEE_ZERO_ARGS)
+#define GET_ARG_16(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,N,...) N
+#define COUNT_MACRO_ARGS(...) GET_ARG_16( __VA_ARGS__, 15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,I_CANNOT_SEE_ZERO_ARGS)
 
 #define MSB_FORMAT(sb, ...) SELECT_MSB_FORMAT(COUNT_MACRO_ARGS(__VA_ARGS__))(sb, __VA_ARGS__)
 
+static inline
+void
+msb_write_us_as_ms(Nonnull(MStringBuilder*)sb, uint64_t microseconds){
+    char buff[20];
+    char* p = uint64_to_str_buffer(buff, microseconds);
+    ptrdiff_t size = (buff+20) - p;
+    if(size <= 3){
+        msb_write_literal(sb, "0.");
+        if(size < 3){
+            msb_write_nchar(sb, '0', 3-size);
+            }
+        msb_write_str(sb, p, size);
+        }
+    else {
+        msb_write_str(sb, p, size-3);
+        msb_write_char(sb, '.');
+        msb_write_str(sb, p+size-3, 3);
+        }
+    msb_write_literal(sb, "ms");
+    }
 
 #endif 
