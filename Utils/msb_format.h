@@ -37,8 +37,8 @@ force_inline
 FormatArg
 padded_int_fmt(int value, int padding){
     return (FormatArg){
-        .type = FORMATTYPE_INT_PADDED, 
-        .padded_int.value=value, 
+        .type = FORMATTYPE_INT_PADDED,
+        .padded_int.value=value,
         .padded_int.padding=padding
     };
 }
@@ -68,7 +68,7 @@ force_inline
 FormatArg
 str_fmt(const char*_Nonnull value){
     return (FormatArg){
-        .type=FORMATTYPE_STRING, 
+        .type=FORMATTYPE_STRING,
         .string_value.text=value,
         .string_value.length=strlen(value),
     };
@@ -404,4 +404,4 @@ msb_write_us_as_ms(Nonnull(MStringBuilder*)sb, uint64_t microseconds){
     msb_write_literal(sb, "ms");
     }
 
-#endif 
+#endif

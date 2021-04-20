@@ -13,12 +13,14 @@
 #include "long_string.h"
 #include "MStringBuilder.h"
 #include "measure_time.h"
-#include "argument_parsing.h"
 #include "dndc_types.h"
 #include "thread_utils.h"
 #include "bb_extensions.h"
 #include "dndc_funcs.h"
 #include "dndc.h"
+#ifdef DNDCMAIN
+#include "argument_parsing.h"
+#endif
 
 #define DNDC_MAJOR 0
 #define DNDC_MINOR 4
@@ -1063,13 +1065,34 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
         }
     }
 
-#include "dndc_python.c"
 #include "dndc_htmlgen.c"
 #include "dndc_parser.c"
 #include "dndc_context.c"
 #include "allocator.c"
+#ifndef WASM
+#include "dndc_python.c"
+#include "terminal_logger.c"
+#else
+static
+Errorable_f(void)
+init_python_docparser(uint64_t flags){
+    Errorable(void) result = {};
+    if(flags & DNDC_PYTHON_IS_INIT)
+        return result;
+    result.errored = OS_ERROR;
+    return result;
+}
+static
+Errorable_f(void)
+execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)str, NodeHandle node){
+    (void)ctx, (void)str, (void)node;
+    return (Errorable(void)){.errored=OS_ERROR};
+    }
+
+#endif
 
 #ifndef PYTHONMODULE
+#ifndef WASM
 extern
 int
 dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongString*)output, Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data){
@@ -1103,7 +1126,6 @@ dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(ErrorFu
     auto e = run_the_dndc(flags, SV(""), source_text, output, (DependsArg){.path=LS("")}, NULL, NULL, error_func, error_user_data);
     return e.errored;
     }
-
 extern
 int
 dndc_init_python(void){
@@ -1123,7 +1145,6 @@ void
 dndc_free_string(LongString str){
     const_free(str.text);
 }
-#endif
 
 extern
 void
@@ -1141,6 +1162,8 @@ dndc_stderr_error_func(Nullable(void*)unused, int type, const char*_Nonnull file
     (void)message_len;
     fprintf(stderr, "%.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
     }
+#endif
+#endif
 
 
 static

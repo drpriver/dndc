@@ -2,6 +2,7 @@
 #define DNDC_HTMLGEN_C
 #include "dndc_types.h"
 #include "dndc_funcs.h"
+#include "log_print.h"
 #include "msb_extensions.h"
 #include "path_util.h"
 #include "str_util.h"
@@ -109,7 +110,7 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                         continue;
                     auto style_e = ctx_load_source_file(ctx, child->header);
                     if(style_e.errored){
-                        node_set_err_q(ctx, child, SV("Unable to load "), child->header); 
+                        node_set_err_q(ctx, child, SV("Unable to load "), child->header);
                         Raise(style_e.errored);
                         }
                     LongString style = style_e.result;

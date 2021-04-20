@@ -111,7 +111,14 @@ finally:
     CloseHandle(handle);
     return result;
     }
-
+#elif defined(WASM)
+static inline
+Errorable_f(void)
+bb_read_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const char*)filename){
+    (void)bb, (void)filename;
+    Errorable(void) result = {.errored=OS_ERROR};
+    return result;
+    }
 #endif
 
 //

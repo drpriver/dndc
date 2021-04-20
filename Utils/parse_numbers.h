@@ -103,17 +103,106 @@ parse_int64(Nonnull(const char*) str, size_t length){
     }
 
 static inline
+Errorable_f(uint32_t)
+parse_uint32(Nonnull(const char*)str, size_t length){
+    Errorable(uint32_t) result = {};
+    if (not length)
+        Raise(UNEXPECTED_END);
+    if (*str == '+'){
+        str++;
+        length--;
+        }
+    if(length > 10)
+        Raise(OVERFLOWED_VALUE); // UINT32_MAX is 10 characters
+    int bad = false;
+    uint32_t value = 0;
+    for(size_t i=0;i < length-1; i++){
+        unsigned cval = str[i];
+        cval -= '0';
+        if(cval > 9u)
+            bad = true;
+        value *= 10;
+        value += cval;
+        }
+    if(bad)
+        Raise(INVALID_SYMBOL);
+    // Handle the last char differently as it's the only
+    // one that can overflow.
+    {
+        unsigned cval = str[length-1];
+        cval -= '0';
+        if(cval > 9u)
+            Raise(INVALID_SYMBOL);
+        if(__builtin_mul_overflow(value, 10, &value))
+            Raise(OVERFLOWED_VALUE);
+        if(__builtin_add_overflow(value, cval, &value))
+            Raise(OVERFLOWED_VALUE);
+    }
+    result.result = value;
+    return result;
+    }
+// TODO: write tests
+static inline
+Errorable(int32_t)
+parse_int32(Nonnull(const char*)str, size_t length){
+    Errorable(int32_t) result = {};
+    if(not length)
+        Raise(UNEXPECTED_END);
+    bool negative = (*str == '-');
+    if(negative){
+        str++;
+        length--;
+        }
+    else if (*str == '+'){
+        str++;
+        length--;
+        }
+    if(length > 10) Raise(OVERFLOWED_VALUE); // INT32_max is 10 chars
+    int bad = false;
+    uint32_t value = 0;
+    for(size_t i=0;i < length-1; i++){
+        unsigned cval = str[i];
+        cval -= '0';
+        if(cval > 9u)
+            bad = true;
+        value *= 10;
+        value += cval;
+        }
+    if(bad)
+        Raise(INVALID_SYMBOL);
+    // Handle the last char differently as it's the only
+    // one that can overflow.
+    {
+        unsigned cval = str[length-1];
+        cval -= '0';
+        if(cval > 9u)
+            Raise(INVALID_SYMBOL);
+        if(__builtin_mul_overflow(value, 10, &value))
+            Raise(OVERFLOWED_VALUE);
+        if(__builtin_add_overflow(value, cval, &value))
+            Raise(OVERFLOWED_VALUE);
+    }
+    if(negative){
+        if(value > (uint32_t)INT32_MAX+1){
+            Raise(OVERFLOWED_VALUE);
+            }
+        value *= -1;
+        }
+    else{
+        if(value > (uint32_t)INT32_MAX)
+            Raise(OVERFLOWED_VALUE);
+        }
+    result.result = value;
+    return result;
+}
+
+static inline
 Errorable_f(int)
 parse_int(Nonnull(const char*) str, size_t length){
-    Errorable(int) result = {};
-    auto e = parse_int64(str, length);
-    if(unlikely(e.errored))
-        Raise(e.errored);
-    int64_t val = e.result;
-    if(val > INT_MAX or val < INT_MIN){
-        Raise (OVERFLOWED_VALUE);
-        }
-    result.result = (int)val;
+    Errorable(int) result;
+    auto e = parse_int32(str, length);
+    result.errored = e.errored;
+    result.result = e.result;
     return result;
     }
 

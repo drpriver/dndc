@@ -39,8 +39,8 @@ recording_ensure_capacity(Nonnull(RecordingAllocator*) r){
         }
     size_t old_cap = r->capacity;
     size_t new_cap = old_cap * 2;
-    r->allocations = realloc(r->allocations, new_cap*sizeof(*r->allocations));
-    r->allocation_sizes = realloc(r->allocation_sizes, new_cap*sizeof(*r->allocation_sizes));
+    r->allocations = sane_realloc(r->allocations, old_cap * sizeof(*r->allocations), new_cap*sizeof(*r->allocations));
+    r->allocation_sizes = sane_realloc(r->allocation_sizes, old_cap*sizeof(*r->allocation_sizes), new_cap*sizeof(*r->allocation_sizes));
     r->capacity = new_cap;
     }
 
@@ -146,7 +146,7 @@ recording_realloc(Nonnull(RecordingAllocator*)r, Nullable(void*)data, size_t ori
             break;
             }
         }
-    void* result = realloc(data, new_size);
+    void* result = sane_realloc(data, orig_size, new_size);
     recording_ensure_capacity(r);
     size_t index = r->count++;
     r->allocations[index] = result;

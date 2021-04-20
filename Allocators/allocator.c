@@ -54,6 +54,7 @@ Allocator_alloc(const Allocator a, size_t size){
             break;
     PopDiagnostic();
         }
+    unreachable();
     }
 
 MALLOC_FUNC
@@ -80,6 +81,7 @@ Allocator_zalloc(const Allocator a, size_t size){
             break;
     PopDiagnostic();
         }
+    unreachable();
     }
 
 ALLOCATOR_SIZE(4)
@@ -95,7 +97,7 @@ Allocator_realloc(const Allocator a, Nullable(void*) data, size_t orig_size, siz
         case ALLOCATOR_LINEAR:
             return linear_realloc(a._data, data, orig_size, size);
         case ALLOCATOR_MALLOC:
-            return realloc(data, size);
+            return sane_realloc(data, orig_size, size);
         case ALLOCATOR_RECORDED:
             return recording_realloc(a._data, data, orig_size, size);
     PushDiagnostic();
@@ -105,6 +107,7 @@ Allocator_realloc(const Allocator a, Nullable(void*) data, size_t orig_size, siz
             break;
     PopDiagnostic();
         }
+    unreachable();
     }
 
 static inline

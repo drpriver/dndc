@@ -234,4 +234,10 @@
 // Always want logging, so include that.
 #include "log_print.h"
 
+#ifndef WASM
+#define sane_realloc(ptr, orig_size, size) realloc(ptr, size)
+#else
+static void* sane_realloc(void* ptr, size_t orig_size, size_t size);
+#endif
+
 #endif

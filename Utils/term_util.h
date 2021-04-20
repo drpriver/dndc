@@ -45,6 +45,12 @@ get_terminal_size(void){
         }
     return (TermSize){80, 24};
     }
+#elif defined(WASM)
+static inline
+TermSize
+get_terminal_size(void){
+    return (TermSize){80, 24};
+    }
 #else
 #include <unistd.h>
 #include <sys/ioctl.h>

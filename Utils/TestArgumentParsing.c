@@ -302,7 +302,21 @@ TestFunction(TestIntegerParsing){
     TestAssertFailure(e);
     }
 #undef TESTUINT
-
+#define TESTINT(N) do { \
+    auto e = parse_int(#N, sizeof(#N)-1); \
+    TestAssertSuccess(e); \
+    auto val = e.result; \
+    TestExpectEquals(val, N); \
+    }while(0)
+    TESTINT(3);
+    TESTINT(0);
+    TESTINT(-1);
+    TESTINT(9999);
+    TESTINT(2147483647);  // INTMAX
+    TESTINT(-2147483647); // INTMIN+1
+    TESTINT(-1298);
+    TESTINT(31928);
+    TESTINT(1128312123);
 #undef TESTINT
     TESTEND();
     }

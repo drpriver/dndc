@@ -146,6 +146,25 @@ join_thread(ThreadHandle handle){
     unhandled_error_condition(result != WAIT_OBJECT_0);
     }
 
+#elif defined(WASM)
+#define THREADFUNC(name) unsigned long (name)(Nullable(void*)thread_arg)
+typedef THREADFUNC(thread_func);
+typedef struct ThreadHandle {
+    int unused;
+} ThreadHandle;
+
+static
+void
+create_thread(Nonnull(ThreadHandle*)handle, Nonnull(thread_func*) func, Nullable(void*)thread_arg){
+    (void)handle;
+    (void)func;
+    }
+
+static
+void
+join_thread(ThreadHandle handle){
+    (void)handle;
+    }
 #else
 #error "Unhandled threading platform."
 #endif

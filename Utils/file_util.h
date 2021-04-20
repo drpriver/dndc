@@ -369,5 +369,33 @@ finally:
     return result;
     }
 
+#elif defined(WASM)
+static inline
+Errorable_f(LongString)
+read_file(const Allocator a, Nonnull(const char*)filepath){
+    (void)a;
+    (void)filepath;
+    Errorable(LongString) result = {.errored=OS_ERROR};
+    return result;
+    }
+
+static inline
+Errorable_f(ByteBuffer)
+read_bin_file(const Allocator a, Nonnull(const char*)filepath){
+    (void)a;
+    (void)filepath;
+    Errorable(ByteBuffer) result = {.errored=OS_ERROR};
+    return result;
+    }
+static inline
+Errorable_f(void)
+write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_length){
+    (void)filename;
+    (void)data;
+    (void)data_length;
+    Errorable(void) result = {.errored=OS_ERROR};
+    return result;
+    }
 #endif
+
 #endif

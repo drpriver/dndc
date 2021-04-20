@@ -1,0 +1,116 @@
+::div.container
+  ::raw
+    <iframe width=800 height=800></iframe>
+  ::raw
+    <textarea class="right">
+    </textarea>
+::js @inline
+  //endjs
+::python
+  ctx.add_dependency('Objs/dndc.wasm')
+  import base64
+  inline = ctx.select_nodes(NodeType.SCRIPTS, attributes=['inline'])[0]
+  b64 = base64.b64encode(open('Objs/dndc.wasm', 'rb').read()).decode('utf-8')
+  inline.add_child(f'const prog64 = "{b64}";')
+  #endpython
+
+::css @inline
+  .container {
+    display: grid;
+  }
+  iframe {
+    width: 100%;
+    height: 100%;
+    grid-column: 1
+    grid-row: 1
+  }
+  .right {
+    width: 100%;
+    height: 100%;
+    grid-column: 2;
+    grid-row: 1;
+  }
+  textarea {
+    font-family: Menlo, Mono;
+  }
+::js @inline
+  var wasm;
+  var wasm_instance;
+  var decoder = new TextDecoder();
+  var encoder = new TextEncoder();
+  var memory;
+  function marshall_string(string){
+      let encoded = encoder.encode(string)
+      let p = wasm_instance.exports.malloc(encoded.length);
+      let lengthp = memory.subarray(p, p+4);
+      lengthp[0] = (encoded.length >> 0) & 255;
+      lengthp[1] = (encoded.length >> 8) & 255;
+      lengthp[2] = (encoded.length >> 16) & 255;
+      lengthp[3] = (encoded.length >> 24) & 255;
+      let sub = memory.subarray(p+4, p+4+encoded.length);
+      memory[p+4+encoded.length] = 0;
+      sub.set(encoded);
+      return p;
+  }
+  function wasm_string_to_js(pstring){
+      let sub = memory.subarray(pstring, pstring+4);
+      let length = sub[0]| (sub[1]<<8) | (sub[2]<<16) | (sub[3]<<24);
+      let textmem = memory.subarray(pstring+4, pstring+4+length);
+      let text = decoder.decode(textmem);
+      return text;
+  }
+  var imports = {
+      env: {
+          logi32: function(i) {
+              console.log(i);
+          },
+          log_string: function(p, len){
+              let sub = memory.subarray(p, p+len);
+              console.log(decoder.decode(sub));
+          },
+          dom_write: function(p, len){
+              let sub = memory.subarray(p, p+len);
+              document.body.innerHTML += decoder.decode(sub);
+          },
+          input: function(){
+              const text = prompt("input:");
+              return marshall_string(text);
+          },
+      }
+  };
+  const wasm_buffer = Uint8Array.from(atob(prog64), c => c.charCodeAt(0)).buffer;
+  WebAssembly.compile(wasm_buffer).then(x => {
+      wasm = x;
+      WebAssembly.instantiate(wasm, imports).then(x => {;
+          wasm_instance = x;
+          wasm_instance.exports.memory.grow(1024);
+          memory = new Uint8Array(wasm_instance.exports.memory.buffer);
+      });
+  });
+
+  function dndc_make_html(string){
+      wasm_instance.exports.reset_memory();
+      const marshalled = marshall_string(string);
+      let result = wasm_instance.exports.make_html(marshalled);
+      if(result){
+          const jsresult = wasm_string_to_js(result);
+          return jsresult;
+      }
+      throw new Error("Some error in htmlgen");
+  }
+
+  function set_dnd(string){
+      const html = dndc_make_html(string);
+      const iframe = document.getElementsByTagName('iframe')[0];
+      iframe.srcdoc = html;
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    const ta = document.getElementsByTagName('textarea')[0];
+    ta.addEventListener('input', function(){
+      const before = window.performance.now();
+      set_dnd(ta.value);
+      const after = window.performance.now();
+      console.log(after - before);
+    });
+  });
+  //endjs

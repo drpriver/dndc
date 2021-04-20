@@ -1487,7 +1487,6 @@ docparse_init_types(void){
     return result;
     }
 
-#include "terminal_logger.c"
 #define SUPPRESS_BUILTIN_MODS
 #define NO_AUX
 
