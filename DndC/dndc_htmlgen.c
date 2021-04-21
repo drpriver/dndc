@@ -142,6 +142,20 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                 msb_write_literal(msb, "</script>\n");
                 continue;
                 }
+            if(node_has_attribute(node, SV("noinline"))){
+                msb_erase(msb, sizeof("<script>\n")-1);
+                if(node->children.count != 1){
+                    if(node->children.count)
+                        node_print_warning(ctx, node, SV("Lines afer the first of a noninline js block are ignored"));
+                    else {
+                        node_print_warning(ctx, node, SV("Empty noinline js block"));
+                        continue;
+                        }
+                    }
+                auto child  = get_node(ctx, node->children.data[0]);
+                MSB_FORMAT(msb, "<script src=\"", child->header, "\"></script>\n");
+                continue;
+                }
             for(size_t j = 0; j < node->children.count; j++){
                 auto child = get_node(ctx, node->children.data[j]);
                 if(unlikely(child->type != NODE_STRING)){
@@ -521,6 +535,12 @@ RENDERFUNC(TEXT){
 RENDERFUNC(DIV){
     msb_write_literal(sb, "<div");
     write_classes(sb, node);
+    if(!node->header.length){
+        auto id = node_get_id(node);
+        if(id){
+            MSB_FORMAT(sb, " id=\"", *id, "\"");
+            }
+        }
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
