@@ -234,7 +234,7 @@ static inline
 void
 msb_write_uint64(Nonnull(MStringBuilder*) sb, uint64_t value){
     char buff[20];
-    char* p = uint32_to_str_buffer(buff, value);
+    char* p = uint64_to_str_buffer(buff, value);
     ptrdiff_t size = (buff+20) - p;
     _check_msb_size(sb, size);
     memcpy(sb->data+sb->cursor, p, size);
