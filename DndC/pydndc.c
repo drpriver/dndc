@@ -356,6 +356,10 @@ PyInit_pydndc(void) {
     PyModule_AddIntConstant(mod, "NO_THREADS", DNDC_NO_THREADS);
     PyModule_AddIntConstant(mod, "USE_DND_URL_SCHEME", DNDC_USE_DND_URL_SCHEME);
     PyModule_AddIntConstant(mod, "PRINT_STATS", DNDC_PRINT_STATS);
+    PyModule_AddIntConstant(mod, "ERROR_MESSAGE", DNDC_ERROR_MESSAGE);
+    PyModule_AddIntConstant(mod, "WARNING_MESSAGE", DNDC_WARNING_MESSAGE);
+    PyModule_AddIntConstant(mod, "SYSTEM_MESSAGE", DNDC_SYSTEM_MESSAGE);
+    PyModule_AddIntConstant(mod, "STATISTIC_MESSAGE", DNDC_STATISTIC_MESSAGE);
     return mod;
 }
 
