@@ -17,12 +17,14 @@
 ::css @inline
   .container {
     display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr;
   }
   iframe {
     width: 100%;
     height: 100%;
-    grid-column: 1
-    grid-row: 1
+    grid-column: 1;
+    grid-row: 1;
   }
   .right {
     width: 100%;
@@ -33,6 +35,7 @@
   textarea {
     font-family: Menlo, Mono;
   }
+  /*endcss*/
 ::js @inline
   var wasm;
   var wasm_instance;
@@ -89,11 +92,16 @@
   });
 
   function dndc_make_html(string){
+      if(!string.length)
+        return "";
+      const before = performance.now();
       wasm_instance.exports.reset_memory();
       const marshalled = marshall_string(string);
       let result = wasm_instance.exports.make_html(marshalled);
       if(result){
           const jsresult = wasm_string_to_js(result);
+          const after = performance.now();
+          console.log(`after-before: ${after-before}ms`);
           return jsresult;
       }
       throw new Error("Some error in htmlgen");
@@ -107,10 +115,10 @@
   document.addEventListener('DOMContentLoaded', function(){
     const ta = document.getElementsByTagName('textarea')[0];
     ta.addEventListener('input', function(){
-      const before = window.performance.now();
+      // const before = window.performance.now();
       set_dnd(ta.value);
-      const after = window.performance.now();
-      console.log(after - before);
+      // const after = window.performance.now();
+      // console.log(after - before);
     });
   });
   //endjs

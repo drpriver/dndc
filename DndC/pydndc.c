@@ -293,7 +293,7 @@ PyMethodDef pydndc_methods[] = {
         "Returns:\n"
         "--------\n"
         "dict: The dict of syntactic regions.\n"
-        "The dictionary a mapping of lines (0-based) as the keys to a tuple of\n"
+        "The dictionary is a mapping of lines (0-based) as the keys to a tuple of\n"
         "(type, col, byteoffset, length)\n"
         "col, byteoffeset and length are all in bytes of utf-8.\n"
         "The type is one of the following:\n"

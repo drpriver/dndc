@@ -1,3 +1,6 @@
+Id Bug::md
+  There is an issue that for many nodes I am not properly generating
+  ids. This can be a problem.
 Syntax Highlighting::md
   For guis, we need to be able to syntax analyze the document.
 
