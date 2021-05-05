@@ -68,22 +68,10 @@ size_t strlen(const char* p){
 // static inline
 void*_Null_unspecified
 memcpy(void*_Nonnull dst, const void*_Nonnull src, size_t nbytes){
-#if 0
-    uint64_t* d = dst;
-    const uint64_t* s = src;
-    while((nbytes-= 8)>7)
-        *(d++) = *(s++);
-    char* dc = (char*)d;
-    const char* sc = (const char*)s;
-    while(nbytes--)
-        *(dc++) = *(sc++);
-#else
     char* d = dst;
     const char* s = src;
-    while(nbytes--){
-        *(d++) = *(s++);
-        }
-#endif
+    while(nbytes--)
+        *d++ = *s++;
     return dst;
 }
 
@@ -92,10 +80,10 @@ void
 bzero(void*_Nonnull s, size_t nbytes){
     uint64_t* dl = s;
     while((nbytes-=8) > 7)
-        *(dl++) = 0;
+        *dl++ = 0;
     char* d = (char*)dl;
     while(nbytes--)
-        *(d++) = 0;
+        *d++ = 0;
 }
 
 void*
@@ -103,7 +91,7 @@ memset(void*_Nonnull s, int c, size_t n){
     unsigned char* str = s;
     unsigned char ch = c;
     while(n--)
-        *(str++) = ch;
+        *str++ = ch;
     return s;
 }
 
@@ -212,8 +200,8 @@ memcmp(const void* s1, const void* s2, size_t n){
     const unsigned char* pa = s1;
     const unsigned char* pb = s2;
     while(n--){
-        unsigned char a = *(pa++);
-        unsigned char b = *(pb++);
+        unsigned char a = *pa++;
+        unsigned char b = *pb++;
         int diff = a - b;
         if(diff)
             return diff;
@@ -225,8 +213,8 @@ strcmp(const char* s1, const char* s2){
     const unsigned char* pa = s1;
     const unsigned char* pb = s2;
     for(;;){
-        unsigned char a = *(pa++);
-        unsigned char b = *(pb++);
+        unsigned char a = *pa++;
+        unsigned char b = *pb++;
         int diff = a - b;
         if(diff)
             return diff;
@@ -243,9 +231,8 @@ memmove(void* dst, const void* src, size_t len){
     if(src < dst){
         char* d_end = dst + len;
         const char* s_end = src+len;
-        while(len--){
-            *(--d_end) = *(--s_end);
-            }
+        while(len--)
+            *--d_end = *--s_end;
         return dst;
         }
     else

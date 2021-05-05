@@ -2,15 +2,6 @@
 #define STDLIB_H
 #include "allstd.h"
 #define alloca __builtin_alloca
-#define LT_FUNC(name, type, arg1, arg2, comparison) \
-    static inline \
-    force_inline \
-    bool \
-    name(const void* a_, const void*b_){ \
-        const type* arg1 = a_; \
-        const type* arg2 = b_; \
-        return comparison ; \
-        }
 typedef int comparator(const void*, const void*);
 
 typedef struct UntypedSlice {
@@ -29,10 +20,10 @@ static inline bool is_sorted(void*, size_t, comparator*, size_t);
 
 static inline
 void
-array_sort_insertion(void* data, size_t n_items, comparator* lt, size_t item_size){
+array_sort_insertion(void* data, size_t n_items, comparator* cmp, size_t item_size){
     void* temp = alloca(item_size);
     for(size_t i = 1; i < n_items; i++){
-        for(size_t j = i; (j > 0) && lt(data+j*item_size, data + (j-1)*item_size) < 0; j--){
+        for(size_t j = i; (j > 0) && cmp(data+j*item_size, data + (j-1)*item_size) < 0; j--){
             void* a = data + (j-1)*item_size;
             void* b = data + j*item_size;
             memcpy(temp, a, item_size);
@@ -40,18 +31,16 @@ array_sort_insertion(void* data, size_t n_items, comparator* lt, size_t item_siz
             memcpy(b, temp, item_size);
             }
         }
-    return;
     }
 
 static inline
 void
-array_sort(Nonnull(void*) data, size_t n_items, Nonnull(comparator*) lt, size_t item_size){
+array_sort(Nonnull(void*) data, size_t n_items, Nonnull(comparator*) cmp, size_t item_size){
     if(n_items*item_size <= 256 || n_items < 4){
-        array_sort_insertion(data, n_items, lt, item_size);
+        array_sort_insertion(data, n_items, cmp, item_size);
         return;
         }
-    array_sort_d(data, n_items, lt, item_size, n_items);
-    return;
+    array_sort_d(data, n_items, cmp, item_size, n_items);
     }
 
 static inline
@@ -63,12 +52,11 @@ memswap(Nonnull(void*)a, Nonnull(void*) b, size_t memsize){
     memcpy(temp, a, memsize);
     memcpy(a, b, memsize);
     memcpy(b, temp, memsize);
-    return;
     }
 
 static inline
 void
-array_sort_d(Nonnull(void*) data, size_t n_items, Nonnull(comparator*) lt, size_t item_size, size_t depth){
+array_sort_d(Nonnull(void*) data, size_t n_items, Nonnull(comparator*) cmp, size_t item_size, size_t depth){
     const size_t short_sort_better = 1024/item_size > 32? 1024/item_size : 32;
     UntypedSlice r = {.data=data, .count = n_items};
     void* pivot = alloca(item_size);
@@ -76,24 +64,24 @@ array_sort_d(Nonnull(void*) data, size_t n_items, Nonnull(comparator*) lt, size_
         if(!depth){
             // something is fucked up here
             // my heap sort is broken is my conclusion
-            heap_sort(&r, lt, item_size);
+            heap_sort(&r, cmp, item_size);
             return;
             }
-        depth *= 2llu;
-        depth /= 3llu;
+        depth *= 2u;
+        depth /= 3u;
         // depth = depth >= UINT64_MAX / 2 ? (depth / 3) * 2: (depth * 2) / 3;
-        size_t pivot_index = get_pivot(&r, lt, item_size);
+        size_t pivot_index = get_pivot(&r, cmp, item_size);
         memcpy(pivot, r.data + pivot_index * item_size, item_size);
         memswap(r.data + pivot_index*item_size, r.data + (r.count-1)*item_size, item_size);
         size_t less_I = (size_t)-1;
         size_t greater_I = r.count - 1;
         for(;;){
-            while(lt(r.data + (++less_I)*item_size, pivot) < 0)
+            while(cmp(r.data + (++less_I)*item_size, pivot) < 0)
                 ;
             for(;;){
                 if(greater_I == less_I)
                     goto breakouter;
-                if(lt(pivot, r.data+ (--greater_I)*item_size) >= 0)
+                if(cmp(pivot, r.data+ (--greater_I)*item_size) >= 0)
                     break;
                 }
             if(less_I == greater_I)
@@ -106,87 +94,87 @@ array_sort_d(Nonnull(void*) data, size_t n_items, Nonnull(comparator*) lt, size_
         UntypedSlice right = {r.data+(less_I+1)*item_size, .count = r.count - less_I - 1};
         if(right.count > left.count)
             memswap(&left, &right, sizeof(left));
-        array_sort_d(right.data, right.count, lt, item_size, depth);
+        array_sort_d(right.data, right.count, cmp, item_size, depth);
         r = left;
         }
-    short_sort(r.data, r.count, lt, item_size);
+    short_sort(r.data, r.count, cmp, item_size);
     }
 
 static inline
 void
-short_sort(Nonnull(void*) data, size_t n_items, Nonnull(comparator*) lt, size_t item_size){
+short_sort(Nonnull(void*) data, size_t n_items, Nonnull(comparator*) cmp, size_t item_size){
     switch(n_items){
         case 0: case 1: return;
-        case 2: {
-            if(lt(data+item_size, data) < 0)
+        case 2:{
+            if(cmp(data+item_size, data) < 0)
                 memswap(data+item_size, data, item_size);
             }return;
-        case 3: {
-            if (lt(data + 2*item_size, data) < 0){
-                if (lt(data, data+item_size) < 0) {
+        case 3:{
+            if(cmp(data + 2*item_size, data) < 0){
+                if(cmp(data, data+item_size) < 0) {
                     memswap(data, data+item_size, item_size);
                     memswap(data, data+2*item_size, item_size);
                     }
                 else {
                     memswap(data, data+2*item_size, item_size);
-                    if (lt(data + item_size, data) < 0)
+                    if(cmp(data + item_size, data) < 0)
                         memswap(data, data+item_size, item_size);
                     }
                 }
             else {
-                if (lt(data+item_size, data) < 0) {
+                if(cmp(data+item_size, data) < 0) {
                     memswap(data, data+item_size, item_size);
                     }
                 else {
-                    if (lt(data + 2*item_size, data+item_size) < 0)
+                    if(cmp(data + 2*item_size, data+item_size) < 0)
                         memswap(data+item_size, data+2*item_size, item_size);
                     }
                 }
             }return;
         case 4:{
-            if (lt(data+item_size, data) < 0)
+            if(cmp(data+item_size, data) < 0)
                 memswap(data, data+item_size, item_size);
-            if (lt(data+item_size*3, data+item_size*2) < 0)
+            if(cmp(data+item_size*3, data+item_size*2) < 0)
                 memswap(data+item_size*2, data+item_size*3, item_size);
-            if (lt(data+item_size*2, data) < 0)
+            if(cmp(data+item_size*2, data) < 0)
                 memswap(data, data+item_size*2, item_size);
-            if (lt(data+item_size*3, data+item_size) < 0)
+            if(cmp(data+item_size*3, data+item_size) < 0)
                 memswap(data+item_size, data+item_size*3, item_size);
-            if (lt(data+item_size*2, data+item_size) < 0)
+            if(cmp(data+item_size*2, data+item_size) < 0)
                 memswap(data+item_size, data+item_size*2, item_size);
             }return;
         default:{
             // sort the last 5 elements
             void* last5 = data + item_size * (n_items-5);
             // 1. Sort first two pairs
-            if (lt(last5+1*item_size, last5) < 0)
+            if (cmp(last5+1*item_size, last5) < 0)
                 memswap(last5+0*item_size, last5+1*item_size, item_size);
-            if (lt(last5+3*item_size, last5+2*item_size) < 0)
+            if (cmp(last5+3*item_size, last5+2*item_size) < 0)
                 memswap(last5+2*item_size, last5+3*item_size, item_size);
             // 2. Arrange first two pairs by the largest element
-            if (lt(last5+3*item_size, last5+1*item_size) < 0) {
+            if (cmp(last5+3*item_size, last5+1*item_size) < 0) {
                 memswap(last5, last5+2*item_size, item_size);
                 memswap(last5+1*item_size, last5+3*item_size, item_size);
                 }
             // 3. Insert 4 into [0, 1, 3]
-            if (lt(last5+4*item_size, last5+1*item_size) < 0) {
+            if (cmp(last5+4*item_size, last5+1*item_size) < 0) {
                 memswap(last5+3*item_size, last5+4*item_size, item_size);
                 memswap(last5+1*item_size, last5+3*item_size, item_size);
-                if (lt(last5+1*item_size, last5) < 0) {
+                if (cmp(last5+1*item_size, last5) < 0) {
                     memswap(last5+0*item_size, last5+1*item_size, item_size);
                     }
                 }
-            else if (lt(last5+4*item_size, last5+3*item_size) < 0) {
+            else if (cmp(last5+4*item_size, last5+3*item_size) < 0) {
                 memswap(last5+3*item_size, last5+4*item_size, item_size);
                 }
             // 4. Insert 2 into [0, 1, 3, 4] (note: we already know the last is greater)
-            if (lt(last5+2*item_size, last5+1*item_size) < 0){
+            if (cmp(last5+2*item_size, last5+1*item_size) < 0){
                 memswap(last5+1*item_size, last5+2*item_size, item_size);
-                if (lt(last5+1*item_size, last5) < 0) {
+                if (cmp(last5+1*item_size, last5) < 0) {
                     memswap(last5, last5+1*item_size, item_size);
                     }
                 }
-            else if (lt(last5+3*item_size, last5+2*item_size) < 0) {
+            else if (cmp(last5+3*item_size, last5+2*item_size) < 0) {
                 memswap(last5+2*item_size, last5+3*item_size, item_size);
                 }
             // 7 comparisons, 0-9 swaps
@@ -194,29 +182,27 @@ short_sort(Nonnull(void*) data, size_t n_items, Nonnull(comparator*) lt, size_t 
                 return;
             }break;
         }
-    /*
-     * The last 5 elements of the range are sorted.
-     * Proceed with expanding the sorted portion downward.
-     */
+
+    // The last 5 elements of the range are sorted.
+    // Proceed with expanding the sorted portion downward.
     void* temp = alloca(item_size);
     for(size_t i = n_items - 6; ;i--){
         size_t j = i + 1;
         memcpy(temp, data+i*item_size, item_size);
-        if(lt(data+j*item_size, temp) < 0){
+        if(cmp(data+j*item_size, temp) < 0){
             do {
                 memcpy(data+(j-1)*item_size, data+j*item_size, item_size);
                 j++;
-                } while(j < n_items && (lt(data + j*item_size, temp) < 0));
+                } while(j < n_items && (cmp(data + j*item_size, temp) < 0));
             memcpy(data+(j-1)*item_size, temp, item_size);
             }
         if(i == 0)
             break;
         }
-
     }
 static inline
 size_t
-get_pivot(Nonnull(UntypedSlice*) r, Nonnull(comparator*) lt, size_t item_size){
+get_pivot(Nonnull(UntypedSlice*) r, Nonnull(comparator*) cmp, size_t item_size){
     void* data = r->data;
     size_t mid = r->count / 2;
     if(r->count < 512){
@@ -225,23 +211,23 @@ get_pivot(Nonnull(UntypedSlice*) r, Nonnull(comparator*) lt, size_t item_size){
             size_t a = 0;
             size_t b = mid;
             size_t c = r->count - 1;
-            if (lt(data+c*item_size, data+a*item_size) < 0) { // c < a
-                if (lt(data+a*item_size, data+b*item_size) < 0) { // c < a < b
+            if (cmp(data+c*item_size, data+a*item_size) < 0) { // c < a
+                if (cmp(data+a*item_size, data+b*item_size) < 0) { // c < a < b
                     memswap(data+a*item_size, data+b*item_size, item_size);
                     memswap(data+a*item_size, data+c*item_size, item_size);
                     }
                 else { // c < a, b <= a
                     memswap(data+a*item_size, data+c*item_size, item_size);
-                    if (lt(data+b*item_size, data+a*item_size) < 0)
+                    if (cmp(data+b*item_size, data+a*item_size) < 0)
                         memswap(data+a*item_size, data+b*item_size, item_size);
                     }
                 }
             else { // a <= c
-                if (lt(data+b*item_size, data+a*item_size) < 0) { // b < a <= c
+                if (cmp(data+b*item_size, data+a*item_size) < 0) { // b < a <= c
                     memswap(data+a*item_size, data+b*item_size, item_size);
                     }
                 else { // a <= c, a <= b
-                    if (lt(data+c*item_size, data+b*item_size) < 0)
+                    if (cmp(data+c*item_size, data+b*item_size) < 0)
                         memswap(data+b*item_size, data+c*item_size, item_size);
                     }
                 }
@@ -254,23 +240,23 @@ get_pivot(Nonnull(UntypedSlice*) r, Nonnull(comparator*) lt, size_t item_size){
     const size_t c = mid;
     const size_t d = mid + quarter;
     const size_t e = r->count - 1;
-    if (lt(data+c*item_size, data+a*item_size) < 0)
+    if (cmp(data+c*item_size, data+a*item_size) < 0)
         memswap(data+a*item_size, data+c*item_size, item_size);
-    if (lt(data+d*item_size, data+b*item_size) < 0)
+    if (cmp(data+d*item_size, data+b*item_size) < 0)
         memswap(data+b*item_size, data+d*item_size, item_size);
-    if (lt(data+d*item_size, data+c*item_size) < 0) {
+    if (cmp(data+d*item_size, data+c*item_size) < 0) {
         memswap(data+c*item_size, data+d*item_size, item_size);
         memswap(data+a*item_size, data+b*item_size, item_size);
         }
-    if (lt(data+e*item_size, data+b*item_size) < 0)
+    if (cmp(data+e*item_size, data+b*item_size) < 0)
         memswap(data+b*item_size, data+e*item_size, item_size);
-    if (lt(data+e*item_size, data+c*item_size) < 0) {
+    if (cmp(data+e*item_size, data+c*item_size) < 0) {
         memswap(data+c*item_size, data+e*item_size, item_size);
-        if (lt(data+c*item_size, data+a*item_size) < 0)
+        if (cmp(data+c*item_size, data+a*item_size) < 0)
             memswap(data+a*item_size, data+c*item_size, item_size);
         }
     else {
-        if (lt(data+c*item_size, data+b*item_size) < 0)
+        if (cmp(data+c*item_size, data+b*item_size) < 0)
             memswap(data+b*item_size, data+c*item_size, item_size);
         }
 
@@ -279,20 +265,20 @@ get_pivot(Nonnull(UntypedSlice*) r, Nonnull(comparator*) lt, size_t item_size){
 
 static inline
 void
-sift_down(Nonnull(UntypedSlice*)r, size_t parent, size_t end, Nonnull(comparator*)lt, size_t item_size){
+sift_down(Nonnull(UntypedSlice*)r, size_t parent, size_t end, Nonnull(comparator*)cmp, size_t item_size){
     void* data = r->data;
     for(;;){
         size_t child = (parent+1) * 2;
         if(child >= end){
-            if(child == end && (lt(data+parent*item_size, data+(--child)*item_size) < 0)){
+            if(child == end && (cmp(data+parent*item_size, data+(--child)*item_size) < 0)){
                 memswap(data + parent*item_size, data+child*item_size, item_size);
                 }
             break;
             }
         size_t left_child = child - 1;
-        if (lt(data+child*item_size, data+left_child*item_size) < 0)
+        if (cmp(data+child*item_size, data+left_child*item_size) < 0)
             child = left_child;
-        if (lt(data+parent*item_size, data+child*item_size) >= 0)
+        if (cmp(data+parent*item_size, data+child*item_size) >= 0)
             break;
         memswap(data+parent*item_size, data+child*item_size, item_size);
         parent = child;
@@ -301,10 +287,10 @@ sift_down(Nonnull(UntypedSlice*)r, size_t parent, size_t end, Nonnull(comparator
 
 static inline
 bool
-is_heap(Nonnull(UntypedSlice*)r, Nonnull(comparator*)lt, size_t item_size){
+is_heap(Nonnull(UntypedSlice*)r, Nonnull(comparator*)cmp, size_t item_size){
     size_t parent = 0;
     for(size_t child = 1; child < r->count; child++){
-        if(lt(r->data+parent*item_size, r->data+child*item_size) < 0)
+        if(cmp(r->data+parent*item_size, r->data+child*item_size) < 0)
             return false;
         parent += !(child & 1llu);
         }
@@ -313,18 +299,18 @@ is_heap(Nonnull(UntypedSlice*)r, Nonnull(comparator*)lt, size_t item_size){
 
 static inline
 void
-build_heap(Nonnull(UntypedSlice*)r, Nonnull(comparator*)lt, size_t item_size){
+build_heap(Nonnull(UntypedSlice*)r, Nonnull(comparator*)cmp, size_t item_size){
     // DBGPrint("building heap");
     size_t n = r->count;
     for(size_t i = n / 2; i-- > 0; ){
-        sift_down(r, i, n, lt, item_size);
+        sift_down(r, i, n, cmp, item_size);
         }
-    assert(is_heap(r, lt, item_size));
+    assert(is_heap(r, cmp, item_size));
     }
 
 static inline
 void
-percolate(Nonnull(UntypedSlice*)r, size_t parent, size_t end, Nonnull(comparator*)lt, size_t item_size){
+percolate(Nonnull(UntypedSlice*)r, size_t parent, size_t end, Nonnull(comparator*)cmp, size_t item_size){
     void* data = r->data;
     const size_t root = parent;
     for(;;){
@@ -338,14 +324,14 @@ percolate(Nonnull(UntypedSlice*)r, size_t parent, size_t end, Nonnull(comparator
             break;
             }
         size_t left_child = child - 1;
-        if(lt(data+child*item_size, data+left_child*item_size) < 0)
+        if(cmp(data+child*item_size, data+left_child*item_size) < 0)
             child = left_child;
         memswap(data+parent*item_size, data+child*item_size, item_size);
         parent = child;
         }
     for(size_t child = parent; child > root; child = parent){
         parent = (child - 1) / 2;
-        if(lt(data+parent*item_size, data+child*item_size) >= 0)
+        if(cmp(data+parent*item_size, data+child*item_size) >= 0)
             break;
         memswap(data+parent*item_size, data+child*item_size, item_size);
         }
@@ -353,25 +339,25 @@ percolate(Nonnull(UntypedSlice*)r, size_t parent, size_t end, Nonnull(comparator
 
 static inline
 void
-heap_sort(Nonnull(UntypedSlice*)r, Nonnull(comparator*)lt, size_t item_size){
+heap_sort(Nonnull(UntypedSlice*)r, Nonnull(comparator*)cmp, size_t item_size){
     if(r->count < 2)
         return;
-    build_heap(r, lt, item_size);
-    assert(is_heap(r, lt, item_size));
+    build_heap(r, cmp, item_size);
+    assert(is_heap(r, cmp, item_size));
     void* data = r->data;
     for(size_t i = r->count - 1; i > 0; --i){
         memswap(data, data+i*item_size, item_size);
-        percolate(r, 0, i, lt, item_size);
+        percolate(r, 0, i, cmp, item_size);
         }
-    assert(is_sorted(r->data, r->count, lt, item_size));
+    assert(is_sorted(r->data, r->count, cmp, item_size));
     }
 
 static inline
 bool
-is_sorted(Nonnull(void*) data, size_t n_items, Nonnull(comparator*)lt , size_t item_size){
+is_sorted(Nonnull(void*) data, size_t n_items, Nonnull(comparator*)cmp , size_t item_size){
     void* before = data;
     for(size_t i = 0; i < n_items; i++){
-        if(lt(data+i*item_size, before) < 0){
+        if(cmp(data+i*item_size, before) < 0){
             return false;
             }
         before = data+i*item_size;
