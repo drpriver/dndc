@@ -1,14 +1,5 @@
 #include "dndc.c"
 #include "dndc_flags.h"
-#if 0
-static
-Errorable_f(void)
-run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
-        Nullable(LongString*) output_path, DependsArg depends,
-        Nullable(FileCache*)external_b64cache,
-        Nullable(FileCache*)external_textcache,
-        Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data);
-#endif
 
 void dndc_error_func(void* error_user_data, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
     log_string(message, message_len);
@@ -22,14 +13,18 @@ make_html(PString* source){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_OUTPUT_PATH_IS_OUT_PARAM
         | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_ALLOW_BAD_LINKS
         | DNDC_NO_CLEANUP
         | DNDC_NO_PYTHON
         | DNDC_NO_THREADS
         | DNDC_DONT_INLINE_IMAGES
+        | DNDC_INPUT_IS_UNTRUSTED
         ;
     auto e = run_the_dndc(flags, base, text, &output, (DependsArg){}, NULL, NULL, dndc_error_func, NULL);
     if(e.errored)
         return NULL;
+    // Wow, this is a lot of copies.
     PString* result = malloc(sizeof(*result) + output.length);
     result->length = output.length;
     memcpy(result->text, output.text, output.length);

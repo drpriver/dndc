@@ -100,6 +100,10 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                     }
                 }
             else{
+                if(unlikely(ctx->flags & DNDC_INPUT_IS_UNTRUSTED)){
+                    node_set_err(ctx, node, LS("Untrusted input can't load external css files"));
+                    Raise(PARSE_ERROR);
+                    }
                 for(size_t j = 0; j < node->children.count; j++){
                     auto child = get_node(ctx, node->children.data[j]);
                     if(unlikely(child->type != NODE_STRING)){
@@ -846,6 +850,20 @@ RENDERFUNC(PYTHON){
     return (Errorable(void)){};
     }
 RENDERFUNC(RAW){
+    // Don't let people smuggle <script> tags in!
+    // Changes the semantics a bit, but oh well.
+    if(unlikely(ctx->flags & DNDC_INPUT_IS_UNTRUSTED)){
+        auto count = node->children.count;
+        auto children = node->children.data;
+        for(size_t i = 0; i < count; i++){
+            auto child = get_node(ctx, children[i]);
+            if(unlikely(child->type != NODE_STRING))
+                node_print_warning(ctx, child, SV("Raw node with a non-string child"));
+            write_tag_escaped_str(sb, child->header.text, child->header.length);
+            msb_write_char(sb, '\n');
+            }
+        return (Errorable(void)){};
+        }
     // ignoring the header for now. Idk what the semantics are supposed to be.
     auto count = node->children.count;
     auto children = node->children.data;

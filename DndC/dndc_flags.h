@@ -51,6 +51,10 @@ enum DndcFlags {
     // Instead, use a dnd:absolute/path/to/img url instead.
     // Applications can then implement custom url handlers for this url scheme.
     DNDC_USE_DND_URL_SCHEME  = 0x40000,
+    // Input is untrusted and thus should not be allowed to read files, execute
+    // python blocks or embed javascript in the output. As raw nodes are
+    // inserted literally, raw nodes are ignored.
+    DNDC_INPUT_IS_UNTRUSTED  = 0x80000,
 };
 #else
 //
@@ -75,6 +79,7 @@ enum DndcFlags {
 #define DNDC_DONT_INLINE_IMAGES           0x10000
 #define DNDC_DEPENDS_IS_CALLBACK          0x20000
 #define DNDC_USE_DND_URL_SCHEME           0x40000
+#define DNDC_INPUT_IS_UNTRUSTED           0x80000
 #endif
 
 

@@ -218,6 +218,7 @@ int main(int argc, char**argv){
     bool dont_inline_images = false;
     bool print_syntax = false;
     bool print_depends = false;
+    bool untrusted = false;
     {
         ArgToParse pos_args[] = {
             [0] = {
@@ -389,6 +390,15 @@ int main(int argc, char**argv){
                 .help = "Instead of base64ing the images, use a link.",
                 .hidden = true,
             },
+            {
+                .name = SV("--untrusted-input"),
+                .altname1 = SV("--untrusted"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&untrusted),
+                .help = "Input is untrusted and thus should not be allowed to import files, execute scripts or embed javascript in the output.",
+                .hidden = true,
+            }
             };
         ArgParser argparser = {
             .name = argv[0],
@@ -466,6 +476,8 @@ int main(int argc, char**argv){
         flags |= DNDC_REFORMAT_ONLY;
     if(dont_inline_images)
         flags |= DNDC_DONT_INLINE_IMAGES;
+    if(untrusted)
+        flags |= DNDC_INPUT_IS_UNTRUSTED;
 
     #ifdef BENCHMARKING
     flags &= ~DNDC_NO_CLEANUP;
@@ -500,6 +512,11 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
         Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data){
     if(flags & DNDC_REFORMAT_ONLY)
         flags |= DNDC_NO_PYTHON;
+    if(flags & DNDC_INPUT_IS_UNTRUSTED){
+        flags |= DNDC_NO_PYTHON;
+        flags |= DNDC_NO_THREADS;
+        flags |= DNDC_DONT_INLINE_IMAGES;
+        }
     auto t0 = get_t();
     Errorable(void) result = {};
     StringView path;
@@ -653,8 +670,31 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
         report_size(&ctx, SV("Total output size (bytes): "), str.length);
         goto success;
         }
-    // Handle imports. Imports can import more imports.
-    {
+    if(unlikely(flags & DNDC_INPUT_IS_UNTRUSTED)){
+        if(ctx.imports.count){
+            auto handle = ctx.imports.data[0];
+            auto node = get_node(&ctx, handle);
+            node_print_err(&ctx, node, SV("Imports are illegal for untrusted input."));
+            result.errored = PARSE_ERROR;
+            goto cleanup;
+            }
+        if(ctx.python_nodes.count){
+            auto handle = ctx.python_nodes.data[0];
+            auto node = get_node(&ctx, handle);
+            node_print_err(&ctx, node, SV("Python blocks are illegal for untrusted input."));
+            result.errored = PARSE_ERROR;
+            goto cleanup;
+            }
+        if(ctx.script_nodes.count){
+            auto handle = ctx.script_nodes.data[0];
+            auto node = get_node(&ctx, handle);
+            node_print_err(&ctx, node, SV("JS blocks are illegal for untrusted input."));
+            result.errored = PARSE_ERROR;
+            goto cleanup;
+            }
+        }
+    else {
+        // Handle imports. Imports can import more imports.
         auto before_imports = get_t();
         for(size_t i = 0; i < ctx.imports.count; i++){
             auto handle = ctx.imports.data[i];

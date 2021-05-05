@@ -2,7 +2,6 @@
 #include "testing.h"
 #include "dndc.c"
 
-// TODO: more interesting tests.
 TestFunction(TestDndC1);
 TestFunction(TestDndC2);
 TestFunction(TestDndC3);
@@ -11,6 +10,7 @@ TestFunction(TestDndcTableMultiline);
 TestFunction(TestFormatTable);
 TestFunction(TestCrashesFixed);
 TestFunction(TestExamplesWork);
+TestFunction(TestUntrusted);
 
 static inline
 void
@@ -23,6 +23,7 @@ register_tests(void){
     RegisterTest(TestFormatTable);
     RegisterTest(TestCrashesFixed);
     RegisterTest(TestExamplesWork);
+    RegisterTest(TestUntrusted);
 }
 
 TestFunction(TestDndC1){
@@ -328,6 +329,40 @@ TestFunction(TestExamplesWork){
     for(size_t i = 0; i < arrlen(examples); i++){
         auto e = run_the_dndc(flags, base_dirs[i], examples[i], NULL, (DependsArg){.path=LS("")}, NULL, NULL, dndc_stderr_error_func, NULL);
         TestExpectSuccess(e);
+        }
+    TESTEND();
+    }
+TestFunction(TestUntrusted){
+    TESTBEGIN();
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_DONT_PRINT_ERRORS
+        | DNDC_INPUT_IS_UNTRUSTED
+        | DNDC_DONT_WRITE
+        ;
+    LongString examples[] = {
+        LS("calendar.dnd"),
+        LS("krugs-basement.dnd"),
+        LS("mechanics.dnd"),
+        LS("characters.dnd"),
+        // These aren't great tests.
+        LS("untrusted-imports.dnd"),
+        LS("untrusted-js.dnd"),
+        LS("untrusted-css.dnd"),
+        };
+    StringView base_dirs[] = {
+        SV("Examples/Calendar"),
+        SV("Examples/KrugsBasement"),
+        SV("Examples/Rules"),
+        SV("Examples/Rules"),
+        SV("TestCases"),
+        SV("TestCases"),
+        SV("TestCases"),
+        };
+    _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
+    for(size_t i = 0; i < arrlen(examples); i++){
+        auto e = run_the_dndc(flags, base_dirs[i], examples[i], NULL, (DependsArg){.path=LS("")}, NULL, NULL, dndc_stderr_error_func, NULL);
+        TestExpectFailure(e);
         }
     TESTEND();
     }
