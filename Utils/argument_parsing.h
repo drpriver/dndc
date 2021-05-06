@@ -212,6 +212,8 @@ static inline
 void
 print_help(Nonnull(const ArgParser*) p){
     auto term_size = get_terminal_size();
+    if(term_size.columns > 80)
+        term_size.columns = 80;
     printf("%s: %s\n", p->name, p->description);
     puts("");
     const auto printed = printf("usage: %s", p->name);

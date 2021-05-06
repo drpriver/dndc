@@ -1,3 +1,5 @@
+Version 0.4.5::md
+  * Bug fixes and performance improvements.
 Version 0.4.4::md
   * Fixed bug that formatting the file would remove all leading whitespace on
     inline js blocks.

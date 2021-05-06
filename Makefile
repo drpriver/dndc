@@ -49,7 +49,7 @@ run-tests: clean-tests tests
 all: tests dndc dndcbench EXAMPLE.html pydndc
 
 install: $(DNDC)
-	@$(INSTALL) -C $< $(INSTALLDIR)/dndc$(EXE)
+	$(INSTALL) -C $< $(INSTALLDIR)/dndc$(EXE)
 
 fuzz: $(BINDIR)/dndcfuzz$(EXE) | $(FUZZDIR)
 	$< $(FUZZDIR) -fork=4 -only_ascii=1

@@ -24,7 +24,7 @@
 
 #define DNDC_MAJOR 0
 #define DNDC_MINOR 4
-#define DNDC_MICRO 4
+#define DNDC_MICRO 5
 #define DNDC_VERSION STRINGIFY(DNDC_MAJOR) "." STRINGIFY(DNDC_MINOR) "." STRINGIFY(DNDC_MICRO)
 
 // Unsure of where to put this. So, just putting it here for now.
@@ -429,6 +429,8 @@ int main(int argc, char**argv){
                 "Hidden Arguments:\n"
                 "-----------------", stdout);
             auto term_size = get_terminal_size();
+            if(term_size.columns > 80)
+                term_size.columns = 80;
             for(int i = 0; i < arrlen(kw_args); i++){
                 auto arg = &kw_args[i];
                 if(!arg->hidden){
