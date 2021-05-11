@@ -80,8 +80,6 @@ ls_fmt(LongString value){
     return sv_fmt(LS_to_SV(value));
 }
 
-
-
 // The first 100 characters of 00 - 99.
 // Assumes a little endian cpu. (0x3733 translates to the string '37').
 // 0x30 is '0'.
@@ -121,6 +119,7 @@ uint32_to_str_buffer(char* _Nonnull buff, uint32_t value){
     while(value >= 100){
         uint32_t old = value;
         p -= 2;
+        // any compiler worth its salt should optimize this to a mul + shift
         value /= 100;
         uint32_t last_two_digits = old - 100*value; // Will always be in range of [00, 99]
         memcpy(p, &ZERO_TO_NINETY_NINE[last_two_digits], sizeof(uint16_t));
@@ -131,13 +130,16 @@ uint32_to_str_buffer(char* _Nonnull buff, uint32_t value){
     // If value < 10, then we ended up writing an extra leading 0.
     // So, add one if less than 10.
     // Also note, that in the exact case that value == 0, we write 00
-    // and then return pointer to the second 0.
+    // and then return a pointer to the second 0.
     return p+(value < 10);
     }
 
 // Just do the same for u64
 // There might be a faster way to do this? It kind of depends on your prior for
 // what the ranges of values are.
+//
+// The math is:
+//   ptrdiff_t length = (buff+20) - p for this, as UINT64_MAX is 20 characters.
 static inline
 char* _Nonnull
 uint64_to_str_buffer(char* _Nonnull buff, uint64_t value){
