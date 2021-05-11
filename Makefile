@@ -21,8 +21,8 @@ compile_commands.json:
 	$(MAKE) clean
 	$(PYTHON) -m compiledb make
 clean:
-	@$(RM)  -f $(OBJDIR)/*
-	@$(RM)  -f $(BINDIR)/*
+	@$(RM) -f $(OBJDIR)/*
+	@$(RM) -f $(BINDIR)/*
 
 clean-tests:
 	@$(RM) -f $(BINDIR)/Test*

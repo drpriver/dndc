@@ -69,7 +69,7 @@ ifeq ($(OS),Windows_NT)
 UNAME:=Windows
 include Platform\Windows\windows.mak
 else
-# nasty hack
+# nasty hack, need a better way to detect 32 bit
 ifeq ($(shell uname -m),armv7l)
 UNAME:=Rpi
 include Platform/RPi32/rpi.mak
@@ -131,11 +131,10 @@ endif
 # We leave out OPT_FLAGS, LINK_FLAGS
 FLAGS=$(INCLUDE_FLAGS) $(WARNING_FLAGS) $(PLATFORM_FLAGS)
 
-
-
+# TestDndC needs to link against the frozenstdlib
 TESTS:=$(filter-out DndC/TestDndC.c, $(wildcard **/Test*.c))
-# all of the tests are compiled both in fast and debug mode
-# as bugs sometimes will present themselves in one and not the other
+# All of the tests are compiled both in fast and debug mode as bugs can
+# sometimes will present themselves in one and not the other.
 
 define TEST_template
 $(BINDIR)/$(notdir $(basename $(1)))_fast$(EXE): $(DEPDIR)/$(notdir $(1))_fast.dep defs.mak | $(DIRECTORIES)
