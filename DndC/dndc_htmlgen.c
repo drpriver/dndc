@@ -83,11 +83,31 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
         }
     if(ctx->stylesheets_nodes.count){
         msb_write_literal(msb, "<style>\n");
+        bool written = false;
         for(size_t i = 0; i < ctx->stylesheets_nodes.count; i++){
             auto node = get_node(ctx, ctx->stylesheets_nodes.data[i]);
             // python nodes can change node types after they are registered
             if(unlikely(node->type != NODE_STYLESHEETS))
                 continue;
+            if(node_has_attribute(node, SV("noinline"))){
+                if(not written){
+                    msb_erase(msb, sizeof("<style>\n")-1);
+                    }
+                else {
+                    msb_write_literal(msb, "</style>\n");
+                    }
+                written = false;
+                for(size_t j = 0; j < node->children.count; j++){
+                    auto child = get_node(ctx, node->children.data[j]);
+                    if(unlikely(child->type != NODE_STRING)){
+                        node_print_warning(ctx, child, SV("Non-string child of a style sheet is being ignored."));
+                        continue;
+                        }
+                    MSB_FORMAT(msb, "<link rel=\"stylesheet\" href=\"", child->header, "\">\n");
+                    }
+                continue;
+                }
+            written = true;
             if(node_has_attribute(node, SV("inline"))){
                 for(size_t j = 0; j < node->children.count; j++){
                     auto child = get_node(ctx, node->children.data[j]);
@@ -122,7 +142,8 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                     }
                 }
             }
-        msb_write_literal(msb, "</style>\n");
+        if(written)
+            msb_write_literal(msb, "</style>\n");
         }
     if(ctx->script_nodes.count){
         for(size_t i = 0; i < ctx->script_nodes.count; i++){
