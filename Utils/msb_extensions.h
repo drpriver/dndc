@@ -155,4 +155,36 @@ msb_write_str_with_backslashes_as_forward_slashes(Nonnull(MStringBuilder*)sb, No
         }
     sb->cursor = cursor;
     }
+
+static inline
+void
+msb_write_stripped(Nonnull(MStringBuilder*)sb, Nonnull(const char*)restrict str, size_t length){
+    _check_msb_size(sb, length);
+    auto data = sb->data;
+    auto cursor = sb->cursor;
+    const char* remainder = str;
+    const char* end = str + length;
+    for(;remainder != end;){
+        const char* endline = memchr(remainder, '\n', end - remainder);
+        if(endline){
+            auto stripped = stripped_view(remainder, endline-remainder);
+            if(stripped.length){
+                memcpy(data+cursor, stripped.text, stripped.length);
+                cursor += stripped.length;
+                }
+            remainder = endline + 1;
+            data[cursor++] = '\n';
+            }
+        else {
+            auto stripped = stripped_view(remainder, end - remainder);
+            if(stripped.length){
+                memcpy(data+cursor, stripped.text, stripped.length);
+                cursor += stripped.length;
+                }
+            data[cursor++] = '\n';
+            break;
+            }
+        }
+    sb->cursor = cursor;
+    }
 #endif

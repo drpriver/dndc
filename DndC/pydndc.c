@@ -227,6 +227,9 @@ PyMethodDef pydndc_methods[] = {
         "                        These are mostly information about timings of\n"
         "                        various stages of execution. Info messages are\n"
         "                        not generated if this is not set.\n"
+        "    STRIP_WHITESPACE:   Strip trailing and leading whitespace from js\n"
+        "                        and css imports. Ignores semantics, so make sure\n"
+        "                        Multiline strings are not disrupted by this!\n"
         "\n"
         "Returns:\n"
         "--------\n"
@@ -355,6 +358,7 @@ PyInit_pydndc(void) {
     PyModule_AddIntConstant(mod, "DONT_INLINE_IMAGES", DNDC_DONT_INLINE_IMAGES);
     PyModule_AddIntConstant(mod, "NO_THREADS", DNDC_NO_THREADS);
     PyModule_AddIntConstant(mod, "USE_DND_URL_SCHEME", DNDC_USE_DND_URL_SCHEME);
+    PyModule_AddIntConstant(mod, "STRIP_WHITESPACE", DNDC_STRIP_WHITESPACE);
     PyModule_AddIntConstant(mod, "PRINT_STATS", DNDC_PRINT_STATS);
     PyModule_AddIntConstant(mod, "ERROR_MESSAGE", DNDC_ERROR_MESSAGE);
     PyModule_AddIntConstant(mod, "WARNING_MESSAGE", DNDC_WARNING_MESSAGE);
@@ -459,6 +463,7 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
         | DNDC_NO_THREADS
         | DNDC_USE_DND_URL_SCHEME
         | DNDC_PRINT_STATS
+        | DNDC_STRIP_WHITESPACE
         };
     const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", NULL};
     PushDiagnostic();

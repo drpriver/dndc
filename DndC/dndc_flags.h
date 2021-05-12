@@ -55,31 +55,34 @@ enum DndcFlags {
     // python blocks or embed javascript in the output. As raw nodes are
     // inserted literally, raw nodes are ignored.
     DNDC_INPUT_IS_UNTRUSTED  = 0x80000,
+    // Strip trailing and leading whitespace from all output lines.
+    DNDC_STRIP_WHITESPACE    = 0x100000,
 };
 #else
 //
 // See above for documentation.
-#define DNDC_FLAGS_NONE                   0x00000
-#define DNDC_ALLOW_BAD_LINKS              0x00001
-#define DNDC_SUPPRESS_WARNINGS            0x00002
-#define DNDC_PRINT_STATS                  0x00004
-#define DNDC_REPORT_ORPHANS               0x00008
-#define DNDC_NO_PYTHON                    0x00010
-#define DNDC_PYTHON_IS_INIT               0x00020
-#define DNDC_PRINT_TREE                   0x00040
-#define DNDC_PRINT_LINKS                  0x00080
-#define DNDC_NO_THREADS                   0x00100
-#define DNDC_DONT_WRITE                   0x00200
-#define DNDC_NO_CLEANUP                   0x00400
-#define DNDC_SOURCE_PATH_IS_DATA_NOT_PATH 0x00800
-#define DNDC_DONT_PRINT_ERRORS            0x01000
-#define DNDC_PYTHON_UNISOLATED            0x02000
-#define DNDC_OUTPUT_PATH_IS_OUT_PARAM     0x04000
-#define DNDC_REFORMAT_ONLY                0x08000
-#define DNDC_DONT_INLINE_IMAGES           0x10000
-#define DNDC_DEPENDS_IS_CALLBACK          0x20000
-#define DNDC_USE_DND_URL_SCHEME           0x40000
-#define DNDC_INPUT_IS_UNTRUSTED           0x80000
+#define DNDC_FLAGS_NONE                   0x000000
+#define DNDC_ALLOW_BAD_LINKS              0x000001
+#define DNDC_SUPPRESS_WARNINGS            0x000002
+#define DNDC_PRINT_STATS                  0x000004
+#define DNDC_REPORT_ORPHANS               0x000008
+#define DNDC_NO_PYTHON                    0x000010
+#define DNDC_PYTHON_IS_INIT               0x000020
+#define DNDC_PRINT_TREE                   0x000040
+#define DNDC_PRINT_LINKS                  0x000080
+#define DNDC_NO_THREADS                   0x000100
+#define DNDC_DONT_WRITE                   0x000200
+#define DNDC_NO_CLEANUP                   0x000400
+#define DNDC_SOURCE_PATH_IS_DATA_NOT_PATH 0x000800
+#define DNDC_DONT_PRINT_ERRORS            0x001000
+#define DNDC_PYTHON_UNISOLATED            0x002000
+#define DNDC_OUTPUT_PATH_IS_OUT_PARAM     0x004000
+#define DNDC_REFORMAT_ONLY                0x008000
+#define DNDC_DONT_INLINE_IMAGES           0x010000
+#define DNDC_DEPENDS_IS_CALLBACK          0x020000
+#define DNDC_USE_DND_URL_SCHEME           0x040000
+#define DNDC_INPUT_IS_UNTRUSTED           0x080000
+#define DNDC_STRIP_WHITESPACE             0x100000
 #endif
 
 

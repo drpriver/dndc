@@ -219,6 +219,7 @@ int main(int argc, char**argv){
     bool print_syntax = false;
     bool print_depends = false;
     bool untrusted = false;
+    bool strip_whitespace = false;
     {
         ArgToParse pos_args[] = {
             [0] = {
@@ -398,7 +399,15 @@ int main(int argc, char**argv){
                 .dest = ARGDEST(&untrusted),
                 .help = "Input is untrusted and thus should not be allowed to import files, execute scripts or embed javascript in the output.",
                 .hidden = true,
-            }
+            },
+            {
+                .name = SV("--strip-spaces"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&strip_whitespace),
+                .help = "Strip trailing and leading whitespace from all output lines",
+                .hidden = false,
+            },
             };
         ArgParser argparser = {
             .name = argv[0],
@@ -480,6 +489,8 @@ int main(int argc, char**argv){
         flags |= DNDC_DONT_INLINE_IMAGES;
     if(untrusted)
         flags |= DNDC_INPUT_IS_UNTRUSTED;
+    if(strip_whitespace)
+        flags |= DNDC_STRIP_WHITESPACE;
 
     #ifdef BENCHMARKING
     flags &= ~DNDC_NO_CLEANUP;

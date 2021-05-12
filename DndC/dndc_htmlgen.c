@@ -138,7 +138,12 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                         Raise(style_e.errored);
                         }
                     LongString style = style_e.result;
-                    msb_write_str(msb, style.text, style.length);
+                    if(ctx->flags & DNDC_STRIP_WHITESPACE){
+                        msb_write_stripped(msb, style.text, style.length);
+                        }
+                    else {
+                        msb_write_str(msb, style.text, style.length);
+                        }
                     }
                 }
             }
@@ -195,7 +200,12 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                     Raise(script_e.errored);
                     }
                 LongString script = script_e.result;
-                msb_write_str(msb, script.text, script.length);
+                if(ctx->flags & DNDC_STRIP_WHITESPACE){
+                    msb_write_stripped(msb, script.text, script.length);
+                    }
+                else {
+                    msb_write_str(msb, script.text, script.length);
+                    }
                 }
             msb_write_literal(msb, "</script>\n");
             }
