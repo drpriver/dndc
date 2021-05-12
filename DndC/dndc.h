@@ -2,6 +2,24 @@
 #define DNDC_H
 #include "long_string_type.h"
 
+// FIXME: remove this? Inappropriate for a public header?
+#ifndef __clang__
+
+#ifndef _Nonnull
+#define _Nonnull
+#endif
+
+#ifndef _Nullable
+#define _Nullable
+#endif
+
+#ifndef _Null_unspecified
+#define _Null_unspecified
+#endif
+
+#endif
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -62,12 +80,12 @@ enum DndCErrorMessageType {
 // message_len:
 //    The length of the error message (excluding the terminating nul character)
 //
-typedef void ErrorFunc(void* _Nullable error_user_data, int type, const char* _Nonnull filename, int filename_len, int line, int col, const char* _Nonnull message, int message_len);
+typedef void DndcErrorFunc(void* _Nullable error_user_data, int type, const char* _Nonnull filename, int filename_len, int line, int col, const char* _Nonnull message, int message_len);
 
 //
 // An error reporting function that prints to stderr. For use with the dndc
 //
-extern ErrorFunc dndc_stderr_error_func;
+extern DndcErrorFunc dndc_stderr_error_func;
 
 //
 // You *must* call dndc_init_python before calling this function.
@@ -96,7 +114,7 @@ extern ErrorFunc dndc_stderr_error_func;
 //    If there is an error, the output is not written to.
 //
 // error_func:
-//   A function for reporting errors. See `ErrorFunc` above. If NULL, errors
+//   A function for reporting errors. See `DndcErrorFunc` above. If NULL, errors
 //   will not be printed. Use `dndc_stderr_error_func` for a function that just
 //   prints to stderr.
 //
@@ -112,7 +130,7 @@ extern ErrorFunc dndc_stderr_error_func;
 //
 extern
 int
-dndc_make_html(StringView base_directory, LongString source_text, LongString*_Nonnull output, ErrorFunc*_Nullable error_func, void*_Nullable error_user_data);
+dndc_make_html(StringView base_directory, LongString source_text, LongString*_Nonnull output, DndcErrorFunc*_Nullable error_func, void*_Nullable error_user_data);
 
 //
 // You do *not* need to call dndc_init_python before calling this function.
@@ -140,7 +158,7 @@ dndc_make_html(StringView base_directory, LongString source_text, LongString*_No
 //    If there is an error, the output is not written to.
 //
 // error_func:
-//    A function for reporting errors. See `ErrorFunc` above. If NULL, errors
+//    A function for reporting errors. See `DndcErrorFunc` above. If NULL, errors
 //    will not be printed. Use `dndc_stderr_error_func` for a function that just
 //    prints to stderr.
 //
@@ -156,7 +174,7 @@ dndc_make_html(StringView base_directory, LongString source_text, LongString*_No
 //
 extern
 int
-dndc_format(LongString source_text, LongString* _Nonnull output, ErrorFunc* _Nullable error_func, void*_Nullable error_user_data);
+dndc_format(LongString source_text, LongString* _Nonnull output, DndcErrorFunc* _Nullable error_func, void*_Nullable error_user_data);
 
 //
 // On windows, if you load a dll, it will have its own crt and thus its own heap.
@@ -239,9 +257,9 @@ enum{DNDC_SYNTAX_MAX=8};
 // length:
 //    The length of the syntactic region, in bytes.
 //
-typedef void SyntaxFunc(void* _Nullable user_data, int type, int line, int col, const char* _Nonnull begin, size_t length);
+typedef void DndcSyntaxFunc(void* _Nullable user_data, int type, int line, int col, const char* _Nonnull begin, size_t length);
 // Ditto, but for utf-16 code units in native endian-ness
-typedef void SyntaxFuncUtf16(void* _Nullable user_data, int type, int line, int col, const uint16_t*_Nonnull begin, size_t length);
+typedef void DndcSyntaxFuncUtf16(void* _Nullable user_data, int type, int line, int col, const unsigned short*_Nonnull begin, size_t length);
 
 //
 // Analyzes a string, identifiying the syntax of parts of the string.
@@ -268,7 +286,7 @@ typedef void SyntaxFuncUtf16(void* _Nullable user_data, int type, int line, int 
 //    No references to this are retained.
 //
 // syntax_func:
-//    A function for marking syntactic regions. See SyntaxFunc. Whenever
+//    A function for marking syntactic regions. See DndcSyntaxFunc. Whenever
 //    a syntactic region is identified, this function will be invoked on it.
 //
 // syntax_data:
@@ -281,13 +299,14 @@ typedef void SyntaxFuncUtf16(void* _Nullable user_data, int type, int line, int 
 //
 extern
 int
-dndc_analyze_syntax(StringView source_text, SyntaxFunc*_Nonnull syntax_func, void*_Nullable syntax_data);
+dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc*_Nonnull syntax_func, void*_Nullable syntax_data);
 //
 // ditto, but for utf-16 code units of native endianness
 //
 extern
 int
-dndc_analyze_syntax_utf16(StringViewUtf16 source_text, SyntaxFuncUtf16*_Nonnull syntax_func, void*_Nullable syntax_data);
+dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16*_Nonnull syntax_func, void*_Nullable syntax_data);
+
 #ifdef __cplusplus
 }
 #endif

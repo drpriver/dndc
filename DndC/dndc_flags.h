@@ -1,9 +1,6 @@
 #ifndef DNDC_FLAGS_H
 #define DNDC_FLAGS_H
-// I wish C offered a typesafe bitflags type, but we resort
-// to just making it a uint64 instead.
 #ifndef _WIN32
-#include "common_macros.h"
 enum DndcFlags {
     DNDC_FLAGS_NONE        = 0x0,
     // Don't error on bad links.

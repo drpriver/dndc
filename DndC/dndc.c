@@ -522,7 +522,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
         Nullable(LongString*) output_path, DependsArg depends,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,
-        Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data){
+        Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
     if(flags & DNDC_REFORMAT_ONLY)
         flags |= DNDC_NO_PYTHON;
     if(flags & DNDC_INPUT_IS_UNTRUSTED){
@@ -1149,7 +1149,7 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)str, NodeHan
 #ifndef WASM
 extern
 int
-dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongString*)output, Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data){
+dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongString*)output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
     uint64_t flags = 0;
     flags |= DNDC_SOURCE_PATH_IS_DATA_NOT_PATH;
     flags |= DNDC_OUTPUT_PATH_IS_OUT_PARAM;
@@ -1168,7 +1168,7 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
 
 extern
 int
-dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data){
+dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
     uint64_t flags = 0;
     flags |= DNDC_SOURCE_PATH_IS_DATA_NOT_PATH;
     flags |= DNDC_OUTPUT_PATH_IS_OUT_PARAM;
@@ -1384,7 +1384,7 @@ find_double_colon_utf16(Nonnull(const uint16_t*) haystack, size_t ncode_units){
 
 extern
 int
-dndc_analyze_syntax(StringView source_text, Nonnull(SyntaxFunc*) syntax_func, Nullable(void*)syntax_data){
+dndc_analyze_syntax(StringView source_text, Nonnull(DndcSyntaxFunc*) syntax_func, Nullable(void*)syntax_data){
     // this is only needed for raw nodes
     ptrdiff_t raw_indentation = 0;
     int line = 0;
@@ -1513,7 +1513,7 @@ dndc_analyze_syntax(StringView source_text, Nonnull(SyntaxFunc*) syntax_func, Nu
 //
 extern
 int
-dndc_analyze_syntax_utf16(StringViewUtf16 source_text, Nonnull(SyntaxFuncUtf16*) syntax_func, Nullable(void*)syntax_data){
+dndc_analyze_syntax_utf16(StringViewUtf16 source_text, Nonnull(DndcSyntaxFuncUtf16*) syntax_func, Nullable(void*)syntax_data){
     // this is only needed for raw nodes
     ptrdiff_t raw_indentation = 0;
     int line = 0;

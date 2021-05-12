@@ -1,5 +1,6 @@
 #ifndef DNDC_TYPES_H
 #define DNDC_TYPES_H
+#include <stdint.h>
 #include "dndc.h"
 #include "long_string.h"
 #include "dndc_flags.h"
@@ -47,7 +48,7 @@ typedef struct DataItem {
 typedef struct Attribute {
     StringView key;
     StringView value; // often null
-    } Attribute;
+} Attribute;
 #define MARRAY_T Attribute
 #include "Marray.h"
 
@@ -232,7 +233,7 @@ typedef struct DndcContext {
     // See DndcFlags.
     uint64_t flags;
     // See dndc.h
-    Nullable(ErrorFunc*) error_func;
+    Nullable(DndcErrorFunc*) error_func;
     Nullable(void*) error_user_data;
     struct {
         StringView filename;

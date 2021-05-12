@@ -67,7 +67,7 @@
 //    computation if being run repeatedly.
 //
 // error_func:
-//   A function for reporting errors. See `ErrorFunc` in dndc.h. If NULL,
+//   A function for reporting errors. See `DndcErrorFunc` in dndc.h. If NULL,
 //   errors will not be printed. Use `dndc_stderr_error_func` for a function
 //   that just prints to stderr.
 //
@@ -88,7 +88,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
         Nullable(LongString*) output_path, DependsArg depends,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,
-        Nullable(ErrorFunc*)error_func, Nullable(void*)error_user_data);
+        Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data);
 
 //
 // The following functions are for reporting errors and warnings. ONLY use

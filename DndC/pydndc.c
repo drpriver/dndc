@@ -409,7 +409,7 @@ pydndc_reformat(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*
     flags |= DNDC_ALLOW_BAD_LINKS;
     flags |= DNDC_REFORMAT_ONLY;
     LongString output = {};
-    ErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
+    DndcErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
     auto e = run_the_dndc(flags, SV(""), source, &output, (DependsArg){.path=LS("")}, NULL, NULL, func, error_list);
@@ -495,7 +495,7 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
     flags |= DNDC_ALLOW_BAD_LINKS;
     flags |= DNDC_DEPENDS_IS_CALLBACK;
     LongString output = {};
-    ErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
+    DndcErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
     PyObject* depends_list = PyList_New(0);
