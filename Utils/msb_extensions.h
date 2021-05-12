@@ -140,6 +140,7 @@ msb_write_json_escaped_str(Nonnull(MStringBuilder*)restrict sb, Nonnull(const ch
         }
     sb->cursor = cursor;
     }
+
 static inline
 void
 msb_write_str_with_backslashes_as_forward_slashes(Nonnull(MStringBuilder*)sb, Nonnull(const char*)restrict str, size_t length){
@@ -156,6 +157,11 @@ msb_write_str_with_backslashes_as_forward_slashes(Nonnull(MStringBuilder*)sb, No
     sb->cursor = cursor;
     }
 
+//
+// Writes the string into the buffer, but strips trailing and leading
+// whitespace from each line in the input. A newline is still written for each
+// line and one will be added to the end if the string is missing a trailing
+// newline.
 static inline
 void
 msb_write_stripped(Nonnull(MStringBuilder*)sb, Nonnull(const char*)restrict str, size_t length){
