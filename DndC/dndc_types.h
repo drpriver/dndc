@@ -17,6 +17,10 @@
 #define MARRAY_T LongString
 #include "Marray.h"
 
+#define RARRAY_T StringView
+#include "Rarray.h"
+
+
 // A cached loaded source file.
 // This is used both for actual sourcefiles loaded from physical storage
 // and for manufactured strings from python.
@@ -49,8 +53,8 @@ typedef struct Attribute {
     StringView key;
     StringView value; // often null
 } Attribute;
-#define MARRAY_T Attribute
-#include "Marray.h"
+#define RARRAY_T Attribute
+#include "Rarray.h"
 
 //
 // Opaque handle to a node
@@ -83,10 +87,6 @@ NodeHandle_eq(NodeHandle a, NodeHandle b){
 #define MARRAY_T NodeHandle
 #include "Marray.h"
 
-// OBSERVATION:
-//      Most nodes do not have attributes
-//      A large number of nodes are string nodes.
-//      We could get some gains from redesigning this.
 typedef struct Node {
     // The type of the node
     NodeType type;                // 4 bytes
@@ -99,8 +99,8 @@ typedef struct Node {
     StringView header;            // 16 bytes
     // Handles to child nodes.
     Marray(NodeHandle) children;   // 24 bytes
-    Marray(Attribute) attributes;  // 24 bytes
-    Marray(StringView) classes;    // 24 bytes
+    Rarray(Attribute)*_Nullable attributes;  // 8 bytes
+    Rarray(StringView)*_Nullable classes;    // 8 bytes
     // Source filename (used for reporting errors)
     StringView filename;           // 16 bytes
     // Location of first character of where this node originated from.
@@ -112,11 +112,11 @@ typedef struct Node {
 
 
 #if UINTPTR_MAX != 0xFFFFFFFF
-_Static_assert(sizeof(Node) == 15*sizeof(size_t), "");
+_Static_assert(sizeof(Node) == 11*sizeof(size_t), "");
 // Damn these are fat.
 // As a huge number of nodes are string nodes, we need a different scheme
 // for storing children attributes and classes.
-_Static_assert(sizeof(Node) == 120, "");
+_Static_assert(sizeof(Node) == 88, "");
 #endif
 
 #define MARRAY_T Node

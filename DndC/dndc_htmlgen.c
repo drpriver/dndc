@@ -507,9 +507,9 @@ write_header(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(const
 static inline
 void
 write_classes(Nonnull(MStringBuilder*)sb, Nonnull(const Node*)node){
-    auto count = node->classes.count;
+    auto count = node->classes?node->classes->count:0;
     if(!count) return;
-    auto classes = node->classes.data;
+    auto classes = node->classes->data;
     msb_write_literal(sb, " class=\"");
     for(size_t i = 0; i < count; i++){
         if(i != 0){
@@ -537,7 +537,7 @@ RENDERFUNC(ROOT){
 
 RENDERFUNC(STRING){
     (void)header_depth;
-    if(unlikely(node->classes.count))
+    if(unlikely(node->classes))
         node_print_warning(ctx, node, SV("Ignoring classes on string node"));
     if(unlikely(node->children.count))
         node_print_warning(ctx, node, SV("Ignoring children of string node"));
@@ -605,7 +605,7 @@ RENDERFUNC(NAV){
     return (Errorable(void)){};
     }
 RENDERFUNC(PARA){
-    if(node->classes.count){
+    if(node->classes){
         // maybe we should allow classes though?
         node_print_warning(ctx, node, SV("Ignoring classes on paragraph node"));
         }
@@ -631,7 +631,7 @@ RENDERFUNC(TITLE){
     if(node->children.count){
         node_print_warning(ctx, node, SV("Ignoring children of title"));
         }
-    if(node->classes.count){
+    if(node->classes){
         node_print_warning(ctx, node, SV("UNIMPLEMENTED: classes on the title"));
         }
     return (Errorable(void)){};
@@ -643,7 +643,7 @@ RENDERFUNC(HEADING){
     if(node->children.count){
         node_print_warning(ctx, node, SV("Ignoring children of heading"));
         }
-    if(node->classes.count){
+    if(node->classes){
         node_print_warning(ctx, node, SV("UNIMPLEMENTED: classes on the heading"));
         }
     return (Errorable(void)){};
@@ -933,7 +933,7 @@ RENDERFUNC(PRE){
 RENDERFUNC(BULLETS){
     if(unlikely(node->header.length))
         node_print_warning(ctx, node, SV("ignoring header on bullet list"));
-    if(unlikely(node->classes.count))
+    if(unlikely(node->classes))
         node_print_warning(ctx, node, SV("Ignoring classes on bullet list"));
     msb_write_literal(sb, "<ul>\n");
     auto count = node->children.count;
@@ -949,7 +949,7 @@ RENDERFUNC(BULLETS){
 RENDERFUNC(LIST){
     if(unlikely(node->header.length))
         node_print_warning(ctx, node, SV("ignoring header on list"));
-    if(unlikely(node->classes.count))
+    if(unlikely(node->classes))
         node_print_warning(ctx, node, SV("Ignoring classes on list"));
     msb_write_literal(sb, "<ol>\n");
     auto count = node->children.count;
@@ -966,7 +966,7 @@ RENDERFUNC(LIST_ITEM){
     msb_write_literal(sb, "<li>\n");
     if(unlikely(node->header.length))
         node_print_warning(ctx, node, SV("ignoring header on list item"));
-    if(unlikely(node->classes.count))
+    if(unlikely(node->classes))
         node_print_warning(ctx, node, SV("Ignoring classes on list item"));
     auto count = node->children.count;
     auto children = node->children.data;

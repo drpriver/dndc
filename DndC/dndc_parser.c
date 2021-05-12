@@ -255,9 +255,8 @@ parse_post_colon(Nonnull(DndcContext*)ctx, StringView postcolon, NodeHandle node
                     parse_set_err(ctx, aftertype.text, LS("Empty class name after a '.'"));
                     Raise(PARSE_ERROR);
                     }
-                auto class_ = Marray_alloc(StringView)(&node->classes, ctx->allocator);
-                class_->length = class_length;
-                class_->text = class_start;
+                StringView class_ = {.length = class_length, .text = class_start};
+                node->classes = Rarray_push(StringView)(node->classes, ctx->allocator, class_);
                 }break;
             case '@':{
                 advance_sv(&aftertype);
@@ -274,7 +273,7 @@ parse_post_colon(Nonnull(DndcContext*)ctx, StringView postcolon, NodeHandle node
                     parse_set_err(ctx, aftertype.text, LS("Empty attribute name after a '@'"));
                     Raise(PARSE_ERROR);
                     }
-                auto attr = Marray_alloc(Attribute)(&node->attributes, ctx->allocator);
+                auto attr = Rarray_alloc(Attribute)(&node->attributes, ctx->allocator);
                 attr->key.length = attribute_length;
                 attr->key.text = attribute_start;
                 attr->value = SV("");

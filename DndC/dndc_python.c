@@ -230,14 +230,16 @@ static
 Py_ssize_t
 DndClasses_length(Nonnull(DndClassesList*)list){
     auto node = get_node(list->ctx, list->handle);
-    return (Py_ssize_t)node->classes.count;
+    if(!node->classes)
+        return 0;
+    return (Py_ssize_t)node->classes->count;
     }
 
 static
 Nullable(PyObject*)
 DndClasses_getitem(Nonnull(DndClassesList*)list, Py_ssize_t index){
     auto node = get_node(list->ctx, list->handle);
-    auto length = node->classes.count;
+    auto length = node->classes?node->classes->count:0;
     if(index < 0){
         index += length;
         }
@@ -245,7 +247,7 @@ DndClasses_getitem(Nonnull(DndClassesList*)list, Py_ssize_t index){
         PyErr_SetString(PyExc_IndexError, "Index out of bounds");
         return NULL;
         }
-    auto sv = node->classes.data[index];
+    auto sv = node->classes->data[index];
     return PyUnicode_FromStringAndSize(sv.text, sv.length);
     }
 
@@ -257,13 +259,13 @@ DndClasses_contains(Nonnull(DndClassesList*)list, PyObject*_Nonnull query){
         return -1;
         }
     auto node = get_node(list->ctx, list->handle);
-    size_t n_classes = node->classes.count;
+    size_t n_classes = node->classes?node->classes->count:0;
     if(!n_classes)
         return 0;
 
     auto key_sv = pystring_borrow_stringview(query);
     for(size_t i = 0; i < n_classes; i++){
-        auto class_string = node->classes.data[i];
+        auto class_string = node->classes->data[i];
         if(SV_equals(class_string, key_sv))
             return 1;
         }
@@ -278,7 +280,7 @@ DndClasses_setitem(Nonnull(DndClassesList*)list, Py_ssize_t index, Nullable(PyOb
         return -1;
         }
     auto node = get_node(list->ctx, list->handle);
-    auto nclasses = node->classes.count;
+    auto nclasses = node->classes?node->classes->count:0;
     if(index < 0){
         index += nclasses;
         }
@@ -286,7 +288,7 @@ DndClasses_setitem(Nonnull(DndClassesList*)list, Py_ssize_t index, Nullable(PyOb
         PyErr_SetString(PyExc_IndexError, "Index out of bounds");
         return -1;
         }
-    node->classes.data[index] = pystring_to_stringview((Nonnull(PyObject*))value, list->ctx->allocator);
+    node->classes->data[index] = pystring_to_stringview((Nonnull(PyObject*))value, list->ctx->allocator);
     return 0;
     }
 
@@ -298,7 +300,7 @@ DndClasses_append(Nonnull(DndClassesList*)list, Nonnull(PyObject*)args){
         return NULL;
     auto node = get_node(list->ctx, list->handle);
     StringView sv = pystring_to_stringview(text, list->ctx->allocator);
-    Marray_push(StringView)(&node->classes, list->ctx->allocator, sv);
+    node->classes = Rarray_push(StringView)(node->classes, list->ctx->allocator, sv);
     Py_RETURN_NONE;
     }
 
@@ -308,11 +310,12 @@ DndClasses_repr(Nonnull(DndClassesList*)list){
     auto node = get_node(list->ctx, list->handle);
     MStringBuilder msb = {.allocator=list->ctx->temp_allocator};
     msb_write_char(&msb, '[');
-    for(size_t i = 0; i < node->classes.count; i++){
+    size_t count = node->classes?node->classes->count:0;
+    for(size_t i = 0; i < count; i++){
         if(i != 0)
             msb_write_str(&msb, ", ", 2);
         msb_write_char(&msb, '\'');
-        auto sv = node->classes.data[i];
+        auto sv = node->classes->data[i];
         msb_write_str(&msb, sv.text, sv.length);
         msb_write_char(&msb, '\'');
         }
@@ -374,8 +377,8 @@ Nonnull(PyObject*)
 DndAttributesMap_items(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*)unused){
     (void)unused;
     auto node = get_node(map->ctx, map->handle);
-    auto attributes = &node->attributes;
-    size_t count = attributes->count;
+    auto attributes = node->attributes;
+    size_t count = attributes?attributes->count:0;;
     PyObject* result = PyList_New(count);
     for(size_t i = 0; i < count; i++){
         auto attr = &attributes->data[i];
@@ -391,7 +394,9 @@ static
 Py_ssize_t
 DndAttributesMap_length(Nonnull(DndAttributesMap*)list){
     auto node = get_node(list->ctx, list->handle);
-    return (Py_ssize_t)node->attributes.count;
+    if(!node->attributes)
+        return 0;
+    return (Py_ssize_t)node->attributes->count;
     }
 
 static
@@ -403,8 +408,8 @@ DndAttributesMap_getitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key){
         }
     auto key_sv = pystring_borrow_stringview(key);
     auto node = get_node(map->ctx, map->handle);
-    auto attributes = &node->attributes;
-    auto count = attributes->count;
+    auto attributes = node->attributes;
+    auto count = attributes?attributes->count:0;
     for(size_t i = 0; i < count; i++){
         auto attr = &attributes->data[i];
         if(SV_equals(attr->key, key_sv))
@@ -423,8 +428,8 @@ DndAttributesMap_contains(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key)
         }
     auto key_sv = pystring_borrow_stringview(key);
     auto node = get_node(map->ctx, map->handle);
-    auto attributes = &node->attributes;
-    auto count = attributes->count;
+    auto attributes = node->attributes;
+    auto count = attributes?attributes->count:0;
     for(size_t i = 0; i < count; i++){
         auto attr = &attributes->data[i];
         if(SV_equals(attr->key, key_sv))
@@ -446,8 +451,8 @@ DndAttributesMap_setitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key, 
         }
     auto key_sv = pystring_borrow_stringview(key);
     auto node = get_node(map->ctx, map->handle);
-    auto attributes = &node->attributes;
-    auto count = attributes->count;
+    auto attributes = node->attributes;
+    auto count = attributes?attributes->count:0;
     for(size_t i = 0; i < count; i++){
         auto attr = &attributes->data[i];
         if(SV_equals(attr->key, key_sv)){
@@ -456,7 +461,7 @@ DndAttributesMap_setitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key, 
                 return 0;
                 }
             else {
-                Marray_remove(Attribute)(attributes, i);
+                Rarray_remove(Attribute)(attributes, i);
                 return 0;
                 }
             }
@@ -466,7 +471,7 @@ DndAttributesMap_setitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key, 
         return -1;
         }
     const char* key_copy = Allocator_dupe(map->ctx->allocator, key_sv.text, key_sv.length);
-    auto attr = Marray_alloc(Attribute)(&node->attributes, map->ctx->allocator);
+    auto attr = Rarray_alloc(Attribute)(&node->attributes, map->ctx->allocator);
     attr->key.length = key_sv.length;
     attr->key.text = key_copy;
     attr->value = pystring_to_stringview((Nonnull(PyObject*))value, map->ctx->allocator);
@@ -477,8 +482,8 @@ static
 Nullable(PyObject*)
 DndAttributesMap_repr(Nonnull(DndAttributesMap*)map){
     auto node = get_node(map->ctx, map->handle);
-    auto attributes = &node->attributes;
-    auto count = attributes->count;
+    auto attributes = node->attributes;
+    auto count = attributes?attributes->count:0;
     MStringBuilder msb = {.allocator = map->ctx->temp_allocator};
     msb_write_char(&msb, '{');
     for(size_t i = 0; i < count; i++){
@@ -515,7 +520,7 @@ DndAttributesMap_add(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*)arg){
     auto key = pystring_to_stringview(arg, ctx->allocator);
     auto node = get_node(ctx, map->handle);
     auto attributes = &node->attributes;
-    auto attr = Marray_alloc(Attribute)(attributes, ctx->allocator);
+    auto attr = Rarray_alloc(Attribute)(attributes, ctx->allocator);
     attr->key = key;
     attr->value = SV("");
     Py_RETURN_NONE;
@@ -601,12 +606,13 @@ DndNode_repr(Nonnull(DndNode*)self){
     auto node = get_node(self->ctx, self->handle);
     // format a buffer as python apparently doesn't support %.*s
     MStringBuilder msb = {.allocator=self->ctx->temp_allocator};
-    if(not node->classes.count)
+    size_t class_count = node->classes?node->classes->count:0;
+    if(not class_count)
         MSB_FORMAT(&msb, "Node(", nodenames[node->type], ", '", node->header, "', [", (int)node->children.count, "children])");
     else {
         MSB_FORMAT(&msb, "Node(", nodenames[node->type].text);
-        for(size_t i = 0; i < node->classes.count;i++){
-            auto class = &node->classes.data[i];
+        for(size_t i = 0; i < class_count;i++){
+            auto class = &node->classes->data[i];
             MSB_FORMAT(&msb, ".", *class);
             }
         MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node->children.count, "children])");
@@ -806,7 +812,7 @@ py_make_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args
         auto sq_length = PySequence_Fast_GET_SIZE(class_sq);
         for(Py_ssize_t i = 0; i < sq_length; i++){
             auto item = PySequence_Fast_GET_ITEM(class_sq, i);
-            auto c = Marray_alloc(StringView)(&node->classes, ctx->allocator);
+            auto c = Rarray_alloc(StringView)(&node->classes, ctx->allocator);
             *c = pystring_to_stringview(item, ctx->allocator);
             }
         }
@@ -814,7 +820,7 @@ py_make_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args
         auto sq_length = PySequence_Fast_GET_SIZE(attributes_sq);
         for(Py_ssize_t i = 0; i < sq_length; i++){
             auto item = PySequence_Fast_GET_ITEM(attributes_sq, i);
-            auto a = Marray_alloc(Attribute)(&node->attributes, ctx->allocator);
+            auto a = Rarray_alloc(Attribute)(&node->attributes, ctx->allocator);
             a->key = pystring_to_stringview(item, ctx->allocator);
             a->value = SV("");
             }
