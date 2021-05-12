@@ -81,8 +81,16 @@ void
 recording_free(Nonnull(RecordingAllocator*)r, Nullable(const void*) data, size_t size){
     if(!data)
         return;
+    auto count = r->count;
+    if(not count)
+        goto Lerror;
+    if(data == r->allocations[count-1]){
+        const_free(data);
+        r->count--;
+        return;
+        }
     // inefficient, but whatever
-    for(size_t i = 0; i < r->count; i++){
+    for(size_t i = 0; i < count-1; i++){
         if(data == r->allocations[i]){
             unhandled_error_condition(size != r->allocation_sizes[i]);
             const_free(data);
@@ -92,6 +100,7 @@ recording_free(Nonnull(RecordingAllocator*)r, Nullable(const void*) data, size_t
             return;
             }
         }
+    Lerror:;
     ERROR("Freeing a pointer not recorded in this allocator. Double free?");
     assert(0);
     }
@@ -137,7 +146,17 @@ static inline
 Nonnull(void*)
 ALLOCATOR_SIZE(4)
 recording_realloc(Nonnull(RecordingAllocator*)r, Nullable(void*)data, size_t orig_size, size_t new_size){
-    for(size_t i = 0; i < r->count; i++){
+    if(!data)
+        goto Lrealloc;
+    auto count = r->count;
+    if(not count)
+        goto Lrealloc;
+    // check to see if we are reallocing in a loop.
+    if(data == r->allocations[count-1]){
+        r->count--;
+        goto Lrealloc;
+        }
+    for(size_t i = 0; i < count-1; i++){
         if(data == r->allocations[i]){
             unhandled_error_condition(orig_size != r->allocation_sizes[i]);
             // TODO: compact?
@@ -146,6 +165,7 @@ recording_realloc(Nonnull(RecordingAllocator*)r, Nullable(void*)data, size_t ori
             break;
             }
         }
+    Lrealloc:;
     void* result = sane_realloc(data, orig_size, new_size);
     recording_ensure_capacity(r);
     size_t index = r->count++;
