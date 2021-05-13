@@ -3,6 +3,7 @@
 
 // I've made a half-hearted attempt to get things to work with non-gcc,
 // non-clang compilers. Oh well.
+// This header shouldn't leak into the public interface.
 
 #ifndef warn_unused
 #if defined(__GNUC__) || defined(__clang__)
@@ -184,17 +185,17 @@
 
 #endif
 
-/*
- * Allocator attributes
- *
- * MALLOC_FUNC: this function is malloc-like and the compiler
- *   is free to assume the pointer returned does not alias any
- *   other pointer. Note that realloc does not meet that criteria
- *   as it can fail and leave the original pointer valid.
- * ALLOCATOR_SIZE(N): the argument at the specified index
- *   (1-based) is the size of the storage that the returned
- *   pointer points to.
- */
+//
+// Allocator attributes
+//
+// MALLOC_FUNC: this function is malloc-like and the compiler
+//   is free to assume the pointer returned does not alias any
+//   other pointer. Note that realloc does not meet that criteria
+//   as it can fail and leave the original pointer valid.
+// ALLOCATOR_SIZE(N): the argument at the specified index
+//   (1-based) is the size of the storage that the returned
+//   pointer points to.
+//
 #if defined(__GNUC__) || defined(__clang__)
 #define ALLOCATOR_SIZE(N) __attribute__((alloc_size(N)))
 #define MALLOC_FUNC __attribute__((malloc))
@@ -221,9 +222,9 @@
 #endif
 
 
-/*
- * printf-like attributes
- */
+//
+// printf-like attributes
+//
 
 #if defined(__GNUC__) || defined(__clang__)
 #define printf_func(fmt_idx, vararg_idx) __attribute__((__format__ (__printf__, fmt_idx, vararg_idx)))

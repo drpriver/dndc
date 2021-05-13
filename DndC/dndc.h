@@ -258,7 +258,36 @@ enum{DNDC_SYNTAX_MAX=8};
 //    The length of the syntactic region, in bytes.
 //
 typedef void DndcSyntaxFunc(void* _Nullable user_data, int type, int line, int col, const char* _Nonnull begin, size_t length);
-// Ditto, but for utf-16 code units in native endian-ness
+
+//
+// A function type for marking syntactic regions, for use with
+// dndc_analyze_syntax_utf16.
+// This is very similar to DndcSyntaxFunc, but for utf16 code units.
+//
+// Arguments:
+// ----------
+// user_data:
+//    A pointer to user-defined data. The pointer will be the same one provided
+//    to dndc_analyze_syntax.
+//
+// type:
+//    The type of the syntactic region. See DndCSyntaxType.
+//
+// line:
+//    Which line of the file the error originated from. This is 0-based.
+//    Newlines increment the line count.
+//
+// col:
+//    The column the error occurred in, on the line specified by line.
+//    This is 0-based and is a code unit offset from the beginning of the line.
+//
+// begin:
+//    The beginning of the syntactic region. This is a pointer derived from
+//    the source string.
+//
+// length:
+//    The length of the syntactic region, in code units.
+//
 typedef void DndcSyntaxFuncUtf16(void* _Nullable user_data, int type, int line, int col, const unsigned short*_Nonnull begin, size_t length);
 
 //
@@ -300,6 +329,7 @@ typedef void DndcSyntaxFuncUtf16(void* _Nullable user_data, int type, int line, 
 extern
 int
 dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc*_Nonnull syntax_func, void*_Nullable syntax_data);
+
 //
 // ditto, but for utf-16 code units of native endianness
 //
