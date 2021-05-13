@@ -37,11 +37,12 @@ Rarray_check_size(RARRAY_T)(Nullable(Rarray(RARRAY_T)*) rarray, const Allocator 
         rarray->capacity = 4;
         }
     if(rarray->count == rarray->capacity){
-        auto new_array = Allocator_realloc(a, rarray, rarray->capacity*sizeof(RARRAY_T)+sizeof(Rarray(RARRAY_T)), rarray->capacity*2*sizeof(RARRAY_T)+sizeof(Rarray(RARRAY_T)));
+        const size_t old_size = rarray->capacity*sizeof(RARRAY_T)+sizeof(Rarray(RARRAY_T));
+        auto new_array = Allocator_realloc(a, rarray, old_size, old_size*2);
         rarray = new_array;
         rarray->capacity *= 2;
         }
-    return rarray;
+    return (Rarray(RARRAY_T)*)rarray;
     }
 
 
@@ -50,7 +51,7 @@ Nonnull(Rarray(RARRAY_T)*)
 Rarray_push(RARRAY_T)(Nullable(Rarray(RARRAY_T)*) rarray, const Allocator a, RARRAY_T item){
     rarray = Rarray_check_size(RARRAY_T)(rarray,a);
     rarray->data[rarray->count++] = item;
-    return rarray;
+    return (Rarray(RARRAY_T)*)rarray;
     }
 
 static inline
