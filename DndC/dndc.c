@@ -1339,7 +1339,7 @@ mem_utf16(const uint16_t* _Nonnull haystack, uint16_t needle, size_t ncode_units
         uint64_t tmp1;
         // Pray that efficient code is generated.
         (memcpy)(&tmp1, haystack, 4*sizeof(*haystack));
-        // After this, each code unit is all zeros iif that code unit == needle
+        // After this, each code unit is all zeros iff that code unit == needle
         const uint64_t tmp2 = tmp1 ^ needles;
         // Subtract one from all of the code units,
         // Thus those that are zeros become all ones.
