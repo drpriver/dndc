@@ -12,22 +12,22 @@ extern "C" {
 // LongStrings and StringViews are very similar.
 // A LongString is basically a StringView with a guaranteed nul-terminator.
 // It is unspecified if a StringView has a nul-terminator.
-typedef struct LongString {
+struct DndcLongString {
     size_t length; // excludes the terminating NUL
     const char* text; // utf-8 encoded text
-} LongString;
+};
 
-typedef struct StringView {
+struct DndcStringView {
     size_t length;
     const char* text; // utf-8 encoded text, might not be nul-terminated
-} StringView;
+};
 
 // Avoiding including <stdint.h> in public header.
 _Static_assert(sizeof(unsigned short) == 2, "unsigned short is not uint16_t");
-typedef struct StringViewUtf16 {
+struct DndcStringViewUtf16 {
     size_t length; // in code units
     const unsigned short* text; // utf-16 encoded code points, native endianness
-} StringViewUtf16;
+};
 
 #ifdef __cplusplus
 }

@@ -2,6 +2,11 @@
 #define DNDC_H
 #include "long_string_type.h"
 
+//
+// TODO: none of the in-repo consumers actually use dndc_make_html as it doesn't
+// provide control over file caching. This suggests that I need to expose file
+// loading/caching for potential consumers.
+
 // FIXME: remove this? Inappropriate for a public header?
 #ifndef __clang__
 
@@ -130,7 +135,7 @@ extern DndcErrorFunc dndc_stderr_error_func;
 //
 extern
 int
-dndc_make_html(StringView base_directory, LongString source_text, LongString*_Nonnull output, DndcErrorFunc*_Nullable error_func, void*_Nullable error_user_data);
+dndc_make_html(struct DndcStringView base_directory, struct DndcLongString source_text, struct DndcLongString*_Nonnull output, DndcErrorFunc*_Nullable error_func, void*_Nullable error_user_data);
 
 //
 // You do *not* need to call dndc_init_python before calling this function.
@@ -174,7 +179,7 @@ dndc_make_html(StringView base_directory, LongString source_text, LongString*_No
 //
 extern
 int
-dndc_format(LongString source_text, LongString* _Nonnull output, DndcErrorFunc* _Nullable error_func, void*_Nullable error_user_data);
+dndc_format(struct DndcLongString source_text, struct DndcLongString* _Nonnull output, DndcErrorFunc* _Nullable error_func, void*_Nullable error_user_data);
 
 //
 // On windows, if you load a dll, it will have its own crt and thus its own heap.
@@ -183,7 +188,7 @@ dndc_format(LongString source_text, LongString* _Nonnull output, DndcErrorFunc* 
 //
 extern
 void
-dndc_free_string(LongString);
+dndc_free_string(struct DndcLongString);
 
 //
 // Initializes the python interpreter and imports the dndc types.
@@ -328,14 +333,14 @@ typedef void DndcSyntaxFuncUtf16(void* _Nullable user_data, int type, int line, 
 //
 extern
 int
-dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc*_Nonnull syntax_func, void*_Nullable syntax_data);
+dndc_analyze_syntax(struct DndcStringView source_text, DndcSyntaxFunc*_Nonnull syntax_func, void*_Nullable syntax_data);
 
 //
 // ditto, but for utf-16 code units of native endianness
 //
 extern
 int
-dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16*_Nonnull syntax_func, void*_Nullable syntax_data);
+dndc_analyze_syntax_utf16(struct DndcStringViewUtf16 source_text, DndcSyntaxFuncUtf16*_Nonnull syntax_func, void*_Nullable syntax_data);
 
 #ifdef __cplusplus
 }

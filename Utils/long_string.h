@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "long_string_type.h"
+typedef struct DndcLongString LongString;
+typedef struct DndcStringView StringView;
+typedef struct DndcStringViewUtf16 StringViewUtf16;
 #include "common_macros.h"
 #include "error_handling.h"
 
