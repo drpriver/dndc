@@ -66,7 +66,7 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
     BinaryJob job = {
         .b64cache = &ctx->b64cache,
         };
-    if(not (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME))){
+    if(not (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME | DNDC_DONT_READ))){
         Marray(NodeHandle)* img_nodes[] = {
             &ctx->img_nodes,
             &ctx->imglinks_nodes,
@@ -220,6 +220,7 @@ int main(int argc, char**argv){
     bool print_depends = false;
     bool untrusted = false;
     bool strip_whitespace = false;
+    bool dont_read = false;
     {
         ArgToParse pos_args[] = {
             [0] = {
@@ -408,6 +409,14 @@ int main(int argc, char**argv){
                 .help = "Strip trailing and leading whitespace from all output lines",
                 .hidden = false,
             },
+            {
+                .name = SV("--dont-read"),
+                .min_num = 0,
+                .max_num = 1,
+                .dest = ARGDEST(&dont_read),
+                .help = "Don't read any files (other than builtins and the initial input file). Python blocks can bypass this.",
+                .hidden = true,
+            },
             };
         ArgParser argparser = {
             .name = argv[0],
@@ -491,6 +500,8 @@ int main(int argc, char**argv){
         flags |= DNDC_INPUT_IS_UNTRUSTED;
     if(strip_whitespace)
         flags |= DNDC_STRIP_WHITESPACE;
+    if(dont_read)
+        flags |= DNDC_DONT_READ;
 
     #ifdef BENCHMARKING
     flags &= ~DNDC_NO_CLEANUP;
@@ -529,6 +540,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
         flags |= DNDC_NO_PYTHON;
         flags |= DNDC_NO_THREADS;
         flags |= DNDC_DONT_INLINE_IMAGES;
+        flags |= DNDC_DONT_READ;
         }
     auto t0 = get_t();
     Errorable(void) result = {};
@@ -596,7 +608,11 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
         ctx_store_builtin_file(&ctx, LS("(stdin)"), source);
         }
     else {
+        // Temporarily clear the DONT_READ flag.
+        auto old_flags = ctx.flags;
+        ctx.flags &= ~DNDC_DONT_READ;
         auto source_err = ctx_load_source_file(&ctx, path);
+        ctx.flags = old_flags;
         if(source_err.errored){
             if(ctx.base_directory.length){
                 MStringBuilder err_builder = {.allocator = ctx.temp_allocator};

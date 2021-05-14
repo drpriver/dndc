@@ -289,6 +289,8 @@ ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
             return (Errorable(LongString)){.result=loaded->sourcetext};
             }
         }
+    if(unlikely(ctx->flags & DNDC_DONT_READ))
+        return (Errorable(LongString)){.errored=PARSE_ERROR};
     char* path = Allocator_strndup(ctx->textcache.allocator, sourcepath.text, sourcepath.length);
     msb_destroy(&temp_builder);
 
@@ -317,6 +319,8 @@ ctx_load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath){
         msb_append_path(&path_builder, binarypath.text, binarypath.length);
         binarypath = LS_to_SV(msb_detach(&path_builder));
         }
+    if(unlikely(ctx->flags & DNDC_DONT_READ))
+        return (Errorable(LongString)){.errored=PARSE_ERROR};
     ctx_note_dependency(ctx, binarypath);
     ByteBuilder bb = {.allocator = ctx->allocator};
     auto result = load_processed_binary_file(&ctx->b64cache, binarypath, &bb);

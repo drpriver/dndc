@@ -235,6 +235,10 @@ PyMethodDef pydndc_methods[] = {
         "                        and css imports. Ignores semantics, so make sure\n"
         "                        multiline strings are not disrupted by this!\n"
         "\n"
+        "    DONT_READ:          Don't read any files not already in the file\n"
+        "                        cache. Python blocks can bypass this by\n"
+        "                        calling open directly.\n"
+        "\n"
         "Returns:\n"
         "--------\n"
         "str: The html.\n"
@@ -363,6 +367,7 @@ PyInit_pydndc(void) {
     PyModule_AddIntConstant(mod, "NO_THREADS", DNDC_NO_THREADS);
     PyModule_AddIntConstant(mod, "USE_DND_URL_SCHEME", DNDC_USE_DND_URL_SCHEME);
     PyModule_AddIntConstant(mod, "STRIP_WHITESPACE", DNDC_STRIP_WHITESPACE);
+    PyModule_AddIntConstant(mod, "DONT_READ", DNDC_DONT_READ);
     PyModule_AddIntConstant(mod, "PRINT_STATS", DNDC_PRINT_STATS);
     PyModule_AddIntConstant(mod, "ERROR_MESSAGE", DNDC_ERROR_MESSAGE);
     PyModule_AddIntConstant(mod, "WARNING_MESSAGE", DNDC_WARNING_MESSAGE);
@@ -468,6 +473,7 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
         | DNDC_USE_DND_URL_SCHEME
         | DNDC_PRINT_STATS
         | DNDC_STRIP_WHITESPACE
+        | DNDC_DONT_READ
         };
     const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", NULL};
     PushDiagnostic();
