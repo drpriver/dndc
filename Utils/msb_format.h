@@ -207,9 +207,11 @@ msb_write_int_space_padded(Nonnull(MStringBuilder*)sb, int32_t value, int width)
     char* data = sb->data;
     if(needed_size >= width){
         _check_msb_size(sb, needed_size);
+        data = sb->data;
         }
     else {
         _check_msb_size(sb, width);
+        data = sb->data;
         auto pad = width - needed_size;
         memset(data+cursor, ' ', pad);
         cursor += pad;
