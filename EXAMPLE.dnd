@@ -143,37 +143,39 @@ Convenience::md
       but user beware, it gets wonky, but I think there are CSS properties
       to fix that.
     The Nodes::table
-      Node Type    | Block Name   | Container Tag | Heading | Hidden
-      ROOT         | ---          |               | ---     | No
-      TEXT         | text         | <div>         | Yes     | No
-      DIV          | div          | <div>         | Yes     | No
-      STRING       | ---          |               | ---     | No
-      PARA         | ---          | <p>           | ---     | No
-      TITLE        | title        | <h1>          | Yes     | No
-      HEADING      | h            | <hN>          | Yes     | No
-      TABLE        | table        | <div><table>  | Yes     | No
-      TABLE_ROW    | ---          | <tr>          | ---     | No
-      STYLESHEETS  | css          | ---           | ---     | No
-      DEPENDENCIES | dependencies | ---           | ---     | No
-      LINKS        | links        | ---           | ---     | No
-      SCRIPTS      | js           | ---           | ---     | No
-      IMPORT       | import       | ---           | ---     | No
-      IMAGE        | img          | <div><img>    | Yes     | No
-      BULLETS      | bullets      | <div><ul>     | Yes     | No
-      LIST         | list         | <div><ol>     | Yes     | No
-      LIST_ITEM    | ---          | <li>          | No      | No
-      PYTHON       | python       | ---           | No      | No
-      RAW          | raw          |               | No      | No
-      PRE          | pre          | <div><pre>    | Yes     | No
-      KEYVALUE     | kv           | <div><table>  | Yes     | No
-      KEYVALUEPAIR | ---          | <tr>          | No      | No
-      IMGLINKS     | imglinks     | <div><svg>    | Yes     | No
-      NAV          | nav          | <div><nav>    | Yes     | No
-      DATA         | data         | ---           | No      | No
-      COMMENT      | comment      | ---           | ---     | No
-      MD           | md           | <div>         | Yes     | No
-      CONTAINER    | ---          |               | No      | No
-      INVALID      | ---          | ---           | ---     | No
+      Node Type    | Block Name   | Container Tag | Heading
+      ROOT         | ---          |               | ---
+      TEXT         | text         | <div>         | Yes
+      DIV          | div          | <div>         | Yes
+      STRING       | ---          |               | ---
+      PARA         | ---          | <p>           | ---
+      TITLE        | title        | <h1>          | Yes
+      HEADING      | h            | <hN>          | Yes
+      TABLE        | table        | <div><table>  | Yes
+      TABLE_ROW    | ---          | <tr>          | ---
+      STYLESHEETS  | css          | ---           | ---
+      DEPENDENCIES | dependencies | ---           | ---
+      LINKS        | links        | ---           | ---
+      SCRIPTS      | js           | ---           | ---
+      IMPORT       | import       | ---           | ---
+      IMAGE        | img          | <div><img>    | Yes
+      BULLETS      | bullets      | <div><ul>     | Yes
+      PYTHON       | python       | ---           | No
+      RAW          | raw          |               | No
+      PRE          | pre          | <div><pre>    | Yes
+      LIST         | list         | <div><ol>     | Yes
+      LIST_ITEM    | ---          | <li>          | No
+      KEYVALUE     | kv           | <div><table>  | Yes
+      KEYVALUEPAIR | ---          | <tr>          | No
+      IMGLINKS     | imglinks     | <div><svg>    | Yes
+      NAV          | nav          | <div><nav>    | Yes
+      DATA         | data         | ---           | No
+      COMMENT      | comment      | ---           | ---
+      MD           | md           | <div>         | Yes
+      CONTAINER    | ---          |               | No
+      QUOTE        | quote        | <blockquote>  | Yes
+      HR           | hr           | <hr>          | No
+      INVALID      | ---          | ---           | ---
 
     ::md
       * Node Type is the type of the node.
@@ -223,6 +225,7 @@ Self-Contained::md
       * {
         box-sizing: border-box;
       }
+     /*endcss*/
     ::comment
       You haven't seen this before. The '@' symbol to the right of the double
       colon indicates an attribute. Attributes can be simple identifiers. They
@@ -324,7 +327,8 @@ Attributes and Classes::md
       @id(iden) | Instead of the automatic id, use iden as the id for the heading
       @hide     | Don't output the block in the rendered output.
       @inline   | Use contents, don't interpret as filepaths.
-      @external | (unimplemented) Produce a link (href) instead of embedding.
+      @noinline | Produce a link (href) instead of embedding.
+      @comment  | Treat the block as a comment instead of its declared type.
     All other attributes are used for user python blocks. I can't guarantee that
     they won't break when I add a new attribute though! We'll stabilize when the
     version is 1.0.
@@ -467,7 +471,7 @@ But Wait, There's More::md
     margin:auto;
   }
   body {
-    font-family: "Helvetica", "Verdana", "Tahoma', sans;
+    font-family: "Helvetica", "Verdana", "Tahoma", sans;
   }
 
   @media only screen and (max-width: 720px) {
@@ -496,6 +500,7 @@ But Wait, There's More::md
   }
   @media (prefers-color-scheme: light) {
   }
+  /*endcss*/
 
 
 ::python
