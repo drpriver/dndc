@@ -80,6 +80,8 @@ add_executable(TestPathUtil Utils/TestPathUtil.c)
 add_test(pathutil TestPathUtil)
 add_executable(TestStrUtils Utils/TestStrUtils.c)
 add_test(strutil TestStrUtils)
+add_executable(TestRarray Utils/TestRarray.c)
+add_test(rarray TestRarray)
 
 add_executable(TestDndC DndC/TestDndC.c PythonEmbed/frozenstdlib.c)
 add_test(dndc TestDndC -C ${CMAKE_SOURCE_DIR})

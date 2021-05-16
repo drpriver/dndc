@@ -2,6 +2,7 @@
 #define TESTING_H
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 #ifdef _WIN32
 // for chdir
 #include <direct.h>
@@ -364,7 +365,7 @@ PopDiagnostic();
     if(directory.length){
         int changed = chdir(directory.text);
         if(changed != 0){
-            fprintf(stderr, "Failed to change directory to '%s'\n", directory.text);
+            fprintf(stderr, "Failed to change directory to '%s': %s\n", directory.text, strerror(errno));
             return changed;
             }
         }

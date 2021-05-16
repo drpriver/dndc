@@ -9,6 +9,22 @@
 #include "error_handling.h"
 #endif
 
+//
+// Rarrays are dynamically resizable arrays where the length and capacity are
+// stored inline with the data. They can only be referred via pointer as they
+// are dynamically sized (data is stored continguously after the
+// length/capacity).
+//
+// This is useful for dynamically sized arrays that are usually empty (as you
+// can just store a pointer and have NULL be the same as a length 0 array) and
+// when you need to access anything about the array you need all of it (so
+// paying the cost of a pointer indirection to look up the size doesn't matter
+// as you need to read the data anyway.
+//
+// We use this to slim down the ast nodes as they have some fields which are
+// dynamically sized, but usually empty (attributes, classes).
+//
+
 #ifndef RARRAY_T
 #error "Must define RARRAY_T"
 #endif
@@ -28,6 +44,16 @@ typedef struct Rarray(RARRAY_T){
 #define Rarray_alloc(type) RARRAYIMPL(alloc, type)
 #define Rarray_remove(type) RARRAYIMPL(remove, type)
 
+//
+// Ensures there is enough space for one more element.
+// Returns the new rarray. The old pointer is now invalid (even if it happens to be the same)!
+//
+// Example:
+//   Allocator al = get_my_allocator();
+//   Rarray(int)* myarray = NULL;
+//   myarray = Rarray_check_size(int)(myarray, al);
+//   assert(myarray->capacity > 0);
+//
 static inline
 Nonnull(Rarray(RARRAY_T)*)
 Rarray_check_size(RARRAY_T)(Nullable(Rarray(RARRAY_T)*) rarray, const Allocator a){
@@ -45,7 +71,22 @@ Rarray_check_size(RARRAY_T)(Nullable(Rarray(RARRAY_T)*) rarray, const Allocator 
     return (Rarray(RARRAY_T)*)rarray;
     }
 
-
+//
+// Pushes one more element onto the end of the rarray.
+// Returns the new rarray. The old pointer is now invalid (even if it happens to be the same)!
+// 
+// Example:
+//
+//   Allocator al = get_my_allocator();
+//   Rarray(int)* myarray = NULL;
+//   myarray = Rarray_push(int)(myarray, al, 1);
+//   myarray = Rarray_push(int)(myarray, al, 2);
+//   myarray = Rarray_push(int)(myarray, al, 3);
+//   assert(myarray->count == 3);
+//   assert(myarray->data[0] == 1);
+//   assert(myarray->data[1] == 2);
+//   assert(myarray->data[2] == 3);
+//
 static inline
 Nonnull(Rarray(RARRAY_T)*)
 Rarray_push(RARRAY_T)(Nullable(Rarray(RARRAY_T)*) rarray, const Allocator a, RARRAY_T item){
@@ -54,6 +95,31 @@ Rarray_push(RARRAY_T)(Nullable(Rarray(RARRAY_T)*) rarray, const Allocator a, RAR
     return (Rarray(RARRAY_T)*)rarray;
     }
 
+//
+// Allocates space for one item in the rarray and returns it.
+// The item is uninitialized. The pointer is unstable as any subsequent usage of the
+// rarray can invalidate it.
+// Takes a pointer to a pointer to rarray and will rewrite it. The previous value
+// is invalid, so either only have one pointer to the rarray and have this rewrite it
+// or you need to manually update the other pointers.
+//
+// Example:
+//
+//   Allocator al = get_my_allocator();
+//   Rarray(int)* myarray = NULL;
+//   // Use a block to scope the allocation as the returned pointer is unstable
+//   {
+//       int* a = Rarray_alloc(int)(&myarray, al);
+//       *a = 3;
+//   }
+//   {
+//       int* b = Rarray_alloc(int)(&myarray, al);
+//       *b = 4;
+//   }
+//   assert(myarray->count == 2);
+//   assert(myarray->data[0] == 3);
+//   assert(myarray->data[1] == 4);
+//
 static inline
 Nonnull(RARRAY_T*)
 Rarray_alloc(RARRAY_T)(Nonnull(Nullable(Rarray(RARRAY_T)*)*) rarray, const Allocator a){
@@ -61,6 +127,21 @@ Rarray_alloc(RARRAY_T)(Nonnull(Nullable(Rarray(RARRAY_T)*)*) rarray, const Alloc
     return &(*rarray)->data[(*rarray)->count++];
     }
 
+//
+// Removes an item by index. All items after it are shifted forward one.
+//
+// Example:
+//
+//   Allocator al = get_my_allocator();
+//   Rarray(int)* myarray = NULL;
+//   myarray = Rarray_push(int)(myarray, al, 1);
+//   myarray = Rarray_push(int)(myarray, al, 2);
+//   myarray = Rarray_push(int)(myarray, al, 3);
+//   Rarray_remove(int)(myarray, 1);
+//   assert(myarray->count == 2);
+//   assert(myarray->data[0] == 1);
+//   assert(myarray->data[1] == 3);
+//
 static inline
 void
 Rarray_remove(RARRAY_T)(Nonnull(Rarray(RARRAY_T)*) rarray, size_t i){

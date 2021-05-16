@@ -124,6 +124,8 @@ t = executable('TestPathUtil', 'Utils/TestPathUtil.c', kwargs:testkw)
 test('pathutil', t)
 t = executable('TestStrUtils', 'Utils/TestStrUtils.c', kwargs:testkw)
 test('strutil', t)
+t = executable('TestRarray', 'Utils/TestRarray.c', kwargs:testkw)
+test('rarray', t)
 t = executable('TestDndC',
   'DndC/TestDndC.c',
   'PythonEmbed/frozenstdlib.c',

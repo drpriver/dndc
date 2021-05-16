@@ -236,7 +236,7 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
     text.text = [string UTF8String];
     text.length = strlen(text.text);
     if(self.controller){
-        [self.controller recalc_html: text];
+        [self.controller recalc_html: [self.controller get_text]];
     }
 #if 1
     // NSRange currentLineRange = NSMakeRange(0, [string length]);
