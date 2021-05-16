@@ -302,7 +302,9 @@ FORMATFUNC(md_list){
         auto child = get_node(ctx, node->children.data[i]);
         assert(child->type == NODE_LIST_ITEM);
         msb_write_nchar(sb, ' ', indent);
-        MSB_FORMAT(sb, padded_int_fmt(i+1, numwidth), ". ");
+        // FIXME: the parser doesn't like nicely indented lists.
+        // MSB_FORMAT(sb, padded_int_fmt(i+1, numwidth), ". ");
+        MSB_FORMAT(sb, int_fmt(i+1), ". ");
         FormatState state = {.lead = indent+numwidth+2, .col=indent+numwidth+2};
         for(size_t j = 0; j < child->children.count; j++){
             auto subchild = get_node(ctx, child->children.data[j]);

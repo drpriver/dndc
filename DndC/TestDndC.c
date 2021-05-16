@@ -8,6 +8,7 @@ TestFunction(TestDndC3);
 TestFunction(TestDndcOutParam);
 TestFunction(TestDndcTableMultiline);
 TestFunction(TestFormatTable);
+TestFunction(TestFormatList);
 TestFunction(TestCrashesFixed);
 TestFunction(TestExamplesWork);
 TestFunction(TestUntrusted);
@@ -21,6 +22,7 @@ register_tests(void){
     RegisterTest(TestDndcOutParam);
     RegisterTest(TestDndcTableMultiline);
     RegisterTest(TestFormatTable);
+    RegisterTest(TestFormatList);
     RegisterTest(TestCrashesFixed);
     RegisterTest(TestExamplesWork);
     RegisterTest(TestUntrusted);
@@ -276,6 +278,66 @@ TestFunction(TestFormatTable){
             HEREPrint(expected.text);
             HEREPrint(outdata.text);
             }
+        const_free(outdata.text);
+        }
+    TESTEND();
+    }
+TestFunction(TestFormatList){
+    TESTBEGIN();
+    LongString source = LS(
+        "Hello\n"
+        "1. 1\n"
+        "2. 2\n"
+        "3. 3\n"
+        "4. 4\n"
+        "5. 5\n"
+        "6. 1\n"
+        "7. 2\n"
+        "8. 3\n"
+        "9. 4\n"
+        "10. 5\n"
+        "11. 5\n"
+        "12. 5\n"
+        );
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_DONT_PRINT_ERRORS
+        | DNDC_OUTPUT_PATH_IS_OUT_PARAM
+        | DNDC_REFORMAT_ONLY
+        ;
+    LongString outdata = {};
+    auto e = run_the_dndc(flags, SV(""), source, &outdata, (DependsArg){.path=LS("")}, NULL, NULL, NULL, NULL);
+    TestExpectSuccess(e);
+    if(!e.errored){
+        // A bit brittle of a test, but it shows that the outparam works.
+        auto expected = LS(
+            "Hello\n"
+            "\n"
+            "1. 1\n"
+            "2. 2\n"
+            "3. 3\n"
+            "4. 4\n"
+            "5. 5\n"
+            "6. 1\n"
+            "7. 2\n"
+            "8. 3\n"
+            "9. 4\n"
+            "10. 5\n"
+            "11. 5\n"
+            "12. 5\n"
+            );
+        TestExpectEquals(expected.length, outdata.length);
+        TestExpectEquals(LS_equals(expected, outdata), true);
+        if(!LS_equals(expected, outdata)){
+            HEREPrint(expected.text);
+            HEREPrint(outdata.text);
+            }
+        { 
+            // check it parses after format
+            auto e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""), outdata, NULL, (DependsArg){.path=LS("")}, NULL, NULL, NULL, NULL);
+            TestExpectSuccess(e2);
+        }
         const_free(outdata.text);
         }
     TESTEND();
