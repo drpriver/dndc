@@ -30,8 +30,8 @@
 #define TESTEND() } return TEST_stats
 
 //
-// If this macro is defined, suppresses generating a main function. You will
-// be responsible for calling test_main yourself and reporting the results.
+// If this macro is defined, suppresses generating a test_main function. You will
+// be responsible for calling run_the_tests yourself and reporting the results.
 // #define SUPPRESS_TEST_MAIN
 //
 
@@ -39,44 +39,65 @@
 // Internal use struct to keep track of the number of tests executed, failed,
 // etc.
 struct TestStats {
+    int funcs_executed;
     int failures;
     int executed;
     int assert_failures;
 };
 
 // The type of a test function.
-typedef struct TestStats (*_test_func)(void);
-typedef Nonnull(_test_func) test_func;
+typedef struct TestStats (TestFunc)(void);
+
+enum TestCaseFlags {
+    // No flags
+    TEST_CASE_FLAGS_NONE = 0x0,
+    // Skip this test unless specifically named on the command line.
+    // This is useful for slow or exhaustive tests that don't need to be run
+    // on every change, but you want to keep them compiling and in tree.
+    TEST_CASE_FLAGS_SKIP_UNLESS_NAMED = 0x1,
+};
+
+// Internal use.
+typedef struct TestCase {
+    Nonnull(const char*) test_name;
+    Nonnull(TestFunc*) test_func;
+    enum TestCaseFlags flags;
+} TestCase;
 
 //
 // Register a test for execution.
-// Use this within your definition of the register_tests function.
+// Use this before calling test_main
 //
-static inline void RegisterTest(test_func);
-
-//
-// Users should register their test by defining this function.
-// The test main will call this function to register all of the tests
-// int the test array and then execute them one by one.
+// static inline void RegisterTest(TestFunc*);
 //
 // Example use:
 //
-// static inline
-// void
-// register_tests(void){
+// int main(int argc, char**argv){
 //     RegisterTest(TestFooIsTwo);
 //     RegisterTest(TestBarIsNotBaz);
+//     return test_main(argc, argv);
 // }
-//
-static inline void register_tests(void);
 
+// Implemented as a macro to capture the name of the test
+#define RegisterTest(tf) register_test(#tf, tf, TEST_CASE_FLAGS_NONE)
+// Ditto, but allows specifying flags.
+#define RegisterTestFlags(tf, flags) register_test(#tf, tf, flags)
+static inline void register_test(Nonnull(const char*) test_name, Nonnull(TestFunc*) func, enum TestCaseFlags flags);
 
 // Internal use, use the RegisterTest function to register a test.
 // This array is where registered tests are located.
 // A single test program can not directly register more than 1000 tests.
-static test_func test_funcs[1000];
+static TestCase test_funcs[1000];
 // How many were registered. Internal use.
 static int test_funcs_count;
+
+static
+inline
+void register_test(Nonnull(const char*) test_name, Nonnull(TestFunc*) func, enum TestCaseFlags flags){
+    assert(test_funcs_count < arrlen(test_funcs));
+    test_funcs[test_funcs_count++] = (TestCase){.test_name = test_name, .test_func=func, .flags=flags};
+    }
+
 
 // Internal use color definitions. They will be set to escape codes if
 // stderr is detected to be interactive.
@@ -94,8 +115,8 @@ Nonnull(const char*) _test_color_red   = ""
 // It's an fprintf wrapper (appends a newline though).
 //
 #define TestReport(fmt, ...) \
-    fprintf(stderr, "%s%-16.16s %5d: %s" fmt "\n",\
-        _test_color_gray, __FILE__, __LINE__, \
+    fprintf(stderr, "%s%s %s %d: %s" fmt "\n",\
+        _test_color_gray, __FILE__, __func__, __LINE__, \
         _test_color_reset, ##__VA_ARGS__);
 
 //
@@ -148,7 +169,8 @@ Nonnull(const char*) _test_color_red   = ""
 
 //
 // Expects the condition is truthy (for the usual C definition of truth).
-// This is identical to TestExpect.
+// This is identical to TestExpect and is provided to mirror TestExpectFalse
+// below.
 //
 #define TestExpectTrue(cond) do{\
         TEST_stats.executed++;\
@@ -161,7 +183,6 @@ Nonnull(const char*) _test_color_red   = ""
 
 //
 // Expects the condition is falsey (for the usual C definition of truth).
-// This is identical to TestExpect.
 //
 #define TestExpectFalse(cond) do{\
         TEST_stats.executed++;\
@@ -279,29 +300,28 @@ Nonnull(const char*) _test_color_red   = ""
         return TEST_stats;\
         }while(0)
 
-// Implementation of RegisterTest
-static
-inline
-void RegisterTest(test_func func){
-    assert(test_funcs_count < arrlen(test_funcs));
-    test_funcs[test_funcs_count++] = func;
-    }
-
 //
 // The actual test runner.
-// You can call this in your own main or other program if you have
-// suppressed the provided main (perhaps you need more setup).
+// You can call this in your own test_main or other function.
 // Otherwise, don't call this directly.
 //
 static
 struct TestStats
-test_main(void){
+run_the_tests(Nullable(const char*) test_name){
     struct TestStats result = {};
-    register_tests();
     for (int i = 0; i < test_funcs_count; i++){
-        auto func = test_funcs[i];
+        if(test_name){
+            if(strcmp(test_funcs[i].test_name, test_name)!= 0)
+                continue;
+            }
+        else {
+            if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED)
+                continue;
+            }
+        auto func = test_funcs[i].test_func;
         assert(func);
         auto func_result = func();
+        result.funcs_executed++;
         result.failures += func_result.failures;
         result.executed += func_result.executed;
         result.assert_failures += func_result.assert_failures;
@@ -310,15 +330,12 @@ test_main(void){
     }
 
 //
-// The default main implementation if you don't suppress it.
-// Executes test_main and pretty prints the results to the terminal.
+// The default test_main implementation if you don't suppress it.
+// Executes run_the_tests and pretty prints the results to the terminal.
 //
 #ifndef SUPPRESS_TEST_MAIN
 #include "term_util.h"
-PushDiagnostic()
-SuppressNullabilityComplete()
-int main(int argc, char**argv){
-PopDiagnostic();
+int test_main(int argc, char*_Nonnull *_Nonnull argv){
     if(argc < 1){
         fprintf(stderr, "Somehow this program was called without an argv.\n");
         return 1;
@@ -326,6 +343,8 @@ PopDiagnostic();
     const char* filename = argv[0];
     bool no_colors = false;
     LongString directory = {};
+    LongString test_names[arrlen(test_funcs)] = {};
+    bool list_tests = false;
     ArgToParse kw_args[] = {
         {
             .name = SV("-C"),
@@ -344,6 +363,25 @@ PopDiagnostic();
             .help = "Dont use ANSI escape codes to print colors in reporting",
             .hide_default = true,
         },
+        {
+            .name = SV("-t"),
+            .altname1 = SV("--target"),
+            .min_num = 0,
+            .max_num = 1,
+            // .max_num = arrlen(test_names),
+            .dest = ARGDEST(test_names),
+            .help = "If given, only run the named test function",
+            .hide_default = true,
+        },
+        {
+            .name = SV("-l"),
+            .altname1 = SV("--list"),
+            .min_num = 0,
+            .max_num = 1,
+            .dest = ARGDEST(&list_tests),
+            .help = "List the names of the test functions.",
+            .hide_default = true,
+        },
     };
     ArgParser argparser = {
         .name = argc?argv[0]:"(Unnamed program)",
@@ -359,8 +397,19 @@ PopDiagnostic();
     auto e = parse_args(&argparser, &args);
     if(e.errored){
         fprintf(stderr, "Error when parsing arguments.\n");
-        print_help(&argparser);
+        if(isatty(fileno(stdout)))
+            print_help(&argparser);
         return e.errored;
+        }
+    if(list_tests){
+        for(int i = 0; i < test_funcs_count; i++){
+            fprintf(stdout, "%-16s\t", test_funcs[i].test_name);
+            if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED){
+                fprintf(stdout, "Will Skip");
+                }
+            fputc('\n', stdout);
+            }
+        return 1;
         }
     if(directory.length){
         int changed = chdir(directory.text);
@@ -385,12 +434,12 @@ PopDiagnostic();
     _test_color_red = red;
 #endif
 
-    auto result = test_main();
+    auto result = run_the_tests(test_names[0].text);
 
-    const char* text = test_funcs_count == 1? "test function executed" : "test functions executed";
+    const char* text = result.funcs_executed == 1? "test function executed" : "test functions executed";
     fprintf(stderr, "%s%s: %s%d%s %s\n",
             gray, filename,
-            blue, test_funcs_count,
+            blue, result.funcs_executed,
             reset, text);
 
     text = result.executed == 1? "test executed" : "tests executed";

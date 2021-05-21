@@ -348,7 +348,7 @@ TestFunction(TestHumanIntegers){
     }
 
 
-void register_tests(void){
+int main(int argc, char** argv){
     RegisterTest(TestArgumentParsing1);
     RegisterTest(TestArgumentParsing2);
     RegisterTest(TestArgumentParsing3);
@@ -361,5 +361,6 @@ void register_tests(void){
     RegisterTest(TestArgumentParsing10);
     RegisterTest(TestIntegerParsing);
     RegisterTest(TestHumanIntegers);
-    }
+    return test_main(argc, argv);
+}
 

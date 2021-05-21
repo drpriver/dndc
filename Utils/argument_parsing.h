@@ -221,9 +221,16 @@ print_help(Nonnull(const ArgParser*) p){
     hs.remaining = hs.output_width;
     for(int i = 0; i < p->positional.count; i++){
         auto arg = &p->positional.args[i];
-        auto to_print = 1 + arg->name.length;
-        help_state_update(&hs, to_print);
-        printf(" %s", arg->name.text);
+        if(arg->max_num > 1){
+            auto to_print = 1 + arg->name.length + 4;
+            help_state_update(&hs, to_print);
+            printf(" %s ...", arg->name.text);
+            }
+        else {
+            auto to_print = 1 + arg->name.length;
+            help_state_update(&hs, to_print);
+            printf(" %s", arg->name.text);
+            }
         }
     for(int i = 0; i < p->keyword.count; i++){
         auto arg = &p->keyword.args[i];
@@ -244,15 +251,15 @@ print_help(Nonnull(const ArgParser*) p){
         else {
             if(arg->altname1.text){
                 auto tn = ArgTypeNames[arg->dest.type];
-                auto to_print = sizeof(" [%s | %s <%s>]") - 7 + arg->name.length + arg->altname1.length + tn.length;
+                auto to_print = sizeof(" [%s | %s <%s>%s]") - 9 + arg->name.length + arg->altname1.length + tn.length + (arg->max_num > 1?sizeof(" ...")-1: 0);
                 help_state_update(&hs, to_print);
-                printf(" [%s | %s <%s>]", arg->name.text, arg->altname1.text, tn.text);
+                printf(" [%s | %s <%s>%s]", arg->name.text, arg->altname1.text, tn.text, arg->max_num > 1?" ...":"");
                 }
             else{
                 auto tn = ArgTypeNames[arg->dest.type];
-                auto to_print = sizeof(" [%s <%s>]") - 5 + arg->name.length + tn.length;
+                auto to_print = sizeof(" [%s <%s>%s]") - 7 + arg->name.length + tn.length + (arg->max_num > 1?sizeof(" ...")-1:0);
                 help_state_update(&hs, to_print);
-                printf(" [%s <%s>]", arg->name.text, tn.text);
+                printf(" [%s <%s>%s]", arg->name.text, tn.text, arg->max_num>1?" ...":"");
                 }
             }
         }
@@ -269,7 +276,7 @@ print_help(Nonnull(const ArgParser*) p){
     if(p->version){
         puts("Keyword Arguments:\n"
              "------------------\n"
-             "-h, --help: flag = false\n"
+             "-h, --help: flag\n"
              "    Print this help and exit.\n"
              "\n"
              "--version: flag = false\n"
@@ -278,7 +285,7 @@ print_help(Nonnull(const ArgParser*) p){
     else {
         puts("Keyword Arguments:\n"
              "------------------\n"
-             "-h, --help: flag = false\n"
+             "-h, --help: flag\n"
              "    Print this help and exit.");
         }
     for(size_t i = 0; i < p->keyword.count; i++){

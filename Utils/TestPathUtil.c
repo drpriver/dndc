@@ -2,13 +2,13 @@
 #define BACKSLASH_IS_A_PATH_SEP
 #include "path_util.h"
 
-struct TestCase {
+struct PathTestCase {
     StringView input;
     StringView expected;
 };
 TestFunction(TestBaseName){
     TESTBEGIN();
-    struct TestCase cases[] = {
+    struct PathTestCase cases[] = {
         {SV("/foo/bar/baz"), SV("baz")},
         {SV(""), SV("")},
         {SV("foo"), SV("foo")},
@@ -38,7 +38,7 @@ TestFunction(TestBaseName){
 
 TestFunction(TestDirName){
     TESTBEGIN();
-    struct TestCase cases[] = {
+    struct PathTestCase cases[] = {
         {SV("/foo/bar/baz"), SV("/foo/bar")},
         {SV(""), SV("")},
         {SV("foo"), SV("")},
@@ -68,7 +68,7 @@ TestFunction(TestDirName){
 
 TestFunction(TestStripExtension){
     TESTBEGIN();
-    struct TestCase cases[] = {
+    struct PathTestCase cases[] = {
         {SV("/foo/bar/baz"), SV("/foo/bar/baz")},
         {SV(""), SV("")},
         {SV("foo"), SV("foo")},
@@ -106,10 +106,11 @@ TestFunction(TestStripExtension){
     TESTEND();
     }
 
-void register_tests(void){
+int main(int argc, char** argv){
     RegisterTest(TestBaseName);
     RegisterTest(TestDirName);
     RegisterTest(TestStripExtension);
-    }
+    return test_main(argc, argv);
+}
 
 #include "allocator.c"

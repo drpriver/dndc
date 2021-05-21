@@ -78,9 +78,10 @@ TestFunction(TestMStringBuilder3){
     TESTEND();
     }
 
-void register_tests(void){
+int main(int argc, char** argv){
     RegisterTest(TestMStringBuilder1);
     RegisterTest(TestMStringBuilder2);
     RegisterTest(TestMStringBuilder3);
+    return test_main(argc, argv);
     }
 #include "allocator.c"

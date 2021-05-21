@@ -19,7 +19,8 @@ TestFunction(TestByteBuilder1){
     TESTEND();
     }
 
-void register_tests(void){
+int
+main(int argc, char** argv){
     RegisterTest(TestByteBuilder1);
     // RegisterTest(TestByteBuilder2);
     // RegisterTest(TestByteBuilder3);
@@ -30,6 +31,7 @@ void register_tests(void){
     // RegisterTest(TestByteBuilder8);
     // RegisterTest(TestByteBuilder9);
     // RegisterTest(TestByteBuilder10);
-    }
+    return test_main(argc, argv);
+}
 
 #include "allocator.c"

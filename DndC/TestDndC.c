@@ -2,20 +2,19 @@
 #include "testing.h"
 #include "dndc.c"
 
-TestFunction(TestDndC1);
-TestFunction(TestDndC2);
-TestFunction(TestDndC3);
-TestFunction(TestDndcOutParam);
-TestFunction(TestDndcTableMultiline);
-TestFunction(TestFormatTable);
-TestFunction(TestFormatList);
-TestFunction(TestCrashesFixed);
-TestFunction(TestExamplesWork);
-TestFunction(TestUntrusted);
+static TestFunc TestDndC1;
+static TestFunc TestDndC2;
+static TestFunc TestDndC3;
+static TestFunc TestDndcOutParam;
+static TestFunc TestDndcTableMultiline;
+static TestFunc TestFormatTable;
+static TestFunc TestFormatList;
+static TestFunc TestCrashesFixed;
+static TestFunc TestExamplesWork;
+static TestFunc TestUntrusted;
 
-static inline
-void
-register_tests(void){
+int main(int argc, char** argv){
+    dndc_init_python();
     RegisterTest(TestDndC1);
     RegisterTest(TestDndC2);
     RegisterTest(TestDndC3);
@@ -26,6 +25,7 @@ register_tests(void){
     RegisterTest(TestCrashesFixed);
     RegisterTest(TestExamplesWork);
     RegisterTest(TestUntrusted);
+    return test_main(argc, argv);
 }
 
 TestFunction(TestDndC1){
@@ -38,6 +38,7 @@ TestFunction(TestDndC1){
         "  ctx.root.add_child('hello')\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_PYTHON_IS_INIT
         | DNDC_DONT_WRITE
         | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
@@ -333,7 +334,7 @@ TestFunction(TestFormatList){
             HEREPrint(expected.text);
             HEREPrint(outdata.text);
             }
-        { 
+        {
             // check it parses after format
             auto e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""), outdata, NULL, (DependsArg){.path=LS("")}, NULL, NULL, NULL, NULL);
             TestExpectSuccess(e2);

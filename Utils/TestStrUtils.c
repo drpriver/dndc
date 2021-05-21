@@ -49,7 +49,9 @@ TestFunction(TestCmp){
     TestExpectEquals(memcmp(strings, expected, sizeof(strings)), 0);
     TESTEND();
     }
-void register_tests(void){
+
+int main(int argc, char** argv){
     RegisterTest(TestStrip);
     RegisterTest(TestCmp);
+    return test_main(argc, argv);
     }

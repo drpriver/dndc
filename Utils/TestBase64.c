@@ -77,8 +77,9 @@ TestFunction(TestBase64_2){
     TESTEND();
     }
 
-void register_tests(void){
+int main(int argc, char** argv){
     RegisterTest(TestBase64);
     RegisterTest(TestBase64_2);
+    return test_main(argc, argv);
     }
 #include "allocator.c"

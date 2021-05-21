@@ -73,11 +73,12 @@ TestFunction(TestRemoveExample){
     }
 
 
-void register_tests(void){
+int main(int argc, char** argv){
     RegisterTest(TestCheckSizeExample);
     RegisterTest(TestPushExample);
     RegisterTest(TestAllocExample);
     RegisterTest(TestRemoveExample);
-    }
+    return test_main(argc, argv);
+}
 
 #include "allocator.c"

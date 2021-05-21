@@ -74,7 +74,7 @@ Rarray_check_size(RARRAY_T)(Nullable(Rarray(RARRAY_T)*) rarray, const Allocator 
 //
 // Pushes one more element onto the end of the rarray.
 // Returns the new rarray. The old pointer is now invalid (even if it happens to be the same)!
-// 
+//
 // Example:
 //
 //   Allocator al = get_my_allocator();
