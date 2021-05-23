@@ -8,16 +8,20 @@
 
 enum FormatType {
     FORMATTYPE_STRING = 0,
-    FORMATTYPE_INT = 1,
-    FORMATTYPE_UINT = 2,
+    FORMATTYPE_INT32 = 1,
+    FORMATTYPE_UINT32 = 2,
     FORMATTYPE_INT_PADDED = 3,
+    FORMATTYPE_INT64 = 4,
+    FORMATTYPE_UINT64 = 5,
 };
 
 typedef struct FormatArg {
     enum FormatType type;
     union {
-        int int_value;
-        unsigned uint_value;
+        int32_t int32_value;
+        uint32_t uint32_value;
+        int64_t int64_value;
+        uint64_t uint64_value;
         StringView string_value;
         struct {
             int value;
@@ -30,7 +34,8 @@ static inline
 force_inline
 FormatArg
 int_fmt(int value){
-    return (FormatArg){.type = FORMATTYPE_INT, .int_value=value};
+    _Static_assert(sizeof(value) == sizeof(int32_t), "");
+    return (FormatArg){.type = FORMATTYPE_INT32, .int32_value=value};
 }
 static inline
 force_inline
@@ -53,8 +58,48 @@ fmt_fmt(FormatArg value){
 static inline
 force_inline
 FormatArg
-uint_fmt(unsigned value){
-    return (FormatArg){.type = FORMATTYPE_UINT, .uint_value=value};
+uint_fmt(uint32_t value){
+    _Static_assert(sizeof(value) == sizeof(unsigned), "");
+    return (FormatArg){.type = FORMATTYPE_UINT32, .uint32_value=value};
+}
+
+static inline
+force_inline
+FormatArg
+ulong_fmt(unsigned long value){
+    if(sizeof(value) == sizeof(uint64_t)){
+        return (FormatArg){.type = FORMATTYPE_UINT64, .uint64_value=value};
+        }
+    else {
+        return (FormatArg){.type = FORMATTYPE_UINT32, .uint32_value=value};
+        }
+}
+
+static inline
+force_inline
+FormatArg
+long_fmt(long value){
+    if(sizeof(value) == sizeof(int64_t)){
+        return (FormatArg){.type = FORMATTYPE_INT64, .int64_value=value};
+        }
+    else {
+        return (FormatArg){.type = FORMATTYPE_INT32, .int32_value=value};
+        }
+}
+
+static inline
+force_inline
+FormatArg
+longlong_fmt(long long value){
+    _Static_assert(sizeof(value) == sizeof(int64_t), "");
+    return (FormatArg){.type = FORMATTYPE_INT64, .int64_value=value};
+}
+static inline
+force_inline
+FormatArg
+ulonglong_fmt(unsigned long long value){
+    _Static_assert(sizeof(value) == sizeof(uint64_t), "");
+    return (FormatArg){.type = FORMATTYPE_UINT64, .uint64_value=value};
 }
 
 static inline
@@ -166,7 +211,7 @@ uint64_to_str_buffer(char* _Nonnull buff, uint64_t value){
 
 static inline
 void
-msb_write_int(Nonnull(MStringBuilder*) sb, int32_t value){
+msb_write_int32(Nonnull(MStringBuilder*) sb, int32_t value){
     if(value == INT32_MIN){
         msb_write_literal(sb, "-2147483648");
         return;
@@ -178,6 +223,25 @@ msb_write_int(Nonnull(MStringBuilder*) sb, int32_t value){
         }
     char* p = uint32_to_str_buffer(buff, value);
     ptrdiff_t size = (buff+10) - p;
+    _check_msb_size(sb, size);
+    memcpy(sb->data+sb->cursor, p, size);
+    sb->cursor += size;
+    }
+
+static inline
+void
+msb_write_int64(Nonnull(MStringBuilder*) sb, int64_t value){
+    if(value == INT64_MIN){
+        msb_write_literal(sb, "-9223372036854775808");
+        return;
+        }
+    if(value < 0){
+        msb_write_char(sb, '-');
+        value = -value;
+        }
+    char buff[20];
+    char* p = uint64_to_str_buffer(buff, value);
+    ptrdiff_t size = (buff+20) - p;
     _check_msb_size(sb, size);
     memcpy(sb->data+sb->cursor, p, size);
     sb->cursor += size;
@@ -225,7 +289,7 @@ msb_write_int_space_padded(Nonnull(MStringBuilder*)sb, int32_t value, int width)
 
 static inline
 void
-msb_write_uint(Nonnull(MStringBuilder*) sb, uint32_t value){
+msb_write_uint32(Nonnull(MStringBuilder*) sb, uint32_t value){
     char buff[10];
     char* p = uint32_to_str_buffer(buff, value);
     ptrdiff_t size = (buff+10) - p;
@@ -253,14 +317,20 @@ msb_apply_format(Nonnull(MStringBuilder*)sb, FormatArg arg){
         case FORMATTYPE_STRING:
             msb_write_str(sb, arg.string_value.text, arg.string_value.length);
             break;
-        case FORMATTYPE_INT:
-            msb_write_int(sb, arg.int_value);
+        case FORMATTYPE_INT32:
+            msb_write_int32(sb, arg.int32_value);
             break;
-        case FORMATTYPE_UINT:
-            msb_write_uint(sb, arg.uint_value);
+        case FORMATTYPE_UINT32:
+            msb_write_uint32(sb, arg.uint32_value);
             break;
         case FORMATTYPE_INT_PADDED:
             msb_write_int_space_padded(sb, arg.padded_int.value, arg.padded_int.padding);
+            break;
+        case FORMATTYPE_INT64:
+            msb_write_int64(sb, arg.int64_value);
+            break;
+        case FORMATTYPE_UINT64:
+            msb_write_uint64(sb, arg.uint64_value);
             break;
         }
     }
@@ -279,6 +349,10 @@ msb_format(Nonnull(MStringBuilder*)sb, size_t n_items, Nonnull(const FormatArg*)
         FormatArg: fmt_fmt,\
         unsigned: uint_fmt,\
         int: int_fmt,\
+        unsigned long: ulong_fmt,\
+        unsigned long long: ulonglong_fmt,\
+        long: long_fmt,\
+        long long: longlong_fmt,\
         char*: str_fmt,\
         const char*: str_fmt,\
         StringView: sv_fmt,\
