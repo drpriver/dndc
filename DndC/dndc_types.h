@@ -130,23 +130,25 @@ typedef struct FileCache {
 static inline
 void
 FileCache_clear(Nonnull(FileCache*)cache){
+    Allocator al = cache->allocator;
     for(size_t i = 0; i < cache->files.count; i++){
         auto src = &cache->files.data[i];
-        Allocator_free(cache->allocator, src->sourcepath.text, src->sourcepath.length+1);
-        Allocator_free(cache->allocator, src->sourcetext.text, src->sourcetext.length+1);
+        Allocator_free(al, src->sourcepath.text, src->sourcepath.length+1);
+        Allocator_free(al, src->sourcetext.text, src->sourcetext.length+1);
         }
-    Marray_cleanup(LoadedSource)(&cache->files, cache->allocator);
+    Marray_cleanup(LoadedSource)(&cache->files, al);
     }
 
 static inline
 void
 FileCache_maybe_remove(Nonnull(FileCache*)cache, StringView path){
+    Allocator al = cache->allocator;
     for(size_t i = 0; i < cache->files.count; i++){
         auto src = cache->files.data[i];
         if(LS_SV_equals(src.sourcepath, path)){
             Marray_remove(LoadedSource)(&cache->files, i);
-            Allocator_free(cache->allocator, src.sourcepath.text, src.sourcepath.length+1);
-            Allocator_free(cache->allocator, src.sourcetext.text, src.sourcetext.length+1);
+            Allocator_free(al, src.sourcepath.text, src.sourcepath.length+1);
+            Allocator_free(al, src.sourcetext.text, src.sourcetext.length+1);
             return;
             }
         }

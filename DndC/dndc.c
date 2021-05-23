@@ -631,6 +631,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
             }
         source = source_err.result;
         }
+    // Quick and dirty estimate of how many nodes we will need.
     Marray_reserve(Node)(&ctx.nodes, ctx.allocator, source.length/10+1);
 
     // Setup the root node.
@@ -733,6 +734,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
                 result.errored = PARSE_ERROR;
                 goto cleanup;
                 }
+            // NOTE: re-get the node every loop as the pointer is invalidated.
             for(size_t j = 0; j < node->children.count; j++, node=get_node(&ctx, handle)){
                 auto child_handle = node->children.data[j];
                 auto child = get_node(&ctx, child_handle);
@@ -746,18 +748,15 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
                 child->header = SV("");
                 auto imp_e = ctx_load_source_file(&ctx, filename);
                 if(imp_e.errored){
+                    MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
                     if(ctx.base_directory.length){
-                        MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
                         MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", filename, "'");
-                        node_print_err(&ctx, child, msb_borrow(&err_builder));
-                        msb_destroy(&err_builder);
                         }
                     else{
-                        MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
                         MSB_FORMAT(&err_builder, "Unable to open '", filename, "'");
-                        node_print_err(&ctx, child, msb_borrow(&err_builder));
-                        msb_destroy(&err_builder);
                         }
+                    node_print_err(&ctx, child, msb_borrow(&err_builder));
+                    msb_destroy(&err_builder);
                     result.errored = imp_e.errored;
                     goto cleanup;
                     }
@@ -808,6 +807,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
                 }
             }
         }
+    // Python blocks can detach the root node and then forget to attach a new
+    // one.
     if(NodeHandle_eq(ctx.root_handle, INVALID_NODE_HANDLE)){
         report_system_error(&ctx, SV("ctx has no root Node."));
         result.errored = PARSE_ERROR;
@@ -840,15 +841,15 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
             }
     }
 
-    // Maybe should remove this option as it clogs up the cli and was just for debugging
-    // before rendering was off the ground.
+    // Maybe should remove this option as it clogs up the cli and was just for
+    // debugging before rendering was off the ground.
     if(flags & DNDC_PRINT_TREE)
         print_node_and_children(&ctx, ctx.root_handle, 0);
 
     // Render the nav block if we have one.
     {
         auto before = get_t();
-        if(!NodeHandle_eq(ctx.navnode, INVALID_NODE_HANDLE))
+        if(not NodeHandle_eq(ctx.navnode, INVALID_NODE_HANDLE))
             build_nav_block(&ctx);
         auto after =  get_t();
         report_time(&ctx, SV("Nav block building took: "), after-before);
@@ -1166,16 +1167,13 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)str, NodeHan
 extern
 int
 dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongString*)output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
-    uint64_t flags = 0;
-    flags |= DNDC_SOURCE_PATH_IS_DATA_NOT_PATH;
-    flags |= DNDC_OUTPUT_PATH_IS_OUT_PARAM;
-    flags |= DNDC_PYTHON_IS_INIT;
-    // flags |= DNDC_DONT_PRINT_ERRORS;
-    flags |= DNDC_SUPPRESS_WARNINGS;
-    flags |= DNDC_ALLOW_BAD_LINKS;
-    // idk how to do this one
-    // flags |= DNDC_DONT_INLINE_IMAGES;
-    // flags |= DNDC_PRINT_STATS;
+    uint64_t flags = 0
+        | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
+        | DNDC_OUTPUT_PATH_IS_OUT_PARAM
+        | DNDC_PYTHON_IS_INIT
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_ALLOW_BAD_LINKS
+    ;
     // gross, move to caller.
     static FileCache cache = {.allocator.type = ALLOCATOR_MALLOC};
     auto e = run_the_dndc(flags, base_directory, source_text, output, (DependsArg){.path=LS("")}, &cache, NULL, error_func, error_user_data);
@@ -1185,14 +1183,14 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
 extern
 int
 dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
-    uint64_t flags = 0;
-    flags |= DNDC_SOURCE_PATH_IS_DATA_NOT_PATH;
-    flags |= DNDC_OUTPUT_PATH_IS_OUT_PARAM;
-    flags |= DNDC_PYTHON_IS_INIT;
-    // flags |= DNDC_DONT_PRINT_ERRORS;
-    flags |= DNDC_SUPPRESS_WARNINGS;
-    flags |= DNDC_ALLOW_BAD_LINKS;
-    flags |= DNDC_REFORMAT_ONLY;
+    uint64_t flags = 0
+        | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
+        | DNDC_OUTPUT_PATH_IS_OUT_PARAM
+        | DNDC_PYTHON_IS_INIT
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_ALLOW_BAD_LINKS
+        | DNDC_REFORMAT_ONLY
+        ;
     auto e = run_the_dndc(flags, SV(""), source_text, output, (DependsArg){.path=LS("")}, NULL, NULL, error_func, error_user_data);
     return e.errored;
     }

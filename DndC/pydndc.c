@@ -21,16 +21,6 @@ DndcPyFileCache_remove(Nonnull(PyObject*)self, Nonnull(PyObject*)str){
         }
     auto path = pystring_borrow_stringview(str);
     auto cache = (DndcPyFileCache*)self;
-#if 0
-    for(size_t i = 0; i < cache->text_cache.files.count; i++){
-        auto file = &cache->text_cache.files.data[i].sourcepath;
-        HERE("text: %.*s", (int)file->length, file->text);
-        }
-    for(size_t i = 0; i < cache->b64_cache.files.count; i++){
-        auto file = &cache->b64_cache.files.data[i].sourcepath;
-        HERE("b64: %.*s", (int)file->length, file->text);
-        }
-#endif
     FileCache_maybe_remove(&cache->text_cache, path);
     FileCache_maybe_remove(&cache->b64_cache, path);
     Py_RETURN_NONE;
@@ -54,14 +44,14 @@ DndcPyFileCache_paths(Nonnull(PyObject*)self){
     if(!result)
         goto error;
     Py_ssize_t index = 0;
-    for(size_t i = 0; i < cache->b64_cache.files.count; i++, index++){
+    for(size_t i = 0, count=cache->b64_cache.files.count; i < count; i++, index++){
         auto path = &cache->b64_cache.files.data[i].sourcepath;
         PyObject* s = PyUnicode_FromStringAndSize(path->text, path->length);
         if(!s)
             goto error;
         PyList_SET_ITEM(result, index, s); // steals the reference
         }
-    for(size_t i = 0; i < cache->text_cache.files.count; i++, index++){
+    for(size_t i = 0, count = cache->text_cache.files.count; i < count; i++, index++){
         auto path = &cache->text_cache.files.data[i].sourcepath;
         PyObject* s = PyUnicode_FromStringAndSize(path->text, path->length);
         if(!s)
