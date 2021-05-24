@@ -5,6 +5,9 @@
 // Looks weird to depend on dndc, but we need the definitions of
 // DndcLongString etc.
 // Oh well. If only C allowed multiple identical struct definitions.
+// I used to have those type in a header shared between the public
+// and internal api, but that meant the public header had to #include it
+// while I wanted the public API to be a single header with no includes.
 #include "dndc.h"
 // Convenience typedefs for internal use.
 typedef struct DndcLongString LongString;
