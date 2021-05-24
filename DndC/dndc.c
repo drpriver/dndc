@@ -545,7 +545,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
     auto t0 = get_t();
     Errorable(void) result = {};
     StringView path;
-    if(flags & DNDC_SOURCE_PATH_IS_DATA_NOT_PATH)
+    if(flags & DNDC_SOURCE_IS_DATA_NOT_PATH)
         path = SV("(string input)");
     else
         path = LS_to_SV(source_path);
@@ -553,7 +553,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
     if(!output_path){
         outpath = LS("");
         }
-    else if(flags & DNDC_OUTPUT_PATH_IS_OUT_PARAM){
+    else if(flags & DNDC_OUTPUT_IS_OUT_PARAM){
         outpath = LS("this.html");
         }
     else {
@@ -587,7 +587,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
     MStringBuilder msb = {.allocator=ctx.allocator};
     ctx_add_builtins(&ctx);
     LongString source;
-    if(flags & DNDC_SOURCE_PATH_IS_DATA_NOT_PATH){
+    if(flags & DNDC_SOURCE_IS_DATA_NOT_PATH){
         source = source_path;
         ctx_store_builtin_file(&ctx, LS("(string input)"), source);
         }
@@ -670,7 +670,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
         if(flags & DNDC_DONT_WRITE){
             goto success;
             }
-        else if(flags & DNDC_OUTPUT_PATH_IS_OUT_PARAM){
+        else if(flags & DNDC_OUTPUT_IS_OUT_PARAM){
             assert(output_path);
             // We don't use the allocator as this needs to outlive the recording
             // allocator.
@@ -965,7 +965,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
             msb_destroy(&output_sb);
             goto success;
             }
-        else if(flags & DNDC_OUTPUT_PATH_IS_OUT_PARAM){
+        else if(flags & DNDC_OUTPUT_IS_OUT_PARAM){
             assert(output_path);
             // We don't use the allocator as this needs to outlive the recording
             // allocator.
@@ -1177,8 +1177,8 @@ extern
 int
 dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongString*)output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
     uint64_t flags = 0
-        | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
-        | DNDC_OUTPUT_PATH_IS_OUT_PARAM
+        | DNDC_SOURCE_IS_DATA_NOT_PATH
+        | DNDC_OUTPUT_IS_OUT_PARAM
         | DNDC_PYTHON_IS_INIT
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_ALLOW_BAD_LINKS
@@ -1193,8 +1193,8 @@ extern
 int
 dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
     uint64_t flags = 0
-        | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
-        | DNDC_OUTPUT_PATH_IS_OUT_PARAM
+        | DNDC_SOURCE_IS_DATA_NOT_PATH
+        | DNDC_OUTPUT_IS_OUT_PARAM
         | DNDC_PYTHON_IS_INIT
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_ALLOW_BAD_LINKS

@@ -40,7 +40,7 @@ TestFunction(TestDndC1){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_PYTHON_IS_INIT
         | DNDC_DONT_WRITE
-        | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
+        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         ;
@@ -61,7 +61,7 @@ TestFunction(TestDndC2){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_PYTHON_IS_INIT
         | DNDC_DONT_WRITE
-        | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
+        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         ;
@@ -81,7 +81,7 @@ TestFunction(TestDndC3){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_PYTHON_IS_INIT
         | DNDC_DONT_WRITE
-        | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
+        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         ;
@@ -100,10 +100,10 @@ TestFunction(TestDndcOutParam){
         "  ctx.root.add_child('hello')\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
+        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
-        | DNDC_OUTPUT_PATH_IS_OUT_PARAM
+        | DNDC_OUTPUT_IS_OUT_PARAM
         ;
     LongString outdata = {};
     auto e = run_the_dndc(flags, SV(""), source, &outdata, (DependsArg){.path=LS("")}, NULL, NULL, NULL, NULL);
@@ -163,10 +163,10 @@ TestFunction(TestDndcTableMultiline){
         "     table\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
+        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
-        | DNDC_OUTPUT_PATH_IS_OUT_PARAM
+        | DNDC_OUTPUT_IS_OUT_PARAM
         ;
     LongString outdata = {};
     auto e = run_the_dndc(flags, SV(""), source, &outdata, (DependsArg){.path=LS("")}, NULL, NULL, NULL, NULL);
@@ -252,10 +252,10 @@ TestFunction(TestFormatTable){
         "  4 | This is a really long text table. As you can see, it is much longer than it really needs to be. But whatever. Long things are long. Long live the long thing! So why not. Be long!\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
+        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
-        | DNDC_OUTPUT_PATH_IS_OUT_PARAM
+        | DNDC_OUTPUT_IS_OUT_PARAM
         | DNDC_REFORMAT_ONLY
         ;
     LongString outdata = {};
@@ -301,10 +301,10 @@ TestFunction(TestFormatList){
         "12. 5\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_SOURCE_PATH_IS_DATA_NOT_PATH
+        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
-        | DNDC_OUTPUT_PATH_IS_OUT_PARAM
+        | DNDC_OUTPUT_IS_OUT_PARAM
         | DNDC_REFORMAT_ONLY
         ;
     LongString outdata = {};

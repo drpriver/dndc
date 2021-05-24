@@ -38,7 +38,7 @@ enum DndcFlags {
     DNDC_NO_CLEANUP        = 0x0400,
 
     // The source_path argument is actually a string containing the data, not a path.
-    DNDC_SOURCE_PATH_IS_DATA_NOT_PATH = 0x0800,
+    DNDC_SOURCE_IS_DATA_NOT_PATH = 0x0800,
 
     // Don't print errors to stderr
     DNDC_DONT_PRINT_ERRORS = 0x01000,
@@ -49,7 +49,7 @@ enum DndcFlags {
     DNDC_PYTHON_UNISOLATED = 0x02000,
 
     // The output path is actually a string to output data to.
-    DNDC_OUTPUT_PATH_IS_OUT_PARAM = 0x04000,
+    DNDC_OUTPUT_IS_OUT_PARAM = 0x04000,
 
     // Instead of rendering to html, render to .dnd with trailing
     // spaces removed, text aligned to 80 columns (if semantically equivelant)
@@ -96,10 +96,10 @@ enum DndcFlags {
 #define DNDC_NO_THREADS                   0x000100
 #define DNDC_DONT_WRITE                   0x000200
 #define DNDC_NO_CLEANUP                   0x000400
-#define DNDC_SOURCE_PATH_IS_DATA_NOT_PATH 0x000800
+#define DNDC_SOURCE_IS_DATA_NOT_PATH 0x000800
 #define DNDC_DONT_PRINT_ERRORS            0x001000
 #define DNDC_PYTHON_UNISOLATED            0x002000
-#define DNDC_OUTPUT_PATH_IS_OUT_PARAM     0x004000
+#define DNDC_OUTPUT_IS_OUT_PARAM     0x004000
 #define DNDC_REFORMAT_ONLY                0x008000
 #define DNDC_DONT_INLINE_IMAGES           0x010000
 #define DNDC_DEPENDS_IS_CALLBACK          0x020000
