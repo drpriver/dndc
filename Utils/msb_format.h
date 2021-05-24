@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "MStringBuilder.h"
 #include "common_macros.h"
-#include "long_string_type.h"
+#include "long_string.h"
 
 enum FormatType {
     FORMATTYPE_STRING = 0,
