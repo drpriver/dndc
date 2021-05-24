@@ -1,22 +1,18 @@
 #import <Cocoa/Cocoa.h>
 #import <Webkit/WebKit.h>
+#include "common_macros.h"
 #include "measure_time.h"
 #include "dndc.h"
 // I need to build strings!
 #include "MStringBuilder.h"
 #include "mallocator.h"
-// Use the internal API.
-#include "dndc_types.h"
-#include "dndc_funcs.h"
 #include "msb_format.h"
 
 #if !__has_feature(objc_arc)
 #error "ARC is off"
 #endif
 
-static FileCache BASE64CACHE = {
-    .allocator.type = ALLOCATOR_MALLOC,
-};
+static struct DndcFileCache*_Nonnull BASE64CACHE;
 //
 // So, each document has N window controllers (I guess 1 for me).
 // Each window controller has a window.
@@ -953,10 +949,10 @@ BOOL coord_helper;
     flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
     // flags |= DNDC_PRINT_STATS;
-    auto err = run_the_dndc(flags, base_dir, source, &html, (DependsArg){.path=LS("")}, &BASE64CACHE, NULL, dndc_stderr_error_func, NULL);
+    auto err = dndc_compile_dnd_file(flags, base_dir, source, &html, (union DndcDependsArg){}, BASE64CACHE, NULL, dndc_stderr_error_func, NULL);
     // auto t1 = get_t();
-    // HERE("dndc_make_html: %.3fms", (t1-t0)/1000.);
-    if(err.errored){
+    // HERE("dndc_compile_dnd_file: %.3fms", (t1-t0)/1000.);
+    if(err){
         // TODO: report errors to the user (need to figure out the UX though).
         return;
     }
@@ -1084,7 +1080,7 @@ completionHandler:(void (^)(NSString *result))completionHandler{
     }
 }
 -(void)purge_img_cache:(id)sender{
-    FileCache_clear(&BASE64CACHE);
+    dndc_filecache_clear(BASE64CACHE);
 }
 
 -(void)applicationDidFinishLaunching:(NSNotification *)notification{
@@ -1113,6 +1109,7 @@ int
 main(int argc, const char * argv[]) {
     if(dndc_init_python() != 0)
         return 1;
+    BASE64CACHE = dndc_create_filecache();
     NSApplication* app = [NSApplication sharedApplication];
     DndAppDelegate* appDelegate = [DndAppDelegate new];
     app.delegate = appDelegate;
