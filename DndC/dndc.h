@@ -1,6 +1,6 @@
 #ifndef DNDC_H
 #define DNDC_H
-#include "long_string_type.h"
+#include <stddef.h>
 
 //
 // TODO: none of the in-repo consumers actually use dndc_make_html as it doesn't
@@ -24,10 +24,42 @@
 
 #endif
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+//
+// `DndcLongString`s and `DndcStringView`s are very similar. A `DndcLongString`
+// is a `DndcStringView` with a guaranteed nul-terminator. It is unspecified if
+// a `DndcStringView` has a nul-terminator (allowing it to point to
+// substrings).
+//
+// A zero length `DndcStringView` or `DndcLongString` with a length > 0 must
+// point to a valid pointer. A zero length `DndcStringView` or `DndcLongString`
+// may either have a null pointer for its `text` field or be a pointer to the
+// empty string (""). Thus, the length field should always be checked to see if
+// it is nonzero.
+//
+struct DndcLongString {
+    size_t length; // excludes the terminating NUL
+    const char*_Null_unspecified text; // utf-8 encoded text
+};
+
+struct DndcStringView {
+    size_t length;
+    // utf-8 encoded text, might not be nul-terminated
+    const char*_Null_unspecified text;
+};
+
+// Avoiding including <stdint.h> in public header.
+_Static_assert(sizeof(unsigned short) == 2, "unsigned short is not uint16_t");
+struct DndcStringViewUtf16 {
+    size_t length; // in code units
+    // utf-16 encoded code points, native endianness
+    const unsigned short*_Null_unspecified text;
+};
+
+
 
 //
 // This documents the external API.

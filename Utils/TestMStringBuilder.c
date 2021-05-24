@@ -34,7 +34,7 @@ TestFunction(TestMStringBuilder2){
     for(int i = 0; i < arrlen(test_cases); i++){
         msb_reset(&sb);
         auto test = test_cases[i];
-        msb_write_int(&sb, test.integer);
+        msb_write_int32(&sb, test.integer);
         auto s = msb_borrow(&sb);
         TestExpectSvEquals(s, test.sv);
         }

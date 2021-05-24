@@ -2,7 +2,11 @@
 #define LONG_STRING_H
 #include <stdlib.h>
 #include <string.h>
-#include "long_string_type.h"
+// Looks weird to depend on dndc, but we need the definitions of
+// DndcLongString etc.
+// Oh well. If only C allowed multiple identical struct definitions.
+#include "dndc.h"
+// Convenience typedefs for internal use.
 typedef struct DndcLongString LongString;
 typedef struct DndcStringView StringView;
 typedef struct DndcStringViewUtf16 StringViewUtf16;
