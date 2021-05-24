@@ -2,8 +2,8 @@
 #define DNDC_CONTEXT_C
 // This file is kind of a grab bag of random functionality
 // that directly interacts with nodes or with the context.
+#include "dndc_api_def.h"
 #include "MStringBuilder.h"
-#include "dndc_flags.h"
 #include "dndc_types.h"
 #include "dndc_funcs.h"
 #include "long_string.h"
@@ -484,7 +484,7 @@ get_node(Nonnull(DndcContext*)ctx, NodeHandle handle){
     }
 
 // for debugging
-extern
+DNDC_API
 Nonnull(Node*)
 get_node_e(Nonnull(DndcContext*)ctx, NodeHandle handle){
     return get_node(ctx, handle);

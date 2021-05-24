@@ -24,6 +24,14 @@
 
 #endif
 
+#ifndef DNDC_API
+#ifdef _WIN32
+#define DNDC_API __declspec(dllimport)
+#else
+#define DNDC_API extern
+#endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -125,7 +133,7 @@ typedef void DndcErrorFunc(void* _Nullable error_user_data, int type, const char
 //
 // An error reporting function that prints to stderr. For use with the dndc
 //
-extern DndcErrorFunc dndc_stderr_error_func;
+DNDC_API DndcErrorFunc dndc_stderr_error_func;
 
 //
 // You *must* call dndc_init_python before calling this function.
@@ -168,7 +176,7 @@ extern DndcErrorFunc dndc_stderr_error_func;
 // Returns 0 on success, a non-zero error code otherwise.
 // If non-zero, output will not be written to.
 //
-extern
+DNDC_API
 int
 dndc_make_html(struct DndcStringView base_directory, struct DndcLongString source_text, struct DndcLongString*_Nonnull output, DndcErrorFunc*_Nullable error_func, void*_Nullable error_user_data);
 
@@ -212,7 +220,7 @@ dndc_make_html(struct DndcStringView base_directory, struct DndcLongString sourc
 // Returns 0 on success, a non-zero error code otherwise.
 // If non-zero, output will not be written to.
 //
-extern
+DNDC_API
 int
 dndc_format(struct DndcLongString source_text, struct DndcLongString* _Nonnull output, DndcErrorFunc* _Nullable error_func, void*_Nullable error_user_data);
 
@@ -221,7 +229,7 @@ dndc_format(struct DndcLongString source_text, struct DndcLongString* _Nonnull o
 // This function is provided so you can free the returned string with the right heap.
 // On Linux or MacOS this is unnecessary as dynamic linking works differently.
 //
-extern
+DNDC_API
 void
 dndc_free_string(struct DndcLongString);
 
@@ -235,7 +243,7 @@ dndc_free_string(struct DndcLongString);
 // -------
 // Returns 0 on success, a non-zero error code otherwise.
 //
-extern
+DNDC_API
 int
 dndc_init_python(void);
 
@@ -251,7 +259,7 @@ dndc_init_python(void);
 // -------
 // Returns 0 on success, a non-zero error code otherwise.
 //
-extern
+DNDC_API
 int
 dndc_init_python_types(void);
 
@@ -366,14 +374,14 @@ typedef void DndcSyntaxFuncUtf16(void* _Nullable user_data, int type, int line, 
 // -------
 // Returns 0 on success, a non-zero error code otherwise.
 //
-extern
+DNDC_API
 int
 dndc_analyze_syntax(struct DndcStringView source_text, DndcSyntaxFunc*_Nonnull syntax_func, void*_Nullable syntax_data);
 
 //
 // ditto, but for utf-16 code units of native endianness
 //
-extern
+DNDC_API
 int
 dndc_analyze_syntax_utf16(struct DndcStringViewUtf16 source_text, DndcSyntaxFuncUtf16*_Nonnull syntax_func, void*_Nullable syntax_data);
 

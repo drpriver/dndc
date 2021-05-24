@@ -1,9 +1,14 @@
+// define DNDC_API before including dndc.h
+#include "dndc_api_def.h"
 #include "dndc_flags.h"
+#include "dndc.h"
 #include "dndc_node_types.h"
+
 #ifdef LOG_LEVEL
 #undef LOG_LEVEL
 #endif
 #define LOG_LEVEL LOG_LEVEL_INFO
+
 #include "dndc_format.c"
 #include "path_util.h"
 #include "allocator.h"
@@ -17,7 +22,7 @@
 #include "thread_utils.h"
 #include "bb_extensions.h"
 #include "dndc_funcs.h"
-#include "dndc.h"
+
 #ifdef DNDCMAIN
 #include "argument_parsing.h"
 #endif
@@ -1189,7 +1194,7 @@ dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongSt
     return e.errored;
     }
 
-extern
+DNDC_API
 int
 dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
     uint64_t flags = 0
@@ -1203,27 +1208,27 @@ dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(DndcErr
     auto e = run_the_dndc(flags, SV(""), source_text, output, (DependsArg){.path=LS("")}, NULL, NULL, error_func, error_user_data);
     return e.errored;
     }
-extern
+DNDC_API
 int
 dndc_init_python(void){
     auto err = init_python_docparser(0);
     return err.errored;
     }
 
-extern
+DNDC_API
 int
 dndc_init_python_types(void){
     auto err = docparse_init_types();
     return err.errored;
     }
 
-extern
+DNDC_API
 void
 dndc_free_string(LongString str){
     const_free(str.text);
 }
 
-extern
+DNDC_API
 void
 dndc_stderr_error_func(Nullable(void*)unused, int type, const char*_Nonnull filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
     (void)unused;
@@ -1412,7 +1417,7 @@ find_double_colon_utf16(Nonnull(const uint16_t*) haystack, size_t ncode_units){
         }
     }
 
-extern
+DNDC_API
 int
 dndc_analyze_syntax(StringView source_text, Nonnull(DndcSyntaxFunc*) syntax_func, Nullable(void*)syntax_data){
     // this is only needed for raw nodes
@@ -1541,7 +1546,7 @@ dndc_analyze_syntax(StringView source_text, Nonnull(DndcSyntaxFunc*) syntax_func
 // copy-paste and slight alterations from dndc_analyze_syntax
 // Will need to keep these in sync. This is where static if would come in handy.
 //
-extern
+DNDC_API
 int
 dndc_analyze_syntax_utf16(StringViewUtf16 source_text, Nonnull(DndcSyntaxFuncUtf16*) syntax_func, Nullable(void*)syntax_data){
     // this is only needed for raw nodes
