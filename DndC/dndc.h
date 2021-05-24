@@ -70,17 +70,20 @@ struct DndcStringViewUtf16 {
 // The type of the error message.
 //
 enum DndCErrorMessageType {
-    // An error that it is not possible to recover from.
+    // An error that is not possible to recover from.
     DNDC_ERROR_MESSAGE = 0,
     // A warning that valid output can still be produced for.
     DNDC_WARNING_MESSAGE = 1,
     // The error originated from the system (not from the source text).
     // filename will be "", line, col, etc will be 0, etc.
-    DNDC_SYSTEM_MESSAGE = 2,
+    DNDC_NODELESS_MESSAGE = 2,
     // The message is just a report of some statistic. It does not originate
     // from the source text.
     // filename will be "", line, col, etc will be 0, etc.
     DNDC_STATISTIC_MESSAGE = 3,
+    // Message is a debugging message, as requested by the user.
+    // May or may not have a valid filename, line, col.
+    DNDC_DEBUG_MESSAGE = 4,
 };
 
 //

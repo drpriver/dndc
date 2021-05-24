@@ -249,10 +249,16 @@ PyMethodDef pydndc_methods[] = {
         "message_type: int\n"
         "    The values are as follows:\n"
         "\n"
-        "    0: Error. An error that caused parsing to fail.\n"
-        "    1: Warning. Something is fishy or otherwise not good.\n"
-        "    2: SystemError. Originated from the system, not the text.\n"
-        "    3: Info. Not an error, a statistic like timing.\n"
+        "    ERROR_MESSAGE:     An error that caused parsing to fail and cannot\n"
+        "                       be recovered from.\n"
+        "    WARNING_MESSAGE:   Recoverable error or diagnostic.\n"
+        "    NODELESS_MESSAGE:  An error that cannot be recovered from but\n"
+        "                       that does not originate from a node or source\n"
+        "                       location.\n"
+        "    STATISTIC_MESSAGE: Not an error, a statistic like timing.\n"
+        "    DEBUG_MESSAGE:     A debug statement, as requested by a flag.\n"
+        "                       May or may not have a valid filename, line,\n"
+        "                       column.\n"
         "\n"
         "filename: str\n"
         "    This will be '(string input)' for the primary text.\n"
@@ -361,8 +367,9 @@ PyInit_pydndc(void) {
     PyModule_AddIntConstant(mod, "PRINT_STATS", DNDC_PRINT_STATS);
     PyModule_AddIntConstant(mod, "ERROR_MESSAGE", DNDC_ERROR_MESSAGE);
     PyModule_AddIntConstant(mod, "WARNING_MESSAGE", DNDC_WARNING_MESSAGE);
-    PyModule_AddIntConstant(mod, "SYSTEM_MESSAGE", DNDC_SYSTEM_MESSAGE);
+    PyModule_AddIntConstant(mod, "NODELESS_MESSAGE", DNDC_NODELESS_MESSAGE);
     PyModule_AddIntConstant(mod, "STATISTIC_MESSAGE", DNDC_STATISTIC_MESSAGE);
+    PyModule_AddIntConstant(mod, "DEBUG_MESSAGE", DNDC_DEBUG_MESSAGE);
     return mod;
 }
 

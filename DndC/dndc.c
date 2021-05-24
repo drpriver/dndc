@@ -880,10 +880,19 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
         if(ctx.links.count)
             qsort(ctx.links.data, ctx.links.count, sizeof(ctx.links.data[0]), StringView_cmp);
         if(flags & DNDC_PRINT_LINKS){
+            if(!ctx.error_func){
+                result.errored = PARSE_ERROR;
+                goto cleanup;
+                }
+            MStringBuilder temp = {.allocator = ctx.temp_allocator};
             for(size_t i = 0; i < ctx.links.count; i++){
                 auto li = &ctx.links.data[i];
-                printf("[%zu] key: '%.*s', value: '%.*s'\n", i, (int)li->key.length, li->key.text, (int)li->value.length, li->value.text);
+                MSB_FORMAT(&temp, "[", i, "] key: '", li->key, "', value: '", li->value, "'");
+                auto msg = msb_borrow(&temp);
+                ctx.error_func(ctx.error_user_data, DNDC_DEBUG_MESSAGE, "", 0, 0, 0, msg.text, msg.length);
+                msb_reset(&temp);
                 }
+            msb_destroy(&temp);
             }
         report_size(&ctx, SV("ctx.links.count = "), ctx.links.count);
     }
@@ -1218,17 +1227,24 @@ extern
 void
 dndc_stderr_error_func(Nullable(void*)unused, int type, const char*_Nonnull filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
     (void)unused;
-    if(type == DNDC_SYSTEM_MESSAGE){
-        fprintf(stderr, "Error: %s\n", message);
-        return;
-        }
-    if(type == DNDC_STATISTIC_MESSAGE){
-        fprintf(stderr, "Info: %s\n", message);
-        return;
-        }
-    (void)type;
     (void)message_len;
-    fprintf(stderr, "%.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+    switch((enum DndCErrorMessageType)type){
+        case DNDC_NODELESS_MESSAGE:
+            fprintf(stderr, "Error: %s\n", message);
+            return;
+        case DNDC_STATISTIC_MESSAGE:
+            fprintf(stderr, "Info: %s\n", message);
+            return;
+        case DNDC_DEBUG_MESSAGE:
+            if(filename_len)
+                fprintf(stderr, "%.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+            else
+                fprintf(stderr, "%s\n", message);
+            return;
+        default:
+            fprintf(stderr, "%.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+            return;
+        }
     }
 #endif
 #endif

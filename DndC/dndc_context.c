@@ -235,7 +235,7 @@ report_system_error(Nonnull(DndcContext*)ctx, StringView msg){
         return;
     if(not ctx->error_func)
         return;
-    ctx->error_func(ctx->error_user_data, DNDC_SYSTEM_MESSAGE, "", 0, 0, 0, msg.text, msg.length);
+    ctx->error_func(ctx->error_user_data, DNDC_NODELESS_MESSAGE, "", 0, 0, 0, msg.text, msg.length);
     }
 
 static inline
