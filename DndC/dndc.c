@@ -1,14 +1,16 @@
 // define DNDC_API before including dndc.h
-#include "dndc_api_def.h"
-#include "dndc.h"
-#include "dndc_node_types.h"
-
 #ifdef LOG_LEVEL
 #undef LOG_LEVEL
 #endif
 #define LOG_LEVEL LOG_LEVEL_INFO
 
+#include "dndc_api_def.h"
+#include "dndc.h"
+#include "dndc_node_types.h"
 #include "dndc_format.c"
+#include "dndc_types.h"
+#include "dndc_funcs.h"
+
 #include "path_util.h"
 #include "allocator.h"
 #include "mallocator.h"
@@ -17,10 +19,8 @@
 #include "long_string.h"
 #include "MStringBuilder.h"
 #include "measure_time.h"
-#include "dndc_types.h"
 #include "thread_utils.h"
 #include "bb_extensions.h"
-#include "dndc_funcs.h"
 
 #ifdef DNDCMAIN
 #include "argument_parsing.h"
