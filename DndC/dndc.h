@@ -335,6 +335,55 @@ DNDC_API
 int
 dndc_analyze_syntax_utf16(struct DndcStringViewUtf16 source_text, DndcSyntaxFuncUtf16*_Nonnull syntax_func, void*_Nullable syntax_data);
 
+//
+// A cache for storing files across repeated invocations.
+// Opaque structure (PIMPL).
+//
+struct DndcFileCache;
+//
+// Allocate a new file cache.
+//
+DNDC_API
+struct DndcFileCache*_Nonnull
+dndc_create_filecache(void);
+//
+// Cleanup all allocated resources and deallocate the filecache.
+//
+DNDC_API
+// int // should we allow for possibility of error?
+void
+dndc_filecache_destroy(struct DndcFileCache*_Nonnull cache);
+//
+// Remove a given path from the filecache.
+//
+// Returns:
+// --------
+// Returns 0 if it successfully removed the path and 1 if the path was not in
+// the cache.
+//
+DNDC_API
+int
+dndc_filecache_remove(struct DndcFileCache*_Nonnull cache,
+        struct DndcStringView path);
+//
+// Remove all paths from the filecache.
+//
+DNDC_API
+// int // should we allow for possibility of error?
+void
+dndc_filecache_clear(struct DndcFileCache*_Nonnull cache);
+
+//
+// Check if a path is in the filecache.
+//
+// Returns:
+// --------
+// Returns 1 if the path is in the cache, 0 otherwise.
+//
+DNDC_API
+int
+dndc_filecache_has_path(struct DndcFileCache*_Nonnull,
+        struct DndcStringView path);
 #ifdef __cplusplus
 }
 #endif

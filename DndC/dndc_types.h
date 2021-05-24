@@ -122,10 +122,11 @@ _Static_assert(sizeof(Node) == 88, "");
 #define MARRAY_T Node
 #include "Marray.h"
 
-typedef struct FileCache {
+struct DndcFileCache {
     Allocator allocator;
     Marray(LoadedSource) files;
-} FileCache;
+};
+typedef struct DndcFileCache FileCache;
 
 static inline
 void
@@ -140,7 +141,7 @@ FileCache_clear(Nonnull(FileCache*)cache){
     }
 
 static inline
-void
+int
 FileCache_maybe_remove(Nonnull(FileCache*)cache, StringView path){
     Allocator al = cache->allocator;
     for(size_t i = 0; i < cache->files.count; i++){
@@ -149,9 +150,10 @@ FileCache_maybe_remove(Nonnull(FileCache*)cache, StringView path){
             Marray_remove(LoadedSource)(&cache->files, i);
             Allocator_free(al, src.sourcepath.text, src.sourcepath.length+1);
             Allocator_free(al, src.sourcetext.text, src.sourcetext.length+1);
-            return;
+            return 1;
             }
         }
+    return 0;
     }
 
 static inline
