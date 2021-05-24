@@ -1,3 +1,5 @@
+Version 0.4.7::md
+  * Bug fixes and performance improvements.
 Version 0.4.6::md
   * Fixed bug that formatting the file with numbered lists of 10 or more
     would lead to lists formatted in a way that the parser would reject
