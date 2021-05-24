@@ -1178,21 +1178,6 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)str, NodeHan
 
 #ifndef PYTHONMODULE
 #ifndef WASM
-extern
-int
-dndc_make_html(StringView base_directory, LongString source_text, Nonnull(LongString*)output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
-    uint64_t flags = 0
-        | DNDC_SOURCE_IS_DATA_NOT_PATH
-        | DNDC_OUTPUT_IS_OUT_PARAM
-        | DNDC_PYTHON_IS_INIT
-        | DNDC_SUPPRESS_WARNINGS
-        | DNDC_ALLOW_BAD_LINKS
-    ;
-    // gross, move to caller.
-    static FileCache cache = {.allocator.type = ALLOCATOR_MALLOC};
-    auto e = run_the_dndc(flags, base_directory, source_text, output, (DependsArg){.path=LS("")}, &cache, NULL, error_func, error_user_data);
-    return e.errored;
-    }
 
 DNDC_API
 int

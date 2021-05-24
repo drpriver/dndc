@@ -2,11 +2,6 @@
 #define DNDC_H
 #include <stddef.h>
 
-//
-// TODO: none of the in-repo consumers actually use dndc_make_html as it doesn't
-// provide control over file caching. This suggests that I need to expose file
-// loading/caching for potential consumers.
-
 // FIXME: remove this? Inappropriate for a public header?
 #ifndef __clang__
 
@@ -134,51 +129,6 @@ typedef void DndcErrorFunc(void* _Nullable error_user_data, int type, const char
 // An error reporting function that prints to stderr. For use with the dndc
 //
 DNDC_API DndcErrorFunc dndc_stderr_error_func;
-
-//
-// You *must* call dndc_init_python before calling this function.
-//
-// Turns the given .dnd string into html, storing the result in output.
-// The output is allocated by malloc. You take ownership of the result.
-// On Windows and if loaded from a dll, you should use dndc_free_string.
-//
-// Arguments
-// ---------
-// base_directory:
-//    The base directory from which imports and other file references are
-//    relative to. This can be the empty string, in which case it will not be
-//    prepended to anything. Absolute paths in the source will never be
-//    adjusted. This allows you to use relative filepaths without having to
-//    chdir, as chdir sucks. This string does not need to be nul-terminated.
-//    No references to this are retained afterwards.
-//
-// source_text:
-//    The actual source .dnd string. This string does need to be
-//    nul-terminated. No references to this are retained afterwards.
-//
-// output:
-//    A pointer to a string to store the html into. The output is allocated by
-//    malloc. You take ownership of the result. Must be non-null.
-//    If there is an error, the output is not written to.
-//
-// error_func:
-//   A function for reporting errors. See `DndcErrorFunc` above. If NULL, errors
-//   will not be printed. Use `dndc_stderr_error_func` for a function that just
-//   prints to stderr.
-//
-// error_user_data:
-//   A pointer that will be passed to the error_func. For
-//   `dndc_stderr_error_func`, this should be NULL. For a function you've
-//   defined, pass an appropriate pointer!
-//
-// Returns
-// -------
-// Returns 0 on success, a non-zero error code otherwise.
-// If non-zero, output will not be written to.
-//
-DNDC_API
-int
-dndc_make_html(struct DndcStringView base_directory, struct DndcLongString source_text, struct DndcLongString*_Nonnull output, DndcErrorFunc*_Nullable error_func, void*_Nullable error_user_data);
 
 //
 // You do *not* need to call dndc_init_python before calling this function.
