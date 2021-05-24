@@ -1654,3 +1654,78 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, Nonnull(DndcSyntaxFuncUtf
         }
     return 0;
 }
+
+DNDC_API
+Nonnull(struct DndcFileCache*)
+dndc_create_filecache(void){
+    struct DndcFileCache* result = malloc(sizeof(*result));
+    Allocator al = get_mallocator();
+    *result = (struct DndcFileCache){.allocator = al};
+    return result;
+    }
+DNDC_API
+void
+dndc_filecache_destroy(Nonnull(struct DndcFileCache*)cache){
+    FileCache_clear(cache);
+    free(cache);
+}
+
+DNDC_API
+int
+dndc_filecache_remove(Nonnull(struct DndcFileCache*)cache, StringView path){
+    return FileCache_maybe_remove(cache, path);
+    }
+
+DNDC_API
+void
+dndc_filecache_clear(Nonnull(struct DndcFileCache*)cache){
+    FileCache_clear(cache);
+    }
+
+DNDC_API
+int
+dndc_filecache_has_path(Nonnull(struct DndcFileCache*)cache, struct DndcStringView path){
+    return FileCache_has_file(cache, path);
+    }
+
+DNDC_API
+int
+dndc_compile_dnd_file(uint64_t flags, struct DndcStringView base_directory,
+    struct DndcLongString source_path,
+    struct DndcLongString*_Nullable output_path,
+    union DndcDependsArg depends, struct DndcFileCache*_Nullable base64cache, struct DndcFileCache*_Nullable textcache,
+    DndcErrorFunc*_Nullable error_func, void*_Nullable error_user_data
+){
+    // TODO: validate flags.
+    enum {
+        // All the valid flags.
+        DNDC_VALID_FLAGS = 0
+            | DNDC_ALLOW_BAD_LINKS
+            | DNDC_SUPPRESS_WARNINGS
+            | DNDC_PRINT_STATS
+            | DNDC_REPORT_ORPHANS
+            | DNDC_NO_PYTHON
+            | DNDC_PYTHON_IS_INIT
+            | DNDC_PRINT_TREE
+            | DNDC_PRINT_LINKS
+            | DNDC_NO_THREADS
+            | DNDC_DONT_WRITE
+            | DNDC_NO_CLEANUP
+            | DNDC_SOURCE_IS_DATA_NOT_PATH
+            | DNDC_DONT_PRINT_ERRORS
+            | DNDC_PYTHON_UNISOLATED
+            | DNDC_OUTPUT_IS_OUT_PARAM
+            | DNDC_REFORMAT_ONLY
+            | DNDC_DONT_INLINE_IMAGES
+            | DNDC_DEPENDS_IS_CALLBACK
+            | DNDC_USE_DND_URL_SCHEME
+            | DNDC_INPUT_IS_UNTRUSTED
+            | DNDC_STRIP_WHITESPACE
+            | DNDC_DONT_READ
+    };
+    uint64_t new_flags = flags & DNDC_VALID_FLAGS;
+    if(new_flags != flags)
+        return GENERIC_ERROR;
+    auto err = run_the_dndc(flags, base_directory, source_path, output_path, depends, base64cache, textcache, error_func, error_user_data);
+    return err.errored;
+    }

@@ -414,6 +414,99 @@ DNDC_API
 int
 dndc_filecache_has_path(DNDC_NONNULL(struct DndcFileCache*),
         struct DndcStringView path);
+
+//
+// Low-level function to compile a dnd source file. The behavior of this
+// function is complex and is greatly controlled by the flags argument.
+// See `enum DndcFlags` for details on the exact meaning of the flags. When
+// arguments change meaning based on the flags that will be described below.
+//
+// In its default mode, this function will load the given source file, parse
+// it, resolve imports, execute python blocks, spawn a thread to base64
+// referenced images, load referenced files such as js files and css files,
+// and render the result into an html file at the given location.
+//
+// Args:
+// ----
+//
+// flags:
+//    A bitwise-or combination of `enum DndcFlags`.
+//
+// base_directory:
+//    May be a zero-length string view.  For relative filepaths referenced in
+//    the document, what those paths are relative to. Defaults to the current
+//    directory for a zero length string view.
+//
+//    Specifically, this string plus a directory separator will be prepended to
+//    all paths for the purposes of opening those paths.
+//
+// source:
+//    The path to the source file. If the string's length is zero, input will
+//    be read from stdin.
+//
+//    Alternatively, if the flag DNDC_SOURCE_IS_DATA_NOT_PATH is set, this
+//    argument is treated as the source data itself and no file is opened.
+//
+// output:
+//    A pointer to the path to write the result to. If null, will write to
+//    stdout instead.
+//
+//    Alternatively, if the flag DNDC_PATH_IS_OUT_PARAM is set, the
+//    result will be allocated into a string via malloc and written into the
+//    struct pointed to by this argument.
+//
+// depends:
+//    The default function is that the path member of this union is set and if
+//    it is a non-zero-length string it is a path to where to write a
+//    make-style dependency file.
+//
+//    Alternatively, if the flag DNDC_DEPENDS_IS_CALLBACK is set, the callback
+//    member should be set (and optionally the user data if needed for the
+//    callback) and it will be called repeatedly with a DndcStringView for each
+//    path that the source file depends on.
+//
+// base64filecache:
+//    A pointer to a filecache (created with dndc_create_filecache) that is
+//    used to cache files across invocations of this function. This may be
+//    null, in which case no caching is done.
+//
+//    This cache is used to cache the results of loading and base64-ing
+//    binary files.
+//
+// textfilecache:
+//    A pointer to a filecache (created with dndc_create_filecache) that is
+//    used to cache files across invocations of this function. This may be
+//    null, in which case no caching is done.
+//
+//    This cache is used to cache the results of loading text files.
+//
+// error_func:
+//    A function for reporting errors. See `DndcErrorFunc` above. If NULL,
+//    errors will not be printed. Use `dndc_stderr_error_func` for a function
+//    that just prints to stderr.
+//
+// error_user_data:
+//    A pointer that will be passed to the error_func. For
+//    `dndc_stderr_error_func`, this should be NULL. For a function you've
+//    defined, pass an appropriate pointer!
+//
+// Returns
+// -------
+// Returns 0 on success, a non-zero error code otherwise.
+//
+DNDC_API
+int
+dndc_compile_dnd_file(
+    unsigned long long flags,
+    struct DndcStringView base_directory,
+    struct DndcLongString source,
+    DNDC_NULLABLE(struct DndcLongString*) output_path,
+    union DndcDependsArg depends,
+    DNDC_NULLABLE(struct DndcFileCache*) base64cache,
+    DNDC_NULLABLE(struct DndcFileCache*) textcache,
+    DNDC_NULLABLE(DndcErrorFunc*) error_func,
+    DNDC_NULLABLE(void*) error_user_data);
+
 //
 // The flags that can be passed as the `flags` argument to
 // `dndc_compile_dnd_file`. Combine them together via bitwise-or.
