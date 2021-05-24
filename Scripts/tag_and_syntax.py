@@ -267,8 +267,8 @@ def add_extra(filename:str, stuff:List[str]) -> None:
             stuff.append(l)
 
 def get_proj_dirs() -> List[str]:
-    EXCLUDED = {'Bin', 'Objs', 'Depends','build', 'build2', 'venv', 'vendored', 'TestCases', 'frozen',}
-    dirs = [d for d in os.listdir('.') if os.path.isdir(d) and d not in EXCLUDED and not d.startswith(('.', '_')) and '.app' not in d]
+    EXCLUDED = {'Bin', 'Objs', 'Depends', 'venv', 'vendored', 'TestCases', 'frozen',}
+    dirs = [d for d in os.listdir('.') if os.path.isdir(d) and d not in EXCLUDED and not d.startswith(('.', '_')) and not d.lower().startswith('build') and '.app' not in d]
     subdirs = []
     for d in dirs:
         for subdir in os.listdir(d):
