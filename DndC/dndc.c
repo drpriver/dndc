@@ -1,6 +1,5 @@
 // define DNDC_API before including dndc.h
 #include "dndc_api_def.h"
-#include "dndc_flags.h"
 #include "dndc.h"
 #include "dndc_node_types.h"
 

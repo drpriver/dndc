@@ -6,7 +6,6 @@
 #include "MStringBuilder.h"
 #include "mallocator.h"
 // Use the internal API.
-#include "dndc_flags.h"
 #include "dndc_types.h"
 #include "dndc_funcs.h"
 #include "msb_format.h"

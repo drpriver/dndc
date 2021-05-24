@@ -2,7 +2,6 @@
 // Exposes dndc as a c-extension for python.
 //
 
-#include "dndc_flags.h"
 #define PYTHONMODULE
 #include "dndc.c"
 
