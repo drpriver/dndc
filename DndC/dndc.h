@@ -4,6 +4,8 @@
 // This documents the external API.
 // For the internal API, see dndc_funcs.h.
 //
+
+// for size_t
 #include <stddef.h>
 
 #ifdef __clang__
@@ -72,7 +74,9 @@ enum DndCErrorMessageType {
     DNDC_ERROR_MESSAGE = 0,
     // A warning that valid output can still be produced for.
     DNDC_WARNING_MESSAGE = 1,
-    // The error originated from the system (not from the source text).
+    // The error did not originate from any specific node. Rather,
+    // it ocurred for another reason (for example, python may have
+    // failed to initialize).
     // filename will be "", line, col, etc will be 0, etc.
     DNDC_NODELESS_MESSAGE = 2,
     // The message is just a report of some statistic. It does not originate
