@@ -26,6 +26,7 @@ seed_rng_fixed(Nonnull(RngState*) rng, uint64_t initstate, uint64_t initseq) {
     rng_random32(rng);
     }
 
+#if 0
 #define DARWIN
 #ifdef LINUX
 #include <sys/random.h>
@@ -58,6 +59,7 @@ seed_rng(Nonnull(RngState*) rng) {
     seed_rng_fixed(rng, initstate, initseq);
     return;
     }
+#endif
 
 static inline
 force_inline
@@ -89,28 +91,17 @@ TestFunction(TestSortRandoms){
     int* array = malloc(N*sizeof(*array));
     TestAssert(array);
     RngState rng = {};
-    seed_rng(&rng);
-    // seed_rng_fixed(&rng, 0x7123, 81728);
+    seed_rng_fixed(&rng, 0x7123, 81728);
     for(int n = 1; n < 0xffff; n++){
-    // for(int i = 0; i < 10000; i++){
-        // printf("\r%d", i); fflush(stdout);
         printf("\r%d", n); fflush(stdout);
-        // int n;
-        // do {
-            // n = rng_random32(&rng) &0xffff;
-        // } while(n > N);
         auto before = rng;
         for(int j = 0; j < n; j++){
             array[j] = rng_random32(&rng);
             }
-        DSORT_SLICE_int r = {.data = array, .count=n};
-        // int__heap_sort(&r);
         int__array_sort(array, n);
-        // qsort(array, N, sizeof(int), (int(*)(const void*, const void*))int_cmp);
         bool is_sorted = int__is_sorted(array, n);
         if(!is_sorted){
             DBGPrint(n);
-            // DBGPrint(i);
             DBGPrint(before.inc);
             DBGPrint(before.state);
             }
