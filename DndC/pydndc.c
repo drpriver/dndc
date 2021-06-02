@@ -300,7 +300,7 @@ PyMethodDef pydndc_methods[] = {
         "--------\n"
         "dict: The dict of syntactic regions.\n"
         "The dictionary is a mapping of lines (0-based) as the keys to a tuple of\n"
-        "(type, col, byteoffset, length)\n"
+        "(type, col, byteoffset, length), which is Tuple[int, int, int, int].\n"
         "col, byteoffeset and length are all in bytes of utf-8.\n"
         "The type is one of the following:\n"
         "\n"
@@ -478,7 +478,11 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
         return NULL;
         }
     PopDiagnostic();
-    flags &= WHITELIST; // clear out any flags that python callers shouldn't be able to set.
+    // Check for any flags that python callers shouldn't be able to set.
+    if((flags & WHITELIST) != flags){
+        PyErr_SetString(PyExc_ValueError, "flags argument contains illegal bits");
+        return NULL;
+        }
     if(error_reporter and error_reporter == Py_None)
         error_reporter = NULL;
     if(error_reporter and !PyCallable_Check(error_reporter)){
@@ -571,6 +575,7 @@ pydndc_collect_syntax_tokens(Nullable(void*)user_data, int type, int line, int c
         assert(list);
         auto fail = PyDict_SetItem(d, key, list); // does not steal
         assert(fail == 0);
+        // list is kept alive by the dict.
         Py_XDECREF(list);
         }
     auto fail = PyList_Append(list, value);

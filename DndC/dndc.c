@@ -778,10 +778,10 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
     }
 
     // Speculatively load imgs and imglinks and preprocess them.
-    // Do this as the same time we execute the Python nodes.
+    // Do this at the same time as we execute the Python nodes.
     // Python blocks can add imgs or change the paths of the img nodes,
     // but they usually don't, so doing these in parallel is a win as
-    // Python startup is very slow.
+    // Python startup (and execution) is very slow.
     {
         // This is shoved in its own function as we need to guarantee
         // the worker has joined before continuing beyond this point.
