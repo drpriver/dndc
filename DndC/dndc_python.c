@@ -138,7 +138,7 @@ NodeTypeEnum_richcmp(Nonnull(PyObject*)a, Nonnull(PyObject*)b, int cmp){
 // definition
 static PyTypeObject NodeTypeEnumType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "docparser.NodeType",
+    .tp_name = "dndc_python.NodeType",
     .tp_basicsize = sizeof(NodeTypeEnum),
     .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_doc = "NodeType Enum",
@@ -163,7 +163,7 @@ typedef struct NodeBoundMethod {
     Nonnull(DndcContext*)ctx;
     NodeHandle handle;
     NodeMethod func;
-    } NodeBoundMethod;
+} NodeBoundMethod;
 
 static
 Nullable(PyObject*)
@@ -174,7 +174,7 @@ NodeBound_call(Nonnull(PyObject*)self, Nonnull(PyObject*)args, Nullable(PyObject
 
 static PyTypeObject NodeBoundMethodType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "docparser.NodeBoundMethod",
+    .tp_name = "dndc_python.NodeBoundMethod",
     .tp_basicsize = sizeof(NodeBoundMethod),
     .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_doc = "Node bound method",
@@ -346,7 +346,7 @@ static PySequenceMethods DndClasses_sq_methods = {
 };
 static PyTypeObject DndClassesListType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "docparser.ClassList",
+    .tp_name = "dndc_python.ClassList",
     .tp_basicsize = sizeof(DndClassesList),
     .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_doc = "Classes List Wrapper",
@@ -552,7 +552,7 @@ static PyMappingMethods DndAttributesMap_map_methods = {
 
 static PyTypeObject DndAttributesMapType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "docparser.AttributesMap",
+    .tp_name = "dndc_python.AttributesMap",
     .tp_basicsize = sizeof(DndAttributesMap),
     .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_doc = "Attributes Map Wrapper",
@@ -590,7 +590,7 @@ static Nullable(PyObject*) DndNode_repr(Nonnull(DndNode*));
 
 static PyTypeObject DndNodeType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "docparser.Node",
+    .tp_name = "dndc_python.Node",
     .tp_basicsize = sizeof(DndNode),
     .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_doc = "Node Wrapper",
@@ -928,7 +928,7 @@ py_detach_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)ar
 static
 Nullable(PyObject*)
 py_add_child_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
-    const char* const keywords[] = { "new_root", NULL, };
+    const char* const keywords[] = { "child", NULL, };
     NodeHandle new_handle;
     PyObject* arg;
     PushDiagnostic();
