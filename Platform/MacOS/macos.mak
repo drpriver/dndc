@@ -27,6 +27,8 @@ $(BINDIR)/gdndc: Platform/MacOS/gdndc.m $(OBJDIR)/frozenstdlib.o Platform/MacOS/
 gdndc: $(BINDIR)/gdndc
 install-gdndc: $(BINDIR)/gdndc
 	$(INSTALL) -C $< $(INSTALLDIR)/gdndc
+$(OBJDIR)/libdndc.a: $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o
+	ar crs $@ $^
 PYEXTENSION=.cpython-38-darwin.so
 PYEXTFLAGS=-bundle -bundle_loader /usr/local/bin/python3 -arch x86_64
 

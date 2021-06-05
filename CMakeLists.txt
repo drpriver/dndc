@@ -26,6 +26,17 @@ target_link_libraries(dndc ${Python3_LIBRARIES})
 target_include_directories(dndc PRIVATE ${Python3_INCLUDE_DIRS})
 target_compile_definitions(dndc PRIVATE DNDCMAIN)
 
+# Cmake sucks and doesn't allow a library and
+# executable with the same name, even though the output files are different!
+add_library(dndc-lib
+    Dndc/dndc.c
+    PythonEmbed/frozenstdlib.c
+	)
+target_link_libraries(dndc-lib ${Python3_LIBRARIES})
+target_include_directories(dndc-lib PRIVATE ${Python3_INCLUDE_DIRS})
+set_target_properties(dndc-lib
+        PROPERTIES OUTPUT_NAME dndc)
+
 Python3_add_library(pydndc
     MODULE
     Dndc/pydndc.c

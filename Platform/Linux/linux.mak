@@ -28,3 +28,5 @@ EXE=
 INSTALL=install
 PYEXTENSION=.cpython-38-x86_64-linux-gnu.so
 PYEXTFLAGS=-shared -fPIC
+$(OBJDIR)/libdndc.a: $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o
+	ar crs $@ $^

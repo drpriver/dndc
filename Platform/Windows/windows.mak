@@ -42,4 +42,6 @@ GDNDCLINKER=-LD:\WebView2Samples\GettingStartedGuides\Win32_GettingStarted\packa
 gdndc: $(BINDIR)/gdndc.exe
 $(BINDIR)/gdndc.exe: Platform/Windows/gdndc.cpp $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o  Platform/Windows/windows.mak
 	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(GDNDCINCLUDES) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/gdndc.dep $< $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) $(GDNDCLINKER) -std=c++17 -Wno-deprecated-dynamic-exception-spec -Wno-missing-noreturn -Wno-c99-designator
-
+#this is untested
+$(OBJDIR)/dndc.lib: $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o
+	llvm-ar crs $@ $^

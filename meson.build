@@ -9,6 +9,8 @@ else
 includes = include_directories('Allocators', 'Utils', 'PythonEmbed', 'Dndc')
 endif
 
+install_headers('Dndc/dndc.h', subdir:'Dndc')
+
 freeze_exec = executable(
   'freeze_py_module',
   'PythonEmbed/freeze_py_module.c',
@@ -85,6 +87,15 @@ executable(
   include_directories: includes,
   dependencies:[pydep],
   c_args: ['-DDNDCMAIN'],
+  install: true,
+  )
+both_libraries(
+  'dndc', 
+  'Dndc/dndc.c', 
+  'PythonEmbed/frozenstdlib.c', 
+  frozen_modules, 
+  include_directories: includes,
+  dependencies:[pydep],
   install: true,
   )
 
