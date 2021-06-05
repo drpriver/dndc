@@ -1,6 +1,6 @@
 include defs.mak
 include PythonEmbed/pythonembed.mak
-include DndC/dndc.mak
+include Dndc/dndc.mak
 
 DNDC:=$(BINDIR)/dndc$(EXE)
 

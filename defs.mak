@@ -41,7 +41,7 @@ INCLUDE_FLAGS=-I.\
 	-IUtils\
 	-IPythonEmbed\
 	-IAllocators\
-	-IDndC\
+	-IDndc\
 
 LINK_FLAGS=
 FAST_FLAGS=-Ofast
@@ -131,8 +131,8 @@ endif
 # We leave out OPT_FLAGS, LINK_FLAGS
 FLAGS=$(INCLUDE_FLAGS) $(WARNING_FLAGS) $(PLATFORM_FLAGS)
 
-# TestDndC needs to link against the frozenstdlib
-TESTS:=$(filter-out DndC/TestDndC.c, $(wildcard **/Test*.c))
+# TestDndc needs to link against the frozenstdlib
+TESTS:=$(filter-out Dndc/TestDndc.c, $(wildcard **/Test*.c))
 # All of the tests are compiled both in fast and debug mode as bugs can
 # sometimes will present themselves in one and not the other.
 
@@ -147,4 +147,4 @@ $(notdir $(basename $(1))): $(BINDIR)/$(notdir $(basename $(1)))_debug$(EXE) $(B
 endef
 $(foreach test, $(TESTS), $(eval $(call TEST_template, $(test))))
 
-tests: $(notdir $(basename $(TESTS))) TestDndC
+tests: $(notdir $(basename $(TESTS))) TestDndc

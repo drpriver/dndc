@@ -69,7 +69,7 @@ struct DndcStringViewUtf16 {
 //
 // The type of the error message.
 //
-enum DndCErrorMessageType {
+enum DndcErrorMessageType {
     // An error that is not possible to recover from.
     DNDC_ERROR_MESSAGE = 0,
     // A warning that valid output can still be produced for.
@@ -99,7 +99,7 @@ enum DndCErrorMessageType {
 //    provided to one of the dndc entry point functions.
 //
 // type:
-//    The type of the message. See DndCErrorMessageType.
+//    The type of the message. See DndcErrorMessageType.
 //
 // filename:
 //    Which file the error occurred in. This pointer is not nul-terminated.
@@ -227,7 +227,7 @@ DNDC_API
 int
 dndc_init_python_types(void);
 
-enum DndCSyntax {
+enum DndcSyntax {
     // DNDC_SYNTAX_NONE,
     DNDC_SYNTAX_DOUBLE_COLON = 1,
     DNDC_SYNTAX_HEADER = 2,
@@ -252,7 +252,7 @@ enum{DNDC_SYNTAX_MAX=8};
 //    to `dndc_analyze_syntax`.
 //
 // type:
-//    The type of the syntactic region. See `DndCSyntaxType`.
+//    The type of the syntactic region. See `DndcSyntaxType`.
 //
 // line:
 //    Which line of the file the error originated from. This is 0-based.
@@ -284,7 +284,7 @@ typedef void DndcSyntaxFunc(DNDC_NULLABLE(void*) user_data, int type, int line,
 //    to dndc_analyze_syntax.
 //
 // type:
-//    The type of the syntactic region. See `DndCSyntaxType`.
+//    The type of the syntactic region. See `DndcSyntaxType`.
 //
 // line:
 //    Which line of the file the error originated from. This is 0-based.

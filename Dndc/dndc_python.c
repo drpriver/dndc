@@ -220,15 +220,15 @@ py_parse_and_append_children(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnul
     Py_RETURN_NONE;
     }
 
-typedef struct DndClassesList {
+typedef struct DndclassesList {
     PyObject_HEAD
     Nonnull(DndcContext*)ctx;
     NodeHandle handle;
-    } DndClassesList;
+    } DndclassesList;
 
 static
 Py_ssize_t
-DndClasses_length(Nonnull(DndClassesList*)list){
+Dndclasses_length(Nonnull(DndclassesList*)list){
     auto node = get_node(list->ctx, list->handle);
     if(!node->classes)
         return 0;
@@ -237,7 +237,7 @@ DndClasses_length(Nonnull(DndClassesList*)list){
 
 static
 Nullable(PyObject*)
-DndClasses_getitem(Nonnull(DndClassesList*)list, Py_ssize_t index){
+Dndclasses_getitem(Nonnull(DndclassesList*)list, Py_ssize_t index){
     auto node = get_node(list->ctx, list->handle);
     auto length = node->classes?node->classes->count:0;
     if(index < 0){
@@ -253,7 +253,7 @@ DndClasses_getitem(Nonnull(DndClassesList*)list, Py_ssize_t index){
 
 static
 int
-DndClasses_contains(Nonnull(DndClassesList*)list, PyObject*_Nonnull query){
+Dndclasses_contains(Nonnull(DndclassesList*)list, PyObject*_Nonnull query){
     if(!PyUnicode_Check(query)){
         PyErr_SetString(PyExc_TypeError, "Only strings can be in classes lists");
         return -1;
@@ -274,7 +274,7 @@ DndClasses_contains(Nonnull(DndClassesList*)list, PyObject*_Nonnull query){
 
 static
 int
-DndClasses_setitem(Nonnull(DndClassesList*)list, Py_ssize_t index, Nullable(PyObject*) value){
+Dndclasses_setitem(Nonnull(DndclassesList*)list, Py_ssize_t index, Nullable(PyObject*) value){
     if(!value){
         PyErr_SetString(PyExc_NotImplementedError, "Deletion is unsupported");
         return -1;
@@ -294,7 +294,7 @@ DndClasses_setitem(Nonnull(DndClassesList*)list, Py_ssize_t index, Nullable(PyOb
 
 static
 Nullable(PyObject*)
-DndClasses_append(Nonnull(DndClassesList*)list, Nonnull(PyObject*)args){
+Dndclasses_append(Nonnull(DndclassesList*)list, Nonnull(PyObject*)args){
     PyObject* text;
     if(!PyArg_ParseTuple(args, "O!:append", &PyUnicode_Type, &text))
         return NULL;
@@ -306,7 +306,7 @@ DndClasses_append(Nonnull(DndClassesList*)list, Nonnull(PyObject*)args){
 
 static
 Nullable(PyObject*)
-DndClasses_repr(Nonnull(DndClassesList*)list){
+Dndclasses_repr(Nonnull(DndclassesList*)list){
     auto node = get_node(list->ctx, list->handle);
     MStringBuilder msb = {.allocator=list->ctx->temp_allocator};
     msb_write_char(&msb, '[');
@@ -327,39 +327,39 @@ DndClasses_repr(Nonnull(DndClassesList*)list){
     }
 
 
-static PyMethodDef DndClassesList_methods[] = {
-    {"append", (PyCFunction)&DndClasses_append, METH_VARARGS, "add a class string"},
+static PyMethodDef DndclassesList_methods[] = {
+    {"append", (PyCFunction)&Dndclasses_append, METH_VARARGS, "add a class string"},
     {NULL, NULL, 0, NULL}, // Sentinel
     };
 
-static PySequenceMethods DndClasses_sq_methods = {
-    .sq_length = (lenfunc)DndClasses_length,
+static PySequenceMethods Dndclasses_sq_methods = {
+    .sq_length = (lenfunc)Dndclasses_length,
     .sq_concat = NULL,
     .sq_repeat = NULL,
-    .sq_item = (ssizeargfunc)DndClasses_getitem,
+    .sq_item = (ssizeargfunc)Dndclasses_getitem,
     .was_sq_slice = NULL,
-    .sq_ass_item = (ssizeobjargproc)DndClasses_setitem,
+    .sq_ass_item = (ssizeobjargproc)Dndclasses_setitem,
     .was_sq_ass_slice = NULL,
-    .sq_contains = (objobjproc)DndClasses_contains,
+    .sq_contains = (objobjproc)Dndclasses_contains,
     .sq_inplace_concat = NULL,
     .sq_inplace_repeat = NULL,
 };
-static PyTypeObject DndClassesListType = {
+static PyTypeObject DndclassesListType = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "dndc_python.ClassList",
-    .tp_basicsize = sizeof(DndClassesList),
+    .tp_basicsize = sizeof(DndclassesList),
     .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_doc = "Classes List Wrapper",
-    .tp_methods = DndClassesList_methods,
+    .tp_methods = DndclassesList_methods,
     .tp_getattro = PyObject_GenericGetAttr,
-    .tp_as_sequence = &DndClasses_sq_methods,
-    .tp_repr = (reprfunc)&DndClasses_repr,
+    .tp_as_sequence = &Dndclasses_sq_methods,
+    .tp_repr = (reprfunc)&Dndclasses_repr,
     };
 
 static
 Nonnull(PyObject*)
 make_classes_list(Nonnull(DndcContext*)ctx, NodeHandle handle){
-    DndClassesList* self = (DndClassesList*)DndClassesListType.tp_alloc(&DndClassesListType, 0);
+    DndclassesList* self = (DndclassesList*)DndclassesListType.tp_alloc(&DndclassesListType, 0);
     unhandled_error_condition(!self);
     self->ctx = ctx;
     self->handle = handle;
@@ -1371,31 +1371,31 @@ DndNode_setattr(Nonnull(DndNode*)obj, Nonnull(const char*)name, Nullable(PyObjec
 //  Possibly all these DndcContext* should actually be DndcContext** so they can get nulled.
 //
 // just a bare wrapper around the parse context
-typedef struct DndContext {
+typedef struct Dndcontext {
     PyObject_HEAD
     Nonnull(DndcContext*) ctx;
-    } DndContext;
+    } Dndcontext;
 
-// static PyMethodDef DndContext_methods[] = {
+// static PyMethodDef Dndcontext_methods[] = {
     // {NULL, NULL, 0, NULL}, // sentinel
     // };
 
-static PyObject* _Nullable DndContext_getattr(Nonnull(DndContext*), Nonnull(const char*));
+static PyObject* _Nullable Dndcontext_getattr(Nonnull(Dndcontext*), Nonnull(const char*));
 
-static PyTypeObject DndContextType = {
+static PyTypeObject DndcontextType = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "docparse.DndcContext",
-    .tp_basicsize = sizeof(DndContext),
+    .tp_basicsize = sizeof(Dndcontext),
     .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_doc = "DndcContext",
     // can you just leave this out?
-    // .tp_methods = DndContext_methods,
-    .tp_getattr = (getattrfunc)&DndContext_getattr,
+    // .tp_methods = Dndcontext_methods,
+    .tp_getattr = (getattrfunc)&Dndcontext_getattr,
     };
 
 static
 PyObject* _Nullable
-DndContext_getattr(Nonnull(DndContext*)pyctx, Nonnull(const char*)attr){
+Dndcontext_getattr(Nonnull(Dndcontext*)pyctx, Nonnull(const char*)attr){
     auto ctx = pyctx->ctx;
     auto len = strlen(attr);
 #define CHECK(lit) (len == sizeof(""lit)-1 and memcmp(attr, ""lit, sizeof(""lit)-1)==0)
@@ -1468,7 +1468,7 @@ DndContext_getattr(Nonnull(DndContext*)pyctx, Nonnull(const char*)attr){
 static
 Nonnull(PyObject*)
 make_py_ctx(Nonnull(DndcContext*)ctx){
-    DndContext* self = (DndContext*)DndContextType.tp_alloc(&DndContextType, 0);
+    Dndcontext* self = (Dndcontext*)DndcontextType.tp_alloc(&DndcontextType, 0);
     unhandled_error_condition(!self);
     self->ctx = ctx;
     return (PyObject*)self;
@@ -1480,7 +1480,7 @@ docparse_init_types(void){
     Errorable(void) result = {};
     if(PyType_Ready(&DndNodeType) < 0)
         Raise(GENERIC_ERROR);
-    if(PyType_Ready(&DndClassesListType) < 0)
+    if(PyType_Ready(&DndclassesListType) < 0)
         Raise(GENERIC_ERROR);
     if(PyType_Ready(&DndAttributesMapType) < 0)
         Raise(GENERIC_ERROR);
@@ -1488,7 +1488,7 @@ docparse_init_types(void){
         Raise(GENERIC_ERROR);
     if(PyType_Ready(&NodeTypeEnumType) < 0)
         Raise(GENERIC_ERROR);
-    if(PyType_Ready(&DndContextType) < 0)
+    if(PyType_Ready(&DndcontextType) < 0)
         Raise(GENERIC_ERROR);
     return result;
     }

@@ -8,7 +8,7 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 
 find_package(Python3 3.8 COMPONENTS Development)
 
-include_directories(Utils DndC PythonEmbed Allocators PythonEmbed/frozen)
+include_directories(Utils Dndc PythonEmbed Allocators PythonEmbed/frozen)
 
 if(WIN32)
 include_directories(Platform/Windows)
@@ -18,7 +18,7 @@ elseif(UNIX)
 endif()
 
 add_executable(dndc
-    DndC/dndc.c
+    Dndc/dndc.c
     PythonEmbed/frozenstdlib.c
     )
 
@@ -28,7 +28,7 @@ target_compile_definitions(dndc PRIVATE DNDCMAIN)
 
 Python3_add_library(pydndc
     MODULE
-    DndC/pydndc.c
+    Dndc/pydndc.c
     )
 
 if(APPLE)
@@ -53,17 +53,17 @@ if(APPLE)
         "-framework WebKit"
         )
     target_compile_options(gdndc PUBLIC "-fobjc-arc")
-    target_include_directories(gdndc PRIVATE ${Python3_INCLUDE_DIRS} DndC)
+    target_include_directories(gdndc PRIVATE ${Python3_INCLUDE_DIRS} Dndc)
 endif()
 
 if(WIN32)
 add_executable(gdndc
     Platform/Windows/gdndc.cpp
-    DndC/dndc.c
+    Dndc/dndc.c
     PythonEmbed/frozenstdlib.c
     )
 target_link_libraries(gdndc ${Python3_LIBRARIES})
-target_include_directories(gdndc PRIVATE ${Python3_INCLUDE_DIRS} DndC)
+target_include_directories(gdndc PRIVATE ${Python3_INCLUDE_DIRS} Dndc)
 endif()
 
 # tests
@@ -83,7 +83,7 @@ add_test(strutil TestStrUtils)
 add_executable(TestRarray Utils/TestRarray.c)
 add_test(rarray TestRarray)
 
-add_executable(TestDndC DndC/TestDndC.c PythonEmbed/frozenstdlib.c)
-add_test(dndc TestDndC -C ${CMAKE_SOURCE_DIR})
-target_link_libraries(TestDndC ${Python3_LIBRARIES})
-target_include_directories(TestDndC PRIVATE ${Python3_INCLUDE_DIRS})
+add_executable(TestDndc Dndc/TestDndc.c PythonEmbed/frozenstdlib.c)
+add_test(dndc TestDndc -C ${CMAKE_SOURCE_DIR})
+target_link_libraries(TestDndc ${Python3_LIBRARIES})
+target_include_directories(TestDndc PRIVATE ${Python3_INCLUDE_DIRS})

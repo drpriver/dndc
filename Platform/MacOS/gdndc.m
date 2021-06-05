@@ -139,7 +139,7 @@ static NSImage* appimage;
         styleMask: NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
         backing: NSBackingStoreBuffered
         defer: NO];
-    window.title = @"DndC";
+    window.title = @"Dndc";
     window.tabbingIdentifier = @"Dnd Window";
     window.contentViewController = self->view_controller;
     return window;

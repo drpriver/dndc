@@ -1,12 +1,12 @@
-project('DndC', 'c', version: '0.4.7')
+project('Dndc', 'c', version: '0.4.7')
 
 pymod = import('python')
 pyinstall = pymod.find_installation()
 pydep = pyinstall.dependency(embed: true)
 if host_machine.system() == 'windows'
-includes = include_directories('Allocators', 'Utils', 'PythonEmbed', 'DndC', 'Platform/Windows')
+includes = include_directories('Allocators', 'Utils', 'PythonEmbed', 'Dndc', 'Platform/Windows')
 else
-includes = include_directories('Allocators', 'Utils', 'PythonEmbed', 'DndC')
+includes = include_directories('Allocators', 'Utils', 'PythonEmbed', 'Dndc')
 endif
 
 freeze_exec = executable(
@@ -79,7 +79,7 @@ frozen_modules = freezer.process(
 
 executable(
   'dndc',
-  'DndC/dndc.c',
+  'Dndc/dndc.c',
   'PythonEmbed/frozenstdlib.c',
   frozen_modules,
   include_directories: includes,
@@ -90,7 +90,7 @@ executable(
 
 pyinstall.extension_module(
   'pydndc',
-  'DndC/pydndc.c',
+  'Dndc/pydndc.c',
   include_directories: includes,
   dependencies:pyinstall.dependency(),
   )
@@ -126,8 +126,8 @@ t = executable('TestStrUtils', 'Utils/TestStrUtils.c', kwargs:testkw)
 test('strutil', t)
 t = executable('TestRarray', 'Utils/TestRarray.c', kwargs:testkw)
 test('rarray', t)
-t = executable('TestDndC',
-  'DndC/TestDndC.c',
+t = executable('TestDndc',
+  'Dndc/TestDndc.c',
   'PythonEmbed/frozenstdlib.c',
   frozen_modules,
   include_directories:includes,

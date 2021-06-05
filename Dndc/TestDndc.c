@@ -2,9 +2,9 @@
 #include "testing.h"
 #include "dndc.c"
 
-static TestFunc TestDndC1;
-static TestFunc TestDndC2;
-static TestFunc TestDndC3;
+static TestFunc TestDndc1;
+static TestFunc TestDndc2;
+static TestFunc TestDndc3;
 static TestFunc TestDndcOutParam;
 static TestFunc TestDndcTableMultiline;
 static TestFunc TestFormatTable;
@@ -15,9 +15,9 @@ static TestFunc TestUntrusted;
 
 int main(int argc, char** argv){
     dndc_init_python();
-    RegisterTest(TestDndC1);
-    RegisterTest(TestDndC2);
-    RegisterTest(TestDndC3);
+    RegisterTest(TestDndc1);
+    RegisterTest(TestDndc2);
+    RegisterTest(TestDndc3);
     RegisterTest(TestDndcOutParam);
     RegisterTest(TestDndcTableMultiline);
     RegisterTest(TestFormatTable);
@@ -28,7 +28,7 @@ int main(int argc, char** argv){
     return test_main(argc, argv);
 }
 
-TestFunction(TestDndC1){
+TestFunction(TestDndc1){
     TESTBEGIN();
     LongString source = LS(
         "::md\n"
@@ -49,7 +49,7 @@ TestFunction(TestDndC1){
     TESTEND();
     }
 
-TestFunction(TestDndC2){
+TestFunction(TestDndc2){
     TESTBEGIN();
     LongString source = LS(
         "::md\n"
@@ -69,7 +69,7 @@ TestFunction(TestDndC2){
     TestExpectSuccess(e);
     TESTEND();
     }
-TestFunction(TestDndC3){
+TestFunction(TestDndc3){
     TESTBEGIN();
     LongString source = LS(
         "::asjdiasjdmd\n"

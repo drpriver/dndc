@@ -1217,7 +1217,7 @@ void
 dndc_stderr_error_func(Nullable(void*)unused, int type, const char*_Nonnull filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
     (void)unused;
     (void)message_len;
-    switch((enum DndCErrorMessageType)type){
+    switch((enum DndcErrorMessageType)type){
         case DNDC_NODELESS_MESSAGE:
             fprintf(stderr, "Error: %s\n", message);
             return;
@@ -1276,7 +1276,7 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
     const char* cyan    = "\033[96m";
     const char* white   = "\033[37m";
     const char* reset   = "\033[39;49m";
-    switch((enum DndCSyntax)type){
+    switch((enum DndcSyntax)type){
         // case DNDC_SYNTAX_NONE:
             // break;
         case DNDC_SYNTAX_DOUBLE_COLON:

@@ -28,7 +28,7 @@ endif
 $(BINDIR)\python39.dll: $(PYDLL)
 	$(CP) $< $@
 $(BINDIR)/dndc.exe: $(BINDIR)\python39.dll
-TestDndC: | $(BINDIR)\python39.dll
+TestDndc: | $(BINDIR)\python39.dll
 # idk
 PYEXTENSION=.pyd
 PYEXTFLAGS=-shared
