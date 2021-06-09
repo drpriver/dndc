@@ -1690,7 +1690,7 @@ dndc_filecache_has_path(Nonnull(struct DndcFileCache*)cache, struct DndcStringVi
 
 DNDC_API
 int
-dndc_compile_dnd_file(uint64_t flags, struct DndcStringView base_directory,
+dndc_compile_dnd_file(unsigned long long flags, struct DndcStringView base_directory,
     struct DndcLongString source_path,
     struct DndcLongString*_Nullable output_path,
     union DndcDependsArg depends, struct DndcFileCache*_Nullable base64cache, struct DndcFileCache*_Nullable textcache,
