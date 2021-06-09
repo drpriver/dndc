@@ -66,6 +66,11 @@ class Node:
         Adds an orphaned node as a child of this node.
         '''
         ...
+    def replace_child(self, child:'Node', newchild:'Node') -> None:
+        '''
+        Replaces the given child with newchild. Newchild must be an orphan and the given child will be an orphan afterwards.
+        '''
+        ...
     def err(self, msg:str) -> NoReturn:
         '''
         Issue an error message originating from this node (throws an exception).

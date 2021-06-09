@@ -969,6 +969,52 @@ py_add_child_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*
 
 static
 Nullable(PyObject*)
+py_replace_child_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+    const char* const keywords[] = { "child", "newchild", NULL, };
+    DndNode* child;
+    DndNode* newchild;
+    PushDiagnostic();
+    SuppressCastQual();
+    // This call is guaranteed to not modify keywords, but it's declared as char**
+    // as const in C is kind of broken.
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!:replace_child", (char**)keywords, &DndNodeType, &child, &DndNodeType, &newchild)){
+        return NULL;
+        }
+    PopDiagnostic();
+    NodeHandle new_handle = child->handle;
+    NodeHandle prev_handle = newchild->handle;
+    auto prevchild_node = get_node(ctx, prev_handle);
+    auto newchild_node = get_node(ctx, new_handle);
+    if(!NodeHandle_eq(newchild_node->parent, INVALID_NODE_HANDLE)){
+        PyErr_SetString(PyExc_ValueError, "Node needs to be an orphan to be added as a child of another node.");
+        return NULL;
+        }
+    if(NodeHandle_eq(handle, new_handle)){
+        PyErr_SetString(PyExc_ValueError, "Node can't be a child of itself");
+        return NULL;
+        }
+    if(!NodeHandle_eq(handle, prevchild_node->parent)){
+        PyErr_SetString(PyExc_ValueError, "Node to replace is not a child of this node");
+        return NULL;
+        }
+    auto parent_node = get_node(ctx, handle);
+    auto count = parent_node->children.count;
+    auto data = parent_node->children.data;
+    for(size_t i = 0; i < count; i++){
+        auto c = data[i];
+        if(NodeHandle_eq(c, prev_handle)){
+            data[i] = new_handle;
+            prevchild_node->parent = INVALID_NODE_HANDLE;
+            newchild_node->parent = handle;
+            Py_RETURN_NONE;
+            }
+        }
+    PyErr_SetString(PyExc_AssertionError, "Internal logic error when replacing nodes");
+    return NULL;
+    }
+
+static
+Nullable(PyObject*)
 py_select_nodes(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
     (void)handle;
     NodeTypeEnum* type_ = NULL;
@@ -1245,6 +1291,9 @@ DndNode_getattr(Nonnull(DndNode*)obj, Nonnull(const char*)name){
     else if(CHECK("add_child")){
         return make_node_bound_method(obj->ctx, obj->handle, &py_add_child_node);
         }
+    else if(CHECK("replace_child")){
+        return make_node_bound_method(obj->ctx, obj->handle, &py_replace_child_node);
+        }
     else if(CHECK("err")){
         return make_node_bound_method(obj->ctx, obj->handle, &py_node_set_err);
         }
@@ -1357,6 +1406,12 @@ DndNode_setattr(Nonnull(DndNode*)obj, Nonnull(const char*)name, Nullable(PyObjec
         if(!PyUnicode_Check(value)){
             PyErr_SetString(PyExc_TypeError, "Header must be a string");
             return -1;
+            }
+        if(PyUnicode_GetLength(value) == 0){
+            auto node = get_node(obj->ctx, obj->handle);
+            node->header.length = 0;
+            node->header.text = "";
+            return 0;
             }
         auto node = get_node(obj->ctx, obj->handle);
         node->header = pystring_to_stringview((Nonnull(PyObject*))value, obj->ctx->allocator);
