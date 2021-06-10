@@ -454,12 +454,14 @@ dndc_filecache_has_path(DNDC_NONNULL(struct DndcFileCache*),
 //    length is zero, input will be read from stdin.
 //
 // output:
-//    A pointer to the path to write the result to. If null, will write to
-//    stdout instead.
+//    A pointer to a string structure to write the data to. The text will be
+//    allocated via malloc. You can call `dndc_free_string` on the text if you
+//    are on a platform where each dynamic library has its own heap (aka
+//    Windows).
 //
-//    Alternatively, if the flag DNDC_PATH_IS_OUT_PARAM is set, the
-//    result will be allocated into a string via malloc and written into the
-//    struct pointed to by this argument.
+//    Alternatively, if the flag DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM is set,
+//    the argument is a pointer to the path to write the result to. If null,
+//    will write to stdout instead.
 //
 // depends:
 //    The default function is that the path member of this union is set and if
@@ -567,8 +569,9 @@ DNDC_DONT_PRINT_ERRORS = 0x01000,
 // libraries.
 DNDC_PYTHON_UNISOLATED = 0x02000,
 
-// The output path is actually a string to output data to.
-DNDC_OUTPUT_IS_OUT_PARAM = 0x04000,
+// The output path is actually a pointer to a filepath to write the data
+// to.
+DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM = 0x04000,
 
 // Instead of rendering to html, render to .dnd with trailing
 // spaces removed, text aligned to 80 columns (if semantically equivelant)

@@ -29,7 +29,6 @@ make_html(PString* source){
     StringView base = SV("");
     LongString output;
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_OUTPUT_IS_OUT_PARAM
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_NO_CLEANUP

@@ -943,7 +943,6 @@ BOOL coord_helper;
     }
     // auto t0 = get_t();
     uint64_t flags = 0;
-    flags |= DNDC_OUTPUT_IS_OUT_PARAM;
     flags |= DNDC_PYTHON_IS_INIT;
     flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;

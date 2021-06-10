@@ -406,7 +406,6 @@ pydndc_reformat(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*
         }
     LongString source = pystring_borrow_longstring(text);
     uint64_t flags = 0;
-    flags |= DNDC_OUTPUT_IS_OUT_PARAM;
     flags |= DNDC_PYTHON_IS_INIT;
     // flags |= DNDC_DONT_PRINT_ERRORS;
     // flags |= DNDC_SUPPRESS_WARNINGS;
@@ -496,7 +495,6 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
         }
     LongString source = pystring_borrow_longstring(text);
     StringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
-    flags |= DNDC_OUTPUT_IS_OUT_PARAM;
     flags |= DNDC_PYTHON_IS_INIT;
     // flags |= DNDC_DONT_PRINT_ERRORS;
     // flags |= DNDC_SUPPRESS_WARNINGS;

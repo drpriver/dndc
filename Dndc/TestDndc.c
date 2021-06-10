@@ -99,7 +99,6 @@ TestFunction(TestDndcOutParam){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
-        | DNDC_OUTPUT_IS_OUT_PARAM
         ;
     LongString outdata = {};
     auto e = run_the_dndc(flags, SV(""), source, &outdata, (DependsArg){.path=LS("")}, NULL, NULL, NULL, NULL);
@@ -161,7 +160,6 @@ TestFunction(TestDndcTableMultiline){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
-        | DNDC_OUTPUT_IS_OUT_PARAM
         ;
     LongString outdata = {};
     auto e = run_the_dndc(flags, SV(""), source, &outdata, (DependsArg){.path=LS("")}, NULL, NULL, NULL, NULL);
@@ -249,7 +247,6 @@ TestFunction(TestFormatTable){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
-        | DNDC_OUTPUT_IS_OUT_PARAM
         | DNDC_REFORMAT_ONLY
         ;
     LongString outdata = {};
@@ -297,7 +294,6 @@ TestFunction(TestFormatList){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
-        | DNDC_OUTPUT_IS_OUT_PARAM
         | DNDC_REFORMAT_ONLY
         ;
     LongString outdata = {};

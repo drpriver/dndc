@@ -471,6 +471,7 @@ int main(int argc, char**argv){
 
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SOURCE_IS_PATH_NOT_DATA
+        | DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM
         ;
     if(allow_bad_links)
         flags |= DNDC_ALLOW_BAD_LINKS;
@@ -559,11 +560,11 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
     if(!output_path){
         outpath = LS("");
         }
-    else if(flags & DNDC_OUTPUT_IS_OUT_PARAM){
-        outpath = LS("this.html");
+    else if(flags & DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM){
+        outpath = *output_path;
         }
     else {
-        outpath = *output_path;
+        outpath = LS("this.html");
         }
     const Allocator allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
     // The linear allocator is very useful for temporary allocations, like
@@ -678,7 +679,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         if(flags & DNDC_DONT_WRITE){
             goto success;
             }
-        else if(flags & DNDC_OUTPUT_IS_OUT_PARAM){
+        else if(!(flags & DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM)){
             assert(output_path);
             // We don't use the allocator as this needs to outlive the recording
             // allocator.
@@ -973,7 +974,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
             msb_destroy(&output_sb);
             goto success;
             }
-        else if(flags & DNDC_OUTPUT_IS_OUT_PARAM){
+        else if(!(flags & DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM)){
             assert(output_path);
             // We don't use the allocator as this needs to outlive the recording
             // allocator.
@@ -1186,7 +1187,6 @@ DNDC_API
 int
 dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
     uint64_t flags = 0
-        | DNDC_OUTPUT_IS_OUT_PARAM
         | DNDC_PYTHON_IS_INIT
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_ALLOW_BAD_LINKS
@@ -1716,7 +1716,7 @@ dndc_compile_dnd_file(unsigned long long flags, struct DndcStringView base_direc
             | DNDC_SOURCE_IS_PATH_NOT_DATA
             | DNDC_DONT_PRINT_ERRORS
             | DNDC_PYTHON_UNISOLATED
-            | DNDC_OUTPUT_IS_OUT_PARAM
+            | DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM
             | DNDC_REFORMAT_ONLY
             | DNDC_DONT_INLINE_IMAGES
             | DNDC_DEPENDS_IS_CALLBACK
