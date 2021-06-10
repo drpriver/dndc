@@ -469,7 +469,9 @@ int main(int argc, char**argv){
         return 0;
     }
 
-    uint64_t flags = DNDC_FLAGS_NONE;
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SOURCE_IS_PATH_NOT_DATA
+        ;
     if(allow_bad_links)
         flags |= DNDC_ALLOW_BAD_LINKS;
     if(suppress_warnings)
@@ -533,7 +535,7 @@ depends_print_callback(void*_Nullable unused, StringView path){
 
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
+run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_path,
         Nullable(LongString*) output_path, DependsArg depends,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,
@@ -549,10 +551,10 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
     auto t0 = get_t();
     Errorable(void) result = {};
     StringView path;
-    if(flags & DNDC_SOURCE_IS_DATA_NOT_PATH)
-        path = SV("(string input)");
+    if(flags & DNDC_SOURCE_IS_PATH_NOT_DATA)
+        path = LS_to_SV(source_or_path);
     else
-        path = LS_to_SV(source_path);
+        path = SV("(string input)");
     LongString outpath;
     if(!output_path){
         outpath = LS("");
@@ -591,49 +593,51 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
     MStringBuilder msb = {.allocator=ctx.allocator};
     ctx_add_builtins(&ctx);
     LongString source;
-    if(flags & DNDC_SOURCE_IS_DATA_NOT_PATH){
-        source = source_path;
-        ctx_store_builtin_file(&ctx, LS("(string input)"), source);
-        }
-    else if(!path.length){
-        // read from stdin
-        MStringBuilder sb = {.allocator=ctx.allocator};
-        for(;;){
-            enum {N = 4096};
-            msb_reserve(&sb, N);
-            char* buff = sb.data + sb.cursor;
-            auto numread = fread(buff, 1, N, stdin);
-            sb.cursor += numread;
-            if(numread != N)
-                break;
+    if(flags & DNDC_SOURCE_IS_PATH_NOT_DATA){
+        if(!path.length){
+            // read from stdin
+            MStringBuilder sb = {.allocator=ctx.allocator};
+            for(;;){
+                enum {N = 4096};
+                msb_reserve(&sb, N);
+                char* buff = sb.data + sb.cursor;
+                auto numread = fread(buff, 1, N, stdin);
+                sb.cursor += numread;
+                if(numread != N)
+                    break;
+                }
+            source = msb_detach(&sb);
+            path = SV("(stdin)");
+            ctx_store_builtin_file(&ctx, LS("(stdin)"), source);
             }
-        source = msb_detach(&sb);
-        path = SV("(stdin)");
-        ctx_store_builtin_file(&ctx, LS("(stdin)"), source);
+        else {
+            // Temporarily clear the DONT_READ flag.
+            auto old_flags = ctx.flags;
+            ctx.flags &= ~DNDC_DONT_READ;
+            auto source_err = ctx_load_source_file(&ctx, path);
+            ctx.flags = old_flags;
+            if(source_err.errored){
+                if(ctx.base_directory.length){
+                    MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
+                    MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", path);
+                    report_system_error(&ctx, msb_borrow(&err_builder));
+                    msb_destroy(&err_builder);
+                    }
+                else{
+                    MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
+                    MSB_FORMAT(&err_builder, "Unable to open '", path);
+                    report_system_error(&ctx, msb_borrow(&err_builder));
+                    msb_destroy(&err_builder);
+                    }
+                result.errored = source_err.errored;
+                goto cleanup;
+                }
+            source = source_err.result;
+            }
         }
     else {
-        // Temporarily clear the DONT_READ flag.
-        auto old_flags = ctx.flags;
-        ctx.flags &= ~DNDC_DONT_READ;
-        auto source_err = ctx_load_source_file(&ctx, path);
-        ctx.flags = old_flags;
-        if(source_err.errored){
-            if(ctx.base_directory.length){
-                MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
-                MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", path);
-                report_system_error(&ctx, msb_borrow(&err_builder));
-                msb_destroy(&err_builder);
-                }
-            else{
-                MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
-                MSB_FORMAT(&err_builder, "Unable to open '", path);
-                report_system_error(&ctx, msb_borrow(&err_builder));
-                msb_destroy(&err_builder);
-                }
-            result.errored = source_err.errored;
-            goto cleanup;
-            }
-        source = source_err.result;
+        source = source_or_path;
+        ctx_store_builtin_file(&ctx, LS("(string input)"), source);
         }
     // Quick and dirty estimate of how many nodes we will need.
     Marray_reserve(Node)(&ctx.nodes, ctx.allocator, source.length/10+1);
@@ -1182,7 +1186,6 @@ DNDC_API
 int
 dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
     uint64_t flags = 0
-        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_OUTPUT_IS_OUT_PARAM
         | DNDC_PYTHON_IS_INIT
         | DNDC_SUPPRESS_WARNINGS
@@ -1696,7 +1699,6 @@ dndc_compile_dnd_file(unsigned long long flags, struct DndcStringView base_direc
     union DndcDependsArg depends, struct DndcFileCache*_Nullable base64cache, struct DndcFileCache*_Nullable textcache,
     DndcErrorFunc*_Nullable error_func, void*_Nullable error_user_data
 ){
-    // TODO: validate flags.
     enum {
         // All the valid flags.
         DNDC_VALID_FLAGS = 0
@@ -1711,7 +1713,7 @@ dndc_compile_dnd_file(unsigned long long flags, struct DndcStringView base_direc
             | DNDC_NO_THREADS
             | DNDC_DONT_WRITE
             | DNDC_NO_CLEANUP
-            | DNDC_SOURCE_IS_DATA_NOT_PATH
+            | DNDC_SOURCE_IS_PATH_NOT_DATA
             | DNDC_DONT_PRINT_ERRORS
             | DNDC_PYTHON_UNISOLATED
             | DNDC_OUTPUT_IS_OUT_PARAM

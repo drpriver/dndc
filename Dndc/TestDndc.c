@@ -40,7 +40,6 @@ TestFunction(TestDndc1){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_PYTHON_IS_INIT
         | DNDC_DONT_WRITE
-        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         ;
@@ -61,7 +60,6 @@ TestFunction(TestDndc2){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_PYTHON_IS_INIT
         | DNDC_DONT_WRITE
-        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         ;
@@ -81,7 +79,6 @@ TestFunction(TestDndc3){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_PYTHON_IS_INIT
         | DNDC_DONT_WRITE
-        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         ;
@@ -100,7 +97,6 @@ TestFunction(TestDndcOutParam){
         "  ctx.root.add_child('hello')\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_OUTPUT_IS_OUT_PARAM
@@ -163,7 +159,6 @@ TestFunction(TestDndcTableMultiline){
         "     table\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_OUTPUT_IS_OUT_PARAM
@@ -252,7 +247,6 @@ TestFunction(TestFormatTable){
         "  4 | This is a really long text table. As you can see, it is much longer than it really needs to be. But whatever. Long things are long. Long live the long thing! So why not. Be long!\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_OUTPUT_IS_OUT_PARAM
@@ -301,7 +295,6 @@ TestFunction(TestFormatList){
         "12. 5\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_OUTPUT_IS_OUT_PARAM
@@ -347,6 +340,7 @@ TestFunction(TestFormatList){
 TestFunction(TestCrashesFixed){
     TESTBEGIN();
     uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SOURCE_IS_PATH_NOT_DATA
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_DONT_WRITE
@@ -372,6 +366,7 @@ TestFunction(TestCrashesFixed){
 TestFunction(TestExamplesWork){
     TESTBEGIN();
     uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SOURCE_IS_PATH_NOT_DATA
         | DNDC_SUPPRESS_WARNINGS
         // | DNDC_DONT_PRINT_ERRORS
         | DNDC_DONT_WRITE
@@ -398,6 +393,7 @@ TestFunction(TestExamplesWork){
 TestFunction(TestUntrusted){
     TESTBEGIN();
     uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SOURCE_IS_PATH_NOT_DATA
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_INPUT_IS_UNTRUSTED

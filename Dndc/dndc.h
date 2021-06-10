@@ -447,11 +447,11 @@ dndc_filecache_has_path(DNDC_NONNULL(struct DndcFileCache*),
 //    all paths for the purposes of opening those paths.
 //
 // source:
-//    The path to the source file. If the string's length is zero, input will
-//    be read from stdin.
+//    The string to be parsed and compiled.
 //
-//    Alternatively, if the flag DNDC_SOURCE_IS_DATA_NOT_PATH is set, this
-//    argument is treated as the source data itself and no file is opened.
+//    Alternatively, if the flag DNDC_SOURCE_IS_PATH_NOT_DATA is set, this
+//    argument is treated as a filepath to the source data. If this string's
+//    length is zero, input will be read from stdin.
 //
 // output:
 //    A pointer to the path to write the result to. If null, will write to
@@ -555,9 +555,9 @@ DNDC_DONT_WRITE        = 0x0200,
 // Appropriate for batch use.
 DNDC_NO_CLEANUP        = 0x0400,
 
-// The `source` argument is actually a string containing the data, not a
-// path.
-DNDC_SOURCE_IS_DATA_NOT_PATH = 0x0800,
+// The `source` argument is actually a filepath to the file containing the
+// data.
+DNDC_SOURCE_IS_PATH_NOT_DATA = 0x0800,
 
 // Don't report errors via the `error_func`.
 DNDC_DONT_PRINT_ERRORS = 0x01000,

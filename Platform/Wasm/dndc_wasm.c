@@ -30,7 +30,6 @@ make_html(PString* source){
     LongString output;
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_OUTPUT_IS_OUT_PARAM
-        | DNDC_SOURCE_IS_DATA_NOT_PATH
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_NO_CLEANUP
