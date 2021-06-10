@@ -161,8 +161,6 @@ thread_worker(void*){
             int fail = dndc_compile_dnd_file(DNDC_FLAGS_NONE
                     | DNDC_ALLOW_BAD_LINKS
                     | DNDC_NO_THREADS
-                    | DNDC_SOURCE_IS_DATA_NOT_PATH
-                    | DNDC_OUTPUT_IS_OUT_PARAM
                     | DNDC_STRIP_WHITESPACE
                     | DNDC_DONT_PRINT_ERRORS
                     | DNDC_SUPPRESS_WARNINGS
