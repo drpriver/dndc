@@ -46,9 +46,9 @@ LS_equals(const LongString a, const LongString b){
         return false;
     if(a.text == b.text)
         return true;
-    assert(a.text);
-    assert(b.text);
-    return !strcmp(a.text, b.text);
+    // assert(a.text);
+    // assert(b.text);
+    return a.text && b.text && !strcmp(a.text, b.text);
     }
 
 #ifdef LS
@@ -57,7 +57,7 @@ LS_equals(const LongString a, const LongString b){
 
 #define LS(literal) ((LongString){.length=sizeof("" literal)-1, .text="" literal})
 #define SV(literal) ((StringView){.length=sizeof("" literal)-1, .text=""  literal})
-
+int getchar(void);
 static inline
 bool
 SV_equals(const StringView a, const StringView b){
@@ -65,9 +65,9 @@ SV_equals(const StringView a, const StringView b){
         return false;
     if(a.text == b.text)
         return true;
-    assert(a.text);
-    assert(b.text);
-    return memcmp(a.text, b.text, a.length) == 0;
+    // assert(a.text);
+    // assert(b.text);
+    return a.text && b.text && memcmp(a.text, b.text, a.length) == 0;
     }
 static inline
 bool
@@ -76,9 +76,9 @@ SV_utf16_equals(const StringViewUtf16 a, const StringViewUtf16 b){
         return false;
     if(a.text == b.text)
         return true;
-    assert(a.text);
-    assert(b.text);
-    return memcmp(a.text, b.text, a.length*sizeof(uint16_t)) == 0;
+    // assert(a.text);
+    // assert(b.text);
+    return a.text && b.text && memcmp(a.text, b.text, a.length*sizeof(uint16_t)) == 0;
     }
 
 static inline
@@ -88,9 +88,9 @@ LS_SV_equals(const LongString ls, const StringView sv){
         return false;
     if(ls.text == sv.text)
         return true;
-    assert(ls.text);
-    assert(sv.text);
-    return memcmp(ls.text, sv.text, sv.length)==0;
+    // assert(ls.text);
+    // assert(sv.text);
+    return ls.text && sv.text && memcmp(ls.text, sv.text, sv.length)==0;
     }
 
 // Maybe it's UB (idk) but this works for LongStrings as well.
