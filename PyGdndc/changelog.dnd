@@ -1,39 +1,45 @@
 Version 0.5.0::md
   * Internal API changes
   * Bug fixes and performance improvements.
+
 Version 0.4.8::md
   * Added replace_child method to nodes in python blocks.
+
 Version 0.4.7::md
   * Bug fixes and performance improvements.
+
 Version 0.4.6::md
-  * Fixed bug that formatting the file with numbered lists of 10 or more
-    would lead to lists formatted in a way that the parser would reject
-    the file.
+  * Fixed bug that formatting the file with numbered lists of 10 or more would
+    lead to lists formatted in a way that the parser would reject the file.
+
 Version 0.4.5::md
   * Bug fixes and performance improvements.
+
 Version 0.4.4::md
   * Fixed bug that formatting the file would remove all leading whitespace on
     inline js blocks.
   * Fixed bug in new coord helper.
+
 Version 0.4.3::md
   * Fixed minor bug in new coord helper.
+
 Version 0.4.2::md
   * Added coord helper to make working with the map easier.
-    - Activate it by checking the new Coord Helper checkbox at the bottom of
-      the editor.
-    - When active and Read-only is not checked, you can click on the map
-      and you will be prompted to give a name to what you are adding. Afterwards,
-      it will append that room to your .dnd file, with the appropriate @coord
-      set.
+    - Activate it by checking the new Coord Helper checkbox at the bottom of the
+      editor.
+    - When active and Read-only is not checked, you can click on the map and you
+      will be prompted to give a name to what you are adding. Afterwards, it will
+      append that room to your .dnd file, with the appropriate @coord set.
   * Added an hr block type. It is for adding <hr> elements.
+
 Version 0.4.1::md
-  * Implemented file caching so things like images don't have to be-read
-    as often. The cache is invalidated based on the file watching from last
-    version.
+  * Implemented file caching so things like images don't have to be read as
+    often. The cache is invalidated based on the file watching from last version.
   * Added a checkbox to enable/disable auto-updating of the rendered content as
     you type.
   * Added a checkbox to make a file read-only to help with accidental typing.
   * Added a developer menu. It is undocumented.
+
 Version 0.4.0::md
   * Implemented file watching. Before, if you changed a file that your dnd
     document depended on (such as the img it loaded as the map), the program
@@ -41,11 +47,12 @@ Version 0.4.0::md
     through the magic of modern technology, we get notifications from the OS if
     those files change and so can redisplay without the user doing anything.
   * Added new examples:
-    - index.dnd in the root of the Examples. It shows using links to link
-      to other .dnd files
+    - index.dnd in the root of the Examples. It shows using links to link to
+      other .dnd files
     - Rules/religion.dnd. It shows linking to external sites.
   * Clicking links to external urls now opens them in your system's default
     browser instead of blocking the request.
+    
 Version 0.3.15::md
   * Implemented new syntax highlighter, is actually accurate now.
     - The colors are kind of wonky. Idk I'm not a graphic designer.
@@ -56,6 +63,7 @@ Version 0.3.15::md
     not change. To ameliorate this, a new action has been added to the View menu
     to refresh the highlighting of the entire document. In practice, this is
     rare, so you probably won't notice.
+
 Version 0.3.14::md
   * Files are now explicitly decoded as utf-8 instead of guessing based on the
     user's locale settings. This caused issues when weebs set their locale to
@@ -63,6 +71,7 @@ Version 0.3.14::md
     - All .dnd files must now be utf-8 encoded. If you somehow have a non-utf-8
       encoded plain text file, you will need to save it as utf-8. Notepad can do
       this.
+
 Version 0.3.13::md
   * Fixed bug that closing a tab with the button would not save the file.
   * Implemented Indent/Dedent actions.
@@ -72,8 +81,10 @@ Version 0.3.13::md
       + By using Ctrl-> or Ctrl-< hotkeys.
       + By the context menu when right clicking the text editor
       + By selecting the actions in the Edit menu.
+
 Version 0.3.12::md
   * Fixed bug that prevented the Format action of Edit from doing anything.
+
 Version 0.3.11::md
   * Added this changelog
   * Closing a tab with the button now closes the associated file.
@@ -90,6 +101,7 @@ Version 0.3.11::md
     - Use Help -> Compress Logs to zip the current log and open that same folder.
     - Logs are per day.
     - You can delete the old logs if they get too fat.
+
 ::css @inline
   body > div {
     margin: auto;
