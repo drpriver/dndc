@@ -1,3 +1,6 @@
+Version 0.5.0::md
+  * Internal API changes
+  * Bug fixes and performance improvements.
 Version 0.4.8::md
   * Added replace_child method to nodes in python blocks.
 Version 0.4.7::md
