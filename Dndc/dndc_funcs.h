@@ -204,7 +204,7 @@ get_node(Nonnull(DndcContext*), NodeHandle);
 // Like get_node, but will be available in the debugger as it is extern.
 // Don't use this, use get_node, this is purely for the debugger.
 //
-extern
+DNDC_API
 Nonnull(Node*)
 get_node_e(Nonnull(DndcContext*), NodeHandle);
 

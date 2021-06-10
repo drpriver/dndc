@@ -14,7 +14,9 @@
 #include <wchar.h>
 // #include <wchar.h>
 #undef ERROR
+#include "dndc_api_def.h"
 #include "dndc.h"
+#include "long_string.h"
 #pragma comment(lib, "user32.lib")
 // #pragma comment(lib, "WebView2Loader.dll.lib")
 #pragma comment(lib, "WebView2LoaderStatic.lib")
@@ -156,7 +158,23 @@ thread_worker(void*){
         if(text){
             LongString source = {.length=strlen(text), .text=text};
             LongString output = {};
-            int fail = dndc_make_html(SV(""), source, &output);
+            int fail = dndc_compile_dnd_file(DNDC_FLAGS_NONE
+                    | DNDC_ALLOW_BAD_LINKS
+                    | DNDC_NO_THREADS
+                    | DNDC_SOURCE_IS_DATA_NOT_PATH
+                    | DNDC_OUTPUT_IS_OUT_PARAM
+                    | DNDC_STRIP_WHITESPACE
+                    | DNDC_DONT_PRINT_ERRORS
+                    | DNDC_SUPPRESS_WARNINGS
+                    ,
+                    SV(""),
+                    source,
+                    &output,
+                    DndcDependsArg{},
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL);
             if(!fail){
                 {
                 auto fh = CreateFileW(_T("html/foo.dnd"), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -192,6 +210,9 @@ thread_worker(void*){
                     }
                 }
                 free((void*)output.text);
+                }
+            else {
+                MessageBox(NULL, TEXT("Unable to compile the dndc file"), TEXT("Error"), MB_OK);
                 }
             free((void*)text);
             }

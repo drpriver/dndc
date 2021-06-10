@@ -1,3 +1,4 @@
+#include "dndc_api_def.h"
 #include "dndc.h"
 #include "testing.h"
 #include "dndc.c"
