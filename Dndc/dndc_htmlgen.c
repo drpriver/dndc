@@ -361,7 +361,7 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
                 msb_write_literal(sb, "<a href=\"");
                 const char* closing_brace = memchr(text+i, ']', length-i);
                 if(unlikely(!closing_brace)){
-                    node_set_err_offset(ctx, node, i, LS("Unterminated '[']"));
+                    node_set_err_offset(ctx, node, i, LS("Unterminated '['"));
                     Raise(PARSE_ERROR);
                     }
                 size_t link_length = closing_brace - (text+i);
