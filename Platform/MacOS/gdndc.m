@@ -12,6 +12,18 @@
 #error "ARC is off"
 #endif
 
+static
+NSString*_Nonnull
+msb_detach_as_ns_string(MStringBuilder*sb){
+    auto text = msb_detach(sb);
+    PushDiagnostic();
+    SuppressCastQual();
+    NSData* data = [NSData dataWithBytesNoCopy:(void*)text.text length:text.length+1 freeWhenDone:YES];
+    PopDiagnostic();
+    NSString* str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    return str;
+}
+
 static struct DndcFileCache*_Nonnull BASE64CACHE;
 //
 // So, each document has N window controllers (I guess 1 for me).
@@ -74,6 +86,7 @@ typedef enum GdndInsertTag{
 @public DndTextView* text;
 @public NSScrollView* scrollview; // contains the text
 @public NSSplitView* editor_container;
+@public NSTextView* error_text;
 @public DndHighlighter* highlighter; // for the text
 @public WKWebView* webview;
 @public WebNavDel* webnavdel; // for the webview
@@ -227,6 +240,39 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
     return;
 }
 #endif
+void
+gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
+    if(!data)
+        return;
+    NSTextView* tv = (__bridge NSTextView*)data;
+    MStringBuilder builder = {.allocator=get_mallocator()};
+    StringView fn = {
+        .text = filename,
+        .length = filename_len,
+    };
+    StringView mess = {
+        .text = message,
+        .length = message_len,
+    };
+    switch((enum DndcErrorMessageType)type){
+        case DNDC_ERROR_MESSAGE:
+        case DNDC_WARNING_MESSAGE:
+            if(SV_equals(fn, SV("(string input)"))){
+                MSB_FORMAT(&builder, line, ":", col, ": ", mess, "\n");
+            }
+            else{
+                MSB_FORMAT(&builder, fn, ":", line, ":", col, ": ", mess, "\n");
+            }
+            break;
+        case DNDC_NODELESS_MESSAGE:
+        case DNDC_STATISTIC_MESSAGE:
+        case DNDC_DEBUG_MESSAGE:
+            MSB_FORMAT(&builder, mess, "\n");
+            break;
+    }
+    auto s = msb_detach_as_ns_string(&builder);
+    [[tv textStorage].mutableString appendString:s];
+}
 
 @implementation DndHighlighter
 - (void)textStorage:(NSTextStorage *)textStorage
@@ -444,12 +490,7 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
     const char* cpath = [path UTF8String];
     msb_write_str(&sb, cpath, strlen(cpath));
     msb_write_char(&sb, '\n');
-    auto strdata = msb_detach(&sb);
-    PushDiagnostic();
-    SuppressCastQual();
-    NSData* data = [NSData dataWithBytesNoCopy:(void*)strdata.text length:strdata.length freeWhenDone:YES];
-    PopDiagnostic();
-    auto to_insert = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    auto to_insert = msb_detach_as_ns_string(&sb);
     [self insertText:to_insert replacementRange:r];
 }
 -(void)insert_imglinks_block:(NSString*)path at:(NSRange)r indent_amount:(NSInteger)indent_amount size:(NSSize)size{
@@ -480,12 +521,7 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
         msb_write_str(&sb, script[i].text, script[i].length);
     }
 #undef INDENT
-    auto strdata = msb_detach(&sb);
-    PushDiagnostic();
-    SuppressCastQual();
-    NSData* data = [NSData dataWithBytesNoCopy:(void*)strdata.text length:strdata.length freeWhenDone:YES];
-    PopDiagnostic();
-    auto to_insert = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    auto to_insert = msb_detach_as_ns_string(&sb);
     [self insertText:to_insert replacementRange:r];
 }
 +(NSMenu*)defaultMenu{
@@ -676,10 +712,12 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
 BOOL editor_on_left;
 BOOL auto_recalc;
 BOOL coord_helper;
+BOOL show_errors;
 }
 #define DND_AUTO_APPLY_CHANGES_LABEL @"Auto-apply changes"
 #define DND_READ_ONLY_LABEL @"Read-only"
 #define DND_COORD_HELPER_LABEL @"Coord helper"
+#define DND_SHOW_ERRORS_LABEL @"Show errors"
 -(void)button_click:(id)a{
     // Being lazy and just doing string comparisons
     NSButton* button = a;
@@ -709,6 +747,16 @@ BOOL coord_helper;
         }
         else {
             coord_helper = NO;
+            [self recalc_html:[self get_text]];
+        }
+    }
+    else if([title isEqualToString:DND_SHOW_ERRORS_LABEL]){
+        if(state == NSControlStateValueOn){
+            show_errors = YES;
+            [self recalc_html:[self get_text]];
+        }
+        else {
+            show_errors = NO;
             [self recalc_html:[self get_text]];
         }
     }
@@ -751,6 +799,11 @@ BOOL coord_helper;
     editor_container = [[NSSplitView alloc] initWithFrame:textrect];
     editor_container.vertical = NO;
 
+    error_text = [[NSTextView alloc] init];
+    error_text.textStorage.font = font;
+    error_text.editable = NO;
+    error_text.usesAdaptiveColorMappingForDarkAppearance = YES;
+
     scrollview = [[NSScrollView alloc] initWithFrame:textrect];
     // scrollview.borderType = NSNoBorder;
     scrollview.hasVerticalScroller = YES;
@@ -784,6 +837,9 @@ BOOL coord_helper;
     [button_view addView:button inGravity:NSStackViewGravityLeading];
     button = [NSButton checkboxWithTitle:DND_COORD_HELPER_LABEL target:self action:@selector(button_click:)];
     [button_view addView:button inGravity:NSStackViewGravityLeading];
+    button = [NSButton checkboxWithTitle:DND_SHOW_ERRORS_LABEL target:self action:@selector(button_click:)];
+    [button_view addView:button inGravity:NSStackViewGravityLeading];
+    [editor_container addSubview:error_text];
     [editor_container addSubview:button_view];
     [split_view addSubview:editor_container];
     webview.autoresizingMask = NSViewHeightSizable | NSViewWidthSizable;
@@ -873,8 +929,10 @@ BOOL coord_helper;
     // auto t1 = get_t();
     LongString html = {};
     auto len = strlen(source_text);
-    auto err = dndc_format((LongString){len, source_text}, &html, dndc_stderr_error_func, NULL);
-    // TODO: report?
+    error_text.editable = YES;
+    [[error_text textStorage].mutableString setString:@""];
+    auto err = dndc_format((LongString){len, source_text}, &html, gdndc_error_func, (__bridge void*)error_text);
+    error_text.editable = NO;
     if(err){
         return;
     }
@@ -956,14 +1014,16 @@ BOOL coord_helper;
     // auto t0 = get_t();
     uint64_t flags = 0;
     flags |= DNDC_PYTHON_IS_INIT;
-    flags |= DNDC_SUPPRESS_WARNINGS;
+    // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
     // flags |= DNDC_PRINT_STATS;
-    auto err = dndc_compile_dnd_file(flags, base_dir, source, &html, (union DndcDependsArg){}, BASE64CACHE, NULL, dndc_stderr_error_func, NULL);
+    error_text.editable = YES;
+    [[error_text textStorage].mutableString setString:@""];
+    auto err = dndc_compile_dnd_file(flags, base_dir, source, &html, (union DndcDependsArg){}, BASE64CACHE, NULL, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL);
+    error_text.editable = NO;
     // auto t1 = get_t();
     // HERE("dndc_compile_dnd_file: %.3fms", (t1-t0)/1000.);
     if(err){
-        // TODO: report errors to the user (need to figure out the UX though).
         return;
     }
     PushDiagnostic();
