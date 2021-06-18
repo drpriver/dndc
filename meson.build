@@ -90,10 +90,10 @@ executable(
   install: true,
   )
 both_libraries(
-  'dndc', 
-  'Dndc/dndc.c', 
-  'PythonEmbed/frozenstdlib.c', 
-  frozen_modules, 
+  'dndc',
+  'Dndc/dndc.c',
+  'PythonEmbed/frozenstdlib.c',
+  frozen_modules,
   include_directories: includes,
   dependencies:[pydep],
   install: true,
