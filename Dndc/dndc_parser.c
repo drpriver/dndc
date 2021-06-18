@@ -782,8 +782,8 @@ PARSEFUNC(parse_md_node){
         NodeHandle item;
         int indentation;
         enum MDSTATE state;
-        } stack[8];
-    int si = -1;
+    } stack[8];
+    int si = -1; // stack index
     NodeHandle para_handle = INVALID_NODE_HANDLE;
     int normal_indent = -1;
     Errorable(void) result = {};

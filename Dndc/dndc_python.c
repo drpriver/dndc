@@ -1191,7 +1191,6 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHa
         c->co_firstlineno+= node->row +1;
         result = PyEval_EvalCode(code, glbl, glbl);
         }
-    // result = PyRun_StringFlags(text, Py_file_input, glbl, glbl, &flags);
     Py_XDECREF(glbl);
     if(!result){
         PyObject *type, *value, *traceback;
@@ -1227,6 +1226,7 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHa
             python_block->row = new_row;
             MStringBuilder sb = {.allocator=ctx->allocator};
             msb_write_str(&sb, type_text, strlen(type_text));
+            msb_write_literal(&sb, ": ");
             msb_write_str(&sb, exc_text, strlen(exc_text));
             node_set_err(ctx, python_block, msb_detach(&sb));
             python_block->row = old_row;
@@ -1547,9 +1547,6 @@ docparse_init_types(void){
         Raise(GENERIC_ERROR);
     return result;
     }
-
-#define SUPPRESS_BUILTIN_MODS
-#define NO_AUX
 
 static struct _inittab mods[] = {
     {NULL, 0}, // sentinel
