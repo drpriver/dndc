@@ -156,7 +156,14 @@ static NSImage* appimage;
     [docwindow makeKeyAndOrderFront: nil];
 }
 -(NSString*)wv_title{
-    return self->view_controller->webview.title;
+    auto title = self->view_controller->webview.title;
+    if([title isEqualToString:@"This"]){
+        if(not [self fileURL])
+            return @"Untitled";
+        return [[[self fileURL] path] lastPathComponent];
+    }
+    else
+        return title;
 }
 
 - (NSData*)dataOfType:(NSString *)typeName error:(NSError **)outError {
@@ -600,7 +607,12 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
     didFinishNavigation:(WKNavigation *)navigation{
     auto title = webView.title;
     // Hack
-    [NSApp mainWindow].title = title;
+    if([title isEqualToString:@"This"]){
+        return;
+    }
+    else {
+        [NSApp mainWindow].title = title;
+    }
 }
 -(void)webView:(WKWebView *)webView
     decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction
