@@ -637,7 +637,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 }
 
 @end
-
+#define DND_THIS_URL @"dnd://gdndc/this.html"
 @implementation WebNavDel: NSObject
 -(void)webView:(WKWebView *)webView
     didFinishNavigation:(WKNavigation *)navigation{
@@ -685,7 +685,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 @implementation DndUrlHandler
 -(void)webView:(WKWebView*)webView startURLSchemeTask:(id<WKURLSchemeTask>)urlSchemeTask{
     auto response = [[NSURLResponse alloc]
-        initWithURL:(NSURL*)[NSURL URLWithString:@"dnd://./this.html"]
+        initWithURL:(NSURL*)[NSURL URLWithString:DND_THIS_URL]
         MIMEType:@"text/plain"
         expectedContentLength:0
         textEncodingName:nil];
@@ -1030,7 +1030,7 @@ BOOL show_errors;
     SuppressCastQual();
     NSData* htmldata = [NSData dataWithBytesNoCopy:(void*)html.text length:html.length+1 freeWhenDone:YES];
     PopDiagnostic();
-    NSURL* url = [NSURL URLWithString:@"dnd://./this.html"];
+    NSURL* url = [NSURL URLWithString:DND_THIS_URL];
     [webview loadData:htmldata MIMEType:@"text/html" characterEncodingName:@"UTF-8" baseURL:url];
     // auto t2 = get_t();
     // HERE("load the page: %.3fms", (t2-t1)/1000.);
