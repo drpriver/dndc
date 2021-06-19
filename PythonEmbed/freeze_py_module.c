@@ -5,6 +5,7 @@
 #include <marshal.h>
 
 #include <stdio.h>
+#define DONT_DEPEND_ON_DNDC
 #include "file_util.h"
 #include "mallocator.h"
 /* To avoid a circular dependency on frozen.o, we create our own structure

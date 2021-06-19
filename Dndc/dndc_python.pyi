@@ -95,10 +95,10 @@ class DndcContext:
         Creates a new STRING node. Will be an orphan node.
         '''
         ...
-    def make_node(self, 
-        type: DndcNodeType, 
-        header:str=None, 
-        classes:Sequence[str]=None, 
+    def make_node(self,
+        type: DndcNodeType,
+        header:str=None,
+        classes:Sequence[str]=None,
         attributes:Sequence[str]=None) -> Node:
         '''
         Creates a new node. Will be an orphan node.
