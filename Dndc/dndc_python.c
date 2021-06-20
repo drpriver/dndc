@@ -584,7 +584,9 @@ static PyMethodDef DndNode_methods[] = {
     {NULL, NULL, 0, NULL}, // Sentinel
     };
 static PyObject* _Nullable DndNode_getattr(Nonnull(DndNode*), Nonnull(const char*));
+static PyObject* _Nullable DndNode_getattro(Nonnull(DndNode*), Nonnull(PyObject*));
 static int DndNode_setattr(Nonnull(DndNode*), Nonnull(const char*), Nullable(PyObject *));
+static int DndNode_setattro(Nonnull(DndNode*), Nonnull(PyObject*), Nullable(PyObject *));
 static Nullable(PyObject*) DndNode_repr(Nonnull(DndNode*));
 
 
@@ -597,6 +599,8 @@ static PyTypeObject DndNodeType = {
     .tp_methods = DndNode_methods,
     .tp_getattr = (getattrfunc)&DndNode_getattr,
     .tp_setattr = (setattrfunc)&DndNode_setattr,
+    .tp_getattro = (getattrofunc)&DndNode_getattro,
+    .tp_setattro = (setattrofunc)&DndNode_setattro,
     .tp_repr = (reprfunc)&DndNode_repr,
     };
 
@@ -1244,187 +1248,283 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHa
     return (Errorable(void)){};
     }
 
-static
+static inline
 Nullable(PyObject*)
-DndNode_getattr(Nonnull(DndNode*)obj, Nonnull(const char*)name){
-    auto len = strlen(name);
-#define CHECK(lit) (len == sizeof(""lit)-1 and memcmp(name, ""lit, sizeof(""lit)-1)==0)
-    // TODO: we can probably do this more optimally
-    if(CHECK("parent")){
-        auto node = get_node(obj->ctx, obj->handle);
-        return make_py_node(obj->ctx, node->parent);
-        }
-    else if(CHECK("type")){
-        auto node = get_node(obj->ctx, obj->handle);
-        return make_node_type_enum(node->type);
-        }
-    else if(CHECK("children")){
-        auto node = get_node(obj->ctx, obj->handle);
-        auto result = PyTuple_New(node->children.count);
-        if(!result)
-            return result;
-        for(size_t i = 0; i < node->children.count; i++){
-            auto child = node->children.data[i];
-            auto pynode = make_py_node(obj->ctx, child);
-            auto fail = PyTuple_SetItem(result, i, pynode);
-            //meh
-            unhandled_error_condition(fail != 0);
+DndNode_getattr_ls(Nonnull(DndNode*)obj, LongString name){
+    auto ctx = obj->ctx;
+    #define CHECK(lit, N) ({_Static_assert(sizeof(lit)-1==N, lit " is not length " #N); memcmp(lit, name.text, N)==0;})
+    switch(name.length){
+        case 2:{
+            if(CHECK("id", 2)){
+            auto node = get_node(ctx, obj->handle);
+            auto id = node_get_id(node);
+            if(id){
+                MStringBuilder temp = {.allocator = ctx->temp_allocator};
+                msb_write_kebab(&temp, id->text, id->length);
+                auto kebabed = msb_borrow(&temp);
+                auto result = PyUnicode_FromStringAndSize(kebabed.text, kebabed.length);
+                msb_destroy(&temp);
+                return result;
+                }
+            else {
+                PyErr_SetString(PyExc_AttributeError, "This node has no id");
+                return NULL;
+                }
             }
-        return result;
-        }
-    else if(CHECK("header")){
-        auto node = get_node(obj->ctx, obj->handle);
-        return PyUnicode_FromStringAndSize(node->header.text, node->header.length);
-        }
-    else if(CHECK("attributes")){
-        return make_attributes_map(obj->ctx, obj->handle);
-        }
-    else if(CHECK("classes")){
-        return make_classes_list(obj->ctx, obj->handle);
-        }
-    else if(CHECK("parse")){
-        return make_node_bound_method(obj->ctx, obj->handle, &py_parse_and_append_children);
-        }
-    else if(CHECK("detach")){
-        return make_node_bound_method(obj->ctx, obj->handle, &py_detach_node);
-        }
-    else if(CHECK("add_child")){
-        return make_node_bound_method(obj->ctx, obj->handle, &py_add_child_node);
-        }
-    else if(CHECK("replace_child")){
-        return make_node_bound_method(obj->ctx, obj->handle, &py_replace_child_node);
-        }
-    else if(CHECK("err")){
-        return make_node_bound_method(obj->ctx, obj->handle, &py_node_set_err);
-        }
-    else if(CHECK("id")){
-        auto node = get_node(obj->ctx, obj->handle);
-        auto id = node_get_id(node);
-        if(id){
-            MStringBuilder temp = {.allocator = obj->ctx->temp_allocator};
-            msb_write_kebab(&temp, id->text, id->length);
-            auto kebabed = msb_borrow(&temp);
-            auto result = PyUnicode_FromStringAndSize(kebabed.text, kebabed.length);
-            msb_destroy(&temp);
-            return result;
+        }break;
+        case 3:{
+            if(CHECK("err", 3)){
+                return make_node_bound_method(ctx, obj->handle, &py_node_set_err);
             }
-        else {
-            PyErr_SetString(PyExc_AttributeError, "This node has no id");
-            return NULL;
+        }break;
+        case 4:{
+            if(CHECK("type", 4)){
+                auto node = get_node(ctx, obj->handle);
+                return make_node_type_enum(node->type);
             }
+        }break;
+        case 5:{
+            if(CHECK("parse", 5)){
+                return make_node_bound_method(ctx, obj->handle, &py_parse_and_append_children);
+            }
+        }break;
+        case 6:{
+            if(CHECK("header", 6)){
+                auto node = get_node(ctx, obj->handle);
+                return PyUnicode_FromStringAndSize(node->header.text, node->header.length);
+                }
+            else if(CHECK("parent", 6)){
+                auto node = get_node(ctx, obj->handle);
+                return make_py_node(ctx, node->parent);
+                }
+            else if(CHECK("detach", 6)){
+                return make_node_bound_method(ctx, obj->handle, &py_detach_node);
+                }
+        }break;
+        case 7:{
+            if(CHECK("classes", 7)){
+                return make_classes_list(ctx, obj->handle);
+                }
+        }break;
+        case 8:{
+            if(CHECK("children", 8)){
+                auto node = get_node(ctx, obj->handle);
+                auto result = PyTuple_New(node->children.count);
+                if(!result)
+                    return result;
+                for(size_t i = 0; i < node->children.count; i++){
+                    auto child = node->children.data[i];
+                    auto pynode = make_py_node(ctx, child);
+                    auto fail = PyTuple_SetItem(result, i, pynode);
+                    //meh
+                    unhandled_error_condition(fail != 0);
+                    }
+                return result;
+                }
+        }break;
+        case 9:{
+            if(CHECK("add_child", 9)){
+                return make_node_bound_method(ctx, obj->handle, &py_add_child_node);
+                }
+        }break;
+        case 10:{
+            if(CHECK("attributes", 10)){
+                return make_attributes_map(ctx, obj->handle);
+                }
+        }break;
+        case 13:{
+            if(CHECK("replace_child", 13)){
+                return make_node_bound_method(ctx, obj->handle, &py_replace_child_node);
+                }
+        }break;
         }
-    PyErr_Format(PyExc_AttributeError, "Unknown attribute: %s", name);
+    #undef CHECK
+    PyErr_Format(PyExc_AttributeError, "Unknown attribute: %s", name.text);
     return NULL;
     }
 
 static
-int
-DndNode_setattr(Nonnull(DndNode*)obj, Nonnull(const char*)name, Nullable(PyObject*) value){
+Nullable(PyObject*)
+DndNode_getattr(Nonnull(DndNode*)obj, Nonnull(const char*)name){
     auto len = strlen(name);
+    return DndNode_getattr_ls(obj, (LongString){.text=name, .length=len});
+    }
+static
+Nullable(PyObject*)
+DndNode_getattro(Nonnull(DndNode*)obj, Nonnull(PyObject*)name){
+    auto ls = pystring_borrow_longstring(name);
+    return DndNode_getattr_ls(obj, ls);
+    }
+
+static inline
+int
+DndNode_setattr_ls(Nonnull(DndNode*)obj, LongString name, Nullable(PyObject*) value){
     if(!value){
         PyErr_SetString(PyExc_TypeError, "deletion of attributes is not supported");
         return -1;
         }
-    if(CHECK("parent")){
-        PyErr_SetString(PyExc_TypeError, "parent cannot be reassigned");
-        return -1;
-        }
-    else if(CHECK("attributes")){
-        PyErr_SetString(PyExc_TypeError, "attributes cannot be reassigned");
-        return -1;
-        }
-    else if(CHECK("classes")){
-        PyErr_SetString(PyExc_TypeError, "classes cannot be reassigned");
-        return -1;
-        }
-    else if(CHECK("type")){
-        if(PyObject_IsInstance(value, (PyObject *)&NodeTypeEnumType)){
-            auto ty = (NodeTypeEnum*)value;
-            auto node = get_node(obj->ctx, obj->handle);
-            switch(ty->type){
-                case NODE_NAV:
-                    obj->ctx->navnode = obj->handle;
-                    break;
-                case NODE_TITLE:
-                    obj->ctx->titlenode = obj->handle;
-                    break;
-                case NODE_STYLESHEETS:
-                    Marray_push(NodeHandle)(&obj->ctx->stylesheets_nodes, obj->ctx->allocator, obj->handle);
-                    break;
-                case NODE_DEPENDENCIES:
-                    Marray_push(NodeHandle)(&obj->ctx->dependencies_nodes, obj->ctx->allocator, obj->handle);
-                    break;
-                case NODE_LINKS:
-                    Marray_push(NodeHandle)(&obj->ctx->link_nodes, obj->ctx->allocator, obj->handle);
-                    break;
-                case NODE_SCRIPTS:
-                    Marray_push(NodeHandle)(&obj->ctx->script_nodes, obj->ctx->allocator, obj->handle);
-                    break;
-                case NODE_DATA:
-                    Marray_push(NodeHandle)(&obj->ctx->data_nodes, obj->ctx->allocator, obj->handle);
-                    break;
-                case NODE_PYTHON:
-                    PyErr_SetString(PyExc_ValueError, "Setting a node to PYTHON not supported.");
+    auto ctx = obj->ctx;
+    #define CHECK(lit, N) ({_Static_assert(sizeof(lit)-1==N, lit " is not length " #N); memcmp(lit, name.text, N)==0;})
+    switch(name.length){
+        case 2:{
+            if(CHECK("id", 2)){
+                PyErr_SetString(PyExc_NotImplementedError, "TODO: Ids should be reassignable.");
+                return -1;
+            }
+        }break;
+        case 3:{
+            if(CHECK("err", 3)){
+                PyErr_SetString(PyExc_TypeError, "method error cannot be reassigned");
+                return -1;
+            }
+        }break;
+        case 4:{
+            if(CHECK("type", 4)){
+                if(PyObject_IsInstance(value, (PyObject *)&NodeTypeEnumType)){
+                    auto ty = (NodeTypeEnum*)value;
+                    auto node = get_node(ctx, obj->handle);
+                    switch(ty->type){
+                        case NODE_NAV:
+                            ctx->navnode = obj->handle;
+                            break;
+                        case NODE_TITLE:
+                            ctx->titlenode = obj->handle;
+                            break;
+                        case NODE_STYLESHEETS:
+                            Marray_push(NodeHandle)(&ctx->stylesheets_nodes, ctx->allocator, obj->handle);
+                            break;
+                        case NODE_DEPENDENCIES:
+                            Marray_push(NodeHandle)(&ctx->dependencies_nodes, ctx->allocator, obj->handle);
+                            break;
+                        case NODE_LINKS:
+                            Marray_push(NodeHandle)(&ctx->link_nodes, ctx->allocator, obj->handle);
+                            break;
+                        case NODE_SCRIPTS:
+                            Marray_push(NodeHandle)(&ctx->script_nodes, ctx->allocator, obj->handle);
+                            break;
+                        case NODE_DATA:
+                            Marray_push(NodeHandle)(&ctx->data_nodes, ctx->allocator, obj->handle);
+                            break;
+                        case NODE_PYTHON:
+                            PyErr_SetString(PyExc_ValueError, "Setting a node to PYTHON not supported.");
+                            return -1;
+                        case NODE_IMPORT:
+                            PyErr_SetString(PyExc_ValueError, "Setting a node to IMPORT not supported.");
+                            return -1;
+                        case NODE_ROOT:
+                        case NODE_TEXT:
+                        case NODE_DIV:
+                        case NODE_STRING:
+                        case NODE_PARA:
+                        case NODE_HEADING:
+                        case NODE_HR:
+                        case NODE_TABLE:
+                        case NODE_TABLE_ROW:
+                        case NODE_IMAGE:
+                        case NODE_BULLETS:
+                        case NODE_RAW:
+                        case NODE_PRE:
+                        case NODE_LIST:
+                        case NODE_LIST_ITEM:
+                        case NODE_KEYVALUE:
+                        case NODE_KEYVALUEPAIR:
+                        case NODE_IMGLINKS:
+                        case NODE_COMMENT:
+                        case NODE_MD:
+                        case NODE_CONTAINER:
+                        case NODE_INVALID:
+                        case NODE_QUOTE:
+                            break;
+                        }
+                    node->type = ty->type;
+                    return 0;
+                    }
+                else {
+                    PyErr_SetString(PyExc_TypeError, "node type must be a NodeType");
                     return -1;
-                case NODE_IMPORT:
-                    PyErr_SetString(PyExc_ValueError, "Setting a node to IMPORT not supported.");
+                    }
+            }
+        }break;
+        case 5:{
+            if(CHECK("parse", 5)){
+                PyErr_SetString(PyExc_TypeError, "method parse cannot be reassigned");
+                return -1;
+            }
+        }break;
+        case 6:{
+            if(CHECK("header", 6)){
+                if(!PyUnicode_Check(value)){
+                    PyErr_SetString(PyExc_TypeError, "Header must be a string");
                     return -1;
-                case NODE_ROOT:
-                case NODE_TEXT:
-                case NODE_DIV:
-                case NODE_STRING:
-                case NODE_PARA:
-                case NODE_HEADING:
-                case NODE_HR:
-                case NODE_TABLE:
-                case NODE_TABLE_ROW:
-                case NODE_IMAGE:
-                case NODE_BULLETS:
-                case NODE_RAW:
-                case NODE_PRE:
-                case NODE_LIST:
-                case NODE_LIST_ITEM:
-                case NODE_KEYVALUE:
-                case NODE_KEYVALUEPAIR:
-                case NODE_IMGLINKS:
-                case NODE_COMMENT:
-                case NODE_MD:
-                case NODE_CONTAINER:
-                case NODE_INVALID:
-                case NODE_QUOTE:
-                    break;
+                    }
+                if(PyUnicode_GetLength(value) == 0){
+                    auto node = get_node(ctx, obj->handle);
+                    node->header.length = 0;
+                    node->header.text = "";
+                    return 0;
+                    }
+                auto node = get_node(ctx, obj->handle);
+                node->header = pystring_to_stringview((Nonnull(PyObject*))value, ctx->allocator);
+                return 0;
                 }
-            node->type = ty->type;
-            return 0;
-            }
-        else {
-            PyErr_SetString(PyExc_TypeError, "node type must be a NodeType");
-            return -1;
-            }
-        }
-    else if(CHECK("header")){
-        if(!PyUnicode_Check(value)){
-            PyErr_SetString(PyExc_TypeError, "Header must be a string");
-            return -1;
-            }
-        if(PyUnicode_GetLength(value) == 0){
-            auto node = get_node(obj->ctx, obj->handle);
-            node->header.length = 0;
-            node->header.text = "";
-            return 0;
-            }
-        auto node = get_node(obj->ctx, obj->handle);
-        node->header = pystring_to_stringview((Nonnull(PyObject*))value, obj->ctx->allocator);
-        return 0;
+            else if(CHECK("parent", 6)){
+                PyErr_SetString(PyExc_TypeError, "parent cannot be reassigned");
+                return -1;
+                }
+            else if(CHECK("detach", 6)){
+                PyErr_SetString(PyExc_TypeError, "method detach cannot be reassigned");
+                return -1;
+                }
+        }break;
+        case 7:{
+            if(CHECK("classes", 7)){
+                PyErr_SetString(PyExc_TypeError, "classes cannot be reassigned");
+                return -1;
+                }
+        }break;
+        case 8:{
+            if(CHECK("children", 8)){
+                PyErr_SetString(PyExc_TypeError, "children cannot be directly reassigned");
+                return -1;
+                }
+        }break;
+        case 9:{
+            if(CHECK("add_child", 9)){
+                PyErr_SetString(PyExc_TypeError, "method add_child cannot be reassigned");
+                return -1;
+                }
+        }break;
+        case 10:{
+            if(CHECK("attributes", 10)){
+                PyErr_SetString(PyExc_TypeError, "attributes cannot be reassigned");
+                return -1;
+                }
+        }break;
+        case 13:{
+            if(CHECK("replace_child", 13)){
+                PyErr_SetString(PyExc_TypeError, "method replace_child cannot be reassigned");
+                return -1;
+                }
+        }break;
         }
 #undef CHECK
     PyErr_Format(PyExc_AttributeError, "Unknown attribute: %s", name);
     return -1;
     }
+static
+int
+DndNode_setattr(Nonnull(DndNode*)obj, Nonnull(const char*)name, Nullable(PyObject*) value){
+    auto len = strlen(name);
+    LongString ls = {.text=name, .length=len};
+    return DndNode_setattr_ls(obj, ls, value);
+    }
+static
+int
+DndNode_setattro(Nonnull(DndNode*)obj, Nonnull(PyObject*)name, Nullable(PyObject*) value){
+    auto ls = pystring_borrow_longstring(name);
+    return DndNode_setattr_ls(obj, ls, value);
+    }
 
-// TODO:
-//  Possibly all these DndcContext* should actually be DndcContext** so they can get nulled.
-//
 // just a bare wrapper around the parse context
 typedef struct Dndcontext {
     PyObject_HEAD
@@ -1436,6 +1536,7 @@ typedef struct Dndcontext {
     // };
 
 static PyObject* _Nullable Dndcontext_getattr(Nonnull(Dndcontext*), Nonnull(const char*));
+static PyObject* _Nullable Dndcontext_getattro(Nonnull(Dndcontext*), Nonnull(PyObject*));
 
 static PyTypeObject DndcontextType = {
     PyVarObject_HEAD_INIT(NULL, 0)
@@ -1446,78 +1547,113 @@ static PyTypeObject DndcontextType = {
     // can you just leave this out?
     // .tp_methods = Dndcontext_methods,
     .tp_getattr = (getattrfunc)&Dndcontext_getattr,
+    .tp_getattro = (getattrofunc)&Dndcontext_getattro,
     };
+
+static PyObject* _Nullable
+Dndcontext_getattr_ls(Nonnull(Dndcontext*)pyctx, LongString name){
+    #define CHECK(lit, N) ({_Static_assert(sizeof(lit)-1==N, lit " is not length " #N); memcmp(lit, name.text, N)==0;})
+    auto ctx = pyctx->ctx;
+    switch(name.length){
+        case 4:{
+            if(CHECK("root", 4)){
+                if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)){
+                    PyErr_SetString(PyExc_AttributeError, "There is currently no root node");
+                    return NULL;
+                    }
+                return make_py_node(ctx, ctx->root_handle);
+                }
+            if(CHECK("base", 4)){
+                auto base = ctx->base_directory;
+                if(!base.length)
+                    base = SV(".");
+                return PyUnicode_FromStringAndSize(base.text, base.length);
+                }
+        }break;
+        case 5:{
+            if(CHECK("kebab", 5)){
+                return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_kebab);
+                }
+        }break;
+        case 6:{
+            if(CHECK("outdir", 6)){
+                auto outdir = path_dirname(LS_to_SV(ctx->outputfile));
+                if(!outdir.length)
+                    outdir = SV(".");
+                return PyUnicode_FromStringAndSize(outdir.text, outdir.length);
+                }
+        }break;
+        case 7:{
+            if(CHECK("outfile", 7)){
+                auto filename = ctx->outputfile.length?path_basename(LS_to_SV(ctx->outputfile)):SV("");
+                return PyUnicode_FromStringAndSize(filename.text, filename.length);
+                }
+            if(CHECK("outpath", 7)){
+                return PyUnicode_FromStringAndSize(ctx->outputfile.text, ctx->outputfile.length);
+                }
+        }break;
+        case 8:{
+            if(CHECK("set_root", 8)){
+                return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_change_root_node);
+                }
+            if(CHECK("set_data", 8)){
+                return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_set_data);
+                }
+        }break;
+        case 9:{
+            if(CHECK("make_node", 9)){
+                return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_make_node);
+                }
+            if(CHECK("all_nodes", 9)){
+                PyObject* result = PyList_New(ctx->nodes.count);
+                for(size_t i = 0; i < ctx->nodes.count; i++){
+                    PyObject* item = make_py_node(ctx, (NodeHandle){.index=i});
+                    PyList_SetItem(result, i, item);
+                    }
+                return result;
+                }
+            if(CHECK("read_file", 9)){
+                return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_read_file);
+                }
+        }break;
+        case 10:{
+            if(CHECK("sourcepath", 10)){
+                return PyUnicode_FromStringAndSize(ctx->filename.text, ctx->filename.length);
+                }
+        }break;
+        case 11:{
+            if(CHECK("make_string", 11)){
+                return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_make_string_node);
+                }
+        }break;
+        case 12:{
+            if(CHECK("select_nodes", 12)){
+                return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_select_nodes);
+                }
+        }break;
+        case 14:{
+            if(CHECK("add_dependency", 14)){
+                return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_add_dependency);
+                }
+        }break;
+    }
+#undef CHECK
+    PyErr_Format(PyExc_AttributeError, "Unknown attribute: '%s'", name.text);
+    return NULL;
+    }
 
 static
 PyObject* _Nullable
 Dndcontext_getattr(Nonnull(Dndcontext*)pyctx, Nonnull(const char*)attr){
-    auto ctx = pyctx->ctx;
     auto len = strlen(attr);
-#define CHECK(lit) (len == sizeof(""lit)-1 and memcmp(attr, ""lit, sizeof(""lit)-1)==0)
-    if(CHECK("root")){
-        if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)){
-            PyErr_SetString(PyExc_AttributeError, "There is currently no root node");
-            return NULL;
-            }
-        return make_py_node(ctx, ctx->root_handle);
-        }
-    if(CHECK("set_root")){
-        return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_change_root_node);
-        }
-    if(CHECK("make_string")){
-        return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_make_string_node);
-        }
-    if(CHECK("make_node")){
-        return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_make_node);
-        }
-    if(CHECK("add_dependency")){
-        return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_add_dependency);
-        }
-    if(CHECK("kebab")){
-        return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_kebab);
-        }
-    if(CHECK("set_data")){
-        return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_set_data);
-        }
-    if(CHECK("outfile")){
-        auto filename = ctx->outputfile.length?path_basename(LS_to_SV(ctx->outputfile)):SV("");
-        return PyUnicode_FromStringAndSize(filename.text, filename.length);
-        }
-    if(CHECK("outdir")){
-        auto outdir = path_dirname(LS_to_SV(ctx->outputfile));
-        if(!outdir.length)
-            outdir = SV(".");
-        return PyUnicode_FromStringAndSize(outdir.text, outdir.length);
-        }
-    if(CHECK("outpath")){
-        return PyUnicode_FromStringAndSize(ctx->outputfile.text, ctx->outputfile.length);
-        }
-    if(CHECK("sourcepath")){
-        return PyUnicode_FromStringAndSize(ctx->filename.text, ctx->filename.length);
-        }
-    if(CHECK("base")){
-        auto base = ctx->base_directory;
-        if(!base.length)
-            base = SV(".");
-        return PyUnicode_FromStringAndSize(base.text, base.length);
-        }
-    if(CHECK("all_nodes")){
-        PyObject* result = PyList_New(ctx->nodes.count);
-        for(size_t i = 0; i < ctx->nodes.count; i++){
-            PyObject* item = make_py_node(ctx, (NodeHandle){.index=i});
-            PyList_SetItem(result, i, item);
-            }
-        return result;
-        }
-    if(CHECK("select_nodes")){
-        return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_select_nodes);
-        }
-    if(CHECK("read_file")){
-        return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_read_file);
-        }
-#undef CHECK
-    PyErr_Format(PyExc_AttributeError, "Unknown attribute: '%s'", attr);
-    return NULL;
+    LongString ls = {.text=attr, .length=len};
+    return Dndcontext_getattr_ls(pyctx, ls);
+    }
+static
+PyObject* _Nullable
+Dndcontext_getattro(Nonnull(Dndcontext*)pyctx, Nonnull(PyObject*)attr){
+    auto ls = pystring_borrow_longstring(attr);
+    return Dndcontext_getattr_ls(pyctx, ls);
     }
 
 static
@@ -1548,11 +1684,12 @@ internal_dndc_python_init_types(void){
     return result;
     }
 
+
+#ifndef PYTHONMODULE
 static struct _inittab mods[] = {
     {NULL, 0}, // sentinel
     };
 
-#ifndef PYTHONMODULE
 static
 int
 init_python_interpreter(uint64_t flags){
