@@ -142,3 +142,8 @@ void
 set_frozen_modules(void){
     }
 #endif
+extern
+struct FrozenPyVersion
+get_frozen_version(void){
+    return (struct FrozenPyVersion){PY_MAJOR_VERSION, PY_MINOR_VERSION};
+    }

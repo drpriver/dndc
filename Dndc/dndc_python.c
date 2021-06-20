@@ -1624,8 +1624,14 @@ init_python_docparser(uint64_t flags){
         return result;
     if(Py_IsInitialized())
         return result;
-    if(!(flags & DNDC_PYTHON_UNISOLATED))
+    if(!(flags & DNDC_PYTHON_UNISOLATED)){
+        struct FrozenPyVersion frozen_version = get_frozen_version();
+        if(frozen_version.major != PY_MAJOR_VERSION || frozen_version.minor != PY_MINOR_VERSION){
+            ERROR("Mismatch between the frozen stdlib and the version of python compiled against");
+            Raise(GENERIC_ERROR);
+            }
         set_frozen_modules();
+        }
     auto fail = init_python_interpreter(flags);
     if(fail){
         ERROR("Failed to init python interpreter");
