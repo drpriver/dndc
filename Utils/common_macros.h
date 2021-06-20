@@ -158,14 +158,14 @@
 #elif defined(__GNUC__)
 
 #define SuppressNullabilityComplete()
-#define SuppressUnusedFunction()
+#define SuppressUnusedFunction()        _Pragma("GCC diagnostic ignored \"-Wunused-function\"")
 #define SuppressDiscardQualifiers()     _Pragma("GCC diagnostic ignored \"-Wdiscarded-qualifiers\"")
 #define SuppressCastQual()              _Pragma("GCC diagnostic ignored \"-Wcast-qual\"")
 #define SuppressCastFunction()          _Pragma("GCC diagnostic ignored \"-Wcast-function-type\"")
 #define SuppressMissingBraces()         _Pragma("GCC diagnostic ignored \"-Wmissing-braces\"")
 #define SuppressDoublePromotion()       _Pragma("GCC diagnostic ignored \"-Wdouble-promotion\"")
 #define SuppressCoveredSwitchDefault()
-#define SuppressVisibility()            _Pragma("GCC diagnostic ignored \"-Wvisibility\"")
+#define SuppressVisibility()
 #define PushDiagnostic()                _Pragma("GCC diagnostic push")
 #define PopDiagnostic()                 _Pragma("GCC diagnostic pop")
 
