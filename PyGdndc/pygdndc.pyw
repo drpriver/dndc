@@ -657,7 +657,7 @@ class Page(QSplitter):
             'Info',
             )
         if error_type < 0 or error_type >= len(error_types):
-            #TODO: logging
+            logger.error('unrecognized error type: %d', error_type)
             return
         if error_type == 0:
             self.textedit.error_line = row
