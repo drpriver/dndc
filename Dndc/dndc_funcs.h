@@ -411,7 +411,7 @@ execute_python_string(Nonnull(DndcContext*), Nonnull(const char*), NodeHandle);
 //
 static
 Errorable_f(void)
-init_python_docparser(uint64_t);
+internal_init_dndc_python_interpreter(uint64_t flags);
 
 //
 // Shutdown the python interpreter, mostly freeing any resources it allocated.

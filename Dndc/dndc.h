@@ -537,7 +537,7 @@ DNDC_REPORT_ORPHANS    = 0x0008,
 // Don't execute python blocks.
 DNDC_NO_PYTHON         = 0x0010,
 
-// The python interpreter and docparser types have already been
+// The python interpreter and dndc_python types have already been
 // initialized.
 DNDC_PYTHON_IS_INIT    = 0x0020,
 

@@ -1439,7 +1439,7 @@ static PyObject* _Nullable Dndcontext_getattr(Nonnull(Dndcontext*), Nonnull(cons
 
 static PyTypeObject DndcontextType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "docparse.DndcContext",
+    .tp_name = "dndc.DndcContext",
     .tp_basicsize = sizeof(Dndcontext),
     .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_doc = "DndcContext",
@@ -1531,7 +1531,7 @@ make_py_ctx(Nonnull(DndcContext*)ctx){
 
 static
 Errorable_f(void)
-docparse_init_types(void){
+internal_dndc_python_init_types(void){
     Errorable(void) result = {};
     if(PyType_Ready(&DndNodeType) < 0)
         Raise(GENERIC_ERROR);
@@ -1615,10 +1615,10 @@ init_python_interpreter(uint64_t flags){
 #endif
     }
 #include "frozenstdlib.h"
-static Errorable_f(void) docparse_init_types(void);
+static Errorable_f(void) internal_dndc_python_init_types(void);
 static
 Errorable_f(void)
-init_python_docparser(uint64_t flags){
+internal_init_dndc_python_interpreter(uint64_t flags){
     Errorable(void) result = {};
     if(flags & DNDC_PYTHON_IS_INIT)
         return result;
@@ -1638,7 +1638,7 @@ init_python_docparser(uint64_t flags){
         Raise(GENERIC_ERROR);
         }
     {
-        auto e = docparse_init_types();
+        auto e = internal_dndc_python_init_types();
         if(e.errored)
             return e;
     }

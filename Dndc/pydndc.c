@@ -334,8 +334,8 @@ PyModuleDef pydndc = {
 
 
 PyMODINIT_FUNC
-PyInit_pydndc(void) {
-    auto e = docparse_init_types();
+PyInit_pydndc(void){
+    auto e = internal_dndc_python_init_types();
     if(e.errored)
         return NULL;
     PyObject* mod = PyModule_Create(&pydndc);

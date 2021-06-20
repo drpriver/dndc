@@ -122,9 +122,9 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
         auto before = get_t();
 
         #ifndef PYTHONMODULE
-        // init_python_docparser handles the DNDC_PYTHON_IS_INIT flag.
-        auto e = init_python_docparser(flags);
-        if(e.errored) {
+        // This call handles the DNDC_PYTHON_IS_INIT flag.
+        auto e = internal_init_dndc_python_interpreter(flags);
+        if(e.errored){
             report_system_error(ctx, SV("Failed to initialize python"));
             result.errored = e.errored;
             goto cleanup;
@@ -1164,7 +1164,7 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
 #else
 static
 Errorable_f(void)
-init_python_docparser(uint64_t flags){
+internal_init_dndc_python_interpreter(uint64_t flags){
     Errorable(void) result = {};
     if(flags & DNDC_PYTHON_IS_INIT)
         return result;
@@ -1198,14 +1198,14 @@ dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(DndcErr
 DNDC_API
 int
 dndc_init_python(void){
-    auto err = init_python_docparser(0);
+    auto err = internal_init_dndc_python_interpreter(0);
     return err.errored;
     }
 
 DNDC_API
 int
 dndc_init_python_types(void){
-    auto err = docparse_init_types();
+    auto err = internal_dndc_python_init_types();
     return err.errored;
     }
 
