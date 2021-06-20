@@ -194,8 +194,6 @@ static NSImage* appimage;
 @end
 
 static NSColor* SYNTAX_COLORS[DNDC_SYNTAX_MAX] = {};
-#define U16SYNTAX
-#ifdef U16SYNTAX
 struct SyntaxData {
     NSTextStorage* storage;
     const uint16_t* begin;
@@ -217,29 +215,6 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
     [sd->storage addAttribute:NSForegroundColorAttributeName value:SYNTAX_COLORS[type] range:NSMakeRange(begin-sd->begin, length)];
     return;
 }
-#else
-struct SyntaxData {
-    NSTextStorage* storage;
-    const char* begin;
-    const char* begin_edited_line;
-    const char* end_edited_lines;
-};
-static
-void
-dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(const char*)begin, size_t length){
-    (void)line;
-    (void)col;
-    struct SyntaxData* sd = data;
-    if(begin + length < sd->begin_edited_line)
-        return;
-    if(begin > sd->end_edited_lines)
-        return;
-    if(type == DNDC_SYNTAX_RAW_STRING)
-        return;
-    [sd->storage addAttribute:NSForegroundColorAttributeName value:SYNTAX_COLORS[type] range:NSMakeRange(begin-sd->begin, length)];
-    return;
-}
-#endif
 void
 gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
     if(!data)
@@ -293,7 +268,6 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     [textStorage removeAttribute:NSForegroundColorAttributeName range:currentLineRange];
     [textStorage removeAttribute:NSBackgroundColorAttributeName range:currentLineRange];
     // HERE("Clearing syntax costs: %.3fms", (get_t()-before)/1000.);
-#ifdef U16SYNTAX
     auto len = [string length];
     // gross!
     static unichar* chars;
@@ -317,18 +291,6 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     // for(int i = 0; i < 1000; i++)
         dndc_analyze_syntax_utf16(text16, dndc_syntax_func, &sd);
     // auto t1 = get_t();
-#else
-    struct SyntaxData sd = {
-        .storage = textStorage,
-        .begin = text.text,
-        .begin_edited_line = currentLineRange.location + text.text,
-        .end_edited_lines = currentLineRange.location+currentLineRange.length+text.text,
-    };
-    // auto t0 = get_t();
-    // for(int i = 0; i < 1000; i++)
-        dndc_analyze_syntax(LS_to_SV(text), dndc_syntax_func, &sd);
-    auto t1 = get_t();
-#endif
     // HERE("dndc_analyze_syntax: %.3fms", (t1-t0)/1000.);
     return;
 #else
