@@ -89,6 +89,16 @@ executable(
   c_args: ['-DDNDCMAIN'],
   install: true,
   )
+executable(
+  'dndcbench',
+  'Dndc/dndc.c',
+  'PythonEmbed/frozenstdlib.c',
+  frozen_modules,
+  include_directories: includes,
+  dependencies:[pydep, thread_dep],
+  c_args: ['-DDNDCMAIN', '-DBENCHMARKING', '-DBENCHMARKITERS=1000', '-g'],
+  install: true,
+  )
 both_libraries(
   'dndc',
   'Dndc/dndc.c',
