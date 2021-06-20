@@ -1,5 +1,5 @@
 project('Dndc', 'c', version: '0.5.0')
-
+thread_dep = dependency('threads')
 pymod = import('python')
 pyinstall = pymod.find_installation()
 pydep = pyinstall.dependency(embed: true)
@@ -85,7 +85,7 @@ executable(
   'PythonEmbed/frozenstdlib.c',
   frozen_modules,
   include_directories: includes,
-  dependencies:[pydep],
+  dependencies:[pydep, thread_dep],
   c_args: ['-DDNDCMAIN'],
   install: true,
   )
@@ -95,7 +95,7 @@ both_libraries(
   'PythonEmbed/frozenstdlib.c',
   frozen_modules,
   include_directories: includes,
-  dependencies:[pydep],
+  dependencies:[pydep, thread_dep],
   install: true,
   )
 
@@ -142,6 +142,6 @@ t = executable('TestDndc',
   'PythonEmbed/frozenstdlib.c',
   frozen_modules,
   include_directories:includes,
-  dependencies:pydep,
+  dependencies:[pydep, thread_dep],
   )
 test('dndc', t, args:['-C', meson.source_root()])
