@@ -13,7 +13,7 @@ enum AllocatorType {
     ALLOCATOR_MALLOC = 1,
     ALLOCATOR_LINEAR = 2,
     ALLOCATOR_RECORDED = 3,
-    };
+};
 
 
 typedef struct Allocator {

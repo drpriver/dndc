@@ -441,6 +441,7 @@ DndAttributesMap_contains(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key)
 static
 int
 DndAttributesMap_setitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key, Nullable(PyObject*) value){
+    auto ctx = map->ctx;
     if(!PyUnicode_Check(key)){
         PyErr_SetString(PyExc_TypeError, "Attribute maps must be indexed by strings");
         return -1;
@@ -450,14 +451,14 @@ DndAttributesMap_setitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key, 
         return -1;
         }
     auto key_sv = pystring_borrow_stringview(key);
-    auto node = get_node(map->ctx, map->handle);
+    auto node = get_node(ctx, map->handle);
     auto attributes = node->attributes;
     auto count = attributes?attributes->count:0;
     for(size_t i = 0; i < count; i++){
         auto attr = &attributes->data[i];
         if(SV_equals(attr->key, key_sv)){
             if(value){
-                attr->value = pystring_to_stringview((Nonnull(PyObject*))value, map->ctx->allocator);
+                attr->value = pystring_to_stringview((Nonnull(PyObject*))value, ctx->allocator);
                 return 0;
                 }
             else {
@@ -470,21 +471,22 @@ DndAttributesMap_setitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key, 
         PyErr_Format(PyExc_KeyError, "Unknown attribute: '%s'", key_sv.text);
         return -1;
         }
-    const char* key_copy = Allocator_dupe(map->ctx->allocator, key_sv.text, key_sv.length);
-    auto attr = Rarray_alloc(Attribute)(&node->attributes, map->ctx->allocator);
+    const char* key_copy = Allocator_dupe(ctx->allocator, key_sv.text, key_sv.length);
+    auto attr = Rarray_alloc(Attribute)(&node->attributes, ctx->allocator);
     attr->key.length = key_sv.length;
     attr->key.text = key_copy;
-    attr->value = pystring_to_stringview((Nonnull(PyObject*))value, map->ctx->allocator);
+    attr->value = pystring_to_stringview((Nonnull(PyObject*))value, ctx->allocator);
     return 0;
     }
 
 static
 Nullable(PyObject*)
 DndAttributesMap_repr(Nonnull(DndAttributesMap*)map){
-    auto node = get_node(map->ctx, map->handle);
+    auto ctx = map->ctx;
+    auto node = get_node(ctx, map->handle);
     auto attributes = node->attributes;
     auto count = attributes?attributes->count:0;
-    MStringBuilder msb = {.allocator = map->ctx->temp_allocator};
+    MStringBuilder msb = {.allocator = ctx->temp_allocator};
     msb_write_char(&msb, '{');
     for(size_t i = 0; i < count; i++){
         auto attr = &attributes->data[i];
