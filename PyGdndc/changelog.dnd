@@ -1,6 +1,7 @@
 Version 0.5.1::md
   * It is no longer possible to crash the formatter by having a table
     with more than 100 items in a single row.
+  * Data blobs are only generated if there is data to put in them now.
 Version 0.5.0::md
   * Internal API changes
   * Bug fixes and performance improvements.

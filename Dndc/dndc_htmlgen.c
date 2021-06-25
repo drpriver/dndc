@@ -56,10 +56,7 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
         "<meta charset=\"UTF-8\">\n"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=yes\">\n"
         );
-    if(!ctx->rendered_data.count){
-        msb_write_literal(msb, "<script>\nconst data_blob = {};\n</script>\n");
-        }
-    else{
+    if(ctx->rendered_data.count){
         msb_write_literal(msb, "<script>\nconst data_blob = {");
         for(size_t i = 0; i < ctx->rendered_data.count; i++){
             auto data = &ctx->rendered_data.data[i];
