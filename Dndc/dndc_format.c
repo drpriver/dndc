@@ -152,7 +152,9 @@ typedef struct FormatTokenized {
     StringView rest;
 } FormatTokenized;
 
-FormatTokenized format_next_token(StringView sv){
+static
+FormatTokenized
+format_next_token(StringView sv){
     sv = lstripped_view(sv.text, sv.length);
     size_t i = 0;
     if(sv.length && sv.text[0] == '['){

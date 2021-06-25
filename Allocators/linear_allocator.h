@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include "common_macros.h"
 #include "allocator.h"
+#include "log_print.h"
 PushDiagnostic();
 SuppressUnusedFunction();
 //

@@ -10,6 +10,8 @@
 #endif
 #include "common_macros.h"
 #include "argument_parsing.h"
+#include "log_print.h"
+
 
 //
 // Macros for defining a test function.

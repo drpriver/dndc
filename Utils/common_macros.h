@@ -232,9 +232,6 @@
 #define printf_func(...)
 #endif
 
-// Always want logging, so include that.
-#include "log_print.h"
-
 // Realloc's signature is silly which makes it hard to
 // reimplement in a sane way. So in order to accomodate
 // platforms where we need to implement it ourselves

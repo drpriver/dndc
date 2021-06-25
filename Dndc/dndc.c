@@ -21,6 +21,7 @@
 #include "measure_time.h"
 #include "thread_utils.h"
 #include "bb_extensions.h"
+#include "log_print.h"
 
 #ifdef DNDCMAIN
 #include "argument_parsing.h"
@@ -28,7 +29,7 @@
 
 #define DNDC_MAJOR 0
 #define DNDC_MINOR 5
-#define DNDC_MICRO 0
+#define DNDC_MICRO 1
 #define DNDC_VERSION STRINGIFY(DNDC_MAJOR) "." STRINGIFY(DNDC_MINOR) "." STRINGIFY(DNDC_MICRO)
 
 // Unsure of where to put this. So, just putting it here for now.

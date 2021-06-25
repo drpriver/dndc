@@ -192,6 +192,7 @@ make_node_bound_method(Nonnull(DndcContext*)ctx, NodeHandle handle, NodeMethod f
     return (PyObject*)self;
     }
 
+static
 Nullable(PyObject*)
 py_parse_and_append_children(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
     PyObject* text;

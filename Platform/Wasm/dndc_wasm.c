@@ -47,7 +47,7 @@ make_html(PString* source){
     return result;
 }
 printf_func(5, 6)
-extern
+static
 void logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, ...){
     MStringBuilder msb = {};
     char buff[4096];

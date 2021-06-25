@@ -23,7 +23,7 @@
 #define STRINGIFY(x) STRINGIFY_IMPL(x)
 
 printf_func(5, 6)
-extern
+static
 void logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, ...);
 // The log levels.
 #define LOG_LEVEL_HERE  0

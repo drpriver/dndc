@@ -15,8 +15,9 @@ static const char*_Nonnull const log_strings[] = {
     "[DEBUG]",
     };
 
-extern
-void vlogfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, va_list args){
+static
+void
+vlogfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, va_list args){
     if(log_level > LOG_LEVEL)
         return;
     const char* log_text;
@@ -47,8 +48,9 @@ void vlogfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func,
     }
 
 printf_func(5, 6)
-extern
-void logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, ...){
+static
+void
+logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, ...){
     if(log_level > LOG_LEVEL)
         return;
     va_list args;
