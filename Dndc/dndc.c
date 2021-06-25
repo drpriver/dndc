@@ -620,13 +620,13 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
             if(source_err.errored){
                 if(ctx.base_directory.length){
                     MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
-                    MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", path);
+                    MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", path, "'");
                     report_system_error(&ctx, msb_borrow(&err_builder));
                     msb_destroy(&err_builder);
                     }
                 else{
                     MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
-                    MSB_FORMAT(&err_builder, "Unable to open '", path);
+                    MSB_FORMAT(&err_builder, "Unable to open '", path, "'");
                     report_system_error(&ctx, msb_borrow(&err_builder));
                     msb_destroy(&err_builder);
                     }
@@ -638,6 +638,11 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         }
     else {
         source = source_or_path;
+        if(!source.length){
+            report_system_error(&ctx, SV("String with no data given as input"));
+            result.errored = UNEXPECTED_END;
+            goto cleanup;
+            }
         ctx_store_builtin_file(&ctx, LS("(string input)"), source);
         }
     // Quick and dirty estimate of how many nodes we will need.
@@ -651,7 +656,6 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         root->col = 0;
         root->row = 0;
         root->filename = path;
-        // root->type = NODE_ROOT;
         root->type = NODE_MD;
         root->parent = root_handle;
     }
@@ -670,13 +674,21 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
     if(flags & DNDC_REFORMAT_ONLY){
         msb_reset(&msb);
         auto before = get_t();
-        format_tree(&ctx, &msb);
+        auto format_error = format_tree(&ctx, &msb);
         auto after = get_t();
         report_time(&ctx, SV("Formatting took: "), after-before);
+        if(format_error.errored){
+            result.errored = format_error.errored;
+            goto cleanup;
+            }
 
         auto str = msb_borrow(&msb);
         auto before_write = get_t();
         if(flags & DNDC_DONT_WRITE){
+            goto success;
+            }
+        else if(!output_path || outpath.length == 0){
+            fputs(str.text, stdout);
             goto success;
             }
         else if(!(flags & DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM)){
@@ -690,10 +702,6 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
             text[str.length] = '\0';
             output_path->text = text;
             output_path->length = str.length;
-            }
-        else if(!output_path || outpath.length == 0){
-            fputs(str.text, stdout);
-            goto success;
             }
         else {
             auto write_err = write_file(outpath.text, str.text, str.length);
@@ -974,6 +982,12 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
             msb_destroy(&output_sb);
             goto success;
             }
+        else if(!output_path || outpath.length == 0){
+            auto str = msb_borrow(&output_sb);
+            fputs(str.text, stdout);
+            msb_destroy(&output_sb);
+            goto success;
+            }
         else if(!(flags & DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM)){
             assert(output_path);
             // We don't use the allocator as this needs to outlive the recording
@@ -981,12 +995,6 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
             //
             // We could do this without the extra copy, but this will work for now.
             *output_path = msb_detach(&output_sb);
-            }
-        else if(!output_path || outpath.length == 0){
-            auto str = msb_borrow(&output_sb);
-            fputs(str.text, stdout);
-            msb_destroy(&output_sb);
-            goto success;
             }
         else {
             auto str = msb_borrow(&output_sb);

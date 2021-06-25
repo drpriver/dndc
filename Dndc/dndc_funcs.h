@@ -359,7 +359,7 @@ render_node(Nonnull(DndcContext*), Nonnull(MStringBuilder*) restrict, Nonnull(co
 // as a .dnd file, formatted to remove trailing spaces, wrap to 80 columns, etc.
 //
 static
-void
+Errorable_f(void)
 format_tree(Nonnull(DndcContext*), Nonnull(MStringBuilder*));
 
 //

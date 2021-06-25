@@ -35,6 +35,7 @@
     apply(OS_ERROR, 15) \
     /*idk man*/ \
     apply(GENERIC_ERROR, 16)\
+    apply(FORMAT_ERROR, 17)\
 
 #ifdef _WIN32
 // Windows.h defines NO_ERROR. What a PITA.
