@@ -152,6 +152,21 @@ Nonnull(const char*) _test_color_red   = ""
             HEREPrint(_rhs);\
             }\
         }while(0)
+//
+// Expects lhs == rhs, using the passed in binary function instead of == operator
+//
+#define TestExpectEquals2(func, lhs, rhs) do{\
+        auto _lhs = lhs; \
+        auto _rhs = rhs; \
+        TEST_stats.executed++;\
+        if (!(func(_lhs, _rhs))) {\
+            TEST_stats.failures++; \
+            TestReport("Test condition failed");\
+            TestReport("!%s(%s, %s)", #func, #lhs, #rhs); \
+            HEREPrint(_lhs);\
+            HEREPrint(_rhs);\
+            }\
+        }while(0)
 
 //
 // Expects lhs != rhs, using the != operator

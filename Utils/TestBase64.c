@@ -12,11 +12,11 @@ TestFunction(TestBase64){
         StringView gt = SV("YW55IGNhcm5hbCBwbGVhc3Vy");
         auto encoded = msb_borrow(&sb);
         TestExpectEquals(gt.length, encoded.length);
-        TestExpectEquals(strcmp(gt.text, encoded.text), 0);
+        TestExpectEquals2(!strcmp, gt.text, encoded.text);
         char decoded[sizeof("any carnal pleasur")] = {};
         auto e = base64_decode(decoded, sizeof(decoded), (const uint8_t*)encoded.text, encoded.length);
         TestExpectSuccess(e);
-        TestExpectEquals(strcmp(decoded, text.text), 0);
+        TestExpectEquals2(!strcmp,decoded, text.text);
         msb_reset(&sb);
     }
     {
@@ -25,11 +25,11 @@ TestFunction(TestBase64){
         StringView gt = SV("YW55IGNhcm5hbCBwbGVhc3VyZS4");
         auto encoded = msb_borrow(&sb);
         TestExpectEquals(encoded.length, gt.length);
-        TestExpectEquals(strcmp(encoded.text, gt.text), 0);
+        TestExpectEquals2(!strcmp,encoded.text, gt.text);
         char decoded[sizeof("any carnal pleasure.")] = {};
         auto e = base64_decode(decoded, sizeof(decoded), (const uint8_t*)encoded.text, encoded.length);
         TestExpectSuccess(e);
-        TestExpectEquals(strcmp(decoded, text.text), 0);
+        TestExpectEquals2(!strcmp,decoded, text.text);
         msb_reset(&sb);
     }
     {
@@ -67,7 +67,7 @@ TestFunction(TestBase64_2){
         msb_write_b64(&sb,  data, sizeof(data));
         StringView encoded = msb_borrow(&sb);
         StringView expected = SV("AQIDBAUGBwgJCw");
-        TestExpectTrue(SV_equals(encoded, expected));
+        TestExpectEquals2(SV_equals,encoded, expected);
         uint8_t decoded[arrlen(data)] = {};
         auto e = base64_decode(decoded, sizeof(decoded), (const uint8_t*)encoded.text, encoded.length);
         TestExpectSuccess(e);

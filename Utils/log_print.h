@@ -24,7 +24,8 @@
 
 printf_func(5, 6)
 static
-void logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, ...);
+void
+logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, ...);
 // The log levels.
 #define LOG_LEVEL_HERE  0
 #define LOG_LEVEL_ERROR 1
@@ -76,52 +77,46 @@ void logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, 
 // Will result in:
 //   [DEBUG] SomeDir/SomeFile.c:main:4: foo = 3
 //
-// This is convenient for debugging and logging some stats, like high water
-// marks on allocators.
-#define DBGPrint(x) DBGPrintIMPL(LOG_LEVEL_DEBUG, x, DBGC)
-#define HEREPrint(x) DBGPrintIMPL(LOG_LEVEL_HERE, x, DBGC)
-#define INFOPrint(x) DBGPrintIMPL(LOG_LEVEL_INFO, x, DBGC)
-#define DBGPrintIMPL(loglevel, x, dbgc) logfunc(loglevel, __FILE__, __func__, __LINE__, DBGF(x), #x, dbgc(x))
+#define DBGPrint(x) DBGPrintIMPL(LOG_LEVEL_DEBUG, x)
+#define HEREPrint(x) DBGPrintIMPL(LOG_LEVEL_HERE, x)
+#define INFOPrint(x) DBGPrintIMPL(LOG_LEVEL_INFO, x)
 
-// Turns a type into the appropriate format string.
-// DBGE ->  "Debug Expansion" I guess? not great name.
-#define DBGE(fmt) "%s = " fmt
-// DBGF -> "Debug Format"
-#define DBGF(x) _Generic(x,\
-        _Bool              : DBGE("%d"), \
-        char               : DBGE("'%c'"), \
-        unsigned char      : DBGE("%d"), \
-        signed char        : DBGE("%d"), \
-        float              : DBGE("%f"), \
-        double             : DBGE("%f"), \
-        short              : DBGE("%d"), \
-        unsigned short     : DBGE("%u"), \
-        int                : DBGE("%d"),\
-        long               : DBGE("%ld"),\
-        long long          : DBGE("%lld"),\
-        unsigned           : DBGE("%u"),\
-        unsigned long      : DBGE("%lu"),\
-        unsigned long long : DBGE("%llu"),\
-        char*              : DBGE("\"%s\""), \
-        const char*        : DBGE("\"%s\""),\
-        void*              : DBGE("%p"),\
-        const void*        : DBGE("%p"),\
-        default            : 0)
-// FIXME: This below explanation doesn't seem to be true
-//        when I test it out. Why do we do this?
-// Some types need to be cast to other types for printing
-// and for handling in the _Generic switch:
-//      floats need to be promoted to double
-//      char[] needs to turn into char*
-//      Same for const char[].
-// DBGC -> "Debug Cast"
-#define DBGC(x) (typeof(_Generic(x,\
-        float: (double){0}, \
-        char*: (char*){0}, \
-        const char* : (const char*){0}, \
-        default: x)))(x)
-// In theory you could redefine DBGF, DBGE, DBGC in order to customize
-// the formatting and even print non-builtin datatypes.
+#define LOGFUNCS(apply) \
+    apply(bool, _Bool, "%d", x) \
+    apply(char, char, "'%c'", x) \
+    apply(uchar, unsigned char, "%u", x) \
+    apply(schar, signed char, "%d", x) \
+    apply(float, float, "%f", (double)x) \
+    apply(double, double, "%f", x) \
+    apply(short, short, "%d", x) \
+    apply(ushort, unsigned short, "%u", x) \
+    apply(int, int, "%d", x) \
+    apply(uint, unsigned int, "%d", x) \
+    apply(long, long, "%ld", x) \
+    apply(ulong, unsigned long, "%lu", x) \
+    apply(llong, long long, "%lld", x) \
+    apply(ullong, unsigned long long, "%llu", x) \
+    apply(pchar, char*, "\"%s\"", x) \
+    apply(cpchar, const char*, "\"%s\"", x) \
+    apply(pvoid, const void*, "%p", x) \
+    apply(LongString, LongString, "\"%s\"", x.text) \
+    apply(StringView, StringView, "\"%.*s\"", (int)x.length, x.text) \
 
+
+PushDiagnostic();
+SuppressNullabilityComplete();
+#define LOGFUNC(name, type, fmt, ...) \
+    static inline force_inline void log_##name(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull expr, type x){ \
+        logfunc(log_level, file, func, line, "%s = " fmt, expr, ##__VA_ARGS__); \
+        }
+LOGFUNCS(LOGFUNC);
+#undef LOGFUNC
+PopDiagnostic();
+
+#define LOGFUNC(name, type, ...) type: log_##name,
+#define DBGPrintIMPL(loglevel, x) \
+_Generic(x, \
+        LOGFUNCS(LOGFUNC) \
+        default: 0)(loglevel, __FILE__, __func__, __LINE__, #x, x)
 
 #endif

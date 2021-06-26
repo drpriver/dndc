@@ -18,7 +18,7 @@ TestFunction(TestStrip){
         auto testval = &testvalues[i];
         auto pre = testval->prestrip;
         auto stripped = stripped_view(pre.text, pre.length);
-        TestExpectTrue(SV_equals(stripped, testval->poststrip));
+        TestExpectEquals2(SV_equals,stripped, testval->poststrip);
         }
     TESTEND();
     }

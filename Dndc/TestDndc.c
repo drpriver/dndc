@@ -132,11 +132,7 @@ TestFunction(TestDndcOutParam){
             "</body>\n"
             "</html>\n");
         TestExpectEquals(expected.length, outdata.length);
-        TestExpectEquals(LS_equals(expected, outdata), true);
-        if(!LS_equals(expected, outdata)){
-            HEREPrint(expected.text);
-            HEREPrint(outdata.text);
-            }
+        TestExpectEquals2(LS_equals, expected, outdata);
         const_free(outdata.text);
         }
     TESTEND();
@@ -215,11 +211,7 @@ TestFunction(TestDndcTableMultiline){
             "</html>\n"
             );
         TestExpectEquals(expected.length, outdata.length);
-        TestExpectEquals(LS_equals(expected, outdata), true);
-        if(!LS_equals(expected, outdata)){
-            HEREPrint(expected.text);
-            HEREPrint(outdata.text);
-            }
+        TestExpectEquals2(LS_equals, expected, outdata);
         const_free(outdata.text);
         }
     TESTEND();
@@ -260,11 +252,7 @@ TestFunction(TestFormatTable){
         "       long thing! So why not. Be long!\n"
             );
         TestExpectEquals(expected.length, outdata.length);
-        TestExpectEquals(LS_equals(expected, outdata), true);
-        if(!LS_equals(expected, outdata)){
-            HEREPrint(expected.text);
-            HEREPrint(outdata.text);
-            }
+        TestExpectEquals2(LS_equals, expected, outdata);
         const_free(outdata.text);
         }
     TESTEND();
@@ -313,11 +301,7 @@ TestFunction(TestFormatList){
             "12. 5\n"
             );
         TestExpectEquals(expected.length, outdata.length);
-        TestExpectEquals(LS_equals(expected, outdata), true);
-        if(!LS_equals(expected, outdata)){
-            HEREPrint(expected.text);
-            HEREPrint(outdata.text);
-            }
+        TestExpectEquals2(LS_equals, expected, outdata);
         {
             // check it parses after format
             auto e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""), outdata, NULL, (DependsArg){.path=LS("")}, NULL, NULL, NULL, NULL);
