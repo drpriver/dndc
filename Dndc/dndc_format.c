@@ -6,6 +6,14 @@
 #include "str_util.h"
 #include "msb_format.h"
 
+// NOTE: Formatting can only be applied to freshly parsed syntax
+//       trees. The code makes assertions about what kinds of nodes
+//       can be children of other nodes, which won't necessarily hold
+//       true if python blocks start inserting nodes willy-nilly.
+//
+//       It would be nice to be able to apply this to post-import and
+//       post-python blocks to see what something expands to.
+
 #ifdef _WIN32
 typedef long long ssize_t;
 #endif
@@ -18,6 +26,80 @@ typedef struct FormatState {
     int lead;
     int col;
 } FormatState;
+
+typedef struct FormatTokenized {
+    StringView token;
+    StringView rest;
+} FormatTokenized;
+
+// Splits a string into (token, rest). Splits on ascii whitespace, treating all
+// other characters as opaque (which means it actually works with non-ascii
+// text).
+static
+FormatTokenized
+format_next_token(StringView sv){
+    sv = lstripped_view(sv.text, sv.length);
+    size_t i = 0;
+    // Treat links as a single token.
+    if(sv.length && sv.text[0] == '['){
+        for(; i < sv.length; i++){
+            switch(sv.text[i]){
+                case ']':
+                    goto breakloop;
+                default:
+                    continue;
+                }
+            }
+        breakloop:;
+        }
+    for(; i < sv.length; i++){
+        switch(sv.text[i]){
+            case ' ':
+            case '\t':
+            case '\f':
+            case '\v':
+            case '\r':
+                return (FormatTokenized){
+                    .token.text = sv.text,
+                    .token.length = i,
+                    .rest.text = sv.text+i,
+                    .rest.length = sv.length - i,
+                    };
+            default:
+                continue;
+            }
+        }
+    return (FormatTokenized){
+        .token = sv,
+        .rest = {},
+        };
+    }
+
+static inline
+void
+format_write_wrapped_string(Nonnull(MStringBuilder*)sb, Nonnull(FormatState*)state, StringView sv){
+    FormatTokenized tokenized= {.rest=sv};
+    if(state->col < state->lead){
+        msb_write_nchar(sb, ' ', state->lead);
+        state->col = state->lead;
+        }
+    while(tokenized.rest.length){
+        tokenized = format_next_token(tokenized.rest);
+        if(!tokenized.token.length)
+            break;
+        if(state->col+tokenized.token.length > FORMAT_WIDTH){
+            msb_write_char(sb, '\n');
+            msb_write_nchar(sb, ' ', state->lead);
+            state->col = state->lead;
+            }
+        else if(state->col != state->lead){
+            msb_write_char(sb, ' ');
+            state->col++;
+            }
+        msb_write_str(sb, tokenized.token.text, tokenized.token.length);
+        state->col += tokenized.token.length;
+        }
+    }
 
 #define FORMATFUNCNAME(nt) format_##nt
 #define FORMATFUNC(nt) static Errorable_f(void) FORMATFUNCNAME(nt)(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)node, int indent)
@@ -147,81 +229,6 @@ format_header(Nonnull(MStringBuilder*)sb, Nonnull(Node*)node, int indent){
     msb_write_char(sb, '\n');
     }
 
-typedef struct FormatTokenized {
-    StringView token;
-    StringView rest;
-} FormatTokenized;
-
-static
-FormatTokenized
-format_next_token(StringView sv){
-    sv = lstripped_view(sv.text, sv.length);
-    size_t i = 0;
-    if(sv.length && sv.text[0] == '['){
-        for(; i < sv.length; i++){
-            switch(sv.text[i]){
-                case ']':
-                    goto endloop;
-                    // return (FormatTokenized){
-                        // .token.text = sv.text,
-                        // .token.length = i+1,
-                        // .rest.text = sv.text+i+1,
-                        // .rest.length = sv.length - i-1,
-                        // };
-                default:
-                    continue;
-                }
-            }
-        endloop:;
-        }
-    for(; i < sv.length; i++){
-        switch(sv.text[i]){
-            case ' ':
-            case '\t':
-            case '\f':
-            case '\v':
-            case '\r':
-                return (FormatTokenized){
-                    .token.text = sv.text,
-                    .token.length = i,
-                    .rest.text = sv.text+i,
-                    .rest.length = sv.length - i,
-                    };
-            default:
-                continue;
-            }
-        }
-    return (FormatTokenized){
-        .token = sv,
-        .rest = {},
-        };
-    }
-
-static inline
-void
-format_write_wrapped_string(Nonnull(MStringBuilder*)sb, Nonnull(FormatState*)state, StringView sv){
-    FormatTokenized tokenized= {.rest=sv};
-    if(state->col < state->lead){
-        msb_write_nchar(sb, ' ', state->lead);
-        state->col = state->lead;
-        }
-    while(tokenized.rest.length){
-        tokenized = format_next_token(tokenized.rest);
-        if(!tokenized.token.length)
-            break;
-        if(state->col+tokenized.token.length > FORMAT_WIDTH){
-            msb_write_char(sb, '\n');
-            msb_write_nchar(sb, ' ', state->lead);
-            state->col = state->lead;
-            }
-        else if(state->col != state->lead){
-            msb_write_char(sb, ' ');
-            state->col++;
-            }
-        msb_write_str(sb, tokenized.token.text, tokenized.token.length);
-        state->col += tokenized.token.length;
-        }
-    }
 
 FORMATFUNC(regular_node){
     format_header(sb, node, indent);
@@ -536,14 +543,13 @@ FORMATFUNC(kv_node){
             }
         msb_write_nchar(sb, ' ', indent);
         assert(child->children.count == 2);
-        auto key   = get_node(ctx, child->children.data[0])->header;
+        auto key = get_node(ctx, child->children.data[0])->header;
         auto value_node = get_node(ctx, child->children.data[1]);
-        auto this_key_width = key_width;
         msb_write_str(sb, key.text, key.length);
         msb_write_literal(sb, ": ");
-        this_key_width -= key.length + 2;
-        msb_write_nchar(sb, ' ', this_key_width);
-        FormatState state = {.lead = key_width+indent, .col=key_width+indent};
+        auto padding = key_width - key.length - 2;
+        msb_write_nchar(sb, ' ', padding);
+        FormatState state = {.lead=key_width+indent, .col=key_width+indent};
         if(value_node->type == NODE_STRING){
             auto value = value_node->header;
             format_write_wrapped_string(sb, &state, value);

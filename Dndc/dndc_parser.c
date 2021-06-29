@@ -67,7 +67,7 @@ static inline
 void
 force_inline
 advance_row(Nonnull(DndcContext*)ctx){
-    if(!unlikely(ctx->lineend[0]))
+    if(unlikely(!ctx->lineend[0]))
         ctx->cursor = ctx->lineend;
     else
         ctx->cursor = ctx->lineend+1;
@@ -149,13 +149,18 @@ parse_double_colon(Nonnull(DndcContext*)ctx, NodeHandle parent_handle){
 static
 void
 eat_leading_tabspaces(Nonnull(StringView*)sv){
-    while(sv->length){
-        char first = sv->text[0];
-        if(first != ' ' and first != '\t')
+    size_t length = sv->length;
+    if(!length) return;
+    const char* text = sv->text;
+    while(length){
+        char first = text[0];
+        if(first != ' ' && first != '\t')
             break;
-        sv->length--;
-        sv->text++;
+        length--;
+        text++;
         }
+    sv->text = text;
+    sv->length = length;
     }
 
 static inline
