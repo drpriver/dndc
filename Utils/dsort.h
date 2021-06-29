@@ -1,3 +1,37 @@
+#ifndef DSORT_H
+#define DSORT_H
+// This header generates a quick sort implementation, specialized
+// to a specific data type and comparison operation.
+//
+// Usage:
+//
+//   #define DSORT_T long
+//   static inline
+//   int
+//   long_cmp(const long* a_, const long* b_){
+//      long a = *a_;
+//      long b = *b_;
+//      if(a < b)
+//          return -1;
+//      if(a > b)
+//          return 1;
+//      return 0;
+//   }
+//   #define DSORT_CMP long_cmp
+//   #include "dsort.h"
+//
+//   long longs[10] = {9, 1, 2, 4, 3, 8, 5, 6, 7};
+//   long__array_sort(longs, 10);
+//   assert(long__is_sorted(longs, 10));
+//
+
+// for bool
+#include <stdbool.h>
+// for size_t
+#include <stddef.h>
+// for Nonnull
+#include "common_macros.h"
+#endif
 #ifndef DSORT_CMP
 #error "Must define a DSORT_CMP macro (DSORT_CMP)"
 #endif

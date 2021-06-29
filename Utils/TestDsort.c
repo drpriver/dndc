@@ -125,10 +125,35 @@ TestFunction(TestStringSorts){
     TESTEND();
     }
 
+#define DSORT_T long
+static inline
+force_inline
+int
+long_cmp(const long*a_, const long*b_){
+    long a = *a_;
+    long b = *b_;
+    if(a < b)
+        return -1;
+    if(a > b)
+        return 1;
+    return 0;
+    }
+#define DSORT_CMP long_cmp
+#include "dsort.h"
+TestFunction(TestExample){
+    TESTBEGIN();
+    long longs[10] = {9, 1, 2, 4, 3, 8, 5, 6, 7};
+    TestExpectFalse(long__is_sorted(longs, 10));
+    long__array_sort(longs, 10);
+    TestExpectTrue(long__is_sorted(longs, 10));
+    TESTEND();
+    }
+
 int main(int argc, char** argv){
     RegisterTest(TestSorts);
     RegisterTestFlags(TestSortRandoms, TEST_CASE_FLAGS_SKIP_UNLESS_NAMED);
     RegisterTest(TestStringSorts);
+    RegisterTest(TestExample);
     return test_main(argc, argv);
 }
 

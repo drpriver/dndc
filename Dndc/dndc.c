@@ -23,6 +23,10 @@
 #include "bb_extensions.h"
 #include "log_print.h"
 
+#define DSORT_T LinkItem
+#define DSORT_CMP StringView_cmp
+#include "dsort.h"
+
 #ifdef DNDCMAIN
 #include "argument_parsing.h"
 #endif
@@ -895,8 +899,13 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
                 }
             }
         // Sort so we can do a binary search.
-        if(ctx.links.count)
-            qsort(ctx.links.data, ctx.links.count, sizeof(ctx.links.data[0]), StringView_cmp);
+        if(ctx.links.count){
+            #if 1
+                LinkItem__array_sort(ctx.links.data, ctx.links.count);
+            #else
+                qsort(ctx.links.data, ctx.links.count, sizeof(ctx.links.data[0]), StringView_cmp);
+            #endif
+            }
         if(flags & DNDC_PRINT_LINKS){
             if(!ctx.error_func){
                 result.errored = PARSE_ERROR;
