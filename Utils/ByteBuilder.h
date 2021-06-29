@@ -132,8 +132,9 @@ bb_destroy(Nonnull(ByteBuilder*) bb){
     if(bb->data){
         Allocator_free(bb->allocator, bb->data, bb->capacity);
         }
-    *bb = (ByteBuilder){};
+    *bb = (ByteBuilder){.allocator=bb->allocator};
     }
+
 static inline
 void
 bb_reset(Nonnull(ByteBuilder*)bb){

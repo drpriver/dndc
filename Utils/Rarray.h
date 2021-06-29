@@ -1,12 +1,20 @@
 #ifndef RARRAY_H
 #define RARRAY_H
 #include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 #include <assert.h>
 #include "allocator.h"
 #include "common_macros.h"
-#include "error_handling.h"
+
+#define Rarray(type) RarrayI(type)
+#define RarrayI(type) Rarray__##type
+#define RARRAYIMPL(meth, type) Rarray##_##meth##__##type
+#define Rarray_push(type) RARRAYIMPL(push, type)
+#define Rarray_check_size(type) RARRAYIMPL(check_size, type)
+#define Rarray_alloc(type) RARRAYIMPL(alloc, type)
+#define Rarray_remove(type) RARRAYIMPL(remove, type)
+
 #endif
 
 //
@@ -29,20 +37,12 @@
 #error "Must define RARRAY_T"
 #endif
 
-#define Rarray(type) RarrayI(type)
-#define RarrayI(type) Rarray__##type
-
 typedef struct Rarray(RARRAY_T){
     size_t count;
     size_t capacity;
     RARRAY_T data[];
 } Rarray(RARRAY_T);
 
-#define RARRAYIMPL(meth, type) Rarray##_##meth##__##type
-#define Rarray_push(type) RARRAYIMPL(push, type)
-#define Rarray_check_size(type) RARRAYIMPL(check_size, type)
-#define Rarray_alloc(type) RARRAYIMPL(alloc, type)
-#define Rarray_remove(type) RARRAYIMPL(remove, type)
 
 //
 // Ensures there is enough space for one more element.

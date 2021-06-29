@@ -1,8 +1,6 @@
 #ifndef MSTRING_BUILDER_H
 #define MSTRING_BUILDER_H
 #include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <assert.h>
 #include "common_macros.h"
 #include "long_string.h"

@@ -621,11 +621,8 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
             return;
         }
         if([path characterAtIndex:0] == '/'){
-            // auto real_url = [[[NSURL fileURLWithPath:[path substringFromIndex:1]] URLByDeletingPathExtension] URLByAppendingPathExtension:@"dnd"];
-            // auto foo = self->controller->file_url.URLByDeletingLastPathComponent;
             auto real_url = [self.controller->file_url.URLByDeletingLastPathComponent URLByAppendingPathComponent:[path substringFromIndex:1]];
             real_url = [[real_url URLByDeletingPathExtension] URLByAppendingPathExtension:@"dnd"];
-            // hack: too lazy to declare interfaces
             [[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:real_url display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
                 (void)documentWasAlreadyOpen;
                 (void)document;

@@ -117,6 +117,7 @@ LS_SV_equals(const LongString ls, const StringView sv){
 // Maybe it's UB (idk) but this works for LongStrings as well.
 // Although maybe I should just use strcmp for those.
 static inline
+force_inline
 int
 StringView_cmp(Nonnull(const void*)a, Nonnull(const void*) b){
     // TODO: There's probably a cleaner way to implement this.

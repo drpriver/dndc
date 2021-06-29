@@ -80,8 +80,11 @@ TestFunction(TestSorts){
     TESTBEGIN();
     int arr[4] = {1, 3, 6, 2};
     int sorted[4] = {1, 2, 3, 6};
+    TestExpectFalse(int__is_sorted(arr, 4));
+    TestExpectTrue(int__is_sorted(sorted, 4));
     int__array_sort(arr, arrlen(arr));
     TestExpectTrue(memcmp(arr, sorted, sizeof(sorted))==0);
+    TestExpectTrue(int__is_sorted(arr, 4));
     TESTEND();
     }
 

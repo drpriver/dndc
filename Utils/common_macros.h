@@ -113,8 +113,14 @@
 #define unimplemented() assert(!"This code not implemented yet.")
 #endif
 
+#ifdef __clang__
+#define breakpoint() __builtin_debugtrap()
+#elif defined(_MSC_VER)
+#define breakpoint() __debugbreak()
+#elif defined(__GNUC__)
 // TODO: breakpoints on arm
 #define breakpoint()  asm("int $3")
+#endif
 
 // There's a bug in the c spec that free's prototype is
 //

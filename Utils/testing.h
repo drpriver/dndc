@@ -420,9 +420,9 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
         }
     if(list_tests){
         for(int i = 0; i < test_funcs_count; i++){
-            fprintf(stdout, "%-16s\t", test_funcs[i].test_name);
+            fprintf(stdout, "%s\t", test_funcs[i].test_name);
             if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED){
-                fprintf(stdout, "Will Skip");
+                fprintf(stdout, "Will-Skip");
                 }
             fputc('\n', stdout);
             }
