@@ -1,4 +1,4 @@
-project('Dndc', 'c', version: '0.5.1')
+project('Dndc', 'c', version: '0.5.2')
 thread_dep = dependency('threads')
 pymod = import('python')
 pyinstall = pymod.find_installation()

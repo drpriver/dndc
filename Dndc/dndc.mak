@@ -36,7 +36,7 @@ PyGdndc/pydndc.pyi: Dndc/pydndc.pyi
 PyGdndc/pydndc$(PYEXTENSION): $(BINDIR)/pydndc$(PYEXTENSION)
 	$(CP) $< $@
 
-DNDCVERSION = 0.5.1
+DNDCVERSION = 0.5.2
 
 RELEASEFILES = $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pygdndc.pyw PyGdndc/changelog.dnd PyGdndc/install_deps.py PyGdndc/README.txt EXAMPLE.dnd PyGdndc/Manual.dnd
 .PHONY: release
