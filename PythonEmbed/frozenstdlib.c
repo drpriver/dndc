@@ -1,6 +1,6 @@
 #include "pyhead.h"
-#if PY_MINOR_VERSION > 7
 #include "frozenstdlib.h"
+#if PY_MINOR_VERSION > 7
 #include "abc.py.h"
 #include "importlib_bootstrap.py.h"
 #include "importlib_bootstrap_external.py.h"
