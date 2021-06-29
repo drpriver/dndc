@@ -542,6 +542,7 @@ PARSEFUNC(parse_table_node){
     }
     NodeHandle last_cell_handle = INVALID_NODE_HANDLE;
     bool converted = false;
+    int previous_row_indentation = indentation;
     Errorable(void) result = {};
     for(;ctx->cursor[0];){
         analyze_line(ctx);
@@ -565,23 +566,26 @@ PARSEFUNC(parse_table_node){
         const char* pipe = memchr(cursor, '|', ctx->lineend - cursor);
         if(!pipe){
             if(!NodeHandle_eq(last_cell_handle, INVALID_NODE_HANDLE)){
-                StringView content = stripped_view(cursor, ctx->lineend-cursor);
-                if(content.length){
-                    if(!converted){
-                        convert_node_to_container_containing_clone_of_former_self(ctx, last_cell_handle);
-                        converted = true;
+                if(ctx->nspaces > previous_row_indentation){
+                    StringView content = stripped_view(cursor, ctx->lineend-cursor);
+                    if(content.length){
+                        if(!converted){
+                            convert_node_to_container_containing_clone_of_former_self(ctx, last_cell_handle);
+                            converted = true;
+                            }
+                        auto str_handle = alloc_handle(ctx);
+                        init_string_node(ctx, str_handle, content);
+                        append_child(ctx, last_cell_handle, str_handle);
                         }
-                    auto str_handle = alloc_handle(ctx);
-                    init_string_node(ctx, str_handle, content);
-                    append_child(ctx, last_cell_handle, str_handle);
+                    advance_row(ctx);
+                    continue;
                     }
                 }
-            advance_row(ctx);
-            continue;
             }
         auto new_node_handle = alloc_handle(ctx);
         init_node(ctx, new_node_handle, ctx->linestart+ctx->nspaces, NODE_TABLE_ROW);
         append_child(ctx, parent_handle, new_node_handle);
+        previous_row_indentation = ctx->nspaces;
         last_cell_handle = INVALID_NODE_HANDLE;
         converted = false;
         while(pipe){
@@ -608,6 +612,9 @@ PARSEFUNC(parse_keyvalue_node){
         assert(parent->type == NODE_KEYVALUE);
     }
     Errorable(void) result = {};
+    NodeHandle previous_value = INVALID_NODE_HANDLE;
+    int previous_kv_indentation = indentation;
+    bool previous_value_was_converted = false;
     for(;ctx->cursor[0];){
         analyze_line(ctx);
         // skip blanks
@@ -621,6 +628,20 @@ PARSEFUNC(parse_keyvalue_node){
             auto e = parse_double_colon(ctx, parent_handle);
             if(e.errored) return e;
             continue;
+            }
+        if(not NodeHandle_eq(previous_value, INVALID_NODE_HANDLE)){
+            if(ctx->nspaces > previous_kv_indentation){
+                if(!previous_value_was_converted){
+                    convert_node_to_container_containing_clone_of_former_self(ctx, previous_value);
+                    previous_value_was_converted = true;
+                    }
+                StringView content = stripped_view(ctx->linestart+ctx->nspaces, ctx->lineend-(ctx->linestart+ctx->nspaces));
+                auto str_handle = alloc_handle(ctx);
+                init_string_node(ctx, str_handle, content);
+                append_child(ctx, previous_value, str_handle);
+                advance_row(ctx);
+                continue;
+                }
             }
         auto new_node_handle = alloc_handle(ctx);
         init_node(ctx, new_node_handle, ctx->linestart + ctx->nspaces, NODE_KEYVALUEPAIR);
@@ -642,6 +663,9 @@ PARSEFUNC(parse_keyvalue_node){
         append_child(ctx, new_node_handle, key_idx);
         append_child(ctx, new_node_handle, val_idx);
         advance_row(ctx);
+        previous_value = val_idx;
+        previous_kv_indentation = ctx->nspaces;
+        previous_value_was_converted = false;
         }
     return result;
     }

@@ -517,6 +517,16 @@ FORMATFUNC(kv_node){
     Errorable(void) result = {};
     format_header(sb, node, indent);
     indent += FORMAT_INDENT;
+    size_t key_width = 0;
+    for(size_t i = 0; i < node->children.count; i++){
+        auto child = get_node(ctx, node->children.data[i]);
+        if(child->type != NODE_KEYVALUEPAIR)
+            continue;
+        auto key = get_node(ctx, child->children.data[0])->header;
+        if(key.length > key_width)
+            key_width = key.length;
+        }
+    key_width += 2; // for the ": "
     for(size_t i = 0; i < node->children.count; i++){
         auto child = get_node(ctx, node->children.data[i]);
         if(child->type != NODE_KEYVALUEPAIR){
@@ -527,10 +537,25 @@ FORMATFUNC(kv_node){
         msb_write_nchar(sb, ' ', indent);
         assert(child->children.count == 2);
         auto key   = get_node(ctx, child->children.data[0])->header;
-        auto value = get_node(ctx, child->children.data[1])->header;
+        auto value_node = get_node(ctx, child->children.data[1]);
+        auto this_key_width = key_width;
         msb_write_str(sb, key.text, key.length);
         msb_write_literal(sb, ": ");
-        msb_write_str(sb, value.text, value.length);
+        this_key_width -= key.length + 2;
+        msb_write_nchar(sb, ' ', this_key_width);
+        FormatState state = {.lead = key_width+indent, .col=key_width+indent};
+        if(value_node->type == NODE_STRING){
+            auto value = value_node->header;
+            format_write_wrapped_string(sb, &state, value);
+            }
+        else {
+            assert(value_node->type == NODE_CONTAINER);
+            for(size_t j = 0; j < value_node->children.count; j++){
+                auto n = get_node(ctx, value_node->children.data[j]);
+                assert(n->type == NODE_STRING);
+                format_write_wrapped_string(sb, &state, n->header);
+                }
+            }
         msb_write_char(sb, '\n');
         }
     // msb_write_char(sb, '\n');

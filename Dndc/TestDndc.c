@@ -10,6 +10,7 @@ static TestFunc TestDndcOutParam;
 static TestFunc TestDndcTableMultiline;
 static TestFunc TestFormatTable;
 static TestFunc TestFormatList;
+static TestFunc TestFormatKV;
 static TestFunc TestCrashesFixed;
 static TestFunc TestExamplesWork;
 static TestFunc TestUntrusted;
@@ -23,6 +24,7 @@ int main(int argc, char** argv){
     RegisterTest(TestDndcTableMultiline);
     RegisterTest(TestFormatTable);
     RegisterTest(TestFormatList);
+    RegisterTest(TestFormatKV);
     RegisterTest(TestCrashesFixed);
     RegisterTest(TestExamplesWork);
     RegisterTest(TestUntrusted);
@@ -255,6 +257,23 @@ TestFunction(TestFormatTable){
         TestExpectEquals2(LS_equals, expected, outdata);
         const_free(outdata.text);
         }
+    source = LS(
+            "::table\n"
+            "  a\n"
+            "  b\n"
+            );
+    outdata = (LongString){};
+    e = run_the_dndc(flags, SV(""), source, &outdata, (DependsArg){.path=LS("")}, NULL, NULL, NULL, NULL);
+    TestExpectSuccess(e);
+    if(!e.errored){
+        auto expected = LS(
+                "::table\n"
+                "  a\n"
+                "  b\n");
+        TestExpectEquals(expected.length, outdata.length);
+        TestExpectEquals2(LS_equals, expected, outdata);
+        const_free(outdata.text);
+        }
     TESTEND();
     }
 TestFunction(TestFormatList){
@@ -299,6 +318,48 @@ TestFunction(TestFormatList){
             "10. 5\n"
             "11. 5\n"
             "12. 5\n"
+            );
+        TestExpectEquals(expected.length, outdata.length);
+        TestExpectEquals2(LS_equals, expected, outdata);
+        {
+            // check it parses after format
+            auto e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""), outdata, NULL, (DependsArg){.path=LS("")}, NULL, NULL, NULL, NULL);
+            TestExpectSuccess(e2);
+        }
+        const_free(outdata.text);
+        }
+    TESTEND();
+    }
+TestFunction(TestFormatKV){
+    TESTBEGIN();
+    LongString source = LS(
+        "::kv\n"
+        "  AC: 13\n"
+        "  Attacks: +3 claws (2)\n"
+        "    +5 bite\n"
+        "  HP: 22\n"
+        "  Ref: +3\n"
+        "  Fort: +4\n"
+        "  Will: +5\n"
+        );
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_DONT_PRINT_ERRORS
+        | DNDC_REFORMAT_ONLY
+        ;
+    LongString outdata = {};
+    auto e = run_the_dndc(flags, SV(""), source, &outdata, (DependsArg){.path=LS("")}, NULL, NULL, NULL, NULL);
+    TestExpectSuccess(e);
+    if(!e.errored){
+        // A bit brittle of a test, but it shows that the outparam works.
+        auto expected = LS(
+            "::kv\n"
+            "  AC:      13\n"
+            "  Attacks: +3 claws (2) +5 bite\n"
+            "  HP:      22\n"
+            "  Ref:     +3\n"
+            "  Fort:    +4\n"
+            "  Will:    +5\n"
             );
         TestExpectEquals(expected.length, outdata.length);
         TestExpectEquals2(LS_equals, expected, outdata);
