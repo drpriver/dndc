@@ -12,6 +12,8 @@
 #error "ARC is off"
 #endif
 
+#pragma clang assume_nonnull begin
+
 static
 NSString*_Nonnull
 msb_detach_as_ns_string(MStringBuilder*sb){
@@ -95,7 +97,7 @@ typedef enum GdndInsertTag{
 }
 -(LongString)get_text;
 -(void)recalc_html:(LongString)text;
--(void)flop_editor:(id)sender;
+-(void)flop_editor:(id _Nullable)sender;
 @end
 
 //
@@ -134,7 +136,7 @@ static NSImage* appimage;
     self->view_controller = [[DndViewController alloc] init];
     return self;
 }
-- (instancetype)initForURL:(NSURL *)urlOrNil
+- (instancetype _Nullable)initForURL:(NSURL *_Nullable)urlOrNil
     withContentsOfURL:(NSURL *)contentsURL
     ofType:(NSString *)typeName
     error:(NSError * _Nullable *)outError{
@@ -179,7 +181,7 @@ static NSImage* appimage;
         return title;
 }
 
-- (NSData*)dataOfType:(NSString *)typeName error:(NSError **)outError {
+- (NSData*_Nullable)dataOfType:(NSString *)typeName error:(NSError **)outError {
     return [[view_controller->text string] dataUsingEncoding:NSUTF8StringEncoding];
 }
 
@@ -193,7 +195,7 @@ static NSImage* appimage;
 }
 @end
 
-static NSColor* SYNTAX_COLORS[DNDC_SYNTAX_MAX] = {};
+static NSColor*_Nonnull SYNTAX_COLORS[DNDC_SYNTAX_MAX] = {};
 struct SyntaxData {
     NSTextStorage* storage;
     const uint16_t* begin;
@@ -362,7 +364,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 @end
 
 @implementation DndTextView
--(void)indent:(id)sender{
+-(void)indent:(id _Nullable)sender{
     auto r = self.selectedRange;
     NSRange currentLineRange = [self.string lineRangeForRange:r];
     int adjustment = 0;
@@ -380,7 +382,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     if(r.length > 0)
         [self setSelectedRange:adjustedrange];
 }
--(void)dedent:(id)sender{
+-(void)dedent:(id _Nullable)sender{
     auto r = self.selectedRange;
     NSRange currentLineRange = [self.string lineRangeForRange:r];
     int adjustment = 0;
@@ -486,7 +488,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     auto to_insert = msb_detach_as_ns_string(&sb);
     [self insertText:to_insert replacementRange:r];
 }
-+(NSMenu*)defaultMenu{
++(NSMenu*_Nullable)defaultMenu{
     NSMenu* result = [[NSMenu alloc] initWithTitle:@"Menu"];
     NSMenuItem* item;
     item = [[NSMenuItem alloc] initWithTitle:@"Cut" action:@selector(cut:) keyEquivalent:@""];
@@ -524,7 +526,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     [result addItem:[NSMenuItem separatorItem]];
     return result;
 }
--(NSString *)preferredPasteboardTypeFromArray:(NSArray *)availableTypes restrictedToTypesFromArray:(NSArray *)allowedTypes {
+-(NSString *_Nullable)preferredPasteboardTypeFromArray:(NSArray *)availableTypes restrictedToTypesFromArray:(NSArray *_Nullable)allowedTypes {
   if ([availableTypes containsObject:NSPasteboardTypeString]) {
     return NSPasteboardTypeString;
   }
@@ -547,7 +549,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     return self;
 }
 
--(void)deleteBackward:(id)sender{
+-(void)deleteBackward:(id _Nullable)sender{
     auto r = self.selectedRange;
     if(r.length == 0){
         NSRange currentLineRange = [self.string lineRangeForRange:r];
@@ -569,7 +571,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     [super deleteBackward:sender];
     [self display];
 }
--(void)insertNewline:(id)sender {
+-(void)insertNewline:(id _Nullable)sender {
     auto sel_range = self.selectedRange;
     if(sel_range.length){
         [super insertNewline:sender];
@@ -594,7 +596,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     [self display];
     [self.enclosingScrollView display];
 }
-- (void)insertTab:(id)sender{
+- (void)insertTab:(id _Nullable)sender{
  [self insertText: @"  " replacementRange:self.selectedRange];
 }
 
@@ -602,7 +604,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 #define DND_THIS_URL @"dnd://gdndc/this.html"
 @implementation WebNavDel: NSObject
 -(void)webView:(WKWebView *)webView
-    didFinishNavigation:(WKNavigation *)navigation{
+    didFinishNavigation:(WKNavigation *_Null_unspecified)navigation{
     auto title = webView.title;
     // Hack
     if([title isEqualToString:@"This"]){
@@ -995,7 +997,8 @@ BOOL show_errors;
     // HERE("load the page: %.3fms", (t2-t1)/1000.);
 }
 
--(void)setRepresentedObject:(id)representedObject {
+// Why do I even have this?
+-(void)setRepresentedObject:(id _Nullable)representedObject {
     [super setRepresentedObject:representedObject];
 }
 
@@ -1010,7 +1013,7 @@ BOOL show_errors;
     }
     self.view = [[NSView alloc] initWithFrame: screenrect];
 }
--(void)flop_editor:(id)sender{
+-(void)flop_editor:(id _Nullable)sender{
     if(scrollview.hidden)
         return;
     if(editor_on_left){
@@ -1040,7 +1043,7 @@ BOOL show_errors;
 
 - (void)webView:(WKWebView *)webView
 runJavaScriptTextInputPanelWithPrompt:(NSString *)prompt
-    defaultText:(NSString *)defaultText
+    defaultText:(NSString *_Nullable)defaultText
 initiatedByFrame:(WKFrameInfo *)frame
 completionHandler:(void (^)(NSString *result))completionHandler{
     auto alert = [[NSAlert alloc] init];
@@ -1135,7 +1138,7 @@ asm(".global __app_icon\n"
     "__app_icon_end:\n");
 
 int
-main(int argc, const char * argv[]) {
+main(int argc, const char *_Null_unspecified *_Nonnull argv) {
     if(dndc_init_python() != 0)
         return 1;
     BASE64CACHE = dndc_create_filecache();
@@ -1324,6 +1327,8 @@ do_menus(void){
         [NSApp setHelpMenu:menu];
     }
 }
+
+#pragma clang assume_nonnull end
 
 #include "allocator.c"
 #include "dndc.c"
