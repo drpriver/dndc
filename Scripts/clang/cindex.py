@@ -1302,6 +1302,7 @@ class Cursor(ctypes.Structure):
     def get_field_offsetof(self) -> ctypes.c_longlong:
         """
         Returns the offsetof the FIELD_DECL pointed by this Cursor.
+        Value is in bits.
         """
         return conf.lib.clang_Cursor_getOffsetOfField(self)
 
@@ -1645,6 +1646,7 @@ class Type(ctypes.Structure):
     def get_offset(self, fieldname):
         """
         Retrieve the offset of a field in the record.
+        This is in bits, not bytes.
         """
         return conf.lib.clang_Type_getOffsetOf(self, fieldname)
 
