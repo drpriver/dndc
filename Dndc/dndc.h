@@ -238,6 +238,8 @@ enum DndcSyntax {
     DNDC_SYNTAX_RAW_STRING = 7,
     // DNDC_SYNTAX_BULLET,
     // DNDC_SYNTAX_COMMENT,
+    // DNDC_SYNTAX_KEY,
+    // DNDC_SYNTAX_VALUE,
 };
 enum{DNDC_SYNTAX_MAX=8};
 

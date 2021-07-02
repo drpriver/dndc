@@ -1028,6 +1028,7 @@ RENDERFUNC(IMGLINKS){
         Raise(PARSE_ERROR);
         }
 
+    // FIXME: It's kind of janky that I parse at htmlgen time.
     LongString imgdatab64 = {};
     if(not (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME))){
         auto imgpath_node = get_node(ctx, node->children.data[0]);
@@ -1095,7 +1096,7 @@ RENDERFUNC(IMGLINKS){
     {
         auto viewBox_node = get_node(ctx, node->children.data[3]);
         if(viewBox_node->type != NODE_STRING){
-            node_set_err(ctx, viewBox_node, LS("Fourth should be a string and be 'viewbox = x0 y0 x1 y1'"));
+            node_set_err(ctx, viewBox_node, LS("Fourth should be a string and be 'viewBox = x0 y0 x1 y1'"));
             Raise(PARSE_ERROR);
             }
         auto header = viewBox_node->header;
@@ -1164,7 +1165,7 @@ RENDERFUNC(IMGLINKS){
                 }
             }
     }
-    MSB_FORMAT(sb, "<svg width=\"", width, "\" height=\"", height, "\" viewbox=\"", viewbox[0], " ", viewbox[1], " ", viewbox[2], " ", viewbox[3], "\" style=\"background-size: 100% 100%; ");
+    MSB_FORMAT(sb, "<svg width=\"", width, "\" height=\"", height, "\" viewBox=\"", viewbox[0], " ", viewbox[1], " ", viewbox[2], " ", viewbox[3], "\" style=\"background-size: 100% 100%; ");
 
     if(ctx->flags & DNDC_USE_DND_URL_SCHEME){
         msb_write_literal(sb, "background-image: url('dnd:");
