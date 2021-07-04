@@ -1,5 +1,6 @@
 Version 0.5.2::md
   * Fixed an issue where single item rows of tables were being ignored.
+  * Nodes with ids but no heading will no longer be shown in the generated nav.
 Version 0.5.1::md
   * It is no longer possible to crash the formatter by having a table
     with more than 100 items in a single row.

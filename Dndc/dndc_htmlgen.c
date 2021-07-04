@@ -250,22 +250,24 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
         case NODE_MD:
         case NODE_QUOTE:
         case NODE_CONTAINER:{
-            auto id = node_get_id(node);
-            if(id){
-                msb_write_literal(sb, "<li><a href=\"#");
-                msb_write_kebab(sb, id->text, id->length);
-                MSB_FORMAT(sb, "\">", node->header, "</a>\n<ul>\n");
-                // kind of a hack
-                auto cursor = sb->cursor;
-                build_nav_block_children(ctx, handle, sb, depth+1);
-                if(cursor != sb->cursor){
-                    msb_write_literal(sb, "</ul>\n");
+            if(node->header.length){
+                auto id = node_get_id(node);
+                if(id){
+                    msb_write_literal(sb, "<li><a href=\"#");
+                    msb_write_kebab(sb, id->text, id->length);
+                    MSB_FORMAT(sb, "\">", node->header, "</a>\n<ul>\n");
+                    // kind of a hack
+                    auto cursor = sb->cursor;
+                    build_nav_block_children(ctx, handle, sb, depth+1);
+                    if(cursor != sb->cursor){
+                        msb_write_literal(sb, "</ul>\n");
+                        }
+                    else{
+                        msb_erase(sb, sizeof("\n<ul>\n")-1);
+                        }
+                    msb_write_literal(sb,"</li>\n");
+                    break;
                     }
-                else{
-                    msb_erase(sb, sizeof("\n<ul>\n")-1);
-                    }
-                msb_write_literal(sb,"</li>\n");
-                break;
                 }
             // fall-through
             }
@@ -291,13 +293,15 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
             break;
         case NODE_PRE:
         case NODE_RAW:{
-            auto id = node_get_id(node);
-            if(id){
-                msb_write_literal(sb, "<li><a href=\"#");
-                msb_write_kebab(sb, id->text, id->length);
-                MSB_FORMAT(sb, "\">", node->header, "</a>");
-                msb_write_literal(sb, "</li>\n");
-                }
+            if(node->header.length){
+                auto id = node_get_id(node);
+                if(id){
+                    msb_write_literal(sb, "<li><a href=\"#");
+                    msb_write_kebab(sb, id->text, id->length);
+                    MSB_FORMAT(sb, "\">", node->header, "</a>");
+                    msb_write_literal(sb, "</li>\n");
+                    }
+                }break;
             }break;
         }
     }
