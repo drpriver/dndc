@@ -1,12 +1,12 @@
 #import <Cocoa/Cocoa.h>
 #import <Webkit/WebKit.h>
-#include "common_macros.h"
-#include "measure_time.h"
-#include "dndc.h"
+#import "common_macros.h"
+#import "measure_time.h"
+#import "dndc.h"
 // I need to build strings!
-#include "MStringBuilder.h"
-#include "mallocator.h"
-#include "msb_format.h"
+#import "MStringBuilder.h"
+#import "mallocator.h"
+#import "msb_format.h"
 
 #if !__has_feature(objc_arc)
 #error "ARC is off"
@@ -364,6 +364,20 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 @end
 
 @implementation DndTextView
+-(void)keyDown:(NSEvent*) event{
+    if(event.modifierFlags & NSEventModifierFlagCommand){
+        auto num = [event.characters integerValue];
+        if(num){
+            num -= 1;
+           auto tabs =  [NSApp mainWindow].tabbedWindows;
+           if(tabs.count > num){
+               [tabs[num] makeKeyAndOrderFront:nil];
+               return;
+           }
+        }
+    }
+    [super keyDown:event];
+}
 -(void)indent:(id _Nullable)sender{
     auto r = self.selectedRange;
     NSRange currentLineRange = [self.string lineRangeForRange:r];
@@ -675,10 +689,10 @@ BOOL auto_recalc;
 BOOL coord_helper;
 BOOL show_errors;
 }
-#define DND_AUTO_APPLY_CHANGES_LABEL @"Auto-apply changes"
-#define DND_READ_ONLY_LABEL @"Read-only"
-#define DND_COORD_HELPER_LABEL @"Coord helper"
-#define DND_SHOW_ERRORS_LABEL @"Show errors"
+#define DND_AUTO_APPLY_CHANGES_LABEL @"Auto-Apply Changes"
+#define DND_READ_ONLY_LABEL @"Read-Only"
+#define DND_COORD_HELPER_LABEL @"Coord Helper"
+#define DND_SHOW_ERRORS_LABEL @"Show Errors"
 -(void)button_click:(id)a{
     // Being lazy and just doing string comparisons
     NSButton* button = a;
@@ -730,6 +744,7 @@ BOOL show_errors;
     editor_on_left = NO;
     coord_helper = NO;
     auto_recalc = YES;
+    show_errors = YES;
     auto screen = [NSScreen mainScreen];
     NSRect screenrect;
     if(screen){
@@ -790,16 +805,28 @@ BOOL show_errors;
     webview.navigationDelegate = webnavdel;
     [split_view addSubview:webview];
     [editor_container addSubview:scrollview];
-    auto button = [NSButton checkboxWithTitle:DND_AUTO_APPLY_CHANGES_LABEL target:self action:@selector(button_click:)];
-    button.state = NSControlStateValueOn;
+
     auto button_view = [[NSStackView alloc] init];
-    [button_view addView:button inGravity:NSStackViewGravityLeading];
-    button = [NSButton checkboxWithTitle:DND_READ_ONLY_LABEL target:self action:@selector(button_click:)];
-    [button_view addView:button inGravity:NSStackViewGravityLeading];
-    button = [NSButton checkboxWithTitle:DND_COORD_HELPER_LABEL target:self action:@selector(button_click:)];
-    [button_view addView:button inGravity:NSStackViewGravityLeading];
-    button = [NSButton checkboxWithTitle:DND_SHOW_ERRORS_LABEL target:self action:@selector(button_click:)];
-    [button_view addView:button inGravity:NSStackViewGravityLeading];
+    {
+        NSString* button_labels[] = {
+            DND_AUTO_APPLY_CHANGES_LABEL,
+            DND_READ_ONLY_LABEL,
+            DND_COORD_HELPER_LABEL,
+            DND_SHOW_ERRORS_LABEL,
+        };
+        BOOL button_states[] = {
+            auto_recalc,
+            !text.editable,
+            coord_helper,
+            show_errors,
+        };
+        _Static_assert(arrlen(button_states)==arrlen(button_labels), "");
+        for(size_t i = 0; i < arrlen(button_labels); i++){
+            auto button = [NSButton checkboxWithTitle:button_labels[i] target:self action:@selector(button_click:)];
+            button.state = button_states[i]?NSControlStateValueOn:NSControlStateValueOff;
+            [button_view addView:button inGravity:NSStackViewGravityLeading];
+        }
+    }
     [editor_container addSubview:error_text];
     [editor_container addSubview:button_view];
     [split_view addSubview:editor_container];
@@ -911,38 +938,41 @@ BOOL show_errors;
 -(LongString)get_text{
     NSString *string = self->text.string;
     if(coord_helper){
+#define JAVASCRIPT(...) #__VA_ARGS__
         string = [string stringByAppendingString:
             @"\n"
-            "::js @inline\n"
-            "  document.addEventListener('DOMContentLoaded', function(){\n"
-            "    const svgs = document.getElementsByTagName('svg');\n"
-            "    for(let i = 0; i < svgs.length; i++){\n"
-            "      const svg = svgs[i];\n"
-            "      const texts = svg.getElementsByTagName('text');\n"
-            "      var text_height = 0;\n"
-            "      if(texts.length){\n"
-            "        const first_text = texts[0];\n"
-            "        const text_height = first_text.getBBox().height || 0;\n"
-            "      }\n"
-            "      svg.addEventListener('click', function(e){\n"
-            "      var name = prompt('Enter Room Name');\n"
-            "      if(name){\n"
-            "        const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;\n"
-            "        const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height;\n"
-            "        const rect = e.currentTarget.getBoundingClientRect();\n"
-            "        const true_x = ((e.clientX - rect.x)/ x_scale) | 0;\n"
-            "        const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;\n"
-            "        let request = new XMLHttpRequest();\n"
-            "        if(!name.includes('.')){\n"
-            "          name += '.';\n"
-            "          }\n"
-            "        const combined = '\\n'+name+':'+':md .room @coord('+true_x+','+true_y+')\\n';\n"
-            "        request.open('POST', 'dnd:///roomclick', true);\n"
-            "        request.send(combined);\n"
-            "        }\n"
-            "      });\n"
-            "    }\n"
-            "  });\n"];
+            "::js @inline\n  "
+            JAVASCRIPT(
+            document.addEventListener("DOMContentLoaded", function(){
+              const svgs = document.getElementsByTagName("svg");
+              for(let i = 0; i < svgs.length; i++){
+                const svg = svgs[i];
+                const texts = svg.getElementsByTagName("text");
+                let text_height = 0;
+                if(texts.length){
+                  const first_text = texts[0];
+                  text_height = first_text.getBBox().height || 0;
+                }
+                svg.addEventListener("click", function(e){
+                let name = prompt('Enter Room Name');
+                if(name){
+                  const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;
+                  const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const true_x = ((e.clientX - rect.x)/ x_scale) | 0;
+                  const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;
+                  let request = new XMLHttpRequest();
+                  if(!name.includes('.')){
+                    name += '.';
+                    }
+                  const combined = '\n'+name+':'+":md .room @coord("+true_x+','+true_y+")\n";
+                  request.open("POST", "dnd:///roomclick", true);
+                  request.send(combined);
+                  }
+                });
+              }
+            });
+        )];
     }
     const char* source_text = [string UTF8String];
     LongString source = {
@@ -1330,5 +1360,5 @@ do_menus(void){
 
 #pragma clang assume_nonnull end
 
-#include "allocator.c"
-#include "dndc.c"
+#import "allocator.c"
+#import "dndc.c"
