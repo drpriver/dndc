@@ -1,5 +1,6 @@
 #import <Cocoa/Cocoa.h>
 #import <Webkit/WebKit.h>
+#import <dispatch/dispatch.h>
 #import "common_macros.h"
 #import "measure_time.h"
 #import "dndc.h"
@@ -27,6 +28,168 @@ msb_detach_as_ns_string(MStringBuilder*sb){
 }
 
 static struct DndcFileCache*_Nonnull BASE64CACHE;
+static struct DndcFileCache*_Nonnull TEXTCACHE;
+typedef struct FileWatchItem {
+    uint64_t hash;
+    uint64_t last_eight_chars;
+    LongString fullpath;
+    int fd;
+    bool tomb;
+} FileWatchItem;
+typedef struct FileWatchCache {
+    size_t capacity;
+    size_t count;
+    FileWatchItem* items;
+} FileWatchCache;
+
+// cut'n'paste from the wikipedia page on murmur hash
+static inline
+force_inline
+nosan
+uint32_t
+murmur_32_scramble(uint32_t k) {
+    k *= 0xcc9e2d51;
+    k = (k << 15) | (k >> 17);
+    k *= 0x1b873593;
+    return k;
+}
+
+static inline
+force_inline
+nosan
+uint32_t
+murmur3_32(Nonnull(const uint8_t*) key, size_t len, uint32_t seed)
+{
+	uint32_t h = seed;
+    uint32_t k;
+    /* Read in groups of 4. */
+    for (size_t i = len >> 2; i; i--) {
+        memcpy(&k, key, sizeof(uint32_t));
+        key += sizeof(uint32_t);
+        h ^= murmur_32_scramble(k);
+        h = (h << 13) | (h >> 19);
+        h = h * 5 + 0xe6546b64;
+    }
+    /* Read the rest. */
+    k = 0;
+    for (size_t i = len & 3; i; i--) {
+        k <<= 8;
+        k |= key[i - 1];
+    }
+    h ^= murmur_32_scramble(k);
+    /* Finalize. */
+	h ^= len;
+	h ^= h >> 16;
+	h *= 0x85ebca6b;
+	h ^= h >> 13;
+	h *= 0xc2b2ae35;
+	h ^= h >> 16;
+	return h;
+}
+
+static
+void
+cache_watch_file(void* cache_, StringView path){
+    // path is not necessarily valid - python blocks can add dependencies.
+    FileWatchCache* cache = cache_;
+    if(!path.length || !path.text){
+        NSLog(@"Not watching invalid path");
+        return;
+    }
+    uint64_t hash = murmur3_32((const uint8_t*)path.text, path.length, 1107845655llu);
+    uint64_t last_eight = 0;
+    const char* end = path.text + path.length;
+    size_t length = path.length >= 8? 8 : path.length;
+    memcpy(&last_eight, end-length, length);
+    // TODO: use a hash table.
+    size_t first_tomb = -1;
+    for(size_t i = 0; i < cache->count; i++){
+        auto it = &cache->items[i];
+        if(it->tomb){
+            if(first_tomb == (size_t)-1){
+                first_tomb = i;
+            }
+            continue;
+        }
+        if(it->hash == hash){
+            if(it->last_eight_chars == last_eight){
+                if(LS_SV_equals(it->fullpath, path)){
+                    // already watching it.
+                    return;
+                }
+            }
+        }
+    }
+    if(cache->count >= cache->capacity){
+        size_t capacity = cache->capacity * 2;
+        if(!capacity)
+            capacity = 8;
+        FileWatchItem* items = realloc(cache->items, capacity*sizeof(*items));
+        if(!items){
+            NSLog(@"Resizing filewatchcache to %zu items failed", capacity);
+            return;
+        }
+        cache->items = items;
+        cache->capacity = capacity;
+    }
+    auto item_index = (first_tomb != (size_t)-1)?first_tomb:cache->count++;
+    auto item = &cache->items[item_index];
+    item->tomb = false;
+    item->hash = hash;
+    item->last_eight_chars = last_eight;
+    item->fullpath.text = strndup(path.text, path.length);
+    if(!item->fullpath.text){
+        NSLog(@"strndup failed");
+        item->tomb = true;
+        return;
+    }
+    item->fullpath.length = path.length;
+    item->fd = open(item->fullpath.text, O_EVTONLY);
+    if(item->fd < 0){
+        NSLog(@"open call for '%s' failed: %s", item->fullpath.text, strerror(errno));
+        item->tomb = true;
+        const_free(item->fullpath.text);
+        return;
+    }
+    // NSLog(@"watching '%s'", item->fullpath.text);
+    dispatch_source_t source = dispatch_source_create(DISPATCH_SOURCE_TYPE_VNODE, item->fd, DISPATCH_VNODE_WRITE | DISPATCH_VNODE_DELETE | DISPATCH_VNODE_RENAME | DISPATCH_VNODE_EXTEND | DISPATCH_VNODE_ATTRIB, dispatch_get_main_queue());
+    dispatch_source_set_event_handler(source, ^{
+        auto bitem = &cache->items[item_index];
+        dndc_filecache_remove(TEXTCACHE, LS_to_SV(bitem->fullpath));
+        dndc_filecache_remove(BASE64CACHE, LS_to_SV(bitem->fullpath));
+        NSLog(@"'%s' changed", bitem->fullpath.text);
+#if 0
+        uint64_t mask = dispatch_source_get_data(source);
+        if(mask & DISPATCH_VNODE_DELETE){
+            NSLog(@"VNode for '%s' was deleted", bitem->fullpath.text);
+        }
+        if(mask & DISPATCH_VNODE_RENAME){
+            NSLog(@"VNode for '%s' was renamed", bitem->fullpath.text);
+        }
+        if(mask & DISPATCH_VNODE_WRITE) {
+            NSLog(@"VNode for '%s' was written", bitem->fullpath.text);
+        }
+        if(mask & DISPATCH_VNODE_EXTEND) {
+            NSLog(@"VNode for '%s' was extended", bitem->fullpath.text);
+        }
+        if(mask & DISPATCH_VNODE_ATTRIB) {
+            NSLog(@"VNode for '%s' metadata changed", bitem->fullpath.text);
+        }
+#endif
+        dispatch_source_cancel(source);
+    });
+    dispatch_source_set_cancel_handler(source, ^{
+        auto bitem = &cache->items[item_index];
+        // NSLog(@"VNode for '%s' was canceled", bitem->fullpath.text);
+        bitem->tomb = true;
+        close(bitem->fd);
+        const_free(bitem->fullpath.text);
+    });
+    dispatch_resume(source);
+}
+
+static FileWatchCache FILE_WATCH_CACHE;
+
 //
 // So, each document has N window controllers (I guess 1 for me).
 // Each window controller has a window.
@@ -175,7 +338,10 @@ static NSImage* appimage;
     if([title isEqualToString:@"This"]){
         if(not [self fileURL])
             return @"Untitled";
+        PushDiagnostic();
+#pragma clang diagnostic ignored "-Wnullable-to-nonnull-conversion"
         return [[[self fileURL] path] lastPathComponent];
+        PopDiagnostic();
     }
     else
         return title;
@@ -429,7 +595,10 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 -(void)ensure_pattern{
     // TODO: maybe this should be a getter instead?
     if(!indent_pattern)
+        PushDiagnostic();
+        #pragma clang diagnostic ignored "-Wnullable-to-nonnull-conversion"
         indent_pattern = [[NSRegularExpression alloc] initWithPattern:kIndentPatternString options:0 error:nil];
+        PopDiagnostic();
 }
 -(void)insert_file_block:(NSString*)path tag:(GdndInsertTag)tag size:(NSSize)size{
     auto r = self.selectedRange;
@@ -659,21 +828,52 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 
 @implementation DndUrlHandler
 -(void)webView:(WKWebView*)webView startURLSchemeTask:(id<WKURLSchemeTask>)urlSchemeTask{
-    auto response = [[NSURLResponse alloc]
-        initWithURL:(NSURL*)[NSURL URLWithString:DND_THIS_URL]
-        MIMEType:@"text/plain"
-        expectedContentLength:0
-        textEncodingName:nil];
-    [urlSchemeTask didReceiveResponse:response];
     auto request = [urlSchemeTask request];
     NSURL* url = request.URL;
     auto method = [request HTTPMethod];
     if([method isEqualToString:@"POST"] and [url isEqual:[NSURL URLWithString:@"dnd:///roomclick"]]){
+        auto response = [[NSURLResponse alloc]
+            initWithURL:(NSURL*)[NSURL URLWithString:DND_THIS_URL]
+            MIMEType:@"text/plain"
+            expectedContentLength:0
+            textEncodingName:nil];
+        [urlSchemeTask didReceiveResponse:response];
         NSString* body = [[NSString alloc] initWithData:(NSData*)[request HTTPBody] encoding:NSUTF8StringEncoding];
         [urlSchemeTask didFinish];
         [self.controller->text insertText:body replacementRange:NSMakeRange([[self.controller->text textStorage] length], 0)];
-        // HEREPrint([body UTF8String]);
     }
+    // This is faster, but I can't figure out how to clear the image from the cache.
+#if 0
+    else if([method isEqualToString:@"GET"] and [[url scheme] isEqualToString:@"dnd"]){
+        auto path = [url path];
+        auto data = [NSData dataWithContentsOfFile: path];
+        if(!data){
+            // TODO: better error.
+            [urlSchemeTask didFailWithError:[NSError errorWithDomain:@"denied" code:1 userInfo:nil]];
+        }
+        auto response = [[NSURLResponse alloc]
+            initWithURL:(NSURL*)[NSURL URLWithString:DND_THIS_URL]
+            MIMEType:@"image/png" // This is wrong, but webkit doesn't mind.
+            expectedContentLength: [data length]
+            textEncodingName:nil];
+        [urlSchemeTask didReceiveResponse:response];
+        [urlSchemeTask didReceiveData:data];
+        [urlSchemeTask didFinish];
+        int fd = open([path UTF8String], O_EVTONLY);
+        if(fd > 0){
+            dispatch_source_t source = dispatch_source_create(DISPATCH_SOURCE_TYPE_VNODE, fd, DISPATCH_VNODE_WRITE | DISPATCH_VNODE_DELETE | DISPATCH_VNODE_RENAME | DISPATCH_VNODE_EXTEND | DISPATCH_VNODE_ATTRIB, dispatch_get_main_queue());
+            dispatch_source_set_event_handler(source, ^{
+                    // TODO: figure out how to invalidate the webview cache.
+                    dispatch_cancel(source);
+                });
+            dispatch_source_set_cancel_handler(source, ^{
+                    close(fd);
+                    });
+            dispatch_resume(source);
+        }
+
+    }
+#endif
     else {
         [urlSchemeTask didFailWithError:[NSError errorWithDomain:@"denied" code:1 userInfo:nil]];
     }
@@ -688,11 +888,13 @@ BOOL editor_on_left;
 BOOL auto_recalc;
 BOOL coord_helper;
 BOOL show_errors;
+BOOL show_stats;
 }
 #define DND_AUTO_APPLY_CHANGES_LABEL @"Auto-Apply Changes"
 #define DND_READ_ONLY_LABEL @"Read-Only"
 #define DND_COORD_HELPER_LABEL @"Coord Helper"
 #define DND_SHOW_ERRORS_LABEL @"Show Errors"
+#define DND_SHOW_STATS_LABEL @"Show Stats"
 -(void)button_click:(id)a{
     // Being lazy and just doing string comparisons
     NSButton* button = a;
@@ -735,6 +937,14 @@ BOOL show_errors;
             [self recalc_html:[self get_text]];
         }
     }
+    else if([title isEqualToString:DND_SHOW_STATS_LABEL]){
+        if(state == NSControlStateValueOn){
+            show_stats = YES;
+        }
+        else {
+            show_stats = NO;
+        }
+    }
     else {
         NSLog(@"Unknown button title:%@", title);
     }
@@ -745,6 +955,7 @@ BOOL show_errors;
     coord_helper = NO;
     auto_recalc = YES;
     show_errors = YES;
+    show_stats = NO;
     auto screen = [NSScreen mainScreen];
     NSRect screenrect;
     if(screen){
@@ -813,12 +1024,14 @@ BOOL show_errors;
             DND_READ_ONLY_LABEL,
             DND_COORD_HELPER_LABEL,
             DND_SHOW_ERRORS_LABEL,
+            DND_SHOW_STATS_LABEL,
         };
         BOOL button_states[] = {
             auto_recalc,
             !text.editable,
             coord_helper,
             show_errors,
+            show_stats,
         };
         _Static_assert(arrlen(button_states)==arrlen(button_labels), "");
         for(size_t i = 0; i < arrlen(button_labels); i++){
@@ -1007,10 +1220,15 @@ BOOL show_errors;
     flags |= DNDC_PYTHON_IS_INIT;
     // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
-    // flags |= DNDC_PRINT_STATS;
+    flags |= DNDC_DEPENDS_IS_CALLBACK;
+    if(show_stats)
+        flags |= DNDC_PRINT_STATS;
+    // Disabled until I can figure out how to get wkwebview to invalidate
+    // cached images.
+    // flags |= DNDC_USE_DND_URL_SCHEME;
     error_text.editable = YES;
     [[error_text textStorage].mutableString setString:@""];
-    auto err = dndc_compile_dnd_file(flags, base_dir, source, &html, (union DndcDependsArg){}, BASE64CACHE, NULL, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL);
+    auto err = dndc_compile_dnd_file(flags, base_dir, source, &html, (union DndcDependsArg){.callback=cache_watch_file, .user_data=&FILE_WATCH_CACHE}, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL);
     error_text.editable = NO;
     // auto t1 = get_t();
     // HERE("dndc_compile_dnd_file: %.3fms", (t1-t0)/1000.);
@@ -1141,8 +1359,9 @@ completionHandler:(void (^)(NSString *result))completionHandler{
         }
     }
 }
--(void)purge_img_cache:(id)sender{
+-(void)purge_file_caches:(id)sender{
     dndc_filecache_clear(BASE64CACHE);
+    dndc_filecache_clear(TEXTCACHE);
 }
 
 -(void)applicationDidFinishLaunching:(NSNotification *)notification{
@@ -1172,12 +1391,16 @@ main(int argc, const char *_Null_unspecified *_Nonnull argv) {
     if(dndc_init_python() != 0)
         return 1;
     BASE64CACHE = dndc_create_filecache();
+    TEXTCACHE = dndc_create_filecache();
     NSApplication* app = [NSApplication sharedApplication];
     DndAppDelegate* appDelegate = [DndAppDelegate new];
     app.delegate = appDelegate;
     auto icon_size = _app_icon_end - _app_icon;
     NSData* imagedata = [NSData dataWithBytesNoCopy:(void*)_app_icon length:icon_size freeWhenDone:NO];
+    PushDiagnostic();
+    #pragma clang diagnostic ignored "-Wnullable-to-nonnull-conversion"
     appimage = [[NSImage alloc] initWithData:imagedata];
+    PopDiagnostic();
     app.applicationIconImage = appimage;
     SYNTAX_COLORS[DNDC_SYNTAX_DOUBLE_COLON]       = [NSColor lightGrayColor];
     SYNTAX_COLORS[DNDC_SYNTAX_HEADER]             = [NSColor systemBlueColor];
@@ -1250,7 +1473,7 @@ do_menus(void){
         [menu addItemWithTitle:@"Save" action:@selector(saveDocument:) keyEquivalent:@"s"];
         [menu addItemWithTitle:@"Revert to Saved" action:@selector(revertDocumentToSaved:) keyEquivalent:@"r"];
         [menu addItem:[NSMenuItem separatorItem]];
-        [menu addItemWithTitle:@"Empty Image Cache" action:@selector(purge_img_cache:) keyEquivalent:@""];
+        [menu addItemWithTitle:@"Empty File Caches" action:@selector(purge_file_caches:) keyEquivalent:@""];
         NSMenuItem* menu_item = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
         [menu_item setSubmenu:menu];
         [[NSApp mainMenu] addItem:menu_item];

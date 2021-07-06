@@ -839,8 +839,11 @@ RENDERFUNC(IMAGE){
             }
         else {
             msb_write_literal(sb, "<img src=\"data:image/png;base64,");
+            auto before = get_t();
             auto b64 = processed_e.result;
             msb_write_str(sb, b64.text, b64.length);
+            auto after = get_t();
+            report_time(ctx, SV("Copying the base64 data of an img took "), after-before);
             }
         msb_write_literal(sb, "\">");
     }
@@ -1206,7 +1209,7 @@ RENDERFUNC(IMGLINKS){
         assert(imgdatab64.length);
         msb_write_str(sb, imgdatab64.text, imgdatab64.length);
         auto after = get_t();
-        report_time(ctx, SV("Base64ing an imglinks took "), after-before);
+        report_time(ctx, SV("Copying the base64 data of an imglinks took "), after-before);
         msb_write_literal(sb, "');\">\n");
         }
     for(size_t i = 4; i < node->children.count; i++){
