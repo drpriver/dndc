@@ -4,6 +4,12 @@
 // This documents the external API.
 // For the internal API, see dndc_funcs.h.
 //
+#define DNDC_STRINGIFY_IMPL(x) #x
+#define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
+#define DNDC_MAJOR 0
+#define DNDC_MINOR 6
+#define DNDC_MICRO 0
+#define DNDC_VERSION DNDC_STRINGIFY(DNDC_MAJOR) "." DNDC_STRINGIFY(DNDC_MINOR) "." DNDC_STRINGIFY(DNDC_MICRO)
 
 // for size_t
 #include <stddef.h>

@@ -31,10 +31,6 @@
 #include "argument_parsing.h"
 #endif
 
-#define DNDC_MAJOR 0
-#define DNDC_MINOR 6
-#define DNDC_MICRO 0
-#define DNDC_VERSION STRINGIFY(DNDC_MAJOR) "." STRINGIFY(DNDC_MINOR) "." STRINGIFY(DNDC_MICRO)
 
 // Unsure of where to put this. So, just putting it here for now.
 typedef struct BinaryJob{
