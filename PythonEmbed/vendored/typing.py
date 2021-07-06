@@ -370,120 +370,120 @@ class _SpecialForm(_Final, _Immutable, _root=True):
         raise TypeError(f"{self} is not subscriptable")
 
 
-Any = _SpecialForm('Any', doc=
-    """Special type indicating an unconstrained type.
+Any = _SpecialForm('Any', doc= "")
+# """Special type indicating an unconstrained type.
 
-    - Any is compatible with every type.
-    - Any assumed to have all methods.
-    - All values assumed to be instances of Any.
+# - Any is compatible with every type.
+# - Any assumed to have all methods.
+# - All values assumed to be instances of Any.
 
-    Note that all the above statements are true from the point of view of
-    static type checkers. At runtime, Any should not be used with instance
-    or class checks.
-    """)
+# Note that all the above statements are true from the point of view of
+# static type checkers. At runtime, Any should not be used with instance
+# or class checks.
+# """
 
-NoReturn = _SpecialForm('NoReturn', doc=
-    """Special type indicating functions that never return.
-    Example::
+NoReturn = _SpecialForm('NoReturn', doc="")
+    # """Special type indicating functions that never return.
+    # Example::
 
-      from typing import NoReturn
+      # from typing import NoReturn
 
-      def stop() -> NoReturn:
-          raise Exception('no way')
+      # def stop() -> NoReturn:
+          # raise Exception('no way')
 
-    This type is invalid in other positions, e.g., ``List[NoReturn]``
-    will fail in static type checkers.
-    """)
+    # This type is invalid in other positions, e.g., ``List[NoReturn]``
+    # will fail in static type checkers.
+    # """)
 
-ClassVar = _SpecialForm('ClassVar', doc=
-    """Special type construct to mark class variables.
+ClassVar = _SpecialForm('ClassVar', doc="")
+    # """Special type construct to mark class variables.
 
-    An annotation wrapped in ClassVar indicates that a given
-    attribute is intended to be used as a class variable and
-    should not be set on instances of that class. Usage::
+    # An annotation wrapped in ClassVar indicates that a given
+    # attribute is intended to be used as a class variable and
+    # should not be set on instances of that class. Usage::
 
-      class Starship:
-          stats: ClassVar[Dict[str, int]] = {} # class variable
-          damage: int = 10                     # instance variable
+      # class Starship:
+          # stats: ClassVar[Dict[str, int]] = {} # class variable
+          # damage: int = 10                     # instance variable
 
-    ClassVar accepts only types and cannot be further subscribed.
+    # ClassVar accepts only types and cannot be further subscribed.
 
-    Note that ClassVar is not a class itself, and should not
-    be used with isinstance() or issubclass().
-    """)
+    # Note that ClassVar is not a class itself, and should not
+    # be used with isinstance() or issubclass().
+    # """)
 
-Final = _SpecialForm('Final', doc=
-    """Special typing construct to indicate final names to type checkers.
+Final = _SpecialForm('Final', doc="")
+    # """Special typing construct to indicate final names to type checkers.
 
-    A final name cannot be re-assigned or overridden in a subclass.
-    For example:
+    # A final name cannot be re-assigned or overridden in a subclass.
+    # For example:
 
-      MAX_SIZE: Final = 9000
-      MAX_SIZE += 1  # Error reported by type checker
+      # MAX_SIZE: Final = 9000
+      # MAX_SIZE += 1  # Error reported by type checker
 
-      class Connection:
-          TIMEOUT: Final[int] = 10
+      # class Connection:
+          # TIMEOUT: Final[int] = 10
 
-      class FastConnector(Connection):
-          TIMEOUT = 1  # Error reported by type checker
+      # class FastConnector(Connection):
+          # TIMEOUT = 1  # Error reported by type checker
 
-    There is no runtime checking of these properties.
-    """)
+    # There is no runtime checking of these properties.
+    # """)
 
-Union = _SpecialForm('Union', doc=
-    """Union type; Union[X, Y] means either X or Y.
+Union = _SpecialForm('Union', doc="")
+    # """Union type; Union[X, Y] means either X or Y.
 
-    To define a union, use e.g. Union[int, str].  Details:
-    - The arguments must be types and there must be at least one.
-    - None as an argument is a special case and is replaced by
-      type(None).
-    - Unions of unions are flattened, e.g.::
+    # To define a union, use e.g. Union[int, str].  Details:
+    # - The arguments must be types and there must be at least one.
+    # - None as an argument is a special case and is replaced by
+      # type(None).
+    # - Unions of unions are flattened, e.g.::
 
-        Union[Union[int, str], float] == Union[int, str, float]
+        # Union[Union[int, str], float] == Union[int, str, float]
 
-    - Unions of a single argument vanish, e.g.::
+    # - Unions of a single argument vanish, e.g.::
 
-        Union[int] == int  # The constructor actually returns int
+        # Union[int] == int  # The constructor actually returns int
 
-    - Redundant arguments are skipped, e.g.::
+    # - Redundant arguments are skipped, e.g.::
 
-        Union[int, str, int] == Union[int, str]
+        # Union[int, str, int] == Union[int, str]
 
-    - When comparing unions, the argument order is ignored, e.g.::
+    # - When comparing unions, the argument order is ignored, e.g.::
 
-        Union[int, str] == Union[str, int]
+        # Union[int, str] == Union[str, int]
 
-    - You cannot subclass or instantiate a union.
-    - You can use Optional[X] as a shorthand for Union[X, None].
-    """)
+    # - You cannot subclass or instantiate a union.
+    # - You can use Optional[X] as a shorthand for Union[X, None].
+    # """)
 
-Optional = _SpecialForm('Optional', doc=
-    """Optional type.
+Optional = _SpecialForm('Optional', doc="")
+    # """Optional type.
 
-    Optional[X] is equivalent to Union[X, None].
-    """)
+    # Optional[X] is equivalent to Union[X, None].
+    # """)
 
-Literal = _SpecialForm('Literal', doc=
-    """Special typing form to define literal types (a.k.a. value types).
+Literal = _SpecialForm('Literal', doc="")
+    # """Special typing form to define literal types (a.k.a. value types).
 
-    This form can be used to indicate to type checkers that the corresponding
-    variable or function parameter has a value equivalent to the provided
-    literal (or one of several literals):
+    # This form can be used to indicate to type checkers that the corresponding
+    # variable or function parameter has a value equivalent to the provided
+    # literal (or one of several literals):
 
-      def validate_simple(data: Any) -> Literal[True]:  # always returns True
-          ...
+      # def validate_simple(data: Any) -> Literal[True]:  # always returns True
+          # ...
 
-      MODE = Literal['r', 'rb', 'w', 'wb']
-      def open_helper(file: str, mode: MODE) -> str:
-          ...
+      # MODE = Literal['r', 'rb', 'w', 'wb']
+      # def open_helper(file: str, mode: MODE) -> str:
+          # ...
 
-      open_helper('/some/path', 'r')  # Passes type check
-      open_helper('/other/path', 'typo')  # Error in type checker
+      # open_helper('/some/path', 'r')  # Passes type check
+      # open_helper('/other/path', 'typo')  # Error in type checker
 
-   Literal[...] cannot be subclassed. At runtime, an arbitrary value
-   is allowed as type argument to Literal[...], but type checkers may
-   impose restrictions.
-    """)
+   # Literal[...] cannot be subclassed. At runtime, an arbitrary value
+   # is allowed as type argument to Literal[...], but type checkers may
+   # impose restrictions.
+    # """)
 
 
 class ForwardRef(_Final, _root=True):
@@ -1447,16 +1447,16 @@ Sized = _alias(collections.abc.Sized, ())  # Not generic.
 Container = _alias(collections.abc.Container, T_co)
 Collection = _alias(collections.abc.Collection, T_co)
 Callable = _VariadicGenericAlias(collections.abc.Callable, (), special=True)
-Callable.__doc__ = \
-    """Callable type; Callable[[int], str] is a function of (int) -> str.
+Callable.__doc__ = ""
+    # """Callable type; Callable[[int], str] is a function of (int) -> str.
 
-    The subscription syntax must always be used with exactly two
-    values: the argument list and the return type.  The argument list
-    must be a list of types or ellipsis; the return type must be a single type.
+    # The subscription syntax must always be used with exactly two
+    # values: the argument list and the return type.  The argument list
+    # must be a list of types or ellipsis; the return type must be a single type.
 
-    There is no syntax to indicate optional or keyword arguments,
-    such function types are rarely used as callback types.
-    """
+    # There is no syntax to indicate optional or keyword arguments,
+    # such function types are rarely used as callback types.
+    # """
 AbstractSet = _alias(collections.abc.Set, T_co)
 MutableSet = _alias(collections.abc.MutableSet, T)
 # NOTE: Mapping is only covariant in the value type.
@@ -1466,15 +1466,15 @@ Sequence = _alias(collections.abc.Sequence, T_co)
 MutableSequence = _alias(collections.abc.MutableSequence, T)
 ByteString = _alias(collections.abc.ByteString, ())  # Not generic
 Tuple = _VariadicGenericAlias(tuple, (), inst=False, special=True)
-Tuple.__doc__ = \
-    """Tuple type; Tuple[X, Y] is the cross-product type of X and Y.
+Tuple.__doc__ = ""
+    # """Tuple type; Tuple[X, Y] is the cross-product type of X and Y.
 
-    Example: Tuple[T1, T2] is a tuple of two elements corresponding
-    to type variables T1 and T2.  Tuple[int, float, str] is a tuple
-    of an int, a float and a string.
+    # Example: Tuple[T1, T2] is a tuple of two elements corresponding
+    # to type variables T1 and T2.  Tuple[int, float, str] is a tuple
+    # of an int, a float and a string.
 
-    To specify a variable-length tuple of homogeneous type, use Tuple[T, ...].
-    """
+    # To specify a variable-length tuple of homogeneous type, use Tuple[T, ...].
+    # """
 List = _alias(list, T, inst=False)
 Deque = _alias(collections.deque, T)
 Set = _alias(set, T, inst=False)
@@ -1493,29 +1493,29 @@ ChainMap = _alias(collections.ChainMap, (KT, VT))
 Generator = _alias(collections.abc.Generator, (T_co, T_contra, V_co))
 AsyncGenerator = _alias(collections.abc.AsyncGenerator, (T_co, T_contra))
 Type = _alias(type, CT_co, inst=False)
-Type.__doc__ = \
-    """A special construct usable to annotate class objects.
+Type.__doc__ = ""
+    # """A special construct usable to annotate class objects.
 
-    For example, suppose we have the following classes::
+    # For example, suppose we have the following classes::
 
-      class User: ...  # Abstract base for User classes
-      class BasicUser(User): ...
-      class ProUser(User): ...
-      class TeamUser(User): ...
+      # class User: ...  # Abstract base for User classes
+      # class BasicUser(User): ...
+      # class ProUser(User): ...
+      # class TeamUser(User): ...
 
-    And a function that takes a class argument that's a subclass of
-    User and returns an instance of the corresponding class::
+    # And a function that takes a class argument that's a subclass of
+    # User and returns an instance of the corresponding class::
 
-      U = TypeVar('U', bound=User)
-      def new_user(user_class: Type[U]) -> U:
-          user = user_class()
+      # U = TypeVar('U', bound=User)
+      # def new_user(user_class: Type[U]) -> U:
+          # user = user_class()
           # (Here we could write the user object to a database)
-          return user
+          # return user
 
-      joe = new_user(BasicUser)
+      # joe = new_user(BasicUser)
 
-    At this point the type checker knows that joe has type BasicUser.
-    """
+    # At this point the type checker knows that joe has type BasicUser.
+    # """
 
 
 @runtime_checkable

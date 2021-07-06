@@ -30,7 +30,8 @@ maintains the heap invariant!
 
 # Original code by Kevin O'Connor, augmented by Tim Peters and Raymond Hettinger
 
-__about__ = """Heap queues
+__about__ = ""
+"""Heap queues
 
 [explanation by François Pinard]
 
