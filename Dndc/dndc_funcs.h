@@ -42,17 +42,6 @@
 //
 //    This path is *NOT* adjusted by the base_directory argument.
 //
-// depends:
-//    This union's active member depends on the flags argument.
-//
-//    If DNDC_DEPENDS_IS_CALLBACK is set, then this is a callback function
-//    that will be called with each dependency.
-//
-//    If it is not set, then this is a path to a directory to write a
-//    make-style dependency file. If not given, no such file is written.
-//
-//    This path *is* adjusted by the base_directory argument.
-//
 // external_b64cache:
 //    An optional pointer to an external cache for base64 images. If NULL,
 //    will internally create and then destroy one. Allows saving on io and
@@ -76,6 +65,13 @@
 //   `dndc_stderr_error_func`, this should be NULL. For a function you've
 //   defined, pass an appropriate pointer!
 //
+// dependency_func:
+//    A function for reporting the dependencies of the generated file. See
+//    `DndcDependencyFunc`.
+//
+// dependency_user_data:
+//   A pointer that will be passed to the dependency_func.
+//
 // Returns
 // -------
 // Nothing is returned upon success (.errored == NO_ERROR).
@@ -84,11 +80,13 @@
 
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, StringView base_directory, LongString source_path,
-        Nullable(LongString*) output_path, DependsArg depends,
+run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_path,
+        Nullable(LongString*) output_path,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,
-        Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data);
+        Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data,
+        Nullable(DndcDependencyFunc*)dependency_func,
+        Nullable(void*)dependency_user_data);
 
 //
 // The following functions are for reporting errors and warnings. ONLY use

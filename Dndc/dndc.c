@@ -32,8 +32,8 @@
 #endif
 
 #define DNDC_MAJOR 0
-#define DNDC_MINOR 5
-#define DNDC_MICRO 2
+#define DNDC_MINOR 6
+#define DNDC_MICRO 0
 #define DNDC_VERSION STRINGIFY(DNDC_MAJOR) "." STRINGIFY(DNDC_MINOR) "." STRINGIFY(DNDC_MICRO)
 
 // Unsure of where to put this. So, just putting it here for now.
@@ -204,12 +204,17 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
 static
 void
 dndc_print_out_syntax(LongString source_path);
+static
+int
+dndc_write_depends_file(Nonnull(void*)user_data, size_t npaths, Nonnull(StringView*) paths);
 
-static void depends_print_callback(void*_Nullable, StringView);
+static int depends_print_callback(void*_Nullable, size_t, Nonnull(StringView*));
 int main(int argc, char**argv){
     LongString source_path = LS("");
     LongString output_path = LS("");
-    DependsArg depends = {.path=LS("")};
+    DndcDependencyFunc*dependency_func = NULL;
+    LongString dependency_path = LS("");
+    LongString* dependency_user_data = NULL;
     LongString base_dir = LS("");
     bool report_orphans = false;
     bool no_python = false;
@@ -255,7 +260,7 @@ int main(int argc, char**argv){
                 .altname1 = SV("--depends-path"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&depends.path),
+                .dest = ARGDEST(&dependency_path),
                 .help = "If given, where to write a make-style dependency file.",
                 .hide_default = true,
             },
@@ -493,8 +498,11 @@ int main(int argc, char**argv){
     if(print_links)
         flags |= DNDC_PRINT_LINKS;
     if(print_depends){
-        flags |= DNDC_DEPENDS_IS_CALLBACK;
-        depends.callback = depends_print_callback;
+        dependency_func = depends_print_callback;
+        }
+    else if(dependency_path.length){
+        dependency_func = dndc_write_depends_file;
+        dependency_user_data = &dependency_path;
         }
     if(no_threads)
         flags |= DNDC_NO_THREADS;
@@ -517,35 +525,70 @@ int main(int argc, char**argv){
 
     #ifdef BENCHMARKING
     flags &= ~DNDC_NO_CLEANUP;
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends, NULL, NULL, dndc_stderr_error_func, NULL);
+    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, NULL, NULL, dndc_stderr_error_func, NULL, dependency_func, dependency_user_data);
     assert(!e.errored);
     flags |= DNDC_PYTHON_IS_INIT;
     for(int i = 0; i < BENCHMARKITERS;i++){
-        e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, depends, NULL, NULL, dndc_stderr_error_func, NULL);
+        e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, NULL, NULL, dndc_stderr_error_func, NULL, dependency_func, dependency_user_data);
         assert(!e.errored);
         }
     end_interpreter();
     return 0;
     #else
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, depends, NULL, NULL, dndc_stderr_error_func, NULL);
+    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, NULL, NULL, dndc_stderr_error_func, NULL, dependency_func, dependency_user_data);
     return e.errored;
     #endif
     }
 static
-void
-depends_print_callback(void*_Nullable unused, StringView path){
+int
+depends_print_callback(void*_Nullable unused, size_t npaths, Nonnull(StringView*) paths){
     (void)unused;
-    printf("%.*s\n", (int)path.length, path.text);
+    for(size_t i = 0; i < npaths; i++){
+        StringView path = paths[i];
+        printf("%.*s\n", (int)path.length, path.text);
+        }
+    return 0;
+    }
+static
+int
+dndc_write_depends_file(Nonnull(void*)user_data, size_t npaths, Nonnull(StringView*) paths){
+    LongString* path = user_data;
+    MStringBuilder msb = {.allocator=get_mallocator()};
+    msb_reset(&msb);
+    msb_write_str(&msb, path->text, path->length);
+    msb_write_char(&msb, ':');
+    for(size_t i = 0; i < npaths; i++){
+        auto dep = &paths[i];
+        msb_write_char(&msb, ' ');
+        msb_write_str(&msb, dep->text, dep->length);
+        }
+    msb_write_char(&msb, '\n');
+    // generate empty rules so deleted files don't fail the build
+    for(size_t i = 0; i < npaths; i++){
+        auto dep = &paths[i];
+        msb_write_str(&msb, dep->text, dep->length);
+        msb_write_literal(&msb, ":\n");
+        }
+    auto deptext = msb_borrow(&msb);
+    auto write_err = write_file(path->text, deptext.text, deptext.length);
+    if(write_err.errored){
+        ERROR("Error on write: %s", get_error_name(write_err));
+        perror("Error on write");
+        return write_err.errored;
+        }
+    return 0;
     }
 #endif
 
 static
 Errorable_f(void)
 run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_path,
-        Nullable(LongString*) output_path, DependsArg depends,
+        Nullable(LongString*) output_path,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,
-        Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
+        Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data,
+        Nullable(DndcDependencyFunc*)dependency_func,
+        Nullable(void*)dependency_user_data){
     if(flags & DNDC_REFORMAT_ONLY)
         flags |= DNDC_NO_PYTHON;
     if(flags & DNDC_INPUT_IS_UNTRUSTED){
@@ -1022,7 +1065,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         report_time(&ctx, SV("Writing took: "), after_write-before_write);
     }
     // Write the make-style dependency file to the Dependency directory.
-    if((flags & DNDC_DEPENDS_IS_CALLBACK) or depends.path.length){
+    if(dependency_func){
         for(size_t i = 0; i < ctx.dependencies_nodes.count; i++){
             auto handle = ctx.dependencies_nodes.data[i];
             auto node = get_node(&ctx, handle);
@@ -1037,36 +1080,10 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
                 Marray_push(StringView)(&ctx.dependencies, ctx.allocator, child->header);
                 }
             }
-        if(flags & DNDC_DEPENDS_IS_CALLBACK){
-            for(size_t i = 0; i < ctx.dependencies.count; i++){
-                auto dep = ctx.dependencies.data[i];
-                depends.callback(depends.user_data, dep);
-                }
-            }
-        else {
-            msb_reset(&msb);
-            msb_write_str(&msb, outpath.text, outpath.length);
-            msb_write_char(&msb, ':');
-            for(size_t i = 0; i < ctx.dependencies.count; i++){
-                auto dep = &ctx.dependencies.data[i];
-                msb_write_char(&msb, ' ');
-                msb_write_str(&msb, dep->text, dep->length);
-                }
-            msb_write_char(&msb, '\n');
-            // generate empty rules so deleted files don't fail the build
-            for(size_t i = 0; i < ctx.dependencies.count; i++){
-                auto dep = &ctx.dependencies.data[i];
-                msb_write_str(&msb, dep->text, dep->length);
-                msb_write_literal(&msb, ":\n");
-                }
-            auto deptext = msb_borrow(&msb);
-            auto write_err = write_file(depends.path.text, deptext.text, deptext.length);
-            if(write_err.errored){
-                ERROR("Error on write: %s", get_error_name(write_err));
-                perror("Error on write");
-                result.errored = write_err.errored;
-                goto cleanup;
-                }
+        int err = dependency_func(dependency_user_data, ctx.dependencies.count, ctx.dependencies.data);
+        if(err){
+            result.errored = err;
+            goto cleanup;
             }
         }
     success:;
@@ -1210,7 +1227,7 @@ dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(DndcErr
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_REFORMAT_ONLY
         ;
-    auto e = run_the_dndc(flags, SV(""), source_text, output, (DependsArg){.path=LS("")}, NULL, NULL, error_func, error_user_data);
+    auto e = run_the_dndc(flags, SV(""), source_text, output, NULL, NULL, error_func, error_user_data, NULL, NULL);
     return e.errored;
     }
 DNDC_API
@@ -1714,8 +1731,13 @@ int
 dndc_compile_dnd_file(unsigned long long flags, struct DndcStringView base_directory,
     struct DndcLongString source_path,
     struct DndcLongString*_Nullable output_path,
-    union DndcDependsArg depends, struct DndcFileCache*_Nullable base64cache, struct DndcFileCache*_Nullable textcache,
-    DndcErrorFunc*_Nullable error_func, void*_Nullable error_user_data
+    struct DndcFileCache*_Nullable base64cache,
+    struct DndcFileCache*_Nullable textcache,
+    DndcErrorFunc*_Nullable error_func,
+    void*_Nullable error_user_data,
+    DndcDependencyFunc*_Nullable dependency_func,
+    void*_Nullable dependency_user_data
+
 ){
     enum {
         // All the valid flags.
@@ -1737,7 +1759,6 @@ dndc_compile_dnd_file(unsigned long long flags, struct DndcStringView base_direc
             | DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM
             | DNDC_REFORMAT_ONLY
             | DNDC_DONT_INLINE_IMAGES
-            | DNDC_DEPENDS_IS_CALLBACK
             | DNDC_USE_DND_URL_SCHEME
             | DNDC_INPUT_IS_UNTRUSTED
             | DNDC_STRIP_WHITESPACE
@@ -1746,6 +1767,6 @@ dndc_compile_dnd_file(unsigned long long flags, struct DndcStringView base_direc
     uint64_t new_flags = flags & DNDC_VALID_FLAGS;
     if(new_flags != flags)
         return GENERIC_ERROR;
-    auto err = run_the_dndc(flags, base_directory, source_path, output_path, depends, base64cache, textcache, error_func, error_user_data);
+    auto err = run_the_dndc(flags, base_directory, source_path, output_path, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data);
     return err.errored;
     }

@@ -189,6 +189,15 @@ cache_watch_file(void* cache_, StringView path){
 }
 
 static FileWatchCache FILE_WATCH_CACHE;
+static
+int
+cache_watch_files(void* unused, size_t npaths, StringView*paths){
+    (void)unused;
+    for(size_t i = 0; i < npaths; i++){
+        cache_watch_file(&FILE_WATCH_CACHE, paths[i]);
+    }
+    return 0;
+}
 
 //
 // So, each document has N window controllers (I guess 1 for me).
@@ -1220,7 +1229,6 @@ BOOL show_stats;
     flags |= DNDC_PYTHON_IS_INIT;
     // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
-    flags |= DNDC_DEPENDS_IS_CALLBACK;
     if(show_stats)
         flags |= DNDC_PRINT_STATS;
     // Disabled until I can figure out how to get wkwebview to invalidate
@@ -1228,7 +1236,7 @@ BOOL show_stats;
     // flags |= DNDC_USE_DND_URL_SCHEME;
     error_text.editable = YES;
     [[error_text textStorage].mutableString setString:@""];
-    auto err = dndc_compile_dnd_file(flags, base_dir, source, &html, (union DndcDependsArg){.callback=cache_watch_file, .user_data=&FILE_WATCH_CACHE}, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL);
+    auto err = dndc_compile_dnd_file(flags, base_dir, source, &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL);
     error_text.editable = NO;
     // auto t1 = get_t();
     // HERE("dndc_compile_dnd_file: %.3fms", (t1-t0)/1000.);

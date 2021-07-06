@@ -1,3 +1,6 @@
+Version 0.6.0::md
+  * Internal API changes
+  * Bug fixes and performance improvements.
 Version 0.5.2::md
   * Fixed an issue where single item rows of tables were being ignored.
   * Nodes with ids but no heading will no longer be shown in the generated nav.

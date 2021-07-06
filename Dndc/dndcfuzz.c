@@ -27,7 +27,7 @@ LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
 #endif
         ;
     LongString source = {.text=str, .length=size};
-    auto e = run_the_dndc(flags, SV(""), source, NULL, (DependsArg){}, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     (void)e;
     free(str);
     return 0;

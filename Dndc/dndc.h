@@ -134,6 +134,34 @@ DNDC_API void dndc_stderr_error_func(DNDC_NULLABLE(void*) error_user_data, int t
         int col, DNDC_NONNULL(const char*)  message, int message_len);
 
 //
+// A function type for reporting dependencies. For use with
+// `dndc_compile_dnd_file`.
+//
+// Arguments:
+// ----------
+// dependency_user_data:
+//    A pointer to user-defined data. The pointer will be the same one provided
+//    to dndc_compile_dnd_file.
+//
+// dependency_paths_count:
+//    The length of the array dependency_paths points to.
+//
+// dependency_paths:
+//    A pointer to an array of string views of the paths to the files that the
+//    file depends on. Note these are string views and so not guaranteed to be
+//    nul-terminated. Files that were loaded in the usual way will have the
+//    base dir prepended, but python blocks can introduce arbitrary strings as
+//    dependencies, which may or may not be absolute paths, or valid paths at
+//    all.
+//
+// Returns:
+// --------
+// 0 on success and non-zero on failure. The value you return will be returned
+// from dndc_compile_dnd_file.
+//
+typedef int DndcDependencyFunc(DNDC_NULLABLE(void*) dependency_user_data, size_t dependency_paths_count, DNDC_NONNULL(struct DndcStringView*) dependency_paths);
+
+//
 // You do *not* need to call dndc_init_python before calling this function.
 //
 // Turns the given .dnd string into another .dnd string, but formatted such
@@ -359,21 +387,6 @@ dndc_analyze_syntax_utf16(struct DndcStringViewUtf16 source_text,
         DNDC_NULLABLE(void*) syntax_data);
 
 //
-// The type of the "depends" argument for `dndc_compile_dnd_file`.  Either a
-// path to where to write a make-style dependency file or a callback function +
-// user data that will be called on each filepath that the dnd file depends on.
-// If a callback, ensure the corresponding flag (`DNDC_DEPENDS_IS_CALLBACK`) is
-// set in the flags argument to `dndc_compile_dnd_file`.
-//
-union DndcDependsArg {
-    struct DndcLongString path;
-    struct {
-        void (DNDC_NULLABLE(*) callback)(DNDC_NULLABLE(void*), struct DndcStringView);
-        DNDC_NULLABLE(void*) user_data;
-    };
-};
-
-//
 // A cache for storing files across repeated invocations.
 // Opaque structure (PIMPL).
 //
@@ -500,6 +513,13 @@ dndc_filecache_has_path(DNDC_NONNULL(struct DndcFileCache*),
 //    `dndc_stderr_error_func`, this should be NULL. For a function you've
 //    defined, pass an appropriate pointer!
 //
+// dependency_func:
+//    A function for reporting the dependencies of the generated file. See
+//    `DndcDependencyFunc` above.
+//
+// dependency_user_data:
+//   A pointer that will be passed to the dependency_func.
+//
 // Returns
 // -------
 // Returns 0 on success, a non-zero error code otherwise.
@@ -511,11 +531,13 @@ dndc_compile_dnd_file(
     struct DndcStringView base_directory,
     struct DndcLongString source,
     DNDC_NULLABLE(struct DndcLongString*) output_path,
-    union DndcDependsArg depends,
     DNDC_NULLABLE(struct DndcFileCache*) base64cache,
     DNDC_NULLABLE(struct DndcFileCache*) textcache,
     DNDC_NULLABLE(DndcErrorFunc*) error_func,
-    DNDC_NULLABLE(void*) error_user_data);
+    DNDC_NULLABLE(void*) error_user_data,
+    DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
+    DNDC_NULLABLE(void*) dependency_user_data
+);
 
 //
 // The flags that can be passed as the `flags` argument to
@@ -583,9 +605,8 @@ DNDC_REFORMAT_ONLY      = 0x08000,
 // Instead of base64-ing the image, use a link.
 DNDC_DONT_INLINE_IMAGES =  0x10000,
 
-// The depends argument of dndc is a callback to be called with each
-// of the document's dependencies.
-DNDC_DEPENDS_IS_CALLBACK = 0x20000,
+// This flag is currently unused.
+DNDC_UNUSED_RESERVED_FLAG_SLOT = 0x20000,
 
 // For imgs, don't base64 them and don't use regular links.
 // Instead, use a dnd:absolute/path/to/img url instead.

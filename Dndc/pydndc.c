@@ -415,7 +415,7 @@ pydndc_reformat(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*
     DndcErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
-    auto e = run_the_dndc(flags, SV(""), source, &output, (DependsArg){.path=LS("")}, NULL, NULL, func, error_list);
+    auto e = run_the_dndc(flags, SV(""), source, &output, NULL, NULL, func, error_list, NULL, NULL);
     if(PyErr_Occurred()){
         goto finally;
         }
@@ -441,14 +441,16 @@ pydndc_reformat(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*
 }
 
 static
-void
-pydndc_add_dependency(Nullable(void*)user_data, StringView path){
-    if(PyErr_Occurred())
-        return;
+int
+pydndc_add_dependencies(Nullable(void*)user_data, size_t npaths, Nonnull(StringView*) paths){
     PyObject* list = user_data;
-    PyObject* str = PyUnicode_FromStringAndSize(path.text, path.length);
-    PyList_Append(list, str);
-    Py_XDECREF(str);
+    for(size_t i = 0; i < npaths; i++){
+        auto path = paths[i];
+        PyObject* str = PyUnicode_FromStringAndSize(path.text, path.length);
+        PyList_Append(list, str);
+        Py_XDECREF(str);
+        }
+    return 0;
 }
 
 static
@@ -499,16 +501,11 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
     // flags |= DNDC_DONT_PRINT_ERRORS;
     // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
-    flags |= DNDC_DEPENDS_IS_CALLBACK;
     LongString output = {};
     DndcErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
     PyObject* depends_list = PyList_New(0);
-    DependsArg depends = {
-        .callback = pydndc_add_dependency,
-        .user_data = depends_list,
-        };
     FileCache* textcache = NULL;
     FileCache* b64cache = NULL;
     if(file_cache){
@@ -516,7 +513,7 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
         textcache = &cache->text_cache;
         b64cache = &cache->b64_cache;
         }
-    auto e = run_the_dndc(flags, base_str, source, &output, depends, b64cache, textcache, func, error_list);
+    auto e = run_the_dndc(flags, base_str, source, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
