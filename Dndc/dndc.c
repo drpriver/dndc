@@ -1035,7 +1035,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
             auto str = msb_borrow(&output_sb);
             fputs(str.text, stdout);
             msb_destroy(&output_sb);
-            goto success;
+            goto skip_report;
             }
         else if(!(flags & DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM)){
             assert(output_path);
@@ -1059,6 +1059,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
             }
         auto after_write = get_t();
         report_time(&ctx, SV("Writing took: "), after_write-before_write);
+        skip_report:;
     }
     // Write the make-style dependency file to the Dependency directory.
     if(dependency_func){
