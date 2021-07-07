@@ -151,9 +151,6 @@ format_node(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)
             return format_md_list(ctx, sb, node, indent);
         case NODE_BULLETS:
             return format_md_bullets(ctx, sb, node, indent, 0);
-        case NODE_ROOT:
-            unreachable();
-            // return format_raw_node(ctx, sb, node, indent);
         case NODE_CONTAINER:
         case NODE_TABLE_ROW:
         case NODE_PARA:

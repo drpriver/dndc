@@ -313,14 +313,14 @@ ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
 static
 Errorable_f(LongString)
 ctx_load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath){
+    if(unlikely(ctx->flags & DNDC_DONT_READ))
+        return (Errorable(LongString)){.errored=PARSE_ERROR};
     MStringBuilder path_builder = {.allocator=ctx->temp_allocator};
     if(not path_is_abspath(binarypath) && ctx->base_directory.length){
         msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
         msb_append_path(&path_builder, binarypath.text, binarypath.length);
-        binarypath = LS_to_SV(msb_detach(&path_builder));
+        binarypath = msb_borrow(&path_builder);
         }
-    if(unlikely(ctx->flags & DNDC_DONT_READ))
-        return (Errorable(LongString)){.errored=PARSE_ERROR};
     ctx_note_dependency(ctx, binarypath);
     ByteBuilder bb = {.allocator = ctx->allocator};
     auto result = load_processed_binary_file(&ctx->b64cache, binarypath, &bb);
@@ -356,8 +356,10 @@ load_processed_binary_file(Nonnull(FileCache*)cache, StringView binarypath, Nonn
     auto base64ed = base64ed_e.result;
     auto sourcepath = msb_detach(&sb);
     auto loaded = Marray_alloc(LoadedSource)(&cache->files, a);
-    loaded->sourcepath = sourcepath;
-    loaded->sourcetext = base64ed;
+    *loaded = (LoadedSource){
+        .sourcepath = sourcepath,
+        .sourcetext = base64ed,
+        };
     return (Errorable(LongString)){.result=base64ed};
     }
 
@@ -559,7 +561,6 @@ gather_anchor(Nonnull(DndcContext*)ctx, NodeHandle handle){
             }
             // fall-through
         case NODE_DATA: // this is a little sketchy
-        case NODE_ROOT:
         case NODE_IMPORT:
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:{

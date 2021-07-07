@@ -1414,7 +1414,6 @@ DndNode_setattr_ls(Nonnull(DndNode*)obj, LongString name, Nullable(PyObject*) va
                         case NODE_IMPORT:
                             PyErr_SetString(PyExc_ValueError, "Setting a node to IMPORT not supported.");
                             return -1;
-                        case NODE_ROOT:
                         case NODE_TEXT:
                         case NODE_DIV:
                         case NODE_STRING:

@@ -144,7 +144,6 @@ Convenience::md
       to fix that.
     The Nodes::table
       Node Type    | Block Name   | Container Tag | Heading
-      ROOT         | ---          |               | ---
       TEXT         | text         | <div>         | Yes
       DIV          | div          | <div>         | Yes
       STRING       | ---          |               | ---
@@ -507,7 +506,7 @@ But Wait, There's More::md
   # this shows more raw manipulation of the tree.
   # we actually temporarily detach the root node from the context
   root = ctx.root
-  root.type = NodeType.DIV # ROOT nodes don't output a container tag.
+  root.type = NodeType.DIV
   root.classes.append('container')
   new_root = ctx.make_node(NodeType.DIV, classes=['root'])
   root.detach()

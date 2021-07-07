@@ -805,7 +805,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
                     goto cleanup;
                     }
                 StringView filename = child->header;
-                child->type = NODE_CONTAINER;
+                // set to MD so we can parse as md
+                child->type = NODE_MD;
                 child->header = SV("");
                 auto imp_e = ctx_load_source_file(&ctx, filename);
                 if(imp_e.errored){
@@ -828,6 +829,9 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
                     result.errored = parse_e.errored;
                     goto cleanup;
                     }
+                child = get_node(&ctx, child_handle);
+                // change to container
+                child->type = NODE_CONTAINER;
                 }
             }
         auto after_imports = get_t();
@@ -1093,9 +1097,13 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
             RecordingAllocator* recorder = allocator._data;
             report_size(&ctx, SV("N allocations: "), recorder->count);
             size_t total = 0;
+            size_t alloced = 0;
             for(size_t i = 0; i < recorder->count; i++){
-                total += recorder->allocation_sizes[i];
+                size_t size = recorder->allocation_sizes[i];
+                total += size;
+                alloced += size > 0;
                 }
+            report_size(&ctx, SV("N existing allocations: "), alloced);
             report_size(&ctx, SV("Allocations outstanding total (bytes): "), total);
             }
         Allocator_free_all(allocator);
@@ -1130,7 +1138,6 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
         }
     printf("[%-8s]", nodenames[node->type].text);
     switch((NodeType)node->type){
-        case NODE_ROOT:
         case NODE_PARA:
         case NODE_TABLE_ROW:
         case NODE_LIST_ITEM:

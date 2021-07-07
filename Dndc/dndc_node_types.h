@@ -3,38 +3,37 @@
 #include "long_string.h"
 
 #define NODETYPES(apply) \
-    apply(ROOT,           0) \
-    apply(TEXT,           1) \
-    apply(DIV,            2)\
-    apply(STRING,         3)\
-    apply(PARA,           4)\
-    apply(TITLE,          5)\
-    apply(HEADING,        6)\
-    apply(TABLE,          7)\
-    apply(TABLE_ROW,      8)\
-    apply(STYLESHEETS,    9)\
-    apply(DEPENDENCIES,   10)\
-    apply(LINKS,          11)\
-    apply(SCRIPTS,        12)\
-    apply(IMPORT,         13)\
-    apply(IMAGE,          14)\
-    apply(BULLETS,        15)\
-    apply(PYTHON,         16)\
-    apply(RAW,            17)\
-    apply(PRE,            18)\
-    apply(LIST,           19)\
-    apply(LIST_ITEM,      20)\
-    apply(KEYVALUE,       21)\
-    apply(KEYVALUEPAIR,   22)\
-    apply(IMGLINKS,       23)\
-    apply(NAV,            24)\
-    apply(DATA,           25)\
-    apply(COMMENT,        26)\
-    apply(MD,             27)\
-    apply(CONTAINER,      28)\
-    apply(QUOTE,          29)\
-    apply(HR,             30)\
-    apply(INVALID,        31)\
+    apply(MD,              0)\
+    apply(DIV,             1)\
+    apply(STRING,          2)\
+    apply(PARA,            3)\
+    apply(TITLE,           4)\
+    apply(HEADING,         5)\
+    apply(TABLE,           6)\
+    apply(TABLE_ROW,       7)\
+    apply(STYLESHEETS,     8)\
+    apply(DEPENDENCIES,    9)\
+    apply(LINKS,          10)\
+    apply(SCRIPTS,        11)\
+    apply(IMPORT,         12)\
+    apply(IMAGE,          13)\
+    apply(BULLETS,        14)\
+    apply(PYTHON,         15)\
+    apply(RAW,            16)\
+    apply(PRE,            17)\
+    apply(LIST,           18)\
+    apply(LIST_ITEM,      19)\
+    apply(KEYVALUE,       20)\
+    apply(KEYVALUEPAIR,   21)\
+    apply(IMGLINKS,       22)\
+    apply(NAV,            23)\
+    apply(DATA,           24)\
+    apply(COMMENT,        25)\
+    apply(TEXT,           26) \
+    apply(CONTAINER,      27)\
+    apply(QUOTE,          28)\
+    apply(HR,             29)\
+    apply(INVALID,        30)\
 
 typedef enum NodeType {
     #define X(a, b) NODE_##a = b,

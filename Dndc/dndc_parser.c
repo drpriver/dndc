@@ -351,7 +351,6 @@ PARSEFUNC(parse_node){
                 }
         case NODE_IMPORT:
         case NODE_IMAGE:
-        case NODE_ROOT:
         case NODE_DIV:
         case NODE_HEADING:
         case NODE_TITLE:

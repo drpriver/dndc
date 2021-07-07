@@ -5,7 +5,6 @@ class DndcNodeType:
     value: int
 # Actually just a simple namespace.
 class NodeType:
-    ROOT         : DndcNodeType
     TEXT         : DndcNodeType
     DIV          : DndcNodeType
     STRING       : DndcNodeType

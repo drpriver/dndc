@@ -58,6 +58,7 @@ get_terminal_size(void){
 static inline
 TermSize
 get_terminal_size(void){
+    struct TermSize result = {80,24};
     struct winsize w;
     int err = ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     if(err == -1){
@@ -73,11 +74,15 @@ get_terminal_size(void){
         int rows = atoi(rows_s);
         if(!rows)
             goto err;
-        return (TermSize){cols, rows};
-        err:
-        return (TermSize){80, 24};
+        result = (TermSize){cols, rows};
         }
-    return (TermSize){w.ws_col, w.ws_row};
+    else {
+        if(!w.ws_col || !w.ws_row)
+            goto err;
+        result = (TermSize){w.ws_col, w.ws_row};
+        }
+    err:
+    return result;
     }
 #endif
 

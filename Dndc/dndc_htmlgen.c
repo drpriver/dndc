@@ -272,7 +272,6 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
             // fall-through
             }
         case NODE_DATA: // this is a little sketchy
-        case NODE_ROOT:
         case NODE_IMPORT:
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:{
@@ -521,19 +520,6 @@ write_classes(Nonnull(MStringBuilder*)sb, Nonnull(const Node*)node){
         }
     msb_write_char(sb, '"');
     return;
-    }
-
-RENDERFUNC(ROOT){
-    auto childs = &node->children;
-    auto count = childs->count;
-    for(size_t i = 0; i < count; i++){
-        auto child_handle = childs->data[i];
-        auto child = get_node(ctx, child_handle);
-        auto e = render_node(ctx, sb, child, header_depth);
-        if(unlikely(e.errored))
-            return e;
-        }
-    return (Errorable(void)){};
     }
 
 RENDERFUNC(STRING){
