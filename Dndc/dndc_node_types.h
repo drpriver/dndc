@@ -42,7 +42,7 @@ typedef enum NodeType {
 } NodeType;
 
 static const
-LongString nodenames[] = {
+LongString NODENAMES[] = {
     #define X(a, b) [NODE_##a] = LS(#a),
     NODETYPES(X)
     #undef X

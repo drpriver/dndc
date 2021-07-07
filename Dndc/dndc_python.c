@@ -84,7 +84,7 @@ NodeTypeEnum_repr(Nonnull(NodeTypeEnum*)e){
         PyErr_Format(PyExc_RuntimeError, "Somehow we have an enum with an invalid value: %d", (int)e->type);
         return NULL;
         }
-    auto name = nodenames[e->type];
+    auto name = NODENAMES[e->type];
     return PyUnicode_FromFormat("NodeType.%s", name.text);
     }
 
@@ -96,7 +96,7 @@ NodeTypeEnum_getattr(Nonnull(NodeTypeEnum*)e, Nonnull(const char*)name){
         return NULL;
         }
     if(strcmp(name, "name")==0){
-        auto enu_name = nodenames[e->type];
+        auto enu_name = NODENAMES[e->type];
         return PyUnicode_FromStringAndSize(enu_name.text, enu_name.length);
         }
     if(strcmp(name, "value")==0){
@@ -489,10 +489,7 @@ DndAttributesMap_repr(Nonnull(DndAttributesMap*)map){
         msb_write_char(&msb,  '\'');
         auto key = attr->key;
         msb_write_str(&msb, key.text, key.length);
-        msb_write_char(&msb, '\'');
-        msb_write_char(&msb, ':');
-        msb_write_char(&msb, ' ');
-        msb_write_char(&msb, '\'');
+        msb_write_literal(&msb, "': '");
         auto val = attr->value;
         msb_write_str(&msb, val.text, val.length);
         msb_write_char(&msb, '\'');
@@ -598,7 +595,7 @@ static PyTypeObject DndNodeType = {
     .tp_getattro = (getattrofunc)&DndNode_getattro,
     .tp_setattro = (setattrofunc)&DndNode_setattro,
     .tp_repr = (reprfunc)&DndNode_repr,
-    };
+};
 
 static
 Nullable(PyObject*)
@@ -608,9 +605,9 @@ DndNode_repr(Nonnull(DndNode*)self){
     MStringBuilder msb = {.allocator=self->ctx->temp_allocator};
     size_t class_count = node->classes?node->classes->count:0;
     if(not class_count)
-        MSB_FORMAT(&msb, "Node(", nodenames[node->type], ", '", node->header, "', [", (int)node->children.count, "children])");
+        MSB_FORMAT(&msb, "Node(", NODENAMES[node->type], ", '", node->header, "', [", (int)node->children.count, "children])");
     else {
-        MSB_FORMAT(&msb, "Node(", nodenames[node->type].text);
+        MSB_FORMAT(&msb, "Node(", NODENAMES[node->type].text);
         RARRAY_FOR_EACH(class, node->classes){
             MSB_FORMAT(&msb, ".", *class);
             }
@@ -1147,9 +1144,9 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHa
         };
     PyObject* glbl = PyDict_New();
     PyObject* nodetypes = PyDict_New();
-    for(size_t i = 0; i < arrlen(nodenames); i++){
+    for(size_t i = 0; i < arrlen(NODENAMES); i++){
         auto enu = make_node_type_enum(i);
-        PyDict_SetItemString(nodetypes, nodenames[i].text, enu);
+        PyDict_SetItemString(nodetypes, NODENAMES[i].text, enu);
         Py_XDECREF(enu);
         }
     auto nt = _PyNamespace_New(nodetypes);

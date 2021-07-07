@@ -1072,7 +1072,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
                 auto child = get_node(&ctx, *it);
                 if(child->type != NODE_STRING){
                     // just warn, don't want to fail the build
-                    node_print_warning2(&ctx, child, SV("Non-string node found as a child node: "), LS_to_SV(nodenames[child->type]));
+                    node_print_warning2(&ctx, child, SV("Non-string node found as a child node: "), LS_to_SV(NODENAMES[child->type]));
                     continue;
                     }
                 Marray_push(StringView)(&ctx.dependencies, ctx.allocator, child->header);
@@ -1134,7 +1134,7 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
     for(int i = 0 ; i < depth*2; i++){
         putchar(' ');
         }
-    printf("[%-8s]", nodenames[node->type].text);
+    printf("[%-8s]", NODENAMES[node->type].text);
     switch((NodeType)node->type){
         case NODE_PARA:
         case NODE_TABLE_ROW:

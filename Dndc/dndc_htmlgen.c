@@ -1160,7 +1160,7 @@ RENDERFUNC(IMGLINKS){
             // error on other nodes probably.
             if(child->type == NODE_PYTHON)
                 continue;
-            node_print_warning2(ctx, child, SV("Non-string node child of imglinks node: "), LS_to_SV(nodenames[child->type]));
+            node_print_warning2(ctx, child, SV("Non-string node child of imglinks node: "), LS_to_SV(NODENAMES[child->type]));
             continue;
             }
         auto header = child->header;
