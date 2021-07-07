@@ -78,6 +78,7 @@ LS_equals(const LongString a, const LongString b){
 
 #define LS(literal) ((LongString){.length=sizeof("" literal)-1, .text="" literal})
 #define SV(literal) ((StringView){.length=sizeof("" literal)-1, .text=""  literal})
+#define SV16(literal) ((StringViewUtf16){.length = sizeof(u"" literal)/2-1, .text=u"" literal})
 int getchar(void);
 static inline
 bool

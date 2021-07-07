@@ -29,7 +29,7 @@
     apply(NAV,            23)\
     apply(DATA,           24)\
     apply(COMMENT,        25)\
-    apply(TEXT,           26) \
+    apply(TEXT,           26)\
     apply(CONTAINER,      27)\
     apply(QUOTE,          28)\
     apply(HR,             29)\
@@ -91,10 +91,10 @@ StringView RAW_NODES[] = {
 };
 static const
 StringViewUtf16 RAW_NODES_UTF16[] = {
-    {.text=u"python", .length=6},
-    {.text=u"raw", .length=3},
-    {.text=u"comment", .length=7},
-    {.text=u"pre", .length=3},
+    SV16("python"),
+    SV16("raw"),
+    SV16("comment"),
+    SV16("pre"),
 };
 
 static const
