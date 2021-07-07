@@ -146,7 +146,7 @@ node_remove_child(Nonnull(Node*)node, size_t i, const Allocator a){
         }
     }
 
-#define NODE_CHILDREN_FOR_EACH(iter, n) for(auto *iter = node_children(n), *iter##end__=node_children(n)+n->children.count;iter != iter##end__;++iter)
+#define NODE_CHILDREN_FOR_EACH(iter, n) for(NodeHandle *iter = node_children(n), *iter##end__=node_children(n)+n->children.count;iter != iter##end__;++iter)
 
 
 #if UINTPTR_MAX != 0xFFFFFFFF
