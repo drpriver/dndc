@@ -242,9 +242,8 @@ static inline
 void
 ctx_note_dependency(Nonnull(DndcContext*)ctx, StringView path){
     // FIXME: O(n^2) deduplication
-    for(size_t i = 0; i < ctx->dependencies.count; i++){
-        auto dep = ctx->dependencies.data[i];
-        if(SV_equals(dep, path))
+    MARRAY_FOR_EACH(dep, ctx->dependencies){
+        if(SV_equals(*dep, path))
             return;
         }
     StringView pathcpy = {.text = Allocator_strndup(ctx->string_allocator, path.text, path.length), .length=path.length};
@@ -263,8 +262,7 @@ static
 Errorable_f(LongString)
 ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
     // check if we already have it as a builtin
-    for(size_t i = 0; i < ctx->builtin_files.count; i++){
-        auto builtin = &ctx->builtin_files.data[i];
+    MARRAY_FOR_EACH(builtin, ctx->builtin_files){
         if(LS_SV_equals(builtin->sourcepath, sourcepath)){
             return (Errorable(LongString)){.result=builtin->sourcetext};
             }
@@ -282,8 +280,7 @@ ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
         }
     ctx_note_dependency(ctx, sourcepath);
     // check if we already have it.
-    for(size_t i = 0; i < ctx->textcache.files.count; i++){
-        auto loaded = &ctx->textcache.files.data[i];
+    MARRAY_FOR_EACH(loaded, ctx->textcache.files){
         if(LS_SV_equals(loaded->sourcepath, sourcepath)){
             msb_destroy(&temp_builder);
             return (Errorable(LongString)){.result=loaded->sourcetext};
@@ -333,8 +330,7 @@ static
 Errorable_f(LongString)
 load_processed_binary_file(Nonnull(FileCache*)cache, StringView binarypath, Nonnull(ByteBuilder*)bb){
     // check if we already have it.
-    for(size_t i = 0; i < cache->files.count; i++){
-        auto loaded = &cache->files.data[i];
+    MARRAY_FOR_EACH(loaded, cache->files){
         if(LS_SV_equals(loaded->sourcepath, binarypath)){
             // DBG("Returning cached b64: '%.*s'", (int)binarypath.length, binarypath.text);
             return (Errorable(LongString)){.result=loaded->sourcetext};
@@ -432,8 +428,8 @@ add_link_from_sv(Nonnull(DndcContext*)ctx, StringView str, bool check_valid){
             Raise(PARSE_ERROR);
             }
         // TODO: keep a binary tree or something?
-        for(size_t i = 0; i < ctx->links.count; i++){
-            if(SV_equals(ctx->links.data[i].value, value))
+        MARRAY_FOR_EACH(li, ctx->links){
+            if(SV_equals(li->value, value))
                 goto foundit;
             }
         // TODO: print error from this node

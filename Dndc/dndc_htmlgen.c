@@ -58,8 +58,7 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
         );
     if(ctx->rendered_data.count){
         msb_write_literal(msb, "<script>\nconst data_blob = {");
-        for(size_t i = 0; i < ctx->rendered_data.count; i++){
-            auto data = &ctx->rendered_data.data[i];
+        MARRAY_FOR_EACH(data, ctx->rendered_data){
             msb_write_char(msb, '"');
             msb_write_str(msb, data->key.text, data->key.length);
             msb_write_literal(msb, "\": \"");
@@ -81,8 +80,8 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
     if(ctx->stylesheets_nodes.count){
         msb_write_literal(msb, "<style>\n");
         bool written = false;
-        for(size_t i = 0; i < ctx->stylesheets_nodes.count; i++){
-            auto node = get_node(ctx, ctx->stylesheets_nodes.data[i]);
+        MARRAY_FOR_EACH(ss, ctx->stylesheets_nodes){
+            auto node = get_node(ctx, *ss);
             // python nodes can change node types after they are registered
             if(unlikely(node->type != NODE_STYLESHEETS))
                 continue;
@@ -148,9 +147,9 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
             msb_write_literal(msb, "</style>\n");
         }
     if(ctx->script_nodes.count){
-        for(size_t i = 0; i < ctx->script_nodes.count; i++){
+        MARRAY_FOR_EACH(s, ctx->script_nodes){
             msb_write_literal(msb, "<script>\n");
-            auto node = get_node(ctx, ctx->script_nodes.data[i]);
+            auto node = get_node(ctx, *s);
             // python nodes can change node types after they are registered
             if(unlikely(node->type != NODE_SCRIPTS))
                 continue;

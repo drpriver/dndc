@@ -78,8 +78,8 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             };
         for(size_t n = 0; n < arrlen(img_nodes); n++){
             auto nodes = img_nodes[n];
-            for(size_t i = 0; i < nodes->count; i++){
-                auto node = get_node(ctx, nodes->data[i]);
+            MARRAY_FOR_EACH(it, *nodes){
+                auto node = get_node(ctx, *it);
                 if(!node->children.count)
                     continue;
                 auto child = get_node(ctx, node_children(node)[0]);
@@ -865,8 +865,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
     report_size(&ctx, SV("ctx.dependencies_nodes.count = "), ctx.dependencies_nodes.count);
     report_size(&ctx, SV("ctx.link_nodes.count = "), ctx.link_nodes.count);
     if(flags & DNDC_REPORT_ORPHANS){
-        for(size_t i = 0; i < ctx.nodes.count; i++){
-            auto node = &ctx.nodes.data[i];
+        MARRAY_FOR_EACH(node, ctx.nodes){
             // python nodes get orphaned after execution
             if(node->type == NODE_PYTHON)
                 continue;
@@ -925,10 +924,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
 
     // Add in the links from explicit link blocks.
     {
-        auto link_node_count = ctx.link_nodes.count;
-        auto link_handles = ctx.link_nodes.data;
-        for(size_t ln = 0; ln < link_node_count; ln++){
-            auto link_node = get_node(&ctx, link_handles[ln]);
+        MARRAY_FOR_EACH(link_handle, ctx.link_nodes){
+            auto link_node = get_node(&ctx, *link_handle);
             NODE_CHILDREN_FOR_EACH(it, link_node){
                 auto link_str_node = get_node(&ctx, *it);
                 auto str = link_str_node->header;
@@ -974,9 +971,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
     {
         auto before_data = get_t();
         MStringBuilder sb = {.allocator=ctx.allocator};
-        for(size_t i = 0; i < ctx.data_nodes.count; i++){
-            auto handle = ctx.data_nodes.data[i];
-            auto data_node = get_node(&ctx, handle);
+        MARRAY_FOR_EACH(handle, ctx.data_nodes){
+            auto data_node = get_node(&ctx, *handle);
             // Node could've been mutated after being registered.
             if(data_node->type != NODE_DATA)
                 continue;
@@ -1070,8 +1066,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
     }
     // Write the make-style dependency file to the Dependency directory.
     if(dependency_func){
-        for(size_t i = 0; i < ctx.dependencies_nodes.count; i++){
-            auto handle = &ctx.dependencies_nodes.data[i];
+        MARRAY_FOR_EACH(handle, ctx.dependencies_nodes){
             auto node = get_node(&ctx, *handle);
             NODE_CHILDREN_FOR_EACH(it, node){
                 auto child = get_node(&ctx, *it);

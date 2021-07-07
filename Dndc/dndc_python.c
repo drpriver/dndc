@@ -1085,13 +1085,12 @@ py_select_nodes(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)a
                 if(node->type != type)
                     goto Continue;
                 }
-            for(size_t a = 0; a < attributes.count; a++){
-                auto attr = attributes.data[a];
-                if(not node_has_attribute(node, attr))
+            MARRAY_FOR_EACH(attr, attributes){
+                if(not node_has_attribute(node, *attr))
                     goto Continue;
                 }
-            for(size_t c = 0; c < classes.count; c++){
-                if(not node_has_class(node, classes.data[c]))
+            MARRAY_FOR_EACH(class_, classes){
+                if(not node_has_class(node, *class_))
                     goto Continue;
                 }
             PyList_Append(result, make_py_node(ctx, (NodeHandle){.index=i}));

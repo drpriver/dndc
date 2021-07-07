@@ -170,8 +170,7 @@ static inline
 void
 FileCache_clear(Nonnull(FileCache*)cache){
     Allocator al = cache->allocator;
-    for(size_t i = 0; i < cache->files.count; i++){
-        auto src = &cache->files.data[i];
+    MARRAY_FOR_EACH(src, cache->files){
         Allocator_free(al, src->sourcepath.text, src->sourcepath.length+1);
         Allocator_free(al, src->sourcetext.text, src->sourcetext.length+1);
         }
@@ -197,9 +196,8 @@ FileCache_maybe_remove(Nonnull(FileCache*)cache, StringView path){
 static inline
 bool
 FileCache_has_file(Nonnull(FileCache*)cache, StringView path){
-    for(size_t i = 0; i < cache->files.count; i++){
-        auto src = cache->files.data[i];
-        if(LS_SV_equals(src.sourcepath, path)){
+    MARRAY_FOR_EACH(src, cache->files){
+        if(LS_SV_equals(src->sourcepath, path)){
             return true;
             }
         }

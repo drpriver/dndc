@@ -73,6 +73,7 @@ resize_to_some_weird_number(size_t x){
 #define Marray_alloc(type) MARRAYIMPL(alloc, type)
 #define Marray_alloc_index(type) MARRAYIMPL(alloc_index, type)
 #define Marray_ensure(type) MARRAYIMPL(ensure, type)
+#define MARRAY_FOR_EACH(iter, marray) for(auto *iter = (marray).data, *iter##end__=(marray).data+(marray).count; iter != iter##end__; ++iter)
 #endif
 
 #ifndef MARRAY_T
