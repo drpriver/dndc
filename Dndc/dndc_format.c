@@ -170,8 +170,8 @@ Errorable_f(void)
 format_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb){
     auto root = get_node(ctx, ctx->root_handle);
     Errorable(void) result = {};
-    for(size_t i = 0; i < root->children.count; i++){
-        auto child = get_node(ctx, root->children.data[i]);
+    NODE_CHILDREN_FOR_EACH(it, root){
+        auto child = get_node(ctx, *it);
         // this is copy-paste from md_node, as the root is an
         // implicit, header-less md node.
         switch(child->type){
@@ -232,8 +232,8 @@ FORMATFUNC(regular_node){
     indent += FORMAT_INDENT;
     Errorable(void) result = {};
     FormatState state = {.lead = indent};
-    for(size_t i = 0; i < node->children.count; i++){
-        auto child = get_node(ctx, node->children.data[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         if(child->type == NODE_STRING){
             format_write_wrapped_string(sb, &state, child->header);
             }
@@ -254,8 +254,8 @@ FORMATFUNC(regular_node){
 FORMATFUNC(para_node){
     Errorable(void) result = {};
     FormatState state = {.lead = indent};
-    for(size_t i = 0; i < node->children.count; i++){
-        auto child = get_node(ctx, node->children.data[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         assert(child->type == NODE_STRING);
         format_write_wrapped_string(sb, &state, child->header);
         }
@@ -266,8 +266,8 @@ FORMATFUNC(para_node){
     }
 static Errorable_f(void) format_md_bullets(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)node, int indent, int bullet_depth){
     Errorable(void) result = {};
-    for(size_t i = 0; i < node->children.count; i++){
-        auto child = get_node(ctx, node->children.data[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         assert(child->type == NODE_LIST_ITEM);
         msb_write_nchar(sb, ' ', indent);
         switch(bullet_depth){
@@ -282,8 +282,8 @@ static Errorable_f(void) format_md_bullets(Nonnull(DndcContext*)ctx, Nonnull(MSt
                 break;
             }
         FormatState state = {.lead = indent+2, .col=indent+2};
-        for(size_t j = 0; j < child->children.count; j++){
-            auto subchild = get_node(ctx, child->children.data[j]);
+        NODE_CHILDREN_FOR_EACH(subit, child){
+            auto subchild = get_node(ctx, *subit);
             if(subchild->type == NODE_STRING){
                 format_write_wrapped_string(sb, &state, subchild->header);
                 }
@@ -319,13 +319,13 @@ FORMATFUNC(md_list){
     numwidth += count > 999;
     numwidth += count > 9999;
     for(size_t i = 0; i < node->children.count; i++){
-        auto child = get_node(ctx, node->children.data[i]);
+        auto child = get_node(ctx, node_children(node)[i]);
         assert(child->type == NODE_LIST_ITEM);
         msb_write_nchar(sb, ' ', indent);
         MSB_FORMAT(sb, int_fmt(i+1), ". ");
         FormatState state = {.lead = indent+numwidth+2, .col=indent+numwidth+2};
         for(size_t j = 0; j < child->children.count; j++){
-            auto subchild = get_node(ctx, child->children.data[j]);
+            auto subchild = get_node(ctx, node_children(child)[j]);
             if(subchild->type == NODE_STRING){
                 format_write_wrapped_string(sb, &state, subchild->header);
                 }
@@ -347,8 +347,8 @@ FORMATFUNC(md_node){
     Errorable(void) result = {};
     format_header(sb, node, indent);
     indent += FORMAT_INDENT;
-    for(size_t i = 0; i < node->children.count; i++){
-        auto child = get_node(ctx, node->children.data[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         switch(child->type){
             case NODE_PARA:
                 result = format_para_node(ctx, sb, child, indent);
@@ -373,8 +373,8 @@ FORMATFUNC(text_node){
     Errorable(void) result = {};
     format_header(sb, node, indent);
     indent += FORMAT_INDENT;
-    for(size_t i = 0; i < node->children.count; i++){
-        auto child = get_node(ctx, node->children.data[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         switch(child->type){
             case NODE_PARA:
                 result = format_para_node(ctx, sb, child, indent);
@@ -402,7 +402,7 @@ write_str_or_container(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Non
             msb_write_char(sb, ' ');
             writ++;
             }
-        Node* str = get_node(ctx, node->children.data[i]);
+        Node* str = get_node(ctx, node_children(node)[i]);
         msb_write_str(sb, str->header.text, str->header.length);
         writ += str->header.length;
         }
@@ -415,8 +415,8 @@ FORMATFUNC(table_node){
     ssize_t n_cells = 0;
     ssize_t widths[100] = {};
     // pre-pass to figure out widths
-    for(size_t i = 0; i < node->children.count; i++){
-        Node* row = get_node(ctx, node->children.data[i]);
+    NODE_CHILDREN_FOR_EACH(row_iter, node){
+        Node* row = get_node(ctx, *row_iter);
         if(row->type != NODE_TABLE_ROW)
             continue;
         if(unlikely(row->children.count > arrlen(widths))){
@@ -426,7 +426,7 @@ FORMATFUNC(table_node){
         if(row->children.count > n_cells)
             n_cells = row->children.count;
         for(size_t j = 0; j < row->children.count; j++){
-            Node* cell = get_node(ctx, row->children.data[j]);
+            Node* cell = get_node(ctx, node_children(row)[j]);
             if(cell->type == NODE_STRING){
                 if(cell->header.length > widths[j])
                     widths[j] = cell->header.length;
@@ -434,8 +434,8 @@ FORMATFUNC(table_node){
             else {
                 assert(cell->type == NODE_CONTAINER);
                 size_t this_width = 0;
-                for(size_t k = 0; k < cell->children.count; k++){
-                    Node* str = get_node(ctx, cell->children.data[k]);
+                NODE_CHILDREN_FOR_EACH(str_iter, cell){
+                    Node* str = get_node(ctx, *str_iter);
                     assert(str->type == NODE_STRING);
                     this_width += 1 + str->header.length;
                     }
@@ -454,8 +454,8 @@ FORMATFUNC(table_node){
     size_t effective_space = FORMAT_WIDTH - indent;
     if(total < effective_space || total_except_last > effective_space){
         // do them all as a single line
-        for(size_t i = 0; i < node->children.count; i++){
-            Node* row = get_node(ctx, node->children.data[i]);
+        NODE_CHILDREN_FOR_EACH(row_iter, node){
+            Node* row = get_node(ctx, *row_iter);
             if(row->type != NODE_TABLE_ROW){
                 result = format_node(ctx, sb, row, indent);
                 if(result.errored)
@@ -468,7 +468,7 @@ FORMATFUNC(table_node){
                     }
                 else
                     msb_write_nchar(sb, ' ', indent);
-                Node* cell = get_node(ctx, row->children.data[j]);
+                Node* cell = get_node(ctx, node_children(row)[j]);
                 size_t writ = write_str_or_container(ctx, sb, cell);
                 if(j != row->children.count-1 && widths[j] > writ){
                     msb_write_nchar(sb, ' ', widths[j] - writ);
@@ -479,8 +479,8 @@ FORMATFUNC(table_node){
         }
     else {
         // we need to wrap just the last line
-        for(size_t i = 0; i < node->children.count; i++){
-            Node* row = get_node(ctx, node->children.data[i]);
+        NODE_CHILDREN_FOR_EACH(row_iter, node){
+            Node* row = get_node(ctx, *row_iter);
             if(row->type != NODE_TABLE_ROW){
                 result = format_node(ctx, sb, row, indent);
                 if(result.errored)
@@ -493,7 +493,7 @@ FORMATFUNC(table_node){
                     }
                 else
                     msb_write_nchar(sb, ' ', indent);
-                Node* cell = get_node(ctx, row->children.data[j]);
+                Node* cell = get_node(ctx, node_children(row)[j]);
                 size_t writ = write_str_or_container(ctx, sb, cell);
                 if(j != row->children.count-1 && widths[j] > writ){
                     msb_write_nchar(sb, ' ', widths[j] - writ);
@@ -501,14 +501,14 @@ FORMATFUNC(table_node){
                 }
             if(row->children.count > 1)
                 msb_write_literal(sb, " | ");
-            Node* last_cell = get_node(ctx, row->children.data[row->children.count-1]);
+            Node* last_cell = get_node(ctx, node_children(row)[row->children.count-1]);
             FormatState state = {.lead = total_except_last, .col=total_except_last};
             if(last_cell->type == NODE_STRING){
                 format_write_wrapped_string(sb, &state, last_cell->header);
                 }
             else {
-                for(size_t j = 0; j < last_cell->children.count; j++){
-                    Node* str = get_node(ctx, last_cell->children.data[j]);
+                NODE_CHILDREN_FOR_EACH(it, last_cell){
+                    Node* str = get_node(ctx, *it);
                     format_write_wrapped_string(sb, &state, str->header);
                     }
                 }
@@ -522,17 +522,17 @@ FORMATFUNC(kv_node){
     format_header(sb, node, indent);
     indent += FORMAT_INDENT;
     size_t key_width = 0;
-    for(size_t i = 0; i < node->children.count; i++){
-        auto child = get_node(ctx, node->children.data[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         if(child->type != NODE_KEYVALUEPAIR)
             continue;
-        auto key = get_node(ctx, child->children.data[0])->header;
+        auto key = get_node(ctx, node_children(child)[0])->header;
         if(key.length > key_width)
             key_width = key.length;
         }
     key_width += 2; // for the ": "
-    for(size_t i = 0; i < node->children.count; i++){
-        auto child = get_node(ctx, node->children.data[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         if(child->type != NODE_KEYVALUEPAIR){
             result = format_node(ctx, sb, child, indent);
             if(result.errored) return result;
@@ -540,8 +540,8 @@ FORMATFUNC(kv_node){
             }
         msb_write_nchar(sb, ' ', indent);
         assert(child->children.count == 2);
-        auto key = get_node(ctx, child->children.data[0])->header;
-        auto value_node = get_node(ctx, child->children.data[1]);
+        auto key = get_node(ctx, node_children(child)[0])->header;
+        auto value_node = get_node(ctx, node_children(child)[1]);
         msb_write_str(sb, key.text, key.length);
         msb_write_literal(sb, ": ");
         auto padding = key_width - key.length - 2;
@@ -553,8 +553,8 @@ FORMATFUNC(kv_node){
             }
         else {
             assert(value_node->type == NODE_CONTAINER);
-            for(size_t j = 0; j < value_node->children.count; j++){
-                auto n = get_node(ctx, value_node->children.data[j]);
+            NODE_CHILDREN_FOR_EACH(c, value_node){
+                auto n = get_node(ctx, *c);
                 assert(n->type == NODE_STRING);
                 format_write_wrapped_string(sb, &state, n->header);
                 }
@@ -569,8 +569,8 @@ FORMATFUNC(raw_node){
     format_header(sb, node, indent);
     indent += FORMAT_INDENT;
     auto nspace = indent < 80? indent: 80;
-    for(size_t i = 0; i < node->children.count; i++){
-        auto child = get_node(ctx, node->children.data[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         if(child->type != NODE_STRING){
             result = format_node(ctx, sb, child, indent);
             if(result.errored) return result;

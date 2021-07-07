@@ -82,7 +82,7 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
                 auto node = get_node(ctx, nodes->data[i]);
                 if(!node->children.count)
                     continue;
-                auto child = get_node(ctx, node->children.data[0]);
+                auto child = get_node(ctx, node_children(node)[0]);
                 if(!child->header.length)
                     continue;
                 if(path_is_abspath(child->header) or !ctx->base_directory.length){
@@ -141,8 +141,8 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             if(node->type != NODE_PYTHON)
                 continue;
             MStringBuilder msb = {.allocator=ctx->string_allocator};
-            for(auto j = 0; j < node->children.count; j++){
-                auto child = node->children.data[j];
+            NODE_CHILDREN_FOR_EACH(it, node){
+                auto child = *it;
                 auto child_node = get_node(ctx, child);
                 msb_write_str(&msb, child_node->header.text, child_node->header.length);
                 msb_write_char(&msb, '\n');
@@ -162,8 +162,8 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             auto parent = get_node(ctx, node->parent);
             node->parent = INVALID_NODE_HANDLE;
             for(size_t j = 0; j < parent->children.count; j++){
-                if(NodeHandle_eq(handle, parent->children.data[j])){
-                    Marray_remove__NodeHandle(&parent->children, j);
+                if(NodeHandle_eq(handle, node_children(parent)[j])){
+                    node_remove_child(parent, j, ctx->allocator);
                     goto after;
                     }
                 }
@@ -788,7 +788,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
             }
         }
     else {
-        // Handle imports. Imports can import more imports.
+        // Handle imports. Imports can import more imports, so don't use a FOR_EACH.
         auto before_imports = get_t();
         for(size_t i = 0; i < ctx.imports.count; i++){
             auto handle = ctx.imports.data[i];
@@ -800,7 +800,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
                 }
             // NOTE: re-get the node every loop as the pointer is invalidated.
             for(size_t j = 0; j < node->children.count; j++, node=get_node(&ctx, handle)){
-                auto child_handle = node->children.data[j];
+                auto child_handle = node_children(node)[j];
                 auto child = get_node(&ctx, child_handle);
                 if(child->type != NODE_STRING){
                     node_print_err(&ctx, child, SV("import child is not a string"));
@@ -929,8 +929,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         auto link_handles = ctx.link_nodes.data;
         for(size_t ln = 0; ln < link_node_count; ln++){
             auto link_node = get_node(&ctx, link_handles[ln]);
-            for(size_t i = 0; i < link_node->children.count; i++){
-                auto link_str_node = get_node(&ctx, link_node->children.data[i]);
+            NODE_CHILDREN_FOR_EACH(it, link_node){
+                auto link_str_node = get_node(&ctx, *it);
                 auto str = link_str_node->header;
                 auto e = add_link_from_sv(&ctx, str, /*check_valid=*/true);
                 if(e.errored){
@@ -980,8 +980,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
             // Node could've been mutated after being registered.
             if(data_node->type != NODE_DATA)
                 continue;
-            for(size_t j = 0; j < data_node->children.count; j++){
-                auto child = get_node(&ctx, data_node->children.data[j]);
+            NODE_CHILDREN_FOR_EACH(it, data_node){
+                auto child = get_node(&ctx, *it);
                 if(!child->header.length){
                     node_print_warning(&ctx, child, SV("Missing header from data child?"));
                     }
@@ -1071,11 +1071,10 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
     // Write the make-style dependency file to the Dependency directory.
     if(dependency_func){
         for(size_t i = 0; i < ctx.dependencies_nodes.count; i++){
-            auto handle = ctx.dependencies_nodes.data[i];
-            auto node = get_node(&ctx, handle);
-            for(size_t j = 0; j < node->children.count; j++){
-                auto child_handle = node->children.data[j];
-                auto child = get_node(&ctx, child_handle);
+            auto handle = &ctx.dependencies_nodes.data[i];
+            auto node = get_node(&ctx, *handle);
+            NODE_CHILDREN_FOR_EACH(it, node){
+                auto child = get_node(&ctx, *it);
                 if(child->type != NODE_STRING){
                     // just warn, don't want to fail the build
                     node_print_warning2(&ctx, child, SV("Non-string node found as a child node: "), LS_to_SV(nodenames[child->type]));
@@ -1192,8 +1191,8 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
             }break;
         }
     putchar('\n');
-    for(size_t i = 0; i < node->children.count; i++){
-        print_node_and_children(ctx, node->children.data[i], depth+1);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        print_node_and_children(ctx, *it, depth+1);
         }
     }
 

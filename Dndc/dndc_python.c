@@ -921,8 +921,8 @@ py_detach_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)ar
     auto parent = get_node(ctx, node->parent);
     node->parent = INVALID_NODE_HANDLE;
     for(size_t i = 0; i < parent->children.count; i++){
-        if(NodeHandle_eq(handle, parent->children.data[i])){
-            Marray_remove__NodeHandle(&parent->children, i);
+        if(NodeHandle_eq(handle, node_children(parent)[i])){
+            node_remove_child(parent, i, ctx->allocator);
             goto after;
             }
         }
@@ -1006,7 +1006,7 @@ py_replace_child_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObj
         }
     auto parent_node = get_node(ctx, handle);
     auto count = parent_node->children.count;
-    auto data = parent_node->children.data;
+    auto data = node_children(parent_node);
     for(size_t i = 0; i < count; i++){
         auto c = data[i];
         if(NodeHandle_eq(c, prev_handle)){
@@ -1316,7 +1316,7 @@ DndNode_getattr_ls(Nonnull(DndNode*)obj, LongString name){
                 if(!result)
                     return result;
                 for(size_t i = 0; i < node->children.count; i++){
-                    auto child = node->children.data[i];
+                    auto child = node_children(node)[i];
                     auto pynode = make_py_node(ctx, child);
                     auto fail = PyTuple_SetItem(result, i, pynode);
                     //meh

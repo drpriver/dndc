@@ -17,13 +17,13 @@
 
 
 #define RENDERFUNCNAME(nt) render_##nt
-#define RENDERFUNC(nt) static Errorable_f(void) RENDERFUNCNAME(nt)(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(const Node*) node, int header_depth)
+#define RENDERFUNC(nt) static Errorable_f(void) RENDERFUNCNAME(nt)(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*) node, int header_depth)
 
 #define X(a, b) RENDERFUNC(a);
 NODETYPES(X)
 #undef X
 
-typedef Errorable_f(void)(*_Nonnull renderfunc)(Nonnull(DndcContext*), Nonnull(MStringBuilder*), Nonnull(const Node*), int);
+typedef Errorable_f(void)(*_Nonnull renderfunc)(Nonnull(DndcContext*), Nonnull(MStringBuilder*), Nonnull(Node*), int);
 
 static
 const
@@ -36,7 +36,7 @@ renderfunc renderfuncs[] = {
 static inline
 force_inline
 Errorable_f(void)
-render_node(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*) restrict sb, Nonnull(const Node*)node, int header_depth){
+render_node(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*) restrict sb, Nonnull(Node*)node, int header_depth){
     bool hide = node_has_attribute(node, SV("hide"));
     if(hide) return (Errorable(void)){};
     return renderfuncs[node->type](ctx, sb, node, header_depth);
@@ -94,8 +94,8 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                     msb_write_literal(msb, "</style>\n");
                     }
                 written = false;
-                for(size_t j = 0; j < node->children.count; j++){
-                    auto child = get_node(ctx, node->children.data[j]);
+                NODE_CHILDREN_FOR_EACH(it, node){
+                    auto child = get_node(ctx, *it);
                     if(unlikely(child->type != NODE_STRING)){
                         node_print_warning(ctx, child, SV("Non-string child of a style sheet is being ignored."));
                         continue;
@@ -106,8 +106,8 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                 }
             written = true;
             if(node_has_attribute(node, SV("inline"))){
-                for(size_t j = 0; j < node->children.count; j++){
-                    auto child = get_node(ctx, node->children.data[j]);
+                NODE_CHILDREN_FOR_EACH(it, node){
+                    auto child = get_node(ctx, *it);
                     if(unlikely(child->type != NODE_STRING)){
                         node_print_warning(ctx, child, SV("Non-string child of a style sheet is being ignored."));
                         continue;
@@ -121,8 +121,8 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                     node_set_err(ctx, node, LS("Untrusted input can't load external css files"));
                     Raise(PARSE_ERROR);
                     }
-                for(size_t j = 0; j < node->children.count; j++){
-                    auto child = get_node(ctx, node->children.data[j]);
+                NODE_CHILDREN_FOR_EACH(it, node){
+                    auto child = get_node(ctx, *it);
                     if(unlikely(child->type != NODE_STRING)){
                         node_print_warning(ctx, child, SV("Non-string child of a style sheet."));
                         continue;
@@ -155,8 +155,8 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
             if(unlikely(node->type != NODE_SCRIPTS))
                 continue;
             if(node_has_attribute(node, SV("inline"))){
-                for(size_t j = 0; j < node->children.count; j++){
-                    auto child = get_node(ctx, node->children.data[j]);
+                NODE_CHILDREN_FOR_EACH(it, node){
+                    auto child = get_node(ctx, *it);
                     if(unlikely(child->type != NODE_STRING)){
                         node_print_warning(ctx, child, SV("script with a non-string child is being ignored"));
                         continue;
@@ -179,12 +179,12 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                         continue;
                         }
                     }
-                auto child  = get_node(ctx, node->children.data[0]);
+                auto child  = get_node(ctx, node_children(node)[0]);
                 MSB_FORMAT(msb, "<script src=\"", child->header, "\"></script>\n");
                 continue;
                 }
-            for(size_t j = 0; j < node->children.count; j++){
-                auto child = get_node(ctx, node->children.data[j]);
+            NODE_CHILDREN_FOR_EACH(it, node){
+                auto child = get_node(ctx, *it);
                 if(unlikely(child->type != NODE_STRING)){
                     node_print_warning(ctx, child, SV("script with a non-string child is being ignored"));
                     continue;
@@ -311,10 +311,8 @@ build_nav_block_children(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MS
     if(depth > 2)
         return;
     auto node = get_node(ctx, handle);
-    auto count = node->children.count;
-    auto children = node->children.data;
-    for(size_t i = 0; i < count; i++){
-        build_nav_block_node(ctx, children[i], sb, depth);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        build_nav_block_node(ctx, *it, sb, depth);
         }
     }
 
@@ -544,10 +542,8 @@ RENDERFUNC(TEXT){
         if(e.errored) return e;
         msb_write_char(sb, '\n');
         }
-    auto children = &node->children;
-    auto count = children->count;
-    for(size_t i = 0; i < count; i++){
-        auto child = get_node(ctx, children->data[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
@@ -570,10 +566,8 @@ RENDERFUNC(DIV){
         if(e.errored) return e;
         msb_write_char(sb, '\n');
         }
-    auto children = &node->children;
-    auto count = children->count;
-    for(size_t i = 0; i < count; i++){
-        auto child = get_node(ctx, children->data[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
@@ -600,10 +594,8 @@ RENDERFUNC(PARA){
         node_print_warning(ctx, node, SV("Ignoring header on paragraph node"));
         }
     msb_write_literal(sb, "<p>\n");
-    auto count = node->children.count;
-    auto children = node->children.data;
-    for(size_t i = 0; i < count; i++){
-        auto child_handle = children[i];
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child_handle = *it;
         auto child = get_node(ctx, child_handle);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
@@ -658,7 +650,7 @@ RENDERFUNC(TABLE){
         }
     msb_write_literal(sb, "<table>\n<thead>\n");
     auto count = node->children.count;
-    auto children = node->children.data;
+    auto children = node_children(node);
     if(count){
         auto child = get_node(ctx, children[0]);
         if(child->type != NODE_TABLE_ROW){
@@ -667,10 +659,8 @@ RENDERFUNC(TABLE){
             }
         // inline rendering table row here so we can do heads
         msb_write_literal(sb, "<tr>\n");
-        auto child_count = child->children.count;
-        auto child_children = child->children.data;
-        for(size_t i = 0; i < child_count; i++){
-            auto child_child = get_node(ctx, child_children[i]);
+        NODE_CHILDREN_FOR_EACH(it, child){
+            auto child_child = get_node(ctx, *it);
             msb_write_literal(sb, "<th>");
             auto e = render_node(ctx, sb, child_child, header_depth);
             if(e.errored) return e;
@@ -690,10 +680,8 @@ RENDERFUNC(TABLE){
 RENDERFUNC(TABLE_ROW){
     // TODO: odd even class?
     msb_write_literal(sb, "<tr>\n");
-    auto count = node->children.count;
-    auto children = node->children.data;
-    for(size_t i = 0; i < count; i++){
-        auto child = get_node(ctx, children[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         msb_write_literal(sb, "<td>");
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
@@ -741,10 +729,8 @@ RENDERFUNC(IMPORT){
     if(node->header.length){
         node_print_warning(ctx, node, SV("Ignoring import header"));
         }
-    auto count = node->children.count;
-    auto children = node->children.data;
-    for(size_t i = 0; i < count; i++){
-        auto child = get_node(ctx, children[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
@@ -761,19 +747,15 @@ RENDERFUNC(IMAGE){
         if(e.errored) return e;
         msb_write_char(sb, '\n');
         }
-    if(!node->children.count){
+    auto count = node->children.count;
+    if(!count){
         node_set_err(ctx, node, LS("Image node missing any children (first should be a string that is path to the image"));
         Raise(PARSE_ERROR);
         }
-    auto children = &node->children;
+    auto children = node_children(node);
     // CLEANUP: lots of copy and paste here.
     if(ctx->flags & DNDC_USE_DND_URL_SCHEME){
-        auto first_child = get_node(ctx, children->data[0]);
-        if(first_child->type != NODE_STRING){
-            node_set_err(ctx, first_child, LS("First child of an image node should be a string that is path to the image."));
-            Raise(PARSE_ERROR);
-            }
-        auto imgpath_node = get_node(ctx, node->children.data[0]);
+        auto imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image."));
             Raise(PARSE_ERROR);
@@ -791,12 +773,7 @@ RENDERFUNC(IMAGE){
         msb_write_literal(sb, "\">");
         }
     else if(ctx->flags & DNDC_DONT_INLINE_IMAGES){
-        auto first_child = get_node(ctx, children->data[0]);
-        if(first_child->type != NODE_STRING){
-            node_set_err(ctx, first_child, LS("First child of an image node should be a string that is path to the image."));
-            Raise(PARSE_ERROR);
-            }
-        auto imgpath_node = get_node(ctx, node->children.data[0]);
+        auto imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image."));
             Raise(PARSE_ERROR);
@@ -807,12 +784,7 @@ RENDERFUNC(IMAGE){
         msb_write_literal(sb, "\">");
         }
     else{
-        auto first_child = get_node(ctx, children->data[0]);
-        if(first_child->type != NODE_STRING){
-            node_set_err(ctx, first_child, LS("First child of an image node should be a string that is path to the image."));
-            Raise(PARSE_ERROR);
-            }
-        auto imgpath_node = get_node(ctx, node->children.data[0]);
+        auto imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image."));
             Raise(PARSE_ERROR);
@@ -833,9 +805,8 @@ RENDERFUNC(IMAGE){
             }
         msb_write_literal(sb, "\">");
     }
-    auto count = children->count;
     for(size_t i = 1; i < count; i++){
-        auto child = get_node(ctx, children->data[i]);
+        auto child = get_node(ctx, children[i]);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
@@ -852,10 +823,8 @@ RENDERFUNC(QUOTE){
         if(e.errored) return e;
         }
     msb_write_literal(sb, "<blockquote>\n");
-    auto count = node->children.count;
-    auto children = node->children.data;
-    for(size_t i = 0; i < count; i++){
-        auto child = get_node(ctx, children[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
@@ -874,10 +843,8 @@ RENDERFUNC(RAW){
     // Don't let people smuggle <script> tags in!
     // Changes the semantics a bit, but oh well.
     if(unlikely(ctx->flags & DNDC_INPUT_IS_UNTRUSTED)){
-        auto count = node->children.count;
-        auto children = node->children.data;
-        for(size_t i = 0; i < count; i++){
-            auto child = get_node(ctx, children[i]);
+        NODE_CHILDREN_FOR_EACH(it, node){
+            auto child = get_node(ctx, *it);
             if(unlikely(child->type != NODE_STRING))
                 node_print_warning(ctx, child, SV("Raw node with a non-string child"));
             write_tag_escaped_str(sb, child->header.text, child->header.length);
@@ -886,10 +853,8 @@ RENDERFUNC(RAW){
         return (Errorable(void)){};
         }
     // ignoring the header for now. Idk what the semantics are supposed to be.
-    auto count = node->children.count;
-    auto children = node->children.data;
-    for(size_t i = 0; i < count; i++){
-        auto child = get_node(ctx, children[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         if(unlikely(child->type != NODE_STRING))
             node_print_warning(ctx, child, SV("Raw node with a non-string child"));
         msb_write_str(sb, child->header.text, child->header.length);
@@ -908,10 +873,8 @@ RENDERFUNC(PRE){
         if(e.errored) return e;
         }
     msb_write_literal(sb, "<pre>\n");
-    auto count = node->children.count;
-    auto children = node->children.data;
-    for(size_t i = 0; i < count; i++){
-        auto child = get_node(ctx, children[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         if(unlikely(child->type != NODE_STRING))
             node_print_warning(ctx, child, SV("pre node with a non-string child"));
         write_tag_escaped_str(sb, child->header.text, child->header.length);
@@ -926,10 +889,8 @@ RENDERFUNC(BULLETS){
     if(unlikely(node->classes))
         node_print_warning(ctx, node, SV("Ignoring classes on bullet list"));
     msb_write_literal(sb, "<ul>\n");
-    auto count = node->children.count;
-    auto children = node->children.data;
-    for(size_t i = 0; i < count; i++){
-        auto child = get_node(ctx, children[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
@@ -942,10 +903,8 @@ RENDERFUNC(LIST){
     if(unlikely(node->classes))
         node_print_warning(ctx, node, SV("Ignoring classes on list"));
     msb_write_literal(sb, "<ol>\n");
-    auto count = node->children.count;
-    auto children = node->children.data;
-    for(size_t i = 0; i < count; i++){
-        auto child = get_node(ctx, children[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
@@ -959,7 +918,7 @@ RENDERFUNC(LIST_ITEM){
     if(unlikely(node->classes))
         node_print_warning(ctx, node, SV("Ignoring classes on list item"));
     auto count = node->children.count;
-    auto children = node->children.data;
+    auto children = node_children(node);
     for(size_t i = 0; i < count; i++){
         if(i != 0)
             msb_write_char(sb, ' ');
@@ -980,10 +939,8 @@ RENDERFUNC(KEYVALUE){
         if(e.errored) return e;
         }
     msb_write_literal(sb, "<table><tbody>\n");
-    auto count = node->children.count;
-    auto children = node->children.data;
-    for(size_t i = 0; i < count; i++){
-        auto child = get_node(ctx, children[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
@@ -994,10 +951,8 @@ RENDERFUNC(KEYVALUEPAIR){
     // TODO: maybe this should be lowered into a table row node?
     // TODO: odd even class?
     msb_write_literal(sb, "<tr>\n");
-    auto count = node->children.count;
-    auto children = node->children.data;
-    for(size_t i = 0; i < count; i++){
-        auto child = get_node(ctx, children[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         msb_write_literal(sb, "<td>");
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
@@ -1023,8 +978,9 @@ RENDERFUNC(IMGLINKS){
 
     // FIXME: It's kind of janky that I parse at htmlgen time.
     LongString imgdatab64 = {};
+    auto children = node_children(node);
     if(not (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME))){
-        auto imgpath_node = get_node(ctx, node->children.data[0]);
+        auto imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
             Raise(PARSE_ERROR);
@@ -1039,7 +995,7 @@ RENDERFUNC(IMGLINKS){
     }
     int width;
     {
-        auto width_node = get_node(ctx, node->children.data[1]);
+        auto width_node = get_node(ctx, children[1]);
         if(width_node->type != NODE_STRING){
             node_set_err(ctx, width_node, LS("Second should be a string and be 'width = WIDTH'"));
             Raise(PARSE_ERROR);
@@ -1063,7 +1019,7 @@ RENDERFUNC(IMGLINKS){
     }
     int height;
     {
-        auto height_node  = get_node(ctx, node->children.data[2]);
+        auto height_node  = get_node(ctx, children[2]);
         if(height_node->type != NODE_STRING){
             node_set_err(ctx, height_node, LS("Third should be a string and be 'height = HEIGHT'"));
             Raise(PARSE_ERROR);
@@ -1087,7 +1043,7 @@ RENDERFUNC(IMGLINKS){
     }
     int viewbox[4];
     {
-        auto viewBox_node = get_node(ctx, node->children.data[3]);
+        auto viewBox_node = get_node(ctx, children[3]);
         if(viewBox_node->type != NODE_STRING){
             node_set_err(ctx, viewBox_node, LS("Fourth should be a string and be 'viewBox = x0 y0 x1 y1'"));
             Raise(PARSE_ERROR);
@@ -1162,7 +1118,7 @@ RENDERFUNC(IMGLINKS){
 
     if(ctx->flags & DNDC_USE_DND_URL_SCHEME){
         msb_write_literal(sb, "background-image: url('dnd:");
-        auto imgpath_node = get_node(ctx, node->children.data[0]);
+        auto imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
             Raise(PARSE_ERROR);
@@ -1180,7 +1136,7 @@ RENDERFUNC(IMGLINKS){
         }
     else if(ctx->flags & DNDC_DONT_INLINE_IMAGES){
         msb_write_literal(sb, "background-image: url('");
-        auto imgpath_node = get_node(ctx, node->children.data[0]);
+        auto imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
             Raise(PARSE_ERROR);
@@ -1199,7 +1155,7 @@ RENDERFUNC(IMGLINKS){
         msb_write_literal(sb, "');\">\n");
         }
     for(size_t i = 4; i < node->children.count; i++){
-        auto child = get_node(ctx, node->children.data[i]);
+        auto child = get_node(ctx, children[i]);
         if(child->type != NODE_STRING){
             // TODO: this lets us skip embedded python nodes, but we should
             // error on other nodes probably.
@@ -1274,10 +1230,8 @@ RENDERFUNC(MD){
         if(e.errored) return e;
         msb_write_char(sb, '\n');
         }
-    auto children = &node->children;
-    auto count = children->count;
-    for(size_t i = 0; i < count; i++){
-        auto child = get_node(ctx, children->data[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
@@ -1289,10 +1243,8 @@ RENDERFUNC(CONTAINER){
     if(node->header.length){
         node_print_warning(ctx, node, SV("Ignoring container header."));
         }
-    auto count = node->children.count;
-    auto children = node->children.data;
-    for(size_t i = 0; i < count; i++){
-        auto child = get_node(ctx, children[i]);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }

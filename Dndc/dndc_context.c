@@ -499,6 +499,17 @@ append_child(Nonnull(DndcContext*)ctx, NodeHandle parent_handle, NodeHandle chil
     auto parent = get_node(ctx, parent_handle);
     auto child = get_node(ctx, child_handle);
     child->parent = parent_handle;
+    if(parent->children.count < 4){
+        parent->inline_children[parent->children.count++] = child_handle;
+        return;
+        }
+    if(parent->children.count == 4){
+        Marray(NodeHandle) children = {};
+        Marray_reserve(NodeHandle)(&children, ctx->allocator, 4);
+        memcpy(children.data, parent->inline_children, sizeof(parent->inline_children));
+        children.count = 4;
+        parent->children = children;
+        }
     Marray_push(NodeHandle)(&parent->children, ctx->allocator, child_handle);
     }
 
@@ -519,8 +530,8 @@ check_node_depth(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
         node_set_err(ctx, node, LS("Tree depth exceeded: greater than 64"));
         return (Errorable(void)){.errored=PARSE_ERROR};
         }
-    for(size_t i = 0; i < node->children.count; i++){
-        auto e = check_node_depth(ctx, node->children.data[i], depth+1);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto e = check_node_depth(ctx, *it, depth+1);
         if(e.errored) return e;
         }
     return (Errorable(void)){.errored=NO_ERROR};
@@ -564,10 +575,8 @@ gather_anchor(Nonnull(DndcContext*)ctx, NodeHandle handle){
         case NODE_IMPORT:
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:{
-            auto count = node->children.count;
-            auto children = node->children.data;
-            for(size_t i = 0; i < count; i++){
-                gather_anchor(ctx, children[i]);
+            NODE_CHILDREN_FOR_EACH(it, node){
+                gather_anchor(ctx, *it);
                 }
             }break;
         case NODE_TABLE_ROW:
@@ -607,7 +616,8 @@ convert_node_to_container_containing_clone_of_former_self(Nonnull(DndcContext*)c
     assert(!old_node->children.count);
     memcpy(new_node, old_node, sizeof(*new_node));
     new_node->parent = handle;
-    Marray_push(NodeHandle)(&old_node->children, ctx->allocator, new_handle);
+    old_node->children.count = 1;
+    old_node->inline_children[0] = new_handle;
     old_node->header = SV("");
     old_node->type = NODE_CONTAINER;
     if(old_node->attributes)

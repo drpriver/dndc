@@ -350,7 +350,7 @@ render_tree(Nonnull(DndcContext*), Nonnull(MStringBuilder*));
 static inline
 force_inline
 Errorable_f(void)
-render_node(Nonnull(DndcContext*), Nonnull(MStringBuilder*) restrict, Nonnull(const Node*), int header_depth);
+render_node(Nonnull(DndcContext*), Nonnull(MStringBuilder*) restrict, Nonnull(Node*), int header_depth);
 
 //
 // Writes the document tree (starting from the context's root node)

@@ -97,7 +97,13 @@ typedef struct Node {
     // For NODE_STRING, this is instead the contents of that node
     StringView header;            // 16 bytes
     // Handles to child nodes.
-    Marray(NodeHandle) children;   // 24 bytes
+    union{
+        Marray(NodeHandle) children;   // 24 bytes
+        struct {
+            size_t children_count;
+            NodeHandle inline_children[4];
+            };
+        };
     Rarray(Attribute)*_Nullable attributes;  // 8 bytes
     Rarray(StringView)*_Nullable classes;    // 8 bytes
     // Source filename (used for reporting errors)
@@ -108,6 +114,39 @@ typedef struct Node {
     int row, col;                  // 4 + 4 bytes.
     // no padding in this struct
 }Node;
+
+static inline 
+force_inline
+Nonnull(NodeHandle*)
+node_children(Nonnull(Node*)node){
+    if(node->children.count > 4)
+        return node->children.data;
+    return node->inline_children;
+}
+
+static inline
+force_inline
+void
+node_remove_child(Nonnull(Node*)node, size_t i, const Allocator a){
+    assert(i < node->children.count);
+    if(node->children.count > 4){
+        Marray_remove__NodeHandle(&node->children, i);
+        if(node->children.count <= 4){
+            NodeHandle children[4];
+            memcpy(children, node->children.data, sizeof(children));
+            Allocator_free(a, node->children.data, node->children.capacity*sizeof(NodeHandle));
+            memcpy(node->inline_children, children, sizeof(children));
+            }
+        }
+    else {
+        node->children.count--;
+        if(i == node->children.count)
+            return;
+        node->inline_children[i]= node->inline_children[node->children.count];
+        }
+    }
+
+#define NODE_CHILDREN_FOR_EACH(iter, n) for(auto *iter = node_children(n), *iter##end__=node_children(n)+n->children.count;iter != iter##end__;++iter)
 
 
 #if UINTPTR_MAX != 0xFFFFFFFF

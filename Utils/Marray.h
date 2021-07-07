@@ -81,8 +81,8 @@ resize_to_some_weird_number(size_t x){
 
 #ifndef MARRAY_IMPL_ONLY
 typedef struct Marray(MARRAY_T) {
-    size_t capacity;
     size_t count;
+    size_t capacity;
     NullUnspec(MARRAY_T*) data;
 } Marray(MARRAY_T);
 
