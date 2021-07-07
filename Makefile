@@ -53,3 +53,12 @@ install: $(DNDC)
 
 fuzz: $(BINDIR)/dndcfuzz$(EXE) | $(FUZZDIR)
 	$< $(FUZZDIR) -fork=4 -only_ascii=1
+
+ifneq ($(UNAME),Windows) # shells out to unix commands
+.PHONY: list
+list:
+	@LC_ALL=C $(MAKE) -npRrq : 2>/dev/null \
+		| awk -v RS= -F: '{if ($$1 !~ "^[#.]") {print $$1}}' \
+		| sort \
+		| egrep -v -e '^[^[:alnum:]]' -e '^$@$$' -e '.(dnd|dep|[ch])$$'
+endif
