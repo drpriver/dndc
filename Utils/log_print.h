@@ -98,7 +98,8 @@ logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int l
     apply(ullong, unsigned long long, "%llu", x) \
     apply(pchar, char*, "\"%s\"", x) \
     apply(cpchar, const char*, "\"%s\"", x) \
-    apply(pvoid, const void*, "%p", x) \
+    apply(cpvoid, const void*, "%p", x) \
+    apply(pvoid, void*, "%p", x) \
     apply(LongString, LongString, "\"%s\"", x.text) \
     apply(StringView, StringView, "\"%.*s\"", (int)x.length, x.text) \
 

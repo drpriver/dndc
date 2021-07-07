@@ -133,7 +133,6 @@ ArenaAllocator_realloc(Nonnull(ArenaAllocator*)aa, Nullable(void*)ptr, size_t ol
         memcpy(result, ptr, new_size);
     return result;
     }
-
 static
 void
 ArenaAllocator_free_all(Nullable(ArenaAllocator*)aa){

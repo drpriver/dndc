@@ -378,7 +378,7 @@ DndAttributesMap_items(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*)unused){
     (void)unused;
     auto node = get_node(map->ctx, map->handle);
     auto attributes = node->attributes;
-    size_t count = attributes?attributes->count:0;;
+    size_t count = attributes?attributes->count:0;
     PyObject* result = PyList_New(count);
     for(size_t i = 0; i < count; i++){
         auto attr = &attributes->data[i];
