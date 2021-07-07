@@ -92,7 +92,7 @@ parse_set_err_q(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, Strin
     ctx->error.filename = ctx->filename;
     ctx->error.line = ctx->lineno;
     ctx->error.col = col;
-    MStringBuilder msb = {.allocator = ctx->allocator};
+    MStringBuilder msb = {.allocator = ctx->string_allocator};
     msb_write_str(&msb, msg.text, msg.length);
     msb_write_char(&msb, '\'');
     msb_write_str(&msb, quoted.text, quoted.length);
@@ -103,7 +103,7 @@ parse_set_err_q(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, Strin
 static
 void
 node_set_err_q(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView msg, StringView quoted){
-    MStringBuilder msb = {.allocator=ctx->allocator};
+    MStringBuilder msb = {.allocator=ctx->string_allocator};
     ctx->error.filename = node->filename;
     ctx->error.line = node->row;
     ctx->error.col = node->col;
@@ -247,7 +247,7 @@ ctx_note_dependency(Nonnull(DndcContext*)ctx, StringView path){
         if(SV_equals(dep, path))
             return;
         }
-    StringView pathcpy = {.text = Allocator_strndup(ctx->allocator, path.text, path.length), .length=path.length};
+    StringView pathcpy = {.text = Allocator_strndup(ctx->string_allocator, path.text, path.length), .length=path.length};
     Marray_push(StringView)(&ctx->dependencies, ctx->allocator, pathcpy);
     }
 
@@ -410,7 +410,7 @@ add_link_from_sv(Nonnull(DndcContext*)ctx, StringView str, bool check_valid){
         ctx->error.message = LS("no '=' in a link node");
         Raise(PARSE_ERROR);
         }
-    MStringBuilder sb = {.allocator=ctx->allocator};
+    MStringBuilder sb = {.allocator=ctx->string_allocator};
     msb_write_kebab(&sb, str.text, equals - str.text);
     if(!sb.cursor){
         // TODO: print error from this node
@@ -450,7 +450,7 @@ add_link_from_sv(Nonnull(DndcContext*)ctx, StringView str, bool check_valid){
 static inline
 void
 add_link_from_header(Nonnull(DndcContext*)ctx, StringView str){
-    MStringBuilder sb = {.allocator=ctx->allocator};
+    MStringBuilder sb = {.allocator=ctx->string_allocator};
     msb_write_char(&sb, '#');
     msb_write_kebab(&sb, str.text, str.length);
     if(sb.cursor==1){

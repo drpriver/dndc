@@ -208,7 +208,7 @@ py_parse_and_append_children(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnul
     // We dupe this as we have no guarantee that the python
     // string will last beyond this execution and we store pointers
     // into the original source string.
-    auto source_text = pystring_to_longstring(text, ctx->allocator);
+    auto source_text = pystring_to_longstring(text, ctx->string_allocator);
     auto old_filename = ctx->filename;
 
     auto parse_e = dndc_parse(ctx, handle, SV("(generated string from script)"), source_text.text);
@@ -649,7 +649,7 @@ py_node_set_err(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)a
         return NULL;
         }
     PopDiagnostic();
-    MStringBuilder sb = {.allocator=ctx->allocator};
+    MStringBuilder sb = {.allocator=ctx->string_allocator};
     msb_write_str(&sb, msg, length);
     node_set_err(ctx, node, msb_detach(&sb));
     PyErr_SetString(PyExc_Exception, "Node threw error.");
@@ -701,7 +701,7 @@ py_make_string_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObjec
         return NULL;
         }
     PopDiagnostic();
-    auto sv = pystring_to_stringview(arg, ctx->allocator);
+    auto sv = pystring_to_stringview(arg, ctx->string_allocator);
     auto new_handle = alloc_handle(ctx);
     {
     auto node = get_node(ctx, new_handle);
@@ -748,7 +748,7 @@ py_add_dependency(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*
         return NULL;
         }
     PopDiagnostic();
-    StringView sv = pystring_to_stringview(text, ctx->allocator);
+    StringView sv = pystring_to_stringview(text, ctx->string_allocator);
     Marray_push(StringView)(&ctx->dependencies, ctx->allocator, sv);
     Py_RETURN_NONE;
     }
@@ -809,18 +809,18 @@ py_make_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args
     if(frame){
         node->row = PyFrame_GetLineNumber(frame) - 1;
         auto code = frame->f_code;
-        node->filename = pystring_to_stringview(code->co_filename, ctx->allocator);
+        node->filename = pystring_to_stringview(code->co_filename, ctx->string_allocator);
         }
     }
     if(text){
-        node->header = pystring_to_stringview(text, ctx->allocator);
+        node->header = pystring_to_stringview(text, ctx->string_allocator);
         }
     if(class_sq){
         auto sq_length = PySequence_Fast_GET_SIZE(class_sq);
         for(Py_ssize_t i = 0; i < sq_length; i++){
             auto item = PySequence_Fast_GET_ITEM(class_sq, i);
             auto c = Rarray_alloc(StringView)(&node->classes, ctx->allocator);
-            *c = pystring_to_stringview(item, ctx->allocator);
+            *c = pystring_to_stringview(item, ctx->string_allocator);
             }
         }
     if(attributes_sq){
@@ -828,7 +828,7 @@ py_make_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args
         for(Py_ssize_t i = 0; i < sq_length; i++){
             auto item = PySequence_Fast_GET_ITEM(attributes_sq, i);
             auto a = Rarray_alloc(Attribute)(&node->attributes, ctx->allocator);
-            a->key = pystring_to_stringview(item, ctx->allocator);
+            a->key = pystring_to_stringview(item, ctx->string_allocator);
             a->value = SV("");
             }
         }
@@ -892,8 +892,8 @@ py_set_data(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args,
         }
     PopDiagnostic();
     auto new_data = Marray_alloc(DataItem)(&ctx->rendered_data, ctx->allocator);
-    new_data->key = pystring_to_stringview(key, ctx->allocator);
-    new_data->value = pystring_to_longstring(value, ctx->allocator);
+    new_data->key = pystring_to_stringview(key, ctx->string_allocator);
+    new_data->value = pystring_to_longstring(value, ctx->string_allocator);
     Py_RETURN_NONE;
     }
 
@@ -951,7 +951,7 @@ py_add_child_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*
         new_handle = new_child->handle;
         }
     else if(PyUnicode_Check(arg)){
-        auto sv = pystring_to_stringview(arg, ctx->allocator);
+        auto sv = pystring_to_stringview(arg, ctx->string_allocator);
         new_handle = alloc_handle(ctx);
         auto node = get_node(ctx, new_handle);
         node->header = sv;
@@ -1231,7 +1231,7 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHa
             unhandled_error_condition(!type_text);
             // NASTY: modding the line number
             python_block->row = new_row;
-            MStringBuilder sb = {.allocator=ctx->allocator};
+            MStringBuilder sb = {.allocator=ctx->string_allocator};
             msb_write_str(&sb, type_text, strlen(type_text));
             msb_write_literal(&sb, ": ");
             msb_write_str(&sb, exc_text, strlen(exc_text));
@@ -1466,7 +1466,7 @@ DndNode_setattr_ls(Nonnull(DndNode*)obj, LongString name, Nullable(PyObject*) va
                     return 0;
                     }
                 auto node = get_node(ctx, obj->handle);
-                node->header = pystring_to_stringview((Nonnull(PyObject*))value, ctx->allocator);
+                node->header = pystring_to_stringview((Nonnull(PyObject*))value, ctx->string_allocator);
                 return 0;
                 }
             else if(CHECK("parent", 6)){

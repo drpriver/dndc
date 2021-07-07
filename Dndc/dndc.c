@@ -92,7 +92,7 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
                         }
                     }
                 else {
-                    MStringBuilder path_builder = {.allocator=ctx->allocator};
+                    MStringBuilder path_builder = {.allocator=ctx->string_allocator};
                     msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
                     msb_append_path(&path_builder, child->header.text, child->header.length);
                     auto path = msb_borrow(&path_builder);
@@ -140,7 +140,7 @@ do_python_and_load_images(Nonnull(DndcContext*)ctx){
             auto node = get_node(ctx, handle);
             if(node->type != NODE_PYTHON)
                 continue;
-            MStringBuilder msb = {.allocator=ctx->allocator};
+            MStringBuilder msb = {.allocator=ctx->string_allocator};
             for(auto j = 0; j < node->children.count; j++){
                 auto child = node->children.data[j];
                 auto child_node = get_node(ctx, child);
@@ -610,6 +610,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
     else {
         outpath = LS("this.html");
         }
+    ArenaAllocator arena_allocator = {};
+    const Allocator string_allocator = {.type=ALLOCATOR_ARENA, ._data=&arena_allocator};
     const Allocator allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
     // The linear allocator is very useful for temporary allocations, like
     // when we need to turn a string into its kebabed form and then look it up
@@ -622,6 +624,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         .flags = flags,
         .allocator = allocator,
         .temp_allocator = la,
+        .string_allocator = string_allocator,
         .titlenode = INVALID_NODE_HANDLE,
         .navnode = INVALID_NODE_HANDLE,
         .outputfile = outpath,
@@ -1106,6 +1109,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
             report_size(&ctx, SV("N existing allocations: "), alloced);
             report_size(&ctx, SV("Allocations outstanding total (bytes): "), total);
             }
+        Allocator_free_all(string_allocator);
         Allocator_free_all(allocator);
         shallow_free_recorded_mallocator(allocator);
         if(!external_b64cache){

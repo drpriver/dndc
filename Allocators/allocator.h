@@ -13,7 +13,13 @@ enum AllocatorType {
     ALLOCATOR_MALLOC = 1,
     ALLOCATOR_LINEAR = 2,
     ALLOCATOR_RECORDED = 3,
+    ALLOCATOR_ARENA = 4,
 };
+
+typedef struct ArenaAllocator {
+    Nullable(struct Arena*) arena;
+    Nullable(struct BigAllocation*) big_allocations;
+} ArenaAllocator;
 
 
 typedef struct Allocator {

@@ -225,7 +225,7 @@ static void build_nav_block_children(Nonnull(DndcContext*), NodeHandle, Nonnull(
 static
 void
 build_nav_block(Nonnull(DndcContext*)ctx){
-    MStringBuilder sb = {.allocator=ctx->allocator};
+    MStringBuilder sb = {.allocator=ctx->string_allocator};
     msb_write_literal(&sb, "<nav>\n<ul>\n");
     build_nav_block_node(ctx, ctx->root_handle, &sb, 1);
     msb_write_literal(&sb, "</ul>\n</nav>");

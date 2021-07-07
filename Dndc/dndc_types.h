@@ -176,6 +176,7 @@ typedef struct DndcContext {
     const Allocator  allocator;
     // Allocator for scratch allocations
     const Allocator  temp_allocator;
+    const Allocator  string_allocator;
     // current parsing location
     struct {
         const char*_Nonnull cursor;
