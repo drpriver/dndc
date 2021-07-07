@@ -1,3 +1,5 @@
+DNDCVERSION = 0.6.1
+
 $(BINDIR)/dndc$(EXE): Dndc/dndc.c $(DEPDIR)/dndc.dep  $(OBJDIR)/frozenstdlib.o opt.mak | $(DIRECTORIES)
 	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DDNDCMAIN
 dndc: $(BINDIR)/dndc$(EXE)
@@ -36,7 +38,6 @@ PyGdndc/pydndc.pyi: Dndc/pydndc.pyi
 PyGdndc/pydndc$(PYEXTENSION): $(BINDIR)/pydndc$(PYEXTENSION)
 	$(CP) $< $@
 
-DNDCVERSION = 0.6.0
 
 RELEASEFILES = $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pygdndc.pyw PyGdndc/changelog.dnd PyGdndc/install_deps.py PyGdndc/README.txt EXAMPLE.dnd PyGdndc/Manual.dnd
 .PHONY: release

@@ -1,4 +1,5 @@
-project('Dndc', 'c', version: '0.6.0')
+project('Dndc', 'c', version: '0.6.1')
+COMPAT_VERSION = '0.6.0'
 thread_dep = dependency('threads')
 pymod = import('python')
 pyinstall = pymod.find_installation()
@@ -109,7 +110,7 @@ both_libraries(
   install: true,
   version: meson.project_version(),
   soversion: meson.project_version(),
-  darwin_versions: ['0.6.0', meson.project_version()],
+  darwin_versions: [COMPAT_VERSION, meson.project_version()],
   )
 
 pyinstall.extension_module(
