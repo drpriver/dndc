@@ -24,10 +24,8 @@ node_has_attribute(Nonnull(const Node*) node, StringView attr){
     // In using this program, I don't think I've ever exceeded 2 attributes.
     if(!node->attributes)
         return false;
-    auto attrs = node->attributes->data;
-    auto count = node->attributes->count;
-    for(size_t i = 0; i < count; i++){
-        if(SV_equals(attrs[i].key, attr))
+    RARRAY_FOR_EACH(a, node->attributes){
+        if(SV_equals(a->key, attr))
             return true;
         }
     return false;
@@ -38,10 +36,8 @@ bool
 node_has_class(Nonnull(const Node*) node, StringView c){
     if(!node->classes)
         return false;
-    auto classes = node->classes->data;
-    auto count = node->classes->count;
-    for(size_t i = 0; i < count; i++){
-        if(SV_equals(classes[i], c))
+    RARRAY_FOR_EACH(cls, node->classes){
+        if(SV_equals(*cls, c))
             return true;
         }
     return false;
@@ -54,11 +50,9 @@ node_get_attribute(Nonnull(const Node*) node, StringView attr){
     // In using this program, I don't think I've ever exceeded 2 attributes.
     if(!node->attributes)
         return NULL;
-    auto attrs = node->attributes->data;
-    auto count = node->attributes->count;
-    for(size_t i = 0; i < count; i++){
-        if(SV_equals(attrs[i].key, attr))
-            return &attrs[i].value;
+    RARRAY_FOR_EACH(a, node->attributes){
+        if(SV_equals(a->key, attr))
+            return &a->value;
         }
     return NULL;
     }

@@ -208,14 +208,12 @@ format_header(Nonnull(MStringBuilder*)sb, Nonnull(Node*)node, int indent){
     // we fucked up if this is 0
     assert(alias->length);
     msb_write_str(sb, alias->text, alias->length);
-    for(size_t i = 0; i < (node->classes?node->classes->count:0); i++){
+    RARRAY_FOR_EACH(cls, node->classes){
         msb_write_literal(sb, " .");
-        auto cls = &node->classes->data[i];
         msb_write_str(sb, cls->text, cls->length);
         }
-    for(size_t i = 0; i < (node->attributes?node->attributes->count:0); i++){
+    RARRAY_FOR_EACH(attr, node->attributes){
         msb_write_literal(sb, " @");
-        auto attr = &node->attributes->data[i];
         msb_write_str(sb, attr->key.text, attr->key.length);
         if(attr->value.length){
             msb_write_char(sb, '(');

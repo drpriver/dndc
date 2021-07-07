@@ -14,7 +14,7 @@
 #define Rarray_check_size(type) RARRAYIMPL(check_size, type)
 #define Rarray_alloc(type) RARRAYIMPL(alloc, type)
 #define Rarray_remove(type) RARRAYIMPL(remove, type)
-
+#define RARRAY_FOR_EACH(iter, rarray) for(auto* iter=(rarray)->data, *iter##end__=(rarray)->data+((rarray)?(rarray)->count:0);iter!=iter##end__;++iter)
 #endif
 
 //

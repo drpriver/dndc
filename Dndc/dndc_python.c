@@ -265,9 +265,8 @@ Dndclasses_contains(Nonnull(DndclassesList*)list, PyObject*_Nonnull query){
         return 0;
 
     auto key_sv = pystring_borrow_stringview(query);
-    for(size_t i = 0; i < n_classes; i++){
-        auto class_string = node->classes->data[i];
-        if(SV_equals(class_string, key_sv))
+    RARRAY_FOR_EACH(cls, node->classes){
+        if(SV_equals(*cls, key_sv))
             return 1;
         }
     return 0;
@@ -409,10 +408,7 @@ DndAttributesMap_getitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key){
         }
     auto key_sv = pystring_borrow_stringview(key);
     auto node = get_node(map->ctx, map->handle);
-    auto attributes = node->attributes;
-    auto count = attributes?attributes->count:0;
-    for(size_t i = 0; i < count; i++){
-        auto attr = &attributes->data[i];
+    RARRAY_FOR_EACH(attr, node->attributes){
         if(SV_equals(attr->key, key_sv))
             return PyUnicode_FromStringAndSize(attr->value.text, attr->value.length);
         }
@@ -429,10 +425,7 @@ DndAttributesMap_contains(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key)
         }
     auto key_sv = pystring_borrow_stringview(key);
     auto node = get_node(map->ctx, map->handle);
-    auto attributes = node->attributes;
-    auto count = attributes?attributes->count:0;
-    for(size_t i = 0; i < count; i++){
-        auto attr = &attributes->data[i];
+    RARRAY_FOR_EACH(attr, node->attributes){
         if(SV_equals(attr->key, key_sv))
             return 1;
         }
@@ -618,8 +611,7 @@ DndNode_repr(Nonnull(DndNode*)self){
         MSB_FORMAT(&msb, "Node(", nodenames[node->type], ", '", node->header, "', [", (int)node->children.count, "children])");
     else {
         MSB_FORMAT(&msb, "Node(", nodenames[node->type].text);
-        for(size_t i = 0; i < class_count;i++){
-            auto class = &node->classes->data[i];
+        RARRAY_FOR_EACH(class, node->classes){
             MSB_FORMAT(&msb, ".", *class);
             }
         MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node->children.count, "children])");
