@@ -56,7 +56,7 @@ static const
 struct {
     StringView name;
     NodeType type;
-} nodealiases[] = {
+} NODEALIASES[] = {
     {SV("md"),           NODE_MD},
     {SV("div"),          NODE_DIV},
     {SV("text"),         NODE_TEXT},
@@ -83,14 +83,14 @@ struct {
 };
 
 static const
-StringView raw_nodes[] = {
+StringView RAW_NODES[] = {
     SV("python"),
     SV("raw"),
     SV("comment"),
     SV("pre"),
 };
 static const
-StringViewUtf16 raw_nodes_utf16[] = {
+StringViewUtf16 RAW_NODES_UTF16[] = {
     {.text=u"python", .length=6},
     {.text=u"raw", .length=3},
     {.text=u"comment", .length=7},
@@ -99,7 +99,7 @@ StringViewUtf16 raw_nodes_utf16[] = {
 
 static const
 StringView
-nodetype_to_node_aliases[NODE_INVALID+1] = {
+NODETYPE_TO_NODE_ALIASES[NODE_INVALID+1] = {
      [NODE_MD]           = SV("md"),
      [NODE_DIV]          = SV("div"),
      [NODE_TEXT]         = SV("text"),

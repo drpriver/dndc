@@ -204,7 +204,7 @@ format_header(Nonnull(MStringBuilder*)sb, Nonnull(Node*)node, int indent){
         }
     msb_write_char(sb, ':');
     msb_write_char(sb, ':');
-    auto alias = &nodetype_to_node_aliases[node->type];
+    auto alias = &NODETYPE_TO_NODE_ALIASES[node->type];
     // we fucked up if this is 0
     assert(alias->length);
     msb_write_str(sb, alias->text, alias->length);

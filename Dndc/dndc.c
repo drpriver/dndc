@@ -1487,8 +1487,8 @@ dndc_analyze_syntax(StringView source_text, Nonnull(DndcSyntaxFunc*) syntax_func
                 if(nodenameend != aftercolon.text){
                     StringView nodename = {.text=aftercolon.text, .length=nodenameend-aftercolon.text};
                     syntax_func(syntax_data, DNDC_SYNTAX_NODE_TYPE, line, nodename.text-begin, nodename.text, nodename.length);
-                    for(size_t i = 0; i < arrlen(raw_nodes); i++){
-                        if(SV_equals(nodename, raw_nodes[i])){
+                    for(size_t i = 0; i < arrlen(RAW_NODES); i++){
+                        if(SV_equals(nodename, RAW_NODES[i])){
                             which = RAW;
                             raw_indentation = stripped.text - begin;
                             break;
@@ -1616,8 +1616,8 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, Nonnull(DndcSyntaxFuncUtf
                 if(nodenameend != aftercolon.text){
                     StringViewUtf16 nodename = {.text=aftercolon.text, .length=nodenameend-aftercolon.text};
                     syntax_func(syntax_data, DNDC_SYNTAX_NODE_TYPE, line, nodename.text-begin, nodename.text, nodename.length);
-                    for(size_t i = 0; i < arrlen(raw_nodes); i++){
-                        if(SV_utf16_equals(nodename, raw_nodes_utf16[i])){
+                    for(size_t i = 0; i < arrlen(RAW_NODES); i++){
+                        if(SV_utf16_equals(nodename, RAW_NODES_UTF16[i])){
                             which = RAW;
                             raw_indentation = stripped.text - begin;
                             break;

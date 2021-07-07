@@ -191,10 +191,10 @@ parse_post_colon(Nonnull(DndcContext*)ctx, StringView postcolon, NodeHandle node
         parse_set_err(ctx, postcolon.text, LS("no node type found after '::'"));
         Raise(PARSE_ERROR);
         }
-    for(size_t i = 0; i < arrlen(nodealiases); i++){
-        if(nodealiases[i].name.length == boundary){
-            if(memcmp(nodealiases[i].name.text, postcolon.text, boundary)==0){
-                auto type = nodealiases[i].type;
+    for(size_t i = 0; i < arrlen(NODEALIASES); i++){
+        if(NODEALIASES[i].name.length == boundary){
+            if(memcmp(NODEALIASES[i].name.text, postcolon.text, boundary)==0){
+                auto type = NODEALIASES[i].type;
                 switch(type){
                     case NODE_PYTHON:
                         Marray_push(NodeHandle)(&ctx->python_nodes, ctx->allocator, node_handle);
