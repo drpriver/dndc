@@ -928,14 +928,8 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
             auto link_node = get_node(&ctx, *link_handle);
             NODE_CHILDREN_FOR_EACH(it, link_node){
                 auto link_str_node = get_node(&ctx, *it);
-                auto str = link_str_node->header;
-                auto e = add_link_from_sv(&ctx, str, /*check_valid=*/true);
+                auto e = add_link_from_sv(&ctx, link_str_node);
                 if(e.errored){
-                    // This looks weird, but I am formatting the error.
-                    // FIXME: pass the node into the add_link_from_sv function?
-                    // That way it can properly format the error itself?
-                    node_set_err(&ctx, link_str_node, ctx.error.message);
-                    report_set_error(&ctx);
                     result.errored = e.errored;
                     goto cleanup;
                     }

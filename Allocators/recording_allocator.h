@@ -94,7 +94,6 @@ recording_free(Nonnull(RecordingAllocator*)r, Nullable(const void*) data, size_t
         if(data == r->allocations[i]){
             unhandled_error_condition(size != r->allocation_sizes[i]);
             const_free(data);
-            // TODO: compact?
             r->allocations[i] = NULL;
             r->allocation_sizes[i] = 0;
             return;
@@ -159,7 +158,6 @@ recording_realloc(Nonnull(RecordingAllocator*)r, Nullable(void*)data, size_t ori
     for(size_t i = 0; i < count-1; i++){
         if(data == r->allocations[i]){
             unhandled_error_condition(orig_size != r->allocation_sizes[i]);
-            // TODO: compact?
             r->allocations[i] = NULL;
             r->allocation_sizes[i] = 0;
             break;

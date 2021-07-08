@@ -441,13 +441,9 @@ find_link_target(Nonnull(DndcContext*)ctx, StringView kebabed);
 //
 // Parses a line of a ::links block, which is of the form "link = target"
 //
-// The check_valid parameter means for targets that start with a '#', aka
-// anchor links, to check that this is actually a valid anchor link in the
-// document.
-//
 static inline
 Errorable_f(void)
-add_link_from_sv(Nonnull(DndcContext*)ctx, StringView str, bool check_valid);
+add_link_from_sv(Nonnull(DndcContext*)ctx, Nonnull(Node*)node);
 
 //
 // Adds the link to the link map as derived from the header

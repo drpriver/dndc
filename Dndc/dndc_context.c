@@ -392,33 +392,30 @@ find_link_target(Nonnull(DndcContext*)ctx, StringView kebabed){
 
 static inline
 Errorable_f(void)
-add_link_from_sv(Nonnull(DndcContext*)ctx, StringView str, bool check_valid){
+add_link_from_sv(Nonnull(DndcContext*)ctx, Nonnull(Node*)node){
+    auto str = node->header;
     Errorable(void) result = {};
     const char* equals = memchr(str.text, '=', str.length);
     if(!equals){
-        // TODO: print error from this node
-        ctx->error.message = LS("no '=' in a link node");
+        node_print_err(ctx, node, SV("no '=' in a link node"));
         Raise(PARSE_ERROR);
         }
     MStringBuilder sb = {.allocator=ctx->string_allocator};
     msb_write_kebab(&sb, str.text, equals - str.text);
     if(!sb.cursor){
-        // TODO: print error from this node
-        ctx->error.message = LS("key is empty");
+        node_print_err(ctx, node, SV("key is empty."));
         Raise(PARSE_ERROR);
         }
     auto key = LS_to_SV(msb_detach(&sb));
     StringView value = stripped_view(equals + 1, (str.text+str.length)-(equals+1));
     if(!value.length){
-        // TODO: print error from this node
-        ctx->error.message = LS("link target is empty");
+        node_print_err(ctx, node, SV("link target is empty."));
         Raise(PARSE_ERROR);
         }
-    if(check_valid and value.text[0] == '#'){
+    if(value.text[0] == '#'){
         StringView target = {.text = value.text+1, .length = value.length-1};
         if(!target.length){
-            // TODO: print error from this node
-            ctx->error.message = LS("link target is empty after the '#'");
+            node_print_err(ctx, node, SV("link target is empty after the '#'"));
             Raise(PARSE_ERROR);
             }
         // TODO: keep a binary tree or something?
@@ -426,8 +423,7 @@ add_link_from_sv(Nonnull(DndcContext*)ctx, StringView str, bool check_valid){
             if(SV_equals(li->value, value))
                 goto foundit;
             }
-        // TODO: print error from this node
-        ctx->error.message = LS("Anchor does not correspond to any link");
+        node_print_err(ctx, node, SV("Anchor does not correspond to any link"));
         Raise(PARSE_ERROR);
         foundit:;
         }
