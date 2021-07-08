@@ -555,6 +555,8 @@ static
 int
 dndc_write_depends_file(Nonnull(void*)user_data, size_t npaths, Nonnull(StringView*) paths){
     struct DependencyUserData* ud = user_data;
+    if(!ud->depfile.length || !ud->outfile.length)
+        return 0;
     MStringBuilder msb = {.allocator=get_mallocator()};
     msb_reset(&msb);
     msb_write_str(&msb, ud->outfile.text, ud->outfile.length);
