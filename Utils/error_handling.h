@@ -7,8 +7,6 @@
 #include <stdlib.h>
 #include "common_macros.h"
 // X macros that is all the error conditions.
-// TODO: cleanup these. Only have the ones we actually
-// use, or else use them consistently!
 #define ERROR_CODES(apply) \
     apply(NO_ERROR, 0) \
     apply(ALLOC_FAILURE, 1) \

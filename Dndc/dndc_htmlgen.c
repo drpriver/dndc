@@ -685,7 +685,6 @@ RENDERFUNC(TABLE){
     return (Errorable(void)){};
     }
 RENDERFUNC(TABLE_ROW){
-    // TODO: odd even class?
     msb_write_literal(sb, "<tr>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
@@ -955,8 +954,6 @@ RENDERFUNC(KEYVALUE){
     return (Errorable(void)){};
     }
 RENDERFUNC(KEYVALUEPAIR){
-    // TODO: maybe this should be lowered into a table row node?
-    // TODO: odd even class?
     msb_write_literal(sb, "<tr>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
@@ -1164,8 +1161,6 @@ RENDERFUNC(IMGLINKS){
     for(size_t i = 4; i < node->children.count; i++){
         auto child = get_node(ctx, children[i]);
         if(child->type != NODE_STRING){
-            // TODO: this lets us skip embedded python nodes, but we should
-            // error on other nodes probably.
             if(child->type == NODE_PYTHON)
                 continue;
             node_print_warning2(ctx, child, SV("Non-string node child of imglinks node: "), LS_to_SV(NODENAMES[child->type]));

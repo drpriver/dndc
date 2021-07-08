@@ -602,7 +602,6 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         [self setSelectedRange:adjustedrange];
 }
 -(void)ensure_pattern{
-    // TODO: maybe this should be a getter instead?
     if(!indent_pattern)
         PushDiagnostic();
         #pragma clang diagnostic ignored "-Wnullable-to-nonnull-conversion"
@@ -1215,8 +1214,6 @@ BOOL show_stats;
     NSString* dir = [[self->file_url URLByDeletingLastPathComponent] path];
     StringView base_dir;
     if(dir){
-        // TODO: is there a more efficient way to
-        // turn an NSString into a string view?
         const char* dir_text = [dir UTF8String];
         base_dir.text = dir_text;
         base_dir.length = strlen(dir_text);

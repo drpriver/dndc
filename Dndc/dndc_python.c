@@ -432,27 +432,18 @@ DndAttributesMap_contains(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key)
     return 0;
     }
 
+// Value should be verified to either be NULL or a PyUnicode object.
 static
 int
-DndAttributesMap_setitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key, Nullable(PyObject*) value){
-    auto ctx = map->ctx;
-    if(!PyUnicode_Check(key)){
-        PyErr_SetString(PyExc_TypeError, "Attribute maps must be indexed by strings");
-        return -1;
-        }
-    if(value and !PyUnicode_Check(value)){
-        PyErr_SetString(PyExc_TypeError, "Attribute maps can only have string values");
-        return -1;
-        }
-    auto key_sv = pystring_borrow_stringview(key);
-    auto node = get_node(ctx, map->handle);
+dnd_attributes_map_set_item(Nonnull(DndcContext*)ctx, NodeHandle handle, StringView key_sv, Nullable(PyObject*)value){
+    auto node = get_node(ctx, handle);
     auto attributes = node->attributes;
     auto count = attributes?attributes->count:0;
     for(size_t i = 0; i < count; i++){
         auto attr = &attributes->data[i];
         if(SV_equals(attr->key, key_sv)){
             if(value){
-                attr->value = pystring_to_stringview((Nonnull(PyObject*))value, ctx->allocator);
+                attr->value = pystring_to_stringview((Nonnull(PyObject*))value, ctx->string_allocator);
                 return 0;
                 }
             else {
@@ -465,12 +456,27 @@ DndAttributesMap_setitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key, 
         PyErr_Format(PyExc_KeyError, "Unknown attribute: '%s'", key_sv.text);
         return -1;
         }
-    const char* key_copy = Allocator_dupe(ctx->allocator, key_sv.text, key_sv.length);
+    const char* key_copy = Allocator_dupe(ctx->string_allocator, key_sv.text, key_sv.length);
     auto attr = Rarray_alloc(Attribute)(&node->attributes, ctx->allocator);
     attr->key.length = key_sv.length;
     attr->key.text = key_copy;
-    attr->value = pystring_to_stringview((Nonnull(PyObject*))value, ctx->allocator);
+    attr->value = pystring_to_stringview((Nonnull(PyObject*))value, ctx->string_allocator);
     return 0;
+    }
+
+static
+int
+DndAttributesMap_setitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key, Nullable(PyObject*) value){
+    if(!PyUnicode_Check(key)){
+        PyErr_SetString(PyExc_TypeError, "Attribute maps must be indexed by strings");
+        return -1;
+        }
+    if(value and !PyUnicode_Check(value)){
+        PyErr_SetString(PyExc_TypeError, "Attribute maps can only have string values");
+        return -1;
+        }
+    auto key_sv = pystring_borrow_stringview(key);
+    return dnd_attributes_map_set_item(map->ctx, map->handle, key_sv, value);
     }
 
 static
@@ -1258,6 +1264,8 @@ DndNode_getattr_ls(Nonnull(DndNode*)obj, LongString name){
                 return result;
                 }
             else {
+                // It's unclear whether you should get empty string, None or AttributeError if you try to access a node without an id.
+                // Py_RETURN_NONE;
                 PyErr_SetString(PyExc_AttributeError, "This node has no id");
                 return NULL;
                 }
@@ -1359,8 +1367,12 @@ DndNode_setattr_ls(Nonnull(DndNode*)obj, LongString name, Nullable(PyObject*) va
     switch(name.length){
         case 2:{
             if(CHECK("id", 2)){
-                PyErr_SetString(PyExc_NotImplementedError, "TODO: Ids should be reassignable.");
-                return -1;
+                if(PyUnicode_Check(value))
+                    return dnd_attributes_map_set_item(ctx, obj->handle, SV("id"), value);
+                else {
+                    PyErr_SetString(PyExc_TypeError, "Attempt to set node id to a non-string.");
+                    return -1;
+                }
             }
         }break;
         case 3:{

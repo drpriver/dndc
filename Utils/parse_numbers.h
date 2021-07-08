@@ -141,7 +141,7 @@ parse_uint32(Nonnull(const char*)str, size_t length){
     result.result = value;
     return result;
     }
-// TODO: write tests
+
 static inline
 Errorable(int32_t)
 parse_int32(Nonnull(const char*)str, size_t length){

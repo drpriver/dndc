@@ -63,14 +63,11 @@
    permitted).
 */
 #ifndef _WIN32
-// this is weird... on windows this evaluates to 4, while on linux/mac this is 0
-// TODO: a version that works on windows!
-// If I'm willing to use statement expressions I could just use a static
-// assert instead...
 #define BUILD_BUG_IF(e) (sizeof(struct { int:-!!(e); }))
 #define __must_be_array(a) \
  BUILD_BUG_IF(__builtin_types_compatible_p(typeof(a), typeof(&a[0])))
 #else
+// Windows bit fields are different in the abi.
 #define __must_be_array(a) 0
 #endif
 
@@ -85,7 +82,6 @@
 #define unreachable() __builtin_unreachable()
 #endif
 
-// TODO: Log an error message?
 // This is for TODO error handling. Don't use bare assert for that as asserts
 // are for invariants and are left in after development is done, whereas
 // these represent defects in the code that needs to be re-written.

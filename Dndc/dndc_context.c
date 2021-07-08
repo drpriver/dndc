@@ -613,28 +613,29 @@ convert_node_to_container_containing_clone_of_former_self(Nonnull(DndcContext*)c
 static inline
 void
 ctx_add_builtins(Nonnull(DndcContext*)ctx){
-    ctx_store_builtin_file(ctx, LS("builtins/coords.js"), LS(
-    // TODO: more maintainable way of doing this
-        "document.addEventListener('DOMContentLoaded', function(){\n"
-        "    const svgs = document.getElementsByTagName('svg');\n"
-        "    for(let i = 0; i < svgs.length; i++){\n"
-        "        const svg = svgs[i];\n"
-        "        const first_text = svg.getElementsByTagName('text')[0];\n"
-        "        const text_height = first_text.getBBox().height || 0;\n"
-        "        const parent = svg.parentElement;\n"
-        "        const p = document.createElement('p');\n"
-        "        p.style = 'text-align:center';\n"
-        "        parent.insertBefore(p, p.nextSibling);\n"
-        "        svg.addEventListener('mousemove', function(e){\n"
-        "            const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;\n"
-        "            const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height; \n"
-        "            const rect = e.currentTarget.getBoundingClientRect();\n"
-        "            const true_x = ((e.clientX - rect.x)/ x_scale) | 0;\n"
-        "            const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;\n"
-        "            p.innerHTML = 'coord(' + true_x + ',' + true_y+ ')';\n"
-        "        })\n"
-        "    }\n"
-        "})\n"
-        ));
+#define JSRAW(...) #__VA_ARGS__
+    ctx_store_builtin_file(ctx, LS("builtins/coords.js"), LS(JSRAW(
+        document.addEventListener("DOMContentLoaded", function(){
+            const svgs = document.getElementsByTagName("svg");
+            for(let i = 0; i < svgs.length; i++){
+                const svg = svgs[i];
+                const first_text = svg.getElementsByTagName("text")[0];
+                const text_height = first_text.getBBox().height || 0;
+                const parent = svg.parentElement;
+                const p = document.createElement('p');
+                p.style = "text-align:center";
+                parent.insertBefore(p, p.nextSibling);
+                svg.addEventListener("mousemove", function(e){
+                    const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;
+                    const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height;
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const true_x = ((e.clientX - rect.x)/ x_scale) | 0;
+                    const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;
+                    p.innerHTML = "coord(" + true_x + ',' + true_y+ ')';
+                });
+            }
+        });
+    )));
+#undef JSRAW
     }
 #endif

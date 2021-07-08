@@ -555,9 +555,8 @@ pydndc_collect_syntax_tokens(Nullable(void*)user_data, int type, int line, int c
         return;
     PyObject* key = PyLong_FromLong(line);
     PyObject* value = Py_BuildValue("iinn", type, col, (Py_ssize_t)(begin - cd->begin), (Py_ssize_t)length);
-    // TODO: handle allocation failures I guess.
-    assert(key);
-    assert(value);
+    unhandled_error_condition(key);
+    unhandled_error_condition(value);
     PyObject * list;
     if(PyDict_Contains(d, key)){
         list = PyDict_GetItem(d, key); // borrow
