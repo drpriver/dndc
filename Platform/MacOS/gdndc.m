@@ -8,6 +8,11 @@
 #import "MStringBuilder.h"
 #import "mallocator.h"
 #import "msb_format.h"
+#define LOGIT(...) NSLog(@ "%d: " #__VA_ARGS__ "= %@", __LINE__, __VA_ARGS__)
+// Convenience macro for writing inline javascript without a million quotes.
+// Note that you need to semi-colon terminate all of your lines.
+#define JSRAW(...) #__VA_ARGS__
+#include "log_print.h"
 
 #if !__has_feature(objc_arc)
 #error "ARC is off"
@@ -266,6 +271,7 @@ typedef enum GdndInsertTag{
 @public WebNavDel* webnavdel; // for the webview
 @public NSURL* file_url;
 @public DndUrlHandler* handler;
+@public NSString* scroll_resto_string;
 }
 -(LongString)get_text;
 -(void)recalc_html:(LongString)text;
@@ -849,6 +855,27 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         NSString* body = [[NSString alloc] initWithData:(NSData*)[request HTTPBody] encoding:NSUTF8StringEncoding];
         [urlSchemeTask didFinish];
         [self.controller->text insertText:body replacementRange:NSMakeRange([[self.controller->text textStorage] length], 0)];
+        return;
+    }
+    if([method isEqualToString:@"GET"]){
+        if([[url scheme] isEqualToString:@"dnd"] and [[url path] isEqualToString:@"/scrollresto"]){
+        auto response = [[NSHTTPURLResponse alloc]
+            initWithURL:(NSURL*)[NSURL URLWithString:@"dnd://gdndc"]
+             statusCode:200
+            HTTPVersion:@"HTTP/1.1"
+           headerFields:@{
+           @"Access-Control-Allow-Origin":@"dnd://gdndc",
+           @"Cache-Control":@"no-cache",
+           }
+        ];
+
+        [urlSchemeTask didReceiveResponse:response];
+        if(self.controller->scroll_resto_string){
+            [urlSchemeTask didReceiveData: (NSData*)[self.controller->scroll_resto_string dataUsingEncoding:NSUTF16StringEncoding]];
+        }
+        [urlSchemeTask didFinish];
+        return;
+        }
     }
     // This is faster, but I can't figure out how to clear the image from the cache.
 #if 0
@@ -882,9 +909,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 
     }
 #endif
-    else {
-        [urlSchemeTask didFailWithError:[NSError errorWithDomain:@"denied" code:1 userInfo:nil]];
-    }
+    [urlSchemeTask didFailWithError:[NSError errorWithDomain:@"denied" code:1 userInfo:nil]];
 }
 -(void)webView:(WKWebView*)webView stopURLSchemeTask:(id<WKURLSchemeTask>)urlSchemeTask{
 }
@@ -1155,15 +1180,85 @@ BOOL show_stats;
     [self->text insertText:str replacementRange:NSMakeRange(0, [[self->text textStorage] length])];
     [self->scrollview setLineScroll:before];
 }
-
+-(void)save_scroll_position {
+    [webview
+        evaluateJavaScript:@ JSRAW(
+            (function(){
+                const result = {};
+                const html = document.getElementsByTagName("html")[0];
+                if(html.scrollLeft || html.scrollTop)
+                    result.html = [html.scrollLeft, html.scrollTop];
+                function get_scroll(ident){
+                    let thing = document.getElementById(ident);
+                    if(!thing){
+                        let things = document.getElementsByClassName(ident);
+                        if(things.length)
+                            thing = things[0];
+                    }
+                    if(thing && (thing.scrollLeft || thing.scrollTop)){
+                        result[ident] = [thing.scrollLeft, thing.scrollTop];
+                    }
+                }
+                get_scroll("left");
+                get_scroll("center");
+                get_scroll("right");
+                if(Object.keys(result).length){
+                    return JSON.stringify(result);
+                }
+                return null;
+            }());)
+        completionHandler:^(id object, NSError*error){
+            if(error){
+                LOGIT(error);
+                return;
+            }
+            if(object == [NSNull null])
+                return;
+            scroll_resto_string = object;
+        }];
+}
 -(LongString)get_text{
+    [self save_scroll_position];
     NSString *string = self->text.string;
+    // Inject javascript that will restore the scroll position in the window.
+    string = [string stringByAppendingString:
+        @"\n"
+        "::js @inline\n"
+    ];
+    string = [string stringByAppendingString:
+        @"  "
+        JSRAW(document.addEventListener("DOMContentLoaded", function(){
+                  let request = new XMLHttpRequest();
+                  request.open("GET", "dnd:///scrollresto", true);
+                  request.onload = function(){
+                    const SCROLLRESTO = JSON.parse(request.response);
+                    for(let [key, value] of Object.entries(SCROLLRESTO)){
+                        if(key == "html"){
+                            const html = document.getElementsByTagName("html")[0];
+                            html.scrollLeft = value[0];
+                            html.scrollTop = value[1];
+                        }
+                        else {
+                            let thing = document.getElementById(key);
+                            if(!thing){
+                                let things = document.getElementsByClassName(key);
+                                if(things.length)
+                                    thing = things[0];
+                            }
+                            if(thing){
+                                thing.scrollLeft = value[0];
+                                thing.scrollTop = value[1];
+                            }
+                        }
+                    }
+                  };
+                  request.send();
+                });) "\n"];
     if(coord_helper){
-#define JAVASCRIPT(...) #__VA_ARGS__
         string = [string stringByAppendingString:
             @"\n"
             "::js @inline\n  "
-            JAVASCRIPT(
+            JSRAW(
             document.addEventListener("DOMContentLoaded", function(){
               const svgs = document.getElementsByTagName("svg");
               for(let i = 0; i < svgs.length; i++){
