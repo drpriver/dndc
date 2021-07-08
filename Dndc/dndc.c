@@ -204,13 +204,18 @@ static
 int
 dndc_write_depends_file(Nonnull(void*)user_data, size_t npaths, Nonnull(StringView*) paths);
 
+struct DependencyUserData {
+    LongString outfile;
+    LongString depfile;
+};
+
 static int depends_print_callback(void*_Nullable, size_t, Nonnull(StringView*));
 int main(int argc, char**argv){
     LongString source_path = LS("");
     LongString output_path = LS("");
     DndcDependencyFunc*dependency_func = NULL;
     LongString dependency_path = LS("");
-    LongString* dependency_user_data = NULL;
+    struct DependencyUserData dependency_user_data = {};
     LongString base_dir = LS("");
     bool report_orphans = false;
     bool no_python = false;
@@ -498,7 +503,7 @@ int main(int argc, char**argv){
         }
     else if(dependency_path.length){
         dependency_func = dndc_write_depends_file;
-        dependency_user_data = &dependency_path;
+        dependency_user_data.depfile = dependency_path;
         }
     if(no_threads)
         flags |= DNDC_NO_THREADS;
@@ -518,20 +523,21 @@ int main(int argc, char**argv){
         flags |= DNDC_STRIP_WHITESPACE;
     if(dont_read)
         flags |= DNDC_DONT_READ;
+    dependency_user_data.outfile = output_path;
 
     #ifdef BENCHMARKING
     flags &= ~DNDC_NO_CLEANUP;
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, NULL, NULL, dndc_stderr_error_func, NULL, dependency_func, dependency_user_data);
+    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, NULL, NULL, dndc_stderr_error_func, NULL, dependency_func, &dependency_user_data);
     assert(!e.errored);
     flags |= DNDC_PYTHON_IS_INIT;
     for(int i = 0; i < BENCHMARKITERS;i++){
-        e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, NULL, NULL, dndc_stderr_error_func, NULL, dependency_func, dependency_user_data);
+        e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, NULL, NULL, dndc_stderr_error_func, NULL, dependency_func, &dependency_user_data);
         assert(!e.errored);
         }
     end_interpreter();
     return 0;
     #else
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, NULL, NULL, dndc_stderr_error_func, NULL, dependency_func, dependency_user_data);
+    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, NULL, NULL, dndc_stderr_error_func, NULL, dependency_func, &dependency_user_data);
     return e.errored;
     #endif
     }
@@ -548,10 +554,10 @@ depends_print_callback(void*_Nullable unused, size_t npaths, Nonnull(StringView*
 static
 int
 dndc_write_depends_file(Nonnull(void*)user_data, size_t npaths, Nonnull(StringView*) paths){
-    LongString* path = user_data;
+    struct DependencyUserData* ud = user_data;
     MStringBuilder msb = {.allocator=get_mallocator()};
     msb_reset(&msb);
-    msb_write_str(&msb, path->text, path->length);
+    msb_write_str(&msb, ud->outfile.text, ud->outfile.length);
     msb_write_char(&msb, ':');
     for(size_t i = 0; i < npaths; i++){
         auto dep = &paths[i];
@@ -566,7 +572,7 @@ dndc_write_depends_file(Nonnull(void*)user_data, size_t npaths, Nonnull(StringVi
         msb_write_literal(&msb, ":\n");
         }
     auto deptext = msb_borrow(&msb);
-    auto write_err = write_file(path->text, deptext.text, deptext.length);
+    auto write_err = write_file(ud->depfile.text, deptext.text, deptext.length);
     if(write_err.errored){
         ERROR("Error on write: %s", get_error_name(write_err));
         perror("Error on write");
