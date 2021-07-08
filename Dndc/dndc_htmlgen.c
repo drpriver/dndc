@@ -27,7 +27,7 @@ typedef Errorable_f(void)(*_Nonnull renderfunc)(Nonnull(DndcContext*), Nonnull(M
 
 static
 const
-renderfunc renderfuncs[] = {
+renderfunc RENDERFUNCS[] = {
     #define X(a,b) [NODE_##a] = &RENDERFUNCNAME(a),
     NODETYPES(X)
     #undef X
@@ -39,7 +39,15 @@ Errorable_f(void)
 render_node(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*) restrict sb, Nonnull(Node*)node, int header_depth){
     bool hide = node_has_attribute(node, SV("hide"));
     if(hide) return (Errorable(void)){};
-    return renderfuncs[node->type](ctx, sb, node, header_depth);
+#if 0
+    switch(node->type){
+#define X(a, b) case NODE_##a: return RENDERFUNCNAME(a)(ctx, sb, node, header_depth);
+        NODETYPES(X)
+#undef X
+        }
+#else
+    return RENDERFUNCS[node->type](ctx, sb, node, header_depth);
+#endif
     }
 static
 Errorable_f(void)
