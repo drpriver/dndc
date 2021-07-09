@@ -24,13 +24,29 @@
 //  "123, North Elm St." -> "123-north-elm-st"
 //
 static inline
-int
+void
 msb_write_kebab(Nonnull(MStringBuilder*)msb, Nonnull(const char*)text, size_t length){
-    msb_reserve(msb, length);
+    msb_reserve(msb, length+2);
     auto data = msb->data;
     auto cursor = msb->cursor;
-    int n_written = 0;
-    bool want_write_hyphen = false;
+    // A bit of explanation is in order.
+    //
+    // Essentially, when a dash is called for, we first check if we have
+    // already written one into the buffer at the current location. If we have,
+    // then we advance the cursor by one. If we have not, then we don't advance
+    // the cursor.
+    //
+    // Now, that sounds weird, but notice that dashes only trail after
+    // characters, they are neveer at the beginning of the string. So, we just
+    // always write the character + a dash, but we don't advance the cursor for
+    // that dash until we actually need one.
+    //
+    // We need this sentinel not for it's value, but rather so that we have a
+    // value past the dash that is not a dash, or at the beginning of the
+    // string. Without writing it, we would read uninitialized memory.
+#define BEGINSENTINEL '@'
+#define ENDSENTINEL '$'
+    data[cursor] = BEGINSENTINEL;
     for(size_t i = 0; i < length; i++){
         char c = text[i];
         switch(c){
@@ -39,25 +55,23 @@ msb_write_kebab(Nonnull(MStringBuilder*)msb, Nonnull(const char*)text, size_t le
                 // fall-through
             case 'a' ... 'z':
             case '0' ... '9':
-                if(want_write_hyphen){
-                    // msb_write_char(msb, a, '-');
-                    data[cursor++] = '-';
-                    want_write_hyphen = false;
-                    }
-                // msb_write_char(msb, a, c);
                 data[cursor++] = c;
-                n_written += 1;
+                data[cursor] = '-';
+                data[cursor+1] = ENDSENTINEL;
                 continue;
-            case ' ': case '\t': case '-':
-                if(n_written)
-                    want_write_hyphen = true;
-                continue;
+            case ' ': case '\t': case '-':{
+                int is_dash = data[cursor] == '-';
+                cursor += is_dash;
+                }continue;
             default:
                 continue;
             }
         }
+    cursor -= (data[cursor] == ENDSENTINEL);
+#undef BEGINSENTINEL
+#undef ENDSENTINEL
     msb->cursor = cursor;
-    return n_written;
+    return;
     }
 
 //
