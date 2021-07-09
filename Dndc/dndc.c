@@ -356,7 +356,7 @@ int main(int argc, char**argv){
                 .hidden = true,
             },
             {
-                .name = SV("--singled-threaded"),
+                .name = SV("--single-threaded"),
                 .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&no_threads),
