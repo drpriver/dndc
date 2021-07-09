@@ -46,17 +46,21 @@ analyze_line(Nonnull(DndcContext*)ctx){
         break;
         }
     for(;;cursor++){
-        if(!doublecolon){
-            if(unlikely(*cursor == ':')){
-                if(cursor[1] == ':'){
-                    doublecolon = cursor;
+        switch(*cursor){
+            case '\n': case '\0':
+                endline = cursor;
+                break;
+            case ':':
+                if(!doublecolon){
+                    if(cursor[1] == ':'){
+                        doublecolon = cursor;
+                        }
                     }
-                }
+                continue;
+            default:
+                continue;
             }
-        if(unlikely(*cursor == '\n' || *cursor == '\0')){
-            endline = cursor;
-            break;
-            }
+        break;
         }
     ctx->doublecolon = doublecolon;
     ctx->lineend = endline;
