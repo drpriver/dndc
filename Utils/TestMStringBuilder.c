@@ -4,6 +4,7 @@
 #include "MStringBuilder.h"
 #include "mallocator.h"
 #include "msb_format.h"
+#include "msb_extensions.h"
 
 TestFunction(TestMStringBuilder1){
     TESTBEGIN();
@@ -77,11 +78,36 @@ TestFunction(TestMStringBuilder3){
     msb_destroy(&sb);
     TESTEND();
     }
+TestFunction(TestKebab){
+    TESTBEGIN();
+    struct {
+        StringView before;
+        StringView after;
+        } testcases[] = {
+            {SV("hello there"), SV("hello-there")},
+            {SV("H3l--lo"), SV("h3l-lo")},
+            {SV("  hi    "), SV("hi")},
+            {SV("1   2   3"), SV("1-2-3")},
+            {SV("My wonderful cat, Lucy"), SV("my-wonderful-cat-lucy")},
+            {SV("123, North Elm St."), SV("123-north-elm-st")},
+            {SV(""), SV("")},
+        };
+    for(int i = 0; i < arrlen(testcases); i++){
+        auto tc = &testcases[i];
+        MStringBuilder sb = {.allocator=get_mallocator()};
+        msb_write_kebab(&sb, tc->before.text, tc->before.length);
+        auto str = msb_borrow(&sb);
+        TestExpectSvEquals(str, tc->after);
+        msb_destroy(&sb);
+        }
+    TESTEND();
+    }
 
 int main(int argc, char** argv){
     RegisterTest(TestMStringBuilder1);
     RegisterTest(TestMStringBuilder2);
     RegisterTest(TestMStringBuilder3);
+    RegisterTest(TestKebab);
     return test_main(argc, argv);
     }
 #include "allocator.c"

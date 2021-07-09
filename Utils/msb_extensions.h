@@ -1,6 +1,7 @@
 #ifndef MSB_EXTENSIONS_H
 #define MSB_EXTENSIONS_H
 #include "MStringBuilder.h"
+#include "str_util.h"
 
 //
 // These functions are not universal enough to go in the main MStringBuilder
