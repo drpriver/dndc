@@ -637,5 +637,18 @@ ctx_add_builtins(Nonnull(DndcContext*)ctx){
         });
     )));
 #undef JSRAW
+    ctx_store_builtin_file(ctx, LS("builtins/autoindex"), LS(
+        "::python\n"
+        "  import os\n"
+        "  base = ctx.base\n"
+        "  dnds = []\n"
+        "  for f in os.listdir(base):\n"
+        "    if not f.endswith('.dnd'):\n"
+        "      continue\n"
+        "    dnds.append(ctx.kebab(f[:-4]))\n"
+        "  links = '::links\\n  '\n"
+        "  links += '\\n  '.join([f'  {d} = {d}.html' for d in dnds]) + '\\n'\n"
+        "  ctx.root.parse(links)\n"
+    ));
     }
 #endif
