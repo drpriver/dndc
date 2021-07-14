@@ -35,13 +35,13 @@ SCHEME = QWebEngineUrlScheme(b'dnd')  # type: ignore
 SCHEME.setFlags(
         QWebEngineUrlScheme.Flag.SecureScheme
         | QWebEngineUrlScheme.Flag.LocalAccessAllowed # type: ignore
-        | QWebEngineUrlScheme.Flag().CorsEnabled # type: ignore
+        | QWebEngineUrlScheme.Flag.CorsEnabled # type: ignore
       )
 SCHEME.setSyntax(QWebEngineUrlScheme.Syntax.Path)
 QWebEngineUrlScheme.registerScheme(SCHEME)
 
 def append_room_with_name_at(name:str, x:int, y:int) -> None:
-    page: Optional[Page] = tabwidget.currentWidget()
+    page: Optional[Page] = TABWIDGET.currentWidget()
     if not page:
         return
     if page.textedit.isReadOnly():
@@ -62,7 +62,7 @@ class SCHEME_Handler(QWebEngineUrlSchemeHandler):
                 y = int(y_)
                 name = ','.join(name_)
             except:
-                logger.exception('Unable to parse room name from PUT: {path=}')
+                LOGGER.exception('Unable to parse room name from PUT: {path=}')
                 return
             # I'm not sure if this is necessary, but I didn't want to trigger
             # any requests from within the scheme handler, so I wanted to add text
@@ -70,7 +70,7 @@ class SCHEME_Handler(QWebEngineUrlSchemeHandler):
             QTimer.singleShot(0, lambda: append_room_with_name_at(name, x, y))
             return
         if request.requestMethod() != b'GET':
-            logger.debug(f'Not GET: {request.requestMethod()=}')
+            LOGGER.debug(f'Not GET: {request.requestMethod()=}')
             request.fail(QWebEngineUrlRequestJob.Error.RequestDenied)
             return
         url = request.requestUrl()
@@ -101,19 +101,19 @@ class Logs:
             self.stream = open(LOGFILE_LOCATION, 'a', encoding='utf-8')
         except:
             self.stream = sys.stderr
-        self.logger = logging.getLogger('pygdndc')
-        self.logger.setLevel(logging.DEBUG)
+        self.LOGGER = logging.getLogger('pygdndc')
+        self.LOGGER.setLevel(logging.DEBUG)
         handler = logging.StreamHandler(stream=self.stream)
         handler.setFormatter(logging.Formatter(
             fmt='[%(levelname)s] %(asctime)s L%(lineno)d: %(message)s',
             datefmt='%H:%M:%S',
             ))
-        self.logger.addHandler(handler)
-        self.error = self.logger.error
-        self.info = self.logger.info
-        self.warn = self.logger.warn
-        self.debug = self.logger.debug
-        self.exception = self.logger.exception
+        self.LOGGER.addHandler(handler)
+        self.error = self.LOGGER.error
+        self.info = self.LOGGER.info
+        self.warn = self.LOGGER.warn
+        self.debug = self.LOGGER.debug
+        self.exception = self.LOGGER.exception
         self.info('New Session')
         self.info('pydndc: version is %s', pydndc.__version__)
         self.info('pygdndc: version is %s', PYGDNDC_VERSION)
@@ -130,8 +130,8 @@ class Logs:
         self.stream.flush()
         self.stream.close()
 
-logger = Logs()
-logger.install()
+LOGGER = Logs()
+LOGGER.install()
 
 whitespace_re = re.compile(r'^\s+')
 
@@ -139,9 +139,9 @@ whitespace_re = re.compile(r'^\s+')
 # recognized app domain.
 APPHOST = 'invalid.'
 
-app = QApplication(sys.argv)
-app.setApplicationName(APPNAME)
-app.setApplicationDisplayName(APPNAME)
+APP = QApplication(sys.argv)
+APP.setApplicationName(APPNAME)
+APP.setApplicationDisplayName(APPNAME)
 handler = SCHEME_Handler()
 QWebEngineProfile.defaultProfile().installUrlSchemeHandler(b'dnd', handler)  # type: ignore
 all_windows: Dict[str, 'Page'] = {}
@@ -156,8 +156,8 @@ else:
 FONT.setPointSize(pointsize)
 FONT.setFixedPitch(True)
 FONT.setFamilies(['Menlo','Cascadia Mono', 'Consolas','Ubuntu Mono', 'Mono'])
-fontmetrics = QFontMetrics(FONT)
-EIGHTYCHARS = fontmetrics.horizontalAdvance('M')*80
+FONTMETRICS = QFontMetrics(FONT)
+EIGHTYCHARS = FONTMETRICS.horizontalAdvance('M')*80
 EDITOR_ON_LEFT = True
 PRINT_STATS = False
 FILE_CACHE = pydndc.FileCache()
@@ -206,19 +206,19 @@ class DndMainWindow(QMainWindow):
             page.save()
         e.accept()
 
-window = DndMainWindow()
-tabwidget = QTabWidget()
-tabwidget.setTabsClosable(True)
+WINDOW = DndMainWindow()
+TABWIDGET = QTabWidget()
+TABWIDGET.setTabsClosable(True)
 def close_tab(index:int) -> None:
-    page = tabwidget.widget(index)
+    page = TABWIDGET.widget(index)
     page.save()
     page.close()
-    tabwidget.removeTab(index)
+    TABWIDGET.removeTab(index)
     del all_windows[page.filename]
     page.setParent(None)  # type: ignore
 
-tabwidget.tabCloseRequested.connect(close_tab)
-window.setCentralWidget(tabwidget)
+TABWIDGET.tabCloseRequested.connect(close_tab)
+WINDOW.setCentralWidget(TABWIDGET)
 
 # this is stupid and slow and I hate it and hate everything about unicode
 def byte_index_to_character_index(s:str, index:int) -> int:
@@ -311,6 +311,61 @@ COORD_HELPER_SCRIPT='''
       });
     }
   });
+'''
+SCROLL_RESTO_SCRIPT='''
+::js @inline
+    document.addEventListener('DOMContentLoaded', function(){
+        console.log(SCROLLRESTO);
+        for(let [key, value] of Object.entries(SCROLLRESTO)){
+            if(key == "html"){
+                const html = document.getElementsByTagName("html")[0];
+                if(html){
+                    html.scrollLeft = value[0];
+                    html.scrollTop = value[1];
+                    }
+            }
+            else {
+                let thing = document.getElementById(key);
+                if(!thing){
+                    let things = document.getElementsByClassName(key);
+                    if(things.length)
+                        thing = things[0];
+                }
+                if(thing){
+                    thing.scrollLeft = value[0];
+                    thing.scrollTop = value[1];
+                }
+            }
+        }
+    });
+'''
+GET_SCROLL_POSITION_SCRIPT='''
+(function(){
+    const result = {};
+    const html = document.getElementsByTagName("html")[0];
+    if(!html)
+        return null;
+    if(html.scrollLeft || html.scrollTop)
+        result.html = [html.scrollLeft, html.scrollTop];
+    function get_scroll(ident){
+        let thing = document.getElementById(ident);
+        if(!thing){
+            let things = document.getElementsByClassName(ident);
+            if(things.length)
+                thing = things[0];
+        }
+        if(thing && (thing.scrollLeft || thing.scrollTop)){
+            result[ident] = [thing.scrollLeft, thing.scrollTop];
+        }
+    }
+    get_scroll("left");
+    get_scroll("center");
+    get_scroll("right");
+    if(Object.keys(result).length){
+        return JSON.stringify(result);
+    }
+    return null;
+}());
 '''
 class DndEditor(QPlainTextEdit):
     def __init__(self, parent=None) -> None:
@@ -556,6 +611,7 @@ class SplitterHandler(QObject):
 class Page(QSplitter):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self.inflight = False
         self.webpage = DndWebPage()
         self.web = QWebEngineView()
         self.web.setPage(self.webpage)
@@ -597,6 +653,7 @@ class Page(QSplitter):
         self.filename = ''
         self.dependencies = set()  # type: Set[str]
         left = EDITOR_ON_LEFT
+        self.scroll_pos_string = ''
         show_errors = True
         self.show_errors = True
         self.editor_is_on_left = True
@@ -642,7 +699,7 @@ class Page(QSplitter):
     def file_changed(self, path:str) -> None:
         if path not in self.dependencies:
             return
-        logger.debug("dependency '%s' changed", path)
+        LOGGER.debug("dependency '%s' changed", path)
         self.update_html()
 
     def clear_errors(self) -> None:
@@ -657,7 +714,7 @@ class Page(QSplitter):
             'Info',
             )
         if error_type < 0 or error_type >= len(error_types):
-            logger.error('unrecognized error type: %d', error_type)
+            LOGGER.error('unrecognized error type: %d', error_type)
             return
         if error_type == 0:
             self.textedit.error_line = row
@@ -671,10 +728,23 @@ class Page(QSplitter):
         text = self.textedit.toPlainText()
         if self.coord_helper and not self.textedit.isReadOnly():
             text += COORD_HELPER_SCRIPT
+        if self.scroll_pos_string:
+            text += '\n::js @inline\n  const SCROLLRESTO = {}\n'.format(self.scroll_pos_string)
+            text += SCROLL_RESTO_SCRIPT
         return text
 
     def update_html(self) -> None:
         # t0 = time.time()
+        # print(f'{t0=}')
+        if self.inflight:
+            return
+        self.inflight = True
+        self.webpage.runJavaScript(GET_SCROLL_POSITION_SCRIPT, 0, self.set_scroll_pos)
+    def set_scroll_pos(self, x:str) -> None:
+        self.scroll_pos_string = x
+        self.inflight = False
+        # t1 = time.time()
+        # print(f'{t1=}')
         self.clear_errors()
         before_paths = set(FILE_CACHE.paths())
         try:
@@ -695,7 +765,7 @@ class Page(QSplitter):
             paths = FILE_CACHE.paths()
             for path in paths:
                 if path not in before_paths:
-                    window.watched.addPath(path)
+                    WINDOW.watched.addPath(path)
             after = time.time()
             # print(f'addPaths: {(after-before)*1000:.3f}ms')
             return
@@ -704,7 +774,7 @@ class Page(QSplitter):
         # t2 = time.time()
         self.dependencies = set(depends)
         if depends:
-            window.watcher.addPaths(depends)
+            WINDOW.watcher.addPaths(depends)
         # t3 = time.time()
         # print(f'htmlgen = {(t1-t0)*1000:.3f}ms')
         # print(f'sethtml = {(t2-t1)*1000:.3f}ms')
@@ -742,7 +812,7 @@ class Page(QSplitter):
     def save(self) -> None:
         if not self.filename:
             return
-        logger.debug("Saving '%s'", self.filename)
+        LOGGER.debug("Saving '%s'", self.filename)
         savefile = QSaveFile(self)
         savefile.setFileName(self.filename)
         savefile.open(savefile.WriteOnly)
@@ -751,7 +821,7 @@ class Page(QSplitter):
             text += b'\n'
         savefile.write(text)  # type: ignore
         savefile.commit()
-        logger.debug("Saved '%s'", self.filename)
+        LOGGER.debug("Saved '%s'", self.filename)
         savefile = QSaveFile(self)
     def get_fname(self, title:str, filter:str)->Optional[str]:
         fname, _ = QFileDialog.getOpenFileName(None, title, '', filter)
@@ -839,19 +909,19 @@ def make_page_widget(filename:str, allow_fail:bool) -> Optional[QWidget]:
         fp = open(filename, 'r', encoding='utf-8')
     except:
         if not allow_fail:
-            logger.debug("Failed to open: '%s'", filename)
+            LOGGER.debug("Failed to open: '%s'", filename)
             return None
         text = ''
     else:
         try:
             text = fp.read()
         except Exception as e:
-            logger.exception('Problem when reading text file')
+            LOGGER.exception('Problem when reading text file')
             fp.close()
             error_message = f'Unable to read data from {filename}'
             if isinstance(e, UnicodeDecodeError):
                 error_message += '\n' + 'The file contains invalid utf-8 data.\nConvert the file to utf-8 first (Notepad can do this)'
-            QMessageBox.critical(window, 'Problem when reading file', error_message)
+            QMessageBox.critical(WINDOW, 'Problem when reading file', error_message)
             return None
         else:
             fp.close()
@@ -912,17 +982,17 @@ def condense(filename:str, is_windows=IS_WINDOWS) -> str:
 def add_tab(filename:str, focus=True, allow_fail:bool=False) -> None:
     if sys.platform == 'win32':
         filename = filename.replace('/', '\\')
-    logger.debug("adding_tab: '%s'", filename)
+    LOGGER.debug("adding_tab: '%s'", filename)
     if filename in all_windows:
         if focus:
-            tabwidget.setCurrentWidget(all_windows[filename])
+            TABWIDGET.setCurrentWidget(all_windows[filename])
         return
     page = make_page_widget(filename, allow_fail)
     if page is None:
         return
-    tabwidget.addTab(page, condense(filename))
+    TABWIDGET.addTab(page, condense(filename))
     if focus:
-        tabwidget.setCurrentWidget(page)
+        TABWIDGET.setCurrentWidget(page)
 
 def open_file(*args) -> None:
     fname, _ = QFileDialog.getOpenFileName(None, 'Choose a dnd file', '', 'Dnd Files (*.dnd)')
@@ -931,11 +1001,11 @@ def open_file(*args) -> None:
     add_tab(fname)
 
 def add_menus() -> None:
-    menubar = window.menuBar()
+    menubar = WINDOW.menuBar()
 
     filemenu = menubar.addMenu('File')
 
-    action = QAction('&Open', window)
+    action = QAction('&Open', WINDOW)
     action.triggered.connect(open_file)
     action.setShortcut(QKeySequence('Ctrl+o'))
     filemenu.addAction(action)
@@ -949,54 +1019,54 @@ def add_menus() -> None:
         if not fname:
             return
         add_tab(fname, allow_fail=True)
-    action = QAction('&New', window)
+    action = QAction('&New', WINDOW)
     action.triggered.connect(new_file)
     action.setShortcut(QKeySequence('Ctrl+n'))
     filemenu.addAction(action)
 
     def save_file(*args) -> None:
-        page: Optional[Page]= tabwidget.currentWidget()
+        page: Optional[Page]= TABWIDGET.currentWidget()
         if page:
             page.save()
-    action = QAction('&Save', window)
+    action = QAction('&Save', WINDOW)
     action.triggered.connect(save_file)
     action.setShortcut(QKeySequence('Ctrl+s'))
     filemenu.addAction(action)
 
     def export_file(*args) -> None:
-        page: Optional[Page] = tabwidget.currentWidget()
+        page: Optional[Page] = TABWIDGET.currentWidget()
         if page: page.export_as_html()
-    action = QAction('&Export As HTML', window)
+    action = QAction('&Export As HTML', WINDOW)
     action.triggered.connect(export_file)
     action.setShortcut(QKeySequence('Ctrl+e'))
     filemenu.addAction(action)
 
     def close_current_tab(*args) -> None:
-        current_tab: Optional[Page] = tabwidget.currentWidget()
+        current_tab: Optional[Page] = TABWIDGET.currentWidget()
         if not current_tab:
-            window.close()
+            WINDOW.close()
             return
         current_tab.save()
         del all_windows[current_tab.filename]
         current_tab.setParent(None)  # type: ignore
-    action = QAction('&Close', window)
+    action = QAction('&Close', WINDOW)
     action.triggered.connect(close_current_tab)
     action.setShortcut(QKeySequence('Ctrl+w'))
     filemenu.addAction(action)
 
     if sys.platform != 'darwin':
-        action = QAction('&Exit', window)
-        action.triggered.connect(window.close)
+        action = QAction('&Exit', WINDOW)
+        action.triggered.connect(WINDOW.close)
         filemenu.addAction(action)
 
     editmenu = menubar.addMenu('Edit')
 
     def format_dnd(*args) -> None:
-        current_tab: Optional[Page] = tabwidget.currentWidget()
+        current_tab: Optional[Page] = TABWIDGET.currentWidget()
         if not current_tab:
             return
         current_tab.format()
-    action = QAction('&Format', window)
+    action = QAction('&Format', WINDOW)
     action.triggered.connect(format_dnd)
     editmenu.addAction(action)
 
@@ -1007,26 +1077,26 @@ def add_menus() -> None:
             FONT = font
             for page in all_windows.values():
                 page.textedit.setFont(FONT)
-    action = QAction('F&ont', window)
+    action = QAction('F&ont', WINDOW)
     action.triggered.connect(pickfont)
     editmenu.addAction(action)
 
     def indent(*args) -> None:
-        current_tab: Optional[Page] = tabwidget.currentWidget()
+        current_tab: Optional[Page] = TABWIDGET.currentWidget()
         if not current_tab:
             return
         current_tab.textedit.alter_indent(indent=True)
-    action = QAction('&Indent', window)
+    action = QAction('&Indent', WINDOW)
     action.setShortcut(QKeySequence('Ctrl+>'))
     action.triggered.connect(indent)
     editmenu.addAction(action)
 
     def dedent(*args) -> None:
-        current_tab: Optional[Page] = tabwidget.currentWidget()
+        current_tab: Optional[Page] = TABWIDGET.currentWidget()
         if not current_tab:
             return
         current_tab.textedit.alter_indent(indent=False)
-    action = QAction('&Dedent', window)
+    action = QAction('&Dedent', WINDOW)
     action.setShortcut(QKeySequence('Ctrl+<'))
     action.triggered.connect(dedent)
     editmenu.addAction(action)
@@ -1034,29 +1104,29 @@ def add_menus() -> None:
     insert = menubar.addMenu('Insert')
     def insert_func(method):
         def insert_foo(*args) -> None:
-            current_tab: Optional[Page] = tabwidget.currentWidget()
+            current_tab: Optional[Page] = TABWIDGET.currentWidget()
             if not current_tab:
                 return
             method(current_tab)
         return insert_foo
 
-    action = QAction('&Image', window)
+    action = QAction('&Image', WINDOW)
     action.triggered.connect(insert_func(Page.insert_image))
     insert.addAction(action)
 
-    action = QAction('Image &Links', window)
+    action = QAction('Image &Links', WINDOW)
     action.triggered.connect(insert_func(Page.insert_image_links))
     insert.addAction(action)
 
-    action = QAction('&Dnd Import', window)
+    action = QAction('&Dnd Import', WINDOW)
     action.triggered.connect(insert_func(Page.insert_dnd))
     insert.addAction(action)
 
-    action = QAction('&JS', window)
+    action = QAction('&JS', WINDOW)
     action.triggered.connect(insert_func(Page.insert_js))
     insert.addAction(action)
 
-    action = QAction('&CSS', window)
+    action = QAction('&CSS', WINDOW)
     action.triggered.connect(insert_func(Page.insert_css))
     insert.addAction(action)
 
@@ -1071,7 +1141,7 @@ def add_menus() -> None:
         else:
             for w in all_windows.values():
                 w.hide_editor()
-    action = QAction('&Toggle Editors', window)
+    action = QAction('&Toggle Editors', WINDOW)
     action.triggered.connect(toggle_editors)
     viewmenu.addAction(action)
 
@@ -1084,7 +1154,7 @@ def add_menus() -> None:
         else:
             for w in all_windows.values():
                 w.show_error()
-    action = QAction('Toggle &Error', window)
+    action = QAction('Toggle &Error', WINDOW)
     action.triggered.connect(toggle_errors)
     viewmenu.addAction(action)
 
@@ -1100,26 +1170,26 @@ def add_menus() -> None:
             EDITOR_ON_LEFT = True
             for w in all_windows.values():
                 w.put_editor_left()
-    action = QAction('&Flop Editors', window)
+    action = QAction('&Flop Editors', WINDOW)
     action.triggered.connect(flop_editors)
     viewmenu.addAction(action)
 
     def refresh_highlight(*args) -> None:
-        current_tab: Optional[Page] = tabwidget.currentWidget()
+        current_tab: Optional[Page] = TABWIDGET.currentWidget()
         if not current_tab:
             return
         current_tab.textedit.highlight.rehighlight()
 
-    action = QAction('&Refresh Highlighting', window)
+    action = QAction('&Refresh Highlighting', WINDOW)
     action.triggered.connect(refresh_highlight)
     viewmenu.addAction(action)
 
     helpmenu = menubar.addMenu('Help')
     def show_version(*args) -> None:
-        QMessageBox.about(window, 'Version',
+        QMessageBox.about(WINDOW, 'Version',
                 f'GUI version: {PYGDNDC_VERSION}\n'
                 f'dndc version: {pydndc.__version__}\n')
-    action = QAction('&Version', window)
+    action = QAction('&Version', WINDOW)
     action.triggered.connect(show_version)
     helpmenu.addAction(action)
 
@@ -1130,8 +1200,8 @@ def add_menus() -> None:
             url = QUrl('file://'+LOGS_FOLDER)
         success = QDesktopServices.openUrl(url)
         if not success:
-            logger.error("Failed to open: '%s'", url)
-    action = QAction('&Open Logs Folder', window)
+            LOGGER.error("Failed to open: '%s'", url)
+    action = QAction('&Open Logs Folder', WINDOW)
     action.triggered.connect(open_log_folder)
     helpmenu.addAction(action)
 
@@ -1144,8 +1214,8 @@ def add_menus() -> None:
             url = QUrl('file://'+LOGS_FOLDER)
         success = QDesktopServices.openUrl(url)
         if not success:
-            logger.error("Failed to open: '%s'", url)
-    action = QAction('&Compress Logs', window)
+            LOGGER.error("Failed to open: '%s'", url)
+    action = QAction('&Compress Logs', WINDOW)
     action.triggered.connect(compress_logs)
     helpmenu.addAction(action)
 
@@ -1156,34 +1226,34 @@ def add_menus() -> None:
         QWebEngineProfile.defaultProfile().clearHttpCache()
         for window in all_windows.values():
             window.update_html()
-    action = QAction('&Clear Caches', window)
+    action = QAction('&Clear Caches', WINDOW)
     action.triggered.connect(clear_caches)
     developmenu.addAction(action)
 
     def recalculate_html(*args) -> None:
         for window in all_windows.values():
             window.update_html()
-    action = QAction('&Recalculate HTML', window)
+    action = QAction('&Recalculate HTML', WINDOW)
     action.triggered.connect(recalculate_html)
     developmenu.addAction(action)
 
     def toggle_timings(*args) -> None:
         global PRINT_STATS
         PRINT_STATS = not PRINT_STATS
-    action = QAction('&Toggle Timings', window)
+    action = QAction('&Toggle Timings', WINDOW)
     action.triggered.connect(toggle_timings)
     developmenu.addAction(action)
     return
 
 add_menus()
-window.restore_everything()
-if not tabwidget.currentWidget():
+WINDOW.restore_everything()
+if not TABWIDGET.currentWidget():
     open_file()
-if not tabwidget.currentWidget():
-    logger.info('Exiting due to user canceling open file')
-    logger.close()
+if not TABWIDGET.currentWidget():
+    LOGGER.info('Exiting due to user canceling open file')
+    LOGGER.close()
     sys.exit(0)
-window.show()
-app.exec_()
-logger.info('Exiting normally')
-logger.close()
+WINDOW.show()
+APP.exec_()
+LOGGER.info('Exiting normally')
+LOGGER.close()

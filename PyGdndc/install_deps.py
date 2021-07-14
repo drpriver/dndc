@@ -70,10 +70,10 @@ def unix_install_qt() -> bool:
     import sys
     try:
         response = input('Install dependencies? ')
-        if not response.strip().startswith('y'):
-            return False
     except:
-        pass
+        return False
+    if not response.strip().startswith('y'):
+        return False
     command = [sys.executable, '-m', 'pip', 'install', 'PySide2==5.15.2', '--user']
     process = subprocess.run(command, check=True)
     return True
@@ -91,12 +91,12 @@ def ensure_deps(report_installed:bool=False) -> bool:
             return win_install_qt()
         else:
             return unix_install_qt()
-    else:
-        if report_installed:
-            if sys.platform == 'win32':
-                win_already_installed()
-            else:
-                unix_already_installed()
+
+    if report_installed:
+        if sys.platform == 'win32':
+            win_already_installed()
+        else:
+            unix_already_installed()
     return True
 
 if __name__ == '__main__':
