@@ -1425,12 +1425,12 @@ find_double_colon_utf16(Nonnull(const uint16_t*) haystack, size_t ncode_units){
         return NULL;
     const uint16_t* end = haystack + ncode_units;
     for(;;){
-        const uint16_t* first = mem_utf16(haystack, ':', end - haystack);
+        const uint16_t* first = mem_utf16(haystack, u':', end - haystack);
         if(!first)
             return NULL;
         if(end - first < 2)
             return NULL;
-        if(first[1] == ':')
+        if(first[1] == u':')
             return first;
         haystack = first+2;
         }
@@ -1579,7 +1579,7 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, Nonnull(DndcSyntaxFuncUtf
         };
     enum WhichNode which = GENERIC;
     for(;begin != end;line++){
-        const uint16_t* endline = mem_utf16(begin, '\n', end-begin);
+        const uint16_t* endline = mem_utf16(begin, u'\n', end-begin);
         if(not endline)
             endline = end;
         StringViewUtf16 stripped = lstripped_view_utf16(begin, endline-begin);
@@ -1603,7 +1603,7 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, Nonnull(DndcSyntaxFuncUtf
                 const uint16_t* nodenameend = aftercolon.text;
                 for(;nodenameend != aftercolon.text+aftercolon.length;nodenameend++){
                     switch(*nodenameend){
-                        case 'a' ... 'z':
+                        case u'a' ... u'z':
                             continue;
                         default:
                             break;
@@ -1624,16 +1624,16 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, Nonnull(DndcSyntaxFuncUtf
                 const uint16_t* postnodename = nodenameend;
                 for(;postnodename != endline;){
                     switch(*postnodename){
-                        case '@':{
+                        case u'@':{
                             const uint16_t* attrfirst = postnodename;
                             postnodename++;
                             for(;postnodename != endline;postnodename++){
                                 uint16_t c = *postnodename;
                                 switch(c){
-                                    case 'a' ... 'z':
-                                    case 'A' ... 'Z':
-                                    case '0' ... '9':
-                                    case '-': case '_':
+                                    case u'a' ... u'z':
+                                    case u'A' ... u'Z':
+                                    case u'0' ... u'9':
+                                    case u'-': case u'_':
                                         continue;
                                     default:
                                         break;
@@ -1641,14 +1641,14 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, Nonnull(DndcSyntaxFuncUtf
                                 break;
                                 }
                             syntax_func(syntax_data, DNDC_SYNTAX_ATTRIBUTE, line, attrfirst-begin, attrfirst, postnodename-attrfirst);
-                            if(postnodename != endline and *postnodename == '('){
+                            if(postnodename != endline and *postnodename == u'('){
                                 int parens = 1;
                                 postnodename++;
                                 const uint16_t* argfirst = postnodename;
                                 for(;postnodename != endline;postnodename++){
-                                    if(*postnodename == '(')
+                                    if(*postnodename == u'(')
                                         parens++;
-                                    if(*postnodename == ')')
+                                    if(*postnodename == u')')
                                         parens--;
                                     if(!parens)
                                         break;
@@ -1658,16 +1658,16 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, Nonnull(DndcSyntaxFuncUtf
                                     postnodename++;
                                 }
                             }break;
-                        case '.':{
+                        case u'.':{
                             const uint16_t* classfirst = postnodename;
                             postnodename++;
                             for(;postnodename != endline;postnodename++){
                                 uint16_t c = *postnodename;
                                 switch(c){
-                                    case 'a' ... 'z':
-                                    case 'A' ... 'Z':
-                                    case '0' ... '9':
-                                    case '-': case '_':
+                                    case u'a' ... u'z':
+                                    case u'A' ... u'Z':
+                                    case u'0' ... u'9':
+                                    case u'-': case u'_':
                                         continue;
                                     default:
                                         break;
