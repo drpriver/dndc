@@ -4,7 +4,6 @@
 #import "common_macros.h"
 #import "measure_time.h"
 #import "dndc.h"
-// I need to build strings!
 #import "MStringBuilder.h"
 #import "mallocator.h"
 #import "msb_format.h"
@@ -12,7 +11,6 @@
 // Convenience macro for writing inline javascript without a million quotes.
 // Note that you need to semi-colon terminate all of your lines.
 #define JSRAW(...) #__VA_ARGS__
-#include "log_print.h"
 
 #if !__has_feature(objc_arc)
 #error "ARC is off"
@@ -1343,11 +1341,6 @@ BOOL show_stats;
     [webview loadData:htmldata MIMEType:@"text/html" characterEncodingName:@"UTF-8" baseURL:url];
     // auto t2 = get_t();
     // HERE("load the page: %.3fms", (t2-t1)/1000.);
-}
-
-// Why do I even have this?
--(void)setRepresentedObject:(id _Nullable)representedObject {
-    [super setRepresentedObject:representedObject];
 }
 
 -(void)loadView {

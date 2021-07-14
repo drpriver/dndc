@@ -100,7 +100,9 @@ recording_free(Nonnull(RecordingAllocator*)r, Nullable(const void*) data, size_t
             }
         }
     Lerror:;
+#ifdef ERROR
     ERROR("Freeing a pointer not recorded in this allocator. Double free?");
+#endif
     assert(0);
     }
 

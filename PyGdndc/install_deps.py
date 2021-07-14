@@ -2,7 +2,7 @@ def win_install_qt() -> bool:
     import sys
     assert sys.platform == 'win32'
     import subprocess
-    from ctypes import windll
+    from ctypes import windll # type: ignore
     from ctypes import pointer
     import time
     MB_YESNO = 0x00000004
@@ -61,7 +61,7 @@ def win_install_qt() -> bool:
     return True
 
 def win_already_installed() -> None:
-    from ctypes import windll
+    from ctypes import windll # type: ignore
     MB_OK = 0
     windll.user32.MessageBoxW(0, 'Dependencies are already installed', 'Already Installed', MB_OK)
 

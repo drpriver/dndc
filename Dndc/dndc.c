@@ -21,7 +21,6 @@
 #include "measure_time.h"
 #include "thread_utils.h"
 #include "bb_extensions.h"
-#include "log_print.h"
 
 #define DSORT_T LinkItem
 #define DSORT_CMP StringView_cmp
@@ -576,7 +575,6 @@ dndc_write_depends_file(Nonnull(void*)user_data, size_t npaths, Nonnull(StringVi
     auto deptext = msb_borrow(&msb);
     auto write_err = write_file(ud->depfile.text, deptext.text, deptext.length);
     if(write_err.errored){
-        ERROR("Error on write: %s", get_error_name(write_err));
         perror("Error on write");
         return write_err.errored;
         }
@@ -761,7 +759,6 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         else {
             auto write_err = write_file(outpath.text, str.text, str.length);
             if(write_err.errored){
-                ERROR("Error on write: %s", get_error_name(write_err));
                 perror("Error on write");
                 result.errored = write_err.errored;
                 goto cleanup;
@@ -1055,7 +1052,6 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
             auto write_err = write_file(outpath.text, str.text, str.length);
             msb_destroy(&output_sb);
             if(write_err.errored){
-                ERROR("Error on write: %s", get_error_name(write_err));
                 perror("Error on write");
                 result.errored = write_err.errored;
                 goto cleanup;
@@ -1197,7 +1193,6 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
 #include "allocator.c"
 #ifndef WASM
 #include "dndc_python.c"
-#include "terminal_logger.c"
 #else
 static
 Errorable_f(void)

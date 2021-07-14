@@ -8,7 +8,6 @@
 #include <stddef.h>
 #include "common_macros.h"
 #include "allocator.h"
-#include "log_print.h"
 PushDiagnostic();
 SuppressUnusedFunction();
 //
@@ -124,7 +123,9 @@ linear_aligned_alloc(Nonnull(LinearAllocator*) restrict s, size_t size, size_t a
         }
     if(s->_cursor + size > s->_capacity){
         // fall back to malloc
+#ifdef ERROR
         ERROR("Exceeded temporary storage capacity for '%s'! Wanted an additional %zu bytes, but only %zu left.\n", s->name?:"(unnamed)", size, s->_capacity - s->_cursor);
+#endif
         s->high_water = s->_cursor + size;
         // leak
         void* result =  malloc(size);

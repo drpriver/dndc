@@ -1766,14 +1766,18 @@ internal_init_dndc_python_interpreter(uint64_t flags){
     if(!(flags & DNDC_PYTHON_UNISOLATED)){
         struct FrozenPyVersion frozen_version = get_frozen_version();
         if(frozen_version.major != PY_MAJOR_VERSION || frozen_version.minor != PY_MINOR_VERSION){
+            #ifdef ERROR
             ERROR("Mismatch between the frozen stdlib and the version of python compiled against");
+            #endif
             Raise(GENERIC_ERROR);
             }
         set_frozen_modules();
         }
     auto fail = init_python_interpreter(flags);
     if(fail){
+        #ifdef ERROR
         ERROR("Failed to init python interpreter");
+        #endif
         Raise(GENERIC_ERROR);
         }
     {

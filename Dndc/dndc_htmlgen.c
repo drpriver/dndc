@@ -2,7 +2,6 @@
 #define DNDC_HTMLGEN_C
 #include "dndc_types.h"
 #include "dndc_funcs.h"
-#include "log_print.h"
 #include "msb_extensions.h"
 #include "path_util.h"
 #include "str_util.h"
