@@ -53,7 +53,7 @@ static HWND textedit_handle;
 static int TEXTEDIT_WIDTH = 1000;
 enum {ID_EDIT=1};
 
-#if 0
+#if 1
 void print_error(LPTSTR lpszFunction){
     // Retrieve the system error message for the last-error code
     LPVOID lpMsgBuf;
@@ -168,30 +168,16 @@ thread_worker(void*){
                     SV(""),
                     source,
                     &output,
-                    DndcDependsArg{},
                     NULL,
                     NULL,
                     NULL,
-                    NULL);
+                    NULL,
+                    NULL,
+                    NULL
+                    );
             if(!fail){
                 {
-                auto fh = CreateFileW(_T("html/foo.dnd"), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-                if(fh != INVALID_HANDLE_VALUE){
-                    DWORD bytes_written;
-                    BOOL write_success = WriteFile(
-                            fh,
-                            text,
-                            strlen(text),
-                            &bytes_written,
-                            NULL);
-                    assert(bytes_written == strlen(text));
-                    (void)bytes_written;
-                    (void)write_success;
-                    CloseHandle(fh);
-                    }
-                }
-                {
-                auto fh = CreateFileW(_T("html/foo.html"), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+                auto fh = CreateFileW(L"D:/DndC/html/foo.html", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
                 if(fh != INVALID_HANDLE_VALUE){
                     DWORD bytes_written;
                     BOOL write_success = WriteFile(
@@ -205,6 +191,9 @@ thread_worker(void*){
                     (void)write_success;
                     CloseHandle(fh);
                     PostMessage(mainwindow, WM_USER, 0, 0);
+                    }
+                else {
+                    print_error(L"Failed to write the html");
                     }
                 }
                 free((void*)output.text);
@@ -348,11 +337,13 @@ WndProc(HWND mainwindow_handle, UINT message, WPARAM wParam, LPARAM lParam){
         SetFocus(textedit_handle);
         }return 0;
     case WM_USER+1:{
+        fprintf(stderr, "Got choose open file command\n");
         choose_open_file(textedit_handle);
         }return 0;
     case WM_USER:{
+        fprintf(stderr, "Got reload command\n");
         if(webviewWindow)
-            webviewWindow->ExecuteScript(_T("location.reload();"),NULL);
+            webviewWindow->ExecuteScript(L"location.reload();", NULL);
         }return 0;
     case WM_COMMAND:{
         switch(LOWORD(wParam)){
