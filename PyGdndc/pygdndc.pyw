@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+PYGDNDC_VERSION = '0.6.2'
+__version__ = PYGDNDC_VERSION
 import os
 os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
 import install_deps
@@ -30,7 +32,6 @@ APPFOLDER = os.path.join(APPLOCAL, APPNAME)
 LOGS_FOLDER = os.path.join(APPFOLDER, 'Logs')
 os.makedirs(LOGS_FOLDER, exist_ok=True)
 LOGFILE_LOCATION = os.path.join(LOGS_FOLDER, datetime.datetime.now().strftime('%Y-%m-%d.txt'))
-PYGDNDC_VERSION = '0.6.1'
 SCHEME = QWebEngineUrlScheme(b'dnd')  # type: ignore
 SCHEME.setFlags(
         QWebEngineUrlScheme.Flag.SecureScheme

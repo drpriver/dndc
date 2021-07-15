@@ -1,3 +1,5 @@
+Version 0.6.2::md
+  * Scroll position within the document is now preserved between refreshes in some cases.
 Version 0.6.1::md
   * Internal API changes
   * Bug fixes and performance improvements.
