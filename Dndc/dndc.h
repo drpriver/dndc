@@ -484,16 +484,6 @@ dndc_filecache_has_path(DNDC_NONNULL(struct DndcFileCache*),
 //    the argument is a pointer to the path to write the result to. If null,
 //    will write to stdout instead.
 //
-// depends:
-//    The default function is that the path member of this union is set and if
-//    it is a non-zero-length string it is a path to where to write a
-//    make-style dependency file.
-//
-//    Alternatively, if the flag DNDC_DEPENDS_IS_CALLBACK is set, the callback
-//    member should be set (and optionally the user data if needed for the
-//    callback) and it will be called repeatedly with a DndcStringView for each
-//    path that the source file depends on.
-//
 // base64filecache:
 //    A pointer to a filecache (created with dndc_create_filecache) that is
 //    used to cache files across invocations of this function. This may be
@@ -536,7 +526,7 @@ dndc_compile_dnd_file(
     unsigned long long flags,
     struct DndcStringView base_directory,
     struct DndcLongString source,
-    DNDC_NULLABLE(struct DndcLongString*) output_path,
+    DNDC_NULLABLE(struct DndcLongString*) output,
     DNDC_NULLABLE(struct DndcFileCache*) base64cache,
     DNDC_NULLABLE(struct DndcFileCache*) textcache,
     DNDC_NULLABLE(DndcErrorFunc*) error_func,
