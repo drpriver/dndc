@@ -653,7 +653,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
             MStringBuilder sb = {.allocator=ctx.allocator};
             for(;;){
                 enum {N = 4096};
-                msb_reserve(&sb, N);
+                msb_ensure_additional(&sb, N);
                 char* buff = sb.data + sb.cursor;
                 auto numread = fread(buff, 1, N, stdin);
                 sb.cursor += numread;
@@ -1354,7 +1354,7 @@ dndc_print_out_syntax(LongString source_path){
         MStringBuilder sb = {.allocator=allocator};
         for(;;){
             enum {N = 4096};
-            msb_reserve(&sb, N);
+            msb_ensure_additional(&sb, N);
             char* buff = sb.data + sb.cursor;
             auto numread = fread(buff, 1, N, stdin);
             sb.cursor += numread;

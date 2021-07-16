@@ -43,7 +43,7 @@ msb_nul_terminate(Nonnull(MStringBuilder*) msb){
 // Avoids re-allocs and thus potential copies
 static inline
 void
-msb_reserve(Nonnull(MStringBuilder*)msb, size_t additional_capacity){
+msb_ensure_additional(Nonnull(MStringBuilder*)msb, size_t additional_capacity){
     _check_msb_size(msb, additional_capacity);
     }
 

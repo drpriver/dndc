@@ -643,7 +643,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 
 -(void)insert_block:(NSString*)path at:(NSRange)r indent_amount:(NSInteger)indent_amount name:(StringView)blockname{
     MStringBuilder sb = {.allocator=get_mallocator()};
-    msb_reserve(&sb, 256);
+    msb_ensure_additional(&sb, 256);
     msb_write_str(&sb, blockname.text, blockname.length);
     msb_write_nchar(&sb, ' ', indent_amount+2);
     const char* cpath = [path UTF8String];
@@ -654,7 +654,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 }
 -(void)insert_imglinks_block:(NSString*)path at:(NSRange)r indent_amount:(NSInteger)indent_amount size:(NSSize)size{
     MStringBuilder sb = {.allocator = get_mallocator()};
-    msb_reserve(&sb, 256);
+    msb_ensure_additional(&sb, 256);
     msb_write_literal(&sb, "::imglinks\n");
 #define INDENT() msb_write_nchar(&sb, ' ', indent_amount+2)
     const char* imgpath = [path UTF8String];
