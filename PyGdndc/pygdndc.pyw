@@ -2,7 +2,8 @@
 PYGDNDC_VERSION = '0.6.2'
 __version__ = PYGDNDC_VERSION
 import os
-os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+# os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+os.environ['QT_ENABLE_HIGHDPI_SCALING'] = '1'
 import install_deps
 have_deps = install_deps.ensure_deps(False)
 import sys
@@ -140,6 +141,8 @@ whitespace_re = re.compile(r'^\s+')
 # recognized app domain.
 APPHOST = 'invalid.'
 
+
+# QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
 APP = QApplication(sys.argv)
 APP.setApplicationName(APPNAME)
 APP.setApplicationDisplayName(APPNAME)
