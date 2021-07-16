@@ -223,7 +223,7 @@ msb_write_int32(Nonnull(MStringBuilder*) sb, int32_t value){
         }
     char* p = uint32_to_str_buffer(buff, value);
     ptrdiff_t size = (buff+10) - p;
-    _check_msb_size(sb, size);
+    _check_msb_remaining_size(sb, size);
     memcpy(sb->data+sb->cursor, p, size);
     sb->cursor += size;
     }
@@ -242,7 +242,7 @@ msb_write_int64(Nonnull(MStringBuilder*) sb, int64_t value){
     char buff[20];
     char* p = uint64_to_str_buffer(buff, value);
     ptrdiff_t size = (buff+20) - p;
-    _check_msb_size(sb, size);
+    _check_msb_remaining_size(sb, size);
     memcpy(sb->data+sb->cursor, p, size);
     sb->cursor += size;
     }
@@ -270,11 +270,11 @@ msb_write_int_space_padded(Nonnull(MStringBuilder*)sb, int32_t value, int width)
     auto cursor = sb->cursor;
     char* data = sb->data;
     if(needed_size >= width){
-        _check_msb_size(sb, needed_size);
+        _check_msb_remaining_size(sb, needed_size);
         data = sb->data;
         }
     else {
-        _check_msb_size(sb, width);
+        _check_msb_remaining_size(sb, width);
         data = sb->data;
         auto pad = width - needed_size;
         memset(data+cursor, ' ', pad);
@@ -293,7 +293,7 @@ msb_write_uint32(Nonnull(MStringBuilder*) sb, uint32_t value){
     char buff[10];
     char* p = uint32_to_str_buffer(buff, value);
     ptrdiff_t size = (buff+10) - p;
-    _check_msb_size(sb, size);
+    _check_msb_remaining_size(sb, size);
     memcpy(sb->data+sb->cursor, p, size);
     sb->cursor += size;
     }
@@ -304,7 +304,7 @@ msb_write_uint64(Nonnull(MStringBuilder*) sb, uint64_t value){
     char buff[20];
     char* p = uint64_to_str_buffer(buff, value);
     ptrdiff_t size = (buff+20) - p;
-    _check_msb_size(sb, size);
+    _check_msb_remaining_size(sb, size);
     memcpy(sb->data+sb->cursor, p, size);
     sb->cursor += size;
     }

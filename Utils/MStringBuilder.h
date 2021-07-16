@@ -27,14 +27,14 @@ msb_destroy(Nonnull(MStringBuilder*) msb){
 static inline
 force_inline
 void
-_check_msb_size(Nonnull(MStringBuilder*), size_t);
+_check_msb_remaining_size(Nonnull(MStringBuilder*), size_t);
 
 // Nul-terminates the builder without actually increasing the length
 // of the string.
 static inline
 void
 msb_nul_terminate(Nonnull(MStringBuilder*) msb){
-    _check_msb_size(msb, 1);
+    _check_msb_remaining_size(msb, 1);
     msb->data[msb->cursor] = '\0';
     }
 
@@ -44,7 +44,7 @@ msb_nul_terminate(Nonnull(MStringBuilder*) msb){
 static inline
 void
 msb_ensure_additional(Nonnull(MStringBuilder*)msb, size_t additional_capacity){
-    _check_msb_size(msb, additional_capacity);
+    _check_msb_remaining_size(msb, additional_capacity);
     }
 
 // Moves the ownership of the sring from the builder to the caller.
@@ -106,7 +106,7 @@ _resize_msb(Nonnull(MStringBuilder*) msb, size_t size){
 static inline
 force_inline
 void
-_check_msb_size(Nonnull(MStringBuilder*) msb, size_t len){
+_check_msb_remaining_size(Nonnull(MStringBuilder*) msb, size_t len){
     if (msb->cursor + len > msb->capacity){
         size_t new_size = (msb->capacity*3)/2;
         if(new_size < 32) new_size = 32;
@@ -124,7 +124,7 @@ void
 msb_write_str(Nonnull(MStringBuilder*) restrict msb, NullUnspec(const char*) restrict str, size_t len){
     if(not len)
         return;
-    _check_msb_size(msb, len);
+    _check_msb_remaining_size(msb, len);
     (memcpy)(msb->data + msb->cursor, str, len);
     msb->cursor += len;
     }
@@ -138,7 +138,7 @@ static inline
 force_inline
 void
 msb_write_char(Nonnull(MStringBuilder*) msb, char c){
-    _check_msb_size(msb, 1);
+    _check_msb_remaining_size(msb, 1);
     msb->data[msb->cursor++] = c;
     }
 static inline
@@ -147,7 +147,7 @@ void
 msb_write_nchar(Nonnull(MStringBuilder*) msb, char c, size_t n){
     if(n == 0)
         return;
-    _check_msb_size(msb, n);
+    _check_msb_remaining_size(msb, n);
     memset(msb->data + msb->cursor, c, n);
     msb->cursor += n;
     }

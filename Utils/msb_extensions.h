@@ -84,7 +84,7 @@ void
 msb_write_title(Nonnull(MStringBuilder*) restrict msb, Nonnull(const char*) restrict str, size_t len){
     if(not len)
         return;
-    _check_msb_size(msb, len);
+    _check_msb_remaining_size(msb, len);
     bool wants_cap = true;
     for(size_t i = 0; i < len; i++){
         char c = str[i];
@@ -114,7 +114,7 @@ msb_write_title(Nonnull(MStringBuilder*) restrict msb, Nonnull(const char*) rest
 static inline
 void
 msb_write_json_escaped_str(Nonnull(MStringBuilder*)restrict sb, Nonnull(const char*)restrict str, size_t length){
-    _check_msb_size(sb, length*2);
+    _check_msb_remaining_size(sb, length*2);
     auto data = sb->data;
     auto cursor = sb->cursor;
     for(size_t i = 0; i < length; i++){
@@ -158,7 +158,7 @@ msb_write_json_escaped_str(Nonnull(MStringBuilder*)restrict sb, Nonnull(const ch
 static inline
 void
 msb_write_str_with_backslashes_as_forward_slashes(Nonnull(MStringBuilder*)sb, Nonnull(const char*)restrict str, size_t length){
-    _check_msb_size(sb, length);
+    _check_msb_remaining_size(sb, length);
     auto data = sb->data;
     auto cursor = sb->cursor;
     for(size_t i = 0; i < length; i++){
@@ -179,7 +179,7 @@ msb_write_str_with_backslashes_as_forward_slashes(Nonnull(MStringBuilder*)sb, No
 static inline
 void
 msb_write_stripped_lines(Nonnull(MStringBuilder*)sb, Nonnull(const char*)restrict str, size_t length){
-    _check_msb_size(sb, length);
+    _check_msb_remaining_size(sb, length);
     auto data = sb->data;
     auto cursor = sb->cursor;
     const char* remainder = str;
