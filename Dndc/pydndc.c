@@ -548,15 +548,15 @@ struct CollectData {
 static
 void
 pydndc_collect_syntax_tokens(Nullable(void*)user_data, int type, int line, int col, Nonnull(const char*)begin, size_t length){
+    if(PyErr_Occurred())
+        return;
     assert(user_data);
     struct CollectData* cd = user_data;
     PyObject* d = cd->dict;
-    if(PyErr_Occurred())
-        return;
     PyObject* key = PyLong_FromLong(line);
     PyObject* value = Py_BuildValue("iinn", type, col, (Py_ssize_t)(begin - cd->begin), (Py_ssize_t)length);
-    unhandled_error_condition(!key);
-    unhandled_error_condition(!value);
+    if(!key) goto Lfail;
+    if(!value) goto Lfail;
     PyObject * list;
     if(PyDict_Contains(d, key)){
         list = PyDict_GetItem(d, key); // borrow
@@ -564,14 +564,15 @@ pydndc_collect_syntax_tokens(Nullable(void*)user_data, int type, int line, int c
         }
     else {
         list = PyList_New(0);
-        assert(list);
-        auto fail = PyDict_SetItem(d, key, list); // does not steal
-        assert(fail == 0);
+        if(!list) goto Lfail;
+        int fail = PyDict_SetItem(d, key, list); // does not steal
         // list is kept alive by the dict.
         Py_XDECREF(list);
+        if(fail) goto Lfail;
         }
-    auto fail = PyList_Append(list, value);
-    assert(fail == 0);
+    int fail = PyList_Append(list, value);
+    (void)fail;
+    Lfail:
     Py_XDECREF(key);
     Py_XDECREF(value);
 }
@@ -596,6 +597,10 @@ pydndc_anaylze_syntax_for_highlight(Nonnull(PyObject*)mod, Nonnull(PyObject*)arg
     if(!cd.dict)
         return NULL;
     auto error = dndc_analyze_syntax(source, pydndc_collect_syntax_tokens, &cd);
+    if(PyErr_Occurred()){
+        Py_XDECREF(cd.dict);
+        return NULL;
+        }
     if(error){
         PyErr_SetString(PyExc_RuntimeError, "Unknown error while collecting tokens");
         Py_XDECREF(cd.dict);

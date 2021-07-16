@@ -148,10 +148,10 @@ static PyTypeObject NodeTypeEnumType = {
     };
 
 static
-Nonnull(PyObject*)
+Nullable(PyObject*)
 make_node_type_enum(NodeType t){
     NodeTypeEnum* self = (NodeTypeEnum*)NodeTypeEnumType.tp_alloc(&NodeTypeEnumType, 0);
-    unhandled_error_condition(!self);
+    if(!self) return NULL;
     self->type = t;
     return (PyObject*)self;
     }
@@ -182,10 +182,10 @@ static PyTypeObject NodeBoundMethodType = {
     };
 
 static
-Nonnull(PyObject*)
+Nullable(PyObject*)
 make_node_bound_method(Nonnull(DndcContext*)ctx, NodeHandle handle, NodeMethod func){
     NodeBoundMethod* self = (NodeBoundMethod*)NodeBoundMethodType.tp_alloc(&NodeBoundMethodType, 0);
-    unhandled_error_condition(!self);
+    if(!self) return NULL;
     self->ctx = ctx;
     self->handle = handle;
     self->func = func;
@@ -357,10 +357,10 @@ static PyTypeObject DndclassesListType = {
     };
 
 static
-Nonnull(PyObject*)
+Nullable(PyObject*)
 make_classes_list(Nonnull(DndcContext*)ctx, NodeHandle handle){
     DndclassesList* self = (DndclassesList*)DndclassesListType.tp_alloc(&DndclassesListType, 0);
-    unhandled_error_condition(!self);
+    if(!self) return NULL;
     self->ctx = ctx;
     self->handle = handle;
     return (PyObject*)self;
@@ -564,10 +564,10 @@ static PyTypeObject DndAttributesMapType = {
     };
 
 static
-Nonnull(PyObject*)
+Nullable(PyObject*)
 make_attributes_map(Nonnull(DndcContext*)ctx, NodeHandle handle){
     DndAttributesMap* self = (DndAttributesMap*)DndAttributesMapType.tp_alloc(&DndAttributesMapType, 0);
-    unhandled_error_condition(!self);
+    if(!self) return NULL;
     self->ctx = ctx;
     self->handle = handle;
     return (PyObject*)self;
@@ -655,7 +655,7 @@ static
 Nullable(PyObject*)
 make_py_node(Nonnull(DndcContext*)ctx, NodeHandle handle){
     DndNode* self = (DndNode*)DndNodeType.tp_alloc(&DndNodeType, 0);
-    unhandled_error_condition(!self);
+    if(!self) return NULL;
     self->ctx = ctx;
     self->handle = handle;
     return (PyObject*)self;
@@ -1137,7 +1137,7 @@ py_read_file(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args
     }
 
 
-static Nonnull(PyObject*) make_py_ctx(Nonnull(DndcContext*));
+static Nullable(PyObject*) make_py_ctx(Nonnull(DndcContext*));
 
 static
 Errorable_f(void)
@@ -1148,6 +1148,8 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHa
         .cf_feature_version = PY_MINOR_VERSION,
 #endif
         };
+    // I'm not checking for failure here with these python API functions.
+    // Technically you should do so to handle low memory.
     PyObject* glbl = PyDict_New();
     PyObject* nodetypes = PyDict_New();
     for(size_t i = 0; i < arrlen(NODENAMES); i++){
@@ -1156,7 +1158,6 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHa
         Py_XDECREF(enu);
         }
     auto nt = _PyNamespace_New(nodetypes);
-    unhandled_error_condition(!nt);
     Py_XDECREF(nodetypes);
     PyDict_SetItemString(glbl, "NodeType", nt);
     Py_XDECREF(nt);
@@ -1202,9 +1203,7 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHa
             }
         else{
             PyObject* exc_str = PyObject_Str(value);
-            unhandled_error_condition(!exc_str);
             const char* exc_text = PyUnicode_AsUTF8(exc_str);
-            unhandled_error_condition(!exc_text);
             auto python_block = get_node(ctx, handle);
             auto old_row = python_block->row;
             auto new_row = old_row;
@@ -1222,7 +1221,6 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHa
                 }
             // kind of hacky, but meh;
             const char* type_text = ((PyTypeObject*)type)->tp_name;
-            unhandled_error_condition(!type_text);
             // NASTY: modding the line number
             python_block->row = new_row;
             MStringBuilder sb = {.allocator=ctx->string_allocator};
@@ -1249,7 +1247,7 @@ static inline
 Nullable(PyObject*)
 DndNode_getattr_ls(Nonnull(DndNode*)obj, LongString name){
     auto ctx = obj->ctx;
-    #define CHECK(lit, N) ({_Static_assert(sizeof(lit)-1==N, lit " is not length " #N); memcmp(lit, name.text, N)==0;})
+    #define CHECK(lit, N) ({_Static_assert(sizeof(lit)-1==N, "'" lit "' is not length " #N); memcmp(lit, name.text, N)==0;})
     switch(name.length){
         case 2:{
             if(CHECK("id", 2)){
@@ -1315,8 +1313,11 @@ DndNode_getattr_ls(Nonnull(DndNode*)obj, LongString name){
                     auto child = node_children(node)[i];
                     auto pynode = make_py_node(ctx, child);
                     auto fail = PyTuple_SetItem(result, i, pynode);
-                    //meh
-                    unhandled_error_condition(fail != 0);
+                    if(fail){
+                        Py_XDECREF(pynode);
+                        Py_XDECREF(result);
+                        return NULL;
+                        }
                     }
                 return result;
                 }
@@ -1363,7 +1364,7 @@ DndNode_setattr_ls(Nonnull(DndNode*)obj, LongString name, Nullable(PyObject*) va
         return -1;
         }
     auto ctx = obj->ctx;
-    #define CHECK(lit, N) ({_Static_assert(sizeof(lit)-1==N, lit " is not length " #N); memcmp(lit, name.text, N)==0;})
+    #define CHECK(lit, N) ({_Static_assert(sizeof(lit)-1==N, "'" lit "' is not length " #N); memcmp(lit, name.text, N)==0;})
     switch(name.length){
         case 2:{
             if(CHECK("id", 2)){
@@ -1554,7 +1555,7 @@ static PyTypeObject DndcontextType = {
 
 static PyObject* _Nullable
 Dndcontext_getattr_ls(Nonnull(Dndcontext*)pyctx, LongString name){
-    #define CHECK(lit, N) ({_Static_assert(sizeof(lit)-1==N, lit " is not length " #N); memcmp(lit, name.text, N)==0;})
+    #define CHECK(lit, N) ({_Static_assert(sizeof(lit)-1==N, "'" lit "' is not length " #N); memcmp(lit, name.text, N)==0;})
     auto ctx = pyctx->ctx;
     switch(name.length){
         case 4:{
@@ -1608,6 +1609,7 @@ Dndcontext_getattr_ls(Nonnull(Dndcontext*)pyctx, LongString name){
                 }
             if(CHECK("all_nodes", 9)){
                 PyObject* result = PyList_New(ctx->nodes.count);
+                if(!result) return NULL;
                 for(size_t i = 0; i < ctx->nodes.count; i++){
                     PyObject* item = make_py_node(ctx, (NodeHandle){.index=i});
                     PyList_SetItem(result, i, item);
@@ -1659,10 +1661,10 @@ Dndcontext_getattro(Nonnull(Dndcontext*)pyctx, Nonnull(PyObject*)attr){
     }
 
 static
-Nonnull(PyObject*)
+Nullable(PyObject*)
 make_py_ctx(Nonnull(DndcContext*)ctx){
     Dndcontext* self = (Dndcontext*)DndcontextType.tp_alloc(&DndcontextType, 0);
-    unhandled_error_condition(!self);
+    if(!self) return NULL;
     self->ctx = ctx;
     return (PyObject*)self;
     }
