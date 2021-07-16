@@ -24,10 +24,11 @@
 // `rarray` is evaluated multiple times.
 //
 #define RARRAY_FOR_EACH(iter, rarray) \
-    for(auto iter=((rarray)?(rarray)->data:NULL), \
-             iter##end__=((rarray)?(rarray)->data+(rarray)->count:NULL); \
-        iter!=iter##end__;\
-        ++iter)
+for(typeof((rarray)->data[0]) \
+      *iter=((rarray)?(rarray)->data:NULL), \
+      *iter##end__=((rarray)?(rarray)->data+(rarray)->count:NULL); \
+    iter!=iter##end__;\
+    ++iter)
 #endif
 
 //

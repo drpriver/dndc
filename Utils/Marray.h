@@ -122,15 +122,17 @@ resize_to_some_weird_number(size_t x){
 //
 //
 #define MARRAY_FOR_EACH(iter, marray) \
-for(auto iter = (marray).data, \
-         iter##end__ = (marray).data?((marray).data+(marray).count):NULL; \
+for(typeof((marray).data[0]) \
+     *iter = (marray).data, \
+     *iter##end__ = (marray).data?((marray).data+(marray).count):NULL; \
   iter != iter##end__; \
   ++iter)
 
-// Above requires auto as this is expanded in user code, after MARRAY_T is
-// undefed.  We could require you to specify the type to get around that...
-// I am hopeful that C23 will have auto and typeof though, so using extensions
-// for now doesn't bother me.
+// Above requires typeof as this is expanded in user code, after MARRAY_T is
+// undefed. auto would be nicer, but gcc and clang disagree on how __auto_type
+// works in the multiple declaration case. We could require you to specify the
+// type to get around that...  I am hopeful that C23 will have auto and typeof
+// though, so using extensions for now doesn't bother me.
 //
 // The above looks like it could be simplified, but note that in C it is
 // stupidly undefined behavior to add 0 to NULL, so you have to use a ternary
