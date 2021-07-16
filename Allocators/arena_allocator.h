@@ -1,0 +1,206 @@
+#ifndef ARENA_ALLOCATOR_H
+#define ARENA_ALLOCATOR_H
+#include <stddef.h>
+#include "common_macros.h"
+
+//
+// Fairly basic arena allocator. If it can fit an allocation, it just bumps a
+// pointer.  If it can't, it allocates a new block of memory and maintains the
+// arenas as a linked list.
+//
+// If the allocation is bigger than would fit in an arena, it allocates it
+// independently and maintains a linked list of these big allocations.
+//
+
+//
+// TODO: Currently we back the arena allocator with malloc, but we could just
+// call the OS apis (mmap, VirtualAlloc, etc.) ourselves. Would need to see how
+// slow they are compared to malloc, but we are allocating relatively large
+// amounts anyway...
+
+//
+// Header for a large allocation. Used to maintain a linked list of allocations.
+typedef struct BigAllocation {
+    Nullable(struct BigAllocation*) next;
+}BigAllocation;
+
+#ifndef PAGE_SIZE
+enum {PAGE_SIZE=4096};
+#endif
+
+// Arenas are in 64 page chunks. This might be excessive, idk.
+enum {ARENA_SIZE=PAGE_SIZE*64};
+
+// The actual amount of data available is smaller due to the arena's haader.
+enum {ARENA_BUFFER_SIZE = ARENA_SIZE-sizeof(void*)-sizeof(size_t)-sizeof(size_t)};
+
+//
+// An arena that is linearly allocated from. Maintains a both the current
+// allocation point and the previous one so that fast realloc can be
+// implemented if reallocing the last allocation.
+//
+typedef struct Arena{
+    Nullable(struct Arena*) prev; // The previous, exhausted arena.
+    size_t used; // How much of this arena has been used.
+    size_t last; // Before the last allocation, how much had been used.
+    char buff[ARENA_BUFFER_SIZE];
+}Arena;
+
+
+//
+// Rounds up to the nearest power of 8.
+//
+static inline
+force_inline
+size_t
+round_size_up(size_t size){
+    size_t remainder = size & 7;
+    if(remainder)
+        size += 8 - remainder;
+    return size;
+    }
+
+//
+// Allocates an uninitialized chunk of memory from the arena.
+//
+static
+Nonnull(void*)
+ArenaAllocator_alloc(Nonnull(ArenaAllocator*)aa, size_t size){
+    size = round_size_up(size);
+    if(size > ARENA_BUFFER_SIZE){
+        BigAllocation* ba = malloc(sizeof(*ba)+size);
+        ba->next = aa->big_allocations;
+        aa->big_allocations = ba;
+        return ba+1;
+        }
+    if(!aa->arena){
+        Arena* arena = malloc(sizeof(*arena));
+        arena->prev = NULL;
+        arena->used = 0;
+        arena->last = 0;
+        aa->arena = arena;
+        }
+    if(size > ARENA_BUFFER_SIZE - aa->arena->used){
+        Arena* arena = malloc(sizeof(*arena));
+        arena->prev = aa->arena;
+        arena->used = size;
+        arena->last = 0;
+        aa->arena = arena;
+        return arena->buff;
+        }
+    aa->arena->last = aa->arena->used;
+    aa->arena->used += size;
+    return aa->arena->buff + aa->arena->last;
+    }
+//
+// Allocates a zeroed chunk of memory from the arena.
+//
+static
+Nonnull(void*)
+ArenaAllocator_zalloc(Nonnull(ArenaAllocator*)aa, size_t size){
+    size = round_size_up(size);
+    if(size > ARENA_SIZE/2){
+        BigAllocation* ba = calloc(1, sizeof(*ba)+size);
+        ba->next = aa->big_allocations;
+        aa->big_allocations = ba;
+        return ba+1;
+        }
+    if(!aa->arena){
+        Arena* arena = calloc(1, sizeof(*arena));
+        arena->prev = NULL;
+        arena->used = 0;
+        arena->last = 0;
+        aa->arena = arena;
+        }
+    if(size > ARENA_BUFFER_SIZE - aa->arena->used){
+        Arena* arena = calloc(1, sizeof(*arena));
+        arena->prev = aa->arena;
+        arena->used = size;
+        arena->last = 0;
+        aa->arena = arena;
+        return arena->buff;
+        }
+    aa->arena->last = aa->arena->used;
+    aa->arena->used += size;
+    void* result =  aa->arena->buff + aa->arena->last;
+    memset(result, 0, size);
+    return result;
+    }
+
+//
+// Reallocs an allocation from the arena, attempting to do it in place if it
+// was the last allocation. If not, is forced to just alloc + memcpy.
+//
+static
+Nullable(void*)
+ArenaAllocator_realloc(Nonnull(ArenaAllocator*)aa, Nullable(void*)ptr, size_t old_size, size_t new_size){
+    if(!old_size || !ptr){
+        return ArenaAllocator_alloc(aa, new_size);
+        }
+    if(!new_size)
+        return NULL;
+    old_size = round_size_up(old_size);
+    new_size = round_size_up(new_size);
+    if(new_size > ARENA_BUFFER_SIZE){
+        BigAllocation* ba = malloc(sizeof(*ba)+new_size);
+        ba->next = aa->big_allocations;
+        aa->big_allocations = ba;
+        void* result = ba+1;
+        if(old_size < new_size)
+            memcpy(result, ptr, old_size);
+        else
+            memcpy(result, ptr, new_size);
+        return result;
+        }
+    if(old_size > ARENA_BUFFER_SIZE){
+        void* result = ArenaAllocator_alloc(aa, new_size);
+        if(old_size < new_size)
+            memcpy(result, ptr, old_size);
+        else
+            memcpy(result, ptr, new_size);
+        return result;
+        }
+    assert(aa->arena);
+    if(aa->arena->last + aa->arena->buff == ptr){
+        if(new_size <= ARENA_BUFFER_SIZE - aa->arena->last){
+            aa->arena->used = aa->arena->last + new_size;
+            return ptr;
+            }
+        }
+    void* result = ArenaAllocator_alloc(aa, new_size);
+    if(old_size < new_size)
+        memcpy(result, ptr, old_size);
+    else
+        memcpy(result, ptr, new_size);
+    return result;
+    }
+//
+// Free all allocations from the arenas. Deallocs the arenas themselves and
+// frees the big allocation linked list as well.
+//
+static
+void
+ArenaAllocator_free_all(Nullable(ArenaAllocator*)aa){
+    Arena* arena = aa->arena;
+    while(arena){
+        Arena* to_free = arena;
+        arena = arena->prev;
+        free(to_free);
+        }
+    BigAllocation* ba = aa->big_allocations;
+    while(ba){
+        BigAllocation* to_free = ba;
+        ba = ba->next;
+        free(to_free);
+        }
+    aa->arena = NULL;
+    aa->big_allocations = NULL;
+    return;
+    }
+
+//
+// Free is not supported, but maybe we should do the linear allocator strategy?
+// Currently, the type erased Allocator just ignores frees.
+//
+
+#endif
