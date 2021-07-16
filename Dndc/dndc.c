@@ -699,7 +699,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         ctx_store_builtin_file(&ctx, LS("(string input)"), source);
         }
     // Quick and dirty estimate of how many nodes we will need.
-    Marray_reserve(Node)(&ctx.nodes, ctx.allocator, source.length/10+1);
+    Marray_ensure_total(Node)(&ctx.nodes, ctx.allocator, source.length/10+1);
 
     // Setup the root node.
     {

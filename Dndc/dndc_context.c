@@ -491,7 +491,7 @@ append_child(Nonnull(DndcContext*)ctx, NodeHandle parent_handle, NodeHandle chil
         }
     if(parent->children.count == 4){
         Marray(NodeHandle) children = {};
-        Marray_reserve(NodeHandle)(&children, ctx->allocator, 4);
+        Marray_ensure_total(NodeHandle)(&children, ctx->allocator, 4);
         memcpy(children.data, parent->inline_children, sizeof(parent->inline_children));
         children.count = 4;
         parent->children = children;
