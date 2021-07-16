@@ -6,6 +6,9 @@
 #include "long_string.h"
 #include "allocator.h"
 
+//
+// A type for building up a string without having to deal with things like sprintf
+// or strcat.
 typedef struct MStringBuilder {
     size_t cursor;
     size_t capacity;
@@ -13,6 +16,7 @@ typedef struct MStringBuilder {
     const Allocator allocator;
 } MStringBuilder;
 
+//
 // Dealloc the data and zeros out the builder.
 // Unneeded if you called msb_detach.
 static inline
@@ -29,6 +33,7 @@ force_inline
 void
 _check_msb_remaining_size(Nonnull(MStringBuilder*), size_t);
 
+//
 // Nul-terminates the builder without actually increasing the length
 // of the string.
 static inline
@@ -39,6 +44,7 @@ msb_nul_terminate(Nonnull(MStringBuilder*) msb){
     }
 
 
+//
 // Ensures additional capacity is present in the builder.
 // Avoids re-allocs and thus potential copies
 static inline
@@ -47,6 +53,7 @@ msb_ensure_additional(Nonnull(MStringBuilder*)msb, size_t additional_capacity){
     _check_msb_remaining_size(msb, additional_capacity);
     }
 
+//
 // Moves the ownership of the sring from the builder to the caller.
 // Ensures nul-termination.
 // Builder can be reused afterwards; its fields are zeroed.
@@ -64,6 +71,7 @@ msb_detach(Nonnull(MStringBuilder*) msb){
     return result;
     }
 
+//
 // "Borrows" the current contents of the builder and returns a nul-terminated
 // string view to those contents.  Keep uses of the borrowed string tightly
 // scoped as any further use of the builder can cause a reallocation.  It's
@@ -80,6 +88,7 @@ msb_borrow(Nonnull(MStringBuilder*) msb){
     }
 
 
+//
 // "Resets" the builder. Logically clears the contents of the builder
 // (although it avoids actually touching the data) and sets the length to 0.
 // Does not dealloc the data, so you can build up a string, borrow it,
@@ -117,6 +126,7 @@ _check_msb_remaining_size(Nonnull(MStringBuilder*) msb, size_t len){
         }
     }
 
+//
 // Writes a string into the builder. You must know the length.
 // If you have a c-str, strlen it yourself.
 static inline
@@ -129,6 +139,7 @@ msb_write_str(Nonnull(MStringBuilder*) restrict msb, NullUnspec(const char*) res
     msb->cursor += len;
     }
 
+//
 // Write a single char into the builder.
 // This is actually kind of slow, relatively speaking, as it checks
 // the size every time.
@@ -141,6 +152,11 @@ msb_write_char(Nonnull(MStringBuilder*) msb, char c){
     _check_msb_remaining_size(msb, 1);
     msb->data[msb->cursor++] = c;
     }
+
+//
+// Write a repeated pattern of characters into the builder.
+// Pay attention to the order of arguments, as C will allow implicit
+// conversions!
 static inline
 force_inline
 void
@@ -152,6 +168,8 @@ msb_write_nchar(Nonnull(MStringBuilder*) msb, char c, size_t n){
     msb->cursor += n;
     }
 
+//
+// Erases the given number of characters from the end of the builder.
 static inline
 void
 msb_erase(Nonnull(MStringBuilder*) msb, size_t len){
@@ -165,7 +183,7 @@ msb_erase(Nonnull(MStringBuilder*) msb, size_t len){
     }
 
 // Writes a string literal into the builder. Avoids the need to strlen
-// as the literals size is known at compile time.
+// as the literal's size is known at compile time.
 #define msb_write_literal(msb, lit) msb_write_str(msb, ""lit, sizeof(""lit)-1)
 
 
