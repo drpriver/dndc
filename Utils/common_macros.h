@@ -76,6 +76,11 @@
 // which is not at all what you want, yet still compiles!
 #define arrlen(arr) (sizeof(arr) / sizeof((arr)[0]) + __must_be_array(arr))
 
+#define ARRAY_FOR_EACH(it, arr) \
+    for(typeof((arr)[0])*it = arr;\
+        it != arr + arrlen(arr);\
+        ++it)
+
 #ifdef DEBUG
 #define unreachable() do{assert(0);__builtin_unreachable();} while(0)
 #else

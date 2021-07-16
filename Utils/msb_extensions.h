@@ -99,7 +99,6 @@ msb_write_title(Nonnull(MStringBuilder*) restrict msb, Nonnull(const char*) rest
                 wants_cap = false;
                 break;
             default:
-                c = ' ';
                 wants_cap = true;
                 break;
             }
