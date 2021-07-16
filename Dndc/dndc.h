@@ -135,9 +135,9 @@ typedef void DndcErrorFunc(DNDC_NULLABLE(void*) error_user_data, int type,
 //
 // An error reporting function that prints to stderr. For use with the dndc
 //
-DNDC_API void dndc_stderr_error_func(DNDC_NULLABLE(void*) error_user_data, int type,
-        DNDC_NONNULL(const char*)  filename, int filename_len, int line,
-        int col, DNDC_NONNULL(const char*)  message, int message_len);
+DNDC_API void dndc_stderr_error_func(DNDC_NULLABLE(void*) error_user_data,
+        int type, DNDC_NONNULL(const char*)  filename, int filename_len,
+        int line, int col, DNDC_NONNULL(const char*)  message, int message_len);
 
 //
 // A function type for reporting dependencies. For use with
@@ -163,9 +163,11 @@ DNDC_API void dndc_stderr_error_func(DNDC_NULLABLE(void*) error_user_data, int t
 // Returns:
 // --------
 // 0 on success and non-zero on failure. The value you return will be returned
-// from dndc_compile_dnd_file.
+// from dndc_compile_dnd_file if non-zero.
 //
-typedef int DndcDependencyFunc(DNDC_NULLABLE(void*) dependency_user_data, size_t dependency_paths_count, DNDC_NONNULL(struct DndcStringView*) dependency_paths);
+typedef int DndcDependencyFunc(DNDC_NULLABLE(void*) dependency_user_data,
+        size_t dependency_paths_count,
+        DNDC_NONNULL(struct DndcStringView*) dependency_paths);
 
 //
 // You do *not* need to call dndc_init_python before calling this function.
