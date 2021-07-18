@@ -413,9 +413,8 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
         }
     auto e = parse_args(&argparser, &args);
     if(e){
-        fprintf(stderr, "Error when parsing arguments.\n");
-        if(isatty(fileno(stdout)))
-            print_help(&argparser);
+        print_argparse_error(&argparser, e);
+        fprintf(stderr, "Use --help to see usage\n");
         return e;
         }
     if(list_tests){

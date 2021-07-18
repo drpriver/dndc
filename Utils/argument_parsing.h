@@ -16,6 +16,23 @@
 // hex) and flags.
 // In the future, this could support floats and files.
 //
+//
+enum ArgParseError {
+    ARGPARSE_NO_ERROR = 0,
+    // Failed to convert a string into a value, like 'a' can't convert to an integer
+    ARGPARSE_CONVERSION_ERROR = 1,
+    // Given keyword arg-like parameter doesn't match any known args.
+    ARGPARSE_UNKNOWN_KWARG = 2,
+    // A keyword argument was given multiple times in the command line.
+    ARGPARSE_DUPLICATE_KWARG = 3,
+    // More than the maximum number of arguments were given for an arg to parse.
+    ARGPARSE_EXCESS_ARGS = 4,
+    // Fewer than the minimum number of arguments were given for an arg to parse.
+    ARGPARSE_INSUFFICIENT_ARGS = 5,
+    // Named at the commandline, but no arguments given. This is a user error
+    // even if min_num is 0 as it can be very confusing otherwie.
+    ARGPARSE_VISITED_NO_ARG_GIVEN = 6,
+};
 
 typedef struct Args {
     // argc/argv should exclude the program name, as it is useless
@@ -23,7 +40,6 @@ typedef struct Args {
     const char *_Nonnull const *_Nonnull argv;
 } Args;
 typedef struct ArgParser ArgParser;
-typedef struct ArgParseError ArgParseError;
 //
 // Parses the Args into the variables. Returns an error if there was any issue
 // while parsing. Note that this function does not print anything if parsing failed.
@@ -33,7 +49,11 @@ typedef struct ArgParseError ArgParseError;
 // If parsing failed, the calling application should probably print the help and
 // exit. This doesn't do that for you as libraries that call exit() are evil.
 //
-static inline int parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args);
+static inline enum ArgParseError parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args);
+
+// After receiving a non-zero error code from `parse_args`, use this function
+// to explain what failed to parse and why.
+static inline void print_argparse_error(Nonnull(ArgParser*)parser, enum ArgParseError error);
 
 //
 // Checks if there is a -h or --help in the args. If there is, you probably
@@ -147,6 +167,13 @@ typedef struct ArgToParse {
     // this to see if the arg was actually set or not.
     int num_parsed;
     //
+    // Whether or not this argument was given at the commandline. For variable
+    // length arguments that allow 0 args, this distinguishes between an empty list
+    // being given versus not being given at all.
+
+    // Also, used internally to avoid allowing duplicate keywords at the commandline.
+    bool visited;
+    //
     // Whether to show the default value in the help printout.
     bool hide_default; // maybe we'll want a bitflags field with options instead.
     // Whether to hide this flag from the help output.
@@ -165,12 +192,6 @@ typedef struct ArgToParse {
         Nonnull(void*) pointer;
     } dest;
 } ArgToParse;
-
-typedef struct ArgParseError {
-    Nullable(const char*) reason;
-    Nullable(const ArgToParse*) failed_arg_to_parse; // this can be null if there is no arg identified (say a bad flag).
-    Nullable(const char*) failed_arg; // from the original argv;
-}ArgParseError;
 
 //
 // Parser structure.
@@ -199,7 +220,10 @@ typedef struct ArgParser {
         Nonnull(ArgToParse*) args;
         size_t count;
     } keyword;
-    ArgParseError error;
+    struct {
+        Nullable(ArgToParse*) arg_to_parse;
+        Nullable(const char*) arg;
+        } failed;
 } ArgParser;
 
 //
@@ -462,14 +486,14 @@ static inline
 int
 parse_arg(Nonnull(ArgToParse*)arg, StringView s){
     if(arg->num_parsed >= arg->max_num)
-        return EXCESS_KWARGS;
+        return ARGPARSE_EXCESS_ARGS;
     // If previous num parsed is nonzero, this means
     // that what we are pointing to is an array.
     switch(arg->dest.type){
         case ARG_INTEGER64:{
             auto e = parse_int64(s.text, s.length);
             if(unlikely(e.errored)) {
-                return e.errored;
+                return ARGPARSE_CONVERSION_ERROR;
                 }
             auto value = e.result;
             int64_t* dest = arg->dest.pointer;
@@ -480,7 +504,7 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
         case ARG_UINTEGER64:{
             auto e = parse_unsigned_human(s.text, s.length);
             if(unlikely(e.errored)) {
-                return e.errored;
+                return ARGPARSE_CONVERSION_ERROR;
                 }
             auto value = e.result;
             uint64_t* dest = arg->dest.pointer;
@@ -491,7 +515,7 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
         case ARG_INT:{
             auto e = parse_int(s.text, s.length);
             if(unlikely(e.errored)) {
-                return e.errored;
+                return ARGPARSE_CONVERSION_ERROR;
                 }
             auto value = e.result;
             int* dest = arg->dest.pointer;
@@ -503,9 +527,9 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
             char* endptr;
             float value = strtof(s.text, &endptr);
             if(endptr == s.text)
-                return PARSE_ERROR;
+                return ARGPARSE_CONVERSION_ERROR;
             if(*endptr != '\0')
-                return INVALID_SYMBOL;
+                return ARGPARSE_CONVERSION_ERROR;
             float* dest = arg->dest.pointer;
             dest += arg->num_parsed;
             *dest = value;
@@ -515,9 +539,9 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
             char* endptr;
             double value = strtod(s.text, &endptr);
             if(endptr == s.text)
-                return PARSE_ERROR;
+                return ARGPARSE_CONVERSION_ERROR;
             if(*endptr != '\0')
-                return INVALID_SYMBOL;
+                return ARGPARSE_CONVERSION_ERROR;
             double* dest = arg->dest.pointer;
             dest += arg->num_parsed;
             *dest = value;
@@ -549,7 +573,7 @@ int
 set_flag(Nonnull(ArgToParse*) arg){
     assert(arg->dest.type == ARG_FLAG);
     if(arg->num_parsed >= arg->max_num)
-        return DUPLICATE_KWARG;
+        return ARGPARSE_DUPLICATE_KWARG;
     bool* dest = arg->dest.pointer;
     *dest = true;
     arg->num_parsed += 1;
@@ -591,111 +615,254 @@ print_version(Nonnull(const ArgParser*)p){
         puts("No version information available.");
     }
 
+static inline
+Nullable(ArgToParse*)
+find_matching_kwarg(Nonnull(ArgParser*)parser, StringView sv){
+    // do an inefficient linear search for now.
+    for(size_t i = 0; i < parser->keyword.count; i++){
+        ArgToParse* kw = &parser->keyword.args[i];
+        if(SV_equals(kw->name, sv))
+            return kw;
+        if(kw->altname1.length){
+            if(SV_equals(kw->altname1, sv))
+                return kw;
+            }
+        }
+    return NULL;
+    }
+
 // See top of file.
 static inline
-int
+enum ArgParseError
 parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
-    auto argc = args->argc;
-    const char*const* argv = args->argv;
-    auto past_the_end = argv+argc;
+    ArgToParse* pos_arg = NULL;
+    ArgToParse* past_the_end = NULL;
     if(parser->positional.count){
-        Nonnull(ArgToParse*) arg = &parser->positional.args[0];
-        assert(arg->max_num > 0);
-        int which_arg = 0;
-        for(;;){
-            if(arg->num_parsed == arg->max_num){
-                if(which_arg +1 == parser->positional.count){
-                    break;
+        pos_arg = &parser->positional.args[0];
+        past_the_end = pos_arg + parser->positional.count;
+        }
+    ArgToParse* kwarg = NULL;
+    auto argv_end = args->argv+args->argc;
+    for(auto arg = args->argv; arg != argv_end; ++arg){
+        auto s = cstr_to_SV(*arg);
+        if(s.length > 1){
+            if(s.text[0] == '-'){
+                switch(s.text[1]){
+                    case '0' ... '9':
+                    case '.':
+                        // number, not an argument.
+                        break;
+                    default:{
+                        // Not a number, find matching kwarg
+                        ArgToParse* new_kwarg = find_matching_kwarg(parser, s);
+                        if(!new_kwarg){
+                            parser->failed.arg = *arg;
+                            return ARGPARSE_UNKNOWN_KWARG;
+                            }
+                        if(new_kwarg->visited){
+                            parser->failed.arg_to_parse = new_kwarg;
+                            parser->failed.arg = *arg;
+                            return ARGPARSE_DUPLICATE_KWARG;
+                            }
+                        if(pos_arg && pos_arg != past_the_end && pos_arg->visited)
+                            pos_arg++;
+                        kwarg = new_kwarg;
+                        kwarg->visited = true;
+                        if(kwarg->dest.type == ARG_FLAG){
+                            auto error = set_flag(kwarg);
+                            if(error) {
+                                parser->failed.arg_to_parse = kwarg;
+                                parser->failed.arg = *arg;
+                                return error;
+                                }
+                            kwarg = NULL;
+                            }
+                        continue;
+                        }break;
                     }
-                arg++;
-                which_arg++;
-                assert(arg->max_num > 0);
                 }
-            if(argv == past_the_end)
-                break;
-            auto s = cstr_to_SV(*argv);
-            if(s.length > 1){
-                if(s.text[0] == '-'){
-                    // make sure it's not actually a number.
-                    switch(s.text[1]){
-                        case '0' ... '9':
-                        case '.':
-                            break;
-                        default:
-                            goto Break;
-                        }
-                    }
-                }
-            argv++;
-            auto e = parse_arg(arg, s);
-            // error in converting to argument
-            if(e) return e;
             }
-        Break:;
-        for(int i = 0; i < parser->positional.count; i++){
-            auto a = &parser->positional.args[i];
-            if(a->num_parsed < a->min_num){
-                // too few arguments
-                return PARSE_ERROR;
+        if(kwarg){
+            auto err = parse_arg(kwarg, s);
+            if(err){
+                parser->failed.arg = *arg;
+                parser->failed.arg_to_parse = kwarg;
+                return err;
                 }
+            if(kwarg->num_parsed == kwarg->max_num)
+                kwarg = NULL;
+            }
+        else if(pos_arg && pos_arg != past_the_end){
+            pos_arg->visited = true;
+            auto err = parse_arg(pos_arg, s);
+            if(err){
+                parser->failed.arg = *arg;
+                parser->failed.arg_to_parse = pos_arg;
+                return err;
+                }
+            if(pos_arg->num_parsed == pos_arg->max_num)
+                pos_arg++;
+            }
+        else {
+            parser->failed.arg = *arg;
+            return ARGPARSE_EXCESS_ARGS;
             }
         }
-    if(parser->keyword.count){
-        Nullable(ArgToParse*) arg = NULL;
-        bool parsed_an_arg = false;
-        for(;;){
-            top:;
-            if(argv == past_the_end)
-                break;
-            auto s = cstr_to_SV(*argv);
-            argv++;
-            // always check for an argument match
-            for(int i = 0; i < parser->keyword.count; i++){
-                auto a = &parser->keyword.args[i];
-                if(SV_equals(s, a->name) or SV_equals(s, a->altname1)){
-                    if(arg and !parsed_an_arg){
-                        // we got something like --foo --bar when --foo expected an argument
-                        return MISSING_ARG;
-                        }
-                    parsed_an_arg = false;
-                    if(a->dest.type == ARG_FLAG){
-                        auto e = set_flag(a);
-                        if(e) return e;
-                        arg = NULL;
-                        }
-                    else
-                        arg = a;
-                    goto top;
-                    }
-                }
-            // unrecognized argument (or really, isn't an argument)
-            if(!arg) return PARSE_ERROR;
-            // I wish clang would see the !arg and deduce arg is nonnull here.
-            auto e = parse_arg((ArgToParse*)arg, s);
-            if(e) return e;
-            parsed_an_arg = true;
+    for(size_t i = 0; i < parser->positional.count; i++){
+        auto arg = &parser->positional.args[i];
+        if(arg->num_parsed < arg->min_num){
+            parser->failed.arg_to_parse = arg;
+            return ARGPARSE_INSUFFICIENT_ARGS;
             }
-        if(arg and !parsed_an_arg){
-            // we got something like --foo --bar when --foo expected an argument
-            return MISSING_ARG;
-            }
-        assert(argv == past_the_end);
-        for(size_t i = 0; i < parser->keyword.count; i++){
-            auto a = &parser->keyword.args[i];
-            // got too few (or none)
-            if(a->num_parsed < a->min_num)
-                return MISSING_KWARG;
-            // got too many
-            if(a->num_parsed > a->max_num)
-                return EXCESS_KWARGS;
+        if(arg->num_parsed > arg->max_num){
+            parser->failed.arg_to_parse = arg;
+            return ARGPARSE_EXCESS_ARGS;
             }
         }
-    // can happen if we don't have kwargs
-    if(argv != past_the_end){
-        // didn't consume all arguments
-        return PARSE_ERROR;
+    for(size_t i = 0; i < parser->keyword.count; i++){
+        auto arg = &parser->keyword.args[i];
+        if(arg->num_parsed < arg->min_num){
+            parser->failed.arg_to_parse = arg;
+            return ARGPARSE_INSUFFICIENT_ARGS;
+            }
+        if(arg->num_parsed > arg->max_num){
+            parser->failed.arg_to_parse = arg;
+            return ARGPARSE_EXCESS_ARGS;
+            }
+        // This only makes sense for keyword arguments.
+        if(arg->visited && arg->num_parsed == 0){
+            parser->failed.arg_to_parse = arg;
+            return ARGPARSE_VISITED_NO_ARG_GIVEN;
+            }
         }
     return 0;
     }
 
+static inline
+void
+print_argparse_error(Nonnull(ArgParser*)parser, enum ArgParseError error){
+    if(parser->failed.arg_to_parse){
+        ArgToParse* arg_to_parse = parser->failed.arg_to_parse;
+        fprintf(stderr, "Error when parsing argument for '%s': ", arg_to_parse->name.text);
+        }
+    switch(error){
+        case ARGPARSE_NO_ERROR:
+            //fall-through
+        PushDiagnostic();
+        SuppressCoveredSwitchDefault();
+        default:
+            fprintf(stderr, "Unknown error when parsing arguments\n");
+            return;
+        PopDiagnostic();
+        case ARGPARSE_CONVERSION_ERROR:
+            if(parser->failed.arg_to_parse){
+                ArgToParse* arg_to_parse = parser->failed.arg_to_parse;
+                if(parser->failed.arg){
+                    const char* arg = parser->failed.arg;
+                    switch(arg_to_parse->dest.type){
+                        case ARG_INTEGER64:
+                            fprintf(stderr, "Unable to parse an int64 from '%s'\n", arg);
+                            return;
+                        case ARG_INT:
+                            fprintf(stderr, "Unable to parse an int from '%s'\n", arg);
+                            return;
+                        // These seem bizarre.
+                        case ARG_STRING:
+                            // fall-through
+                        case ARG_CSTRING:
+                            fprintf(stderr, "Unable to parse a string from '%s'\n", arg);
+                            return;
+                        case ARG_UINTEGER64:
+                            fprintf(stderr, "Unable to parse a uint64 from '%s'\n", arg);
+                            return;
+                        case ARG_FLOAT32:
+                            fprintf(stderr, "Unable to parse a float32 from '%s'\n", arg);
+                            return;
+                        case ARG_FLOAT64:
+                            fprintf(stderr, "Unable to parse a float64 from '%s'\n", arg);
+                            return;
+                        default:
+                            fprintf(stderr, "Unable to parse an unknown type from '%s'\n", arg);
+                            return;
+                        }
+                    }
+                else {
+                    switch(arg_to_parse->dest.type){
+                        case ARG_INTEGER64:
+                            fprintf(stderr, "Unable to parse an int64 from unknown argument'\n");
+                            return;
+                        case ARG_INT:
+                            fprintf(stderr, "Unable to parse an int from unknown argument'\n");
+                            return;
+                        // These seem bizarre.
+                        case ARG_STRING:
+                            // fall-through
+                        case ARG_CSTRING:
+                            fprintf(stderr, "Unable to parse a string from unknown argument'\n");
+                            return;
+                        case ARG_UINTEGER64:
+                            fprintf(stderr, "Unable to parse a uint64 from unknown argument'\n");
+                            return;
+                        case ARG_FLOAT32:
+                            fprintf(stderr, "Unable to parse a float32 from unknown argument'\n");
+                            return;
+                        case ARG_FLOAT64:
+                            fprintf(stderr, "Unable to parse a float64 from unknown argument'\n");
+                            return;
+                        default:
+                            fprintf(stderr, "Unable to parse an unknown type from unknown argument'\n");
+                            return;
+                        }
+                    }
+                }
+            else if(parser->failed.arg){
+                const char* arg = parser->failed.arg;
+                fprintf(stderr, "Unable to parse an unknown type from '%s'\n", arg);
+                return;
+                }
+            else {
+                fprintf(stderr, "Unable to parse an unknown type from an unknown argument. This is a bug.\n");
+                }
+            return;
+        case ARGPARSE_UNKNOWN_KWARG:
+            if(parser->failed.arg)
+                fprintf(stderr, "Unrecognized argument '%s'\n", parser->failed.arg);
+            else
+                fprintf(stderr, "Unrecognized argument is unknown. This is a bug.\n");
+            return;
+        case ARGPARSE_DUPLICATE_KWARG:
+            fprintf(stderr, "Option given more than once.\n");
+            return;
+        case ARGPARSE_EXCESS_ARGS:{
+            // Args were given after all possible args were consumed.
+            if(!parser->failed.arg_to_parse){
+                fprintf(stderr, "More arguments given than needed. First excess argument: '%s'\n", parser->failed.arg);
+                return;
+                }
+            ArgToParse* arg_to_parse = parser->failed.arg_to_parse;
+
+            if(!parser->failed.arg){
+                fprintf(stderr, "Excess arguments. No more than %d arguments needed. Unknown first excess argument (this is a bug)\n", arg_to_parse->max_num);
+                return;
+                }
+            fprintf(stderr, "Excess arguments. No more than %d arguments needed. First excess argument: '%s'\n", arg_to_parse->max_num, parser->failed.arg) ;
+            }return;
+        case ARGPARSE_INSUFFICIENT_ARGS:{
+            if(!parser->failed.arg_to_parse){
+                fprintf(stderr, "Insufficent arguments for unknown option. This is a bug\n");
+                return;
+                }
+            ArgToParse* arg_to_parse = parser->failed.arg_to_parse;
+            fprintf(stderr, "Insufficient arguments.. %d arguments are required.\n", arg_to_parse->min_num);
+            }return;
+        case ARGPARSE_VISITED_NO_ARG_GIVEN:{
+            ArgToParse* arg_to_parse = parser->failed.arg_to_parse;
+            if(!arg_to_parse){
+                fprintf(stderr, "An unknown argument was visited. This is a bug.\n");
+                return;
+                }
+            fprintf(stderr, "No arguments given.\n");
+            }return;
+        }
+    }
 #endif

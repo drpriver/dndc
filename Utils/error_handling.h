@@ -29,11 +29,12 @@
     apply(EXCESS_KWARGS, 12) \
     apply(DUPLICATE_KWARG, 13) \
     apply(MISSING_ARG, 14) \
+    apply(BAD_KWARG, 15)\
     /*Some low level routine failed*/ \
-    apply(OS_ERROR, 15) \
+    apply(OS_ERROR, 16) \
     /*idk man*/ \
-    apply(GENERIC_ERROR, 16)\
-    apply(FORMAT_ERROR, 17)\
+    apply(GENERIC_ERROR, 17)\
+    apply(FORMAT_ERROR, 18)\
 
 #ifdef _WIN32
 // Windows.h defines NO_ERROR. What a PITA.

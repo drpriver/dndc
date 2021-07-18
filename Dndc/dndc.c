@@ -452,8 +452,8 @@ int main(int argc, char**argv){
             }
         auto e = parse_args(&argparser, &args);
         if(e){
-            fprintf(stderr, "Error when parsing arguments.\n");
-            print_help(&argparser);
+            print_argparse_error(&argparser, e);
+            fprintf(stderr, "Use --help to see usage\n");
             return e;
             }
         if(hidden_help){
