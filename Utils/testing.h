@@ -412,11 +412,11 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
         return 1; // Return non-zero so this doesn't count as a successful test.
         }
     auto e = parse_args(&argparser, &args);
-    if(e.errored){
+    if(e){
         fprintf(stderr, "Error when parsing arguments.\n");
         if(isatty(fileno(stdout)))
             print_help(&argparser);
-        return e.errored;
+        return e;
         }
     if(list_tests){
         for(int i = 0; i < test_funcs_count; i++){

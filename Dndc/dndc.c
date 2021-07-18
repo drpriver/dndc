@@ -451,10 +451,10 @@ int main(int argc, char**argv){
             return 0;
             }
         auto e = parse_args(&argparser, &args);
-        if(e.errored){
+        if(e){
             fprintf(stderr, "Error when parsing arguments.\n");
             print_help(&argparser);
-            return e.errored;
+            return e;
             }
         if(hidden_help){
             fputs(

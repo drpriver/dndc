@@ -1,11 +1,13 @@
 #ifndef argument_parsing_h
 #define argument_parsing_h
+// bool
 #include <stdbool.h>
-#include <limits.h>
+// integer types
 #include <stdint.h>
+// strtod, strtof
+#include <stdlib.h>
 #include "common_macros.h"
 #include "long_string.h"
-#include "error_handling.h"
 #include "parse_numbers.h"
 #include "term_util.h"
 //
@@ -21,6 +23,7 @@ typedef struct Args {
     const char *_Nonnull const *_Nonnull argv;
 } Args;
 typedef struct ArgParser ArgParser;
+typedef struct ArgParseError ArgParseError;
 //
 // Parses the Args into the variables. Returns an error if there was any issue
 // while parsing. Note that this function does not print anything if parsing failed.
@@ -30,7 +33,7 @@ typedef struct ArgParser ArgParser;
 // If parsing failed, the calling application should probably print the help and
 // exit. This doesn't do that for you as libraries that call exit() are evil.
 //
-static inline Errorable_f(void) parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args);
+static inline int parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args);
 
 //
 // Checks if there is a -h or --help in the args. If there is, you probably
@@ -66,6 +69,8 @@ static inline void print_version(Nonnull(const ArgParser*));
     apply(ARG_FLAG, bool, "flag") \
     apply(ARG_STRING, LongString, "string") \
     apply(ARG_UINTEGER64, uint64_t, "uint64") \
+    apply(ARG_FLOAT32, float, "float32") \
+    apply(ARG_FLOAT64, double, "float64") \
 
 #ifdef _WIN32
 // Packing doesn't work on enums with Windows.
@@ -96,6 +101,8 @@ static const LongString ArgTypeNames[] = {
 #define ARGTYPE(_x) _Generic(_x, \
     int64_t: ARG_INTEGER64, \
     uint64_t: ARG_UINTEGER64, \
+    float: ARG_FLOAT32, \
+    double: ARG_FLOAT64, \
     int: ARG_INT, \
     bool: ARG_FLAG, \
     LongString: ARG_STRING)
@@ -153,6 +160,12 @@ typedef struct ArgToParse {
     } dest;
 } ArgToParse;
 
+typedef struct ArgParseError {
+    Nullable(const char*) reason;
+    Nullable(const ArgToParse*) failed_arg_to_parse; // this can be null if there is no arg identified (say a bad flag).
+    Nullable(const char*) failed_arg; // from the original argv;
+}ArgParseError;
+
 //
 // Parser structure.
 typedef struct ArgParser {
@@ -180,6 +193,7 @@ typedef struct ArgParser {
         Nonnull(ArgToParse*) args;
         size_t count;
     } keyword;
+    ArgParseError error;
 } ArgParser;
 
 //
@@ -279,7 +293,7 @@ print_help(Nonnull(const ArgParser*) p){
              "-h, --help: flag\n"
              "    Print this help and exit.\n"
              "\n"
-             "--version: flag = false\n"
+             "--version: flag\n"
              "    Print version information and exit.");
         }
     else {
@@ -299,7 +313,7 @@ print_help(Nonnull(const ArgParser*) p){
 
 static inline
 void
-print_wrapped_help(Nonnull(const char*), TermSize);
+print_wrapped_help(Nullable(const char*), TermSize);
 
 // See top of file.
 static inline
@@ -323,7 +337,7 @@ print_arg_help(Nonnull(const ArgToParse*) arg, TermSize term_size){
         case ARG_INTEGER64:{
             int64_t* data = arg->dest.pointer;
             printf(" = %lld", (long long)*data);
-        print_wrapped_help(help, term_size);
+            print_wrapped_help(help, term_size);
             }break;
         case ARG_UINTEGER64:{
             int64_t* data = arg->dest.pointer;
@@ -335,9 +349,17 @@ print_arg_help(Nonnull(const ArgToParse*) arg, TermSize term_size){
             printf(" = %d", *data);
             print_wrapped_help(help, term_size);
             }break;
+        case ARG_FLOAT32:{
+            float* data = arg->dest.pointer;
+            printf(" = %f", (double)*data);
+            print_wrapped_help(help, term_size);
+            }break;
+        case ARG_FLOAT64:{
+            double* data = arg->dest.pointer;
+            printf(" = %f", *data);
+            print_wrapped_help(help, term_size);
+            }break;
         case ARG_FLAG:{
-            bool* data = arg->dest.pointer;
-            printf(" = %s", *data?"true":"false");
             print_wrapped_help(help, term_size);
             } break;
         case ARG_STRING:{
@@ -352,7 +374,8 @@ struct HelpTokenized {
     StringView token;
     bool is_newline;
     Nonnull(const char*) rest;
-    };
+};
+
 // Tokenizes the string on whitespace.
 // Internal helper for printing the help wrapped.
 static inline
@@ -393,12 +416,16 @@ next_tokenize_help(Nonnull(const char*) help){
 
 static inline
 void
-print_wrapped_help(Nonnull(const char*)help, TermSize term_size){
+print_wrapped_help(Nullable(const char*)help, TermSize term_size){
+    if(!help){
+        putchar('\n');
+        return;
+        }
     printf("\n    ");
     HelpState hs = {.output_width = term_size.columns - 4, .lead = 4, .remaining = 0};
     hs.remaining = hs.output_width;
     for(;*help;){
-        auto tok = next_tokenize_help(help);
+        auto tok = next_tokenize_help((const char*)help); // cast away nullability
         help = tok.rest;
         if(tok.is_newline){
             if(hs.remaining != hs.output_width){
@@ -421,17 +448,18 @@ print_wrapped_help(Nonnull(const char*)help, TermSize term_size){
 // Used internally. I guess you could use it if you really wanted to, but you
 // don't need this type generic version?
 static inline
-Errorable_f(void)
+int
 parse_arg(Nonnull(ArgToParse*)arg, StringView s){
-    Errorable(void) result = {};
     if(arg->num_parsed >= arg->max_num)
-        Raise(EXCESS_KWARGS);
+        return EXCESS_KWARGS;
     // If previous num parsed is nonzero, this means
     // that what we are pointing to is an array.
     switch(arg->dest.type){
         case ARG_INTEGER64:{
             auto e = parse_int64(s.text, s.length);
-            if(unlikely(e.errored)) Raise(e.errored);
+            if(unlikely(e.errored)) {
+                return e.errored;
+                }
             auto value = e.result;
             int64_t* dest = arg->dest.pointer;
             dest += arg->num_parsed;
@@ -440,18 +468,46 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
             }break;
         case ARG_UINTEGER64:{
             auto e = parse_unsigned_human(s.text, s.length);
-            if(unlikely(e.errored)) Raise(e.errored);
+            if(unlikely(e.errored)) {
+                return e.errored;
+                }
             auto value = e.result;
             uint64_t* dest = arg->dest.pointer;
             dest += arg->num_parsed;
             *dest = value;
             arg->num_parsed += 1;
             }break;
-        case ARG_INT: {
+        case ARG_INT:{
             auto e = parse_int(s.text, s.length);
-            if(unlikely(e.errored)) Raise(e.errored);
+            if(unlikely(e.errored)) {
+                return e.errored;
+                }
             auto value = e.result;
             int* dest = arg->dest.pointer;
+            dest += arg->num_parsed;
+            *dest = value;
+            arg->num_parsed += 1;
+            }break;
+        case ARG_FLOAT32:{
+            char* endptr;
+            float value = strtof(s.text, &endptr);
+            if(endptr == s.text)
+                return PARSE_ERROR;
+            if(*endptr != '\0')
+                return INVALID_SYMBOL;
+            float* dest = arg->dest.pointer;
+            dest += arg->num_parsed;
+            *dest = value;
+            arg->num_parsed += 1;
+            }break;
+        case ARG_FLOAT64:{
+            char* endptr;
+            double value = strtod(s.text, &endptr);
+            if(endptr == s.text)
+                return PARSE_ERROR;
+            if(*endptr != '\0')
+                return INVALID_SYMBOL;
+            double* dest = arg->dest.pointer;
             dest += arg->num_parsed;
             *dest = value;
             arg->num_parsed += 1;
@@ -467,21 +523,20 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
             arg->num_parsed += 1;
             }break;
         }
-    return result;
+    return 0;
     }
 
 // Set a flag. I really don't see why you would use this outside of this.
 static inline
-Errorable_f(void)
+int
 set_flag(Nonnull(ArgToParse*) arg){
-    Errorable(void) result = {};
     assert(arg->dest.type == ARG_FLAG);
     if(arg->num_parsed >= arg->max_num)
-        Raise(DUPLICATE_KWARG);
+        return DUPLICATE_KWARG;
     bool* dest = arg->dest.pointer;
     *dest = true;
     arg->num_parsed += 1;
-    return result;
+    return 0;
     }
 
 // See top of file.
@@ -521,9 +576,8 @@ print_version(Nonnull(const ArgParser*)p){
 
 // See top of file.
 static inline
-Errorable_f(void)
+int
 parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
-    Errorable(void) result = {};
     auto argc = args->argc;
     const char*const* argv = args->argv;
     auto past_the_end = argv+argc;
@@ -548,6 +602,7 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
                     // make sure it's not actually a number.
                     switch(s.text[1]){
                         case '0' ... '9':
+                        case '.':
                             break;
                         default:
                             goto Break;
@@ -557,15 +612,14 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
             argv++;
             auto e = parse_arg(arg, s);
             // error in converting to argument
-            if(e.errored)
-                return e;
+            if(e) return e;
             }
         Break:;
         for(int i = 0; i < parser->positional.count; i++){
             auto a = &parser->positional.args[i];
             if(a->num_parsed < a->min_num){
                 // too few arguments
-                Raise(PARSE_ERROR);
+                return PARSE_ERROR;
                 }
             }
         }
@@ -584,13 +638,12 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
                 if(SV_equals(s, a->name) or SV_equals(s, a->altname1)){
                     if(arg and !parsed_an_arg){
                         // we got something like --foo --bar when --foo expected an argument
-                        Raise(MISSING_ARG);
+                        return MISSING_ARG;
                         }
                     parsed_an_arg = false;
                     if(a->dest.type == ARG_FLAG){
                         auto e = set_flag(a);
-                        if(e.errored)
-                            return e;
+                        if(e) return e;
                         arg = NULL;
                         }
                     else
@@ -599,35 +652,33 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
                     }
                 }
             // unrecognized argument (or really, isn't an argument)
-            if(!arg)
-                Raise(PARSE_ERROR);
+            if(!arg) return PARSE_ERROR;
             // I wish clang would see the !arg and deduce arg is nonnull here.
             auto e = parse_arg((ArgToParse*)arg, s);
-            if(e.errored)
-                return e;
+            if(e) return e;
             parsed_an_arg = true;
             }
         if(arg and !parsed_an_arg){
             // we got something like --foo --bar when --foo expected an argument
-            Raise(MISSING_ARG);
+            return MISSING_ARG;
             }
         assert(argv == past_the_end);
         for(size_t i = 0; i < parser->keyword.count; i++){
             auto a = &parser->keyword.args[i];
             // got too few (or none)
             if(a->num_parsed < a->min_num)
-                Raise(MISSING_KWARG);
+                return MISSING_KWARG;
             // got too many
             if(a->num_parsed > a->max_num)
-                Raise(EXCESS_KWARGS);
+                return EXCESS_KWARGS;
             }
         }
     // can happen if we don't have kwargs
     if(argv != past_the_end){
         // didn't consume all arguments
-        Raise(PARSE_ERROR);
+        return PARSE_ERROR;
         }
-    return result;
+    return 0;
     }
 
 #endif

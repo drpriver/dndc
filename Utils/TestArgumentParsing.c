@@ -65,8 +65,8 @@ test_parse_args(int argc, const char** argv){
         .keyword.count = arrlen(kw_args),
         };
     auto e = parse_args(&parser, &args);
-    if(e.errored)
-        Raise(e.errored);
+    if(e)
+        Raise(e);
     // IDK if these are needed, but this is to preserve
     // compatibility with how the parsing used to work
     // and I don't want to rethink the tests yet
@@ -101,8 +101,8 @@ Errorable_f(holder2) test_parse_args2(int argc, const char** argv){
         .keyword.count = arrlen(kw_args),
         };
     auto e = parse_args(&parser, &args);
-    if(e.errored)
-        Raise(e.errored);
+    if(e)
+        Raise(e);
     result.result.f_count = kw_args[0].num_parsed;
     return result;
     }
@@ -229,6 +229,43 @@ TestFunction(TestArgumentParsing10){
     const char* argv[] = {"bin", "--f", "-h", "lol"};
     auto e = test_parse_args2(arrlen(argv), argv);
     TestExpectEquals(e.errored, EXCESS_KWARGS);
+    TESTEND();
+    }
+
+TestFunction(TestArgumentParsing11){
+    TESTBEGIN();
+    const char*argv[] = {"3.0", "-1e12"};
+    float foo = -1.f;
+    double bar = 0.2;
+    ArgToParse pos_args[] = {
+        [0] = {
+            .name = SV("foo"),
+            .min_num = 1,
+            .max_num = 1,
+            .dest = ARGDEST(&foo),
+            },
+        [1] = {
+            .name = SV("bar"),
+            .min_num = 1,
+            .max_num = 1,
+            .dest = ARGDEST(&bar),
+            },
+        };
+    ArgToParse kwargs[0] = {};
+    ArgParser argparser = {
+        .name = "barzle",
+        .description = "A flim flam.",
+        .version = "0.1.0",
+        .positional.args = pos_args,
+        .positional.count = arrlen(pos_args),
+        .keyword.args = kwargs,
+        .keyword.count = 0,
+        };
+    Args args = {arrlen(argv), argv};
+    auto e = parse_args(&argparser, &args);
+    TestExpectEquals(e, 0);
+    TestExpectEquals(foo, 3.0f);
+    TestExpectEquals(bar, -1e12);
     TESTEND();
     }
 
@@ -359,6 +396,7 @@ int main(int argc, char** argv){
     RegisterTest(TestArgumentParsing8);
     RegisterTest(TestArgumentParsing9);
     RegisterTest(TestArgumentParsing10);
+    RegisterTest(TestArgumentParsing11);
     RegisterTest(TestIntegerParsing);
     RegisterTest(TestHumanIntegers);
     return test_main(argc, argv);
