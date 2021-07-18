@@ -93,28 +93,14 @@ static inline void print_version(Nonnull(const ArgParser*));
     apply(ARG_FLOAT32, float, "float32") \
     apply(ARG_FLOAT64, double, "float64") \
 
-#ifdef _WIN32
-// Packing doesn't work on enums with Windows.
-// Manually pack by not using the type.
-typedef uint8_t _ARG_TYPE;
-enum {
-    #define X(enumname, b, c) enumname,
-    ARGS(X)
-    #undef X
-    ARG_ENUM,
-    ARG_USER_DEFINED,
-};
-#else
-// On linux and macos, packing enums works fine.
-typedef enum __attribute__((__packed__)) _ARG_TYPE {
+
+typedef enum _ARG_TYPE {
     #define X(enumname, b, c) enumname,
     ARGS(X)
     #undef X
     ARG_ENUM,
     ARG_USER_DEFINED,
 } _ARG_TYPE;
-#endif
-_Static_assert(sizeof(_ARG_TYPE) == 1, "");
 
 static const LongString ArgTypeNames[] = {
     #define X(a,b, string) LS(string),
