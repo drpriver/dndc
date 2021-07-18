@@ -24,17 +24,11 @@
     /*File IO Errors*/ \
     apply(FILE_ERROR, 9) \
     apply(FILE_NOT_OPENED, 10) \
-    /*KWARG*/ \
-    apply(MISSING_KWARG, 11) \
-    apply(EXCESS_KWARGS, 12) \
-    apply(DUPLICATE_KWARG, 13) \
-    apply(MISSING_ARG, 14) \
-    apply(BAD_KWARG, 15)\
     /*Some low level routine failed*/ \
-    apply(OS_ERROR, 16) \
+    apply(OS_ERROR, 11) \
     /*idk man*/ \
-    apply(GENERIC_ERROR, 17)\
-    apply(FORMAT_ERROR, 18)\
+    apply(GENERIC_ERROR, 12)\
+    apply(FORMAT_ERROR, 13)\
 
 #ifdef _WIN32
 // Windows.h defines NO_ERROR. What a PITA.
