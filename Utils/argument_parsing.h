@@ -68,6 +68,7 @@ static inline void print_version(Nonnull(const ArgParser*));
     apply(ARG_INT, int, "int") \
     apply(ARG_FLAG, bool, "flag") \
     apply(ARG_STRING, LongString, "string") \
+    apply(ARG_CSTRING, const char*, "string") \
     apply(ARG_UINTEGER64, uint64_t, "uint64") \
     apply(ARG_FLOAT32, float, "float32") \
     apply(ARG_FLOAT64, double, "float64") \
@@ -105,6 +106,9 @@ static const LongString ArgTypeNames[] = {
     double: ARG_FLOAT64, \
     int: ARG_INT, \
     bool: ARG_FLAG, \
+    const char*: ARG_CSTRING, \
+    char*: ARG_CSTRING, \
+    StringView: ARG_STRING, \
     LongString: ARG_STRING)
 
 //
@@ -127,6 +131,8 @@ typedef struct ArgToParse {
     StringView name;
     //
     // An alternate name of the argument. Optional.
+    // Allows to have a short and longer version of argument (name is "--help",
+    // altname is "-h")
     StringView altname1;
     //
     // Mininum number of arguments for this arg. Fewer than this is an error.
@@ -362,6 +368,11 @@ print_arg_help(Nonnull(const ArgToParse*) arg, TermSize term_size){
         case ARG_FLAG:{
             print_wrapped_help(help, term_size);
             } break;
+        case ARG_CSTRING:{
+            const char* s = arg->dest.pointer;
+            printf(" = '%s'", s);
+            print_wrapped_help(help, term_size);
+            }break;
         case ARG_STRING:{
             LongString* s = arg->dest.pointer;
             printf(" = '%.*s'", (int)s->length, s->text);
@@ -520,6 +531,12 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
             StringView* dest = arg->dest.pointer;
             dest += arg->num_parsed;
             *dest = s;
+            arg->num_parsed += 1;
+            }break;
+        case ARG_CSTRING:{
+            const char** dest = arg->dest.pointer;
+            dest += arg->num_parsed;
+            *dest = s.text;
             arg->num_parsed += 1;
             }break;
         }

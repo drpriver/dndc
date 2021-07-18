@@ -361,25 +361,25 @@ TestFunction(TestIntegerParsing){
 TestFunction(TestHumanIntegers){
     TESTBEGIN();
     {
-    char digits[6] = {'1', '3', '4', '5', '6', '2'};
-    auto e = parse_unsigned_human(digits, 6);
-    TestAssertSuccess(e);
-    auto val = e.result;
-    TestExpectEquals(val, 134562);
+        char digits[6] = {'1', '3', '4', '5', '6', '2'};
+        auto e = parse_unsigned_human(digits, 6);
+        TestAssertSuccess(e);
+        auto val = e.result;
+        TestExpectEquals(val, 134562);
     }
     {
-    char digits[6] = {'#', '3', '4', '5', '6', '2'};
-    auto e = parse_unsigned_human(digits, 6);
-    TestAssertSuccess(e);
-    auto val = e.result;
-    TestExpectEquals(val, 0x34562);
+        char digits[6] = {'#', '3', '4', '5', '6', '2'};
+        auto e = parse_unsigned_human(digits, 6);
+        TestAssertSuccess(e);
+        auto val = e.result;
+        TestExpectEquals(val, 0x34562);
     }
     {
-    char digits[6] = {'0', 'b', '1', '1', '0', '1'};
-    auto e = parse_unsigned_human(digits, 6);
-    TestAssertSuccess(e);
-    auto val = e.result;
-    TestExpectEquals(val, 0b1101);
+        char digits[6] = {'0', 'b', '1', '1', '0', '1'};
+        auto e = parse_unsigned_human(digits, 6);
+        TestAssertSuccess(e);
+        auto val = e.result;
+        TestExpectEquals(val, 0b1101);
     }
     TESTEND();
     }
