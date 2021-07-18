@@ -101,6 +101,8 @@ enum {
     #define X(enumname, b, c) enumname,
     ARGS(X)
     #undef X
+    ARG_ENUM,
+    ARG_USER_DEFINED,
 };
 #else
 // On linux and macos, packing enums works fine.
@@ -108,6 +110,8 @@ typedef enum __attribute__((__packed__)) _ARG_TYPE {
     #define X(enumname, b, c) enumname,
     ARGS(X)
     #undef X
+    ARG_ENUM,
+    ARG_USER_DEFINED,
 } _ARG_TYPE;
 #endif
 _Static_assert(sizeof(_ARG_TYPE) == 1, "");
@@ -116,6 +120,8 @@ static const LongString ArgTypeNames[] = {
     #define X(a,b, string) LS(string),
     ARGS(X)
     #undef X
+    LS("enum"),
+    LS("USER DEFINED THIS IS A BUG"),
 };
 
 // Type Generic macro allows us to turn a type into an enum.
@@ -139,6 +145,74 @@ static const LongString ArgTypeNames[] = {
 // element of the array and set the max_num appropriately.
 //
 #define ARGDEST(_x) {.type = ARGTYPE((_x)[0]), .pointer=_x}
+
+//
+// A structure for allowing the parsing of user defined types.
+// Fill out a struct with the given fields and use the
+// ARG_USER_DEFINED type.
+//
+// Instead of using the ARGDEST macro, you fill out the dest field
+// of ArgToParse yourself. For example:
+//
+//  ArgToParse pos_args[] = {
+//     ...
+//     [2] = {
+//         .name = SV("mytype"),
+//         .min_num = 0,
+//         .max_num = 3,
+//         .dest = {
+//             .type = ARG_USER_DEFINED,
+//             .user_pointer = &mytype_def,
+//             .pointer = &myarg,
+//         },
+//     },
+//     ...
+//  };
+//
+typedef struct ArgParseUserDefinedType {
+    // Converts the given string into the defined type by writing
+    // into the pointer.
+    // Return non-zero to indicate a conversion error.
+    // First argument is the user_data pointer from this struct.
+    int (*_Nonnull converter)(NullUnspec(void*), Nonnull(const char*), size_t, Nonnull(void*));
+    // Should do something like:
+    //    printf(" = %d,%d,%d", x, y, z);
+    // Used when printing the help.
+    void(*_Nullable default_printer)(Nonnull(void*));
+    // Used when printing the help.
+    LongString type_name;
+    size_t type_size;
+    // If you need complicated state in your converter function,
+    // you can store whatever you want here.
+    NullUnspec(void*) user_data;
+} ArgParseUserDefinedType;
+
+//
+// A structure for converting strings into enums.  The enum must start at 0. It
+// can have holes in the values, but you will have to fill them in with 0
+// length strings.
+//
+// NOTE: We just do a linear search over the strings.  In theory this is very
+// bad, but in practice a typical parse line will need to match against a given
+// enum only once so any fancy algorithm would require a pre-pass over all the
+// data anyway.  We could be faster if we required enums to be sorted or be
+// pre-placed in a perfect hash table, but this harms usability too much.  If
+// you need to parse a lot of enums with weird requirements, then just a create
+// a user defined type instead of using this.
+typedef struct ArgParseEnumType {
+    // In order to support packed enums, specify the size of the enum here
+    // instead of just assuming it's an int.  Only powers of two are supported
+    // and it will be interpreted as an unsigned integer.
+    size_t enum_size;
+    // This should be the largest enum value + 1.
+    size_t enum_count;
+    // This should be a pointer to an array of `LongString`s that is
+    // `enum_count` in length.
+    // These will be used for both printing the help and for
+    // parsing strings into the enum, so they should be in a
+    // format that you would type in a command line.
+    Nonnull(const LongString*) enum_names;
+}ArgParseEnumType;
 
 //
 // A structure describing an argument to be parsed.
@@ -168,8 +242,10 @@ typedef struct ArgToParse {
     int num_parsed;
     //
     // Whether or not this argument was given at the commandline. For variable
-    // length arguments that allow 0 args, this distinguishes between an empty list
-    // being given versus not being given at all.
+    // length positional arguments that allow 0 args, this distinguishes
+    // between an empty list being given versus not being given at all, which
+    // is used to return an error in that case.
+    // This isn't very useful for users to look at.
 
     // Also, used internally to avoid allowing duplicate keywords at the commandline.
     bool visited;
@@ -186,10 +262,23 @@ typedef struct ArgToParse {
     // The helptext will be appropriately soft-wrapped on word boundaries.
     Nonnull(const char*) help;
     //
-    // Use the ARGDEST macro to intialize this.
+    // Use the ARGDEST macro to intialize this for basic types.
     struct {
+        // The type what pointer points to.
         _ARG_TYPE type;
+        // Pointer to the first element.
         Nonnull(void*) pointer;
+        union {
+            // This should be set if type == ARG_USER_DEFINED. It's a pointer
+            // to a structure that defines how to convert a string to the
+            // value, how to print, etc.
+            // See the struct definition for more information.
+            Nullable(const ArgParseUserDefinedType*) user_pointer;
+            // This should be set if type == ARG_ENUM. It's a pointer to a
+            // structure that defines the value enum values, its size, etc.
+            // See the struct definition for more information.
+            Nullable(const ArgParseEnumType*) enum_pointer;
+        };
     } dest;
 } ArgToParse;
 
@@ -220,10 +309,15 @@ typedef struct ArgParser {
         Nonnull(ArgToParse*) args;
         size_t count;
     } keyword;
+    // If an error occurred, these are set depending on what error occurred.
+    // Exactly when they are set or not is an implementation detail, so use
+    // `print_argparse_error` instead.
     struct {
+        // If failure happened while an option was identified, this will be set to that arg.
         Nullable(ArgToParse*) arg_to_parse;
+        // If failure happened on a specific argument, this will be set.
         Nullable(const char*) arg;
-        } failed;
+    } failed;
 } ArgParser;
 
 //
@@ -345,6 +439,19 @@ static inline
 void
 print_wrapped_help(Nullable(const char*), TermSize);
 
+static inline
+void
+print_enum_options(Nullable(const ArgParseEnumType*)enu_){
+    if(!enu_) return;
+    // cast away nullability
+    const ArgParseEnumType* enu = enu_;
+    printf("    Options:\n");
+    printf("    -------\n");
+    for(size_t i = 0; i < enu->enum_count; i++){
+        printf("    %s\n", enu->enum_names[i].text);
+        }
+    }
+
 // See top of file.
 static inline
 void
@@ -352,7 +459,16 @@ print_arg_help(Nonnull(const ArgToParse*) arg, TermSize term_size){
     const char* help = arg->help;
     auto name = arg->name.text;
     auto type = arg->dest.type;
-    auto typename = ArgTypeNames[type];
+
+    LongString typename;
+    switch(type){
+        case ARG_USER_DEFINED:
+            typename = arg->dest.user_pointer->type_name;
+            break;
+        default:
+            typename = ArgTypeNames[type];
+            break;
+        }
     printf("%s", name);
     if(arg->altname1.length){
         printf(", %s", arg->altname1.text);
@@ -361,6 +477,8 @@ print_arg_help(Nonnull(const ArgToParse*) arg, TermSize term_size){
 
     if(arg->min_num != 0 or arg->hide_default){
         print_wrapped_help(help, term_size);
+        if(type == ARG_ENUM)
+            print_enum_options(arg->dest.enum_pointer);
         return;
         }
     switch(type){
@@ -402,6 +520,41 @@ print_arg_help(Nonnull(const ArgToParse*) arg, TermSize term_size){
             printf(" = '%.*s'", (int)s->length, s->text);
             print_wrapped_help(help, term_size);
             } break;
+        case ARG_USER_DEFINED:{
+            if(arg->dest.user_pointer->default_printer){
+                arg->dest.user_pointer->default_printer(arg->dest.pointer);
+                }
+            print_wrapped_help(help, term_size);
+            }break;
+        case ARG_ENUM:{
+            const ArgParseEnumType* enu = arg->dest.enum_pointer;
+            LongString enu_name = LS("???");
+            switch(enu->enum_size){
+                case 1:{
+                    uint8_t* def = arg->dest.pointer;
+                    if(*def <  enu->enum_count)
+                        enu_name = enu->enum_names[*def];
+                    }break;
+                case 2:{
+                    uint16_t* def = arg->dest.pointer;
+                    if(*def <  enu->enum_count)
+                        enu_name = enu->enum_names[*def];
+                    }break;
+                case 4:{
+                    uint32_t* def = arg->dest.pointer;
+                    if(*def <  enu->enum_count)
+                        enu_name = enu->enum_names[*def];
+                    }break;
+                case 8:{
+                    uint64_t* def = arg->dest.pointer;
+                    if(*def <  enu->enum_count)
+                        enu_name = enu->enum_names[*def];
+                    }break;
+                }
+            printf(" = %s", enu_name.text);
+            print_wrapped_help(help, term_size);
+            print_enum_options(enu);
+            }break;
         }
     }
 
@@ -562,6 +715,60 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
             dest += arg->num_parsed;
             *dest = s.text;
             arg->num_parsed += 1;
+            }break;
+        case ARG_USER_DEFINED:{
+            char* dest = arg->dest.pointer;
+            dest += arg->dest.user_pointer->type_size * arg->num_parsed;
+            auto e = arg->dest.user_pointer->converter(arg->dest.user_pointer->user_data, s.text, s.length, dest);
+            if(e) return ARGPARSE_CONVERSION_ERROR;
+            arg->num_parsed += 1;
+            }break;
+        case ARG_ENUM:{
+            if(!s.length) return ARGPARSE_CONVERSION_ERROR;
+            const ArgParseEnumType* enu = arg->dest.enum_pointer;
+            // We just do a linear search over the strings.
+            // In theory this is very bad, but in practice
+            // a typical parse line will need to match against a
+            // given enum once so any fancy algorithm would
+            // require a pre-pass over all the data anyway.
+            // We could be faster if we required enums to be
+            // sorted, but this harms usability too much.
+            // If you need to parse a lot of enums with weird
+            // requirements, then just a create a user defined
+            // type instead of using this.
+            for(size_t i = 0; i < enu->enum_count; i++){
+                if(LS_SV_equals(enu->enum_names[i], s)){
+                    switch(enu->enum_size){
+                        case 1:{
+                            uint8_t* dest = arg->dest.pointer;
+                            dest += enu->enum_size * arg->num_parsed;
+                            *dest = i;
+                            arg->num_parsed += 1;
+                            }return 0;
+                        case 2:{
+                            uint16_t* dest = arg->dest.pointer;
+                            dest += enu->enum_size * arg->num_parsed;
+                            *dest = i;
+                            arg->num_parsed += 1;
+                            }return 0;
+                        case 4:{
+                            uint32_t* dest = arg->dest.pointer;
+                            dest += enu->enum_size * arg->num_parsed;
+                            *dest = i;
+                            arg->num_parsed += 1;
+                            }return 0;
+                        case 8:{
+                            uint64_t* dest = arg->dest.pointer;
+                            dest += enu->enum_size * arg->num_parsed;
+                            *dest = i;
+                            arg->num_parsed += 1;
+                            }return 0;
+                        default:
+                            return ARGPARSE_CONVERSION_ERROR;
+                        }
+                    }
+                }
+            return ARGPARSE_CONVERSION_ERROR;
             }break;
         }
     return 0;
@@ -781,10 +988,18 @@ print_argparse_error(Nonnull(ArgParser*)parser, enum ArgParseError error){
                         case ARG_FLOAT64:
                             fprintf(stderr, "Unable to parse a float64 from '%s'\n", arg);
                             return;
-                        default:
-                            fprintf(stderr, "Unable to parse an unknown type from '%s'\n", arg);
+                        case ARG_USER_DEFINED:
+                            fprintf(stderr, "Unable to parse a %s from '%s'\n", arg_to_parse->dest.user_pointer->type_name.text, arg);
+                            return;
+                        case ARG_ENUM:
+                            fprintf(stderr, "Unable to parse a choice from '%s. Not a valid option.\n", arg);
+                            return;
+                        case ARG_FLAG:
+                            fprintf(stderr, "Unable to parse a flag. This is a bug.\n");
                             return;
                         }
+                        fprintf(stderr, "Unable to parse an unknown type from '%s'\n", arg);
+                        return;
                     }
                 else {
                     switch(arg_to_parse->dest.type){
@@ -798,21 +1013,29 @@ print_argparse_error(Nonnull(ArgParser*)parser, enum ArgParseError error){
                         case ARG_STRING:
                             // fall-through
                         case ARG_CSTRING:
-                            fprintf(stderr, "Unable to parse a string from unknown argument'\n");
+                            fprintf(stderr, "Unable to parse a string from unknown argument.\n");
                             return;
                         case ARG_UINTEGER64:
-                            fprintf(stderr, "Unable to parse a uint64 from unknown argument'\n");
+                            fprintf(stderr, "Unable to parse a uint64 from unknown argument.\n");
                             return;
                         case ARG_FLOAT32:
-                            fprintf(stderr, "Unable to parse a float32 from unknown argument'\n");
+                            fprintf(stderr, "Unable to parse a float32 from unknown argument.\n");
                             return;
                         case ARG_FLOAT64:
-                            fprintf(stderr, "Unable to parse a float64 from unknown argument'\n");
+                            fprintf(stderr, "Unable to parse a float64 from unknown argument.\n");
                             return;
-                        default:
-                            fprintf(stderr, "Unable to parse an unknown type from unknown argument'\n");
+                        case ARG_USER_DEFINED:
+                            fprintf(stderr, "Unable to parse a %s from unknown argument.\n", arg_to_parse->dest.user_pointer->type_name.text);
+                            return;
+                        case ARG_ENUM:
+                            fprintf(stderr, "Unable to parse a choice from unknown argument.\n");
+                            return;
+                        case ARG_FLAG:
+                            fprintf(stderr, "Unable to parse a flag. This is a bug.\n");
                             return;
                         }
+                    fprintf(stderr, "Unable to parse an unknown type from unknown argument'\n");
+                    return;
                     }
                 }
             else if(parser->failed.arg){

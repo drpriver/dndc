@@ -267,6 +267,151 @@ TestFunction(TestArgumentParsing4){
     TESTEND();
     }
 
+typedef struct Point {
+    int x, y;
+} Point;
+#include "str_util.h"
+int 
+point_parse(NullUnspec(void*)ud, Nonnull(const char*)s, size_t length, Nonnull(void*) dest){
+    (void)ud;
+    auto split = stripped_split(s, length, ',');
+    if(!split.tail.length) return 1;
+    auto x_e = parse_int(split.head.text, split.head.length);
+    if(x_e.errored) return x_e.errored;
+    auto y_e = parse_int(split.tail.text, split.tail.length);
+    if(y_e.errored) return y_e.errored;
+    Point* p = dest;
+    *p = (Point){x_e.result, y_e.result};
+    return 0;
+    }
+
+void point_print(Nonnull(void*)vp){
+    Point*p = vp;
+    printf(" = %d,%d", p->x, p->y);
+    }
+
+TestFunction(TestParseUserDefined){
+    TESTBEGIN();
+    struct Point p;
+    ArgParseUserDefinedType point_def = {
+        .converter = point_parse,
+        .type_name = LS("point"),
+        .type_size = sizeof(Point),
+        };
+    ArgToParse pos_args[] = {
+        [0] = {
+            .name = SV("point"),
+            .min_num = 1,
+            .max_num = 1,
+            .dest = {
+                .type = ARG_USER_DEFINED,
+                .user_pointer = &point_def,
+                .pointer = &p,
+                },
+            },
+        };
+    ArgParser argparser = {
+        .name = "point printer",
+        .description = "prints points",
+        .version = "0.3.oh.fo",
+        .positional.args = pos_args,
+        .positional.count = arrlen(pos_args),
+        };
+    {
+        const char* argv[] = {"asd"};
+        Args args = {arrlen(argv), argv};
+        auto e = parse_args(&argparser, &args);
+        TestExpectEquals(e, ARGPARSE_CONVERSION_ERROR);
+        clear_parser(&argparser);
+        memset(&p, 0, sizeof(p));
+    }
+    {
+        const char* argv[] = {"-1,3"};
+        Args args = {arrlen(argv), argv};
+        auto e = parse_args(&argparser, &args);
+        TestExpectEquals(e, 0);
+        TestExpectEquals(p.x, -1);
+        TestExpectEquals(p.y, 3);
+        clear_parser(&argparser);
+        memset(&p, 0, sizeof(p));
+    }
+    {
+        const char* argv[] = {"4,6"};
+        Args args = {arrlen(argv), argv};
+        auto e = parse_args(&argparser, &args);
+        TestExpectEquals(e, 0);
+        TestExpectEquals(p.x, 4);
+        TestExpectEquals(p.y, 6);
+        clear_parser(&argparser);
+        memset(&p, 0, sizeof(p));
+    }
+    TESTEND();
+    }
+
+TestFunction(TestParseEnum){
+    TESTBEGIN();
+    enum FooBar{
+        NOFOOBAR=0,
+        FOO = 1,
+        BAR = 2,
+        };
+    enum FooBar fb = NOFOOBAR;
+    LongString names[] = {
+        [NOFOOBAR] = LS("no-foo-bar"),
+        [FOO] = LS("foo"),
+        [BAR] = LS("bar"),
+        };
+    ArgParseEnumType enum_def = {
+        .enum_size = sizeof(enum FooBar),
+        .enum_count = arrlen(names),
+        .enum_names = names,
+        };
+    ArgToParse pos_args[] = {
+        [0] = {
+            .name = SV("foobar"),
+            .min_num = 0,
+            .max_num = 1,
+            .dest = {
+                .type = ARG_ENUM,
+                .enum_pointer = &enum_def,
+                .pointer = &fb,
+                },
+            },
+        };
+    ArgParser argparser = {
+        .name = "foo-barrer",
+        .description = "fooes the barr",
+        .version = "13.3.7",
+        .positional.args = pos_args,
+        .positional.count = arrlen(pos_args),
+        };
+    {
+        const char* argv[] = {"asd"};
+        Args args = {arrlen(argv), argv};
+        auto e = parse_args(&argparser, &args);
+        TestExpectEquals(e, ARGPARSE_CONVERSION_ERROR);
+        clear_parser(&argparser);
+    }
+    {
+        fb = FOO;
+        const char* argv[] = {"no-foo-bar"};
+        Args args = {arrlen(argv), argv};
+        auto e = parse_args(&argparser, &args);
+        TestExpectEquals(e, 0);
+        TestExpectEquals(fb, NOFOOBAR);
+        clear_parser(&argparser);
+    }
+    {
+        fb = NOFOOBAR;
+        const char* argv[] = {"foo"};
+        Args args = {arrlen(argv), argv};
+        auto e = parse_args(&argparser, &args);
+        TestExpectEquals(e, 0);
+        TestExpectEquals(fb, FOO);
+        clear_parser(&argparser);
+    }
+    TESTEND();
+    }
 TestFunction(TestParseHex){
     TESTBEGIN();
     #define HexTest(hexval) do{\
@@ -433,6 +578,8 @@ int main(int argc, char** argv){
     RegisterTest(TestParseHex);
     RegisterTest(TestIntegerParsing);
     RegisterTest(TestHumanIntegers);
+    RegisterTest(TestParseUserDefined);
+    RegisterTest(TestParseEnum);
     return test_main(argc, argv);
 }
 
