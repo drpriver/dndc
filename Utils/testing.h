@@ -431,9 +431,13 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
     };
     Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
     switch(check_for_early_out_args(&argparser, &args)){
-        case HELP:
-            print_help(&argparser);
+        case HELP:{
+            auto term_size = get_terminal_size();
+            if(term_size.columns > 80)
+                term_size.columns = 80;
+            print_help(&argparser, term_size);
             return 1;
+            }
         case LIST:
             for(int i = 0; i < test_funcs_count; i++){
                 fprintf(stdout, "%s\t", test_funcs[i].test_name.text);

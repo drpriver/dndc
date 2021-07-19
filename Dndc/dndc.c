@@ -230,8 +230,8 @@ int main(int argc, char**argv){
                 .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&source_path),
-                .help = "Source file (.dnd file) to read from.\n"
-                        "If not given, reads from stdin.",
+                .help = "Source file (.dnd file) to read from.",
+                .hide_default = true,
                 },
             };
         ArgToParse kw_args[] = {
@@ -241,8 +241,7 @@ int main(int argc, char**argv){
                 .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&output_path),
-                .help = "output path (.html file) to write to.\n"
-                        "If not given, writes to stdout.",
+                .help = "output path (.html file) to write to.",
                 .hide_default = true,
             },
             {
@@ -450,9 +449,17 @@ int main(int argc, char**argv){
             };
         Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
         switch(check_for_early_out_args(&argparser, &args)){
-            case HELP:
-                print_help(&argparser);
+            case HELP:{
+                auto term_size = get_terminal_size();
+                if(term_size.columns > 80)
+                    term_size.columns = 80;
+                print_help(&argparser, term_size);
+                putchar('\n');
+                print_wrapped("If a source argument is not given, dndc will "
+                              "read from stdin. If an output argument is not "
+                              "given, dndc will write to stdout.", term_size);
                 return 0;
+                }
             case VERSION:
                 puts(version);
                 return 0;

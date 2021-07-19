@@ -67,7 +67,7 @@ static inline ssize_t check_for_early_out_args(Nonnull(ArgParser*)parser, Nonnul
 //
 // Prints a formatted help display for the command line arguments.
 //
-static inline void print_help(Nonnull(const ArgParser*));
+static inline void print_help(Nonnull(const ArgParser*), TermSize);
 
 
 //
@@ -394,8 +394,7 @@ print_wrapped_help(Nullable(const char*), TermSize);
 // See top of file.
 static inline
 void
-print_help(Nonnull(const ArgParser*) p){
-    auto term_size = get_terminal_size();
+print_help(Nonnull(const ArgParser*) p, TermSize term_size){
     if(term_size.columns > 80)
         term_size.columns = 80;
     printf("%s: %s\n", p->name, p->description);
@@ -650,6 +649,31 @@ next_tokenize_help(Nonnull(const char*) help){
             }
         }
     unreachable();
+    }
+
+static inline
+void
+print_wrapped(Nonnull(const char*)text, TermSize term_size){
+    HelpState hs = {.output_width = term_size.columns, .lead=0, .remaining=0};
+    hs.remaining = hs.output_width;
+    for(;*text;){
+        auto tok = next_tokenize_help((const char*)text); // cast away nullability
+        text = tok.rest;
+        if(tok.is_newline){
+            if(hs.remaining != hs.output_width){
+                putchar('\n');
+                hs.remaining = hs.output_width;
+                }
+            continue;
+            }
+        help_state_update(&hs, tok.token.length);
+        printf("%.*s", (int)tok.token.length, tok.token.text);
+        if(hs.remaining){
+            putchar(' ');
+            hs.remaining--;
+            }
+        }
+    putchar('\n');
     }
 
 static inline
