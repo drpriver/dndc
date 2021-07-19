@@ -621,6 +621,86 @@ TestFunction(TestBitFlags){
     TESTEND();
     }
 
+#define MARRAY_T short
+#include "Marray.h"
+#include "mallocator.h"
+int append_short(Nonnull(void*)dest, Nonnull(const void*) arg){
+    Marray(short*) marray = dest;
+    int value = *(const int*)arg;
+    _Static_assert(sizeof(short) == sizeof(int16_t),"");
+    if(value < INT16_MIN)
+        return 1;
+    if(value > INT16_MAX)
+        return 1;
+    Marray_push(short)(marray, get_mallocator(), value);
+    return 0;
+    }
+TestFunction(TestAppender){
+    TESTBEGIN();
+    Marray(short) shorts = {};
+    ArgToParse pos_args[] = {
+        [0] = {
+            .name = SV("shorts"),
+            .min_num = 2,
+            .max_num = 1<<16,
+            .dest = {
+                .pointer = &shorts,
+                .type = ARG_INT, // parse as int, handle overfow in append func.
+                },
+            .append_proc = append_short,
+            },
+        };
+    ArgParser argparser = {
+        .name = "short shorter",
+        .description = "shorts shorts",
+        .positional.args = pos_args,
+        .positional.count = arrlen(pos_args),
+        };
+    {
+        const char* argv[] = {"asd"};
+        Args args = {arrlen(argv), argv};
+        auto e = parse_args(&argparser, &args);
+        TestExpectEquals(e, ARGPARSE_CONVERSION_ERROR);
+        TestExpectEquals(shorts.count, 0);
+        Marray_cleanup(short)(&shorts, get_mallocator());
+        clear_parser(&argparser);
+    }
+    {
+        const char* argv[] = {"-1"};
+        Args args = {arrlen(argv), argv};
+        auto e = parse_args(&argparser, &args);
+        TestExpectEquals(e, ARGPARSE_INSUFFICIENT_ARGS);
+        TestAssertEquals(shorts.count, 1);
+        TestExpectEquals(shorts.data[0], -1);
+        Marray_cleanup(short)(&shorts, get_mallocator());
+        clear_parser(&argparser);
+    }
+    {
+        const char* argv[] = {"4", "6", "8", "10", "12"};
+        Args args = {arrlen(argv), argv};
+        auto e = parse_args(&argparser, &args);
+        TestExpectEquals(e, 0);
+        TestAssertEquals(shorts.count, 5);
+        TestExpectEquals(shorts.data[0], 4);
+        TestExpectEquals(shorts.data[1], 6);
+        TestExpectEquals(shorts.data[2], 8);
+        TestExpectEquals(shorts.data[3], 10);
+        TestExpectEquals(shorts.data[4], 12);
+        Marray_cleanup(short)(&shorts, get_mallocator());
+        clear_parser(&argparser);
+    }
+    {
+        const char* argv[] = {"262144"};
+        Args args = {arrlen(argv), argv};
+        auto e = parse_args(&argparser, &args);
+        TestExpectEquals(e, ARGPARSE_CONVERSION_ERROR);
+        TestExpectEquals(shorts.count, 0);
+        Marray_cleanup(short)(&shorts, get_mallocator());
+        clear_parser(&argparser);
+    }
+    TESTEND();
+    }
+
 int main(int argc, char** argv){
     RegisterTest(TestArgumentParsing1);
     RegisterTest(TestArgumentParsing2);
@@ -632,6 +712,8 @@ int main(int argc, char** argv){
     RegisterTest(TestParseUserDefined);
     RegisterTest(TestParseEnum);
     RegisterTest(TestBitFlags);
+    RegisterTest(TestAppender);
     return test_main(argc, argv);
 }
+#include "allocator.c"
 

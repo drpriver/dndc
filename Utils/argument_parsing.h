@@ -33,6 +33,8 @@ enum ArgParseError {
     // Named at the commandline, but no arguments given. This is a user error
     // even if min_num is 0 as it can be very confusing otherwie.
     ARGPARSE_VISITED_NO_ARG_GIVEN = 6,
+    // Something went wrong, but it is a logic error or a configuration error.
+    ARGPARSE_INTERNAL_ERROR = 7,
 };
 
 typedef struct Args {
@@ -57,7 +59,6 @@ static inline enum ArgParseError parse_args(Nonnull(ArgParser*) parser, Nonnull(
 // to explain what failed to parse and why.
 static inline void print_argparse_error(Nonnull(ArgParser*)parser, enum ArgParseError error);
 
-typedef struct ArgToParse ArgToParse;
 //
 // Check for arguments like `-h` or `--version` that mean to ignore all other arguments
 // and take an immediate action.
@@ -271,6 +272,8 @@ typedef struct ArgToParse {
     // Maximum number of arguments for this arg. More than this is an error.
     // Greater than 1 means the dest is a pointer to the first element
     // of an array.
+    // Unbounded types should just set to a very large number. Argv isn't that
+    // big anyway.
     int max_num;
     //
     // How many were actually parsed. Initialize to 0. You can check
@@ -300,6 +303,18 @@ typedef struct ArgToParse {
     //
     // Use the ARGDEST macro to intialize this for basic types.
     ArgParseDestination dest;
+
+    //
+    // To support dynamically allocated collections, you can set this field
+    // to a function pointer that appends the given argument. Return a non-zero
+    // value to indicate an error.
+    // First argument is the dest.pointer. Second argument is a pointer to the
+    // parsed value. For non-user-defined types this is a pointer to the
+    // parsed version of the thing.
+    //
+    // For user-defined types, we don't call the converter function and instead
+    // pass a pointer to the string view as the second argument.
+    int (*_Nullable append_proc)(void*_Nonnull, const void*_Nonnull);
 } ArgToParse;
 
 //
@@ -673,21 +688,34 @@ static inline int set_flag(Nonnull(ArgToParse*) arg);
 static inline
 int
 parse_arg(Nonnull(ArgToParse*)arg, StringView s){
+    // Append_procs should signal their own error.
     if(arg->num_parsed >= arg->max_num)
         return ARGPARSE_EXCESS_ARGS;
     // If previous num parsed is nonzero, this means
     // that what we are pointing to is an array.
+#define APPEND_ARG(type, value_) do { \
+    if(arg->append_proc){ \
+        int fail = arg->append_proc(arg->dest.pointer, &value_); \
+        if(fail) {\
+            return ARGPARSE_CONVERSION_ERROR; \
+            } \
+        arg->num_parsed += 1; \
+        } \
+    else { \
+        type* dest = arg->dest.pointer; \
+        dest += arg->num_parsed; \
+        *dest = value_; \
+        arg->num_parsed += 1; \
+        } \
+    }while(0)
     switch(arg->dest.type){
         case ARG_INTEGER64:{
             auto e = parse_int64(s.text, s.length);
-            if(unlikely(e.errored)) {
+            if(unlikely(e.errored)){
                 return ARGPARSE_CONVERSION_ERROR;
                 }
             auto value = e.result;
-            int64_t* dest = arg->dest.pointer;
-            dest += arg->num_parsed;
-            *dest = value;
-            arg->num_parsed += 1;
+            APPEND_ARG(int64_t, value);
             }break;
         case ARG_UINTEGER64:{
             auto e = parse_unsigned_human(s.text, s.length);
@@ -695,10 +723,7 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
                 return ARGPARSE_CONVERSION_ERROR;
                 }
             auto value = e.result;
-            uint64_t* dest = arg->dest.pointer;
-            dest += arg->num_parsed;
-            *dest = value;
-            arg->num_parsed += 1;
+            APPEND_ARG(uint64_t, value);
             }break;
         case ARG_INT:{
             auto e = parse_int(s.text, s.length);
@@ -706,10 +731,7 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
                 return ARGPARSE_CONVERSION_ERROR;
                 }
             auto value = e.result;
-            int* dest = arg->dest.pointer;
-            dest += arg->num_parsed;
-            *dest = value;
-            arg->num_parsed += 1;
+            APPEND_ARG(int, value);
             }break;
         case ARG_FLOAT32:{
             char* endptr;
@@ -718,10 +740,7 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
                 return ARGPARSE_CONVERSION_ERROR;
             if(*endptr != '\0')
                 return ARGPARSE_CONVERSION_ERROR;
-            float* dest = arg->dest.pointer;
-            dest += arg->num_parsed;
-            *dest = value;
-            arg->num_parsed += 1;
+            APPEND_ARG(float, value);
             }break;
         case ARG_FLOAT64:{
             char* endptr;
@@ -730,35 +749,36 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
                 return ARGPARSE_CONVERSION_ERROR;
             if(*endptr != '\0')
                 return ARGPARSE_CONVERSION_ERROR;
-            double* dest = arg->dest.pointer;
-            dest += arg->num_parsed;
-            *dest = value;
-            arg->num_parsed += 1;
+            APPEND_ARG(double, value);
             }break;
+        // for flags, using the append_proc doesn't make sense.
         case ARG_BITFLAG:
             // fall-through
         case ARG_FLAG:
             // This is weird, but it is a configuration error.
             return set_flag(arg);
         case ARG_STRING:{
-            // This is a hack, our target
-            // is actually a LongString.
-            StringView* dest = arg->dest.pointer;
-            dest += arg->num_parsed;
-            *dest = s;
-            arg->num_parsed += 1;
+            // This is a hack, our target is actually a LongString.
+            // But it can also be a StringView and they pun to each other.
+            APPEND_ARG(StringView, s);
             }break;
         case ARG_CSTRING:{
-            const char** dest = arg->dest.pointer;
-            dest += arg->num_parsed;
-            *dest = s.text;
-            arg->num_parsed += 1;
+            APPEND_ARG(const char*, s.text);
             }break;
         case ARG_USER_DEFINED:{
-            char* dest = arg->dest.pointer;
-            dest += arg->dest.user_pointer->type_size * arg->num_parsed;
-            auto e = arg->dest.user_pointer->converter(arg->dest.user_pointer->user_data, s.text, s.length, dest);
-            if(e) return ARGPARSE_CONVERSION_ERROR;
+            // This is error prone, but seemed like the best option.
+            // We could alloca onto our stack, but that could be significantly
+            // inefficient compare to forcing them to parse in their append proc.
+            if(arg->append_proc){
+                auto e = arg->append_proc(arg->dest.pointer, &s);
+                if(e) return ARGPARSE_CONVERSION_ERROR;
+                }
+            else {
+                char* dest = arg->dest.pointer;
+                dest += arg->dest.user_pointer->type_size * arg->num_parsed;
+                auto e = arg->dest.user_pointer->converter(arg->dest.user_pointer->user_data, s.text, s.length, dest);
+                if(e) return ARGPARSE_CONVERSION_ERROR;
+                }
             arg->num_parsed += 1;
             }break;
         case ARG_ENUM:{
@@ -778,28 +798,16 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
                 if(LS_SV_equals(enu->enum_names[i], s)){
                     switch(enu->enum_size){
                         case 1:{
-                            uint8_t* dest = arg->dest.pointer;
-                            dest += enu->enum_size * arg->num_parsed;
-                            *dest = i;
-                            arg->num_parsed += 1;
+                            APPEND_ARG(uint8_t, i);
                             }return 0;
                         case 2:{
-                            uint16_t* dest = arg->dest.pointer;
-                            dest += enu->enum_size * arg->num_parsed;
-                            *dest = i;
-                            arg->num_parsed += 1;
+                            APPEND_ARG(uint16_t, i);
                             }return 0;
                         case 4:{
-                            uint32_t* dest = arg->dest.pointer;
-                            dest += enu->enum_size * arg->num_parsed;
-                            *dest = i;
-                            arg->num_parsed += 1;
+                            APPEND_ARG(uint32_t, i);
                             }return 0;
                         case 8:{
-                            uint64_t* dest = arg->dest.pointer;
-                            dest += enu->enum_size * arg->num_parsed;
-                            *dest = i;
-                            arg->num_parsed += 1;
+                            APPEND_ARG(uint64_t, i);
                             }return 0;
                         default:
                             return ARGPARSE_CONVERSION_ERROR;
@@ -811,6 +819,7 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
         }
     return 0;
     }
+#undef APPEND_ARG
 
 // Set a flag. I really don't see why you would use this outside of this.
 static inline
@@ -833,7 +842,7 @@ set_flag(Nonnull(ArgToParse*) arg){
     return 0;
     }
 
-static inline 
+static inline
 ssize_t
 check_for_early_out_args(Nonnull(ArgParser*)parser, Nonnull(const Args*) args){
     for(int i = 0; i < args->argc; i++){
