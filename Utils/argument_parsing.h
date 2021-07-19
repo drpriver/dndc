@@ -60,8 +60,11 @@ static inline enum ArgParseError parse_args(Nonnull(ArgParser*) parser, Nonnull(
 static inline void print_argparse_error(Nonnull(ArgParser*)parser, enum ArgParseError error);
 
 //
-// Check for arguments like `-h` or `--version` that mean to ignore all other arguments
-// and take an immediate action.
+// Check for arguments like `-h` or `--version` that mean to ignore all other
+// arguments and take an immediate action.
+// This just returns the index of what matched, or -1 if there was no match.
+// The caller should take the actual action and exit, return, etc. as appropriate.
+// Parsing will almost surely fail.
 static inline ssize_t check_for_early_out_args(Nonnull(ArgParser*)parser, Nonnull(const Args*) args);
 //
 // Prints a formatted help display for the command line arguments.
