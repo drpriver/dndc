@@ -894,8 +894,8 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
         past_the_end = pos_arg + parser->positional.count;
         }
     ArgToParse* kwarg = NULL;
-    auto argv_end = args->argv+args->argc;
-    for(auto arg = args->argv; arg != argv_end; ++arg){
+    const char*const* argv_end = args->argv?(args->argv+args->argc):NULL;
+    for(const char*const* arg = args->argv; arg != argv_end; ++arg){
         auto s = cstr_to_SV(*arg);
         if(s.length > 1){
             if(s.text[0] == '-'){
