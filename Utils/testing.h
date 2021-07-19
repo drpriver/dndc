@@ -380,7 +380,6 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
         .enum_count = test_funcs_count,
         .enum_names = test_names,
         };
-    bool list_tests = false;
     ArgToParse kw_args[] = {
         {
             .name = SV("-C"),
@@ -408,14 +407,18 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
             .help = "If given, only run the named test function. If not given, all tests will be run.",
             .hide_default = true,
         },
-        {
+    };
+    enum {HELP=0, LIST=1};
+    ArgToParse early_args[] = {
+        [HELP] = {
+            .name = SV("-h"),
+            .altname1 = SV("--help"),
+            .help = "Print this help and exit.",
+        },
+        [LIST] = {
             .name = SV("-l"),
             .altname1 = SV("--list"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&list_tests),
-            .help = "List the names of the test functions.",
-            .hide_default = true,
+            .help = "List the names of the test functions and exit.",
         },
     };
     ArgParser argparser = {
@@ -423,27 +426,31 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
         .description = "A test runner.",
         .keyword.args = kw_args,
         .keyword.count = arrlen(kw_args),
+        .early_out.args = early_args,
+        .early_out.count = arrlen(early_args),
     };
     Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
-    if(check_for_help(&args)){
-        print_help(&argparser);
-        return 1; // Return non-zero so this doesn't count as a successful test.
+    switch(check_for_early_out_args(&argparser, &args)){
+        case HELP:
+            print_help(&argparser);
+            return 1;
+        case LIST:
+            for(int i = 0; i < test_funcs_count; i++){
+                fprintf(stdout, "%s\t", test_funcs[i].test_name.text);
+                if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED){
+                    fprintf(stdout, "Will-Skip");
+                    }
+                fputc('\n', stdout);
+                }
+            return 1;
+        default:
+            break;
         }
     auto e = parse_args(&argparser, &args);
     if(e){
         print_argparse_error(&argparser, e);
-        fprintf(stderr, "Use --help to see usage\n.");
+        fprintf(stderr, "Use --help to see usage.\n");
         return e;
-        }
-    if(list_tests){
-        for(int i = 0; i < test_funcs_count; i++){
-            fprintf(stdout, "%s\t", test_funcs[i].test_name.text);
-            if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED){
-                fprintf(stdout, "Will-Skip");
-                }
-            fputc('\n', stdout);
-            }
-        return 1;
         }
     if(directory.length){
         int changed = chdir(directory.text);

@@ -18,6 +18,7 @@
 //
 //
 enum ArgParseError {
+    // parsing succeeded.
     ARGPARSE_NO_ERROR = 0,
     // Failed to convert a string into a value, like 'a' can't convert to an integer
     ARGPARSE_CONVERSION_ERROR = 1,
@@ -51,32 +52,21 @@ typedef struct ArgParser ArgParser;
 //
 static inline enum ArgParseError parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args);
 
+//
 // After receiving a non-zero error code from `parse_args`, use this function
 // to explain what failed to parse and why.
 static inline void print_argparse_error(Nonnull(ArgParser*)parser, enum ArgParseError error);
 
+typedef struct ArgToParse ArgToParse;
 //
-// Checks if there is a -h or --help in the args. If there is, you probably
-// want to print out the help and exit as parsing will fail due to the --help.
-// This doesn't do that for you as libraries that call exit() are evil.
-//
-static inline bool check_for_help(Nonnull(Args*) args);
-
+// Check for arguments like `-h` or `--version` that mean to ignore all other arguments
+// and take an immediate action.
+static inline ssize_t check_for_early_out_args(Nonnull(ArgParser*)parser, Nonnull(const Args*) args);
 //
 // Prints a formatted help display for the command line arguments.
 //
 static inline void print_help(Nonnull(const ArgParser*));
 
-//
-// Checks if there is a --version in the args. If there is, you probably
-// want to just print the version and exit.
-//
-static inline bool check_for_version(Nonnull(Args*) args);
-
-//
-// Prints the formatted version number.
-//
-static inline void print_version(Nonnull(const ArgParser*));
 
 //
 // X-macro for the current kinds of args we can parse.
@@ -325,6 +315,12 @@ typedef struct ArgParser {
     //
     // The text to be printed for --version.
     Nullable(const char*) version;
+    // The args that mean to early out and immediately take an action.
+    // Generally, you should put in a help and version action.
+    struct {
+        Nonnull(ArgToParse*)args;
+        size_t count;
+    } early_out;
     //
     // The positional arguments. Create an array of these. The order in the
     // array will be the order they need to be parsed in.
@@ -374,6 +370,10 @@ help_state_update(Nonnull(HelpState*)hs, int n_to_print){
         }
     hs->remaining -= n_to_print;
     }
+
+static inline
+void
+print_wrapped_help(Nullable(const char*), TermSize);
 
 // See top of file.
 static inline
@@ -432,6 +432,21 @@ print_help(Nonnull(const ArgParser*) p){
             }
         }
     puts("\n");
+    if(p->early_out.count){
+        puts("Early Out Arguments:\n"
+             "--------------------");
+        }
+    for(size_t i = 0; i < p->early_out.count; i++){
+        auto early = &p->early_out.args[i];
+        if(early->altname1.length){
+            printf("%s, %s:", early->name.text, early->altname1.text);
+            }
+        else{
+            printf("%s:", early->name.text);
+            }
+        print_wrapped_help(early->help, term_size);
+        putchar('\n');
+        }
     if(p->positional.count){
         puts("Positional Arguments:\n"
              "---------------------");
@@ -441,21 +456,11 @@ print_help(Nonnull(const ArgParser*) p){
             putchar('\n');
             }
         }
-    if(p->version){
-        puts("Keyword Arguments:\n"
-             "------------------\n"
-             "-h, --help: flag\n"
-             "    Print this help and exit.\n"
-             "\n"
-             "--version: flag\n"
-             "    Print version information and exit.");
-        }
-    else {
+    if(p->keyword.count)
         puts("Keyword Arguments:\n"
              "------------------\n"
              "-h, --help: flag\n"
              "    Print this help and exit.");
-        }
     for(size_t i = 0; i < p->keyword.count; i++){
         auto arg = &p->keyword.args[i];
         if(arg->hidden)
@@ -464,10 +469,6 @@ print_help(Nonnull(const ArgParser*) p){
         print_arg_help(arg, term_size);
         }
     }
-
-static inline
-void
-print_wrapped_help(Nullable(const char*), TermSize);
 
 static inline
 void
@@ -832,39 +833,20 @@ set_flag(Nonnull(ArgToParse*) arg){
     return 0;
     }
 
-// See top of file.
-static inline
-bool
-check_for_help(Nonnull(Args*) args){
+static inline 
+ssize_t
+check_for_early_out_args(Nonnull(ArgParser*)parser, Nonnull(const Args*) args){
     for(int i = 0; i < args->argc; i++){
         auto argstring = cstr_to_SV(args->argv[i]);
-        if(SV_equals(argstring, SV("-h")) or SV_equals(argstring, SV("--help"))){
-            return true;
+        for(size_t j = 0; j < parser->early_out.count; j++){
+            auto early = &parser->early_out.args[j];
+            if(SV_equals(argstring, early->name))
+                return j;
+            if(early->altname1.length && SV_equals(argstring, early->altname1))
+                return j;
             }
         }
-    return false;
-    }
-
-// See top of file.
-static inline
-bool
-check_for_version(Nonnull(Args*) args){
-    for(int i = 0; i < args->argc; i++){
-        auto argstring = cstr_to_SV(args->argv[i]);
-        if(SV_equals(argstring, SV("--version")))
-            return true;
-        }
-    return false;
-    }
-
-// See top of file.
-static inline
-void
-print_version(Nonnull(const ArgParser*)p){
-    if(p->version)
-        printf("%s\n", p->version);
-    else
-        puts("No version information available.");
+    return -1;
     }
 
 static inline

@@ -221,7 +221,6 @@ int main(int argc, char**argv){
         | DNDC_SOURCE_IS_PATH_NOT_DATA
         | DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM
         ;
-    bool hidden_help = false;
     bool print_syntax = false;
     bool print_depends = false;
     {
@@ -261,7 +260,7 @@ int main(int argc, char**argv){
                 .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&base_dir),
-                .help = "Relative filepaths in source files will be relative "
+                .help = "Paths in source files will be relative "
                         "to the given directory.\n"
                         "If not given, everything is relative to cwd.",
                 .hide_default = true,
@@ -381,18 +380,7 @@ int main(int argc, char**argv){
                 .dest = ArgBitFlagDest(&flags, DNDC_REFORMAT_ONLY),
                 .help = "Instead of rendering to html, render to .dnd with "
                         "trailing spaces removed, text wrapped to 80 columns "
-                        "(if semantically equivalent), etc. Imports will not "
-                        "be resolved - only the given input file will be "
-                        "imported."
-                        ,
-            },
-            {
-                .name = SV("-H"),
-                .altname1 = SV("--hidden-help"),
-                .min_num = 0,
-                .max_num = 1,
-                .dest = ARGDEST(&hidden_help),
-                .help = "Print out help for the hidden arguments.",
+                        "(if semantically equivalent), etc." ,
             },
             {
                 .name = SV("--dont-inline-images"),
@@ -419,7 +407,7 @@ int main(int argc, char**argv){
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_STRIP_WHITESPACE),
                 .help = "Strip trailing and leading whitespace from all output "
-                        "lines",
+                        "lines.",
                 .hidden = false,
             },
             {
@@ -432,46 +420,67 @@ int main(int argc, char**argv){
                 .hidden = true,
             },
             };
+        enum {HELP, VERSION, HIDDEN_HELP};
+        ArgToParse early_args[] = {
+            [HELP] = {
+                .name = SV("-h"),
+                .altname1 = SV("--help"),
+                .help = "Print this help and exit.",
+            },
+            [VERSION] = {
+                .name = SV("--version"),
+                .help = "Print version information and exit.",
+            },
+            [HIDDEN_HELP] = {
+                .name = SV("-H"),
+                .altname1 = SV("--hidden-help"),
+                .help = "Print out help for the hidden arguments and exit.",
+            },
+        };
+        const char* version = "dndc version " DNDC_VERSION ". Compiled " __TIMESTAMP__;
         ArgParser argparser = {
             .name = argv[0],
             .description = "A .dnd to .html parser and compiler.",
-            .version = "dndc version " DNDC_VERSION ". Compiled " __TIMESTAMP__,
             .positional.args = pos_args,
             .positional.count = arrlen(pos_args),
             .keyword.args = kw_args,
             .keyword.count = arrlen(kw_args),
+            .early_out.args = early_args,
+            .early_out.count = arrlen(early_args),
             };
         Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
-        if(check_for_help(&args)){
-            print_help(&argparser);
-            return 0;
-            }
-        if(check_for_version(&args)){
-            print_version(&argparser);
-            return 0;
+        switch(check_for_early_out_args(&argparser, &args)){
+            case HELP:
+                print_help(&argparser);
+                return 0;
+            case VERSION:
+                puts(version);
+                return 0;
+            case HIDDEN_HELP:{
+                fputs(
+                    "Hidden Arguments:\n"
+                    "-----------------", stdout);
+                auto term_size = get_terminal_size();
+                if(term_size.columns > 80)
+                    term_size.columns = 80;
+                for(int i = 0; i < arrlen(kw_args); i++){
+                    auto arg = &kw_args[i];
+                    if(!arg->hidden){
+                        continue;
+                        }
+                    putchar('\n');
+                    print_arg_help(arg, term_size);
+                    }
+                return 0;
+                }
+            default:
+                break;
             }
         auto e = parse_args(&argparser, &args);
         if(e){
             print_argparse_error(&argparser, e);
             fprintf(stderr, "Use --help to see usage.\n");
             return e;
-            }
-        if(hidden_help){
-            fputs(
-                "Hidden Arguments:\n"
-                "-----------------", stdout);
-            auto term_size = get_terminal_size();
-            if(term_size.columns > 80)
-                term_size.columns = 80;
-            for(int i = 0; i < arrlen(kw_args); i++){
-                auto arg = &kw_args[i];
-                if(!arg->hidden){
-                    continue;
-                    }
-                putchar('\n');
-                print_arg_help(arg, term_size);
-                }
-            return 0;
             }
     }
     if(print_syntax){
