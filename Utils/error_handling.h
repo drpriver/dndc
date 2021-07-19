@@ -1,11 +1,21 @@
 #ifndef error_handling_h
 #define error_handling_h
 #include <stdint.h>
-#include <assert.h>
-#include <stdbool.h>
 // size_t
-#include <stdlib.h>
-#include "common_macros.h"
+#include <stddef.h>
+
+#ifndef warn_unused
+
+#if defined(__GNUC__) || defined(__clang__)
+#define warn_unused __attribute__((warn_unused_result))
+#elif defined(_MSC_VER)
+#define warn_unused _Check_return
+#else
+#define warn_unused
+#endif
+
+#endif
+
 // X macros that is all the error conditions.
 #define ERROR_CODES(apply) \
     apply(NO_ERROR, 0) \
