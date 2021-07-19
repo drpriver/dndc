@@ -51,6 +51,7 @@ LS_to_SV(LongString ls){
     }
 
 static inline
+force_inline
 StringView
 cstr_to_SV(Nonnull(const char*)cstr){
     auto len = strlen(cstr);
@@ -81,6 +82,7 @@ LS_equals(const LongString a, const LongString b){
 #define SV16(literal) ((StringViewUtf16){.length = sizeof(u"" literal)/2-1, .text=u"" literal})
 int getchar(void);
 static inline
+force_inline
 bool
 SV_equals(const StringView a, const StringView b){
     if(a.length != b.length)
