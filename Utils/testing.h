@@ -432,10 +432,10 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
     Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
     switch(check_for_early_out_args(&argparser, &args)){
         case HELP:{
-            auto term_size = get_terminal_size();
-            if(term_size.columns > 80)
-                term_size.columns = 80;
-            print_help(&argparser, term_size);
+            auto columns = get_terminal_size().columns;
+            if(columns > 80)
+                columns = 80;
+            print_help(&argparser, columns);
             return 1;
             }
         case LIST:
@@ -450,7 +450,7 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
         default:
             break;
         }
-    auto e = parse_args(&argparser, &args);
+    auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
     if(e){
         print_argparse_error(&argparser, e);
         fprintf(stderr, "Use --help to see usage.\n");

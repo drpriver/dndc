@@ -28,6 +28,7 @@
 
 #ifdef DNDCMAIN
 #include "argument_parsing.h"
+#include "term_util.h"
 #endif
 
 
@@ -450,14 +451,14 @@ int main(int argc, char**argv){
         Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
         switch(check_for_early_out_args(&argparser, &args)){
             case HELP:{
-                auto term_size = get_terminal_size();
-                if(term_size.columns > 80)
-                    term_size.columns = 80;
-                print_help(&argparser, term_size);
+                auto columns = get_terminal_size().columns;
+                if(columns > 80)
+                    columns = 80;
+                print_help(&argparser, columns);
                 putchar('\n');
                 print_wrapped("If a source argument is not given, dndc will "
                               "read from stdin. If an output argument is not "
-                              "given, dndc will write to stdout.", term_size);
+                              "given, dndc will write to stdout.", columns);
                 return 0;
                 }
             case VERSION:
@@ -467,23 +468,23 @@ int main(int argc, char**argv){
                 fputs(
                     "Hidden Arguments:\n"
                     "-----------------", stdout);
-                auto term_size = get_terminal_size();
-                if(term_size.columns > 80)
-                    term_size.columns = 80;
+                auto columns = get_terminal_size().columns;
+                if(columns > 80)
+                    columns = 80;
                 for(int i = 0; i < arrlen(kw_args); i++){
                     auto arg = &kw_args[i];
                     if(!arg->hidden){
                         continue;
                         }
                     putchar('\n');
-                    print_arg_help(arg, term_size);
+                    print_arg_help(arg, columns);
                     }
                 return 0;
                 }
             default:
                 break;
             }
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         if(e){
             print_argparse_error(&argparser, e);
             fprintf(stderr, "Use --help to see usage.\n");

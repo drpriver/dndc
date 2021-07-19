@@ -50,19 +50,20 @@ static const char* const ERROR_NAMES[] = {
 // This kind of sucks, but given an errorable gets the corresponding c string.
 #define get_error_name(err) ({ERROR_NAMES[err.errored];})
 
-#define _Errorable_impl(T) T##__Errorable
+#define Errorable_impl(T) T##__Errorable
 
 // This is for local variables.
-#define Errorable(T) struct _Errorable_impl(T)
+#define Errorable(T) struct Errorable_impl(T)
 // This one is for functions. It will make the caller get a warning if
 // they ignore the value.
-#define Errorable_f(T) warn_unused struct _Errorable_impl(T)
+#define Errorable_f(T) warn_unused struct Errorable_impl(T)
 #define Errorable_declare(T) Errorable(T) { T result; uint8_t errored; }
 // Declare some common types
 // Errorable(void) is specialized to not have a result field.
-struct _Errorable_impl(void) {
+struct Errorable_impl(void) {
     uint8_t errored;
 };
+
 Errorable_declare(int);
 Errorable_declare(char);
 Errorable_declare(short);

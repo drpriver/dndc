@@ -1,15 +1,31 @@
 #ifndef ARGUMENT_PARSING_H
 #define ARGUMENT_PARSING_H
+// size_t
+#include <stddef.h>
 // bool
 #include <stdbool.h>
 // integer types
 #include <stdint.h>
 // strtod, strtof
 #include <stdlib.h>
-#include "common_macros.h"
+// fprintf
+#include <stdio.h>
 #include "long_string.h"
 #include "parse_numbers.h"
-#include "term_util.h"
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#else
+#ifndef _Nullable
+#define _Nullable
+#endif
+#ifndef _Nonnull
+#define _Nonnull
+#endif
+#ifndef _Null_unspecified
+#define _Null_unspecified
+#endif
+#endif
 //
 // Parses argv (like from main) into variables.
 // Supports parsing argv into strings, ints, unsigned ints (decimal, binary,
@@ -35,10 +51,18 @@ enum ArgParseError {
     ARGPARSE_INTERNAL_ERROR = 7,
 };
 
+enum ArgParseFlags {
+    // Nothing
+    ARGPARSE_FLAGS_NONE = 0,
+    // Treat args looking like "-foo" that don't match a kwarg as strings to be
+    // parsed as an argument rather than as an erroneous keyword.
+    ARGPARSE_FLAGS_UNKNOWN_KWARGS_AS_ARGS = 1 << 0,
+};
+
 typedef struct Args {
     // argc/argv should exclude the program name, as it is useless
     int argc;
-    const char *_Nonnull const *_Nonnull argv;
+    const char*_Nonnull const *_Null_unspecified argv;
 } Args;
 typedef struct ArgParser ArgParser;
 //
@@ -50,12 +74,12 @@ typedef struct ArgParser ArgParser;
 // If parsing failed, the calling application should probably print the help and
 // exit. This doesn't do that for you as libraries that call exit() are evil.
 //
-static inline enum ArgParseError parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args);
+static inline enum ArgParseError parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags);
 
 //
 // After receiving a non-zero error code from `parse_args`, use this function
 // to explain what failed to parse and why.
-static inline void print_argparse_error(Nonnull(ArgParser*)parser, enum ArgParseError error);
+static inline void print_argparse_error(ArgParser* parser, enum ArgParseError error);
 
 //
 // Check for arguments like `-h` or `--version` that mean to ignore all other
@@ -63,11 +87,12 @@ static inline void print_argparse_error(Nonnull(ArgParser*)parser, enum ArgParse
 // This just returns the index of what matched, or -1 if there was no match.
 // The caller should take the actual action and exit, return, etc. as appropriate.
 // Parsing will almost surely fail.
-static inline ssize_t check_for_early_out_args(Nonnull(ArgParser*)parser, Nonnull(const Args*) args);
+static inline ssize_t check_for_early_out_args(ArgParser* parser, const Args* args);
 //
 // Prints a formatted help display for the command line arguments.
+// Second argument is the wrap width.
 //
-static inline void print_help(Nonnull(const ArgParser*), TermSize);
+static inline void print_help(const ArgParser*, int);
 
 
 //
@@ -144,17 +169,17 @@ typedef struct ArgParseUserDefinedType {
     // into the pointer.
     // Return non-zero to indicate a conversion error.
     // First argument is the user_data pointer from this struct.
-    int (*_Nonnull converter)(NullUnspec(void*), Nonnull(const char*), size_t, Nonnull(void*));
+    int (* converter)(void*_Null_unspecified, const char*, size_t, void*);
     // Should do something like:
     //    printf(" = %d,%d,%d", x, y, z);
     // Used when printing the help.
-    void(*_Nullable default_printer)(Nonnull(void*));
+    void(*_Nullable default_printer)(void*);
     // Used when printing the help.
     LongString type_name;
     size_t type_size;
     // If you need complicated state in your converter function,
     // you can store whatever you want here.
-    NullUnspec(void*) user_data;
+    void* _Null_unspecified user_data;
 } ArgParseUserDefinedType;
 
 //
@@ -185,24 +210,24 @@ typedef struct ArgParseEnumType {
     // These will be used for both printing the help and for
     // parsing strings into the enum, so they should be in a
     // format that you would type in a command line.
-    Nonnull(const LongString*) enum_names;
+    const LongString* enum_names;
 }ArgParseEnumType;
 
 typedef struct ArgParseDestination {
     // The type of what pointer points to.
     ArgType type;
     // Pointer to the first element.
-    Nonnull(void*) pointer;
+    void* pointer;
     union {
         // This should be set if type == ARG_USER_DEFINED. It's a pointer
         // to a structure that defines how to convert a string to the
         // value, how to print, etc.
         // See the struct definition for more information.
-        Nullable(const ArgParseUserDefinedType*) user_pointer;
+        const ArgParseUserDefinedType*_Nullable user_pointer;
         // This should be set if type == ARG_ENUM. It's a pointer to a
         // structure that defines the value enum values, its size, etc.
         // See the struct definition for more information.
-        Nullable(const ArgParseEnumType*) enum_pointer;
+        const ArgParseEnumType*_Nullable enum_pointer;
         // For the ARG_BITFLAG type, this will be '|='ed into the destination.
         uint64_t bitflag;
     };
@@ -221,7 +246,7 @@ typedef struct ArgParseDestination {
 // For bit flags.
 static inline
 ArgParseDestination
-ArgBitFlagDest(Nonnull(uint64_t*)pointer, uint64_t flag){
+ArgBitFlagDest(uint64_t* pointer, uint64_t flag){
     return (ArgParseDestination){
         .type = ARG_BITFLAG,
         .pointer = pointer,
@@ -232,7 +257,7 @@ ArgBitFlagDest(Nonnull(uint64_t*)pointer, uint64_t flag){
 // For enums.
 static inline
 ArgParseDestination
-ArgEnumDest(Nonnull(void*)pointer, Nonnull(const ArgParseEnumType*) enu){
+ArgEnumDest(void* pointer, const ArgParseEnumType* enu){
     return (ArgParseDestination){
         .type = ARG_ENUM,
         .pointer = pointer,
@@ -243,14 +268,13 @@ ArgEnumDest(Nonnull(void*)pointer, Nonnull(const ArgParseEnumType*) enu){
 // For a user defined type.
 static inline
 ArgParseDestination
-ArgUserDest(Nonnull(void*)pointer, Nonnull(const ArgParseUserDefinedType*) udt){
+ArgUserDest(void* pointer, const ArgParseUserDefinedType* udt){
     return (ArgParseDestination){
         .type = ARG_USER_DEFINED,
         .pointer = pointer,
         .user_pointer = udt,
         };
     }
-
 
 //
 // A structure describing an argument to be parsed.
@@ -300,7 +324,7 @@ typedef struct ArgToParse {
     // tokenized and adjacent whitespace will be merged into a single space.
     // Newlines are preserved, so don't hardwrap your helpstring.
     // The helptext will be appropriately soft-wrapped on word boundaries.
-    Nonnull(const char*) help;
+    const char* help;
     //
     // Use the ARGDEST macro to intialize this for basic types.
     ArgParseDestination dest;
@@ -315,7 +339,7 @@ typedef struct ArgToParse {
     //
     // For user-defined types, we don't call the converter function and instead
     // pass a pointer to the string view as the second argument.
-    int (*_Nullable append_proc)(void*_Nonnull, const void*_Nonnull);
+    int (*_Nullable append_proc)(void*, const void*);
 } ArgToParse;
 
 //
@@ -324,29 +348,29 @@ typedef struct ArgParser {
     //
     // The name of the program. Usually argv[0], but you can do whatever you
     // want.
-    Nonnull(const char*) name;
+    const char* name;
     //
     // A one-line description of the program.
-    Nonnull(const char*) description;
+    const char* description;
     //
     // The args that mean to early out and immediately take an action.
     // Generally, you should put in a help and version action.
     struct {
-        Nonnull(ArgToParse*)args;
+        ArgToParse* args;
         size_t count;
     } early_out;
     //
     // The positional arguments. Create an array of these. The order in the
     // array will be the order they need to be parsed in.
     struct {
-        Nonnull(ArgToParse*) args;
+        ArgToParse* args;
         size_t count;
     } positional;
     //
     // The keyword arguments. Create an array of these.
     // The order doesn't matter.
     struct {
-        Nonnull(ArgToParse*) args;
+        ArgToParse* args;
         size_t count;
     } keyword;
     // If an error occurred, these are set depending on what error occurred.
@@ -354,15 +378,15 @@ typedef struct ArgParser {
     // `print_argparse_error` instead.
     struct {
         // If failure happened while an option was identified, this will be set to that arg.
-        Nullable(ArgToParse*) arg_to_parse;
+        ArgToParse*_Nullable arg_to_parse;
         // If failure happened on a specific argument, this will be set.
-        Nullable(const char*) arg;
+        const char*_Nullable arg;
     } failed;
 } ArgParser;
 
 //
 // Prints the help for a single argument.
-static inline void print_arg_help(Nonnull(const ArgToParse*),TermSize);
+static inline void print_arg_help(const ArgToParse*, int);
 
 
 // Internal helper struct for text-wrapping.
@@ -375,7 +399,7 @@ typedef struct HelpState {
 // Handle text-wrapping, printing a newline and indenting if necessary.
 static inline
 void
-help_state_update(Nonnull(HelpState*)hs, int n_to_print){
+help_state_update(HelpState* hs, int n_to_print){
     if(hs->remaining - n_to_print < 0){
         // This is a string with 80 spaces in it.
         const char* SPACES = "                                                                                ";
@@ -387,58 +411,56 @@ help_state_update(Nonnull(HelpState*)hs, int n_to_print){
 
 static inline
 void
-print_wrapped_help(Nullable(const char*), TermSize);
+print_wrapped_help(Nullable(const char*), int);
 
 // See top of file.
 static inline
 void
-print_help(Nonnull(const ArgParser*) p, TermSize term_size){
-    if(term_size.columns > 80)
-        term_size.columns = 80;
+print_help(const ArgParser* p, int columns){
     printf("%s: %s\n", p->name, p->description);
     puts("");
-    const auto printed = printf("usage: %s", p->name);
-    HelpState hs = {.output_width = term_size.columns - printed, .lead = printed, .remaining = 0};
+    const int printed = printf("usage: %s", p->name);
+    HelpState hs = {.output_width = columns - printed, .lead = printed, .remaining = 0};
     hs.remaining = hs.output_width;
     for(int i = 0; i < p->positional.count; i++){
-        auto arg = &p->positional.args[i];
+        ArgToParse* arg = &p->positional.args[i];
         if(arg->max_num > 1){
-            auto to_print = 1 + arg->name.length + 4;
+            int to_print = 1 + arg->name.length + 4;
             help_state_update(&hs, to_print);
             printf(" %s ...", arg->name.text);
             }
         else {
-            auto to_print = 1 + arg->name.length;
+            int to_print = 1 + arg->name.length;
             help_state_update(&hs, to_print);
             printf(" %s", arg->name.text);
             }
         }
     for(int i = 0; i < p->keyword.count; i++){
-        auto arg = &p->keyword.args[i];
+        ArgToParse* arg = &p->keyword.args[i];
         if(arg->hidden)
             continue;
         if(arg->dest.type == ARG_FLAG){
             if(arg->altname1.length){
-                auto to_print = sizeof(" [%s | %s]") - 5 + arg->name.length + arg->altname1.length;
+                int to_print = sizeof(" [%s | %s]") - 5 + arg->name.length + arg->altname1.length;
                 help_state_update(&hs, to_print);
                 printf(" [%s | %s]", arg->name.text, arg->altname1.text);
                 }
             else{
-                auto to_print = sizeof(" [%s]") - 3 + arg->name.length;
+                int to_print = sizeof(" [%s]") - 3 + arg->name.length;
                 help_state_update(&hs, to_print);
                 printf(" [%s]", arg->name.text);
                 }
             }
         else {
             if(arg->altname1.text){
-                auto tn = ArgTypeNames[arg->dest.type];
-                auto to_print = sizeof(" [%s | %s <%s>%s]") - 9 + arg->name.length + arg->altname1.length + tn.length + (arg->max_num > 1?sizeof(" ...")-1: 0);
+                LongString tn = ArgTypeNames[arg->dest.type];
+                int to_print = sizeof(" [%s | %s <%s>%s]") - 9 + arg->name.length + arg->altname1.length + tn.length + (arg->max_num > 1?sizeof(" ...")-1: 0);
                 help_state_update(&hs, to_print);
                 printf(" [%s | %s <%s>%s]", arg->name.text, arg->altname1.text, tn.text, arg->max_num > 1?" ...":"");
                 }
             else{
-                auto tn = ArgTypeNames[arg->dest.type];
-                auto to_print = sizeof(" [%s <%s>%s]") - 7 + arg->name.length + tn.length + (arg->max_num > 1?sizeof(" ...")-1:0);
+                LongString tn = ArgTypeNames[arg->dest.type];
+                int to_print = sizeof(" [%s <%s>%s]") - 7 + arg->name.length + tn.length + (arg->max_num > 1?sizeof(" ...")-1:0);
                 help_state_update(&hs, to_print);
                 printf(" [%s <%s>%s]", arg->name.text, tn.text, arg->max_num>1?" ...":"");
                 }
@@ -450,22 +472,22 @@ print_help(Nonnull(const ArgParser*) p, TermSize term_size){
              "--------------------");
         }
     for(size_t i = 0; i < p->early_out.count; i++){
-        auto early = &p->early_out.args[i];
+        ArgToParse* early = &p->early_out.args[i];
         if(early->altname1.length){
             printf("%s, %s:", early->name.text, early->altname1.text);
             }
         else{
             printf("%s:", early->name.text);
             }
-        print_wrapped_help(early->help, term_size);
+        print_wrapped_help(early->help, columns);
         putchar('\n');
         }
     if(p->positional.count){
         puts("Positional Arguments:\n"
              "---------------------");
         for(size_t i = 0; i < p->positional.count; i++){
-            auto arg = &p->positional.args[i];
-            print_arg_help(arg, term_size);
+            ArgToParse* arg = &p->positional.args[i];
+            print_arg_help(arg, columns);
             putchar('\n');
             }
         }
@@ -473,17 +495,17 @@ print_help(Nonnull(const ArgParser*) p, TermSize term_size){
         fputs("Keyword Arguments:\n"
              "------------------", stdout);
     for(size_t i = 0; i < p->keyword.count; i++){
-        auto arg = &p->keyword.args[i];
+        ArgToParse* arg = &p->keyword.args[i];
         if(arg->hidden)
             continue;
         putchar('\n');
-        print_arg_help(arg, term_size);
+        print_arg_help(arg, columns);
         }
     }
 
 static inline
 void
-print_enum_options(Nullable(const ArgParseEnumType*)enu_){
+print_enum_options(const ArgParseEnumType*_Nullable enu_){
     if(!enu_) return;
     // cast away nullability
     const ArgParseEnumType* enu = enu_;
@@ -497,10 +519,10 @@ print_enum_options(Nullable(const ArgParseEnumType*)enu_){
 // See top of file.
 static inline
 void
-print_arg_help(Nonnull(const ArgToParse*) arg, TermSize term_size){
+print_arg_help(const ArgToParse* arg, int columns){
     const char* help = arg->help;
-    auto name = arg->name.text;
-    auto type = arg->dest.type;
+    const char* name = arg->name.text;
+    ArgType type = arg->dest.type;
 
     LongString typename;
     switch(type){
@@ -518,7 +540,7 @@ print_arg_help(Nonnull(const ArgToParse*) arg, TermSize term_size){
     printf(": %s", typename.text);
 
     if(arg->min_num != 0 or arg->hide_default){
-        print_wrapped_help(help, term_size);
+        print_wrapped_help(help, columns);
         if(type == ARG_ENUM)
             print_enum_options(arg->dest.enum_pointer);
         return;
@@ -527,49 +549,49 @@ print_arg_help(Nonnull(const ArgToParse*) arg, TermSize term_size){
         case ARG_INTEGER64:{
             int64_t* data = arg->dest.pointer;
             printf(" = %lld", (long long)*data);
-            print_wrapped_help(help, term_size);
+            print_wrapped_help(help, columns);
             }break;
         case ARG_UINTEGER64:{
             int64_t* data = arg->dest.pointer;
             printf(" = %llu", (unsigned long long)*data);
-            print_wrapped_help(help, term_size);
+            print_wrapped_help(help, columns);
             }break;
         case ARG_INT:{
             int* data = arg->dest.pointer;
             printf(" = %d", *data);
-            print_wrapped_help(help, term_size);
+            print_wrapped_help(help, columns);
             }break;
         case ARG_FLOAT32:{
             float* data = arg->dest.pointer;
             printf(" = %f", (double)*data);
-            print_wrapped_help(help, term_size);
+            print_wrapped_help(help, columns);
             }break;
         case ARG_FLOAT64:{
             double* data = arg->dest.pointer;
             printf(" = %f", *data);
-            print_wrapped_help(help, term_size);
+            print_wrapped_help(help, columns);
             }break;
         case ARG_BITFLAG:{
-            print_wrapped_help(help, term_size);
+            print_wrapped_help(help, columns);
             }break;
         case ARG_FLAG:{
-            print_wrapped_help(help, term_size);
+            print_wrapped_help(help, columns);
             }break;
         case ARG_CSTRING:{
             const char* s = arg->dest.pointer;
             printf(" = '%s'", s);
-            print_wrapped_help(help, term_size);
+            print_wrapped_help(help, columns);
             }break;
         case ARG_STRING:{
             LongString* s = arg->dest.pointer;
             printf(" = '%.*s'", (int)s->length, s->text);
-            print_wrapped_help(help, term_size);
+            print_wrapped_help(help, columns);
             }break;
         case ARG_USER_DEFINED:{
             if(arg->dest.user_pointer->default_printer){
                 arg->dest.user_pointer->default_printer(arg->dest.pointer);
                 }
-            print_wrapped_help(help, term_size);
+            print_wrapped_help(help, columns);
             }break;
         case ARG_ENUM:{
             const ArgParseEnumType* enu = arg->dest.enum_pointer;
@@ -597,7 +619,7 @@ print_arg_help(Nonnull(const ArgToParse*) arg, TermSize term_size){
                     }break;
                 }
             printf(" = %s", enu_name.text);
-            print_wrapped_help(help, term_size);
+            print_wrapped_help(help, columns);
             print_enum_options(enu);
             }break;
         }
@@ -606,14 +628,14 @@ print_arg_help(Nonnull(const ArgToParse*) arg, TermSize term_size){
 struct HelpTokenized {
     StringView token;
     bool is_newline;
-    Nonnull(const char*) rest;
+    const char* rest;
 };
 
 // Tokenizes the string on whitespace.
 // Internal helper for printing the help wrapped.
 static inline
 struct HelpTokenized
-next_tokenize_help(Nonnull(const char*) help){
+next_tokenize_help(const char* help){
     for(;;help++){
         switch(*help){
             case ' ': case '\r': case '\t': case '\f':
@@ -649,11 +671,11 @@ next_tokenize_help(Nonnull(const char*) help){
 
 static inline
 void
-print_wrapped(Nonnull(const char*)text, TermSize term_size){
-    HelpState hs = {.output_width = term_size.columns, .lead=0, .remaining=0};
+print_wrapped(const char*text, int columns){
+    HelpState hs = {.output_width = columns, .lead=0, .remaining=0};
     hs.remaining = hs.output_width;
     for(;*text;){
-        auto tok = next_tokenize_help((const char*)text); // cast away nullability
+        struct HelpTokenized tok = next_tokenize_help((const char*)text); // cast away nullability
         text = tok.rest;
         if(tok.is_newline){
             if(hs.remaining != hs.output_width){
@@ -674,16 +696,16 @@ print_wrapped(Nonnull(const char*)text, TermSize term_size){
 
 static inline
 void
-print_wrapped_help(Nullable(const char*)help, TermSize term_size){
+print_wrapped_help(const char*_Nullable help, int columns){
     if(!help){
         putchar('\n');
         return;
         }
     printf("\n    ");
-    HelpState hs = {.output_width = term_size.columns - 4, .lead = 4, .remaining = 0};
+    HelpState hs = {.output_width = columns - 4, .lead = 4, .remaining = 0};
     hs.remaining = hs.output_width;
     for(;*help;){
-        auto tok = next_tokenize_help((const char*)help); // cast away nullability
+        struct HelpTokenized tok = next_tokenize_help((const char*)help); // cast away nullability
         help = tok.rest;
         if(tok.is_newline){
             if(hs.remaining != hs.output_width){
@@ -702,13 +724,13 @@ print_wrapped_help(Nullable(const char*)help, TermSize term_size){
     putchar('\n');
     }
 
-static inline int set_flag(Nonnull(ArgToParse*) arg);
+static inline int set_flag(ArgToParse* arg);
 // Parse a single argument from a string.
 // Used internally. I guess you could use it if you really wanted to, but you
 // don't need this type generic version?
 static inline
 int
-parse_arg(Nonnull(ArgToParse*)arg, StringView s){
+parse_arg(ArgToParse* arg, StringView s){
     // Append_procs should signal their own error.
     if(arg->num_parsed >= arg->max_num)
         return ARGPARSE_EXCESS_ARGS;
@@ -731,27 +753,27 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
     }while(0)
     switch(arg->dest.type){
         case ARG_INTEGER64:{
-            auto e = parse_int64(s.text, s.length);
+            Errorable(int64_t) e = parse_int64(s.text, s.length);
             if(unlikely(e.errored)){
                 return ARGPARSE_CONVERSION_ERROR;
                 }
-            auto value = e.result;
+            int64_t value = e.result;
             APPEND_ARG(int64_t, value);
             }break;
         case ARG_UINTEGER64:{
-            auto e = parse_unsigned_human(s.text, s.length);
+            Errorable(uint64_t) e = parse_unsigned_human(s.text, s.length);
             if(unlikely(e.errored)) {
                 return ARGPARSE_CONVERSION_ERROR;
                 }
-            auto value = e.result;
+            uint64_t value = e.result;
             APPEND_ARG(uint64_t, value);
             }break;
         case ARG_INT:{
-            auto e = parse_int(s.text, s.length);
+            Errorable(int) e = parse_int(s.text, s.length);
             if(unlikely(e.errored)) {
                 return ARGPARSE_CONVERSION_ERROR;
                 }
-            auto value = e.result;
+            int value = e.result;
             APPEND_ARG(int, value);
             }break;
         case ARG_FLOAT32:{
@@ -791,13 +813,13 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
             // We could alloca onto our stack, but that could be significantly
             // inefficient compare to forcing them to parse in their append proc.
             if(arg->append_proc){
-                auto e = arg->append_proc(arg->dest.pointer, &s);
+                int e = arg->append_proc(arg->dest.pointer, &s);
                 if(e) return ARGPARSE_CONVERSION_ERROR;
                 }
             else {
                 char* dest = arg->dest.pointer;
                 dest += arg->dest.user_pointer->type_size * arg->num_parsed;
-                auto e = arg->dest.user_pointer->converter(arg->dest.user_pointer->user_data, s.text, s.length, dest);
+                int e = arg->dest.user_pointer->converter(arg->dest.user_pointer->user_data, s.text, s.length, dest);
                 if(e) return ARGPARSE_CONVERSION_ERROR;
                 }
             arg->num_parsed += 1;
@@ -845,7 +867,7 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
 // Set a flag. I really don't see why you would use this outside of this.
 static inline
 int
-set_flag(Nonnull(ArgToParse*) arg){
+set_flag(ArgToParse* arg){
     if(arg->dest.type == ARG_BITFLAG){
         uint64_t* dest = arg->dest.pointer;
         if(*dest & arg->dest.bitflag)
@@ -865,11 +887,11 @@ set_flag(Nonnull(ArgToParse*) arg){
 
 static inline
 ssize_t
-check_for_early_out_args(Nonnull(ArgParser*)parser, Nonnull(const Args*) args){
+check_for_early_out_args(ArgParser* parser, const Args* args){
     for(int i = 0; i < args->argc; i++){
-        auto argstring = cstr_to_SV(args->argv[i]);
+        StringView argstring = cstr_to_SV(args->argv[i]);
         for(size_t j = 0; j < parser->early_out.count; j++){
-            auto early = &parser->early_out.args[j];
+            ArgToParse* early = &parser->early_out.args[j];
             if(SV_equals(argstring, early->name))
                 return j;
             if(early->altname1.length && SV_equals(argstring, early->altname1))
@@ -880,8 +902,8 @@ check_for_early_out_args(Nonnull(ArgParser*)parser, Nonnull(const Args*) args){
     }
 
 static inline
-Nullable(ArgToParse*)
-find_matching_kwarg(Nonnull(ArgParser*)parser, StringView sv){
+ArgToParse*_Nullable
+find_matching_kwarg(ArgParser* parser, StringView sv){
     // do an inefficient linear search for now.
     for(size_t i = 0; i < parser->keyword.count; i++){
         ArgToParse* kw = &parser->keyword.args[i];
@@ -898,7 +920,7 @@ find_matching_kwarg(Nonnull(ArgParser*)parser, StringView sv){
 // See top of file.
 static inline
 enum ArgParseError
-parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
+parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
     ArgToParse* pos_arg = NULL;
     ArgToParse* past_the_end = NULL;
     if(parser->positional.count){
@@ -908,7 +930,7 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
     ArgToParse* kwarg = NULL;
     const char*const* argv_end = args->argv?(args->argv+args->argc):NULL;
     for(const char*const* arg = args->argv; arg != argv_end; ++arg){
-        auto s = cstr_to_SV(*arg);
+        StringView s = cstr_to_SV(*arg);
         if(s.length > 1){
             if(s.text[0] == '-'){
                 switch(s.text[1]){
@@ -920,6 +942,8 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
                         // Not a number, find matching kwarg
                         ArgToParse* new_kwarg = find_matching_kwarg(parser, s);
                         if(!new_kwarg){
+                            if(flags & ARGPARSE_FLAGS_UNKNOWN_KWARGS_AS_ARGS)
+                                break;
                             parser->failed.arg = *arg;
                             return ARGPARSE_UNKNOWN_KWARG;
                             }
@@ -933,7 +957,7 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
                         kwarg = new_kwarg;
                         kwarg->visited = true;
                         if(kwarg->dest.type == ARG_FLAG || kwarg->dest.type == ARG_BITFLAG){
-                            auto error = set_flag(kwarg);
+                            int error = set_flag(kwarg);
                             if(error) {
                                 parser->failed.arg_to_parse = kwarg;
                                 parser->failed.arg = *arg;
@@ -947,7 +971,7 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
                 }
             }
         if(kwarg){
-            auto err = parse_arg(kwarg, s);
+            int err = parse_arg(kwarg, s);
             if(err){
                 parser->failed.arg = *arg;
                 parser->failed.arg_to_parse = kwarg;
@@ -958,7 +982,7 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
             }
         else if(pos_arg && pos_arg != past_the_end){
             pos_arg->visited = true;
-            auto err = parse_arg(pos_arg, s);
+            int err = parse_arg(pos_arg, s);
             if(err){
                 parser->failed.arg = *arg;
                 parser->failed.arg_to_parse = pos_arg;
@@ -973,7 +997,7 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
             }
         }
     for(size_t i = 0; i < parser->positional.count; i++){
-        auto arg = &parser->positional.args[i];
+        ArgToParse* arg = &parser->positional.args[i];
         if(arg->num_parsed < arg->min_num){
             parser->failed.arg_to_parse = arg;
             return ARGPARSE_INSUFFICIENT_ARGS;
@@ -984,7 +1008,7 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
             }
         }
     for(size_t i = 0; i < parser->keyword.count; i++){
-        auto arg = &parser->keyword.args[i];
+        ArgToParse* arg = &parser->keyword.args[i];
         if(arg->num_parsed < arg->min_num){
             parser->failed.arg_to_parse = arg;
             return ARGPARSE_INSUFFICIENT_ARGS;
@@ -1004,20 +1028,14 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
 
 static inline
 void
-print_argparse_error(Nonnull(ArgParser*)parser, enum ArgParseError error){
+print_argparse_error(ArgParser* parser, enum ArgParseError error){
     if(parser->failed.arg_to_parse){
         ArgToParse* arg_to_parse = parser->failed.arg_to_parse;
         fprintf(stderr, "Error when parsing argument for '%s': ", arg_to_parse->name.text);
         }
     switch(error){
         case ARGPARSE_NO_ERROR:
-            //fall-through
-        PushDiagnostic();
-        SuppressCoveredSwitchDefault();
-        default:
-            fprintf(stderr, "Unknown error when parsing arguments\n");
-            return;
-        PopDiagnostic();
+            break;
         case ARGPARSE_CONVERSION_ERROR:
             if(parser->failed.arg_to_parse){
                 ArgToParse* arg_to_parse = parser->failed.arg_to_parse;
@@ -1152,5 +1170,12 @@ print_argparse_error(Nonnull(ArgParser*)parser, enum ArgParseError error){
             return;
             }
         }
+        fprintf(stderr, "Unknown error when parsing arguments\n");
+        return;
     }
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
+
 #endif

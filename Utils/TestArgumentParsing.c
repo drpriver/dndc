@@ -81,7 +81,7 @@ TestFunction(TestArgumentParsing1){
             "--x", "1", "--y", "0x00f02", "--z", "3", "4", "5", "--a", "hello",
             };
         Args args= {arrlen(argv), argv};
-        auto e = parse_args(&parser, &args);
+        auto e = parse_args(&parser, &args, ARGPARSE_FLAGS_NONE);
         TestAssert(!e);
         TestExpectEquals(h.x, 1);
         TestExpectEquals(h.y, 0x00f02);
@@ -100,7 +100,7 @@ TestFunction(TestArgumentParsing1){
     {
         const char* argv[] = {"--x", "--j", "--y", "2"};
         Args args= {arrlen(argv), argv};
-        auto e = parse_args(&parser, &args);
+        auto e = parse_args(&parser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectTrue(e != ARGPARSE_NO_ERROR);
         clear_parser(&parser);
         memset(&h, 0, sizeof(h));
@@ -109,7 +109,7 @@ TestFunction(TestArgumentParsing1){
         // is this allow by C standard?
         const char* argv[0] = {};
         Args args= {arrlen(argv), argv};
-        auto e = parse_args(&parser, &args);
+        auto e = parse_args(&parser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, ARGPARSE_NO_ERROR);
         clear_parser(&parser);
         memset(&h, 0, sizeof(h));
@@ -117,7 +117,7 @@ TestFunction(TestArgumentParsing1){
     {
         const char* argv[] = {"--f"};
         Args args= {arrlen(argv), argv};
-        auto e = parse_args(&parser, &args);
+        auto e = parse_args(&parser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, ARGPARSE_NO_ERROR);
         TestExpectTrue(h.flag);
         clear_parser(&parser);
@@ -126,7 +126,7 @@ TestFunction(TestArgumentParsing1){
     {
         const char* argv[] = {"--f", "--f"};
         Args args= {arrlen(argv), argv};
-        auto e = parse_args(&parser, &args);
+        auto e = parse_args(&parser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, ARGPARSE_DUPLICATE_KWARG);
         TestExpectTrue(h.flag);
         clear_parser(&parser);
@@ -155,7 +155,7 @@ TestFunction(TestArgumentParsing2){
     {
         const char* argv[] = {"--f", "lol"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&parser, &args);
+        auto e = parse_args(&parser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, ARGPARSE_NO_ERROR);
         clear_parser(&parser);
         memset(&f, 0, sizeof(f));
@@ -163,7 +163,7 @@ TestFunction(TestArgumentParsing2){
     {
         const char* argv[] = {"--f", "-g", "lol"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&parser, &args);
+        auto e = parse_args(&parser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, ARGPARSE_UNKNOWN_KWARG);
         clear_parser(&parser);
         memset(&f, 0, sizeof(f));
@@ -200,7 +200,7 @@ TestFunction(TestArgumentParsing3){
         .keyword.count = 0,
         };
     Args args = {arrlen(argv), argv};
-    auto e = parse_args(&argparser, &args);
+    auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
     TestExpectEquals(e, 0);
     TestExpectEquals(foo, 3.0f);
     TestExpectEquals(bar, -1e12);
@@ -238,7 +238,7 @@ TestFunction(TestArgumentParsing4){
     {
         const char* argv[] = {"a1", "-b", "b1", "c"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, ARGPARSE_EXCESS_ARGS);
         clear_parser(&argparser);
         memset(a, 0, sizeof(a));
@@ -247,7 +247,7 @@ TestFunction(TestArgumentParsing4){
     {
         const char* argv[] = {"a1", "a2", "-b", "b1"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, 0);
         clear_parser(&argparser);
         memset(a, 0, sizeof(a));
@@ -256,7 +256,7 @@ TestFunction(TestArgumentParsing4){
     {
         const char* argv[] = {"-b", "b1", "a1", "a2"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, 0);
         clear_parser(&argparser);
         memset(a, 0, sizeof(a));
@@ -313,7 +313,7 @@ TestFunction(TestParseUserDefined){
     {
         const char* argv[] = {"asd"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, ARGPARSE_CONVERSION_ERROR);
         clear_parser(&argparser);
         memset(&p, 0, sizeof(p));
@@ -321,7 +321,7 @@ TestFunction(TestParseUserDefined){
     {
         const char* argv[] = {"-1,3"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, 0);
         TestExpectEquals(p.x, -1);
         TestExpectEquals(p.y, 3);
@@ -331,7 +331,7 @@ TestFunction(TestParseUserDefined){
     {
         const char* argv[] = {"4,6"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, 0);
         TestExpectEquals(p.x, 4);
         TestExpectEquals(p.y, 6);
@@ -376,7 +376,7 @@ TestFunction(TestParseEnum){
     {
         const char* argv[] = {"asd"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, ARGPARSE_CONVERSION_ERROR);
         clear_parser(&argparser);
     }
@@ -384,7 +384,7 @@ TestFunction(TestParseEnum){
         fb = FOO;
         const char* argv[] = {"no-foo-bar"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, 0);
         TestExpectEquals(fb, NOFOOBAR);
         clear_parser(&argparser);
@@ -393,7 +393,7 @@ TestFunction(TestParseEnum){
         fb = NOFOOBAR;
         const char* argv[] = {"foo"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, 0);
         TestExpectEquals(fb, FOO);
         clear_parser(&argparser);
@@ -591,7 +591,7 @@ TestFunction(TestBitFlags){
         clear_parser(&argparser);
         const char* argv[] = {"--foo"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, 0);
         TestExpectEquals(flags, 1);
     }
@@ -600,7 +600,7 @@ TestFunction(TestBitFlags){
         clear_parser(&argparser);
         const char* argv[] = {"--dango"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, 0);
         TestExpectEquals(flags, 4);
     }
@@ -609,7 +609,7 @@ TestFunction(TestBitFlags){
         clear_parser(&argparser);
         const char* argv[] = {"--bar", "--dango"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, 0);
         TestExpectEquals(flags, 6);
     }
@@ -654,7 +654,7 @@ TestFunction(TestAppender){
     {
         const char* argv[] = {"asd"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, ARGPARSE_CONVERSION_ERROR);
         TestExpectEquals(shorts.count, 0);
         Marray_cleanup(short)(&shorts, get_mallocator());
@@ -663,7 +663,7 @@ TestFunction(TestAppender){
     {
         const char* argv[] = {"-1"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, ARGPARSE_INSUFFICIENT_ARGS);
         TestAssertEquals(shorts.count, 1);
         TestExpectEquals(shorts.data[0], -1);
@@ -673,7 +673,7 @@ TestFunction(TestAppender){
     {
         const char* argv[] = {"4", "6", "8", "10", "12"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, 0);
         TestAssertEquals(shorts.count, 5);
         TestExpectEquals(shorts.data[0], 4);
@@ -687,7 +687,7 @@ TestFunction(TestAppender){
     {
         const char* argv[] = {"262144"};
         Args args = {arrlen(argv), argv};
-        auto e = parse_args(&argparser, &args);
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, ARGPARSE_CONVERSION_ERROR);
         TestExpectEquals(shorts.count, 0);
         Marray_cleanup(short)(&shorts, get_mallocator());

@@ -1,5 +1,6 @@
 #ifndef PARSE_NUMBERS_H
 #define PARSE_NUMBERS_H
+#include <stdbool.h>
 #include <stdint.h>
 #include <limits.h>
 #include "common_macros.h"
@@ -12,9 +13,9 @@ static inline
 Errorable_f(uint64_t)
 parse_uint64(Nonnull(const char*) str, size_t length){
     Errorable(uint64_t) result = {};
-    if (not length)
+    if(!length)
         Raise(UNEXPECTED_END);
-    if (*str == '+'){
+    if(*str == '+'){
         str++;
         length--;
         }
@@ -52,7 +53,7 @@ static inline
 Errorable_f(int64_t)
 parse_int64(Nonnull(const char*) str, size_t length){
     Errorable(int64_t) result = {};
-    if(not length)
+    if(!length)
         Raise(UNEXPECTED_END);
     bool negative = (*str == '-');
     if(negative){
@@ -106,9 +107,9 @@ static inline
 Errorable_f(uint32_t)
 parse_uint32(Nonnull(const char*)str, size_t length){
     Errorable(uint32_t) result = {};
-    if (not length)
+    if(!length)
         Raise(UNEXPECTED_END);
-    if (*str == '+'){
+    if(*str == '+'){
         str++;
         length--;
         }
@@ -146,7 +147,7 @@ static inline
 Errorable(int32_t)
 parse_int32(Nonnull(const char*)str, size_t length){
     Errorable(int32_t) result = {};
-    if(not length)
+    if(!length)
         Raise(UNEXPECTED_END);
     bool negative = (*str == '-');
     if(negative){
@@ -200,7 +201,7 @@ static inline
 Errorable_f(int)
 parse_int(Nonnull(const char*) str, size_t length){
     Errorable(int) result;
-    auto e = parse_int32(str, length);
+    Errorable(int32_t) e = parse_int32(str, length);
     result.errored = e.errored;
     result.result = e.result;
     return result;
@@ -255,7 +256,7 @@ parse_hex(Nonnull(const char*) str, size_t length){
         Raise(UNEXPECTED_END);
     if(str[0] != '0')
         Raise(INVALID_SYMBOL);
-    if(str[1] != 'x' and str[1] != 'X')
+    if(str[1] != 'x' && str[1] != 'X')
         Raise(INVALID_SYMBOL);
     return parse_hex_inner(str+2, length-2);
     }
@@ -270,7 +271,7 @@ parse_binary(Nonnull(const char*) str, size_t length){
         Raise(UNEXPECTED_END);
     if(str[0] != '0')
         Raise(INVALID_SYMBOL);
-    if(str[1] != 'b' and str[1] != 'B')
+    if(str[1] != 'b' && str[1] != 'B')
         Raise(INVALID_SYMBOL);
     return parse_binary_inner(str+2, length-2);
     }
@@ -308,14 +309,14 @@ static inline
 Errorable_f(uint64_t)
 parse_unsigned_human(Nonnull(const char*) str, size_t length){
     Errorable(uint64_t) result = {};
-    if(not length)
+    if(!length)
         Raise(UNEXPECTED_END);
     if(str[0] == '#')
         return parse_pound_hex(str, length);
-    if(str[0] == '0' and length > 1){
-        if(str[1] == 'x' or str[1] == 'X')
+    if(str[0] == '0' && length > 1){
+        if(str[1] == 'x' || str[1] == 'X')
             return parse_hex(str, length);
-        if(str[1] == 'b' or str[1] == 'B')
+        if(str[1] == 'b' || str[1] == 'B')
             return parse_binary(str, length);
         }
     return parse_uint64(str, length);

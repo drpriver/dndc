@@ -54,7 +54,7 @@ static inline
 force_inline
 StringView
 cstr_to_SV(Nonnull(const char*)cstr){
-    auto len = strlen(cstr);
+    size_t len = strlen(cstr);
     return (StringView){
         .length = len,
         .text = cstr,
@@ -126,8 +126,8 @@ StringView_cmp(Nonnull(const void*)a, Nonnull(const void*) b){
     // TODO: There's probably a cleaner way to implement this.
     auto lhs = (const StringView*)a;
     auto rhs = (const StringView*)b;
-    auto l1 = lhs->length;
-    auto l2 = rhs->length;
+    size_t l1 = lhs->length;
+    size_t l2 = rhs->length;
     if(l1 == l2){
         if(!l1)
             return 0;
