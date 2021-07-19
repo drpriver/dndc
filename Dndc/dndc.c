@@ -209,6 +209,7 @@ struct DependencyUserData {
 };
 
 static int depends_print_callback(void*_Nullable, size_t, Nonnull(StringView*));
+
 int main(int argc, char**argv){
     LongString source_path = LS("");
     LongString output_path = LS("");
@@ -230,7 +231,8 @@ int main(int argc, char**argv){
                 .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&source_path),
-                .help = "Source file (.dnd file) to read from.\nIf not given, reads from stdin.",
+                .help = "Source file (.dnd file) to read from.\n"
+                        "If not given, reads from stdin.",
                 },
             };
         ArgToParse kw_args[] = {
@@ -240,7 +242,8 @@ int main(int argc, char**argv){
                 .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&output_path),
-                .help = "output path (.html file) to write to.\n If not given, writes to stdout.",
+                .help = "output path (.html file) to write to.\n"
+                        "If not given, writes to stdout.",
                 .hide_default = true,
             },
             {
@@ -258,7 +261,8 @@ int main(int argc, char**argv){
                 .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&base_dir),
-                .help = "Relative filepaths in source files will be relative to the given directory.\n"
+                .help = "Relative filepaths in source files will be relative "
+                        "to the given directory.\n"
                         "If not given, everything is relative to cwd.",
                 .hide_default = true,
             },
@@ -291,7 +295,8 @@ int main(int argc, char**argv){
                 .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_PRINT_LINKS),
-                .help = "Print out all links (and what they target) known by the system.",
+                .help = "Print out all links (and what they target) known by "
+                        "the system.",
                 .hidden = true,
             },
             {
@@ -347,7 +352,8 @@ int main(int argc, char**argv){
                 .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_NO_THREADS),
-                .help = "Do not create worker threads, do everything in the same thread.",
+                .help = "Do not create worker threads, do everything in the "
+                        "same thread.",
                 .hidden = true,
             },
             {
@@ -356,7 +362,7 @@ int main(int argc, char**argv){
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_NO_CLEANUP),
                 .help = "Cleanup all resources (memory allocations, etc.).\n"
-                    "    Development debugging tool, useless in regular cli use.",
+                        "Development debugging tool, useless in regular cli use.",
                 .hidden = true,
             },
             {
@@ -365,17 +371,19 @@ int main(int argc, char**argv){
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_PYTHON_UNISOLATED),
                 .help = "Don't isolate python, import site, etc.\n"
-                    "   Greatly slows startup, but allows importing user installed packages.",
+                        "Greatly slows startup, but allows importing user "
+                        "installed packages.",
             },
             {
                 .name = SV("--format"),
                 .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_REFORMAT_ONLY),
-                .help = "Instead of rendering to html, render to .dnd with trailing  "
-                        "spaces removed, text wrapped to 80 columns (if semantically "
-                        "equivalent), etc. Imports will not be resolved - only the "
-                        "given input file will be imported."
+                .help = "Instead of rendering to html, render to .dnd with "
+                        "trailing spaces removed, text wrapped to 80 columns "
+                        "(if semantically equivalent), etc. Imports will not "
+                        "be resolved - only the given input file will be "
+                        "imported."
                         ,
             },
             {
@@ -400,7 +408,9 @@ int main(int argc, char**argv){
                 .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_INPUT_IS_UNTRUSTED),
-                .help = "Input is untrusted and thus should not be allowed to import files, execute scripts or embed javascript in the output.",
+                .help = "Input is untrusted and thus should not be allowed to "
+                        "import files, execute scripts or embed javascript in "
+                        "the output.",
                 .hidden = true,
             },
             {
@@ -408,7 +418,8 @@ int main(int argc, char**argv){
                 .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_STRIP_WHITESPACE),
-                .help = "Strip trailing and leading whitespace from all output lines",
+                .help = "Strip trailing and leading whitespace from all output "
+                        "lines",
                 .hidden = false,
             },
             {
@@ -416,7 +427,8 @@ int main(int argc, char**argv){
                 .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_DONT_READ),
-                .help = "Don't read any files (other than builtins and the initial input file). Python blocks can bypass this.",
+                .help = "Don't read any files (other than builtins and the "
+                        "initial input file). Python blocks can bypass this.",
                 .hidden = true,
             },
             };
@@ -478,17 +490,33 @@ int main(int argc, char**argv){
 
     #ifdef BENCHMARKING
     flags &= ~DNDC_NO_CLEANUP;
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, NULL, NULL, dndc_stderr_error_func, NULL, dependency_func, &dependency_user_data);
+    auto e = run_the_dndc(flags,
+                LS_to_SV(base_dir), source_path,
+                &output_path,
+                NULL, NULL,
+                dndc_stderr_error_func, NULL,
+                dependency_func, &dependency_user_data);
+
     assert(!e.errored);
     flags |= DNDC_PYTHON_IS_INIT;
-    for(int i = 0; i < BENCHMARKITERS;i++){
-        e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, NULL, NULL, dndc_stderr_error_func, NULL, dependency_func, &dependency_user_data);
+    for(int i = 0; i < BENCHMARKITERS; i++){
+        e = run_the_dndc(flags,
+                LS_to_SV(base_dir), source_path,
+                &output_path,
+                NULL, NULL,
+                dndc_stderr_error_func, NULL,
+                dependency_func, &dependency_user_data);
         assert(!e.errored);
         }
     end_interpreter();
     return 0;
     #else
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, NULL, NULL, dndc_stderr_error_func, NULL, dependency_func, &dependency_user_data);
+    auto e = run_the_dndc(flags,
+                 LS_to_SV(base_dir), source_path,
+                 output_path.length? &output_path : NULL,
+                 NULL, NULL,
+                 dndc_stderr_error_func, NULL,
+                 dependency_func, &dependency_user_data);
     return e.errored;
     #endif
     }
@@ -570,7 +598,9 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         }
     ArenaAllocator arena_allocator = {};
     const Allocator string_allocator = {.type=ALLOCATOR_ARENA, ._data=&arena_allocator};
-    const Allocator allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
+    const Allocator allocator = (flags & DNDC_NO_CLEANUP)?
+        get_mallocator()
+        : new_recorded_mallocator();
     // The linear allocator is very useful for temporary allocations, like
     // when we need to turn a string into its kebabed form and then look it up
     // in the link map. We do this a lot and throw away the temporary string
@@ -589,10 +619,17 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         .base_directory = base_directory,
         // The base64 cache is moved to another thread and then moved back, so
         // it needs an independent allocator so it can run concurrently.
-        .b64cache = external_b64cache? *external_b64cache :
-            ((FileCache){.allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator()}),
-        // The text cache only runs on this thread so we can just use the general allocator.
-        .textcache = external_textcache?*external_textcache:((FileCache){.allocator=allocator}),
+        .b64cache = external_b64cache? *external_b64cache:
+            (FileCache){
+                .allocator = (flags & DNDC_NO_CLEANUP)?
+                    get_mallocator()
+                    : new_recorded_mallocator()
+                },
+        // The text cache only runs on this thread so we can just use the
+        // general allocator.
+        .textcache = external_textcache?
+            *external_textcache
+            : (FileCache){.allocator=allocator},
         .error_func = error_func,
         .error_user_data = error_user_data,
         };
