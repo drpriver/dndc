@@ -29,8 +29,6 @@
 #include <stdbool.h>
 // for size_t
 #include <stddef.h>
-// for Nonnull
-#include "common_macros.h"
 #endif
 #ifndef DSORT_CMP
 #error "Must define a DSORT_CMP macro (DSORT_CMP)"
@@ -40,10 +38,15 @@
 #error "Must define a DSORT_T"
 #endif
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
+
 #define DSORT_SLICE_(X) DSORT_SLICE_##X
 #define DSORT_SLICE(x) DSORT_SLICE_(x)
 typedef struct DSORT_SLICE(DSORT_T) {
-    DSORT_T*_Nonnull data;
+    DSORT_T* data;
     size_t count;
 } DSORT_SLICE(DSORT_T);
 #define DSORT_SWAP(a, b) do{\
@@ -55,17 +58,17 @@ typedef struct DSORT_SLICE(DSORT_T) {
 #define DSORT_IMPL_(A, X) DSORT_IMPL__(A,X)
 #define DSORT_IMPL(X) DSORT_IMPL_(DSORT_T,X)
 
-static void DSORT_IMPL(array_sort)(DSORT_T*_Nonnull, size_t);
-static inline void DSORT_IMPL(array_sort_insertion)(DSORT_T*_Nonnull, size_t);
-static inline void DSORT_IMPL(array_sort_d)(DSORT_T*_Nonnull, size_t, size_t);
-static inline void DSORT_IMPL(heap_sort)(DSORT_SLICE(DSORT_T)*_Nonnull);
-static inline size_t DSORT_IMPL(get_pivot)(DSORT_SLICE(DSORT_T)*_Nonnull);
-static inline void DSORT_IMPL(short_sort)(DSORT_T*_Nonnull, size_t);
-static inline bool DSORT_IMPL(is_sorted)(DSORT_T*_Nonnull, size_t);
+static void DSORT_IMPL(array_sort)(DSORT_T*, size_t);
+static inline void DSORT_IMPL(array_sort_insertion)(DSORT_T*, size_t);
+static inline void DSORT_IMPL(array_sort_d)(DSORT_T*, size_t, size_t);
+static inline void DSORT_IMPL(heap_sort)(DSORT_SLICE(DSORT_T)*);
+static inline size_t DSORT_IMPL(get_pivot)(DSORT_SLICE(DSORT_T)*);
+static inline void DSORT_IMPL(short_sort)(DSORT_T*, size_t);
+static inline bool DSORT_IMPL(is_sorted)(DSORT_T*, size_t);
 
 static inline
 void
-DSORT_IMPL(array_sort_insertion)(DSORT_T*_Nonnull data, size_t n_items){
+DSORT_IMPL(array_sort_insertion)(DSORT_T* data, size_t n_items){
     for(size_t i = 1; i < n_items; i++){
         for(size_t j = i; (j > 0) && DSORT_CMP(data+j, data+(j-1)) < 0; j--){
             DSORT_T* a = data + (j-1);
@@ -76,7 +79,7 @@ DSORT_IMPL(array_sort_insertion)(DSORT_T*_Nonnull data, size_t n_items){
     }
 static
 void
-DSORT_IMPL(array_sort)(Nonnull(DSORT_T*) data, size_t n_items){
+DSORT_IMPL(array_sort)(DSORT_T* data, size_t n_items){
     if(n_items*sizeof(DSORT_T) <= 256 || n_items < 4){
         DSORT_IMPL(array_sort_insertion)(data, n_items);
         return;
@@ -86,7 +89,7 @@ DSORT_IMPL(array_sort)(Nonnull(DSORT_T*) data, size_t n_items){
 
 static inline
 void
-DSORT_IMPL(array_sort_d)(Nonnull(DSORT_T*) data, size_t n_items, size_t depth){
+DSORT_IMPL(array_sort_d)(DSORT_T* data, size_t n_items, size_t depth){
     enum{short_sort_better = 256/sizeof(DSORT_T) > 32? 256/sizeof(DSORT_T) : 32};
     DSORT_SLICE(DSORT_T) r = {.data=data, .count = n_items};
     DSORT_T pivot;
@@ -137,7 +140,7 @@ DSORT_IMPL(array_sort_d)(Nonnull(DSORT_T*) data, size_t n_items, size_t depth){
     }
 static inline
 void
-DSORT_IMPL(short_sort)(Nonnull(DSORT_T*) data, size_t n_items){
+DSORT_IMPL(short_sort)(DSORT_T* data, size_t n_items){
     switch(n_items){
         case 0: case 1: return;
         case 2:{
@@ -238,7 +241,7 @@ DSORT_IMPL(short_sort)(Nonnull(DSORT_T*) data, size_t n_items){
 
 static inline
 size_t
-DSORT_IMPL(get_pivot)(Nonnull(DSORT_SLICE(DSORT_T)*) r){
+DSORT_IMPL(get_pivot)(DSORT_SLICE(DSORT_T)* r){
     DSORT_T* data = r->data;
     size_t mid = r->count / 2;
     if(r->count < 512){
@@ -300,7 +303,7 @@ DSORT_IMPL(get_pivot)(Nonnull(DSORT_SLICE(DSORT_T)*) r){
 
 static inline
 void
-DSORT_IMPL(sift_down)(Nonnull(DSORT_SLICE(DSORT_T)*)r, size_t parent, size_t end){
+DSORT_IMPL(sift_down)(DSORT_SLICE(DSORT_T)* r, size_t parent, size_t end){
     DSORT_T* data = r->data;
     for(;;){
         size_t child = (parent+1) * 2;
@@ -321,7 +324,7 @@ DSORT_IMPL(sift_down)(Nonnull(DSORT_SLICE(DSORT_T)*)r, size_t parent, size_t end
     }
 static inline
 bool
-DSORT_IMPL(is_heap)(Nonnull(DSORT_SLICE(DSORT_T)*)r){
+DSORT_IMPL(is_heap)(DSORT_SLICE(DSORT_T)* r){
     size_t parent = 0;
     for(size_t child = 1; child < r->count; child++){
         if(DSORT_CMP(r->data+parent, r->data+child) < 0)
@@ -333,7 +336,7 @@ DSORT_IMPL(is_heap)(Nonnull(DSORT_SLICE(DSORT_T)*)r){
 
 static inline
 void
-DSORT_IMPL(build_heap)(Nonnull(DSORT_SLICE(DSORT_T)*)r){
+DSORT_IMPL(build_heap)(DSORT_SLICE(DSORT_T)* r){
     // DBGPrint("building heap");
     size_t n = r->count;
     for(size_t i = n / 2; i-- > 0; ){
@@ -344,7 +347,7 @@ DSORT_IMPL(build_heap)(Nonnull(DSORT_SLICE(DSORT_T)*)r){
 
 static inline
 void
-DSORT_IMPL(percolate)(Nonnull(DSORT_SLICE(DSORT_T)*)r, size_t parent, size_t end){
+DSORT_IMPL(percolate)(DSORT_SLICE(DSORT_T)* r, size_t parent, size_t end){
     DSORT_T* data = r->data;
     const size_t root = parent;
     for(;;){
@@ -373,7 +376,7 @@ DSORT_IMPL(percolate)(Nonnull(DSORT_SLICE(DSORT_T)*)r, size_t parent, size_t end
 
 static inline
 void
-DSORT_IMPL(heap_sort)(Nonnull(DSORT_SLICE(DSORT_T)*)r){
+DSORT_IMPL(heap_sort)(DSORT_SLICE(DSORT_T)* r){
     if(r->count < 2)
         return;
     DSORT_IMPL(build_heap)(r);
@@ -388,7 +391,7 @@ DSORT_IMPL(heap_sort)(Nonnull(DSORT_SLICE(DSORT_T)*)r){
 
 static inline
 bool
-DSORT_IMPL(is_sorted)(Nonnull(DSORT_T*) data, size_t n_items){
+DSORT_IMPL(is_sorted)(DSORT_T* data, size_t n_items){
     DSORT_T* before = data;
     for(size_t i = 0; i < n_items; i++){
         if(DSORT_CMP(data+i, before) < 0){
@@ -399,6 +402,9 @@ DSORT_IMPL(is_sorted)(Nonnull(DSORT_T*) data, size_t n_items){
     return true;
     }
 
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
 #undef DSORT_T
 #undef DSORT_CMP

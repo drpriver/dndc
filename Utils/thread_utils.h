@@ -83,7 +83,7 @@
 //
 // static
 // void
-// create_thread(Nonnull(ThreadHandle*)handle, Nonnull(thread_func*) func, Nullable(void*)thread_arg);
+// create_thread(ThreadHandle* handle, thread_func* func, Nullable(void*)thread_arg);
 
 //
 // Waits for the corresponding thread to finish.
@@ -97,6 +97,9 @@
 
 #if defined(__linux__) || defined(__APPLE__)
 #include <pthread.h>
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
 #define THREADFUNC(name) Nullable(void*) (name)(Nullable(void*)thread_arg)
 typedef THREADFUNC(thread_func);
 PushDiagnostic();
@@ -108,7 +111,7 @@ PopDiagnostic();
 
 static
 void
-create_thread(Nonnull(ThreadHandle*)handle, Nonnull(thread_func*) func, Nullable(void*)thread_arg){
+create_thread(ThreadHandle* handle, thread_func* func, Nullable(void*)thread_arg){
     int err = pthread_create(&handle->thread, NULL, func, thread_arg);
     unhandled_error_condition(err != 0);
     }
@@ -125,6 +128,9 @@ join_thread(ThreadHandle handle){
 typedef THREADFUNC(thread_func);
 
 #include "windowsheader.h"
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
 PushDiagnostic();
 SuppressNullabilityComplete();
 typedef struct ThreadHandle {
@@ -134,7 +140,7 @@ PopDiagnostic();
 
 static
 void
-create_thread(Nonnull(ThreadHandle*)handle, Nonnull(thread_func*) func, Nullable(void*)thread_arg){
+create_thread(ThreadHandle* handle, thread_func* func, Nullable(void*)thread_arg){
     handle->thread = CreateThread(NULL, 0, func, thread_arg, 0, NULL);
     unhandled_error_condition(handle->thread == NULL);
     }
@@ -155,7 +161,7 @@ typedef struct ThreadHandle {
 
 static
 void
-create_thread(Nonnull(ThreadHandle*)handle, Nonnull(thread_func*) func, Nullable(void*)thread_arg){
+create_thread(ThreadHandle* handle, thread_func* func, Nullable(void*)thread_arg){
     (void)handle;
     (void)func;
     }
@@ -169,5 +175,8 @@ join_thread(ThreadHandle handle){
 #error "Unhandled threading platform."
 #endif
 
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
 #endif

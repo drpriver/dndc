@@ -3,6 +3,10 @@
 #include "MStringBuilder.h"
 #include "str_util.h"
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 //
 // These functions are not universal enough to go in the main MStringBuilder
 // header, but require access to internal functions and state for efficiency
@@ -25,7 +29,7 @@
 //
 static inline
 void
-msb_write_kebab(Nonnull(MStringBuilder*)msb, Nonnull(const char*)text, size_t length){
+msb_write_kebab(MStringBuilder* msb, const char* text, size_t length){
     msb_ensure_additional(msb, length+2);
     auto data = msb->data;
     auto cursor = msb->cursor;
@@ -81,7 +85,7 @@ msb_write_kebab(Nonnull(MStringBuilder*)msb, Nonnull(const char*)text, size_t le
 //  "this is some text." -> "This Is Some Text."
 static inline
 void
-msb_write_title(Nonnull(MStringBuilder*) restrict msb, Nonnull(const char*) restrict str, size_t len){
+msb_write_title(MStringBuilder* restrict msb, const char* restrict str, size_t len){
     if(not len)
         return;
     _check_msb_remaining_size(msb, len);
@@ -113,7 +117,7 @@ msb_write_title(Nonnull(MStringBuilder*) restrict msb, Nonnull(const char*) rest
 // need them.
 static inline
 void
-msb_write_json_escaped_str(Nonnull(MStringBuilder*)restrict sb, Nonnull(const char*)restrict str, size_t length){
+msb_write_json_escaped_str(MStringBuilder* restrict sb, const char* restrict str, size_t length){
     _check_msb_remaining_size(sb, length*2);
     auto data = sb->data;
     auto cursor = sb->cursor;
@@ -157,7 +161,7 @@ msb_write_json_escaped_str(Nonnull(MStringBuilder*)restrict sb, Nonnull(const ch
 
 static inline
 void
-msb_write_str_with_backslashes_as_forward_slashes(Nonnull(MStringBuilder*)sb, Nonnull(const char*)restrict str, size_t length){
+msb_write_str_with_backslashes_as_forward_slashes(MStringBuilder* sb, const char* restrict str, size_t length){
     _check_msb_remaining_size(sb, length);
     auto data = sb->data;
     auto cursor = sb->cursor;
@@ -178,7 +182,7 @@ msb_write_str_with_backslashes_as_forward_slashes(Nonnull(MStringBuilder*)sb, No
 // newline.
 static inline
 void
-msb_write_stripped_lines(Nonnull(MStringBuilder*)sb, Nonnull(const char*)restrict str, size_t length){
+msb_write_stripped_lines(MStringBuilder* sb, const char* restrict str, size_t length){
     _check_msb_remaining_size(sb, length);
     auto data = sb->data;
     auto cursor = sb->cursor;
@@ -207,4 +211,7 @@ msb_write_stripped_lines(Nonnull(MStringBuilder*)sb, Nonnull(const char*)restric
         }
     sb->cursor = cursor;
     }
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 #endif

@@ -5,6 +5,10 @@
 #include "allocator.h"
 #include "mallocator.h"
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 typedef struct ByteBuilder {
     size_t cursor;
     size_t capacity;
@@ -14,12 +18,12 @@ typedef struct ByteBuilder {
 
 static inline
 void
-_check_bb_size(Nonnull(ByteBuilder*), size_t);
+_check_bb_size(ByteBuilder*, size_t);
 
 static inline
 void
 force_inline
-_resize_bb(Nonnull(ByteBuilder*) bb, size_t size){
+_resize_bb(ByteBuilder* bb, size_t size){
     if(unlikely(!bb->allocator.type)){
         bb->allocator = get_mallocator();
         }
@@ -32,7 +36,7 @@ _resize_bb(Nonnull(ByteBuilder*) bb, size_t size){
 static inline
 void
 force_inline
-_check_bb_size(Nonnull(ByteBuilder*) bb, size_t len){
+_check_bb_size(ByteBuilder* bb, size_t len){
     if(bb->cursor + len <= bb->capacity)
         return;
     size_t new_size = (bb->capacity*3)/2;
@@ -44,14 +48,14 @@ _check_bb_size(Nonnull(ByteBuilder*) bb, size_t len){
     }
 static inline
 void
-bb_reserve(Nonnull(ByteBuilder*)bb, size_t n){
+bb_reserve(ByteBuilder* bb, size_t n){
     _check_bb_size(bb, n);
     }
 
 static inline
 void
 force_inline
-bb_write(Nonnull(ByteBuilder*) restrict bb, Nonnull(const void*) restrict data, size_t size){
+bb_write(ByteBuilder* restrict bb, const void* restrict data, size_t size){
     _check_bb_size(bb, size);
     switch(size){
         case 1:  memcpy(bb->data+bb->cursor, data, 1);      break;
@@ -66,7 +70,7 @@ bb_write(Nonnull(ByteBuilder*) restrict bb, Nonnull(const void*) restrict data, 
 static inline
 void
 force_inline
-bb_write_qword(Nonnull(ByteBuilder*) restrict bb, uint64_t qword){
+bb_write_qword(ByteBuilder* restrict bb, uint64_t qword){
     _check_bb_size(bb, 8);
     memcpy(bb->data+bb->cursor, &qword, 8);
     bb->cursor += 8;
@@ -74,7 +78,7 @@ bb_write_qword(Nonnull(ByteBuilder*) restrict bb, uint64_t qword){
 static inline
 void
 force_inline
-bb_write_dword(Nonnull(ByteBuilder*) restrict bb, uint32_t dword){
+bb_write_dword(ByteBuilder* restrict bb, uint32_t dword){
     _check_bb_size(bb, 4);
     memcpy(bb->data+bb->cursor, &dword, 4);
     bb->cursor += 4;
@@ -83,7 +87,7 @@ bb_write_dword(Nonnull(ByteBuilder*) restrict bb, uint32_t dword){
 static inline
 void
 force_inline
-bb_write_word(Nonnull(ByteBuilder*) restrict bb, uint16_t word){
+bb_write_word(ByteBuilder* restrict bb, uint16_t word){
     // assumes little-endian
     _check_bb_size(bb, 2);
     uint8_t high = word >> 8;
@@ -97,7 +101,7 @@ bb_write_word(Nonnull(ByteBuilder*) restrict bb, uint16_t word){
 static inline
 void
 force_inline
-bb_write_byte(Nonnull(ByteBuilder*) restrict bb, uint8_t byte_){
+bb_write_byte(ByteBuilder* restrict bb, uint8_t byte_){
     _check_bb_size(bb, 1);
     uint8_t* dst = (uint8_t*)bb->data + bb->cursor;
     *dst = byte_;
@@ -106,7 +110,7 @@ bb_write_byte(Nonnull(ByteBuilder*) restrict bb, uint8_t byte_){
 
 static inline
 ByteBuffer
-bb_borrow(Nonnull(ByteBuilder*) bb){
+bb_borrow(ByteBuilder* bb){
     return (ByteBuffer){
         .buff = bb->data,
         .n_bytes = bb->cursor,
@@ -115,7 +119,7 @@ bb_borrow(Nonnull(ByteBuilder*) bb){
 
 static inline
 ByteBuffer
-bb_detach(Nonnull(ByteBuilder*)bb){
+bb_detach(ByteBuilder* bb){
     auto result = (ByteBuffer){
         .buff = bb->data,
         .n_bytes = bb->cursor,
@@ -128,7 +132,7 @@ bb_detach(Nonnull(ByteBuilder*)bb){
 
 static inline
 void
-bb_destroy(Nonnull(ByteBuilder*) bb){
+bb_destroy(ByteBuilder* bb){
     if(bb->data){
         Allocator_free(bb->allocator, bb->data, bb->capacity);
         }
@@ -137,7 +141,10 @@ bb_destroy(Nonnull(ByteBuilder*) bb){
 
 static inline
 void
-bb_reset(Nonnull(ByteBuilder*)bb){
+bb_reset(ByteBuilder* bb){
     bb->cursor = 0;
     }
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 #endif

@@ -5,6 +5,10 @@
 #include "base64.h"
 #include "errorable_long_string.h"
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 //
 // Reads an entire file into a ByteBuilder.
 // Returns an error if the data could not be read for the file for
@@ -13,13 +17,13 @@
 // of the file.
 static inline
 Errorable_f(void)
-bb_read_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const char*)filename);
+bb_read_bin_file(ByteBuilder* bb, const char* filename);
 
 #ifdef USE_C_STDIO
 
 static inline
 Errorable_f(void)
-bb_read_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const char*)filename){
+bb_read_bin_file(ByteBuilder* bb, const char* filename){
     Errorable(void) result = {};
     auto fp = fopen(filename, "rb");
     if(not fp)
@@ -47,7 +51,7 @@ finally:
 #elif defined(__linux__) || defined(__APPLE__)
 static inline
 Errorable_f(void)
-bb_read_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const char*)filename){
+bb_read_bin_file(ByteBuilder* bb, const char* filename){
     Errorable(void) result = {};
     int fd = open(filename, O_RDONLY);
     if(fd < 0)
@@ -75,7 +79,7 @@ finally:
 #elif defined(_WIN32)
 static inline
 Errorable_f(void)
-bb_read_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const char*)filename){
+bb_read_bin_file(ByteBuilder* bb, const char* filename){
     Errorable(void) result = {};
     PushDiagnostic();
     SuppressDiscardQualifiers();
@@ -115,7 +119,7 @@ finally:
 #elif defined(WASM)
 static inline
 Errorable_f(void)
-bb_read_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const char*)filename){
+bb_read_bin_file(ByteBuilder* bb, const char* filename){
     (void)bb, (void)filename;
     Errorable(void) result = {.errored=OS_ERROR};
     return result;
@@ -133,7 +137,7 @@ bb_read_bin_file(Nonnull(ByteBuilder*)bb, Nonnull(const char*)filename){
 //
 static
 Errorable_f(LongString)
-read_and_base64_bin_file(Nonnull(ByteBuilder*)bb, const Allocator a, Nonnull(const char*) filepath){
+read_and_base64_bin_file(ByteBuilder* bb, const Allocator a, const char* filepath){
     Errorable(LongString) result = {};
     assert(bb->cursor == 0);
     auto e = bb_read_bin_file(bb, filepath);
@@ -147,5 +151,8 @@ read_and_base64_bin_file(Nonnull(ByteBuilder*)bb, const Allocator a, Nonnull(con
     return result;
     }
 
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
 #endif

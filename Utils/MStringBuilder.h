@@ -6,6 +6,10 @@
 #include "long_string.h"
 #include "allocator.h"
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 //
 // A type for building up a string without having to deal with things like sprintf
 // or strcat.
@@ -21,7 +25,7 @@ typedef struct MStringBuilder {
 // Unneeded if you called msb_detach.
 static inline
 void
-msb_destroy(Nonnull(MStringBuilder*) msb){
+msb_destroy(MStringBuilder* msb){
     Allocator_free(msb->allocator, msb->data, msb->capacity);
     msb->data=0;
     msb->cursor=0;
@@ -31,14 +35,14 @@ msb_destroy(Nonnull(MStringBuilder*) msb){
 static inline
 force_inline
 void
-_check_msb_remaining_size(Nonnull(MStringBuilder*), size_t);
+_check_msb_remaining_size(MStringBuilder*, size_t);
 
 //
 // Nul-terminates the builder without actually increasing the length
 // of the string.
 static inline
 void
-msb_nul_terminate(Nonnull(MStringBuilder*) msb){
+msb_nul_terminate(MStringBuilder* msb){
     _check_msb_remaining_size(msb, 1);
     msb->data[msb->cursor] = '\0';
     }
@@ -49,7 +53,7 @@ msb_nul_terminate(Nonnull(MStringBuilder*) msb){
 // Avoids re-allocs and thus potential copies
 static inline
 void
-msb_ensure_additional(Nonnull(MStringBuilder*)msb, size_t additional_capacity){
+msb_ensure_additional(MStringBuilder* msb, size_t additional_capacity){
     _check_msb_remaining_size(msb, additional_capacity);
     }
 
@@ -59,7 +63,7 @@ msb_ensure_additional(Nonnull(MStringBuilder*)msb, size_t additional_capacity){
 // Builder can be reused afterwards; its fields are zeroed.
 static inline
 LongString
-msb_detach(Nonnull(MStringBuilder*) msb){
+msb_detach(MStringBuilder* msb){
     assert(msb->data);
     msb_nul_terminate(msb);
     LongString result = {};
@@ -78,7 +82,7 @@ msb_detach(Nonnull(MStringBuilder*) msb){
 // also confusing to have the contents of the string view change under you.
 static inline
 StringView
-msb_borrow(Nonnull(MStringBuilder*) msb){
+msb_borrow(MStringBuilder* msb){
     msb_nul_terminate(msb);
     assert(msb->data);
     return (StringView) {
@@ -97,14 +101,14 @@ msb_borrow(Nonnull(MStringBuilder*) msb){
 // always will copy the string themselves.
 static inline
 void
-msb_reset(Nonnull(MStringBuilder*) msb){
+msb_reset(MStringBuilder* msb){
     msb->cursor = 0;
     }
 
 // Internal function, resizes the builder to the new size.
 static inline
 void
-_resize_msb(Nonnull(MStringBuilder*) msb, size_t size){
+_resize_msb(MStringBuilder* msb, size_t size){
     char* new_data = Allocator_realloc(msb->allocator, msb->data, msb->capacity, size);
     unhandled_error_condition(!new_data);
     msb->data = new_data;
@@ -115,7 +119,7 @@ _resize_msb(Nonnull(MStringBuilder*) msb, size_t size){
 static inline
 force_inline
 void
-_check_msb_remaining_size(Nonnull(MStringBuilder*) msb, size_t len){
+_check_msb_remaining_size(MStringBuilder* msb, size_t len){
     if (msb->cursor + len > msb->capacity){
         size_t new_size = (msb->capacity*3)/2;
         if(new_size < 32) new_size = 32;
@@ -131,7 +135,7 @@ _check_msb_remaining_size(Nonnull(MStringBuilder*) msb, size_t len){
 // If you have a c-str, strlen it yourself.
 static inline
 void
-msb_write_str(Nonnull(MStringBuilder*) restrict msb, NullUnspec(const char*) restrict str, size_t len){
+msb_write_str(MStringBuilder* restrict msb, NullUnspec(const char*) restrict str, size_t len){
     if(not len)
         return;
     _check_msb_remaining_size(msb, len);
@@ -148,7 +152,7 @@ msb_write_str(Nonnull(MStringBuilder*) restrict msb, NullUnspec(const char*) res
 static inline
 force_inline
 void
-msb_write_char(Nonnull(MStringBuilder*) msb, char c){
+msb_write_char(MStringBuilder* msb, char c){
     _check_msb_remaining_size(msb, 1);
     msb->data[msb->cursor++] = c;
     }
@@ -160,7 +164,7 @@ msb_write_char(Nonnull(MStringBuilder*) msb, char c){
 static inline
 force_inline
 void
-msb_write_nchar(Nonnull(MStringBuilder*) msb, char c, size_t n){
+msb_write_nchar(MStringBuilder* msb, char c, size_t n){
     if(n == 0)
         return;
     _check_msb_remaining_size(msb, n);
@@ -172,7 +176,7 @@ msb_write_nchar(Nonnull(MStringBuilder*) msb, char c, size_t n){
 // Erases the given number of characters from the end of the builder.
 static inline
 void
-msb_erase(Nonnull(MStringBuilder*) msb, size_t len){
+msb_erase(MStringBuilder* msb, size_t len){
     if(len > msb->cursor){
         msb->cursor = 0;
         msb->data[0] = '\0';
@@ -186,5 +190,8 @@ msb_erase(Nonnull(MStringBuilder*) msb, size_t len){
 // as the literal's size is known at compile time.
 #define msb_write_literal(msb, lit) msb_write_str(msb, ""lit, sizeof(""lit)-1)
 
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
 #endif

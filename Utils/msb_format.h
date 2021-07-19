@@ -6,6 +6,9 @@
 #include "common_macros.h"
 #include "long_string.h"
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
 enum FormatType {
     FORMATTYPE_STRING = 0,
     FORMATTYPE_INT32 = 1,
@@ -111,7 +114,7 @@ sv_fmt(StringView value){
 static inline
 force_inline
 FormatArg
-str_fmt(const char*_Nonnull value){
+str_fmt(const char* value){
     return (FormatArg){
         .type=FORMATTYPE_STRING,
         .string_value.text=value,
@@ -155,8 +158,8 @@ _Static_assert(sizeof(ZERO_TO_NINETY_NINE)==200, "");
 //   ptrdiff_t length = (buff+10) - p; // always buff+10, even if buff is longer.
 //
 static inline
-char* _Nonnull
-uint32_to_str_buffer(char* _Nonnull buff, uint32_t value){
+char* 
+uint32_to_str_buffer(char*  buff, uint32_t value){
     // UINT32_MAX: 4294967295 (10 characters)
     char *p = buff+10; // 1 past the end
     // Loop over the traditional naive way, but write two characters at a time.
@@ -186,8 +189,8 @@ uint32_to_str_buffer(char* _Nonnull buff, uint32_t value){
 // The math is:
 //   ptrdiff_t length = (buff+20) - p for this, as UINT64_MAX is 20 characters.
 static inline
-char* _Nonnull
-uint64_to_str_buffer(char* _Nonnull buff, uint64_t value){
+char* 
+uint64_to_str_buffer(char*  buff, uint64_t value){
     // UINT64_MAX: 18446744073709551615 (20 characters)
     char *p = buff+20; // 1 past the end
     // Loop over the traditional naive way, but write two characters at a time.
@@ -211,7 +214,7 @@ uint64_to_str_buffer(char* _Nonnull buff, uint64_t value){
 
 static inline
 void
-msb_write_int32(Nonnull(MStringBuilder*) sb, int32_t value){
+msb_write_int32(MStringBuilder* sb, int32_t value){
     if(value == INT32_MIN){
         msb_write_literal(sb, "-2147483648");
         return;
@@ -230,7 +233,7 @@ msb_write_int32(Nonnull(MStringBuilder*) sb, int32_t value){
 
 static inline
 void
-msb_write_int64(Nonnull(MStringBuilder*) sb, int64_t value){
+msb_write_int64(MStringBuilder* sb, int64_t value){
     if(value == INT64_MIN){
         msb_write_literal(sb, "-9223372036854775808");
         return;
@@ -249,7 +252,7 @@ msb_write_int64(Nonnull(MStringBuilder*) sb, int64_t value){
 
 static inline
 void
-msb_write_int_space_padded(Nonnull(MStringBuilder*)sb, int32_t value, int width){
+msb_write_int_space_padded(MStringBuilder* sb, int32_t value, int width){
     char buff[10];
     const char* p;
     size_t size;
@@ -289,7 +292,7 @@ msb_write_int_space_padded(Nonnull(MStringBuilder*)sb, int32_t value, int width)
 
 static inline
 void
-msb_write_uint32(Nonnull(MStringBuilder*) sb, uint32_t value){
+msb_write_uint32(MStringBuilder* sb, uint32_t value){
     char buff[10];
     char* p = uint32_to_str_buffer(buff, value);
     ptrdiff_t size = (buff+10) - p;
@@ -300,7 +303,7 @@ msb_write_uint32(Nonnull(MStringBuilder*) sb, uint32_t value){
 
 static inline
 void
-msb_write_uint64(Nonnull(MStringBuilder*) sb, uint64_t value){
+msb_write_uint64(MStringBuilder* sb, uint64_t value){
     char buff[20];
     char* p = uint64_to_str_buffer(buff, value);
     ptrdiff_t size = (buff+20) - p;
@@ -312,7 +315,7 @@ msb_write_uint64(Nonnull(MStringBuilder*) sb, uint64_t value){
 static inline
 force_inline
 void
-msb_apply_format(Nonnull(MStringBuilder*)sb, FormatArg arg){
+msb_apply_format(MStringBuilder* sb, FormatArg arg){
     switch(arg.type){
         case FORMATTYPE_STRING:
             msb_write_str(sb, arg.string_value.text, arg.string_value.length);
@@ -337,7 +340,7 @@ msb_apply_format(Nonnull(MStringBuilder*)sb, FormatArg arg){
 
 static inline
 void
-msb_format(Nonnull(MStringBuilder*)sb, size_t n_items, Nonnull(const FormatArg*)args){
+msb_format(MStringBuilder* sb, size_t n_items, const FormatArg* args){
     for(size_t i = 0; i < n_items; i++){
         msb_apply_format(sb, args[i]);
         }
@@ -463,7 +466,7 @@ msb_format(Nonnull(MStringBuilder*)sb, size_t n_items, Nonnull(const FormatArg*)
 
 static inline
 void
-msb_write_us_as_ms(Nonnull(MStringBuilder*)sb, uint64_t microseconds){
+msb_write_us_as_ms(MStringBuilder* sb, uint64_t microseconds){
     char buff[20];
     char* p = uint64_to_str_buffer(buff, microseconds);
     ptrdiff_t size = (buff+20) - p;
@@ -481,5 +484,9 @@ msb_write_us_as_ms(Nonnull(MStringBuilder*)sb, uint64_t microseconds){
         }
     msb_write_literal(sb, "ms");
     }
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
 #endif

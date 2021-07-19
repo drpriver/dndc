@@ -6,6 +6,10 @@
 #include "term_util.h"
 
 // This file is the implementation of the logfunc needed by log_print.h
+//
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
 
 static const char*_Nonnull const log_strings[] = {
     "[HERE ]",
@@ -17,7 +21,7 @@ static const char*_Nonnull const log_strings[] = {
 
 static
 void
-vlogfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, va_list args){
+vlogfunc(int log_level, const char* file, const char* func, int line, const char* fmt, va_list args){
     if(log_level > LOG_LEVEL)
         return;
     const char* log_text;
@@ -50,7 +54,7 @@ vlogfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int 
 printf_func(5, 6)
 static
 void
-logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, ...){
+logfunc(int log_level, const char* file, const char* func, int line, const char* fmt, ...){
     if(log_level > LOG_LEVEL)
         return;
     va_list args;
@@ -58,5 +62,9 @@ logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int l
     vlogfunc(log_level, file, func, line, fmt, args);
     va_end(args);
     }
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
 #endif

@@ -10,6 +10,10 @@
 #endif
 #endif
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 // Helper to distinguish what is a path separator.
 static inline
 force_inline
@@ -27,7 +31,7 @@ is_sep(char c){
 static inline
 force_inline
 Nullable(void*)
-memsep(Nonnull(const char*)str, size_t length){
+memsep(const char* str, size_t length){
     char* slash = memchr(str, '/', length);
     #ifdef BACKSLASH_IS_A_PATH_SEP
     if(!slash)
@@ -140,7 +144,7 @@ path_strip_extension(StringView path){
 //
 static inline
 void
-msb_append_path(Nonnull(MStringBuilder*)sb, Nonnull(const char*) restrict path, size_t length){
+msb_append_path(MStringBuilder* sb, const char* restrict path, size_t length){
     _check_msb_remaining_size(sb, length+1);
     if(sb->cursor)
         sb->data[sb->cursor++] = '/';
@@ -148,4 +152,7 @@ msb_append_path(Nonnull(MStringBuilder*)sb, Nonnull(const char*) restrict path, 
     sb->cursor += length;
     }
 
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 #endif

@@ -4,6 +4,10 @@
 #include "common_macros.h"
 #include "long_string.h"
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 //
 // Returns a view of the string, stripped of whitespace on both ends.
 // Whitespace is ' ', '\t', '\f', '\r', '\n', '\v'.
@@ -12,7 +16,7 @@
 //
 static inline
 StringView
-stripped_view(Nonnull(const char*)str, size_t len){
+stripped_view(const char* str, size_t len){
     for(;len;len--, str++){
         switch(*str){
             case ' ': case '\t': case '\r': case '\n': case '\f': case '\v':
@@ -36,7 +40,7 @@ stripped_view(Nonnull(const char*)str, size_t len){
 
 static inline
 StringViewUtf16
-stripped_view_utf16(Nonnull(const uint16_t*)str, size_t len){
+stripped_view_utf16(const uint16_t* str, size_t len){
     for(;len;len--, str++){
         switch(*str){
             case ' ': case '\t': case '\r': case '\n': case '\f': case '\v':
@@ -62,7 +66,7 @@ stripped_view_utf16(Nonnull(const uint16_t*)str, size_t len){
 //
 static inline
 StringView
-rstripped_view(Nonnull(const char*)str, size_t len){
+rstripped_view(const char* str, size_t len){
     for(;len;len--){
         switch(str[len-1]){
             case ' ': case '\t': case '\r': case '\n': case '\f': case '\v':
@@ -79,7 +83,7 @@ rstripped_view(Nonnull(const char*)str, size_t len){
 //
 static inline
 StringView
-lstripped_view(Nonnull(const char*)str, size_t len){
+lstripped_view(const char* str, size_t len){
     for(;len;len--, str++){
         switch(*str){
             case ' ': case '\t': case '\r': case '\n': case '\f': case '\v':
@@ -94,7 +98,7 @@ lstripped_view(Nonnull(const char*)str, size_t len){
 
 static inline
 StringViewUtf16
-lstripped_view_utf16(Nonnull(const uint16_t*)str, size_t len){
+lstripped_view_utf16(const uint16_t* str, size_t len){
     for(;len;len--, str++){
         switch(*str){
             case ' ': case '\t': case '\r': case '\n': case '\f': case '\v':
@@ -128,7 +132,7 @@ typedef struct SplitPair {
 //
 static inline
 SplitPair
-stripped_split(Nonnull(const char*)a, size_t length, char splitter){
+stripped_split(const char* a, size_t length, char splitter){
     const char* split = memchr(a, splitter, length);
     if(!split){
         return (SplitPair){
@@ -142,4 +146,7 @@ stripped_split(Nonnull(const char*)a, size_t length, char splitter){
         };
     }
 
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 #endif
