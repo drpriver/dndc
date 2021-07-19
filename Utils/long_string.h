@@ -1,8 +1,14 @@
 #ifndef LONG_STRING_H
 #define LONG_STRING_H
-#include <stdlib.h>
+// size_t
+#include <stddef.h>
+// strlen, memcmp
 #include <string.h>
 #include "common_macros.h"
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
 
 // It is very likely you want to put the LongString and/or StringView
 // into your public API, but this header contains lots of convenience functions
@@ -45,7 +51,7 @@ LS_to_SV(LongString ls){
 static inline
 force_inline
 StringView
-cstr_to_SV(Nonnull(const char*)cstr){
+cstr_to_SV(const char* cstr){
     size_t len = strlen(cstr);
     return (StringView){
         .length = len,
@@ -72,7 +78,6 @@ LS_equals(const LongString a, const LongString b){
 #define LS(literal) ((LongString){.length=sizeof("" literal)-1, .text="" literal})
 #define SV(literal) ((StringView){.length=sizeof("" literal)-1, .text=""  literal})
 #define SV16(literal) ((StringViewUtf16){.length = sizeof(u"" literal)/2-1, .text=u"" literal})
-int getchar(void);
 static inline
 force_inline
 bool
@@ -114,7 +119,7 @@ LS_SV_equals(const LongString ls, const StringView sv){
 static inline
 force_inline
 int
-StringView_cmp(Nonnull(const void*)a, Nonnull(const void*) b){
+StringView_cmp(const void* a, const void* b){
     // TODO: There's probably a cleaner way to implement this.
     auto lhs = (const StringView*)a;
     auto rhs = (const StringView*)b;
@@ -139,5 +144,9 @@ StringView_cmp(Nonnull(const void*)a, Nonnull(const void*) b){
         }
     return -(int)(unsigned char)rhs->text[lhs->length];
     }
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
 #endif
