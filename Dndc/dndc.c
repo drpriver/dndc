@@ -6,6 +6,7 @@
 
 #include "dndc_api_def.h"
 #include "dndc.h"
+#include "dndc_long_string.h"
 #include "dndc_node_types.h"
 #include "dndc_format.c"
 #include "dndc_types.h"

@@ -2,39 +2,39 @@
 #define LONG_STRING_H
 #include <stdlib.h>
 #include <string.h>
-// Looks weird to depend on dndc, but we need the definitions of
-// DndcLongString etc.
-// Oh well. If only C allowed multiple identical struct definitions.
-// I used to have those type in a header shared between the public
-// and internal api, but that meant the public header had to #include it
-// while I wanted the public API to be a single header with no includes.
-#ifndef DONT_DEPEND_ON_DNDC
-#include "dndc.h"
-// Convenience typedefs for internal use.
-typedef struct DndcLongString LongString;
-typedef struct DndcStringView StringView;
-typedef struct DndcStringViewUtf16 StringViewUtf16;
-#else
-typedef struct DndcLongString {
+#include "common_macros.h"
+
+// It is very likely you want to put the LongString and/or StringView
+// into your public API, but this header contains lots of convenience functions
+// that depend on the macros header and particular coding style that would
+// be inappropriate for a public header.
+//
+// Setting this macro means there is already a typedef for LongString,
+// StringView and StringViewUtf16, which allows you to expose the structs
+// without the rest of this file.
+
+#ifndef LONGSTRING_DEFINED
+
+typedef struct LongString {
     size_t length; // excludes the terminating NUL
     NullUnspec(const char*) text; // utf-8 encoded text
 } LongString;
 
-typedef struct DndcStringView {
+typedef struct StringView {
     size_t length;
     // utf-8 encoded text, might not be nul-terminated
     NullUnspec(const char*) text;
 } StringView;
 
-// Avoiding including <stdint.h> in public header.
 _Static_assert(sizeof(unsigned short) == 2, "unsigned short is not uint16_t");
-typedef struct DndcStringViewUtf16 {
+typedef struct StringViewUtf16 {
     size_t length; // in code units
     // utf-16 encoded code points, native endianness
     NullUnspec(const unsigned short*) text;
 } StringViewUtf16;
+
 #endif
-#include "common_macros.h"
+
 #include "error_handling.h"
 
 Errorable_declare(LongString);

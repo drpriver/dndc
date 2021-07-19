@@ -1,6 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #import <Webkit/WebKit.h>
 #import <dispatch/dispatch.h>
+#import "dndc_long_string.h"
 #import "common_macros.h"
 #import "measure_time.h"
 #import "dndc.h"
