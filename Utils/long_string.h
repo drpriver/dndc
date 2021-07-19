@@ -35,14 +35,6 @@ typedef struct StringViewUtf16 {
 
 #endif
 
-#include "error_handling.h"
-
-Errorable_declare(LongString);
-
-Errorable_declare(StringView);
-
-Errorable_declare(StringViewUtf16);
-
 static inline
 force_inline
 StringView

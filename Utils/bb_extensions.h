@@ -3,6 +3,7 @@
 #include "ByteBuilder.h"
 #include "file_util.h"
 #include "base64.h"
+#include "errorable_long_string.h"
 
 //
 // Reads an entire file into a ByteBuilder.

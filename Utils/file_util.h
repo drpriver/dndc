@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include "common_macros.h"
+#include "errorable_long_string.h"
 #include "long_string.h"
 #include "ByteBuffer.h"
 #include "allocator.h"

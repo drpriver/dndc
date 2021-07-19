@@ -1,6 +1,7 @@
 #ifndef DNDC_FUNCS_H
 #define DNDC_FUNCS_H
 #include "dndc.h"
+#include "errorable_long_string.h"
 #include "MStringBuilder.h"
 #include "ByteBuilder.h"
 #include "dndc_types.h"
