@@ -218,10 +218,10 @@ Nonnull(const char*) _test_color_red   = ""
 //
 #define TestExpectSuccess(cond) do{\
         TEST_stats.executed++;\
-        if ((cond.errored)){ \
+        if ((cond).errored){ \
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
-            TestReport("%s = %s", #cond, get_error_name(cond));\
+            TestReport("%s = %d", #cond, (cond).errored);\
             }\
         }while(0)
 
@@ -230,10 +230,10 @@ Nonnull(const char*) _test_color_red   = ""
 //
 #define TestExpectFailure(cond) do{\
         TEST_stats.executed++;\
-        if ((!cond.errored)){ \
+        if (!(cond).errored){ \
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
-            TestReport("%s = %s", #cond, get_error_name(cond));\
+            TestReport("%s = %d", #cond, (cond).errored);\
             }\
         }while(0)
 
@@ -284,12 +284,12 @@ Nonnull(const char*) _test_color_red   = ""
 //
 #define TestAssertSuccess(cond) do{\
         TEST_stats.executed++;\
-        if ((cond.errored)){ \
+        if ((cond).errored){ \
             TEST_stats.failures++; \
             TEST_stats.assert_failures++; \
             TestReport("Test condition failed");\
             TestReport("%s prematurely ended", __func__);\
-            TestReport("%s = %s", #cond, get_error_name(cond)); \
+            TestReport("%s = %d", #cond, (cond).errored); \
             return TEST_stats;\
             }\
         }while(0)
@@ -304,7 +304,7 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.assert_failures++; \
             TestReport("Test condition failed");\
             TestReport("%s prematurely ended", __func__);\
-            TestReport("%s = %s", #cond, get_error_name(cond)); \
+            TestReport("%s = %d", #cond, (cond).errored); \
             return TEST_stats;\
             }\
         }while(0)

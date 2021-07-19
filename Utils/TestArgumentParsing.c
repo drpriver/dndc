@@ -426,18 +426,18 @@ TestFunction(TestParseHex){
             auto e = parse_hex(argstring, sizeof(argstring)-1);\
             TestExpectEquals(e.errored, error_code);\
             }while(0)
-    FailHexTest("0 xff", INVALID_SYMBOL);
-    FailHexTest("0xff ", INVALID_SYMBOL);
-    FailHexTest("0xff 0x", INVALID_SYMBOL);
-    FailHexTest("0x", UNEXPECTED_END);
-    FailHexTest("0X", UNEXPECTED_END);
-    FailHexTest("0X-", INVALID_SYMBOL);
-    FailHexTest("X", UNEXPECTED_END);
-    FailHexTest("a", UNEXPECTED_END);
-    FailHexTest("1", UNEXPECTED_END);
-    FailHexTest("?", UNEXPECTED_END);
-    FailHexTest("0xfff??ff", INVALID_SYMBOL);
-    FailHexTest("0xffffffffffffffffff", OVERFLOWED_VALUE);
+    FailHexTest("0 xff", PARSENUMBER_INVALID_CHARACTER);
+    FailHexTest("0xff ", PARSENUMBER_INVALID_CHARACTER);
+    FailHexTest("0xff 0x", PARSENUMBER_INVALID_CHARACTER);
+    FailHexTest("0x", PARSENUMBER_UNEXPECTED_END);
+    FailHexTest("0X", PARSENUMBER_UNEXPECTED_END);
+    FailHexTest("0X-", PARSENUMBER_INVALID_CHARACTER);
+    FailHexTest("X", PARSENUMBER_UNEXPECTED_END);
+    FailHexTest("a", PARSENUMBER_UNEXPECTED_END);
+    FailHexTest("1", PARSENUMBER_UNEXPECTED_END);
+    FailHexTest("?", PARSENUMBER_UNEXPECTED_END);
+    FailHexTest("0xfff??ff", PARSENUMBER_INVALID_CHARACTER);
+    FailHexTest("0xffffffffffffffffff", PARSENUMBER_OVERFLOWED_VALUE);
     #undef FailHexTest
     TESTEND();
     }

@@ -753,7 +753,7 @@ parse_arg(ArgToParse* arg, StringView s){
     }while(0)
     switch(arg->dest.type){
         case ARG_INTEGER64:{
-            Errorable(int64_t) e = parse_int64(s.text, s.length);
+            struct Int64Result e = parse_int64(s.text, s.length);
             if(unlikely(e.errored)){
                 return ARGPARSE_CONVERSION_ERROR;
                 }
@@ -761,7 +761,7 @@ parse_arg(ArgToParse* arg, StringView s){
             APPEND_ARG(int64_t, value);
             }break;
         case ARG_UINTEGER64:{
-            Errorable(uint64_t) e = parse_unsigned_human(s.text, s.length);
+            struct Uint64Result e = parse_unsigned_human(s.text, s.length);
             if(unlikely(e.errored)) {
                 return ARGPARSE_CONVERSION_ERROR;
                 }
@@ -769,7 +769,7 @@ parse_arg(ArgToParse* arg, StringView s){
             APPEND_ARG(uint64_t, value);
             }break;
         case ARG_INT:{
-            Errorable(int) e = parse_int(s.text, s.length);
+            struct IntResult e = parse_int(s.text, s.length);
             if(unlikely(e.errored)) {
                 return ARGPARSE_CONVERSION_ERROR;
                 }

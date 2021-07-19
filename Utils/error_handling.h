@@ -47,9 +47,6 @@ static const char* const ERROR_NAMES[] = {
 #undef X
 #undef ERROR_CODES
 
-// This kind of sucks, but given an errorable gets the corresponding c string.
-#define get_error_name(err) ({ERROR_NAMES[err.errored];})
-
 #define Errorable_impl(T) T##__Errorable
 
 // This is for local variables.
