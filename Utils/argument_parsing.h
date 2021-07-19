@@ -55,7 +55,7 @@ enum ArgParseFlags {
     // Nothing
     ARGPARSE_FLAGS_NONE = 0,
     // Treat args looking like "-foo" that don't match a kwarg as strings to be
-    // parsed as an argument rather than as an erroneous keyword.
+    // parsed as an argument rather than treated as an erroneous keyword.
     ARGPARSE_FLAGS_UNKNOWN_KWARGS_AS_ARGS = 1 << 0,
 };
 
@@ -422,7 +422,7 @@ print_help(const ArgParser* p, int columns){
     const int printed = printf("usage: %s", p->name);
     HelpState hs = {.output_width = columns - printed, .lead = printed, .remaining = 0};
     hs.remaining = hs.output_width;
-    for(int i = 0; i < p->positional.count; i++){
+    for(size_t i = 0; i < p->positional.count; i++){
         ArgToParse* arg = &p->positional.args[i];
         if(arg->max_num > 1){
             int to_print = 1 + arg->name.length + 4;
@@ -435,7 +435,7 @@ print_help(const ArgParser* p, int columns){
             printf(" %s", arg->name.text);
             }
         }
-    for(int i = 0; i < p->keyword.count; i++){
+    for(size_t i = 0; i < p->keyword.count; i++){
         ArgToParse* arg = &p->keyword.args[i];
         if(arg->hidden)
             continue;
@@ -539,7 +539,7 @@ print_arg_help(const ArgToParse* arg, int columns){
         }
     printf(": %s", typename.text);
 
-    if(arg->min_num != 0 or arg->hide_default){
+    if(arg->min_num != 0 || arg->hide_default){
         print_wrapped_help(help, columns);
         if(type == ARG_ENUM)
             print_enum_options(arg->dest.enum_pointer);
