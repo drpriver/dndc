@@ -13,9 +13,7 @@
 //
 // Parses argv (like from main) into variables.
 // Supports parsing argv into strings, ints, unsigned ints (decimal, binary,
-// hex) and flags.
-// In the future, this could support floats and files.
-//
+// hex), floats, doubles, flags, bitflags and user defined types.
 //
 enum ArgParseError {
     // parsing succeeded.
@@ -1129,6 +1127,10 @@ print_argparse_error(Nonnull(ArgParser*)parser, enum ArgParseError error){
                 }
             fprintf(stderr, "No arguments given.\n");
             }return;
+        case ARGPARSE_INTERNAL_ERROR:{
+            fprintf(stderr, "An internal error occurred. This is a bug.\n");
+            return;
+            }
         }
     }
 #endif
