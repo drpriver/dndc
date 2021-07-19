@@ -4,10 +4,25 @@
 #include <stddef.h>
 // strlen, memcmp
 #include <string.h>
-#include "common_macros.h"
+// true, false
+#include <stdbool.h>
+// uint16_t
+#include <stdint.h>
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
+#else
+#ifndef _Null_unspecified
+#define _Null_unspecified
+#endif
+#endif
+
+#ifndef force_inline
+#if defined(__GNUC__) || defined(__clang__)
+#define force_inline __attribute__((always_inline))
+#else
+#define force_inline
+#endif
 #endif
 
 // It is very likely you want to put the LongString and/or StringView
@@ -23,20 +38,20 @@
 
 typedef struct LongString {
     size_t length; // excludes the terminating NUL
-    NullUnspec(const char*) text; // utf-8 encoded text
+    const char*_Null_unspecified text; // utf-8 encoded text
 } LongString;
 
 typedef struct StringView {
     size_t length;
     // utf-8 encoded text, might not be nul-terminated
-    NullUnspec(const char*) text;
+    const char*_Null_unspecified text;
 } StringView;
 
 _Static_assert(sizeof(unsigned short) == 2, "unsigned short is not uint16_t");
 typedef struct StringViewUtf16 {
     size_t length; // in code units
     // utf-16 encoded code points, native endianness
-    NullUnspec(const unsigned short*) text;
+    const unsigned short*_Null_unspecified text;
 } StringViewUtf16;
 
 #endif
@@ -121,8 +136,8 @@ force_inline
 int
 StringView_cmp(const void* a, const void* b){
     // TODO: There's probably a cleaner way to implement this.
-    auto lhs = (const StringView*)a;
-    auto rhs = (const StringView*)b;
+    const StringView* lhs = (const StringView*)a;
+    const StringView* rhs = (const StringView*)b;
     size_t l1 = lhs->length;
     size_t l2 = rhs->length;
     if(l1 == l2){
