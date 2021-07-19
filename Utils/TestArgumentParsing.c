@@ -194,7 +194,6 @@ TestFunction(TestArgumentParsing3){
     ArgParser argparser = {
         .name = "barzle",
         .description = "A flim flam.",
-        .version = "0.1.0",
         .positional.args = pos_args,
         .positional.count = arrlen(pos_args),
         .keyword.args = kwargs,
@@ -231,7 +230,6 @@ TestFunction(TestArgumentParsing4){
     ArgParser argparser = {
         .name = "lmao",
         .description = "lol",
-        .version = "0.2.oh",
         .positional.args = pos_args,
         .positional.count = arrlen(pos_args),
         .keyword.args = kw_args,
@@ -309,7 +307,6 @@ TestFunction(TestParseUserDefined){
     ArgParser argparser = {
         .name = "point printer",
         .description = "prints points",
-        .version = "0.3.oh.fo",
         .positional.args = pos_args,
         .positional.count = arrlen(pos_args),
         };
@@ -373,7 +370,6 @@ TestFunction(TestParseEnum){
     ArgParser argparser = {
         .name = "foo-barrer",
         .description = "fooes the barr",
-        .version = "13.3.7",
         .positional.args = pos_args,
         .positional.count = arrlen(pos_args),
         };
@@ -587,7 +583,6 @@ TestFunction(TestBitFlags){
     ArgParser argparser = {
         .name = "bitter",
         .description = "bits",
-        .version = "13.3.7",
         .keyword.args = kw_args,
         .keyword.count = arrlen(kw_args),
         };

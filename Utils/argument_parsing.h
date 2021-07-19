@@ -1,5 +1,5 @@
-#ifndef argument_parsing_h
-#define argument_parsing_h
+#ifndef ARGUMENT_PARSING_H
+#define ARGUMENT_PARSING_H
 // bool
 #include <stdbool.h>
 // integer types
@@ -329,8 +329,6 @@ typedef struct ArgParser {
     // A one-line description of the program.
     Nonnull(const char*) description;
     //
-    // The text to be printed for --version.
-    Nullable(const char*) version;
     // The args that mean to early out and immediately take an action.
     // Generally, you should put in a help and version action.
     struct {
