@@ -271,7 +271,7 @@ typedef struct Point {
     int x, y;
 } Point;
 #include "str_util.h"
-int 
+int
 point_parse(NullUnspec(void*)ud, Nonnull(const char*)s, size_t length, Nonnull(void*) dest){
     (void)ud;
     auto split = stripped_split(s, length, ',');
@@ -303,11 +303,7 @@ TestFunction(TestParseUserDefined){
             .name = SV("point"),
             .min_num = 1,
             .max_num = 1,
-            .dest = {
-                .type = ARG_USER_DEFINED,
-                .user_pointer = &point_def,
-                .pointer = &p,
-                },
+            .dest = ArgUserDest(&p, &point_def),
             },
         };
     ArgParser argparser = {
@@ -371,11 +367,7 @@ TestFunction(TestParseEnum){
             .name = SV("foobar"),
             .min_num = 0,
             .max_num = 1,
-            .dest = {
-                .type = ARG_ENUM,
-                .enum_pointer = &enum_def,
-                .pointer = &fb,
-                },
+            .dest = ArgEnumDest(&fb, &enum_def),
             },
         };
     ArgParser argparser = {
@@ -569,6 +561,65 @@ TestFunction(TestHumanIntegers){
     TESTEND();
     }
 
+TestFunction(TestBitFlags){
+    TESTBEGIN();
+    uint64_t flags = 0;
+    ArgToParse kw_args[] = {
+        {
+            .name = SV("--foo"),
+            .min_num = 0,
+            .max_num = 1,
+            .dest = ArgBitFlagDest(&flags, 1),
+        },
+        {
+            .name = SV("--bar"),
+            .min_num = 0,
+            .max_num = 1,
+            .dest = ArgBitFlagDest(&flags, 2),
+        },
+        {
+            .name = SV("--dango"),
+            .min_num = 0,
+            .max_num = 1,
+            .dest = ArgBitFlagDest(&flags, 4),
+        },
+    };
+    ArgParser argparser = {
+        .name = "bitter",
+        .description = "bits",
+        .version = "13.3.7",
+        .keyword.args = kw_args,
+        .keyword.count = arrlen(kw_args),
+        };
+    {
+        flags = 0;
+        clear_parser(&argparser);
+        const char* argv[] = {"--foo"};
+        Args args = {arrlen(argv), argv};
+        auto e = parse_args(&argparser, &args);
+        TestExpectEquals(e, 0);
+        TestExpectEquals(flags, 1);
+    }
+    {
+        flags = 0;
+        clear_parser(&argparser);
+        const char* argv[] = {"--dango"};
+        Args args = {arrlen(argv), argv};
+        auto e = parse_args(&argparser, &args);
+        TestExpectEquals(e, 0);
+        TestExpectEquals(flags, 4);
+    }
+    {
+        flags = 0;
+        clear_parser(&argparser);
+        const char* argv[] = {"--bar", "--dango"};
+        Args args = {arrlen(argv), argv};
+        auto e = parse_args(&argparser, &args);
+        TestExpectEquals(e, 0);
+        TestExpectEquals(flags, 6);
+    }
+    TESTEND();
+    }
 
 int main(int argc, char** argv){
     RegisterTest(TestArgumentParsing1);
@@ -580,6 +631,7 @@ int main(int argc, char** argv){
     RegisterTest(TestHumanIntegers);
     RegisterTest(TestParseUserDefined);
     RegisterTest(TestParseEnum);
+    RegisterTest(TestBitFlags);
     return test_main(argc, argv);
 }
 

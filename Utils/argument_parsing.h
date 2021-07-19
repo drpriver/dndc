@@ -94,18 +94,20 @@ static inline void print_version(Nonnull(const ArgParser*));
     apply(ARG_FLOAT64, double, "float64") \
 
 
-typedef enum _ARG_TYPE {
+typedef enum ArgType {
     #define X(enumname, b, c) enumname,
     ARGS(X)
     #undef X
+    ARG_BITFLAG,
     ARG_ENUM,
     ARG_USER_DEFINED,
-} _ARG_TYPE;
+} ArgType;
 
 static const LongString ArgTypeNames[] = {
     #define X(a,b, string) LS(string),
     ARGS(X)
     #undef X
+    LS("flag"),
     LS("enum"),
     LS("USER DEFINED THIS IS A BUG"),
 };
@@ -122,16 +124,6 @@ static const LongString ArgTypeNames[] = {
     char*: ARG_CSTRING, \
     StringView: ARG_STRING, \
     LongString: ARG_STRING)
-
-//
-// Given a pointer to the storage for an argument, sets
-// the correct type tag enum (ARG_INTEGER64 or whatever).
-// Use this to initialize the dest member of ArgToParse.
-// If the storage is an array, give the pointer to the first
-// element of the array and set the max_num appropriately.
-//
-#define ARGDEST(_x) {.type = ARGTYPE((_x)[0]), .pointer=_x}
-
 //
 // A structure for allowing the parsing of user defined types.
 // Fill out a struct with the given fields and use the
@@ -179,12 +171,16 @@ typedef struct ArgParseUserDefinedType {
 // length strings.
 //
 // NOTE: We just do a linear search over the strings.  In theory this is very
-// bad, but in practice a typical parse line will need to match against a given
-// enum only once so any fancy algorithm would require a pre-pass over all the
-// data anyway.  We could be faster if we required enums to be sorted or be
-// pre-placed in a perfect hash table, but this harms usability too much.  If
-// you need to parse a lot of enums with weird requirements, then just a create
-// a user defined type instead of using this.
+//       bad, but in practice a typical parse line will need to match against a
+//       given enum only once so any fancy algorithm would require a pre-pass
+//       over all the data anyway.  We could be faster if we required enums to
+//       be sorted or be pre-placed in a perfect hash table, but this harms
+//       usability too much.  If you need to parse a lot of enums with weird
+//       requirements, then just a create a user defined type instead of using
+//       this.
+//
+// NOTE: You don't have to use a literal enum. You can define the "enum" at runtime
+//       and actually just have it be an index into an array.
 typedef struct ArgParseEnumType {
     // In order to support packed enums, specify the size of the enum here
     // instead of just assuming it's an int.  Only powers of two are supported
@@ -199,6 +195,70 @@ typedef struct ArgParseEnumType {
     // format that you would type in a command line.
     Nonnull(const LongString*) enum_names;
 }ArgParseEnumType;
+
+typedef struct ArgParseDestination {
+    // The type of what pointer points to.
+    ArgType type;
+    // Pointer to the first element.
+    Nonnull(void*) pointer;
+    union {
+        // This should be set if type == ARG_USER_DEFINED. It's a pointer
+        // to a structure that defines how to convert a string to the
+        // value, how to print, etc.
+        // See the struct definition for more information.
+        Nullable(const ArgParseUserDefinedType*) user_pointer;
+        // This should be set if type == ARG_ENUM. It's a pointer to a
+        // structure that defines the value enum values, its size, etc.
+        // See the struct definition for more information.
+        Nullable(const ArgParseEnumType*) enum_pointer;
+        // For the ARG_BITFLAG type, this will be '|='ed into the destination.
+        uint64_t bitflag;
+    };
+} ArgParseDestination;
+
+
+//
+// Given a pointer to the storage for an argument, sets
+// the correct type tag enum (ARG_INTEGER64 or whatever).
+// Use this to initialize the dest member of ArgToParse.
+// If the storage is an array, give the pointer to the first
+// element of the array and set the max_num appropriately.
+//
+#define ARGDEST(_x) ((ArgParseDestination){.type = ARGTYPE((_x)[0]), .pointer=_x})
+
+// For bit flags.
+static inline
+ArgParseDestination
+ArgBitFlagDest(Nonnull(uint64_t*)pointer, uint64_t flag){
+    return (ArgParseDestination){
+        .type = ARG_BITFLAG,
+        .pointer = pointer,
+        .bitflag = flag,
+        };
+    }
+
+// For enums.
+static inline
+ArgParseDestination
+ArgEnumDest(Nonnull(void*)pointer, Nonnull(const ArgParseEnumType*) enu){
+    return (ArgParseDestination){
+        .type = ARG_ENUM,
+        .pointer = pointer,
+        .enum_pointer = enu,
+        };
+    }
+
+// For a user defined type.
+static inline
+ArgParseDestination
+ArgUserDest(Nonnull(void*)pointer, Nonnull(const ArgParseUserDefinedType*) udt){
+    return (ArgParseDestination){
+        .type = ARG_USER_DEFINED,
+        .pointer = pointer,
+        .user_pointer = udt,
+        };
+    }
+
 
 //
 // A structure describing an argument to be parsed.
@@ -249,23 +309,7 @@ typedef struct ArgToParse {
     Nonnull(const char*) help;
     //
     // Use the ARGDEST macro to intialize this for basic types.
-    struct {
-        // The type what pointer points to.
-        _ARG_TYPE type;
-        // Pointer to the first element.
-        Nonnull(void*) pointer;
-        union {
-            // This should be set if type == ARG_USER_DEFINED. It's a pointer
-            // to a structure that defines how to convert a string to the
-            // value, how to print, etc.
-            // See the struct definition for more information.
-            Nullable(const ArgParseUserDefinedType*) user_pointer;
-            // This should be set if type == ARG_ENUM. It's a pointer to a
-            // structure that defines the value enum values, its size, etc.
-            // See the struct definition for more information.
-            Nullable(const ArgParseEnumType*) enum_pointer;
-        };
-    } dest;
+    ArgParseDestination dest;
 } ArgToParse;
 
 //
@@ -432,7 +476,7 @@ print_enum_options(Nullable(const ArgParseEnumType*)enu_){
     // cast away nullability
     const ArgParseEnumType* enu = enu_;
     printf("    Options:\n");
-    printf("    -------\n");
+    printf("    --------\n");
     for(size_t i = 0; i < enu->enum_count; i++){
         printf("    %s\n", enu->enum_names[i].text);
         }
@@ -493,9 +537,12 @@ print_arg_help(Nonnull(const ArgToParse*) arg, TermSize term_size){
             printf(" = %f", *data);
             print_wrapped_help(help, term_size);
             }break;
+        case ARG_BITFLAG:{
+            print_wrapped_help(help, term_size);
+            }break;
         case ARG_FLAG:{
             print_wrapped_help(help, term_size);
-            } break;
+            }break;
         case ARG_CSTRING:{
             const char* s = arg->dest.pointer;
             printf(" = '%s'", s);
@@ -505,7 +552,7 @@ print_arg_help(Nonnull(const ArgToParse*) arg, TermSize term_size){
             LongString* s = arg->dest.pointer;
             printf(" = '%.*s'", (int)s->length, s->text);
             print_wrapped_help(help, term_size);
-            } break;
+            }break;
         case ARG_USER_DEFINED:{
             if(arg->dest.user_pointer->default_printer){
                 arg->dest.user_pointer->default_printer(arg->dest.pointer);
@@ -618,6 +665,7 @@ print_wrapped_help(Nullable(const char*)help, TermSize term_size){
     putchar('\n');
     }
 
+static inline int set_flag(Nonnull(ArgToParse*) arg);
 // Parse a single argument from a string.
 // Used internally. I guess you could use it if you really wanted to, but you
 // don't need this type generic version?
@@ -686,8 +734,11 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
             *dest = value;
             arg->num_parsed += 1;
             }break;
+        case ARG_BITFLAG:
+            // fall-through
         case ARG_FLAG:
-            unreachable();
+            // This is weird, but it is a configuration error.
+            return set_flag(arg);
         case ARG_STRING:{
             // This is a hack, our target
             // is actually a LongString.
@@ -764,6 +815,14 @@ parse_arg(Nonnull(ArgToParse*)arg, StringView s){
 static inline
 int
 set_flag(Nonnull(ArgToParse*) arg){
+    if(arg->dest.type == ARG_BITFLAG){
+        uint64_t* dest = arg->dest.pointer;
+        if(*dest & arg->dest.bitflag)
+            return ARGPARSE_DUPLICATE_KWARG;
+        *dest |= arg->dest.bitflag;
+        arg->num_parsed += 1;
+        return 0;
+        }
     assert(arg->dest.type == ARG_FLAG);
     if(arg->num_parsed >= arg->max_num)
         return ARGPARSE_DUPLICATE_KWARG;
@@ -861,7 +920,7 @@ parse_args(Nonnull(ArgParser*) parser, Nonnull(const Args*) args){
                             pos_arg++;
                         kwarg = new_kwarg;
                         kwarg->visited = true;
-                        if(kwarg->dest.type == ARG_FLAG){
+                        if(kwarg->dest.type == ARG_FLAG || kwarg->dest.type == ARG_BITFLAG){
                             auto error = set_flag(kwarg);
                             if(error) {
                                 parser->failed.arg_to_parse = kwarg;
@@ -978,8 +1037,10 @@ print_argparse_error(Nonnull(ArgParser*)parser, enum ArgParseError error){
                             fprintf(stderr, "Unable to parse a %s from '%s'\n", arg_to_parse->dest.user_pointer->type_name.text, arg);
                             return;
                         case ARG_ENUM:
-                            fprintf(stderr, "Unable to parse a choice from '%s. Not a valid option.\n", arg);
+                            fprintf(stderr, "Unable to parse a choice from '%s'. Not a valid option.\n", arg);
                             return;
+                        case ARG_BITFLAG:
+                            // fall-through
                         case ARG_FLAG:
                             fprintf(stderr, "Unable to parse a flag. This is a bug.\n");
                             return;
@@ -1016,6 +1077,8 @@ print_argparse_error(Nonnull(ArgParser*)parser, enum ArgParseError error){
                         case ARG_ENUM:
                             fprintf(stderr, "Unable to parse a choice from unknown argument.\n");
                             return;
+                        case ARG_BITFLAG:
+                            // fall-through
                         case ARG_FLAG:
                             fprintf(stderr, "Unable to parse a flag. This is a bug.\n");
                             return;

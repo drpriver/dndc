@@ -216,25 +216,13 @@ int main(int argc, char**argv){
     LongString dependency_path = LS("");
     struct DependencyUserData dependency_user_data = {};
     LongString base_dir = LS("");
-    bool report_orphans = false;
-    bool no_python = false;
-    bool print_tree = false;
-    bool print_links = false;
-    bool print_stats = false;
-    bool allow_bad_links = false;
-    bool suppress_warnings = false;
-    bool dont_write = false;
-    bool no_threads = false;
-    bool cleanup = false;
-    bool use_site = false;
-    bool reformat_only = false;
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SOURCE_IS_PATH_NOT_DATA
+        | DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM
+        ;
     bool hidden_help = false;
-    bool dont_inline_images = false;
     bool print_syntax = false;
     bool print_depends = false;
-    bool untrusted = false;
-    bool strip_whitespace = false;
-    bool dont_read = false;
     {
         ArgToParse pos_args[] = {
             [0] = {
@@ -278,7 +266,7 @@ int main(int argc, char**argv){
                 .name = SV("--report-orphans"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&report_orphans),
+                .dest = ArgBitFlagDest(&flags, DNDC_REPORT_ORPHANS),
                 .help = "Report orphaned nodes (for debugging scripts).",
                 .hidden = true,
             },
@@ -286,7 +274,7 @@ int main(int argc, char**argv){
                 .name = SV("--no-python"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&no_python),
+                .dest = ArgBitFlagDest(&flags, DNDC_NO_PYTHON),
                 .help = "Don't execute python nodes.",
                 .hidden = true,
             },
@@ -294,7 +282,7 @@ int main(int argc, char**argv){
                 .name = SV("--print-tree"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&print_tree),
+                .dest = ArgBitFlagDest(&flags, DNDC_PRINT_TREE),
                 .help = "Print out the entire document tree.",
                 .hidden = true,
             },
@@ -302,7 +290,7 @@ int main(int argc, char**argv){
                 .name = SV("--print-links"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&print_links),
+                .dest = ArgBitFlagDest(&flags, DNDC_PRINT_LINKS),
                 .help = "Print out all links (and what they target) known by the system.",
                 .hidden = true,
             },
@@ -318,7 +306,7 @@ int main(int argc, char**argv){
                 .name = SV("--print-stats"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&print_stats),
+                .dest = ArgBitFlagDest(&flags, DNDC_PRINT_STATS),
                 .help = "Log some informative statistics.",
                 .hidden = true,
             },
@@ -334,7 +322,7 @@ int main(int argc, char**argv){
                 .name = SV("--allow-bad-links"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&allow_bad_links),
+                .dest = ArgBitFlagDest(&flags, DNDC_ALLOW_BAD_LINKS),
                 .help = "Warn instead of erroring if a link can't be resolved.",
                 .hidden = true,
             },
@@ -342,7 +330,7 @@ int main(int argc, char**argv){
                 .name = SV("--suppress-warnings"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&suppress_warnings),
+                .dest = ArgBitFlagDest(&flags, DNDC_SUPPRESS_WARNINGS),
                 .help = "Don't report non-fatal errors.",
                 .hidden = true,
             },
@@ -350,7 +338,7 @@ int main(int argc, char**argv){
                 .name = SV("--dont-write"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&dont_write),
+                .dest = ArgBitFlagDest(&flags, DNDC_DONT_WRITE),
                 .help = "Don't write out the document.",
                 .hidden = true,
             },
@@ -358,7 +346,7 @@ int main(int argc, char**argv){
                 .name = SV("--single-threaded"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&no_threads),
+                .dest = ArgBitFlagDest(&flags, DNDC_NO_THREADS),
                 .help = "Do not create worker threads, do everything in the same thread.",
                 .hidden = true,
             },
@@ -366,7 +354,7 @@ int main(int argc, char**argv){
                 .name = SV("--cleanup"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&cleanup),
+                .dest = ArgBitFlagDest(&flags, DNDC_NO_CLEANUP),
                 .help = "Cleanup all resources (memory allocations, etc.).\n"
                     "    Development debugging tool, useless in regular cli use.",
                 .hidden = true,
@@ -375,7 +363,7 @@ int main(int argc, char**argv){
                 .name = SV("--use-site"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&use_site),
+                .dest = ArgBitFlagDest(&flags, DNDC_PYTHON_UNISOLATED),
                 .help = "Don't isolate python, import site, etc.\n"
                     "   Greatly slows startup, but allows importing user installed packages.",
             },
@@ -383,7 +371,7 @@ int main(int argc, char**argv){
                 .name = SV("--format"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&reformat_only),
+                .dest = ArgBitFlagDest(&flags, DNDC_REFORMAT_ONLY),
                 .help = "Instead of rendering to html, render to .dnd with trailing  "
                         "spaces removed, text wrapped to 80 columns (if semantically "
                         "equivalent), etc. Imports will not be resolved - only the "
@@ -402,7 +390,7 @@ int main(int argc, char**argv){
                 .name = SV("--dont-inline-images"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&dont_inline_images),
+                .dest = ArgBitFlagDest(&flags, DNDC_DONT_INLINE_IMAGES),
                 .help = "Instead of base64ing the images, use a link.",
                 .hidden = true,
             },
@@ -411,7 +399,7 @@ int main(int argc, char**argv){
                 .altname1 = SV("--untrusted"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&untrusted),
+                .dest = ArgBitFlagDest(&flags, DNDC_INPUT_IS_UNTRUSTED),
                 .help = "Input is untrusted and thus should not be allowed to import files, execute scripts or embed javascript in the output.",
                 .hidden = true,
             },
@@ -419,7 +407,7 @@ int main(int argc, char**argv){
                 .name = SV("--strip-spaces"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&strip_whitespace),
+                .dest = ArgBitFlagDest(&flags, DNDC_STRIP_WHITESPACE),
                 .help = "Strip trailing and leading whitespace from all output lines",
                 .hidden = false,
             },
@@ -427,7 +415,7 @@ int main(int argc, char**argv){
                 .name = SV("--dont-read"),
                 .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&dont_read),
+                .dest = ArgBitFlagDest(&flags, DNDC_DONT_READ),
                 .help = "Don't read any files (other than builtins and the initial input file). Python blocks can bypass this.",
                 .hidden = true,
             },
@@ -453,7 +441,7 @@ int main(int argc, char**argv){
         auto e = parse_args(&argparser, &args);
         if(e){
             print_argparse_error(&argparser, e);
-            fprintf(stderr, "Use --help to see usage\n");
+            fprintf(stderr, "Use --help to see usage.\n");
             return e;
             }
         if(hidden_help){
@@ -479,24 +467,6 @@ int main(int argc, char**argv){
         return 0;
     }
 
-    uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_SOURCE_IS_PATH_NOT_DATA
-        | DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM
-        ;
-    if(allow_bad_links)
-        flags |= DNDC_ALLOW_BAD_LINKS;
-    if(suppress_warnings)
-        flags |= DNDC_SUPPRESS_WARNINGS;
-    if(print_stats)
-        flags |= DNDC_PRINT_STATS;
-    if(report_orphans)
-        flags |= DNDC_REPORT_ORPHANS;
-    if(no_python)
-        flags |= DNDC_NO_PYTHON;
-    if(print_tree)
-        flags |= DNDC_PRINT_TREE;
-    if(print_links)
-        flags |= DNDC_PRINT_LINKS;
     if(print_depends){
         dependency_func = depends_print_callback;
         }
@@ -504,24 +474,6 @@ int main(int argc, char**argv){
         dependency_func = dndc_write_depends_file;
         dependency_user_data.depfile = dependency_path;
         }
-    if(no_threads)
-        flags |= DNDC_NO_THREADS;
-    if(dont_write)
-        flags |= DNDC_DONT_WRITE;
-    if(not cleanup)
-        flags |= DNDC_NO_CLEANUP;
-    if(use_site)
-        flags |= DNDC_PYTHON_UNISOLATED;
-    if(reformat_only)
-        flags |= DNDC_REFORMAT_ONLY;
-    if(dont_inline_images)
-        flags |= DNDC_DONT_INLINE_IMAGES;
-    if(untrusted)
-        flags |= DNDC_INPUT_IS_UNTRUSTED;
-    if(strip_whitespace)
-        flags |= DNDC_STRIP_WHITESPACE;
-    if(dont_read)
-        flags |= DNDC_DONT_READ;
     dependency_user_data.outfile = output_path;
 
     #ifdef BENCHMARKING
