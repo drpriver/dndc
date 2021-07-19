@@ -6,6 +6,10 @@
 #include "ByteBuilder.h"
 #include "dndc_types.h"
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 //
 // Forward declarations of functions that are shared between components,
 // including the main run function.
@@ -105,11 +109,11 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
 //
 static
 void
-parse_set_err(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, LongString);
+parse_set_err(DndcContext* ctx, NullUnspec(const char*) errchar, LongString);
 
 static
 void
-parse_set_err_q(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, StringView, StringView);
+parse_set_err_q(DndcContext* ctx, NullUnspec(const char*) errchar, StringView, StringView);
 
 //
 // Sets an error message originating from the source location that corresponds
@@ -117,11 +121,11 @@ parse_set_err_q(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, Strin
 //
 static
 void
-node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), LongString);
+node_set_err(DndcContext* ctx, const Node*, LongString);
 
 static
 void
-node_set_err_q(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView msg, StringView quoted);
+node_set_err_q(DndcContext* ctx, const Node* node, StringView msg, StringView quoted);
 
 //
 // Like node_set_err, but with an offset to the column.
@@ -131,7 +135,7 @@ node_set_err_q(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView ms
 //
 static
 void
-node_set_err_offset(Nonnull(DndcContext*)ctx, Nonnull(const Node*), int, LongString);
+node_set_err_offset(DndcContext* ctx, const Node*, int, LongString);
 
 //
 // Like node_set_err, but immediately prints the message instead of setting
@@ -141,7 +145,7 @@ node_set_err_offset(Nonnull(DndcContext*)ctx, Nonnull(const Node*), int, LongStr
 //
 static
 void
-node_print_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), StringView);
+node_print_err(DndcContext* ctx, const Node*, StringView);
 
 //
 // Like node_set_err, but immediately prints the message instead of setting a
@@ -149,38 +153,38 @@ node_print_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*), StringView);
 //
 static
 void
-node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView msg);
+node_print_warning(DndcContext* ctx, const Node* node, StringView msg);
 static
 void
-node_print_warning2(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView, StringView);
+node_print_warning2(DndcContext* ctx, const Node* node, StringView, StringView);
 
 //
 // Reports time to execute some component.
 //
 static
 void
-report_time(Nonnull(DndcContext*), StringView msg, uint64_t microseconds);
+report_time(DndcContext*, StringView msg, uint64_t microseconds);
 
 //
 // Reports size of some component.
 //
 static
 void
-report_size(Nonnull(DndcContext*), StringView msg, uint64_t microseconds);
+report_size(DndcContext*, StringView msg, uint64_t microseconds);
 
 //
 // Reports some information.
 //
 static
 void
-report_info(Nonnull(DndcContext*), StringView msg);
+report_info(DndcContext*, StringView msg);
 
 //
 // Reports an error that was set by a different part of the system.
 //
 static
 void
-report_set_error(Nonnull(DndcContext*));
+report_set_error(DndcContext*);
 
 //
 // Reports an error that did not originate from the source text. Should only be
@@ -188,7 +192,7 @@ report_set_error(Nonnull(DndcContext*));
 //
 static
 void
-report_system_error(Nonnull(DndcContext*)ctx, StringView msg);
+report_system_error(DndcContext* ctx, StringView msg);
 
 //
 // Getter function to turn a node handle to an acual pointer to a Node.
@@ -196,16 +200,16 @@ report_system_error(Nonnull(DndcContext*)ctx, StringView msg);
 // nodes can trigger pointer invalidation.
 //
 static inline
-Nonnull(Node*)
-get_node(Nonnull(DndcContext*), NodeHandle);
+Node*
+get_node(DndcContext*, NodeHandle);
 
 //
 // Like get_node, but will be available in the debugger as it is extern.
 // Don't use this, use get_node, this is purely for the debugger.
 //
 DNDC_API
-Nonnull(Node*)
-get_node_e(Nonnull(DndcContext*), NodeHandle);
+Node*
+get_node_e(DndcContext*, NodeHandle);
 
 
 //
@@ -219,14 +223,14 @@ get_node_e(Nonnull(DndcContext*), NodeHandle);
 //
 static inline
 bool
-node_has_attribute(Nonnull(const Node*) node, StringView attr);
+node_has_attribute(const Node* node, StringView attr);
 
 //
 // Checks if the node has a class or not.
 //
 static inline
 bool
-node_has_class(Nonnull(const Node*) node, StringView class);
+node_has_class(const Node* node, StringView class);
 
 //
 // Retrieves the value associate with attr key.
@@ -240,7 +244,7 @@ node_has_class(Nonnull(const Node*) node, StringView class);
 //
 static inline
 Nullable(StringView*)
-node_get_attribute(Nonnull(const Node*) node, StringView attr);
+node_get_attribute(const Node* node, StringView attr);
 
 //
 // Retrieves the id of the node. Handles the id being set via attribute. If
@@ -251,7 +255,7 @@ node_get_attribute(Nonnull(const Node*) node, StringView attr);
 //
 static inline
 Nullable(const StringView*)
-node_get_id(Nonnull(const Node*) node);
+node_get_id(const Node* node);
 
 //
 // Loads the text of a sourcefile given by sourcepath, or an error if
@@ -264,7 +268,7 @@ node_get_id(Nonnull(const Node*) node);
 //
 static
 Errorable_f(LongString)
-ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath);
+ctx_load_source_file(DndcContext* ctx, StringView sourcepath);
 
 //
 // Load a binary file as base64 text, or an error if something went wrong.
@@ -276,7 +280,7 @@ ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath);
 //
 static
 Errorable_f(LongString)
-ctx_load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath);
+ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath);
 
 //
 // Load a binary file as base64 text, or an error if something went wrong.
@@ -290,7 +294,7 @@ ctx_load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath);
 //
 static
 Errorable_f(LongString)
-load_processed_binary_file(Nonnull(FileCache*)cache, StringView binarypath, Nonnull(ByteBuilder*)bb);
+load_processed_binary_file(FileCache* cache, StringView binarypath, ByteBuilder* bb);
 
 //
 // Stores a file in the context as a special builtin file.
@@ -303,14 +307,14 @@ load_processed_binary_file(Nonnull(FileCache*)cache, StringView binarypath, Nonn
 //
 static inline
 void
-ctx_store_builtin_file(Nonnull(DndcContext*)ctx, LongString sourcepath, LongString text);
+ctx_store_builtin_file(DndcContext* ctx, LongString sourcepath, LongString text);
 
 //
 // Marks a file as being a dependency of the document. Deduplicates.
 //
 static inline
 void
-ctx_note_dependency(Nonnull(DndcContext*)ctx, StringView path);
+ctx_note_dependency(DndcContext* ctx, StringView path);
 
 //
 // Parses the nul-terminated source text;
@@ -319,7 +323,7 @@ ctx_note_dependency(Nonnull(DndcContext*)ctx, StringView path);
 //
 static
 Errorable_f(void)
-dndc_parse(Nonnull(DndcContext*), NodeHandle root, StringView filename, Nonnull(const char*) text);
+dndc_parse(DndcContext*, NodeHandle root, StringView filename, const char* text);
 
 
 //
@@ -338,7 +342,7 @@ print_node_and_children(Nonnull(DndcContext*), NodeHandle handle, int depth);
 //
 static
 Errorable_f(void)
-render_tree(Nonnull(DndcContext*), Nonnull(MStringBuilder*));
+render_tree(DndcContext*, MStringBuilder*);
 
 //
 // Writes the tree originating from the given node into the builder.
@@ -351,7 +355,7 @@ render_tree(Nonnull(DndcContext*), Nonnull(MStringBuilder*));
 static inline
 force_inline
 Errorable_f(void)
-render_node(Nonnull(DndcContext*), Nonnull(MStringBuilder*) restrict, Nonnull(Node*), int header_depth);
+render_node(DndcContext*, MStringBuilder* restrict, Node*, int header_depth);
 
 //
 // Writes the document tree (starting from the context's root node)
@@ -359,7 +363,7 @@ render_node(Nonnull(DndcContext*), Nonnull(MStringBuilder*) restrict, Nonnull(No
 //
 static
 Errorable_f(void)
-format_tree(Nonnull(DndcContext*), Nonnull(MStringBuilder*));
+format_tree(DndcContext*, MStringBuilder*);
 
 //
 // Traverses the tree to find all the link targets
@@ -368,7 +372,7 @@ format_tree(Nonnull(DndcContext*), Nonnull(MStringBuilder*));
 //
 static
 void
-gather_anchors(Nonnull(DndcContext*));
+gather_anchors(DndcContext*);
 
 //
 // Call this before any function that traverses the tree.
@@ -377,7 +381,7 @@ gather_anchors(Nonnull(DndcContext*));
 //
 static
 Errorable_f(void)
-check_depth(Nonnull(DndcContext*));
+check_depth(DndcContext*);
 
 //
 // Walks the tree to construct the nav block.
@@ -385,14 +389,14 @@ check_depth(Nonnull(DndcContext*));
 //
 static
 void
-build_nav_block(Nonnull(DndcContext*));
+build_nav_block(DndcContext*);
 
 //
 // Allocate a new node and return its handle.
 //
 static inline
 NodeHandle
-alloc_handle(Nonnull(DndcContext*));
+alloc_handle(DndcContext*);
 
 //
 // Execute a string representing python code. The string should be nul
@@ -401,7 +405,7 @@ alloc_handle(Nonnull(DndcContext*));
 //
 static
 Errorable_f(void)
-execute_python_string(Nonnull(DndcContext*), Nonnull(const char*), NodeHandle);
+execute_python_string(DndcContext*, Nonnull(const char*), NodeHandle);
 #ifndef PYTHONMODULE
 //
 // Initialize the python interpreter and the dndc python data types. Takes a
@@ -429,7 +433,7 @@ end_interpreter(void);
 //
 static
 void
-append_child(Nonnull(DndcContext*), NodeHandle parent, NodeHandle child);
+append_child(DndcContext* , NodeHandle parent, NodeHandle child);
 
 //
 // Find the target that the kebabed string view is actually a link to.
@@ -437,14 +441,14 @@ append_child(Nonnull(DndcContext*), NodeHandle parent, NodeHandle child);
 //
 static inline
 Nullable(StringView*)
-find_link_target(Nonnull(DndcContext*)ctx, StringView kebabed);
+find_link_target(DndcContext* ctx, StringView kebabed);
 
 //
 // Parses a line of a ::links block, which is of the form "link = target"
 //
 static inline
 Errorable_f(void)
-add_link_from_sv(Nonnull(DndcContext*)ctx, Nonnull(Node*)node);
+add_link_from_sv(DndcContext* ctx, Nonnull(Node*)node);
 
 //
 // Adds the link to the link map as derived from the header
@@ -453,7 +457,7 @@ add_link_from_sv(Nonnull(DndcContext*)ctx, Nonnull(Node*)node);
 //
 static inline
 void
-add_link_from_header(Nonnull(DndcContext*)ctx, StringView str);
+add_link_from_header(DndcContext* ctx, StringView str);
 
 
 //
@@ -463,13 +467,17 @@ add_link_from_header(Nonnull(DndcContext*)ctx, StringView str);
 static
 inline
 void
-convert_node_to_container_containing_clone_of_former_self(Nonnull(DndcContext*)ctx, NodeHandle handle);
+convert_node_to_container_containing_clone_of_former_self(DndcContext* ctx, NodeHandle handle);
 
 //
 // Adds special builtin-scripts and stylesheets to the source cache.
 //
 static inline
 void
-ctx_add_builtins(Nonnull(DndcContext*)ctx);
+ctx_add_builtins(DndcContext* ctx);
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
 #endif
