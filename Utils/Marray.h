@@ -33,7 +33,7 @@
 #include <assert.h>
 // Allocator
 #include "allocator.h"
-// For Nonnull and diagnostic suppression
+// For diagnostic suppression
 #include "common_macros.h"
 
 // Not really sure about this function tbh.
@@ -191,45 +191,44 @@ typedef struct Marray(MARRAY_T) {
 // Appends to the end of the marray, reallocating if necessary.
 MARRAY_LINKAGE
 void
-Marray_push(MARRAY_T)(Nonnull(MARRAY*), Allocator, MARRAY_T);
+Marray_push(MARRAY_T)(MARRAY*, Allocator, MARRAY_T);
 
 //
 // Frees the array and zeros out the members. The marray can then be re-used.
 MARRAY_LINKAGE
 void
-Marray_cleanup(MARRAY_T)(Nonnull(MARRAY*), Allocator);
+Marray_cleanup(MARRAY_T)(MARRAY*, Allocator);
 
 //
 // Makes the marray at least this capacity.
 MARRAY_LINKAGE
 void
-Marray_ensure_total(MARRAY_T)(Nonnull(MARRAY*), Allocator, size_t);
+Marray_ensure_total(MARRAY_T)(MARRAY*, Allocator, size_t);
 
 //
 // Ensures space for n additional items.
 MARRAY_LINKAGE
 void
-Marray_ensure_additional(MARRAY_T)(Nonnull(MARRAY*), Allocator, size_t);
+Marray_ensure_additional(MARRAY_T)(MARRAY*, Allocator, size_t);
 //
 // Appends the n items at the given pointer to the end of the marray,
 // reallocing if necessary.
 MARRAY_LINKAGE
 void
-Marray_extend(MARRAY_T)(Nonnull(MARRAY*), Allocator, Nonnull(const MARRAY_T*),
-        size_t);
+Marray_extend(MARRAY_T)(MARRAY*, Allocator, const MARRAY_T*, size_t);
 
 //
 // Inserts the element at the given index, shifting the remaining elements
 // backwards.
 MARRAY_LINKAGE
 void
-Marray_insert(MARRAY_T)(Nonnull(MARRAY*), Allocator, size_t, MARRAY_T);
+Marray_insert(MARRAY_T)(MARRAY*, Allocator, size_t, MARRAY_T);
 
 //
 // Removes an element by index and shifts the remaining elements forward.
 MARRAY_LINKAGE
 void
-Marray_remove(MARRAY_T)(Nonnull(MARRAY*), size_t);
+Marray_remove(MARRAY_T)(MARRAY*, size_t);
 
 //
 // Returns a pointer to an uninitialized element at the end of the marray,
@@ -237,8 +236,8 @@ Marray_remove(MARRAY_T)(Nonnull(MARRAY*), size_t);
 // Conceptually similar to push.
 MARRAY_LINKAGE
 warn_unused
-Nonnull(MARRAY_T*)
-Marray_alloc(MARRAY_T)(Nonnull(MARRAY*), Allocator);
+MARRAY_T*
+Marray_alloc(MARRAY_T)(MARRAY*, Allocator);
 
 //
 // Returns an index to an uninitialized element at the end of the marray,
@@ -247,7 +246,7 @@ Marray_alloc(MARRAY_T)(Nonnull(MARRAY*), Allocator);
 MARRAY_LINKAGE
 warn_unused
 size_t
-Marray_alloc_index(MARRAY_T)(Nonnull(MARRAY*), Allocator);
+Marray_alloc_index(MARRAY_T)(MARRAY*, Allocator);
 
 #endif
 
@@ -285,7 +284,7 @@ Marray_push(MARRAY_T)(MARRAY* marray, Allocator a, MARRAY_T value){
     }
 
 MARRAY_LINKAGE
-Nonnull(MARRAY_T*)
+MARRAY_T*
 Marray_alloc(MARRAY_T)(MARRAY* marray, Allocator a){
     Marray_ensure_additional(MARRAY_T)(marray, a, 1);
     MARRAY_T* result = &marray->data[marray->count++];
@@ -329,7 +328,7 @@ Marray_remove(MARRAY_T)(MARRAY* marray, size_t index){
 
 MARRAY_LINKAGE
 void
-Marray_extend(MARRAY_T)(MARRAY* marray, Allocator a, Nonnull(const MARRAY_T*) values, size_t n_values){
+Marray_extend(MARRAY_T)(MARRAY* marray, Allocator a, const MARRAY_T* values, size_t n_values){
     Marray_ensure_additional(MARRAY_T)(marray, a, n_values);
     (memcpy)(marray->data+marray->count, values, n_values*(sizeof(MARRAY_T)));
     marray->count+=n_values;
