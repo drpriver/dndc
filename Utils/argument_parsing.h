@@ -470,10 +470,8 @@ print_help(Nonnull(const ArgParser*) p, TermSize term_size){
             }
         }
     if(p->keyword.count)
-        puts("Keyword Arguments:\n"
-             "------------------\n"
-             "-h, --help: flag\n"
-             "    Print this help and exit.");
+        fputs("Keyword Arguments:\n"
+             "------------------", stdout);
     for(size_t i = 0; i < p->keyword.count; i++){
         auto arg = &p->keyword.args[i];
         if(arg->hidden)
