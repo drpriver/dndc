@@ -7,6 +7,8 @@
 // for chdir
 #include <direct.h>
 #define chdir _chdir
+#else
+#include <unistd.h>
 #endif
 #include "common_macros.h"
 #include "argument_parsing.h"
