@@ -211,6 +211,22 @@ msb_write_stripped_lines(MStringBuilder* sb, const char* restrict str, size_t le
         }
     sb->cursor = cursor;
     }
+
+//
+// Appends a path separator to the builder and then writes the given string.
+// If the builder is empty, a path separator is not appended. This prevents
+// accidentally turning a relative path into the wrong absolute path.
+//
+static inline
+void
+msb_append_path(MStringBuilder* sb, const char* restrict path, size_t length){
+    _check_msb_remaining_size(sb, length+1);
+    if(sb->cursor)
+        sb->data[sb->cursor++] = '/';
+    memcpy(sb->data + sb->cursor, path, length);
+    sb->cursor += length;
+    }
+
 #ifdef __clang__
 #pragma clang assume_nonnull end
 #endif

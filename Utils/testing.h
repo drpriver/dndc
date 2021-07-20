@@ -435,7 +435,7 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
             auto columns = get_terminal_size().columns;
             if(columns > 80)
                 columns = 80;
-            print_help(&argparser, columns);
+            print_argparse_help(&argparser, columns);
             return 1;
             }
         case LIST:

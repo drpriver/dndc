@@ -1,7 +1,9 @@
 #ifndef TERMINAL_LOGGER_C
 #define TERMINAL_LOGGER_C
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include "log_print.h"
 #include "common_macros.h"
 #include "term_util.h"
 

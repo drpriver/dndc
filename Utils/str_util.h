@@ -1,7 +1,10 @@
 #ifndef STR_UTIL_H
 #define STR_UTIL_H
+// size_t
+#include <stddef.h>
+// memchr
 #include <string.h>
-#include "common_macros.h"
+// StringView, etc.
 #include "long_string.h"
 
 #ifdef __clang__

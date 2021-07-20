@@ -1,8 +1,13 @@
 #ifndef PATH_UTIL_H
 #define PATH_UTIL_H
+// size_t
+#include <stddef.h>
+// bool
+#include <stdbool.h>
+// memchr
 #include <string.h>
+// StringView and currently force_inline, which is kind of janky.
 #include "long_string.h"
-#include "MStringBuilder.h"
 
 #ifdef _WIN32
 #ifndef BACKSLASH_IS_A_PATH_SEP
@@ -12,6 +17,10 @@
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
+#else
+#ifndef _Nullable
+#define _Nullable
+#endif
 #endif
 
 // Helper to distinguish what is a path separator.
@@ -20,7 +29,7 @@ force_inline
 bool
 is_sep(char c){
     #ifdef BACKSLASH_IS_A_PATH_SEP
-    return c == '/' or c == '\\';
+    return c == '/' || c == '\\';
     #else
     return c == '/';
     #endif
@@ -30,7 +39,7 @@ is_sep(char c){
 // on Windows.
 static inline
 force_inline
-Nullable(void*)
+void*_Nullable
 memsep(const char* str, size_t length){
     char* slash = memchr(str, '/', length);
     #ifdef BACKSLASH_IS_A_PATH_SEP
@@ -39,7 +48,6 @@ memsep(const char* str, size_t length){
     #endif
     return slash;
     }
-
 
 //
 // Returns if the path is an absolute path (aka starts from /).
@@ -135,21 +143,6 @@ path_strip_extension(StringView path){
             return path;
         }
     return path;
-    }
-
-//
-// Appends a path separator to the builder and then writes the given string.
-// If the builder is empty, a path separator is not appended. This prevents
-// accidentally turning a relative path into the wrong absolute path.
-//
-static inline
-void
-msb_append_path(MStringBuilder* sb, const char* restrict path, size_t length){
-    _check_msb_remaining_size(sb, length+1);
-    if(sb->cursor)
-        sb->data[sb->cursor++] = '/';
-    memcpy(sb->data + sb->cursor, path, length);
-    sb->cursor += length;
     }
 
 #ifdef __clang__

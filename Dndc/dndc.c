@@ -13,6 +13,7 @@
 #include "dndc_funcs.h"
 
 #include "path_util.h"
+#include "msb_extensions.h"
 #include "allocator.h"
 #include "mallocator.h"
 #include "linear_allocator.h"
@@ -455,7 +456,7 @@ int main(int argc, char**argv){
                 auto columns = get_terminal_size().columns;
                 if(columns > 80)
                     columns = 80;
-                print_help(&argparser, columns);
+                print_argparse_help(&argparser, columns);
                 putchar('\n');
                 print_wrapped("If a source argument is not given, dndc will "
                               "read from stdin. If an output argument is not "

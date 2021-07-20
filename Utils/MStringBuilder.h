@@ -1,13 +1,17 @@
 #ifndef MSTRING_BUILDER_H
 #define MSTRING_BUILDER_H
+#include <stddef.h>
 #include <string.h>
 #include <assert.h>
-#include "common_macros.h"
 #include "long_string.h"
 #include "allocator.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
+#else
+#ifndef _Null_unspecified
+#define _Null_unspecified
+#endif
 #endif
 
 //
@@ -16,7 +20,7 @@
 typedef struct MStringBuilder {
     size_t cursor;
     size_t capacity;
-    NullUnspec(char*) data;
+    char*_Null_unspecified data;
     const Allocator allocator;
 } MStringBuilder;
 
@@ -120,7 +124,7 @@ static inline
 force_inline
 void
 _check_msb_remaining_size(MStringBuilder* msb, size_t len){
-    if (msb->cursor + len > msb->capacity){
+    if(msb->cursor + len > msb->capacity){
         size_t new_size = (msb->capacity*3)/2;
         if(new_size < 32) new_size = 32;
         while(new_size < msb->cursor+len){
@@ -135,8 +139,8 @@ _check_msb_remaining_size(MStringBuilder* msb, size_t len){
 // If you have a c-str, strlen it yourself.
 static inline
 void
-msb_write_str(MStringBuilder* restrict msb, NullUnspec(const char*) restrict str, size_t len){
-    if(not len)
+msb_write_str(MStringBuilder* restrict msb, const char*_Null_unspecified restrict str, size_t len){
+    if(!len)
         return;
     _check_msb_remaining_size(msb, len);
     (memcpy)(msb->data + msb->cursor, str, len);

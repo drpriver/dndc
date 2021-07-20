@@ -2,6 +2,9 @@
 #define MSB_FORMAT_H
 
 #include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stddef.h>
 #include "MStringBuilder.h"
 #include "common_macros.h"
 #include "long_string.h"
@@ -158,7 +161,7 @@ _Static_assert(sizeof(ZERO_TO_NINETY_NINE)==200, "");
 //   ptrdiff_t length = (buff+10) - p; // always buff+10, even if buff is longer.
 //
 static inline
-char* 
+char*
 uint32_to_str_buffer(char*  buff, uint32_t value){
     // UINT32_MAX: 4294967295 (10 characters)
     char *p = buff+10; // 1 past the end
@@ -189,7 +192,7 @@ uint32_to_str_buffer(char*  buff, uint32_t value){
 // The math is:
 //   ptrdiff_t length = (buff+20) - p for this, as UINT64_MAX is 20 characters.
 static inline
-char* 
+char*
 uint64_to_str_buffer(char*  buff, uint64_t value){
     // UINT64_MAX: 18446744073709551615 (20 characters)
     char *p = buff+20; // 1 past the end
@@ -368,6 +371,11 @@ msb_format(MStringBuilder* sb, size_t n_items, const FormatArg* args){
 
 #define SELECT_MSB_FORMAT_IMPL(n) MSB_FORMAT_IMPL##n
 #define SELECT_MSB_FORMAT(n) SELECT_MSB_FORMAT_IMPL(n)
+// These use the variant-style formatter, but the FMT is generic and knows the
+// type, so we could dispatch to the specific format funcs instead.
+//
+// But whatever, these are mainly for convenience. If you care about
+// performance, you need to reserve and then directly write to the buffer.
 #define MSB_FORMAT_IMPL1(sb, a) do{ \
     msb_apply_format(sb, FMT(a));\
 }while(0)

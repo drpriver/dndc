@@ -10,6 +10,7 @@
 #include <stdlib.h>
 // fprintf
 #include <stdio.h>
+#include <assert.h>
 #include "long_string.h"
 #include "parse_numbers.h"
 
@@ -92,7 +93,7 @@ static inline ssize_t check_for_early_out_args(ArgParser* parser, const Args* ar
 // Prints a formatted help display for the command line arguments.
 // Second argument is the wrap width.
 //
-static inline void print_help(const ArgParser*, int);
+static inline void print_argparse_help(const ArgParser*, int);
 
 
 //
@@ -411,12 +412,12 @@ help_state_update(HelpState* hs, int n_to_print){
 
 static inline
 void
-print_wrapped_help(Nullable(const char*), int);
+print_wrapped_help(const char*_Nullable, int);
 
 // See top of file.
 static inline
 void
-print_help(const ArgParser* p, int columns){
+print_argparse_help(const ArgParser* p, int columns){
     printf("%s: %s\n", p->name, p->description);
     puts("");
     const int printed = printf("usage: %s", p->name);
@@ -666,7 +667,7 @@ next_tokenize_help(const char* help){
                 continue;
             }
         }
-    unreachable();
+    __builtin_unreachable();
     }
 
 static inline
@@ -754,7 +755,7 @@ parse_arg(ArgToParse* arg, StringView s){
     switch(arg->dest.type){
         case ARG_INTEGER64:{
             struct Int64Result e = parse_int64(s.text, s.length);
-            if(unlikely(e.errored)){
+            if(e.errored){
                 return ARGPARSE_CONVERSION_ERROR;
                 }
             int64_t value = e.result;
@@ -762,7 +763,7 @@ parse_arg(ArgToParse* arg, StringView s){
             }break;
         case ARG_UINTEGER64:{
             struct Uint64Result e = parse_unsigned_human(s.text, s.length);
-            if(unlikely(e.errored)) {
+            if(e.errored) {
                 return ARGPARSE_CONVERSION_ERROR;
                 }
             uint64_t value = e.result;
@@ -770,7 +771,7 @@ parse_arg(ArgToParse* arg, StringView s){
             }break;
         case ARG_INT:{
             struct IntResult e = parse_int(s.text, s.length);
-            if(unlikely(e.errored)) {
+            if(e.errored) {
                 return ARGPARSE_CONVERSION_ERROR;
                 }
             int value = e.result;
@@ -1155,7 +1156,7 @@ print_argparse_error(ArgParser* parser, enum ArgParseError error){
                 return;
                 }
             ArgToParse* arg_to_parse = parser->failed.arg_to_parse;
-            fprintf(stderr, "Insufficient arguments.. %d arguments are required.\n", arg_to_parse->min_num);
+            fprintf(stderr, "Insufficient arguments. %d arguments are required.\n", arg_to_parse->min_num);
             }return;
         case ARGPARSE_VISITED_NO_ARG_GIVEN:{
             ArgToParse* arg_to_parse = parser->failed.arg_to_parse;
