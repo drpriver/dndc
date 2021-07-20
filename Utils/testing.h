@@ -386,28 +386,22 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
         {
             .name = SV("-C"),
             .altname1 = SV("--change-directory"),
-            .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&directory),
             .help = "Directory to change the working directory to before executing tests.",
-            .hide_default = true,
         },
         {
             .name = SV("--no-colors"),
-            .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&no_colors),
             .help = "Dont use ANSI escape codes to print colors in reporting.",
-            .hide_default = true,
         },
         {
             .name = SV("-t"),
             .altname1 = SV("--target"),
-            .min_num = 0,
             .max_num = test_funcs_count,
             .dest = ArgEnumDest(tests_to_run, &targets),
             .help = "If given, only run the named test function. If not given, all tests will be run.",
-            .hide_default = true,
         },
     };
     enum {HELP=0, LIST=1};

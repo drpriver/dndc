@@ -230,46 +230,37 @@ int main(int argc, char**argv){
         ArgToParse pos_args[] = {
             [0] = {
                 .name = SV("source"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&source_path),
                 .help = "Source file (.dnd file) to read from.",
-                .hide_default = true,
                 },
             };
         ArgToParse kw_args[] = {
             {
                 .name = SV("-o"),
                 .altname1 = SV("--output"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&output_path),
                 .help = "output path (.html file) to write to.",
-                .hide_default = true,
             },
             {
                 .name = SV("-d"),
                 .altname1 = SV("--depends-path"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&dependency_path),
                 .help = "If given, where to write a make-style dependency file.",
-                .hide_default = true,
             },
             {
                 .name = SV("-C"),
                 .altname1 = SV("--base-directory"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&base_dir),
                 .help = "Paths in source files will be relative "
                         "to the given directory.\n"
                         "If not given, everything is relative to cwd.",
-                .hide_default = true,
             },
             {
                 .name = SV("--report-orphans"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_REPORT_ORPHANS),
                 .help = "Report orphaned nodes (for debugging scripts).",
@@ -277,7 +268,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--no-python"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_NO_PYTHON),
                 .help = "Don't execute python nodes.",
@@ -285,7 +275,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--print-tree"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_PRINT_TREE),
                 .help = "Print out the entire document tree.",
@@ -293,7 +282,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--print-links"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_PRINT_LINKS),
                 .help = "Print out all links (and what they target) known by "
@@ -302,7 +290,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--print-syntax"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&print_syntax),
                 .help = "Print out the input document with syntax highlighting.",
@@ -310,7 +297,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--print-stats"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_PRINT_STATS),
                 .help = "Log some informative statistics.",
@@ -318,7 +304,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--print-depends"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&print_depends),
                 .help = "Print out what paths the document depends on.",
@@ -326,7 +311,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--allow-bad-links"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_ALLOW_BAD_LINKS),
                 .help = "Warn instead of erroring if a link can't be resolved.",
@@ -334,7 +318,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--suppress-warnings"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_SUPPRESS_WARNINGS),
                 .help = "Don't report non-fatal errors.",
@@ -342,7 +325,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--dont-write"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_DONT_WRITE),
                 .help = "Don't write out the document.",
@@ -350,7 +332,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--single-threaded"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_NO_THREADS),
                 .help = "Do not create worker threads, do everything in the "
@@ -359,7 +340,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--cleanup"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_NO_CLEANUP),
                 .help = "Cleanup all resources (memory allocations, etc.).\n"
@@ -368,7 +348,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--use-site"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_PYTHON_UNISOLATED),
                 .help = "Don't isolate python, import site, etc.\n"
@@ -377,7 +356,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--format"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_REFORMAT_ONLY),
                 .help = "Instead of rendering to html, render to .dnd with "
@@ -386,7 +364,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--dont-inline-images"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_DONT_INLINE_IMAGES),
                 .help = "Instead of base64ing the images, use a link.",
@@ -395,7 +372,6 @@ int main(int argc, char**argv){
             {
                 .name = SV("--untrusted-input"),
                 .altname1 = SV("--untrusted"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_INPUT_IS_UNTRUSTED),
                 .help = "Input is untrusted and thus should not be allowed to "
@@ -405,7 +381,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--strip-spaces"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_STRIP_WHITESPACE),
                 .help = "Strip trailing and leading whitespace from all output "
@@ -414,7 +389,6 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--dont-read"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_DONT_READ),
                 .help = "Don't read any files (other than builtins and the "

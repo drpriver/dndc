@@ -316,7 +316,7 @@ typedef struct ArgToParse {
     bool visited;
     //
     // Whether to show the default value in the help printout.
-    bool hide_default; // maybe we'll want a bitflags field with options instead.
+    bool show_default; // maybe we'll want a bitflags field with options instead.
     // Whether to hide this flag from the help output.
     // Keyword argument only.
     bool hidden;
@@ -540,7 +540,7 @@ print_arg_help(const ArgToParse* arg, int columns){
         }
     printf(": %s", typename.text);
 
-    if(arg->min_num != 0 || arg->hide_default){
+    if(arg->min_num != 0 || !arg->show_default){
         print_wrapped_help(help, columns);
         if(type == ARG_ENUM)
             print_enum_options(arg->dest.enum_pointer);
