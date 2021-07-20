@@ -259,7 +259,7 @@ int main(int argc, char**argv){
         clear_parser(&argparser);
         Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
         if(check_for_help(&args)){
-            print_help(&argparser);
+            print_argparse_help(&argparser);
             continue;
             }
         if(check_for_version(&args)){

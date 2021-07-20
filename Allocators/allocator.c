@@ -1,11 +1,17 @@
 #ifndef ALLOCATOR_C
 #define ALLOCATOR_C
 #include <stddef.h>
+// abort
+#include <stdlib.h>
 #include "allocator.h"
 #include "linear_allocator.h"
 #include "mallocator.h"
 #include "recording_allocator.h"
 #include "arena_allocator.h"
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
 
 static inline
 void
@@ -13,34 +19,28 @@ Allocator_free_all(Allocator a){
     switch(a.type){
         case ALLOCATOR_UNSET:
             abort();
-            break;
+            return;
         case ALLOCATOR_MALLOC:
             abort();
-            break;
+            return;
         case ALLOCATOR_LINEAR:
             linear_reset(a._data);
-            break;
+            return;
         case ALLOCATOR_RECORDED:
             recording_free_all(a._data);
-            break;
+            return;
         case ALLOCATOR_ARENA:
             ArenaAllocator_free_all(a._data);
-            break;
-    PushDiagnostic();
-    SuppressCoveredSwitchDefault();
-        default:
-            abort();
-            break;
-    PopDiagnostic();
+            return;
         }
+    abort();
     }
 
 MALLOC_FUNC
-ALLOCATOR_SIZE(2)
 static inline
 warn_unused
 // force_inline
-Nonnull(void*)
+void*
 Allocator_alloc(Allocator a, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
@@ -54,22 +54,16 @@ Allocator_alloc(Allocator a, size_t size){
             return recording_alloc(a._data, size);
         case ALLOCATOR_ARENA:
             return ArenaAllocator_alloc(a._data, size);
-    PushDiagnostic();
-    SuppressCoveredSwitchDefault();
-        default:
-            abort();
-            break;
-    PopDiagnostic();
         }
-    unreachable();
+    abort();
+    __builtin_unreachable();
     }
 
 MALLOC_FUNC
-ALLOCATOR_SIZE(2)
 static inline
 warn_unused
 // force_inline
-Nonnull(void*)
+void*
 Allocator_zalloc(Allocator a, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
@@ -83,22 +77,16 @@ Allocator_zalloc(Allocator a, size_t size){
             return recording_zalloc(a._data, size);
         case ALLOCATOR_ARENA:
             return ArenaAllocator_zalloc(a._data, size);
-    PushDiagnostic();
-    SuppressCoveredSwitchDefault();
-        default:
-            abort();
-            break;
-    PopDiagnostic();
         }
-    unreachable();
+    abort();
+    __builtin_unreachable();
     }
 
-ALLOCATOR_SIZE(4)
 static inline
 // force_inline
 warn_unused
-Nonnull(void*)
-Allocator_realloc(Allocator a, Nullable(void*) data, size_t orig_size, size_t size){
+void*
+Allocator_realloc(Allocator a, void*_Nullable data, size_t orig_size, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
             abort();
@@ -111,66 +99,58 @@ Allocator_realloc(Allocator a, Nullable(void*) data, size_t orig_size, size_t si
             return recording_realloc(a._data, data, orig_size, size);
         case ALLOCATOR_ARENA:
             return (void*)ArenaAllocator_realloc(a._data, data, orig_size, size);
-    PushDiagnostic();
-    SuppressCoveredSwitchDefault();
-        default:
-            abort();
-            break;
-    PopDiagnostic();
         }
-    unreachable();
+    abort();
+    __builtin_unreachable();
     }
 
 static inline
 // force_inline
 void
-Allocator_free(Allocator a, Nullable(const void*) data, size_t size){
+Allocator_free(Allocator a, const void*_Nullable data, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
             abort();
-            break;
+            return;
         case ALLOCATOR_LINEAR:
             linear_free(a._data, data, size);
-            break;
+            return;
         case ALLOCATOR_MALLOC:
             const_free(data);
-            break;
+            return;
         case ALLOCATOR_RECORDED:
             recording_free(a._data, data, size);
-            break;
+            return;
         case ALLOCATOR_ARENA:
-            break;
-    PushDiagnostic();
-    SuppressCoveredSwitchDefault();
-        default:
-            abort();
-            break;
-    PopDiagnostic();
+            return;
         }
+    abort();
     }
 
-ALLOCATOR_SIZE(3)
 static inline
 warn_unused
 // force_inline
-Nonnull(void*)
-Allocator_dupe(Allocator allocator, Nonnull(const void*) data, size_t size){
+void*
+Allocator_dupe(Allocator allocator, const void* data, size_t size){
     void* result = Allocator_alloc(allocator, size);
     memcpy(result, data, size);
     return result;
     }
 
 MALLOC_FUNC
-ALLOCATOR_SIZE(3)
 static inline
 warn_unused
-Nonnull(char*)
-Allocator_strndup(Allocator allocator, Nonnull(const char*)str, size_t length){
+char*
+Allocator_strndup(Allocator allocator, const char* str, size_t length){
     char* result = Allocator_alloc(allocator, length+1);
     unhandled_error_condition(!result);
-    if(likely(length))
+    if(length)
         memcpy(result, str, length);
     result[length] = '\0';
     return result;
     }
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 #endif

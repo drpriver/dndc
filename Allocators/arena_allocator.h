@@ -1,7 +1,27 @@
 #ifndef ARENA_ALLOCATOR_H
 #define ARENA_ALLOCATOR_H
+// size_t
 #include <stddef.h>
-#include "common_macros.h"
+// malloc, free
+#include <stdlib.h>
+// memcpy, memset
+#include <string.h>
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#else
+#ifndef _Nullable
+#define _Nullable
+#endif
+#endif
+
+#ifndef force_inline
+#if defined(__GNUC__) || defined(__clang__)
+#define force_inline __attribute__((always_inline))
+#else
+#define force_inline
+#endif
+#endif
 
 //
 // Fairly basic arena allocator. If it can fit an allocation, it just bumps a
@@ -21,7 +41,7 @@
 //
 // Header for a large allocation. Used to maintain a linked list of allocations.
 typedef struct BigAllocation {
-    Nullable(struct BigAllocation*) next;
+    struct BigAllocation*_Nullable next;
 }BigAllocation;
 
 #ifndef PAGE_SIZE
@@ -40,7 +60,7 @@ enum {ARENA_BUFFER_SIZE = ARENA_SIZE-sizeof(void*)-sizeof(size_t)-sizeof(size_t)
 // implemented if reallocing the last allocation.
 //
 typedef struct Arena{
-    Nullable(struct Arena*) prev; // The previous, exhausted arena.
+    struct Arena*_Nullable prev; // The previous, exhausted arena.
     size_t used; // How much of this arena has been used.
     size_t last; // Before the last allocation, how much had been used.
     char buff[ARENA_BUFFER_SIZE];
@@ -64,8 +84,8 @@ round_size_up(size_t size){
 // Allocates an uninitialized chunk of memory from the arena.
 //
 static
-Nonnull(void*)
-ArenaAllocator_alloc(Nonnull(ArenaAllocator*)aa, size_t size){
+void*
+ArenaAllocator_alloc(ArenaAllocator* aa, size_t size){
     size = round_size_up(size);
     if(size > ARENA_BUFFER_SIZE){
         BigAllocation* ba = malloc(sizeof(*ba)+size);
@@ -96,8 +116,8 @@ ArenaAllocator_alloc(Nonnull(ArenaAllocator*)aa, size_t size){
 // Allocates a zeroed chunk of memory from the arena.
 //
 static
-Nonnull(void*)
-ArenaAllocator_zalloc(Nonnull(ArenaAllocator*)aa, size_t size){
+void*
+ArenaAllocator_zalloc(ArenaAllocator* aa, size_t size){
     size = round_size_up(size);
     if(size > ARENA_SIZE/2){
         BigAllocation* ba = calloc(1, sizeof(*ba)+size);
@@ -132,8 +152,8 @@ ArenaAllocator_zalloc(Nonnull(ArenaAllocator*)aa, size_t size){
 // was the last allocation. If not, is forced to just alloc + memcpy.
 //
 static
-Nullable(void*)
-ArenaAllocator_realloc(Nonnull(ArenaAllocator*)aa, Nullable(void*)ptr, size_t old_size, size_t new_size){
+void*_Nullable
+ArenaAllocator_realloc(ArenaAllocator* aa, void*_Nullable ptr, size_t old_size, size_t new_size){
     if(!old_size || !ptr){
         return ArenaAllocator_alloc(aa, new_size);
         }
@@ -180,7 +200,7 @@ ArenaAllocator_realloc(Nonnull(ArenaAllocator*)aa, Nullable(void*)ptr, size_t ol
 //
 static
 void
-ArenaAllocator_free_all(Nullable(ArenaAllocator*)aa){
+ArenaAllocator_free_all(ArenaAllocator*_Nullable aa){
     Arena* arena = aa->arena;
     while(arena){
         Arena* to_free = arena;
@@ -202,5 +222,9 @@ ArenaAllocator_free_all(Nullable(ArenaAllocator*)aa){
 // Free is not supported, but maybe we should do the linear allocator strategy?
 // Currently, the type erased Allocator just ignores frees.
 //
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
 #endif
