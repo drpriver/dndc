@@ -1175,8 +1175,111 @@ print_argparse_error(ArgParser* parser, enum ArgParseError error){
         return;
     }
 
+#ifdef ARGPARSE_EXAMPLE
+// This is an example of how to use this header.  To compile, make a .c file,
+// #define ARGPARSE_EXAMPLE and include this header.
+//
+// Or, if you're feeling spicy,
+//   `echo '#include "argument_parsing.h"' | cc -DARGPARSE_EXAMPLE -xc -o argparse_example -`
+// You may need to add `-I` for whatever directory you put this file in.
+int
+main(int argc, const char*_Null_unspecified*_Null_unspecified argv){
+    Args args = {argc?argc-1:0, argc?argv+1:NULL}; // argc can be zero.
+    LongString somepath = LS("");
+    LongString output = LS("");
+    ArgToParse pos_args[] = {
+        [0] = {
+                .name = SV("somepath"),
+                .min_num = 1,
+                .max_num = 1,
+                .dest = ARGDEST(&somepath),
+                .help = "Source file (.txt file) to read from.",
+                .hide_default = true,
+            },
+        };
+    int n_times = 5;
+    bool dry_run = false;
+    ArgToParse kw_args[] = {
+            {
+                .name = SV("-o"),
+                .altname1 = SV("--output"),
+                .max_num = 1,
+                .dest = ARGDEST(&output),
+                .hide_default = true,
+                .help = "Where to write the output file."
+            },
+            {
+                .name = SV("-n"),
+                .altname1 = SV("--n-times"),
+                .max_num = 1,
+                .dest = ARGDEST(&n_times),
+                .hide_default = false,
+                .help = "Do it n times.",
+            },
+            {
+                .name = SV("--dry-run"),
+                .max_num = 1,
+                .dest = ARGDEST(&dry_run),
+                .help = "Do everything but actually write the file."
+            },
+        };
+    enum {HELP=0, VERSION};
+    ArgToParse early_args[] = {
+            [HELP] = {
+                .name = SV("-h"),
+                .altname1 = SV("--help"),
+                .help = "Print this help and exit.",
+            },
+            [VERSION] = {
+                .name = SV("-v"),
+                .altname1 = SV("--version"),
+                .help = "Print the version and exit.",
+            },
+        };
+    #define arrlen(arr) (sizeof(arr)/sizeof((arr)[0]))
+    ArgParser parser = {
+        .name = argc?argv[0]:"argparse_example",
+        .description = "An example of how to use the argparser.",
+        .positional.args = pos_args,
+        .positional.count = arrlen(pos_args),
+        .early_out.args = early_args,
+        .early_out.count = arrlen(early_args),
+        .keyword.args = kw_args,
+        .keyword.count = arrlen(kw_args),
+    };
+    // Real program would use OS apis to get the width of the terminal.
+    int columns = 80;
+    switch(check_for_early_out_args(&parser, &args)){
+        case HELP:
+            print_argparse_help(&parser, columns);
+            return 0;
+        case VERSION:
+            puts("argparse_example v1.2.3");
+            return 0;
+        default:
+            break;
+        }
+    enum ArgParseError error = parse_args(&parser, &args, ARGPARSE_FLAGS_NONE);
+    if(error){
+        print_argparse_error(&parser, error);
+        return error;
+        }
+    // Parsing has succeeded at this point.
+    // Real program would then do stuff with these values.
+    printf("somepath = '%s'\n", somepath.text);
+    if(output.length)
+        printf("output = '%s'\n", output.text);
+    printf("n_times = %d\n", n_times);
+    puts(dry_run? "dry_run = true": "dry_run = false");
+    return 0;
+}
+
+#endif
+
 #ifdef __clang__
 #pragma clang assume_nonnull end
 #endif
+
+
 
 #endif
