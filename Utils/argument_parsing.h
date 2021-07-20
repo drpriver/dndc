@@ -1205,7 +1205,6 @@ main(int argc, const char*_Null_unspecified*_Null_unspecified argv){
                 .altname1 = SV("--output"),
                 .max_num = 1,
                 .dest = ARGDEST(&output),
-                .hide_default = true,
                 .help = "Where to write the output file."
             },
             {
@@ -1213,7 +1212,7 @@ main(int argc, const char*_Null_unspecified*_Null_unspecified argv){
                 .altname1 = SV("--n-times"),
                 .max_num = 1,
                 .dest = ARGDEST(&n_times),
-                .hide_default = false,
+                .show_default = true,
                 .help = "Do it n times.",
             },
             {
