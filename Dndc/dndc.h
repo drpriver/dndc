@@ -28,6 +28,7 @@
 #define DNDC_NULLDEP(x) x
 #endif
 
+// This can be defined before you include for your own usage.
 #ifndef DNDC_API
 #ifdef _WIN32
 #define DNDC_API __declspec(dllimport)

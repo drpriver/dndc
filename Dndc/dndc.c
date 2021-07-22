@@ -1,9 +1,9 @@
-// define DNDC_API before including dndc.h
 #ifdef LOG_LEVEL
 #undef LOG_LEVEL
 #endif
 #define LOG_LEVEL LOG_LEVEL_INFO
 
+// define DNDC_API before including dndc.h
 #include "dndc_api_def.h"
 #include "dndc.h"
 #include "dndc_long_string.h"
@@ -33,11 +33,14 @@
 #include "term_util.h"
 #endif
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
 
 // Unsure of where to put this. So, just putting it here for now.
 typedef struct BinaryJob{
     Marray(StringView) sourcepaths;
-    Nonnull(FileCache*)b64cache;
+    FileCache* b64cache;
 } BinaryJob;
 
 static
@@ -66,7 +69,7 @@ THREADFUNC(binary_worker){
 // joined by the time we exit.
 static
 Errorable_f(void)
-do_python_and_load_images(Nonnull(DndcContext*)ctx){
+do_python_and_load_images(DndcContext* ctx){
     Errorable(void) result = {};
     // Setup for the worker thread.
     auto flags = ctx->flags;
@@ -204,14 +207,14 @@ void
 dndc_print_out_syntax(LongString source_path);
 static
 int
-dndc_write_depends_file(Nonnull(void*)user_data, size_t npaths, Nonnull(StringView*) paths);
+dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths);
 
 struct DependencyUserData {
     LongString outfile;
     LongString depfile;
 };
 
-static int depends_print_callback(void*_Nullable, size_t, Nonnull(StringView*));
+static int depends_print_callback(void*_Nullable, size_t, StringView*);
 
 int main(int argc, char**argv){
     LongString source_path = LS("");
@@ -515,7 +518,7 @@ int main(int argc, char**argv){
     }
 static
 int
-depends_print_callback(void*_Nullable unused, size_t npaths, Nonnull(StringView*) paths){
+depends_print_callback(void*_Nullable unused, size_t npaths, StringView* paths){
     (void)unused;
     for(size_t i = 0; i < npaths; i++){
         StringView path = paths[i];
@@ -525,7 +528,7 @@ depends_print_callback(void*_Nullable unused, size_t npaths, Nonnull(StringView*
     }
 static
 int
-dndc_write_depends_file(Nonnull(void*)user_data, size_t npaths, Nonnull(StringView*) paths){
+dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths){
     struct DependencyUserData* ud = user_data;
     if(!ud->depfile.length || !ud->outfile.length)
         return 0;
@@ -547,6 +550,7 @@ dndc_write_depends_file(Nonnull(void*)user_data, size_t npaths, Nonnull(StringVi
         }
     auto deptext = msb_borrow(&msb);
     auto write_err = write_file(ud->depfile.text, deptext.text, deptext.length);
+    msb_destroy(&msb);
     if(write_err.errored){
         perror("Error on write");
         return write_err.errored;
@@ -1109,7 +1113,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
 // Idk where to put this.
 static
 void
-print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
+print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
     auto node = get_node(ctx, handle);
     for(int i = 0 ; i < depth*2; i++){
         putchar(' ');
@@ -1169,6 +1173,12 @@ print_node_and_children(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
         }
     }
 
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
+
+
+
 #include "dndc_htmlgen.c"
 #include "dndc_parser.c"
 #include "dndc_context.c"
@@ -1187,11 +1197,15 @@ internal_init_dndc_python_interpreter(uint64_t flags){
 }
 static
 Errorable_f(void)
-execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)str, NodeHandle node){
+execute_python_string(DndcContext* ctx, const char* str, NodeHandle node){
     (void)ctx, (void)str, (void)node;
     return (Errorable(void)){.errored=OS_ERROR};
     }
 
+#endif
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
 #endif
 
 #ifndef PYTHONMODULE
@@ -1199,7 +1213,7 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)str, NodeHan
 
 DNDC_API
 int
-dndc_format(LongString source_text, Nonnull(LongString*)output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
+dndc_format(LongString source_text, LongString* output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
     uint64_t flags = 0
         | DNDC_PYTHON_IS_INIT
         | DNDC_SUPPRESS_WARNINGS
@@ -1231,7 +1245,7 @@ dndc_free_string(LongString str){
 
 DNDC_API
 void
-dndc_stderr_error_func(Nullable(void*)unused, int type, const char*_Nonnull filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
+dndc_stderr_error_func(Nullable(void*)unused, int type, const char* filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
     (void)unused;
     (void)message_len;
     switch((enum DndcErrorMessageType)type){
@@ -1258,7 +1272,7 @@ dndc_stderr_error_func(Nullable(void*)unused, int type, const char*_Nonnull file
 
 static
 Nullable(const char*)
-find_double_colon(Nonnull(const char*) haystack, size_t length){
+find_double_colon(const char* haystack, size_t length){
     if(length < 2)
         return NULL;
     const char* end = haystack + length;
@@ -1277,7 +1291,7 @@ find_double_colon(Nonnull(const char*) haystack, size_t length){
 #ifdef DNDCMAIN
 static
 void
-dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(const char*)begin, size_t length){
+dndc_syntax_func(void* _Nullable data, int type, int line, int col, const char* begin, size_t length){
     (void)line;
     (void)col;
     const char** where = data;
@@ -1364,7 +1378,7 @@ dndc_print_out_syntax(LongString source_path){
 static inline
 force_inline
 const uint16_t* _Nullable
-mem_utf16(const uint16_t* _Nonnull haystack, uint16_t needle, size_t ncode_units){
+mem_utf16(const uint16_t* haystack, uint16_t needle, size_t ncode_units){
     // A 1 in each utf-16 code unit slot.
     const uint64_t ones = 0x0001000100010001;
     const uint64_t needle_ = needle; // Basically a cast.
@@ -1402,7 +1416,7 @@ mem_utf16(const uint16_t* _Nonnull haystack, uint16_t needle, size_t ncode_units
 static inline
 force_inline
 Nullable(const uint16_t*)
-find_double_colon_utf16(Nonnull(const uint16_t*) haystack, size_t ncode_units){
+find_double_colon_utf16(const uint16_t* haystack, size_t ncode_units){
     if(ncode_units < 2)
         return NULL;
     const uint16_t* end = haystack + ncode_units;
@@ -1420,7 +1434,7 @@ find_double_colon_utf16(Nonnull(const uint16_t*) haystack, size_t ncode_units){
 
 DNDC_API
 int
-dndc_analyze_syntax(StringView source_text, Nonnull(DndcSyntaxFunc*) syntax_func, Nullable(void*)syntax_data){
+dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullable(void*)syntax_data){
     // this is only needed for raw nodes
     ptrdiff_t raw_indentation = 0;
     int line = 0;
@@ -1549,7 +1563,7 @@ dndc_analyze_syntax(StringView source_text, Nonnull(DndcSyntaxFunc*) syntax_func
 //
 DNDC_API
 int
-dndc_analyze_syntax_utf16(StringViewUtf16 source_text, Nonnull(DndcSyntaxFuncUtf16*) syntax_func, Nullable(void*)syntax_data){
+dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* syntax_func, Nullable(void*)syntax_data){
     // this is only needed for raw nodes
     ptrdiff_t raw_indentation = 0;
     int line = 0;
@@ -1673,7 +1687,7 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, Nonnull(DndcSyntaxFuncUtf
 }
 
 DNDC_API
-Nonnull(struct DndcFileCache*)
+struct DndcFileCache*
 dndc_create_filecache(void){
     struct DndcFileCache* result = malloc(sizeof(*result));
     Allocator al = get_mallocator();
@@ -1682,26 +1696,26 @@ dndc_create_filecache(void){
     }
 DNDC_API
 void
-dndc_filecache_destroy(Nonnull(struct DndcFileCache*)cache){
+dndc_filecache_destroy(struct DndcFileCache* cache){
     FileCache_clear(cache);
     free(cache);
 }
 
 DNDC_API
 int
-dndc_filecache_remove(Nonnull(struct DndcFileCache*)cache, StringView path){
+dndc_filecache_remove(struct DndcFileCache* cache, StringView path){
     return FileCache_maybe_remove(cache, path);
     }
 
 DNDC_API
 void
-dndc_filecache_clear(Nonnull(struct DndcFileCache*)cache){
+dndc_filecache_clear(struct DndcFileCache* cache){
     FileCache_clear(cache);
     }
 
 DNDC_API
 int
-dndc_filecache_has_path(Nonnull(struct DndcFileCache*)cache, struct DndcStringView path){
+dndc_filecache_has_path(struct DndcFileCache* cache, StringView path){
     return FileCache_has_file(cache, path);
     }
 
@@ -1749,3 +1763,7 @@ dndc_compile_dnd_file(unsigned long long flags, struct DndcStringView base_direc
     auto err = run_the_dndc(flags, base_directory, source_path, output_path, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data);
     return err.errored;
     }
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif

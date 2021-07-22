@@ -16,9 +16,13 @@
 #include "str_util.h"
 #include "path_util.h"
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 static inline
 bool
-node_has_attribute(Nonnull(const Node*) node, StringView attr){
+node_has_attribute(const Node* node, StringView attr){
     // TODO: maybe use a dict? Idk how many attributes we actually use.
     // Maybe if count is greater than some N we sort and do a binary search?
     // In using this program, I don't think I've ever exceeded 2 attributes.
@@ -33,7 +37,7 @@ node_has_attribute(Nonnull(const Node*) node, StringView attr){
 
 static inline
 bool
-node_has_class(Nonnull(const Node*) node, StringView c){
+node_has_class(const Node* node, StringView c){
     if(!node->classes)
         return false;
     RARRAY_FOR_EACH(cls, node->classes){
@@ -44,7 +48,7 @@ node_has_class(Nonnull(const Node*) node, StringView c){
     }
 static inline
 Nullable(StringView*)
-node_get_attribute(Nonnull(const Node*) node, StringView attr){
+node_get_attribute(const Node* node, StringView attr){
     // TODO: maybe use a dict? Idk how many attributes we actually use.
     // Maybe if count is greater than some N we sort and do a binary search?
     // In using this program, I don't think I've ever exceeded 2 attributes.
@@ -59,7 +63,7 @@ node_get_attribute(Nonnull(const Node*) node, StringView attr){
 
 static inline
 Nullable(const StringView*)
-node_get_id(Nonnull(const Node*) node){
+node_get_id(const Node* node){
     if(node_has_attribute(node, SV("noid")))
         return NULL;
     const StringView* id = node_get_attribute(node, SV("id"));
@@ -71,7 +75,7 @@ node_get_id(Nonnull(const Node*) node){
     }
 static
 void
-parse_set_err(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, LongString msg){
+parse_set_err(DndcContext* ctx, NullUnspec(const char*) errchar, LongString msg){
     int col = (int)(errchar - ctx->linestart);
     ctx->error.filename = ctx->filename;
     ctx->error.line = ctx->lineno;
@@ -81,7 +85,7 @@ parse_set_err(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, LongStr
 
 static
 void
-parse_set_err_q(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, StringView msg, StringView quoted){
+parse_set_err_q(DndcContext* ctx, NullUnspec(const char*) errchar, StringView msg, StringView quoted){
     int col = (int)(errchar - ctx->linestart);
     ctx->error.filename = ctx->filename;
     ctx->error.line = ctx->lineno;
@@ -96,7 +100,7 @@ parse_set_err_q(Nonnull(DndcContext*)ctx, NullUnspec(const char*) errchar, Strin
 
 static
 void
-node_set_err_q(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView msg, StringView quoted){
+node_set_err_q(DndcContext* ctx, const Node* node, StringView msg, StringView quoted){
     MStringBuilder msb = {.allocator=ctx->string_allocator};
     ctx->error.filename = node->filename;
     ctx->error.line = node->row;
@@ -110,7 +114,7 @@ node_set_err_q(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView ms
 
 static
 void
-node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, LongString ls){
+node_set_err(DndcContext* ctx, const Node* node, LongString ls){
     ctx->error.filename = node->filename;
     ctx->error.line = node->row;
     ctx->error.col = node->col;
@@ -119,7 +123,7 @@ node_set_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, LongString ls){
 
 static
 void
-node_set_err_offset(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, int offset, LongString message){
+node_set_err_offset(DndcContext* ctx, const Node* node, int offset, LongString message){
     ctx->error.filename = node->filename;
     ctx->error.line = node->row;
     ctx->error.col = node->col+offset;
@@ -128,7 +132,7 @@ node_set_err_offset(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, int offs
 
 static
 void
-node_print_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView msg){
+node_print_err(DndcContext* ctx, const Node* node, StringView msg){
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
     if(not ctx->error_func)
@@ -141,7 +145,7 @@ node_print_err(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView ms
 
 static
 void
-node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView msg){
+node_print_warning(DndcContext* ctx, const Node* node, StringView msg){
     if(ctx->flags & DNDC_SUPPRESS_WARNINGS)
         return;
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
@@ -155,7 +159,7 @@ node_print_warning(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringVie
     }
 static
 void
-node_print_warning2(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringView a, StringView b){
+node_print_warning2(DndcContext* ctx, const Node* node, StringView a, StringView b){
     if(ctx->flags & DNDC_SUPPRESS_WARNINGS)
         return;
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
@@ -175,7 +179,7 @@ node_print_warning2(Nonnull(DndcContext*)ctx, Nonnull(const Node*)node, StringVi
 
 static
 void
-report_time(Nonnull(DndcContext*)ctx, StringView msg, uint64_t microseconds){
+report_time(DndcContext* ctx, StringView msg, uint64_t microseconds){
     if(not (ctx->flags & DNDC_PRINT_STATS))
         return;
     if(not ctx->error_func)
@@ -190,7 +194,7 @@ report_time(Nonnull(DndcContext*)ctx, StringView msg, uint64_t microseconds){
 
 static
 void
-report_info(Nonnull(DndcContext*)ctx, StringView msg){
+report_info(DndcContext* ctx, StringView msg){
     if(not (ctx->flags & DNDC_PRINT_STATS))
         return;
     if(not ctx->error_func)
@@ -199,7 +203,7 @@ report_info(Nonnull(DndcContext*)ctx, StringView msg){
     }
 static
 void
-report_size(Nonnull(DndcContext*)ctx, StringView msg, uint64_t size){
+report_size(DndcContext* ctx, StringView msg, uint64_t size){
     if(not (ctx->flags & DNDC_PRINT_STATS))
         return;
     if(not ctx->error_func)
@@ -214,7 +218,7 @@ report_size(Nonnull(DndcContext*)ctx, StringView msg, uint64_t size){
 
 static
 void
-report_set_error(Nonnull(DndcContext*)ctx){
+report_set_error(DndcContext* ctx){
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
     if(not ctx->error_func)
@@ -224,7 +228,7 @@ report_set_error(Nonnull(DndcContext*)ctx){
 
 static
 void
-report_system_error(Nonnull(DndcContext*)ctx, StringView msg){
+report_system_error(DndcContext* ctx, StringView msg){
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
     if(not ctx->error_func)
@@ -234,7 +238,7 @@ report_system_error(Nonnull(DndcContext*)ctx, StringView msg){
 
 static inline
 void
-ctx_note_dependency(Nonnull(DndcContext*)ctx, StringView path){
+ctx_note_dependency(DndcContext* ctx, StringView path){
     // FIXME: O(n^2) deduplication
     MARRAY_FOR_EACH(dep, ctx->dependencies){
         if(SV_equals(*dep, path))
@@ -246,7 +250,7 @@ ctx_note_dependency(Nonnull(DndcContext*)ctx, StringView path){
 
 static inline
 void
-ctx_store_builtin_file(Nonnull(DndcContext*)ctx, LongString sourcepath, LongString text){
+ctx_store_builtin_file(DndcContext* ctx, LongString sourcepath, LongString text){
     auto loaded = Marray_alloc(LoadedSource)(&ctx->builtin_files, ctx->allocator);
     loaded->sourcepath = sourcepath;
     loaded->sourcetext = text;
@@ -254,7 +258,7 @@ ctx_store_builtin_file(Nonnull(DndcContext*)ctx, LongString sourcepath, LongStri
 
 static
 Errorable_f(LongString)
-ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
+ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
     // check if we already have it as a builtin
     MARRAY_FOR_EACH(builtin, ctx->builtin_files){
         if(LS_SV_equals(builtin->sourcepath, sourcepath)){
@@ -303,7 +307,7 @@ ctx_load_source_file(Nonnull(DndcContext*)ctx, StringView sourcepath){
 
 static
 Errorable_f(LongString)
-ctx_load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath){
+ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath){
     if(unlikely(ctx->flags & DNDC_DONT_READ))
         return (Errorable(LongString)){.errored=PARSE_ERROR};
     MStringBuilder path_builder = {.allocator=ctx->temp_allocator};
@@ -322,7 +326,7 @@ ctx_load_processed_binary_file(Nonnull(DndcContext*)ctx, StringView binarypath){
 
 static
 Errorable_f(LongString)
-load_processed_binary_file(Nonnull(FileCache*)cache, StringView binarypath, Nonnull(ByteBuilder*)bb){
+load_processed_binary_file(FileCache* cache, StringView binarypath, ByteBuilder* bb){
     // check if we already have it.
     MARRAY_FOR_EACH(loaded, cache->files){
         if(LS_SV_equals(loaded->sourcepath, binarypath)){
@@ -355,7 +359,7 @@ load_processed_binary_file(Nonnull(FileCache*)cache, StringView binarypath, Nonn
 
 static inline
 Nullable(StringView*)
-find_link_target(Nonnull(DndcContext*)ctx, StringView kebabed){
+find_link_target(DndcContext* ctx, StringView kebabed){
     if(!ctx->links.count)
         return NULL;
 #if 1
@@ -391,7 +395,7 @@ find_link_target(Nonnull(DndcContext*)ctx, StringView kebabed){
 
 static inline
 Errorable_f(void)
-add_link_from_sv(Nonnull(DndcContext*)ctx, Nonnull(Node*)node){
+add_link_from_sv(DndcContext* ctx, Node* node){
     auto str = node->header;
     Errorable(void) result = {};
     const char* equals = memchr(str.text, '=', str.length);
@@ -434,7 +438,7 @@ add_link_from_sv(Nonnull(DndcContext*)ctx, Nonnull(Node*)node){
 
 static inline
 void
-add_link_from_header(Nonnull(DndcContext*)ctx, StringView str){
+add_link_from_header(DndcContext* ctx, StringView str){
     MStringBuilder sb = {.allocator=ctx->string_allocator};
     msb_write_char(&sb, '#');
     msb_write_kebab(&sb, str.text, str.length);
@@ -453,7 +457,7 @@ add_link_from_header(Nonnull(DndcContext*)ctx, StringView str){
 static inline
 force_inline
 NodeHandle
-alloc_handle(Nonnull(DndcContext*)ctx){
+alloc_handle(DndcContext* ctx){
     size_t index = Marray_alloc_index(Node)(&ctx->nodes, ctx->allocator);
     ctx->nodes.data[index] = (Node){};
     // debug to help find nodes without parents
@@ -462,9 +466,9 @@ alloc_handle(Nonnull(DndcContext*)ctx){
     }
 
 static inline
-Nonnull(Node*)
+Node*
 force_inline
-get_node(Nonnull(DndcContext*)ctx, NodeHandle handle){
+get_node(DndcContext* ctx, NodeHandle handle){
     assert(handle.index < ctx->nodes.count);
     auto result = &ctx->nodes.data[handle.index];
     return result;
@@ -472,15 +476,15 @@ get_node(Nonnull(DndcContext*)ctx, NodeHandle handle){
 
 // for debugging
 DNDC_API
-Nonnull(Node*)
-get_node_e(Nonnull(DndcContext*)ctx, NodeHandle handle){
+Node*
+get_node_e(DndcContext* ctx, NodeHandle handle){
     return get_node(ctx, handle);
     }
 
 static inline
 void
 force_inline
-append_child(Nonnull(DndcContext*)ctx, NodeHandle parent_handle, NodeHandle child_handle){
+append_child(DndcContext* ctx, NodeHandle parent_handle, NodeHandle child_handle){
     auto parent = get_node(ctx, parent_handle);
     auto child = get_node(ctx, child_handle);
     child->parent = parent_handle;
@@ -498,17 +502,17 @@ append_child(Nonnull(DndcContext*)ctx, NodeHandle parent_handle, NodeHandle chil
     Marray_push(NodeHandle)(&parent->children, ctx->allocator, child_handle);
     }
 
-static Errorable_f(void) check_node_depth(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth);
+static Errorable_f(void) check_node_depth(DndcContext* ctx, NodeHandle handle, int depth);
 
 static
 Errorable_f(void)
-check_depth(Nonnull(DndcContext*)ctx){
+check_depth(DndcContext* ctx){
     return check_node_depth(ctx, ctx->root_handle, 0);
     }
 
 static
 Errorable_f(void)
-check_node_depth(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
+check_node_depth(DndcContext* ctx, NodeHandle handle, int depth){
     auto node = get_node(ctx, handle);
     enum {MAX_DEPTH=64};
     if(unlikely(depth > MAX_DEPTH)){
@@ -522,18 +526,18 @@ check_node_depth(Nonnull(DndcContext*)ctx, NodeHandle handle, int depth){
     return (Errorable(void)){.errored=NO_ERROR};
     }
 
-static void gather_anchor(Nonnull(DndcContext*)ctx, NodeHandle handle);
+static void gather_anchor(DndcContext* ctx, NodeHandle handle);
 
 static
 void
-gather_anchors(Nonnull(DndcContext*)ctx){
+gather_anchors(DndcContext* ctx){
     auto root = ctx->root_handle;
     return gather_anchor(ctx, root);
     }
 
 static
 void
-gather_anchor(Nonnull(DndcContext*)ctx, NodeHandle handle){
+gather_anchor(DndcContext* ctx, NodeHandle handle){
     auto node = get_node(ctx, handle);
     switch(node->type){
         case NODE_BULLETS:
@@ -594,7 +598,7 @@ gather_anchor(Nonnull(DndcContext*)ctx, NodeHandle handle){
 static
 inline
 void
-convert_node_to_container_containing_clone_of_former_self(Nonnull(DndcContext*)ctx, NodeHandle handle){
+convert_node_to_container_containing_clone_of_former_self(DndcContext* ctx, NodeHandle handle){
     auto new_handle = alloc_handle(ctx);
     auto new_node = get_node(ctx, new_handle);
     auto old_node = get_node(ctx, handle);
@@ -611,7 +615,7 @@ convert_node_to_container_containing_clone_of_former_self(Nonnull(DndcContext*)c
 
 static inline
 void
-ctx_add_builtins(Nonnull(DndcContext*)ctx){
+ctx_add_builtins(DndcContext* ctx){
 #define JSRAW(...) #__VA_ARGS__
     ctx_store_builtin_file(ctx, LS("builtins/coords.js"), LS(JSRAW(
         document.addEventListener("DOMContentLoaded", function(){
@@ -650,4 +654,9 @@ ctx_add_builtins(Nonnull(DndcContext*)ctx){
         "  ctx.root.parse(links)\n"
     ));
     }
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
+
 #endif

@@ -5,7 +5,6 @@
 #include <marshal.h>
 
 #include <stdio.h>
-#define DONT_DEPEND_ON_DNDC
 #include "file_util.h"
 #include "mallocator.h"
 #include "log_print.h"

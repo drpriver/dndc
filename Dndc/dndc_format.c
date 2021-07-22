@@ -15,7 +15,12 @@
 //       post-python blocks to see what something expands to.
 
 #ifdef _WIN32
+// Move to header?
 typedef long long ssize_t;
+#endif
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
 #endif
 
 enum {FORMAT_WIDTH=80};
@@ -77,7 +82,7 @@ format_next_token(StringView sv){
 
 static inline
 void
-format_write_wrapped_string(Nonnull(MStringBuilder*)sb, Nonnull(FormatState*)state, StringView sv){
+format_write_wrapped_string(MStringBuilder* sb, FormatState* state, StringView sv){
     FormatTokenized tokenized= {.rest=sv};
     if(state->col < state->lead){
         msb_write_nchar(sb, ' ', state->lead);
@@ -102,7 +107,7 @@ format_write_wrapped_string(Nonnull(MStringBuilder*)sb, Nonnull(FormatState*)sta
     }
 
 #define FORMATFUNCNAME(nt) format_##nt
-#define FORMATFUNC(nt) static Errorable_f(void) FORMATFUNCNAME(nt)(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)node, int indent)
+#define FORMATFUNC(nt) static Errorable_f(void) FORMATFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent)
 
 FORMATFUNC(regular_node);
 FORMATFUNC(md_node);
@@ -113,11 +118,11 @@ FORMATFUNC(raw_node);
 FORMATFUNC(md_list);
 FORMATFUNC(para_node);
 
-static Errorable_f(void) format_md_bullets(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)node, int indent, int bullet_depth);
+static Errorable_f(void) format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, int bullet_depth);
 
 static inline
 Errorable_f(void)
-format_node(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)node, int indent){
+format_node(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
     switch(node->type){
         case NODE_DIV:
         case NODE_TITLE:
@@ -167,7 +172,7 @@ format_node(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)
 
 static
 Errorable_f(void)
-format_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb){
+format_tree(DndcContext* ctx, MStringBuilder* sb){
     auto root = get_node(ctx, ctx->root_handle);
     Errorable(void) result = {};
     NODE_CHILDREN_FOR_EACH(it, root){
@@ -197,7 +202,7 @@ format_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb){
     }
 static inline
 void
-format_header(Nonnull(MStringBuilder*)sb, Nonnull(Node*)node, int indent){
+format_header(MStringBuilder* sb, Node* node, int indent){
     msb_write_nchar(sb, ' ', indent);
     if(node->header.length){
         msb_write_str(sb, node->header.text,node->header.length);
@@ -262,7 +267,9 @@ FORMATFUNC(para_node){
     msb_write_char(sb, '\n');
     return result;
     }
-static Errorable_f(void) format_md_bullets(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)node, int indent, int bullet_depth){
+static
+Errorable_f(void)
+format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, int bullet_depth){
     Errorable(void) result = {};
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
@@ -389,7 +396,7 @@ FORMATFUNC(text_node){
     }
 static inline
 size_t
-write_str_or_container(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*)node){
+write_str_or_container(DndcContext* ctx, MStringBuilder* sb, Node* node){
     if(node->type == NODE_STRING){
         msb_write_str(sb, node->header.text, node->header.length);
         return node->header.length;
@@ -587,4 +594,8 @@ FORMATFUNC(raw_node){
 
 #undef FORMATFUNC
 #undef FORMATFUNCNAME
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 #endif

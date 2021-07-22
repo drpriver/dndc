@@ -5,6 +5,10 @@
 #define PYTHONMODULE
 #include "dndc.c"
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 typedef struct DndcPyFileCache {
     PyObject_HEAD
     FileCache text_cache;
@@ -13,7 +17,7 @@ typedef struct DndcPyFileCache {
 
 static
 Nullable(PyObject*)
-DndcPyFileCache_remove(Nonnull(PyObject*)self, Nonnull(PyObject*)str){
+DndcPyFileCache_remove(PyObject* self, PyObject* str){
     if(!PyUnicode_Check(str)){
         PyErr_SetString(PyExc_TypeError, "Argument to remove must be a string");
         return NULL;
@@ -27,7 +31,7 @@ DndcPyFileCache_remove(Nonnull(PyObject*)self, Nonnull(PyObject*)str){
 
 static
 Nullable(PyObject*)
-DndcPyFileCache_clear(Nonnull(PyObject*)self){
+DndcPyFileCache_clear(PyObject* self){
     auto cache = (DndcPyFileCache*)self;
     FileCache_clear(&cache->text_cache);
     FileCache_clear(&cache->b64_cache);
@@ -36,7 +40,7 @@ DndcPyFileCache_clear(Nonnull(PyObject*)self){
 
 static
 Nullable(PyObject*)
-DndcPyFileCache_paths(Nonnull(PyObject*)self){
+DndcPyFileCache_paths(PyObject* self){
     auto cache = (DndcPyFileCache*)self;
     Py_ssize_t nfiles = cache->b64_cache.files.count + cache->text_cache.files.count;
     PyObject* result = PyList_New(nfiles);
@@ -65,7 +69,7 @@ DndcPyFileCache_paths(Nonnull(PyObject*)self){
 
 static
 Nullable(PyObject*)
-DndcPyFileCache_new(Nonnull(PyTypeObject*)subtype, PyObject *_Null_unspecified args, PyObject *_Null_unspecified kwds){
+DndcPyFileCache_new(PyTypeObject* subtype, PyObject *_Null_unspecified args, PyObject *_Null_unspecified kwds){
     (void)args;
     (void)kwds;
     auto obj = (DndcPyFileCache*)subtype->tp_alloc(subtype, 1);
@@ -78,7 +82,7 @@ DndcPyFileCache_new(Nonnull(PyTypeObject*)subtype, PyObject *_Null_unspecified a
 
 static
 void
-DndcPyFileCache_dealloc(Nonnull(PyObject*)self){
+DndcPyFileCache_dealloc(PyObject* self){
     auto cache = (DndcPyFileCache*)self;
     FileCache_clear(&cache->text_cache);
     FileCache_clear(&cache->b64_cache);
@@ -129,15 +133,15 @@ PyTypeObject DndcPyFileCache_Type = {
 
 static
 Nullable(PyObject*)
-pydndc_reformat(Nonnull(PyObject*), Nonnull(PyObject*), Nonnull(PyObject*));
+pydndc_reformat(PyObject* , PyObject* , PyObject*);
 
 static
 Nullable(PyObject*)
-pydndc_htmlgen(Nonnull(PyObject*), Nonnull(PyObject*), Nonnull(PyObject*));
+pydndc_htmlgen(PyObject*, PyObject*, PyObject*);
 
 static
 Nullable(PyObject*)
-pydndc_anaylze_syntax_for_highlight(Nonnull(PyObject*), Nonnull(PyObject*), Nonnull(PyObject*));
+pydndc_anaylze_syntax_for_highlight(PyObject*, PyObject*, PyObject*);
 
 static
 PyMethodDef pydndc_methods[] = {
@@ -333,7 +337,7 @@ PyModuleDef pydndc = {
 };
 
 
-PyMODINIT_FUNC
+PyMODINIT_FUNC _Nullable
 PyInit_pydndc(void){
     auto e = internal_dndc_python_init_types();
     if(e.errored)
@@ -374,7 +378,7 @@ PyInit_pydndc(void){
 
 static
 void
-pydndc_collect_errors(Nullable(void*)user_data, int type, const char* _Nonnull filename, int filename_len, int line, int col, const char* _Nonnull message, int message_len){
+pydndc_collect_errors(Nullable(void*)user_data, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
     PyObject* tup = Py_BuildValue("is#iis#", type, filename, (Py_ssize_t)filename_len, line, col, message, (Py_ssize_t)message_len);
     if(!tup){
         return;
@@ -387,7 +391,7 @@ pydndc_collect_errors(Nullable(void*)user_data, int type, const char* _Nonnull f
 
 static
 Nullable(PyObject*)
-pydndc_reformat(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)kwargs){
+pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
     (void)mod;
     PyObject* text;
     PyObject* error_reporter = NULL;
@@ -442,7 +446,7 @@ pydndc_reformat(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*
 
 static
 int
-pydndc_add_dependencies(Nullable(void*)user_data, size_t npaths, Nonnull(StringView*) paths){
+pydndc_add_dependencies(Nullable(void*)user_data, size_t npaths, StringView* paths){
     PyObject* list = user_data;
     for(size_t i = 0; i < npaths; i++){
         auto path = paths[i];
@@ -455,7 +459,7 @@ pydndc_add_dependencies(Nullable(void*)user_data, size_t npaths, Nonnull(StringV
 
 static
 Nullable(PyObject*)
-pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)kwargs){
+pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     (void)mod;
     PyObject* text;
     PyObject* base_dir = NULL;
@@ -541,13 +545,13 @@ pydndc_htmlgen(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)
 }
 
 struct CollectData {
-    Nonnull(const char*) begin;
-    Nonnull(PyObject*) dict;
+    const char* begin;
+    PyObject* dict;
 };
 
 static
 void
-pydndc_collect_syntax_tokens(Nullable(void*)user_data, int type, int line, int col, Nonnull(const char*)begin, size_t length){
+pydndc_collect_syntax_tokens(Nullable(void*)user_data, int type, int line, int col, const char* begin, size_t length){
     if(PyErr_Occurred())
         return;
     assert(user_data);
@@ -579,7 +583,7 @@ pydndc_collect_syntax_tokens(Nullable(void*)user_data, int type, int line, int c
 
 static
 Nullable(PyObject*)
-pydndc_anaylze_syntax_for_highlight(Nonnull(PyObject*)mod, Nonnull(PyObject*)args, Nonnull(PyObject*)kwargs){
+pydndc_anaylze_syntax_for_highlight(PyObject* mod, PyObject* args, PyObject* kwargs){
     (void)mod;
     PyObject* text;
     const char* const keywords[] = {"text", NULL};
@@ -612,3 +616,6 @@ pydndc_anaylze_syntax_for_highlight(Nonnull(PyObject*)mod, Nonnull(PyObject*)arg
         }
     return cd.dict;
 }
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif

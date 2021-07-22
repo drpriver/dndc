@@ -3,17 +3,22 @@
 #include "dndc_funcs.h"
 #include "dndc_types.h"
 #include "str_util.h"
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 static
 Errorable_f(void)
-parse_post_colon(Nonnull(DndcContext*)ctx, StringView postcolon, NodeHandle node_handle);
+parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle);
 static
 void
-analyze_line(Nonnull(DndcContext*));
+analyze_line(DndcContext*);
 static
 void
-advance_row(Nonnull(DndcContext*));
+advance_row(DndcContext*);
 
-#define PARSEFUNC(name) static Errorable_f(void) name(Nonnull(DndcContext*)ctx, NodeHandle parent_handle, int indentation)
+#define PARSEFUNC(name) static Errorable_f(void) name(DndcContext* ctx, NodeHandle parent_handle, int indentation)
 PARSEFUNC(parse_node);
 PARSEFUNC(parse_text_node);
 PARSEFUNC(parse_table_node);
@@ -27,7 +32,7 @@ PARSEFUNC(parse_md_node);
 
 static inline
 void
-analyze_line(Nonnull(DndcContext*)ctx){
+analyze_line(DndcContext* ctx){
     if(ctx->cursor == ctx->linestart)
         return;
     const char* doublecolon = NULL;
@@ -70,7 +75,7 @@ analyze_line(Nonnull(DndcContext*)ctx){
 static inline
 void
 force_inline
-advance_row(Nonnull(DndcContext*)ctx){
+advance_row(DndcContext* ctx){
     if(unlikely(!ctx->lineend[0]))
         ctx->cursor = ctx->lineend;
     else
@@ -82,7 +87,7 @@ advance_row(Nonnull(DndcContext*)ctx){
 static inline
 void
 force_inline
-init_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(const char*) src_char, NodeType type){
+init_node(DndcContext* ctx, NodeHandle handle, const char* src_char, NodeType type){
     auto node = get_node(ctx, handle);
     int col = (int)(src_char - ctx->linestart);
     node->col = col;
@@ -94,7 +99,7 @@ init_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(const char*) src_
 static inline
 void
 force_inline
-init_string_node(Nonnull(DndcContext*)ctx, NodeHandle handle, StringView sv){
+init_string_node(DndcContext* ctx, NodeHandle handle, StringView sv){
     auto node = get_node(ctx, handle);
     int col = (int)(sv.text - ctx->linestart);
     node->col = col;
@@ -106,7 +111,7 @@ init_string_node(Nonnull(DndcContext*)ctx, NodeHandle handle, StringView sv){
 
 static
 Errorable_f(void)
-dndc_parse(Nonnull(DndcContext*)ctx, NodeHandle root_handle, StringView filename, Nonnull(const char*)text){
+dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const char* text){
     Errorable(void) result = {};
     ctx->cursor = text;
     ctx->linestart = NULL;
@@ -122,7 +127,7 @@ dndc_parse(Nonnull(DndcContext*)ctx, NodeHandle root_handle, StringView filename
 
 static
 Errorable_f(void)
-parse_double_colon(Nonnull(DndcContext*)ctx, NodeHandle parent_handle){
+parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
     Errorable(void) result = {};
     // parse the node header
     const char* starttext = ctx->doublecolon + 2;
@@ -152,7 +157,7 @@ parse_double_colon(Nonnull(DndcContext*)ctx, NodeHandle parent_handle){
 
 static
 void
-eat_leading_tabspaces(Nonnull(StringView*)sv){
+eat_leading_tabspaces(StringView* sv){
     size_t length = sv->length;
     if(!length) return;
     const char* text = sv->text;
@@ -169,7 +174,7 @@ eat_leading_tabspaces(Nonnull(StringView*)sv){
 
 static inline
 void
-advance_sv(Nonnull(StringView*)sv){
+advance_sv(StringView* sv){
     assert(sv->length);
     sv->text++;
     sv->length--;
@@ -177,7 +182,7 @@ advance_sv(Nonnull(StringView*)sv){
 
 static
 Errorable_f(void)
-parse_post_colon(Nonnull(DndcContext*)ctx, StringView postcolon, NodeHandle node_handle){
+parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle){
     Errorable(void) result = {};
     auto node = get_node(ctx, node_handle);
     size_t boundary = postcolon.length;
@@ -996,4 +1001,9 @@ PARSEFUNC(parse_md_node){
         }
     return result;
     }
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
+
 #endif

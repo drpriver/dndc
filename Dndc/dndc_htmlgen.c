@@ -8,21 +8,25 @@
 #include "parse_numbers.h"
 #include "measure_time.h"
 #include "msb_format.h"
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 //
 // For some reason I refer to generating html as rendering.
 //
 
 /* Rendering */
 
-
 #define RENDERFUNCNAME(nt) render_##nt
-#define RENDERFUNC(nt) static Errorable_f(void) RENDERFUNCNAME(nt)(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(Node*) node, int header_depth)
+#define RENDERFUNC(nt) static Errorable_f(void) RENDERFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, Node* node, int header_depth)
 
 #define X(a, b) RENDERFUNC(a);
 NODETYPES(X)
 #undef X
 
-typedef Errorable_f(void)(*_Nonnull renderfunc)(Nonnull(DndcContext*), Nonnull(MStringBuilder*), Nonnull(Node*), int);
+typedef Errorable_f(void)(*_Nonnull renderfunc)(DndcContext*, MStringBuilder*, Node*, int);
 
 static
 const
@@ -35,7 +39,7 @@ renderfunc RENDERFUNCS[] = {
 static inline
 force_inline
 Errorable_f(void)
-render_node(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*) restrict sb, Nonnull(Node*)node, int header_depth){
+render_node(DndcContext* ctx, MStringBuilder* restrict sb, Node* node, int header_depth){
     bool hide = node_has_attribute(node, SV("hide"));
     if(hide) return (Errorable(void)){};
 #if 0
@@ -50,7 +54,7 @@ render_node(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*) restrict sb, Nonn
     }
 static
 Errorable_f(void)
-render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
+render_tree(DndcContext* ctx, MStringBuilder* msb){
     Errorable(void) result = {};
     auto imgcount = ctx->img_nodes.count + ctx->imglinks_nodes.count;
     // estimate memory usage as 120 characters per node and 200 kb images.
@@ -225,12 +229,12 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
     return result;
     }
 
-static void build_nav_block_node(Nonnull(DndcContext*), NodeHandle, Nonnull(MStringBuilder*), int);
-static void build_nav_block_children(Nonnull(DndcContext*), NodeHandle, Nonnull(MStringBuilder*), int);
+static void build_nav_block_node(DndcContext* , NodeHandle, MStringBuilder*, int);
+static void build_nav_block_children(DndcContext* , NodeHandle, MStringBuilder*, int);
 
 static
 void
-build_nav_block(Nonnull(DndcContext*)ctx){
+build_nav_block(DndcContext* ctx){
     MStringBuilder sb = {.allocator=ctx->string_allocator};
     msb_write_literal(&sb, "<nav>\n<ul>\n");
     build_nav_block_node(ctx, ctx->root_handle, &sb, 1);
@@ -240,7 +244,7 @@ build_nav_block(Nonnull(DndcContext*)ctx){
 
 static
 void
-build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStringBuilder*)sb, int depth){
+build_nav_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth){
     auto node = get_node(ctx, handle);
     switch(node->type){
         case NODE_BULLETS:
@@ -275,8 +279,8 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
                     break;
                     }
                 }
-            // fall-through
             }
+            // fall-through
         case NODE_DATA: // this is a little sketchy
         case NODE_IMPORT:
         case NODE_LIST_ITEM:
@@ -313,7 +317,7 @@ build_nav_block_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStrin
 
 static
 void
-build_nav_block_children(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MStringBuilder*)sb, int depth){
+build_nav_block_children(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth){
     if(depth > 2)
         return;
     auto node = get_node(ctx, handle);
@@ -324,7 +328,7 @@ build_nav_block_children(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(MS
 
 static inline
 void
-write_tag_escaped_str(Nonnull(MStringBuilder*)sb, NullUnspec(const char*)text, size_t length){
+write_tag_escaped_str(MStringBuilder* sb, NullUnspec(const char*)text, size_t length){
     for(size_t i = 0; i < length; i++){
         char c = text[i];
         switch(c){
@@ -356,7 +360,7 @@ write_tag_escaped_str(Nonnull(MStringBuilder*)sb, NullUnspec(const char*)text, s
 
 static inline
 Errorable_f(void)
-write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, Nonnull(const char*)text, size_t length, Nonnull(const Node*)node){
+write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const Node* node){
     Errorable(void) result = {};
     for(size_t i = 0; i < length; i++){
         char c = text[i];
@@ -492,7 +496,7 @@ write_link_escaped_str(Nonnull(DndcContext*) ctx, Nonnull(MStringBuilder*)sb, No
 
 static inline
 Errorable_f(void)
-write_header(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(const Node*)node, int header_level){
+write_header(DndcContext* ctx, MStringBuilder* sb, const Node* node, int header_level){
     auto id = node_get_id(node);
     if(!id){
         MSB_FORMAT(sb, "<h", header_level, ">");
@@ -510,7 +514,7 @@ write_header(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)sb, Nonnull(const
 
 static inline
 void
-write_classes(Nonnull(MStringBuilder*)sb, Nonnull(const Node*)node){
+write_classes(MStringBuilder* sb, const Node* node){
     auto count = node->classes?node->classes->count:0;
     if(!count) return;
     auto classes = node->classes->data;
@@ -1261,5 +1265,9 @@ RENDERFUNC(INVALID){
     }
 #undef RENDERFUNC
 #undef RENDERFUNCNAME
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
 #endif

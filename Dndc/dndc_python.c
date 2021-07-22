@@ -13,11 +13,15 @@
 #include <frameobject.h>
 #include <code.h>
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 PushDiagnostic();
 SuppressUnusedFunction();
 static inline
 LongString
-pystring_to_longstring(Nonnull(PyObject*)pyobj, const Allocator a){
+pystring_to_longstring(PyObject* pyobj, const Allocator a){
     const char* text;
     Py_ssize_t length;
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
@@ -35,7 +39,7 @@ PopDiagnostic();
 
 static inline
 StringView
-pystring_to_stringview(Nonnull(PyObject*)pyobj, const Allocator a){
+pystring_to_stringview(PyObject* pyobj, const Allocator a){
     const char* text;
     Py_ssize_t length;
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
@@ -51,7 +55,7 @@ pystring_to_stringview(Nonnull(PyObject*)pyobj, const Allocator a){
     }
 static inline
 StringView
-pystring_borrow_stringview(Nonnull(PyObject*)pyobj){
+pystring_borrow_stringview(PyObject* pyobj){
     const char* text;
     Py_ssize_t length;
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
@@ -62,7 +66,7 @@ PushDiagnostic();
 SuppressUnusedFunction();
 static inline
 LongString
-pystring_borrow_longstring(Nonnull(PyObject*)pyobj){
+pystring_borrow_longstring(PyObject* pyobj){
     const char* text;
     Py_ssize_t length;
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
@@ -79,7 +83,7 @@ typedef struct NodeTypeEnum {
 
 static
 Nullable(PyObject*)
-NodeTypeEnum_repr(Nonnull(NodeTypeEnum*)e){
+NodeTypeEnum_repr(NodeTypeEnum* e){
     if(e->type > NODE_INVALID or e->type < 0){
         PyErr_Format(PyExc_RuntimeError, "Somehow we have an enum with an invalid value: %d", (int)e->type);
         return NULL;
@@ -90,7 +94,7 @@ NodeTypeEnum_repr(Nonnull(NodeTypeEnum*)e){
 
 static
 PyObject* _Nullable
-NodeTypeEnum_getattr(Nonnull(NodeTypeEnum*)e, Nonnull(const char*)name){
+NodeTypeEnum_getattr(NodeTypeEnum* e, const char* name){
     if(e->type > NODE_INVALID or e->type < 0){
         PyErr_Format(PyExc_RuntimeError, "Somehow we have an enum with an invalid value: %d", (int)e->type);
         return NULL;
@@ -111,7 +115,7 @@ static PyTypeObject NodeTypeEnumType;
 
 static
 PyObject* _Nullable
-NodeTypeEnum_richcmp(Nonnull(PyObject*)a, Nonnull(PyObject*)b, int cmp){
+NodeTypeEnum_richcmp(PyObject* a, PyObject* b, int cmp){
     auto check = PyObject_IsInstance(b, (PyObject*)&NodeTypeEnumType);
     if(check == -1)
         return NULL;
@@ -156,18 +160,18 @@ make_node_type_enum(NodeType t){
     return (PyObject*)self;
     }
 
-typedef Nullable(PyObject*) (*_Nonnull NodeMethod)(Nonnull(DndcContext*), NodeHandle, Nonnull(PyObject*), Nullable(PyObject*));
+typedef Nullable(PyObject*) (*_Nonnull NodeMethod)(DndcContext* , NodeHandle, PyObject*, Nullable(PyObject*));
 
 typedef struct NodeBoundMethod {
     PyObject_HEAD
-    Nonnull(DndcContext*)ctx;
+    DndcContext* ctx;
     NodeHandle handle;
     NodeMethod func;
 } NodeBoundMethod;
 
 static
 Nullable(PyObject*)
-NodeBound_call(Nonnull(PyObject*)self, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+NodeBound_call(PyObject* self, PyObject* args, Nullable(PyObject*)kwargs){
     auto meth = (NodeBoundMethod*)self;
     return meth->func(meth->ctx, meth->handle, args, kwargs);
     }
@@ -183,7 +187,7 @@ static PyTypeObject NodeBoundMethodType = {
 
 static
 Nullable(PyObject*)
-make_node_bound_method(Nonnull(DndcContext*)ctx, NodeHandle handle, NodeMethod func){
+make_node_bound_method(DndcContext* ctx, NodeHandle handle, NodeMethod func){
     NodeBoundMethod* self = (NodeBoundMethod*)NodeBoundMethodType.tp_alloc(&NodeBoundMethodType, 0);
     if(!self) return NULL;
     self->ctx = ctx;
@@ -194,7 +198,7 @@ make_node_bound_method(Nonnull(DndcContext*)ctx, NodeHandle handle, NodeMethod f
 
 static
 Nullable(PyObject*)
-py_parse_and_append_children(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_parse_and_append_children(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
     PyObject* text;
     const char* const keywords[] = { "text", NULL, };
     PushDiagnostic();
@@ -223,13 +227,13 @@ py_parse_and_append_children(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnul
 
 typedef struct DndclassesList {
     PyObject_HEAD
-    Nonnull(DndcContext*)ctx;
+    DndcContext* ctx;
     NodeHandle handle;
     } DndclassesList;
 
 static
 Py_ssize_t
-Dndclasses_length(Nonnull(DndclassesList*)list){
+Dndclasses_length(DndclassesList* list){
     auto node = get_node(list->ctx, list->handle);
     if(!node->classes)
         return 0;
@@ -238,7 +242,7 @@ Dndclasses_length(Nonnull(DndclassesList*)list){
 
 static
 Nullable(PyObject*)
-Dndclasses_getitem(Nonnull(DndclassesList*)list, Py_ssize_t index){
+Dndclasses_getitem(DndclassesList* list, Py_ssize_t index){
     auto node = get_node(list->ctx, list->handle);
     auto length = node->classes?node->classes->count:0;
     if(index < 0){
@@ -254,7 +258,7 @@ Dndclasses_getitem(Nonnull(DndclassesList*)list, Py_ssize_t index){
 
 static
 int
-Dndclasses_contains(Nonnull(DndclassesList*)list, PyObject*_Nonnull query){
+Dndclasses_contains(DndclassesList* list, PyObject* query){
     if(!PyUnicode_Check(query)){
         PyErr_SetString(PyExc_TypeError, "Only strings can be in classes lists");
         return -1;
@@ -274,7 +278,7 @@ Dndclasses_contains(Nonnull(DndclassesList*)list, PyObject*_Nonnull query){
 
 static
 int
-Dndclasses_setitem(Nonnull(DndclassesList*)list, Py_ssize_t index, Nullable(PyObject*) value){
+Dndclasses_setitem(DndclassesList* list, Py_ssize_t index, Nullable(PyObject*) value){
     if(!value){
         PyErr_SetString(PyExc_NotImplementedError, "Deletion is unsupported");
         return -1;
@@ -294,7 +298,7 @@ Dndclasses_setitem(Nonnull(DndclassesList*)list, Py_ssize_t index, Nullable(PyOb
 
 static
 Nullable(PyObject*)
-Dndclasses_append(Nonnull(DndclassesList*)list, Nonnull(PyObject*)args){
+Dndclasses_append(DndclassesList* list, PyObject* args){
     PyObject* text;
     if(!PyArg_ParseTuple(args, "O!:append", &PyUnicode_Type, &text))
         return NULL;
@@ -306,7 +310,7 @@ Dndclasses_append(Nonnull(DndclassesList*)list, Nonnull(PyObject*)args){
 
 static
 Nullable(PyObject*)
-Dndclasses_repr(Nonnull(DndclassesList*)list){
+Dndclasses_repr(DndclassesList* list){
     auto node = get_node(list->ctx, list->handle);
     MStringBuilder msb = {.allocator=list->ctx->temp_allocator};
     msb_write_char(&msb, '[');
@@ -358,7 +362,7 @@ static PyTypeObject DndclassesListType = {
 
 static
 Nullable(PyObject*)
-make_classes_list(Nonnull(DndcContext*)ctx, NodeHandle handle){
+make_classes_list(DndcContext* ctx, NodeHandle handle){
     DndclassesList* self = (DndclassesList*)DndclassesListType.tp_alloc(&DndclassesListType, 0);
     if(!self) return NULL;
     self->ctx = ctx;
@@ -368,13 +372,13 @@ make_classes_list(Nonnull(DndcContext*)ctx, NodeHandle handle){
 
 typedef struct DndAttributesMap {
     PyObject_HEAD
-    Nonnull(DndcContext*)ctx;
+    DndcContext* ctx;
     NodeHandle handle;
     } DndAttributesMap;
 
 static
-Nonnull(PyObject*)
-DndAttributesMap_items(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*)unused){
+PyObject*
+DndAttributesMap_items(DndAttributesMap* map, PyObject* unused){
     (void)unused;
     auto node = get_node(map->ctx, map->handle);
     auto attributes = node->attributes;
@@ -392,7 +396,7 @@ DndAttributesMap_items(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*)unused){
 
 static
 Py_ssize_t
-DndAttributesMap_length(Nonnull(DndAttributesMap*)list){
+DndAttributesMap_length(DndAttributesMap* list){
     auto node = get_node(list->ctx, list->handle);
     if(!node->attributes)
         return 0;
@@ -401,7 +405,7 @@ DndAttributesMap_length(Nonnull(DndAttributesMap*)list){
 
 static
 Nullable(PyObject*)
-DndAttributesMap_getitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key){
+DndAttributesMap_getitem(DndAttributesMap* map, PyObject* key){
     if(!PyUnicode_Check(key)){
         PyErr_SetString(PyExc_TypeError, "Attribute maps must be indexed by strings");
         return NULL;
@@ -418,7 +422,7 @@ DndAttributesMap_getitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key){
 
 static
 int
-DndAttributesMap_contains(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key){
+DndAttributesMap_contains(DndAttributesMap* map, PyObject* key){
     if(!PyUnicode_Check(key)){
         PyErr_SetString(PyExc_TypeError, "Attribute maps must be indexed by strings");
         return -1;
@@ -435,7 +439,7 @@ DndAttributesMap_contains(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key)
 // Value should be verified to either be NULL or a PyUnicode object.
 static
 int
-dnd_attributes_map_set_item(Nonnull(DndcContext*)ctx, NodeHandle handle, StringView key_sv, Nullable(PyObject*)value){
+dnd_attributes_map_set_item(DndcContext* ctx, NodeHandle handle, StringView key_sv, Nullable(PyObject*)value){
     auto node = get_node(ctx, handle);
     auto attributes = node->attributes;
     auto count = attributes?attributes->count:0;
@@ -466,7 +470,7 @@ dnd_attributes_map_set_item(Nonnull(DndcContext*)ctx, NodeHandle handle, StringV
 
 static
 int
-DndAttributesMap_setitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key, Nullable(PyObject*) value){
+DndAttributesMap_setitem(DndAttributesMap* map, PyObject* key, Nullable(PyObject*) value){
     if(!PyUnicode_Check(key)){
         PyErr_SetString(PyExc_TypeError, "Attribute maps must be indexed by strings");
         return -1;
@@ -481,7 +485,7 @@ DndAttributesMap_setitem(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*) key, 
 
 static
 Nullable(PyObject*)
-DndAttributesMap_repr(Nonnull(DndAttributesMap*)map){
+DndAttributesMap_repr(DndAttributesMap* map){
     auto ctx = map->ctx;
     auto node = get_node(ctx, map->handle);
     auto attributes = node->attributes;
@@ -510,7 +514,7 @@ DndAttributesMap_repr(Nonnull(DndAttributesMap*)map){
 
 static
 Nullable(PyObject*)
-DndAttributesMap_add(Nonnull(DndAttributesMap*)map, Nonnull(PyObject*)arg){
+DndAttributesMap_add(DndAttributesMap* map, PyObject* arg){
     if(!PyUnicode_Check(arg)){
         PyErr_SetString(PyExc_TypeError, "Argument to add must be a string");
         return NULL;
@@ -565,7 +569,7 @@ static PyTypeObject DndAttributesMapType = {
 
 static
 Nullable(PyObject*)
-make_attributes_map(Nonnull(DndcContext*)ctx, NodeHandle handle){
+make_attributes_map(DndcContext* ctx, NodeHandle handle){
     DndAttributesMap* self = (DndAttributesMap*)DndAttributesMapType.tp_alloc(&DndAttributesMapType, 0);
     if(!self) return NULL;
     self->ctx = ctx;
@@ -575,18 +579,18 @@ make_attributes_map(Nonnull(DndcContext*)ctx, NodeHandle handle){
 
 typedef struct DndNode {
     PyObject_HEAD
-    Nonnull(DndcContext*)ctx;
+    DndcContext* ctx;
     NodeHandle handle;
     } DndNode;
 
 static PyMethodDef DndNode_methods[] = {
     {NULL, NULL, 0, NULL}, // Sentinel
     };
-static PyObject* _Nullable DndNode_getattr(Nonnull(DndNode*), Nonnull(const char*));
-static PyObject* _Nullable DndNode_getattro(Nonnull(DndNode*), Nonnull(PyObject*));
-static int DndNode_setattr(Nonnull(DndNode*), Nonnull(const char*), Nullable(PyObject *));
-static int DndNode_setattro(Nonnull(DndNode*), Nonnull(PyObject*), Nullable(PyObject *));
-static Nullable(PyObject*) DndNode_repr(Nonnull(DndNode*));
+static PyObject* _Nullable DndNode_getattr(DndNode*, const char*);
+static PyObject* _Nullable DndNode_getattro(DndNode*, PyObject*);
+static int DndNode_setattr(DndNode*, const char*, Nullable(PyObject *));
+static int DndNode_setattro(DndNode*, PyObject*, Nullable(PyObject *));
+static Nullable(PyObject*) DndNode_repr(DndNode*);
 
 
 static PyTypeObject DndNodeType = {
@@ -605,7 +609,7 @@ static PyTypeObject DndNodeType = {
 
 static
 Nullable(PyObject*)
-DndNode_repr(Nonnull(DndNode*)self){
+DndNode_repr(DndNode* self){
     auto node = get_node(self->ctx, self->handle);
     // format a buffer as python apparently doesn't support %.*s
     MStringBuilder msb = {.allocator=self->ctx->temp_allocator};
@@ -627,7 +631,7 @@ DndNode_repr(Nonnull(DndNode*)self){
 
 static
 Nullable(PyObject*)
-py_node_set_err(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_node_set_err(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE)){
         PyErr_SetString(PyExc_ValueError, "Method called with invalid handle: 'err'");
         return NULL;
@@ -653,7 +657,7 @@ py_node_set_err(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)a
 
 static
 Nullable(PyObject*)
-make_py_node(Nonnull(DndcContext*)ctx, NodeHandle handle){
+make_py_node(DndcContext* ctx, NodeHandle handle){
     DndNode* self = (DndNode*)DndNodeType.tp_alloc(&DndNodeType, 0);
     if(!self) return NULL;
     self->ctx = ctx;
@@ -663,7 +667,7 @@ make_py_node(Nonnull(DndcContext*)ctx, NodeHandle handle){
 
 static
 Nullable(PyObject*)
-py_change_root_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_change_root_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
     (void)handle; // we're abusing my pyboundmethod machinery
     DndNode* new_root;
     const char* const keywords[] = { "new_root", NULL, };
@@ -684,7 +688,7 @@ py_change_root_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObjec
 
 static
 Nullable(PyObject*)
-py_make_string_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_make_string_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
     (void)handle;
     PyObject* arg;
     const char* const keywords[] = { "text", NULL, };
@@ -708,7 +712,7 @@ py_make_string_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObjec
 
 static
 Nullable(PyObject*)
-py_kebab(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_kebab(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
     (void)handle;
     const char* text;
     Py_ssize_t length;
@@ -731,7 +735,7 @@ py_kebab(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nu
 
 static
 Nullable(PyObject*)
-py_add_dependency(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_add_dependency(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
     (void)handle;
     PyObject* text;
     const char* const keywords[] = { "text", NULL, };
@@ -750,7 +754,7 @@ py_add_dependency(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*
 
 static
 Nullable(PyObject*)
-py_make_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_make_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
     (void)handle;
     NodeTypeEnum* type;
     PyObject* text = NULL;
@@ -873,7 +877,7 @@ py_make_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args
 
 static
 Nullable(PyObject*)
-py_set_data(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_set_data(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
     (void)handle;
     PyObject* key = NULL;
     PyObject* value = NULL;
@@ -894,7 +898,7 @@ py_set_data(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args,
 
 static
 Nullable(PyObject*)
-py_detach_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_detach_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
     const char* const keywords[] = { NULL, };
     PushDiagnostic();
     SuppressCastQual();
@@ -929,7 +933,7 @@ py_detach_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)ar
 
 static
 Nullable(PyObject*)
-py_add_child_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_add_child_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
     const char* const keywords[] = { "child", NULL, };
     NodeHandle new_handle;
     PyObject* arg;
@@ -971,7 +975,7 @@ py_add_child_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*
 
 static
 Nullable(PyObject*)
-py_replace_child_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_replace_child_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
     const char* const keywords[] = { "child", "newchild", NULL, };
     DndNode* child;
     DndNode* newchild;
@@ -1017,7 +1021,7 @@ py_replace_child_node(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObj
 
 static
 Nullable(PyObject*)
-py_select_nodes(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_select_nodes(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
     (void)handle;
     NodeTypeEnum* type_ = NULL;
     PyObject* result = NULL;
@@ -1102,7 +1106,7 @@ py_select_nodes(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)a
 
 static
 Nullable(PyObject*)
-py_read_file(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args, Nullable(PyObject*)kwargs){
+py_read_file(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
     (void)handle;
     const char* const keywords[] = {"path", NULL};
     PyObject* arg;
@@ -1137,11 +1141,11 @@ py_read_file(Nonnull(DndcContext*)ctx, NodeHandle handle, Nonnull(PyObject*)args
     }
 
 
-static Nullable(PyObject*) make_py_ctx(Nonnull(DndcContext*));
+static Nullable(PyObject*) make_py_ctx(DndcContext*);
 
 static
 Errorable_f(void)
-execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHandle handle){
+execute_python_string(DndcContext* ctx, const char* text, NodeHandle handle){
     PyCompilerFlags flags = {
 #if PY_MINOR_VERSION > 7
         .cf_flags = PyCF_SOURCE_IS_UTF8,
@@ -1245,7 +1249,7 @@ execute_python_string(Nonnull(DndcContext*)ctx, Nonnull(const char*)text, NodeHa
 
 static inline
 Nullable(PyObject*)
-DndNode_getattr_ls(Nonnull(DndNode*)obj, LongString name){
+DndNode_getattr_ls(DndNode* obj, LongString name){
     auto ctx = obj->ctx;
     #define CHECK(lit, N) ({_Static_assert(sizeof(lit)-1==N, "'" lit "' is not length " #N); memcmp(lit, name.text, N)==0;})
     switch(name.length){
@@ -1345,20 +1349,20 @@ DndNode_getattr_ls(Nonnull(DndNode*)obj, LongString name){
 
 static
 Nullable(PyObject*)
-DndNode_getattr(Nonnull(DndNode*)obj, Nonnull(const char*)name){
+DndNode_getattr(DndNode* obj, const char* name){
     auto len = strlen(name);
     return DndNode_getattr_ls(obj, (LongString){.text=name, .length=len});
     }
 static
 Nullable(PyObject*)
-DndNode_getattro(Nonnull(DndNode*)obj, Nonnull(PyObject*)name){
+DndNode_getattro(DndNode* obj, PyObject* name){
     auto ls = pystring_borrow_longstring(name);
     return DndNode_getattr_ls(obj, ls);
     }
 
 static inline
 int
-DndNode_setattr_ls(Nonnull(DndNode*)obj, LongString name, Nullable(PyObject*) value){
+DndNode_setattr_ls(DndNode* obj, LongString name, Nullable(PyObject*) value){
     if(!value){
         PyErr_SetString(PyExc_TypeError, "deletion of attributes is not supported");
         return -1;
@@ -1516,14 +1520,14 @@ DndNode_setattr_ls(Nonnull(DndNode*)obj, LongString name, Nullable(PyObject*) va
     }
 static
 int
-DndNode_setattr(Nonnull(DndNode*)obj, Nonnull(const char*)name, Nullable(PyObject*) value){
+DndNode_setattr(DndNode* obj, const char* name, Nullable(PyObject*) value){
     auto len = strlen(name);
     LongString ls = {.text=name, .length=len};
     return DndNode_setattr_ls(obj, ls, value);
     }
 static
 int
-DndNode_setattro(Nonnull(DndNode*)obj, Nonnull(PyObject*)name, Nullable(PyObject*) value){
+DndNode_setattro(DndNode* obj, PyObject* name, Nullable(PyObject*) value){
     auto ls = pystring_borrow_longstring(name);
     return DndNode_setattr_ls(obj, ls, value);
     }
@@ -1531,15 +1535,15 @@ DndNode_setattro(Nonnull(DndNode*)obj, Nonnull(PyObject*)name, Nullable(PyObject
 // just a bare wrapper around the parse context
 typedef struct Dndcontext {
     PyObject_HEAD
-    Nonnull(DndcContext*) ctx;
-    } Dndcontext;
+    DndcContext* ctx;
+} Dndcontext;
 
 // static PyMethodDef Dndcontext_methods[] = {
     // {NULL, NULL, 0, NULL}, // sentinel
     // };
 
-static PyObject* _Nullable Dndcontext_getattr(Nonnull(Dndcontext*), Nonnull(const char*));
-static PyObject* _Nullable Dndcontext_getattro(Nonnull(Dndcontext*), Nonnull(PyObject*));
+static PyObject* _Nullable Dndcontext_getattr(Dndcontext*, const char*);
+static PyObject* _Nullable Dndcontext_getattro(Dndcontext*, PyObject*);
 
 static PyTypeObject DndcontextType = {
     PyVarObject_HEAD_INIT(NULL, 0)
@@ -1554,7 +1558,7 @@ static PyTypeObject DndcontextType = {
     };
 
 static PyObject* _Nullable
-Dndcontext_getattr_ls(Nonnull(Dndcontext*)pyctx, LongString name){
+Dndcontext_getattr_ls(Dndcontext* pyctx, LongString name){
     #define CHECK(lit, N) ({_Static_assert(sizeof(lit)-1==N, "'" lit "' is not length " #N); memcmp(lit, name.text, N)==0;})
     auto ctx = pyctx->ctx;
     switch(name.length){
@@ -1648,21 +1652,21 @@ Dndcontext_getattr_ls(Nonnull(Dndcontext*)pyctx, LongString name){
 
 static
 PyObject* _Nullable
-Dndcontext_getattr(Nonnull(Dndcontext*)pyctx, Nonnull(const char*)attr){
+Dndcontext_getattr(Dndcontext* pyctx, const char* attr){
     auto len = strlen(attr);
     LongString ls = {.text=attr, .length=len};
     return Dndcontext_getattr_ls(pyctx, ls);
     }
 static
 PyObject* _Nullable
-Dndcontext_getattro(Nonnull(Dndcontext*)pyctx, Nonnull(PyObject*)attr){
+Dndcontext_getattro(Dndcontext* pyctx, PyObject* attr){
     auto ls = pystring_borrow_longstring(attr);
     return Dndcontext_getattr_ls(pyctx, ls);
     }
 
 static
 Nullable(PyObject*)
-make_py_ctx(Nonnull(DndcContext*)ctx){
+make_py_ctx(DndcContext* ctx){
     Dndcontext* self = (Dndcontext*)DndcontextType.tp_alloc(&DndcontextType, 0);
     if(!self) return NULL;
     self->ctx = ctx;
@@ -1755,7 +1759,15 @@ init_python_interpreter(uint64_t flags){
     return 0;
 #endif
     }
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
 #include "frozenstdlib.h"
+#pragma clang assume_nonnull begin
+#else
+#include "frozenstdlib.h"
+#endif
+
 static Errorable_f(void) internal_dndc_python_init_types(void);
 static
 Errorable_f(void)
@@ -1799,4 +1811,9 @@ end_interpreter(void){
     }
 PopDiagnostic();
 #endif
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
+
 #endif
