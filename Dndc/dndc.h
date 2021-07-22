@@ -17,12 +17,15 @@
 #ifdef __clang__
 // Unless marked, pointers are nonnull.
 #pragma clang assume_nonnull begin
+
 // This pointer may be null
 #define DNDC_NULLABLE(x) x _Nullable
-// This pointer's nullability depends on something else and can be assumed null or
-// nonnull depending on that state. For example, a buffer with length 0 can
+
+// This pointer's nullability depends on something else and can be assumed null
+// or nonnull depending on that state. For example, a buffer with length 0 can
 // have a null pointer.
 #define DNDC_NULLDEP(x) x _Null_unspecified
+
 #else
 #define DNDC_NULLABLE(x) x
 #define DNDC_NULLDEP(x) x
