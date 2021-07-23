@@ -36,10 +36,10 @@
 // #pragma comment(lib, "uuid.lib")
 // #pragma comment(lib, "winspool.lib")
 
-static TCHAR win_class[] = _T("DesktopApp");
+static wchar_t win_class[] = L"DesktopApp";
 
-static TCHAR title[] = _T("Gdndc");
-static TCHAR filepath[1024];
+static wchar_t title[] = L"Gdndc";
+static wchar_t filepath[1024];
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
@@ -50,39 +50,36 @@ static wil::com_ptr<ICoreWebView2> webviewWindow;
 static wil::com_ptr<ICoreWebView2_3> webviewWindow_3;
 static HWND textedit_handle;
 // mutable on purpose
-static int TEXTEDIT_WIDTH = 1000;
+static int TEXTEDIT_WIDTH = 1100;
 enum {ID_EDIT=1};
 
 #if 1
-void print_error(LPTSTR lpszFunction){
+void print_error(const wchar_t* where_failed){
     // Retrieve the system error message for the last-error code
-    LPVOID lpMsgBuf;
-    LPVOID lpDisplayBuf;
+    wchar_t* MsgBuf;
     DWORD dw = GetLastError();
 
-    FormatMessage(
+    FormatMessageW(
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
         FORMAT_MESSAGE_FROM_SYSTEM |
         FORMAT_MESSAGE_IGNORE_INSERTS,
         NULL,
         dw,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPTSTR) &lpMsgBuf,
+        (wchar_t*) &MsgBuf,
         0, NULL );
 
     // Display the error message and exit the process
 
-    lpDisplayBuf = (LPVOID)LocalAlloc(LMEM_ZEROINIT,
-        (lstrlen((LPCTSTR)lpMsgBuf) + lstrlen((LPCTSTR)lpszFunction) + 40) * sizeof(TCHAR));
-    StringCchPrintf((LPTSTR)lpDisplayBuf,
-        LocalSize(lpDisplayBuf) / sizeof(TCHAR),
-        TEXT("%s failed with error %d: %s"),
-        lpszFunction, dw, lpMsgBuf);
-    MessageBox(NULL, (LPCTSTR)lpDisplayBuf, TEXT("Error"), MB_OK);
+    wchar_t* DisplayBuf = (wchar_t*)LocalAlloc(LMEM_ZEROINIT, (lstrlenW(MsgBuf) + lstrlenW(where_failed) + 40) * sizeof(wchar_t));
+    StringCchPrintfW(DisplayBuf, LocalSize(DisplayBuf) / sizeof(wchar_t), L"%s failed with error %d: %s", where_failed, dw, MsgBuf);
+    MessageBoxW(NULL, DisplayBuf, L"Error", MB_OK);
 
-    LocalFree(lpMsgBuf);
-    LocalFree(lpDisplayBuf);
+    LocalFree(MsgBuf);
+    LocalFree(DisplayBuf);
     }
+#else
+#define print_error(mess) (void)mess
 #endif
 
 static
@@ -110,7 +107,7 @@ get_utf8_string_from_window(HWND handle){
 
 struct WinString {
     wchar_t* text;
-    size_t nchars; // includes terminating null character
+    size_t nchars_with_zero; // includes terminating null character
 };
 
 static void choose_open_file(HWND);
@@ -244,7 +241,7 @@ int main(){
     // TODO: tell user to install runtime
     (void)res;
     HINSTANCE app_instance = GetModuleHandle(NULL);
-    LoadLibrary(_T("Msftedit.dll"));
+    LoadLibraryW(L"Msftedit.dll");
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 	WNDCLASSEX wcex = {
         .cbSize = sizeof(WNDCLASSEX),
@@ -276,9 +273,9 @@ int main(){
 	);
 
 	if(!mainwindow){
-		MessageBox(NULL,
-			_T("Call to CreateWindow failed!"),
-			_T("Foo"),
+		MessageBoxW(NULL,
+			L"Call to CreateWindow failed!",
+			L"Foo",
 			NULL);
 		return 1;
 	}
@@ -313,15 +310,15 @@ WndProc(HWND mainwindow_handle, UINT message, WPARAM wParam, LPARAM lParam){
         CHARFORMATW fmt1 = {
             .cbSize = sizeof(fmt1),
             .dwMask = CFM_FACE,
-            // .szFaceName = _T("Consolas"),
-            .szFaceName = _T("Cascadia Mono"),
+            // .szFaceName = L"Consolas",
+            .szFaceName = L"Cascadia Mono",
             };
         LRESULT font_success = SendMessage(textedit_handle, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&fmt1);
         if(!font_success){
             CHARFORMATW fmt2 = {
                 .cbSize = sizeof(fmt2),
                 .dwMask = CFM_FACE,
-                .szFaceName = _T("Consolas"),  // I think Consolas is guaranteed to be installed?
+                .szFaceName = L"Consolas",  // I think Consolas is guaranteed to be installed?
                 };
             font_success = SendMessage(textedit_handle, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&fmt2);
             }
@@ -337,11 +334,9 @@ WndProc(HWND mainwindow_handle, UINT message, WPARAM wParam, LPARAM lParam){
         SetFocus(textedit_handle);
         }return 0;
     case WM_USER+1:{
-        fprintf(stderr, "Got choose open file command\n");
         choose_open_file(textedit_handle);
         }return 0;
     case WM_USER:{
-        fprintf(stderr, "Got reload command\n");
         if(webviewWindow)
             webviewWindow->ExecuteScript(L"location.reload();", NULL);
         }return 0;
@@ -409,29 +404,29 @@ void
 make_menus(HWND window){
     HMENU menu = CreateMenu();
     HMENU popup = CreateMenu();
-    AppendMenu(popup, MF_STRING,    IDM_FILE_NEW,     _T("&New"));
-    AppendMenu(popup, MF_STRING,    IDM_FILE_OPEN,    _T("&Open..."));
-    AppendMenu(popup, MF_STRING,    IDM_FILE_SAVE,    _T("&Save"));
-    AppendMenu(popup, MF_STRING,    IDM_FILE_SAVE_AS, _T("Save &As..."));
-    AppendMenu(popup, MF_SEPARATOR, 0,                NULL);
-    AppendMenu(popup, MF_STRING,    IDM_APP_EXIT,     _T("E&xit"));
+    AppendMenuW(popup, MF_STRING,    IDM_FILE_NEW,     L"&New");
+    AppendMenuW(popup, MF_STRING,    IDM_FILE_OPEN,    L"&Open...");
+    AppendMenuW(popup, MF_STRING,    IDM_FILE_SAVE,    L"&Save");
+    AppendMenuW(popup, MF_STRING,    IDM_FILE_SAVE_AS, L"Save &As...");
+    AppendMenuW(popup, MF_SEPARATOR, 0,                NULL);
+    AppendMenuW(popup, MF_STRING,    IDM_APP_EXIT,     L"E&xit");
 
-    AppendMenu(menu, MF_POPUP, (UINT_PTR)popup, _T("&File"));
-
-    popup = CreateMenu();
-    AppendMenu(popup, MF_STRING,    IDM_EDIT_UNDO,  _T("&Undo"));
-    AppendMenu(popup, MF_STRING,    IDM_EDIT_REDO,  _T("Redo"));
-    AppendMenu(popup, MF_SEPARATOR, 0,              NULL);
-    AppendMenu(popup, MF_STRING,    IDM_EDIT_CUT,   _T("Cu&t"));
-    AppendMenu(popup, MF_STRING,    IDM_EDIT_COPY,  _T("&Copy"));
-    AppendMenu(popup, MF_STRING,    IDM_EDIT_PASTE, _T("&Paste"));
-
-    AppendMenu(menu, MF_POPUP, (UINT_PTR)popup, _T("&Edit"));
+    AppendMenuW(menu, MF_POPUP, (uintptr_t)popup, L"&File");
 
     popup = CreateMenu();
-    AppendMenu(popup, MF_STRING,    IDM_FORMAT_FONT, _T("F&ont"));
+    AppendMenuW(popup, MF_STRING,    IDM_EDIT_UNDO,  L"&Undo");
+    AppendMenuW(popup, MF_STRING,    IDM_EDIT_REDO,  L"Redo");
+    AppendMenuW(popup, MF_SEPARATOR, 0,              NULL);
+    AppendMenuW(popup, MF_STRING,    IDM_EDIT_CUT,   L"Cu&t");
+    AppendMenuW(popup, MF_STRING,    IDM_EDIT_COPY,  L"&Copy");
+    AppendMenuW(popup, MF_STRING,    IDM_EDIT_PASTE, L"&Paste");
 
-    AppendMenu(menu, MF_POPUP, (UINT_PTR)popup, _T("&Format"));
+    AppendMenuW(menu, MF_POPUP, (uintptr_t)popup, L"&Edit");
+
+    popup = CreateMenu();
+    AppendMenuW(popup, MF_STRING,    IDM_FORMAT_FONT, L"F&ont");
+
+    AppendMenuW(menu, MF_POPUP, (uintptr_t)popup, L"&Format");
 
     SetMenu(window, menu);
 
@@ -504,7 +499,7 @@ save_file(HWND textedit){
         return save_as_file(textedit);
         }
     auto text = get_utf8_string_from_window(textedit);
-    WinString path = {.text=filepath, .nchars = wcslen(filepath)+1};
+    WinString path = {.text=filepath, .nchars_with_zero = wcslen(filepath)+1};
     auto result = sortof_atomically_write_file(text, path);
     free((void*)text.text);
     return result;
@@ -534,16 +529,17 @@ sortof_atomically_write_file(LongString text, WinString path){
     // exists. Write to a temp file and then replace the original.
     wchar_t tmppath[1024];
     wchar_t tmppath2[1024];
-    if(path.nchars > 1022){ // space for '\0' and trailing char
+    if(path.nchars_with_zero > 1022){ // space for '\0' and trailing char
         return false;
         }
-    memcpy(tmppath, path.text, path.nchars*sizeof(path.text[0]));
-    memcpy(tmppath2, path.text, path.nchars*sizeof(path.text[0]));
-    // nchars includdes terminating null
-    tmppath[path.nchars-1]  = L't';
-    tmppath[path.nchars]    = L'\0';
-    tmppath2[path.nchars-1] = L'b';
-    tmppath2[path.nchars]   = L'\0';
+    memcpy(tmppath, path.text, path.nchars_with_zero*sizeof(path.text[0]));
+    memcpy(tmppath2, path.text, path.nchars_with_zero*sizeof(path.text[0]));
+    // append a 't'
+    tmppath[path.nchars_with_zero-1]  = L't';
+    tmppath[path.nchars_with_zero]    = L'\0';
+    // append a 'b'
+    tmppath2[path.nchars_with_zero-1] = L'b';
+    tmppath2[path.nchars_with_zero]   = L'\0';
     auto tmpfile = CreateFileW(
             tmppath,
             GENERIC_WRITE,
@@ -563,7 +559,7 @@ sortof_atomically_write_file(LongString text, WinString path){
         }
     auto replaced = ReplaceFileW(path.text, tmppath, tmppath2, 0, 0, 0);
     if(replaced == 0){
-        // print_error(L"replace failed");
+        print_error(L"replace failed");
         DeleteFileW(tmppath2);
         return false;
         }
@@ -591,7 +587,7 @@ save_as_file(HWND textedit){
     static_assert(sizeof(filepath) == sizeof(filestr));
     memcpy(filepath, filestr, sizeof(filestr));
     auto text = get_utf8_string_from_window(textedit);
-    WinString path = {.text=filepath, .nchars = wcslen(filepath)+1};
+    WinString path = {.text=filepath, .nchars_with_zero = wcslen(filepath)+1};
     auto result = sortof_atomically_write_file(text, path);
     free((void*)text.text);
     return result;
