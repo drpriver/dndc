@@ -356,19 +356,18 @@ load_processed_binary_file(Nonnull(FileCache*)cache, StringView binarypath, Nonn
 static inline
 Nullable(StringView*)
 find_link_target(Nonnull(DndcContext*)ctx, StringView kebabed){
-    // HERE("kebabed = '%.*s'", (int)kebabed.length, kebabed.text);
     if(!ctx->links.count)
         return NULL;
 #if 1
     auto data = ctx->links.data;
     size_t low = 0, high = ctx->links.count-1;
-    // This can't realistically overflow.
-    size_t mid = (high+low)/2;
+    size_t mid;
     if(SV_equals(data[low].key, kebabed))
         return &data[low].value;
     if(SV_equals(data[high].key, kebabed))
         return &data[high].value;
     while(low < high){
+        // This can't realistically overflow.
         mid = (low+high)/2;
         int c = StringView_cmp(&data[mid].key, &kebabed);
         if(c == 0)
@@ -491,7 +490,7 @@ append_child(Nonnull(DndcContext*)ctx, NodeHandle parent_handle, NodeHandle chil
         }
     if(parent->children.count == 4){
         Marray(NodeHandle) children = {};
-        Marray_reserve(NodeHandle)(&children, ctx->allocator, 4);
+        Marray_ensure_total(NodeHandle)(&children, ctx->allocator, 4);
         memcpy(children.data, parent->inline_children, sizeof(parent->inline_children));
         children.count = 4;
         parent->children = children;

@@ -6,12 +6,14 @@
 
 #include "dndc_api_def.h"
 #include "dndc.h"
+#include "dndc_long_string.h"
 #include "dndc_node_types.h"
 #include "dndc_format.c"
 #include "dndc_types.h"
 #include "dndc_funcs.h"
 
 #include "path_util.h"
+#include "msb_extensions.h"
 #include "allocator.h"
 #include "mallocator.h"
 #include "linear_allocator.h"
@@ -28,6 +30,7 @@
 
 #ifdef DNDCMAIN
 #include "argument_parsing.h"
+#include "term_util.h"
 #endif
 
 
@@ -209,6 +212,7 @@ struct DependencyUserData {
 };
 
 static int depends_print_callback(void*_Nullable, size_t, Nonnull(StringView*));
+
 int main(int argc, char**argv){
     LongString source_path = LS("");
     LongString output_path = LS("");
@@ -216,99 +220,76 @@ int main(int argc, char**argv){
     LongString dependency_path = LS("");
     struct DependencyUserData dependency_user_data = {};
     LongString base_dir = LS("");
-    bool report_orphans = false;
-    bool no_python = false;
-    bool print_tree = false;
-    bool print_links = false;
-    bool print_stats = false;
-    bool allow_bad_links = false;
-    bool suppress_warnings = false;
-    bool dont_write = false;
-    bool no_threads = false;
-    bool cleanup = false;
-    bool use_site = false;
-    bool reformat_only = false;
-    bool hidden_help = false;
-    bool dont_inline_images = false;
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SOURCE_IS_PATH_NOT_DATA
+        | DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM
+        ;
     bool print_syntax = false;
     bool print_depends = false;
-    bool untrusted = false;
-    bool strip_whitespace = false;
-    bool dont_read = false;
     {
         ArgToParse pos_args[] = {
             [0] = {
                 .name = SV("source"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&source_path),
-                .help = "Source file (.dnd file) to read from.\nIf not given, reads from stdin.",
+                .help = "Source file (.dnd file) to read from.",
                 },
             };
         ArgToParse kw_args[] = {
             {
                 .name = SV("-o"),
                 .altname1 = SV("--output"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&output_path),
-                .help = "output path (.html file) to write to.\n If not given, writes to stdout.",
-                .hide_default = true,
+                .help = "output path (.html file) to write to.",
             },
             {
                 .name = SV("-d"),
                 .altname1 = SV("--depends-path"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&dependency_path),
                 .help = "If given, where to write a make-style dependency file.",
-                .hide_default = true,
             },
             {
                 .name = SV("-C"),
                 .altname1 = SV("--base-directory"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&base_dir),
-                .help = "Relative filepaths in source files will be relative to the given directory.\n"
+                .help = "Paths in source files will be relative "
+                        "to the given directory.\n"
                         "If not given, everything is relative to cwd.",
-                .hide_default = true,
             },
             {
                 .name = SV("--report-orphans"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&report_orphans),
+                .dest = ArgBitFlagDest(&flags, DNDC_REPORT_ORPHANS),
                 .help = "Report orphaned nodes (for debugging scripts).",
                 .hidden = true,
             },
             {
                 .name = SV("--no-python"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&no_python),
+                .dest = ArgBitFlagDest(&flags, DNDC_NO_PYTHON),
                 .help = "Don't execute python nodes.",
                 .hidden = true,
             },
             {
                 .name = SV("--print-tree"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&print_tree),
+                .dest = ArgBitFlagDest(&flags, DNDC_PRINT_TREE),
                 .help = "Print out the entire document tree.",
                 .hidden = true,
             },
             {
                 .name = SV("--print-links"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&print_links),
-                .help = "Print out all links (and what they target) known by the system.",
+                .dest = ArgBitFlagDest(&flags, DNDC_PRINT_LINKS),
+                .help = "Print out all links (and what they target) known by "
+                        "the system.",
                 .hidden = true,
             },
             {
                 .name = SV("--print-syntax"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&print_syntax),
                 .help = "Print out the input document with syntax highlighting.",
@@ -316,15 +297,13 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--print-stats"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&print_stats),
+                .dest = ArgBitFlagDest(&flags, DNDC_PRINT_STATS),
                 .help = "Log some informative statistics.",
                 .hidden = true,
             },
             {
                 .name = SV("--print-depends"),
-                .min_num = 0,
                 .max_num = 1,
                 .dest = ARGDEST(&print_depends),
                 .help = "Print out what paths the document depends on.",
@@ -332,146 +311,160 @@ int main(int argc, char**argv){
             },
             {
                 .name = SV("--allow-bad-links"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&allow_bad_links),
+                .dest = ArgBitFlagDest(&flags, DNDC_ALLOW_BAD_LINKS),
                 .help = "Warn instead of erroring if a link can't be resolved.",
                 .hidden = true,
             },
             {
                 .name = SV("--suppress-warnings"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&suppress_warnings),
+                .dest = ArgBitFlagDest(&flags, DNDC_SUPPRESS_WARNINGS),
                 .help = "Don't report non-fatal errors.",
                 .hidden = true,
             },
             {
                 .name = SV("--dont-write"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&dont_write),
+                .dest = ArgBitFlagDest(&flags, DNDC_DONT_WRITE),
                 .help = "Don't write out the document.",
                 .hidden = true,
             },
             {
                 .name = SV("--single-threaded"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&no_threads),
-                .help = "Do not create worker threads, do everything in the same thread.",
+                .dest = ArgBitFlagDest(&flags, DNDC_NO_THREADS),
+                .help = "Do not create worker threads, do everything in the "
+                        "same thread.",
                 .hidden = true,
             },
             {
                 .name = SV("--cleanup"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&cleanup),
+                .dest = ArgBitFlagDest(&flags, DNDC_NO_CLEANUP),
                 .help = "Cleanup all resources (memory allocations, etc.).\n"
-                    "    Development debugging tool, useless in regular cli use.",
+                        "Development debugging tool, useless in regular cli use.",
                 .hidden = true,
             },
             {
                 .name = SV("--use-site"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&use_site),
+                .dest = ArgBitFlagDest(&flags, DNDC_PYTHON_UNISOLATED),
                 .help = "Don't isolate python, import site, etc.\n"
-                    "   Greatly slows startup, but allows importing user installed packages.",
+                        "Greatly slows startup, but allows importing user "
+                        "installed packages.",
             },
             {
                 .name = SV("--format"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&reformat_only),
-                .help = "Instead of rendering to html, render to .dnd with trailing  "
-                        "spaces removed, text wrapped to 80 columns (if semantically "
-                        "equivalent), etc. Imports will not be resolved - only the "
-                        "given input file will be imported."
-                        ,
-            },
-            {
-                .name = SV("-H"),
-                .altname1 = SV("--hidden-help"),
-                .min_num = 0,
-                .max_num = 1,
-                .dest = ARGDEST(&hidden_help),
-                .help = "Print out help for the hidden arguments.",
+                .dest = ArgBitFlagDest(&flags, DNDC_REFORMAT_ONLY),
+                .help = "Instead of rendering to html, render to .dnd with "
+                        "trailing spaces removed, text wrapped to 80 columns "
+                        "(if semantically equivalent), etc." ,
             },
             {
                 .name = SV("--dont-inline-images"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&dont_inline_images),
+                .dest = ArgBitFlagDest(&flags, DNDC_DONT_INLINE_IMAGES),
                 .help = "Instead of base64ing the images, use a link.",
                 .hidden = true,
             },
             {
                 .name = SV("--untrusted-input"),
                 .altname1 = SV("--untrusted"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&untrusted),
-                .help = "Input is untrusted and thus should not be allowed to import files, execute scripts or embed javascript in the output.",
+                .dest = ArgBitFlagDest(&flags, DNDC_INPUT_IS_UNTRUSTED),
+                .help = "Input is untrusted and thus should not be allowed to "
+                        "import files, execute scripts or embed javascript in "
+                        "the output.",
                 .hidden = true,
             },
             {
                 .name = SV("--strip-spaces"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&strip_whitespace),
-                .help = "Strip trailing and leading whitespace from all output lines",
+                .dest = ArgBitFlagDest(&flags, DNDC_STRIP_WHITESPACE),
+                .help = "Strip trailing and leading whitespace from all output "
+                        "lines.",
                 .hidden = false,
             },
             {
                 .name = SV("--dont-read"),
-                .min_num = 0,
                 .max_num = 1,
-                .dest = ARGDEST(&dont_read),
-                .help = "Don't read any files (other than builtins and the initial input file). Python blocks can bypass this.",
+                .dest = ArgBitFlagDest(&flags, DNDC_DONT_READ),
+                .help = "Don't read any files (other than builtins and the "
+                        "initial input file). Python blocks can bypass this.",
                 .hidden = true,
             },
             };
+        enum {HELP, VERSION, HIDDEN_HELP};
+        ArgToParse early_args[] = {
+            [HELP] = {
+                .name = SV("-h"),
+                .altname1 = SV("--help"),
+                .help = "Print this help and exit.",
+            },
+            [VERSION] = {
+                .name = SV("--version"),
+                .help = "Print version information and exit.",
+            },
+            [HIDDEN_HELP] = {
+                .name = SV("-H"),
+                .altname1 = SV("--hidden-help"),
+                .help = "Print out help for the hidden arguments and exit.",
+            },
+        };
+        const char* version = "dndc version " DNDC_VERSION ". Compiled " __TIMESTAMP__;
         ArgParser argparser = {
             .name = argv[0],
             .description = "A .dnd to .html parser and compiler.",
-            .version = "dndc version " DNDC_VERSION ". Compiled " __TIMESTAMP__,
             .positional.args = pos_args,
             .positional.count = arrlen(pos_args),
             .keyword.args = kw_args,
             .keyword.count = arrlen(kw_args),
+            .early_out.args = early_args,
+            .early_out.count = arrlen(early_args),
             };
         Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
-        if(check_for_help(&args)){
-            print_help(&argparser);
-            return 0;
-            }
-        if(check_for_version(&args)){
-            print_version(&argparser);
-            return 0;
-            }
-        auto e = parse_args(&argparser, &args);
-        if(e.errored){
-            fprintf(stderr, "Error when parsing arguments.\n");
-            print_help(&argparser);
-            return e.errored;
-            }
-        if(hidden_help){
-            fputs(
-                "Hidden Arguments:\n"
-                "-----------------", stdout);
-            auto term_size = get_terminal_size();
-            if(term_size.columns > 80)
-                term_size.columns = 80;
-            for(int i = 0; i < arrlen(kw_args); i++){
-                auto arg = &kw_args[i];
-                if(!arg->hidden){
-                    continue;
-                    }
+        switch(check_for_early_out_args(&argparser, &args)){
+            case HELP:{
+                auto columns = get_terminal_size().columns;
+                if(columns > 80)
+                    columns = 80;
+                print_argparse_help(&argparser, columns);
                 putchar('\n');
-                print_arg_help(arg, term_size);
+                print_wrapped("If a source argument is not given, dndc will "
+                              "read from stdin. If an output argument is not "
+                              "given, dndc will write to stdout.", columns);
+                return 0;
                 }
-            return 0;
+            case VERSION:
+                puts(version);
+                return 0;
+            case HIDDEN_HELP:{
+                fputs(
+                    "Hidden Arguments:\n"
+                    "-----------------", stdout);
+                auto columns = get_terminal_size().columns;
+                if(columns > 80)
+                    columns = 80;
+                for(int i = 0; i < arrlen(kw_args); i++){
+                    auto arg = &kw_args[i];
+                    if(!arg->hidden){
+                        continue;
+                        }
+                    putchar('\n');
+                    print_arg_help(arg, columns);
+                    }
+                return 0;
+                }
+            default:
+                break;
+            }
+        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
+        if(e){
+            print_argparse_error(&argparser, e);
+            fprintf(stderr, "Use --help to see usage.\n");
+            return e;
             }
     }
     if(print_syntax){
@@ -479,24 +472,6 @@ int main(int argc, char**argv){
         return 0;
     }
 
-    uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_SOURCE_IS_PATH_NOT_DATA
-        | DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM
-        ;
-    if(allow_bad_links)
-        flags |= DNDC_ALLOW_BAD_LINKS;
-    if(suppress_warnings)
-        flags |= DNDC_SUPPRESS_WARNINGS;
-    if(print_stats)
-        flags |= DNDC_PRINT_STATS;
-    if(report_orphans)
-        flags |= DNDC_REPORT_ORPHANS;
-    if(no_python)
-        flags |= DNDC_NO_PYTHON;
-    if(print_tree)
-        flags |= DNDC_PRINT_TREE;
-    if(print_links)
-        flags |= DNDC_PRINT_LINKS;
     if(print_depends){
         dependency_func = depends_print_callback;
         }
@@ -504,39 +479,37 @@ int main(int argc, char**argv){
         dependency_func = dndc_write_depends_file;
         dependency_user_data.depfile = dependency_path;
         }
-    if(no_threads)
-        flags |= DNDC_NO_THREADS;
-    if(dont_write)
-        flags |= DNDC_DONT_WRITE;
-    if(not cleanup)
-        flags |= DNDC_NO_CLEANUP;
-    if(use_site)
-        flags |= DNDC_PYTHON_UNISOLATED;
-    if(reformat_only)
-        flags |= DNDC_REFORMAT_ONLY;
-    if(dont_inline_images)
-        flags |= DNDC_DONT_INLINE_IMAGES;
-    if(untrusted)
-        flags |= DNDC_INPUT_IS_UNTRUSTED;
-    if(strip_whitespace)
-        flags |= DNDC_STRIP_WHITESPACE;
-    if(dont_read)
-        flags |= DNDC_DONT_READ;
     dependency_user_data.outfile = output_path;
 
     #ifdef BENCHMARKING
     flags &= ~DNDC_NO_CLEANUP;
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, NULL, NULL, dndc_stderr_error_func, NULL, dependency_func, &dependency_user_data);
+    auto e = run_the_dndc(flags,
+                LS_to_SV(base_dir), source_path,
+                &output_path,
+                NULL, NULL,
+                dndc_stderr_error_func, NULL,
+                dependency_func, &dependency_user_data);
+
     assert(!e.errored);
     flags |= DNDC_PYTHON_IS_INIT;
-    for(int i = 0; i < BENCHMARKITERS;i++){
-        e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, &output_path, NULL, NULL, dndc_stderr_error_func, NULL, dependency_func, &dependency_user_data);
+    for(int i = 0; i < BENCHMARKITERS; i++){
+        e = run_the_dndc(flags,
+                LS_to_SV(base_dir), source_path,
+                &output_path,
+                NULL, NULL,
+                dndc_stderr_error_func, NULL,
+                dependency_func, &dependency_user_data);
         assert(!e.errored);
         }
     end_interpreter();
     return 0;
     #else
-    auto e = run_the_dndc(flags, LS_to_SV(base_dir), source_path, output_path.length? &output_path : NULL, NULL, NULL, dndc_stderr_error_func, NULL, dependency_func, &dependency_user_data);
+    auto e = run_the_dndc(flags,
+                 LS_to_SV(base_dir), source_path,
+                 output_path.length? &output_path : NULL,
+                 NULL, NULL,
+                 dndc_stderr_error_func, NULL,
+                 dependency_func, &dependency_user_data);
     return e.errored;
     #endif
     }
@@ -618,7 +591,9 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         }
     ArenaAllocator arena_allocator = {};
     const Allocator string_allocator = {.type=ALLOCATOR_ARENA, ._data=&arena_allocator};
-    const Allocator allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator();
+    const Allocator allocator = (flags & DNDC_NO_CLEANUP)?
+        get_mallocator()
+        : new_recorded_mallocator();
     // The linear allocator is very useful for temporary allocations, like
     // when we need to turn a string into its kebabed form and then look it up
     // in the link map. We do this a lot and throw away the temporary string
@@ -637,10 +612,17 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         .base_directory = base_directory,
         // The base64 cache is moved to another thread and then moved back, so
         // it needs an independent allocator so it can run concurrently.
-        .b64cache = external_b64cache? *external_b64cache :
-            ((FileCache){.allocator = flags & DNDC_NO_CLEANUP?get_mallocator():new_recorded_mallocator()}),
-        // The text cache only runs on this thread so we can just use the general allocator.
-        .textcache = external_textcache?*external_textcache:((FileCache){.allocator=allocator}),
+        .b64cache = external_b64cache? *external_b64cache:
+            (FileCache){
+                .allocator = (flags & DNDC_NO_CLEANUP)?
+                    get_mallocator()
+                    : new_recorded_mallocator()
+                },
+        // The text cache only runs on this thread so we can just use the
+        // general allocator.
+        .textcache = external_textcache?
+            *external_textcache
+            : (FileCache){.allocator=allocator},
         .error_func = error_func,
         .error_user_data = error_user_data,
         };
@@ -653,7 +635,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
             MStringBuilder sb = {.allocator=ctx.allocator};
             for(;;){
                 enum {N = 4096};
-                msb_reserve(&sb, N);
+                msb_ensure_additional(&sb, N);
                 char* buff = sb.data + sb.cursor;
                 auto numread = fread(buff, 1, N, stdin);
                 sb.cursor += numread;
@@ -699,7 +681,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         ctx_store_builtin_file(&ctx, LS("(string input)"), source);
         }
     // Quick and dirty estimate of how many nodes we will need.
-    Marray_reserve(Node)(&ctx.nodes, ctx.allocator, source.length/10+1);
+    Marray_ensure_total(Node)(&ctx.nodes, ctx.allocator, source.length/10+1);
 
     // Setup the root node.
     {
@@ -1354,7 +1336,7 @@ dndc_print_out_syntax(LongString source_path){
         MStringBuilder sb = {.allocator=allocator};
         for(;;){
             enum {N = 4096};
-            msb_reserve(&sb, N);
+            msb_ensure_additional(&sb, N);
             char* buff = sb.data + sb.cursor;
             auto numread = fread(buff, 1, N, stdin);
             sb.cursor += numread;

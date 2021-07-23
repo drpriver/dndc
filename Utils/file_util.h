@@ -6,9 +6,14 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include "common_macros.h"
+#include "errorable_long_string.h"
 #include "long_string.h"
 #include "ByteBuffer.h"
 #include "allocator.h"
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
 
 // If this is defined, use libc's FILE* to do everything instead of
 // native apis like read or ReadFile.
@@ -22,19 +27,19 @@
 // on Posix platforms, you will encounter files with CRLF, or mixed!
 // Most algorithms want to ignore trailing spaces anyway, so this isn't
 // that big an imposition.
-static inline Errorable_f(LongString) read_file(const Allocator a, Nonnull(const char*)filepath);
+static inline Errorable_f(LongString) read_file(const Allocator a, const char* filepath);
 // Read an entire file into a byte buffer. Not guranteed nul-terminated.
-static inline Errorable_f(ByteBuffer) read_bin_file(const Allocator a, Nonnull(const char*)filepath);
+static inline Errorable_f(ByteBuffer) read_bin_file(const Allocator a, const char* filepath);
 // Write an entire file. Agnostic as to text and binary, opens the file in binary
 // mode. Writes whatever you give it as is, so we don't convert unix newlines to CRLF
 // or anything like that.
-static inline Errorable_f(void) write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_length);
+static inline Errorable_f(void) write_file(const char* filename, const void* data, size_t data_length);
 
 #ifdef USE_C_STDIO
 static inline
 force_inline
 Errorable_f(size_t)
-file_size_from_fp(Nonnull(FILE*) fp){
+file_size_from_fp(FILE* fp){
     Errorable(size_t) result = {};
     #if 1
         auto fd = fileno(fp);
@@ -55,7 +60,7 @@ file_size_from_fp(Nonnull(FILE*) fp){
 
 static inline
 Errorable_f(LongString)
-read_file(const Allocator a, Nonnull(const char*)filepath){
+read_file(const Allocator a, const char* filepath){
     Errorable(LongString) result = {};
     auto fp = fopen(filepath, "rb");
     if(not fp)
@@ -87,7 +92,7 @@ finally:
 
 static inline
 Errorable_f(ByteBuffer)
-read_bin_file(const Allocator a, Nonnull(const char*)filepath){
+read_bin_file(const Allocator a, const char* filepath){
     Errorable(ByteBuffer) result = {};
     auto fp = fopen(filepath, "rb");
     if(not fp)
@@ -120,7 +125,7 @@ finally:
 
 static inline
 Errorable_f(void)
-write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_length){
+write_file(const char* filename, const void* data, size_t data_length){
     Errorable(void) result = {};
     auto fp = fopen(filename, "wb");
     if(!fp) Raise(FILE_NOT_OPENED);
@@ -136,8 +141,14 @@ write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_l
     }
 
 #elif defined(__linux__) || defined(__APPLE__)
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 #include <unistd.h>
 #include <fcntl.h>
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
 static inline
 force_inline
 Errorable_f(size_t)
@@ -154,7 +165,7 @@ file_size_from_fd(int fd){
 
 static inline
 Errorable_f(LongString)
-read_file(const Allocator a, Nonnull(const char*)filepath){
+read_file(const Allocator a, const char* filepath){
     Errorable(LongString) result = {};
     int fd = open(filepath, O_RDONLY);
     if(fd < 0)
@@ -188,7 +199,7 @@ finally:
 
 static inline
 Errorable_f(ByteBuffer)
-read_bin_file(const Allocator a, Nonnull(const char*)filepath){
+read_bin_file(const Allocator a, const char* filepath){
     Errorable(ByteBuffer) result = {};
     int fd = open(filepath, O_RDONLY);
     if(fd < 0)
@@ -221,7 +232,7 @@ finally:
 
 static inline
 Errorable_f(void)
-write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_length){
+write_file(const char* filename, const void* data, size_t data_length){
     Errorable(void) result = {};
     int fd = open(
             filename,
@@ -242,10 +253,16 @@ write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_l
     }
 
 #elif defined(_WIN32)
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 #include "windowsheader.h"
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
 static inline
 Errorable_f(LongString)
-read_file(const Allocator a, Nonnull(const char*)filepath){
+read_file(const Allocator a, const char* filepath){
     Errorable(LongString) result = {};
     PushDiagnostic();
     SuppressDiscardQualifiers();
@@ -291,7 +308,7 @@ finally:
 
 static inline
 Errorable_f(ByteBuffer)
-read_bin_file(const Allocator a, Nonnull(const char*)filepath){
+read_bin_file(const Allocator a, const char* filepath){
     Errorable(ByteBuffer) result = {};
     PushDiagnostic();
     SuppressDiscardQualifiers();
@@ -335,7 +352,7 @@ finally:
     }
 static inline
 Errorable_f(void)
-write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_length){
+write_file(const char* filename, const void* data, size_t data_length){
     Errorable(void) result = {};
     PushDiagnostic();
     SuppressDiscardQualifiers();
@@ -372,7 +389,7 @@ finally:
 #elif defined(WASM)
 static inline
 Errorable_f(LongString)
-read_file(const Allocator a, Nonnull(const char*)filepath){
+read_file(const Allocator a, const char* filepath){
     (void)a;
     (void)filepath;
     Errorable(LongString) result = {.errored=OS_ERROR};
@@ -381,7 +398,7 @@ read_file(const Allocator a, Nonnull(const char*)filepath){
 
 static inline
 Errorable_f(ByteBuffer)
-read_bin_file(const Allocator a, Nonnull(const char*)filepath){
+read_bin_file(const Allocator a, const char* filepath){
     (void)a;
     (void)filepath;
     Errorable(ByteBuffer) result = {.errored=OS_ERROR};
@@ -389,13 +406,17 @@ read_bin_file(const Allocator a, Nonnull(const char*)filepath){
     }
 static inline
 Errorable_f(void)
-write_file(Nonnull(const char*)filename, Nonnull(const void*)data, size_t data_length){
+write_file(const char* filename, const void* data, size_t data_length){
     (void)filename;
     (void)data;
     (void)data_length;
     Errorable(void) result = {.errored=OS_ERROR};
     return result;
     }
+#endif
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
 #endif
 
 #endif

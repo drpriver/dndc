@@ -225,9 +225,6 @@ def should_exclude(name:str, excludes={}) -> bool:
     if 'System' in name:
         excludes[name] = True
         return True
-    # if 'DCraw' not in name and 'SDL' not in name:# and 'python' not in name:
-        # excludes[name] = True
-        # return True
     excludes[name] = False
     return False
 

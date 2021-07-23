@@ -6,6 +6,10 @@
 #include "ByteBuilder.h"
 #include "error_handling.h"
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 // The size needed to encode a data buffer into a string.
 static inline
 size_t
@@ -29,7 +33,7 @@ base64_decode_size(size_t src_length){
 // Some implementations don't like that, but they are wrong!
 static inline
 size_t
-base64_encode(Nonnull(char*) restrict dst, size_t dst_length, Nonnull(const void*) restrict src, size_t src_length){
+base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, size_t src_length){
     static const char  base64_encode_table0[256] =
         "AAAABBBBCC"
         "CCDDDDEEEE"
@@ -263,11 +267,11 @@ base64_encode(Nonnull(char*) restrict dst, size_t dst_length, Nonnull(const void
 // Writes the base64 representation of the data buffer into the builder.
 static inline
 void
-msb_write_b64(Nonnull(MStringBuilder*)restrict sb, Nonnull(const void*) data, size_t length){
+msb_write_b64(MStringBuilder* restrict sb, const void* data, size_t length){
     size_t size_needed = base64_encode_size(length);
     if(unlikely(!size_needed))
         return;
-    _check_msb_size(sb, size_needed);
+    _check_msb_remaining_size(sb, size_needed);
     size_t size_used = base64_encode(sb->data + sb->cursor, size_needed, data, length);
     assert(size_used == size_needed);
     sb->cursor += size_used;
@@ -278,7 +282,7 @@ msb_write_b64(Nonnull(MStringBuilder*)restrict sb, Nonnull(const void*) data, si
 // Doesn't support '=' as zero end-padding.
 static inline
 Errorable_f(void)
-base64_decode(Nonnull(void*)restrict dst, size_t dst_length, Nonnull(const uint8_t*) restrict src, size_t src_length){
+base64_decode(void* restrict dst, size_t dst_length, const uint8_t* restrict src, size_t src_length){
     Errorable(void) result = {};
     // In order to detect invalid inputs, but without introducing a branch on
     // every byte of input, we set bad inputs to have the 0b11000000  bits set
@@ -406,7 +410,7 @@ base64_decode(Nonnull(void*)restrict dst, size_t dst_length, Nonnull(const uint8
 // ByteBuilder handles things like allocating the proper size, etc.
 static inline
 Errorable_f(void)
-bb_decode_b64(Nonnull(ByteBuilder*)bb, Nonnull(const uint8_t*) restrict src, size_t src_length){
+bb_decode_b64(ByteBuilder* bb, const uint8_t* restrict src, size_t src_length){
     Errorable(void) result = {};
     auto reserved_size = base64_decode_size(src_length);
     if(!reserved_size) return result;
@@ -417,4 +421,9 @@ bb_decode_b64(Nonnull(ByteBuilder*)bb, Nonnull(const uint8_t*) restrict src, siz
     bb->cursor += reserved_size;
     return result;
     }
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
+
 #endif

@@ -7,10 +7,13 @@
 // for chdir
 #include <direct.h>
 #define chdir _chdir
+#else
+#include <unistd.h>
 #endif
 #include "common_macros.h"
 #include "argument_parsing.h"
 #include "log_print.h"
+#include "long_string.h"
 
 
 //
@@ -61,7 +64,7 @@ enum TestCaseFlags {
 
 // Internal use.
 typedef struct TestCase {
-    Nonnull(const char*) test_name;
+    LongString test_name;
     Nonnull(TestFunc*) test_func;
     enum TestCaseFlags flags;
 } TestCase;
@@ -81,22 +84,24 @@ typedef struct TestCase {
 // }
 
 // Implemented as a macro to capture the name of the test
-#define RegisterTest(tf) register_test(#tf, tf, TEST_CASE_FLAGS_NONE)
+#define RegisterTest(tf) register_test(LS(#tf), tf, TEST_CASE_FLAGS_NONE)
 // Ditto, but allows specifying flags.
-#define RegisterTestFlags(tf, flags) register_test(#tf, tf, flags)
-static inline void register_test(Nonnull(const char*) test_name, Nonnull(TestFunc*) func, enum TestCaseFlags flags);
+#define RegisterTestFlags(tf, flags) register_test(LS(#tf), tf, flags)
+static inline void register_test(LongString test_name, Nonnull(TestFunc*) func, enum TestCaseFlags flags);
 
 // Internal use, use the RegisterTest function to register a test.
 // This array is where registered tests are located.
 // A single test program can not directly register more than 1000 tests.
+static LongString test_names[1000];
 static TestCase test_funcs[1000];
 // How many were registered. Internal use.
 static int test_funcs_count;
 
 static
 inline
-void register_test(Nonnull(const char*) test_name, Nonnull(TestFunc*) func, enum TestCaseFlags flags){
+void register_test(LongString test_name, Nonnull(TestFunc*) func, enum TestCaseFlags flags){
     assert(test_funcs_count < arrlen(test_funcs));
+    test_names[test_funcs_count] = test_name;
     test_funcs[test_funcs_count++] = (TestCase){.test_name = test_name, .test_func=func, .flags=flags};
     }
 
@@ -215,10 +220,10 @@ Nonnull(const char*) _test_color_red   = ""
 //
 #define TestExpectSuccess(cond) do{\
         TEST_stats.executed++;\
-        if ((cond.errored)){ \
+        if ((cond).errored){ \
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
-            TestReport("%s = %s", #cond, get_error_name(cond));\
+            TestReport("%s = %d", #cond, (cond).errored);\
             }\
         }while(0)
 
@@ -227,10 +232,10 @@ Nonnull(const char*) _test_color_red   = ""
 //
 #define TestExpectFailure(cond) do{\
         TEST_stats.executed++;\
-        if ((!cond.errored)){ \
+        if (!(cond).errored){ \
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
-            TestReport("%s = %s", #cond, get_error_name(cond));\
+            TestReport("%s = %d", #cond, (cond).errored);\
             }\
         }while(0)
 
@@ -281,12 +286,12 @@ Nonnull(const char*) _test_color_red   = ""
 //
 #define TestAssertSuccess(cond) do{\
         TEST_stats.executed++;\
-        if ((cond.errored)){ \
+        if ((cond).errored){ \
             TEST_stats.failures++; \
             TEST_stats.assert_failures++; \
             TestReport("Test condition failed");\
             TestReport("%s prematurely ended", __func__);\
-            TestReport("%s = %s", #cond, get_error_name(cond)); \
+            TestReport("%s = %d", #cond, (cond).errored); \
             return TEST_stats;\
             }\
         }while(0)
@@ -301,7 +306,7 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.assert_failures++; \
             TestReport("Test condition failed");\
             TestReport("%s prematurely ended", __func__);\
-            TestReport("%s = %s", #cond, get_error_name(cond)); \
+            TestReport("%s = %d", #cond, (cond).errored); \
             return TEST_stats;\
             }\
         }while(0)
@@ -322,26 +327,37 @@ Nonnull(const char*) _test_color_red   = ""
 // You can call this in your own test_main or other function.
 // Otherwise, don't call this directly.
 //
+// which_tests is a pointer to an array of indexes into the
+// registered tests table.
+// test_count is the length of that array.
+// As a special case, 0 means to run all the tests.
 static
 struct TestStats
-run_the_tests(Nullable(const char*) test_name){
+run_the_tests(Nullable(size_t*)which_tests, size_t test_count){
     struct TestStats result = {};
-    for (int i = 0; i < test_funcs_count; i++){
-        if(test_name){
-            if(strcmp(test_funcs[i].test_name, test_name)!= 0)
-                continue;
+    if(test_count){
+        for(size_t i = 0; i < test_count; i++){
+            auto func = test_funcs[which_tests[i]].test_func;
+            assert(func);
+            auto func_result = func();
+            result.funcs_executed++;
+            result.failures += func_result.failures;
+            result.executed += func_result.executed;
+            result.assert_failures += func_result.assert_failures;
             }
-        else {
+        }
+    else {
+        for (int i = 0; i < test_funcs_count; i++){
             if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED)
                 continue;
+            auto func = test_funcs[i].test_func;
+            assert(func);
+            auto func_result = func();
+            result.funcs_executed++;
+            result.failures += func_result.failures;
+            result.executed += func_result.executed;
+            result.assert_failures += func_result.assert_failures;
             }
-        auto func = test_funcs[i].test_func;
-        assert(func);
-        auto func_result = func();
-        result.funcs_executed++;
-        result.failures += func_result.failures;
-        result.executed += func_result.executed;
-        result.assert_failures += func_result.assert_failures;
         }
     return result;
     }
@@ -360,44 +376,45 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
     const char* filename = argv[0];
     bool no_colors = false;
     LongString directory = {};
-    LongString test_names[arrlen(test_funcs)] = {};
-    bool list_tests = false;
+    size_t tests_to_run[arrlen(test_funcs)] = {};
+    struct ArgParseEnumType targets = {
+        .enum_size = sizeof(size_t),
+        .enum_count = test_funcs_count,
+        .enum_names = test_names,
+        };
     ArgToParse kw_args[] = {
         {
             .name = SV("-C"),
             .altname1 = SV("--change-directory"),
-            .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&directory),
-            .help = "Directory to change the working directory to",
-            .hide_default = true,
+            .help = "Directory to change the working directory to before executing tests.",
         },
         {
             .name = SV("--no-colors"),
-            .min_num = 0,
             .max_num = 1,
             .dest = ARGDEST(&no_colors),
-            .help = "Dont use ANSI escape codes to print colors in reporting",
-            .hide_default = true,
+            .help = "Dont use ANSI escape codes to print colors in reporting.",
         },
         {
             .name = SV("-t"),
             .altname1 = SV("--target"),
-            .min_num = 0,
-            .max_num = 1,
-            // .max_num = arrlen(test_names),
-            .dest = ARGDEST(test_names),
-            .help = "If given, only run the named test function",
-            .hide_default = true,
+            .max_num = test_funcs_count,
+            .dest = ArgEnumDest(tests_to_run, &targets),
+            .help = "If given, only run the named test function. If not given, all tests will be run.",
         },
-        {
+    };
+    enum {HELP=0, LIST=1};
+    ArgToParse early_args[] = {
+        [HELP] = {
+            .name = SV("-h"),
+            .altname1 = SV("--help"),
+            .help = "Print this help and exit.",
+        },
+        [LIST] = {
             .name = SV("-l"),
             .altname1 = SV("--list"),
-            .min_num = 0,
-            .max_num = 1,
-            .dest = ARGDEST(&list_tests),
-            .help = "List the names of the test functions.",
-            .hide_default = true,
+            .help = "List the names of the test functions and exit.",
         },
     };
     ArgParser argparser = {
@@ -405,33 +422,40 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
         .description = "A test runner.",
         .keyword.args = kw_args,
         .keyword.count = arrlen(kw_args),
+        .early_out.args = early_args,
+        .early_out.count = arrlen(early_args),
     };
     Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
-    if(check_for_help(&args)){
-        print_help(&argparser);
-        return 1; // Return non-zero so this doesn't count as a successful test.
-        }
-    auto e = parse_args(&argparser, &args);
-    if(e.errored){
-        fprintf(stderr, "Error when parsing arguments.\n");
-        if(isatty(fileno(stdout)))
-            print_help(&argparser);
-        return e.errored;
-        }
-    if(list_tests){
-        for(int i = 0; i < test_funcs_count; i++){
-            fprintf(stdout, "%s\t", test_funcs[i].test_name);
-            if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED){
-                fprintf(stdout, "Will-Skip");
-                }
-            fputc('\n', stdout);
+    switch(check_for_early_out_args(&argparser, &args)){
+        case HELP:{
+            auto columns = get_terminal_size().columns;
+            if(columns > 80)
+                columns = 80;
+            print_argparse_help(&argparser, columns);
+            return 1;
             }
-        return 1;
+        case LIST:
+            for(int i = 0; i < test_funcs_count; i++){
+                fprintf(stdout, "%s\t", test_funcs[i].test_name.text);
+                if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED){
+                    fprintf(stdout, "Will-Skip");
+                    }
+                fputc('\n', stdout);
+                }
+            return 1;
+        default:
+            break;
+        }
+    auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
+    if(e){
+        print_argparse_error(&argparser, e);
+        fprintf(stderr, "Use --help to see usage.\n");
+        return e;
         }
     if(directory.length){
         int changed = chdir(directory.text);
         if(changed != 0){
-            fprintf(stderr, "Failed to change directory to '%s': %s\n", directory.text, strerror(errno));
+            fprintf(stderr, "Failed to change directory to '%s': %s.\n", directory.text, strerror(errno));
             return changed;
             }
         }
@@ -451,7 +475,8 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
     _test_color_red = red;
 #endif
 
-    auto result = run_the_tests(test_names[0].text);
+    assert(SV_equals(kw_args[2].name, SV("-t")));
+    auto result = run_the_tests(tests_to_run, kw_args[2].num_parsed);
 
     const char* text = result.funcs_executed == 1? "test function executed" : "test functions executed";
     fprintf(stderr, "%s%s: %s%d%s %s\n",

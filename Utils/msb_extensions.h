@@ -3,6 +3,10 @@
 #include "MStringBuilder.h"
 #include "str_util.h"
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 //
 // These functions are not universal enough to go in the main MStringBuilder
 // header, but require access to internal functions and state for efficiency
@@ -25,8 +29,8 @@
 //
 static inline
 void
-msb_write_kebab(Nonnull(MStringBuilder*)msb, Nonnull(const char*)text, size_t length){
-    msb_reserve(msb, length+2);
+msb_write_kebab(MStringBuilder* msb, const char* text, size_t length){
+    msb_ensure_additional(msb, length+2);
     auto data = msb->data;
     auto cursor = msb->cursor;
     // A bit of explanation is in order.
@@ -37,13 +41,13 @@ msb_write_kebab(Nonnull(MStringBuilder*)msb, Nonnull(const char*)text, size_t le
     // the cursor.
     //
     // Now, that sounds weird, but notice that dashes only trail after
-    // characters, they are neveer at the beginning of the string. So, we just
+    // characters, they are never at the beginning of the string. So, we just
     // always write the character + a dash, but we don't advance the cursor for
     // that dash until we actually need one.
     //
-    // We need this sentinel not for it's value, but rather so that we have a
-    // value past the dash that is not a dash, or at the beginning of the
-    // string. Without writing it, we would read uninitialized memory.
+    // We need this sentinel not for it's value, but rather so that we will
+    // have a value past the dash that is not a dash, or at the beginning of
+    // the string. Without writing it, we would read uninitialized memory.
 #define BEGINSENTINEL '@'
 #define ENDSENTINEL '$'
     data[cursor] = BEGINSENTINEL;
@@ -81,10 +85,10 @@ msb_write_kebab(Nonnull(MStringBuilder*)msb, Nonnull(const char*)text, size_t le
 //  "this is some text." -> "This Is Some Text."
 static inline
 void
-msb_write_title(Nonnull(MStringBuilder*) restrict msb, Nonnull(const char*) restrict str, size_t len){
+msb_write_title(MStringBuilder* restrict msb, const char* restrict str, size_t len){
     if(not len)
         return;
-    _check_msb_size(msb, len);
+    _check_msb_remaining_size(msb, len);
     bool wants_cap = true;
     for(size_t i = 0; i < len; i++){
         char c = str[i];
@@ -99,7 +103,6 @@ msb_write_title(Nonnull(MStringBuilder*) restrict msb, Nonnull(const char*) rest
                 wants_cap = false;
                 break;
             default:
-                c = ' ';
                 wants_cap = true;
                 break;
             }
@@ -114,8 +117,8 @@ msb_write_title(Nonnull(MStringBuilder*) restrict msb, Nonnull(const char*) rest
 // need them.
 static inline
 void
-msb_write_json_escaped_str(Nonnull(MStringBuilder*)restrict sb, Nonnull(const char*)restrict str, size_t length){
-    _check_msb_size(sb, length*2);
+msb_write_json_escaped_str(MStringBuilder* restrict sb, const char* restrict str, size_t length){
+    _check_msb_remaining_size(sb, length*2);
     auto data = sb->data;
     auto cursor = sb->cursor;
     for(size_t i = 0; i < length; i++){
@@ -158,8 +161,8 @@ msb_write_json_escaped_str(Nonnull(MStringBuilder*)restrict sb, Nonnull(const ch
 
 static inline
 void
-msb_write_str_with_backslashes_as_forward_slashes(Nonnull(MStringBuilder*)sb, Nonnull(const char*)restrict str, size_t length){
-    _check_msb_size(sb, length);
+msb_write_str_with_backslashes_as_forward_slashes(MStringBuilder* sb, const char* restrict str, size_t length){
+    _check_msb_remaining_size(sb, length);
     auto data = sb->data;
     auto cursor = sb->cursor;
     for(size_t i = 0; i < length; i++){
@@ -179,8 +182,8 @@ msb_write_str_with_backslashes_as_forward_slashes(Nonnull(MStringBuilder*)sb, No
 // newline.
 static inline
 void
-msb_write_stripped(Nonnull(MStringBuilder*)sb, Nonnull(const char*)restrict str, size_t length){
-    _check_msb_size(sb, length);
+msb_write_stripped_lines(MStringBuilder* sb, const char* restrict str, size_t length){
+    _check_msb_remaining_size(sb, length);
     auto data = sb->data;
     auto cursor = sb->cursor;
     const char* remainder = str;
@@ -208,4 +211,23 @@ msb_write_stripped(Nonnull(MStringBuilder*)sb, Nonnull(const char*)restrict str,
         }
     sb->cursor = cursor;
     }
+
+//
+// Appends a path separator to the builder and then writes the given string.
+// If the builder is empty, a path separator is not appended. This prevents
+// accidentally turning a relative path into the wrong absolute path.
+//
+static inline
+void
+msb_append_path(MStringBuilder* sb, const char* restrict path, size_t length){
+    _check_msb_remaining_size(sb, length+1);
+    if(sb->cursor)
+        sb->data[sb->cursor++] = '/';
+    memcpy(sb->data + sb->cursor, path, length);
+    sb->cursor += length;
+    }
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 #endif

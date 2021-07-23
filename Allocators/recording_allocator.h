@@ -1,9 +1,12 @@
 #ifndef RECORDING_ALLOCATOR_H
 #define RECORDING_ALLOCATOR_H
+#include <stdlib.h>
+#include <string.h>
 #include "allocator.h"
 
-PushDiagnostic();
-SuppressUnusedFunction();
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
 
 /*
  * An Allocator wrapper allocator that tracks all allocations
@@ -11,23 +14,33 @@ SuppressUnusedFunction();
  * for allocators that don't normally support it.
  *
  * This is currently super unoptimized, but that's ok.
- *
- * Additionally, allows querying if the memory is valid.
  */
+
+#ifndef sane_realloc
+// Realloc's signature is silly which makes it hard to
+// reimplement in a sane way. So in order to accomodate
+// platforms where we need to implement it ourselves
+// (aka WASM), we use this compatibility macro.
+#ifndef WASM
+#define sane_realloc(ptr, orig_size, size) realloc(ptr, size)
+#else
+static void* sane_realloc(void* ptr, size_t orig_size, size_t size);
+#endif
+#endif
 
 
 typedef struct RecordingAllocator {
     // We need a dynamic array to record all of the allocations.
     // We specialize it to be SOA
     void*_Nullable*_Nonnull allocations;
-    Nonnull(size_t*) allocation_sizes;
+    size_t* allocation_sizes;
     size_t count;
     size_t capacity;
 } RecordingAllocator;
 
 static inline
 void
-recording_ensure_capacity(Nonnull(RecordingAllocator*) r){
+recording_ensure_capacity(RecordingAllocator* r){
     if(r->count < r->capacity)
         return;
     if(!r->capacity){
@@ -45,11 +58,10 @@ recording_ensure_capacity(Nonnull(RecordingAllocator*) r){
     }
 
 MALLOC_FUNC
-ALLOCATOR_SIZE(2)
 static
 warn_unused
-Nonnull(void*)
-recording_alloc(Nonnull(RecordingAllocator*) r, size_t size){
+void*
+recording_alloc(RecordingAllocator* r, size_t size){
     void* result = malloc(size);
     if(!result)
         return result;
@@ -61,11 +73,10 @@ recording_alloc(Nonnull(RecordingAllocator*) r, size_t size){
     }
 
 MALLOC_FUNC
-ALLOCATOR_SIZE(2)
 static
 warn_unused
-Nonnull(void*)
-recording_zalloc(Nonnull(RecordingAllocator*) r, size_t size){
+void*
+recording_zalloc(RecordingAllocator* r, size_t size){
     void* result = calloc(1, size);
     if(!result)
         return result;
@@ -78,11 +89,11 @@ recording_zalloc(Nonnull(RecordingAllocator*) r, size_t size){
 
 static
 void
-recording_free(Nonnull(RecordingAllocator*)r, Nullable(const void*) data, size_t size){
+recording_free(RecordingAllocator* r, const void*_Nullable data, size_t size){
     if(!data)
         return;
-    auto count = r->count;
-    if(not count)
+    size_t count = r->count;
+    if(!count)
         goto Lerror;
     if(data == r->allocations[count-1]){
         const_free(data);
@@ -110,7 +121,7 @@ recording_free(Nonnull(RecordingAllocator*)r, Nullable(const void*) data, size_t
 // place.
 static
 void
-recording_free_all(Nonnull(RecordingAllocator*)r){
+recording_free_all(RecordingAllocator* r){
     for(size_t i = 0; i < r->count; i++){
         if(!r->allocations[i])
             continue;
@@ -121,7 +132,7 @@ recording_free_all(Nonnull(RecordingAllocator*)r){
 
 static
 void
-recording_cleanup(Nonnull(RecordingAllocator*)r){
+recording_cleanup(RecordingAllocator* r){
     free(r->allocation_sizes);
     free(r->allocations);
     memset(r, 0, sizeof(*r));
@@ -130,7 +141,7 @@ recording_cleanup(Nonnull(RecordingAllocator*)r){
 
 static
 void
-recording_merge(Nonnull(RecordingAllocator*) restrict dst, Nonnull(const RecordingAllocator*) restrict src){
+recording_merge(RecordingAllocator* restrict dst, const RecordingAllocator* restrict src){
     for(size_t i = 0; i < src->count; i++){
         size_t size = src->allocation_sizes[i];
         if(!size)
@@ -144,13 +155,12 @@ recording_merge(Nonnull(RecordingAllocator*) restrict dst, Nonnull(const Recordi
     }
 
 static inline
-Nonnull(void*)
-ALLOCATOR_SIZE(4)
-recording_realloc(Nonnull(RecordingAllocator*)r, Nullable(void*)data, size_t orig_size, size_t new_size){
+void*
+recording_realloc(RecordingAllocator* r, void*_Nullable data, size_t orig_size, size_t new_size){
     if(!data)
         goto Lrealloc;
-    auto count = r->count;
-    if(not count)
+    size_t count = r->count;
+    if(!count)
         goto Lrealloc;
     // check to see if we are reallocing in a loop.
     if(data == r->allocations[count-1]){
@@ -189,7 +199,7 @@ merge_recorded_mallocators_and_destroy_src(const Allocator dst, const Allocator 
     // shallow_free_recorded_mallocator(src);
     }
 
-static
+static inline
 Allocator
 new_recorded_mallocator(void){
     RecordingAllocator* ra = calloc(1, sizeof(*ra));
@@ -199,6 +209,8 @@ new_recorded_mallocator(void){
         };
     }
 
-PopDiagnostic();
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
 #endif

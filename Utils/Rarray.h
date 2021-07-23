@@ -1,9 +1,12 @@
 #ifndef RARRAY_H
 #define RARRAY_H
-#include <stdint.h>
-#include <string.h>
+// size_t
 #include <stddef.h>
+// memmove
+#include <string.h>
+// assert
 #include <assert.h>
+// Allocator functions
 #include "allocator.h"
 #include "common_macros.h"
 
@@ -14,7 +17,18 @@
 #define Rarray_check_size(type) RARRAYIMPL(check_size, type)
 #define Rarray_alloc(type) RARRAYIMPL(alloc, type)
 #define Rarray_remove(type) RARRAYIMPL(remove, type)
-#define RARRAY_FOR_EACH(iter, rarray) for(typeof((rarray)->data[0]) *iter=((rarray)?(rarray)->data:NULL), *iter##end__=((rarray)?(rarray)->data+(rarray)->count:NULL);iter!=iter##end__;++iter)
+
+//
+// Convenience macro for correctly iterating over an rarray, handling the
+// case where it is NULL. Note that `rarray` should be an RARRAY* and that
+// `rarray` is evaluated multiple times.
+//
+#define RARRAY_FOR_EACH(iter, rarray) \
+for(typeof((rarray)->data[0]) \
+      *iter=((rarray)?(rarray)->data:NULL), \
+      *iter##end__=((rarray)?(rarray)->data+(rarray)->count:NULL); \
+    iter!=iter##end__;\
+    ++iter)
 #endif
 
 //
@@ -43,10 +57,12 @@ typedef struct Rarray(RARRAY_T){
     RARRAY_T data[];
 } Rarray(RARRAY_T);
 
+#define RARRAY Rarray(RARRAY_T)
 
 //
 // Ensures there is enough space for one more element.
-// Returns the new rarray. The old pointer is now invalid (even if it happens to be the same)!
+// Returns the new rarray. The old pointer is now invalid (even if it happens
+// to be the same)!
 //
 // Example:
 //   Allocator al = get_my_allocator();
@@ -55,15 +71,17 @@ typedef struct Rarray(RARRAY_T){
 //   assert(myarray->capacity > 0);
 //
 static inline
-Nonnull(Rarray(RARRAY_T)*)
-Rarray_check_size(RARRAY_T)(Nullable(Rarray(RARRAY_T)*) rarray, const Allocator a){
+Nonnull(RARRAY*)
+Rarray_check_size(RARRAY_T)(Nullable(RARRAY*) rarray, Allocator a){
     if(!rarray){
-        rarray = Allocator_alloc(a, sizeof(Rarray(RARRAY_T)) + 4 * sizeof(RARRAY_T));
+        enum {INITIAL_CAPACITY=4};
+        enum {INITIAL_SIZE=INITIAL_CAPACITY*sizeof(RARRAY_T)+sizeof(RARRAY)};
+        rarray = Allocator_alloc(a, INITIAL_SIZE);
         rarray->count = 0;
-        rarray->capacity = 4;
+        rarray->capacity = INITIAL_CAPACITY;
         }
     if(rarray->count == rarray->capacity){
-        const size_t old_size = rarray->capacity*sizeof(RARRAY_T)+sizeof(Rarray(RARRAY_T));
+        size_t old_size = rarray->capacity*sizeof(RARRAY_T)+sizeof(RARRAY);
         auto new_array = Allocator_realloc(a, rarray, old_size, old_size*2);
         rarray = new_array;
         rarray->capacity *= 2;
@@ -73,7 +91,8 @@ Rarray_check_size(RARRAY_T)(Nullable(Rarray(RARRAY_T)*) rarray, const Allocator 
 
 //
 // Pushes one more element onto the end of the rarray.
-// Returns the new rarray. The old pointer is now invalid (even if it happens to be the same)!
+// Returns the new rarray. The old pointer is now invalid (even if it happens
+// to be the same)!
 //
 // Example:
 //
@@ -88,20 +107,20 @@ Rarray_check_size(RARRAY_T)(Nullable(Rarray(RARRAY_T)*) rarray, const Allocator 
 //   assert(myarray->data[2] == 3);
 //
 static inline
-Nonnull(Rarray(RARRAY_T)*)
-Rarray_push(RARRAY_T)(Nullable(Rarray(RARRAY_T)*) rarray, const Allocator a, RARRAY_T item){
+Nonnull(RARRAY*)
+Rarray_push(RARRAY_T)(Nullable(RARRAY*) rarray, Allocator a, RARRAY_T item){
     rarray = Rarray_check_size(RARRAY_T)(rarray,a);
     rarray->data[rarray->count++] = item;
-    return (Rarray(RARRAY_T)*)rarray;
+    return (RARRAY*)rarray; // cast away nullability
     }
 
 //
 // Allocates space for one item in the rarray and returns it.
-// The item is uninitialized. The pointer is unstable as any subsequent usage of the
-// rarray can invalidate it.
-// Takes a pointer to a pointer to rarray and will rewrite it. The previous value
-// is invalid, so either only have one pointer to the rarray and have this rewrite it
-// or you need to manually update the other pointers.
+// The item is uninitialized. The pointer is unstable as any subsequent usage
+// of the rarray can invalidate it.
+// Takes a pointer to a pointer to rarray and will rewrite it. The previous
+// value is invalid, so either only have one pointer to the rarray and have
+// this rewrite it or you need to manually update the other pointers.
 //
 // Example:
 //
@@ -122,7 +141,7 @@ Rarray_push(RARRAY_T)(Nullable(Rarray(RARRAY_T)*) rarray, const Allocator a, RAR
 //
 static inline
 Nonnull(RARRAY_T*)
-Rarray_alloc(RARRAY_T)(Nonnull(Nullable(Rarray(RARRAY_T)*)*) rarray, const Allocator a){
+Rarray_alloc(RARRAY_T)(Nonnull(Nullable(RARRAY*)*) rarray, Allocator a){
     *rarray = Rarray_check_size(RARRAY_T)(*rarray, a);
     return &(*rarray)->data[(*rarray)->count++];
     }
@@ -144,15 +163,16 @@ Rarray_alloc(RARRAY_T)(Nonnull(Nullable(Rarray(RARRAY_T)*)*) rarray, const Alloc
 //
 static inline
 void
-Rarray_remove(RARRAY_T)(Nonnull(Rarray(RARRAY_T)*) rarray, size_t i){
+Rarray_remove(RARRAY_T)(Nonnull(RARRAY*) rarray, size_t i){
     assert(i < rarray->count);
     if(i == rarray->count-1){
         rarray->count--;
         return;
         }
     size_t n_move = rarray->count - i - 1;
-    (memmove)(rarray->data+i, rarray->data+i+1, n_move*(sizeof(rarray->data[0])));
+    (memmove)(rarray->data+i, rarray->data+i+1, n_move*(sizeof(RARRAY_T)));
     rarray->count--;
     }
 
+#undef RARRAY
 #undef RARRAY_T

@@ -1,47 +1,60 @@
 #ifndef LONG_STRING_H
 #define LONG_STRING_H
-#include <stdlib.h>
+// size_t
+#include <stddef.h>
+// strlen, memcmp
 #include <string.h>
-// Looks weird to depend on dndc, but we need the definitions of
-// DndcLongString etc.
-// Oh well. If only C allowed multiple identical struct definitions.
-// I used to have those type in a header shared between the public
-// and internal api, but that meant the public header had to #include it
-// while I wanted the public API to be a single header with no includes.
-#ifndef DONT_DEPEND_ON_DNDC
-#include "dndc.h"
-// Convenience typedefs for internal use.
-typedef struct DndcLongString LongString;
-typedef struct DndcStringView StringView;
-typedef struct DndcStringViewUtf16 StringViewUtf16;
+// true, false
+#include <stdbool.h>
+// uint16_t
+#include <stdint.h>
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
 #else
-typedef struct DndcLongString {
+#ifndef _Null_unspecified
+#define _Null_unspecified
+#endif
+#endif
+
+#ifndef force_inline
+#if defined(__GNUC__) || defined(__clang__)
+#define force_inline __attribute__((always_inline))
+#else
+#define force_inline
+#endif
+#endif
+
+// It is very likely you want to put the LongString and/or StringView
+// into your public API, but this header contains lots of convenience functions
+// that depend on the macros header and particular coding style that would
+// be inappropriate for a public header.
+//
+// Setting this macro means there is already a typedef for LongString,
+// StringView and StringViewUtf16, which allows you to expose the structs
+// without the rest of this file.
+
+#ifndef LONGSTRING_DEFINED
+
+typedef struct LongString {
     size_t length; // excludes the terminating NUL
-    NullUnspec(const char*) text; // utf-8 encoded text
+    const char*_Null_unspecified text; // utf-8 encoded text
 } LongString;
 
-typedef struct DndcStringView {
+typedef struct StringView {
     size_t length;
     // utf-8 encoded text, might not be nul-terminated
-    NullUnspec(const char*) text;
+    const char*_Null_unspecified text;
 } StringView;
 
-// Avoiding including <stdint.h> in public header.
 _Static_assert(sizeof(unsigned short) == 2, "unsigned short is not uint16_t");
-typedef struct DndcStringViewUtf16 {
+typedef struct StringViewUtf16 {
     size_t length; // in code units
     // utf-16 encoded code points, native endianness
-    NullUnspec(const unsigned short*) text;
+    const unsigned short*_Null_unspecified text;
 } StringViewUtf16;
+
 #endif
-#include "common_macros.h"
-#include "error_handling.h"
-
-Errorable_declare(LongString);
-
-Errorable_declare(StringView);
-
-Errorable_declare(StringViewUtf16);
 
 static inline
 force_inline
@@ -51,9 +64,10 @@ LS_to_SV(LongString ls){
     }
 
 static inline
+force_inline
 StringView
-cstr_to_SV(Nonnull(const char*)cstr){
-    auto len = strlen(cstr);
+cstr_to_SV(const char* cstr){
+    size_t len = strlen(cstr);
     return (StringView){
         .length = len,
         .text = cstr,
@@ -79,8 +93,8 @@ LS_equals(const LongString a, const LongString b){
 #define LS(literal) ((LongString){.length=sizeof("" literal)-1, .text="" literal})
 #define SV(literal) ((StringView){.length=sizeof("" literal)-1, .text=""  literal})
 #define SV16(literal) ((StringViewUtf16){.length = sizeof(u"" literal)/2-1, .text=u"" literal})
-int getchar(void);
 static inline
+force_inline
 bool
 SV_equals(const StringView a, const StringView b){
     if(a.length != b.length)
@@ -120,12 +134,12 @@ LS_SV_equals(const LongString ls, const StringView sv){
 static inline
 force_inline
 int
-StringView_cmp(Nonnull(const void*)a, Nonnull(const void*) b){
+StringView_cmp(const void* a, const void* b){
     // TODO: There's probably a cleaner way to implement this.
-    auto lhs = (const StringView*)a;
-    auto rhs = (const StringView*)b;
-    auto l1 = lhs->length;
-    auto l2 = rhs->length;
+    const StringView* lhs = (const StringView*)a;
+    const StringView* rhs = (const StringView*)b;
+    size_t l1 = lhs->length;
+    size_t l2 = rhs->length;
     if(l1 == l2){
         if(!l1)
             return 0;
@@ -145,5 +159,9 @@ StringView_cmp(Nonnull(const void*)a, Nonnull(const void*) b){
         }
     return -(int)(unsigned char)rhs->text[lhs->length];
     }
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
 #endif

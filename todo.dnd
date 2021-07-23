@@ -87,6 +87,8 @@ Ports::md
     Turn it into a python extension. Build wheels?
     Update::md @noid
       Done.
+  Update::md @noid
+    Using python qt bindings we run on every Os. Mac has native app, windows has like 1/3rd of a native app.
 
 ::css @inline
   body {

@@ -18,6 +18,7 @@
 #include <assert.h>
 #include <stdbool.h>
 
+
 #if defined(__GNUC__) || defined(__clang__)
 #define force_inline __attribute__((always_inline))
 #define never_inline __attribute__((noinline))
@@ -76,6 +77,11 @@
 // which is not at all what you want, yet still compiles!
 #define arrlen(arr) (sizeof(arr) / sizeof((arr)[0]) + __must_be_array(arr))
 
+#define ARRAY_FOR_EACH(it, arr) \
+    for(typeof((arr)[0])*it = arr;\
+        it != arr + arrlen(arr);\
+        ++it)
+
 #ifdef DEBUG
 #define unreachable() do{assert(0);__builtin_unreachable();} while(0)
 #else
@@ -85,7 +91,9 @@
 // This is for TODO error handling. Don't use bare assert for that as asserts
 // are for invariants and are left in after development is done, whereas
 // these represent defects in the code that needs to be re-written.
+#ifndef unhandled_error_condition
 #define unhandled_error_condition(cond) assert(!(cond))
+#endif
 
 #if defined(__clang__)
 #define nosan \
@@ -129,12 +137,14 @@
 // This is stupid as hell as it means you can't free pointers that you have
 // made const after allocation (for example, a string).
 // So, suppress the diagnostics and do it anyway.
+#ifndef const_free
 #define const_free(ptr) do{\
     PushDiagnostic(); \
     SuppressDiscardQualifiers(); \
     free(ptr);\
     PopDiagnostic(); \
     }while(0)
+#endif
 
 /*
  * Warning Suppression
@@ -215,12 +225,14 @@
 // is unlikely to be true (probably checking for some unlikely error condition).
 //
 
+#if !defined(likely) && !defined(unlikely)
 #if defined(__GNUC__) || defined(__clang__)
 #define likely(x)      __builtin_expect(!!(x), 1)
 #define unlikely(x)    __builtin_expect(!!(x), 0)
 #else
 #define likely(x) (x)
 #define unlikely(x) (x)
+#endif
 #endif
 
 

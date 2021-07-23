@@ -118,6 +118,6 @@ PopDiagnostic();
 #define DBGPrintIMPL(loglevel, x) \
 _Generic(x, \
         LOGFUNCS(LOGFUNC) \
-        default: 0)(loglevel, __FILE__, __func__, __LINE__, #x, x)
+        struct{}: 0)(loglevel, __FILE__, __func__, __LINE__, #x, x)
 
 #endif

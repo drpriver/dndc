@@ -594,7 +594,7 @@ PARSEFUNC(parse_table_node){
         init_node(ctx, new_node_handle, ctx->linestart+ctx->nspaces, NODE_TABLE_ROW);
         append_child(ctx, parent_handle, new_node_handle);
         previous_row_indentation = ctx->nspaces;
-        last_cell_handle = INVALID_NODE_HANDLE;
+        // last_cell_handle = INVALID_NODE_HANDLE;
         converted = false;
         while(pipe){
             auto cell_index = alloc_handle(ctx);

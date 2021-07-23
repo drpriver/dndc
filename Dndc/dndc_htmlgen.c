@@ -55,7 +55,7 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
     auto imgcount = ctx->img_nodes.count + ctx->imglinks_nodes.count;
     // estimate memory usage as 120 characters per node and 200 kb images.
     auto reserve_amount = ctx->nodes.count*120 + imgcount*200*1024;
-    msb_reserve(msb, reserve_amount);
+    msb_ensure_additional(msb, reserve_amount);
     msb_write_literal(msb,
         "<!DOCTYPE html>\n"
         "<html lang=\"en\">\n"
@@ -142,7 +142,7 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                         }
                     LongString style = style_e.result;
                     if(ctx->flags & DNDC_STRIP_WHITESPACE){
-                        msb_write_stripped(msb, style.text, style.length);
+                        msb_write_stripped_lines(msb, style.text, style.length);
                         }
                     else {
                         msb_write_str(msb, style.text, style.length);
@@ -204,7 +204,7 @@ render_tree(Nonnull(DndcContext*)ctx, Nonnull(MStringBuilder*)msb){
                     }
                 LongString script = script_e.result;
                 if(ctx->flags & DNDC_STRIP_WHITESPACE){
-                    msb_write_stripped(msb, script.text, script.length);
+                    msb_write_stripped_lines(msb, script.text, script.length);
                     }
                 else {
                     msb_write_str(msb, script.text, script.length);

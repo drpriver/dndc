@@ -6,10 +6,12 @@
 #include <string.h>
 #include <stdint.h>
 #include <stddef.h>
-#include "common_macros.h"
 #include "allocator.h"
-PushDiagnostic();
-SuppressUnusedFunction();
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 //
 // A very simple allocator. All allocations are just advancing down a pointer in
 // a linear fashion. We support freeing, but only if it was the most recent
@@ -41,7 +43,7 @@ SuppressUnusedFunction();
 //
 typedef struct LinearAllocator {
     // The buffer to allocate from.
-    NullUnspec(void*)  _data;
+    void*_Null_unspecified  _data;
     // How big the buffer is.
     size_t _capacity; // if over _capacity, we start mallocing
     // How many bytes have been allocated currently.
@@ -49,7 +51,7 @@ typedef struct LinearAllocator {
     // The greatest total number of bytes ever allocated by this allocator.
     size_t high_water;
     // The name of this allocator. Used for logging when we exceed capacity.
-    NullUnspec(const char*) name; // for logging purposes
+    const char*_Nullable name; // for logging purposes
 } LinearAllocator;
 
 //
@@ -63,7 +65,7 @@ typedef struct LinearAllocator {
 static inline
 warn_unused
 LinearAllocator
-new_linear_storage(size_t size, Nullable(const char*) name){
+new_linear_storage(size_t size, const char*_Nullable name){
     // Malloc has to return a pointer suitably aligned for any object,
     // so we don't have to do any alignment fixup.
     void* _data = malloc(size);
@@ -88,16 +90,16 @@ new_linear_storage(size_t size, Nullable(const char*) name){
 //
 static inline
 void
-linear_reset(Nonnull(LinearAllocator*) s){
+linear_reset(LinearAllocator* s){
     s->_cursor = 0;
     }
 
 //
 // If alloced via malloc, cleans-up the resources.
 //
-static
+static inline
 void
-destroy_linear_storage(Nonnull(LinearAllocator*) s){
+destroy_linear_storage(LinearAllocator* s){
     free(s->_data);
     s->name = NULL;
     s->_data = NULL;
@@ -109,11 +111,10 @@ destroy_linear_storage(Nonnull(LinearAllocator*) s){
 // Allocates a buffer of size size, suitably aligned to alignment.
 //
 MALLOC_FUNC
-ALLOCATOR_SIZE(2)
 static
 warn_unused
-Nonnull(void*)
-linear_aligned_alloc(Nonnull(LinearAllocator*) restrict s, size_t size, size_t alignment){
+void*
+linear_aligned_alloc(LinearAllocator* restrict s, size_t size, size_t alignment){
     uintptr_t val = (uintptr_t)s->_data;
     val += s->_cursor;
     // alignment is always a power of 2
@@ -146,11 +147,10 @@ linear_aligned_alloc(Nonnull(LinearAllocator*) restrict s, size_t size, size_t a
 // those and having the minimum allocation size be 16 was too much for me.
 //
 MALLOC_FUNC
-ALLOCATOR_SIZE(2)
 static
 warn_unused
-Nonnull(void*)
-linear_alloc(Nonnull(LinearAllocator*) restrict s, size_t size){
+void*
+linear_alloc(LinearAllocator* restrict s, size_t size){
     enum {GENERIC_ALIGNMENT = 8}; // lmao, but this allows for u64s on 32 bit platforms
     _Static_assert(sizeof(void*) <= GENERIC_ALIGNMENT, "");
     return linear_aligned_alloc(s, size, GENERIC_ALIGNMENT);
@@ -162,11 +162,10 @@ linear_alloc(Nonnull(LinearAllocator*) restrict s, size_t size){
 // so this is purely convenience, unlike calloc.
 //
 MALLOC_FUNC
-ALLOCATOR_SIZE(2)
 static
 warn_unused
-Nonnull(void*)
-linear_aligned_zalloc(Nonnull(LinearAllocator*) restrict s, size_t size, size_t alignment){
+void*
+linear_aligned_zalloc(LinearAllocator* restrict s, size_t size, size_t alignment){
     void* result = linear_aligned_alloc(s, size, alignment);
     memset(result, 0, size);
     return result;
@@ -177,11 +176,10 @@ linear_aligned_zalloc(Nonnull(LinearAllocator*) restrict s, size_t size, size_t 
 // so this is purely convenience, unlike calloc.
 //
 MALLOC_FUNC
-ALLOCATOR_SIZE(2)
 static
 warn_unused
-Nonnull(void*)
-linear_zalloc(Nonnull(LinearAllocator*) restrict s, size_t size){
+void*
+linear_zalloc(LinearAllocator* restrict s, size_t size){
     return linear_aligned_zalloc(s, size, _Alignof(void*));
     }
 
@@ -194,7 +192,7 @@ linear_zalloc(Nonnull(LinearAllocator*) restrict s, size_t size){
 //
 static
 void
-linear_free(Nonnull(LinearAllocator*)la, Nullable(const void*) data, size_t size){
+linear_free(LinearAllocator* la, const void*_Nullable data, size_t size){
     if(!data)
         return;
     assert(size);
@@ -209,9 +207,8 @@ linear_free(Nonnull(LinearAllocator*)la, Nullable(const void*) data, size_t size
 // and copies the data over.
 //
 static inline
-Nonnull(void*)
-ALLOCATOR_SIZE(4)
-linear_realloc(Nonnull(LinearAllocator*)la, Nullable(void*)data, size_t orig_size, size_t new_size){
+void*
+linear_realloc(LinearAllocator* la, void*_Nullable data, size_t orig_size, size_t new_size){
     // only support growing
     assert(new_size > orig_size);
     if(!data){
@@ -238,12 +235,14 @@ linear_realloc(Nonnull(LinearAllocator*)la, Nullable(void*)data, size_t orig_siz
 //
 static inline
 Allocator
-allocator_from_la(Nonnull(LinearAllocator*)la){
+allocator_from_la(LinearAllocator* la){
     return (Allocator){
         ._data = la,
         .type = ALLOCATOR_LINEAR,
         };
     }
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
-PopDiagnostic();
 #endif

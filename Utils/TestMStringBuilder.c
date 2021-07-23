@@ -102,12 +102,32 @@ TestFunction(TestKebab){
         }
     TESTEND();
     }
+TestFunction(TestTitle){
+    TESTBEGIN();
+    struct {
+        StringView before;
+        StringView after;
+    } testcases[] = {
+        {SV(""), SV("")},
+        {SV("this is some text."), SV("This Is Some Text.")},
+        {SV("  hello world1!"), SV("  Hello World1!")},
+        };
+    ARRAY_FOR_EACH(tc, testcases){
+        MStringBuilder sb = {.allocator=get_mallocator()};
+        msb_write_title(&sb, tc->before.text, tc->before.length);
+        auto str = msb_borrow(&sb);
+        TestExpectSvEquals(str, tc->after);
+        msb_destroy(&sb);
+        }
+    TESTEND();
+    }
 
 int main(int argc, char** argv){
     RegisterTest(TestMStringBuilder1);
     RegisterTest(TestMStringBuilder2);
     RegisterTest(TestMStringBuilder3);
     RegisterTest(TestKebab);
+    RegisterTest(TestTitle);
     return test_main(argc, argv);
     }
 #include "allocator.c"

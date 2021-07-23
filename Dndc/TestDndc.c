@@ -1,5 +1,6 @@
 #include "dndc_api_def.h"
 #include "dndc.h"
+#include "dndc_long_string.h"
 #include "testing.h"
 #include "dndc.c"
 

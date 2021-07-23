@@ -1,11 +1,21 @@
 #ifndef error_handling_h
 #define error_handling_h
 #include <stdint.h>
-#include <assert.h>
-#include <stdbool.h>
 // size_t
-#include <stdlib.h>
-#include "common_macros.h"
+#include <stddef.h>
+
+#ifndef warn_unused
+
+#if defined(__GNUC__) || defined(__clang__)
+#define warn_unused __attribute__((warn_unused_result))
+#elif defined(_MSC_VER)
+#define warn_unused _Check_return
+#else
+#define warn_unused
+#endif
+
+#endif
+
 // X macros that is all the error conditions.
 #define ERROR_CODES(apply) \
     apply(NO_ERROR, 0) \
@@ -24,16 +34,11 @@
     /*File IO Errors*/ \
     apply(FILE_ERROR, 9) \
     apply(FILE_NOT_OPENED, 10) \
-    /*KWARG*/ \
-    apply(MISSING_KWARG, 11) \
-    apply(EXCESS_KWARGS, 12) \
-    apply(DUPLICATE_KWARG, 13) \
-    apply(MISSING_ARG, 14) \
     /*Some low level routine failed*/ \
-    apply(OS_ERROR, 15) \
+    apply(OS_ERROR, 11) \
     /*idk man*/ \
-    apply(GENERIC_ERROR, 16)\
-    apply(FORMAT_ERROR, 17)\
+    apply(GENERIC_ERROR, 12)\
+    apply(FORMAT_ERROR, 13)\
 
 #ifdef _WIN32
 // Windows.h defines NO_ERROR. What a PITA.
@@ -52,22 +57,20 @@ static const char* const ERROR_NAMES[] = {
 #undef X
 #undef ERROR_CODES
 
-// This kind of sucks, but given an errorable gets the corresponding c string.
-#define get_error_name(err) ({ERROR_NAMES[err.errored];})
-
-#define _Errorable_impl(T) T##__Errorable
+#define Errorable_impl(T) T##__Errorable
 
 // This is for local variables.
-#define Errorable(T) struct _Errorable_impl(T)
+#define Errorable(T) struct Errorable_impl(T)
 // This one is for functions. It will make the caller get a warning if
 // they ignore the value.
-#define Errorable_f(T) warn_unused struct _Errorable_impl(T)
+#define Errorable_f(T) warn_unused struct Errorable_impl(T)
 #define Errorable_declare(T) Errorable(T) { T result; uint8_t errored; }
 // Declare some common types
 // Errorable(void) is specialized to not have a result field.
-struct _Errorable_impl(void) {
+struct Errorable_impl(void) {
     uint8_t errored;
 };
+
 Errorable_declare(int);
 Errorable_declare(char);
 Errorable_declare(short);
