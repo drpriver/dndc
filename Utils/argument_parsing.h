@@ -88,7 +88,7 @@ static inline void print_argparse_error(ArgParser* parser, enum ArgParseError er
 // This just returns the index of what matched, or -1 if there was no match.
 // The caller should take the actual action and exit, return, etc. as appropriate.
 // Parsing will almost surely fail.
-static inline ssize_t check_for_early_out_args(ArgParser* parser, const Args* args);
+static inline intptr_t check_for_early_out_args(ArgParser* parser, const Args* args);
 //
 // Prints a formatted help display for the command line arguments.
 // Second argument is the wrap width.
@@ -101,6 +101,7 @@ static inline void print_argparse_help(const ArgParser*, int);
 // Self explanatory, except ARG_UINTEGER64 accepts decimal (95), binary
 // (0b1011111), and hex (0x5f) format.
 //
+// Format is apply(ArgType, type, "user string)
 #define ARGS(apply) \
     apply(ARG_INTEGER64, int64_t, "int64") \
     apply(ARG_INT, int, "int") \
@@ -887,7 +888,7 @@ set_flag(ArgToParse* arg){
     }
 
 static inline
-ssize_t
+intptr_t
 check_for_early_out_args(ArgParser* parser, const Args* args){
     for(int i = 0; i < args->argc; i++){
         StringView argstring = cstr_to_SV(args->argv[i]);
