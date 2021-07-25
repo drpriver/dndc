@@ -103,6 +103,9 @@ def clang_default_include() -> str:
     includes = [line.strip() for line in out.decode('utf-8').split('\n') if reg.search(line)]
     sysname = os.uname().sysname
     if sysname == 'Darwin':
+        MACOSX_platform = [p for p in includes if 'MacOSX.platform' in p]
+        if MACOSX_platform:
+            return MACOSX_platform[0]
         # XXX: os specific index (maybe machine specific) index
         return includes[2]
     elif sysname == 'Linux':

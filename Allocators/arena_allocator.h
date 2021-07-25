@@ -44,12 +44,10 @@ typedef struct BigAllocation {
     struct BigAllocation*_Nullable next;
 }BigAllocation;
 
-#ifndef PAGE_SIZE
-enum {PAGE_SIZE=4096};
-#endif
+enum {ARENA_PAGE_SIZE=4096};
 
 // Arenas are in 64 page chunks. This might be excessive, idk.
-enum {ARENA_SIZE=PAGE_SIZE*64};
+enum {ARENA_SIZE=ARENA_PAGE_SIZE*64};
 
 // The actual amount of data available is smaller due to the arena's haader.
 enum {ARENA_BUFFER_SIZE = ARENA_SIZE-sizeof(void*)-sizeof(size_t)-sizeof(size_t)};
