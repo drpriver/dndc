@@ -11,9 +11,19 @@
 #include <unistd.h>
 #endif
 #include "common_macros.h"
-#include "argument_parsing.h"
 #include "log_print.h"
 #include "long_string.h"
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
+
+// TODO:
+// Some of these testing macros use HEREPrint, which is nice as it tells you
+// what the actual values are, but that will fail for types it can't handle.
+// I can' currently think of a way to handle this without reimplementing
+// HEREPrint. But maybe I want to do that anyway for modularity reasons.
 
 
 //
@@ -87,7 +97,9 @@ typedef struct TestCase {
 #define RegisterTest(tf) register_test(LS(#tf), tf, TEST_CASE_FLAGS_NONE)
 // Ditto, but allows specifying flags.
 #define RegisterTestFlags(tf, flags) register_test(LS(#tf), tf, flags)
-static inline void register_test(LongString test_name, Nonnull(TestFunc*) func, enum TestCaseFlags flags);
+static inline
+void
+register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags);
 
 // Internal use, use the RegisterTest function to register a test.
 // This array is where registered tests are located.
@@ -97,12 +109,16 @@ static TestCase test_funcs[1000];
 // How many were registered. Internal use.
 static int test_funcs_count;
 
-static
-inline
-void register_test(LongString test_name, Nonnull(TestFunc*) func, enum TestCaseFlags flags){
+static inline
+void
+register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
     assert(test_funcs_count < arrlen(test_funcs));
     test_names[test_funcs_count] = test_name;
-    test_funcs[test_funcs_count++] = (TestCase){.test_name = test_name, .test_func=func, .flags=flags};
+    test_funcs[test_funcs_count++] = (TestCase){
+        .test_name = test_name,
+        .test_func=func,
+        .flags=flags,
+        };
     }
 
 
@@ -140,8 +156,8 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++;\
             TestReport("Test condition failed");\
             TestReport("%s", #cond);\
-            }\
-        }while(0)
+        }\
+    }while(0)
 //
 // Expects lhs == rhs, using the == operator
 //
@@ -155,8 +171,8 @@ Nonnull(const char*) _test_color_red   = ""
             TestReport("%s == %s", #lhs, #rhs); \
             HEREPrint(_lhs);\
             HEREPrint(_rhs);\
-            }\
-        }while(0)
+        }\
+    }while(0)
 //
 // Expects lhs == rhs, using the passed in binary function instead of == operator
 //
@@ -170,8 +186,8 @@ Nonnull(const char*) _test_color_red   = ""
             TestReport("!%s(%s, %s)", #func, #lhs, #rhs); \
             HEREPrint(_lhs);\
             HEREPrint(_rhs);\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // Expects lhs != rhs, using the != operator
@@ -186,8 +202,8 @@ Nonnull(const char*) _test_color_red   = ""
             TestReport("%s != %s", #lhs, #rhs); \
             HEREPrint(_lhs);\
             HEREPrint(_rhs);\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // Expects the condition is truthy (for the usual C definition of truth).
@@ -200,8 +216,8 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s", #cond);\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // Expects the condition is falsey (for the usual C definition of truth).
@@ -212,8 +228,8 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++; \
             TestReport("Test condition failed (expected falsey)");\
             HEREPrint(cond);\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // For an Errorable, expects .errored is NO_ERROR
@@ -224,8 +240,8 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s = %d", #cond, (cond).errored);\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // For an Errorable, expects .errored is not NO_ERROR
@@ -236,8 +252,8 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s = %d", #cond, (cond).errored);\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // Unlike the TestExpect* family of macros, TestAssert* macros immediately end
@@ -259,8 +275,8 @@ Nonnull(const char*) _test_color_red   = ""
             TestReport("%s prematurely ended", __func__);\
             TestReport("%s", #cond); \
             return TEST_stats;\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // Asserts lhs is equal to rhs, using ==
@@ -278,8 +294,8 @@ Nonnull(const char*) _test_color_red   = ""
             HEREPrint(_lhs);\
             HEREPrint(_rhs); \
             return TEST_stats;\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // For an Errorable, asserts .errored is NO_ERROR
@@ -293,8 +309,8 @@ Nonnull(const char*) _test_color_red   = ""
             TestReport("%s prematurely ended", __func__);\
             TestReport("%s = %d", #cond, (cond).errored); \
             return TEST_stats;\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // For an Errorable, asserts .errored is not NO_ERROR
@@ -308,8 +324,8 @@ Nonnull(const char*) _test_color_red   = ""
             TestReport("%s prematurely ended", __func__);\
             TestReport("%s = %d", #cond, (cond).errored); \
             return TEST_stats;\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // Immediately ends the test function, counting as an early termination of
@@ -320,7 +336,7 @@ Nonnull(const char*) _test_color_red   = ""
         TestReport("Reason: %s", reason); \
         TEST_stats.assert_failures++;\
         return TEST_stats;\
-        }while(0)
+    }while(0)
 
 //
 // The actual test runner.
@@ -333,7 +349,7 @@ Nonnull(const char*) _test_color_red   = ""
 // As a special case, 0 means to run all the tests.
 static
 struct TestStats
-run_the_tests(Nullable(size_t*)which_tests, size_t test_count){
+run_the_tests(Nullable(size_t*) which_tests, size_t test_count){
     struct TestStats result = {};
     if(test_count){
         for(size_t i = 0; i < test_count; i++){
@@ -362,11 +378,16 @@ run_the_tests(Nullable(size_t*)which_tests, size_t test_count){
     return result;
     }
 
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
+
 //
 // The default test_main implementation if you don't suppress it.
 // Executes run_the_tests and pretty prints the results to the terminal.
 //
 #ifndef SUPPRESS_TEST_MAIN
+#include "argument_parsing.h"
 #include "term_util.h"
 int test_main(int argc, char*_Nonnull *_Nonnull argv){
     if(argc < 1){
@@ -388,7 +409,8 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
             .altname1 = SV("--change-directory"),
             .max_num = 1,
             .dest = ARGDEST(&directory),
-            .help = "Directory to change the working directory to before executing tests.",
+            .help = "Directory to change the working directory to before "
+                    "executing tests.",
         },
         {
             .name = SV("--no-colors"),
@@ -401,7 +423,8 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
             .altname1 = SV("--target"),
             .max_num = test_funcs_count,
             .dest = ArgEnumDest(tests_to_run, &targets),
-            .help = "If given, only run the named test function. If not given, all tests will be run.",
+            .help = "If given, only run the named test function. If not given, "
+                    "all tests will be run. Specify by name or by number.",
         },
     };
     enum {HELP=0, LIST=1};
@@ -455,7 +478,8 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
     if(directory.length){
         int changed = chdir(directory.text);
         if(changed != 0){
-            fprintf(stderr, "Failed to change directory to '%s': %s.\n", directory.text, strerror(errno));
+            fprintf(stderr, "Failed to change directory to '%s': %s.\n",
+                    directory.text, strerror(errno));
             return changed;
             }
         }
@@ -478,7 +502,9 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
     assert(SV_equals(kw_args[2].name, SV("-t")));
     auto result = run_the_tests(tests_to_run, kw_args[2].num_parsed);
 
-    const char* text = result.funcs_executed == 1? "test function executed" : "test functions executed";
+    const char* text = result.funcs_executed == 1?
+        "test function executed"
+        : "test functions executed";
     fprintf(stderr, "%s%s: %s%d%s %s\n",
             gray, filename,
             blue, result.funcs_executed,
@@ -490,7 +516,9 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
             blue, result.executed,
             reset, text);
 
-    text = result.assert_failures == 1? "test function aborted early" : "test functions aborted early";
+    text = result.assert_failures == 1?
+        "test function aborted early"
+        : "test functions aborted early";
     const char* color = result.assert_failures?red:green;
     fprintf(stderr, "%s%s: %s%d%s %s\n",
             gray, filename,
@@ -509,5 +537,6 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
 
 #include "terminal_logger.c"
 #endif
+
 
 #endif

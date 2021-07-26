@@ -32,22 +32,32 @@
 // Supports parsing argv into strings, ints, unsigned ints (decimal, binary,
 // hex), floats, doubles, flags, bitflags and user defined types.
 //
+// Supports fixed size arrays and a user defined add function.
+//
 enum ArgParseError {
     // parsing succeeded.
     ARGPARSE_NO_ERROR = 0,
-    // Failed to convert a string into a value, like 'a' can't convert to an integer
+
+    // Failed to convert a string into a value, like 'hello' can't convert to
+    // an integer
     ARGPARSE_CONVERSION_ERROR = 1,
+
     // Given keyword arg-like parameter doesn't match any known args.
     ARGPARSE_UNKNOWN_KWARG = 2,
+
     // A keyword argument was given multiple times in the command line.
     ARGPARSE_DUPLICATE_KWARG = 3,
-    // More than the maximum number of arguments were given for an arg to parse.
+
+    // Greater than the maximum number of arguments were given for an arg.
     ARGPARSE_EXCESS_ARGS = 4,
-    // Fewer than the minimum number of arguments were given for an arg to parse.
+
+    // Fewer than the minimum number of arguments were given for an arg.
     ARGPARSE_INSUFFICIENT_ARGS = 5,
+
     // Named at the commandline, but no arguments given. This is a user error
     // even if min_num is 0 as it can be very confusing otherwie.
     ARGPARSE_VISITED_NO_ARG_GIVEN = 6,
+
     // Something went wrong, but it is a logic error or a configuration error.
     ARGPARSE_INTERNAL_ERROR = 7,
 };
@@ -55,9 +65,13 @@ enum ArgParseError {
 enum ArgParseFlags {
     // Nothing
     ARGPARSE_FLAGS_NONE = 0,
+
     // Treat args looking like "-foo" that don't match a kwarg as strings to be
     // parsed as an argument rather than treated as an erroneous keyword.
     ARGPARSE_FLAGS_UNKNOWN_KWARGS_AS_ARGS = 1 << 0,
+
+    // Skip 0 length strings.
+    ARGPARSE_FLAGS_SKIP_EMPTY_STRINGS = 1 << 1,
 };
 
 typedef struct Args {
@@ -68,27 +82,34 @@ typedef struct Args {
 typedef struct ArgParser ArgParser;
 //
 // Parses the Args into the variables. Returns an error if there was any issue
-// while parsing. Note that this function does not print anything if parsing failed.
-// If parsing failed, the destination variables could have some initialized and
-// some not. Safe to assume they are all indeterminate.
+// while parsing. Note that this function does not print anything if parsing
+// failed.  If parsing failed, the destination variables could have some
+// initialized and some not. Safe to assume they are all indeterminate.
 //
-// If parsing failed, the calling application should probably print the help and
-// exit. This doesn't do that for you as libraries that call exit() are evil.
+// If parsing failed, the calling application should probably print the help
+// and exit. This doesn't do that for you as libraries that call exit() are
+// evil.
 //
-static inline enum ArgParseError parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags);
+static inline
+enum ArgParseError
+parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags);
 
 //
 // After receiving a non-zero error code from `parse_args`, use this function
 // to explain what failed to parse and why.
-static inline void print_argparse_error(ArgParser* parser, enum ArgParseError error);
+static inline
+void
+print_argparse_error(ArgParser* parser, enum ArgParseError error);
 
 //
 // Check for arguments like `-h` or `--version` that mean to ignore all other
 // arguments and take an immediate action.
 // This just returns the index of what matched, or -1 if there was no match.
-// The caller should take the actual action and exit, return, etc. as appropriate.
-// Parsing will almost surely fail.
-static inline intptr_t check_for_early_out_args(ArgParser* parser, const Args* args);
+// The caller should take the actual action and exit, return, etc. as
+// appropriate. Parsing will almost surely fail.
+static inline
+intptr_t
+check_for_early_out_args(ArgParser* parser, const Args* args);
 //
 // Prints a formatted help display for the command line arguments.
 // Second argument is the wrap width.
@@ -198,8 +219,8 @@ typedef struct ArgParseUserDefinedType {
 //       requirements, then just a create a user defined type instead of using
 //       this.
 //
-// NOTE: You don't have to use a literal enum. You can define the "enum" at runtime
-//       and actually just have it be an index into an array.
+// NOTE: You don't have to use a literal enum. You can define the "enum" at
+//       runtime and actually just have it be an index into an array.
 typedef struct ArgParseEnumType {
     // In order to support packed enums, specify the size of the enum here
     // instead of just assuming it's an int.  Only powers of two are supported
@@ -313,34 +334,45 @@ typedef struct ArgToParse {
     // is used to return an error in that case.
     // This isn't very useful for users to look at.
 
-    // Also, used internally to avoid allowing duplicate keywords at the commandline.
+    // Also, used internally to avoid allowing duplicate keywords at the
+    // commandline.
     bool visited;
+
     //
     // Whether to show the default value in the help printout.
     bool show_default; // maybe we'll want a bitflags field with options instead.
+
+    //
     // Whether to hide this flag from the help output.
     // Keyword argument only.
     bool hidden;
+
     //
     // The description of the argument. When printed, the helpstring will be
     // tokenized and adjacent whitespace will be merged into a single space.
     // Newlines are preserved, so don't hardwrap your helpstring.
     // The helptext will be appropriately soft-wrapped on word boundaries.
     const char* help;
+
     //
     // Use the ARGDEST macro to intialize this for basic types.
+    // Some helper functions for other types are described. Or you can fill it
+    // out yourself.
     ArgParseDestination dest;
 
     //
     // To support dynamically allocated collections, you can set this field
     // to a function pointer that appends the given argument. Return a non-zero
     // value to indicate an error.
+    //
     // First argument is the dest.pointer. Second argument is a pointer to the
     // parsed value. For non-user-defined types this is a pointer to the
     // parsed version of the thing.
     //
     // For user-defined types, we don't call the converter function and instead
     // pass a pointer to the string view as the second argument.
+    // This function should do anything string to value conversion itself if
+    // needed.
     int (*_Nullable append_proc)(void*, const void*);
 } ArgToParse;
 
@@ -379,7 +411,8 @@ typedef struct ArgParser {
     // Exactly when they are set or not is an implementation detail, so use
     // `print_argparse_error` instead.
     struct {
-        // If failure happened while an option was identified, this will be set to that arg.
+        // If failure happened while an option was identified, this will be set
+        // to that arg.
         ArgToParse*_Nullable arg_to_parse;
         // If failure happened on a specific argument, this will be set.
         const char*_Nullable arg;
@@ -388,7 +421,9 @@ typedef struct ArgParser {
 
 //
 // Prints the help for a single argument.
-static inline void print_arg_help(const ArgToParse*, int);
+static inline
+void
+print_arg_help(const ArgToParse*, int);
 
 
 // Internal helper struct for text-wrapping.
@@ -422,7 +457,11 @@ print_argparse_help(const ArgParser* p, int columns){
     printf("%s: %s\n", p->name, p->description);
     puts("");
     const int printed = printf("usage: %s", p->name);
-    HelpState hs = {.output_width = columns - printed, .lead = printed, .remaining = 0};
+    HelpState hs = {
+        .output_width = columns - printed,
+        .lead = printed,
+        .remaining = 0,
+        };
     hs.remaining = hs.output_width;
     for(size_t i = 0; i < p->positional.count; i++){
         ArgToParse* arg = &p->positional.args[i];
@@ -493,13 +532,18 @@ print_argparse_help(const ArgParser* p, int columns){
             putchar('\n');
             }
         }
-    if(p->keyword.count)
-        fputs("Keyword Arguments:\n"
-             "------------------", stdout);
+    // It's possible for all keyword arguments to be hidden,
+    // so only print the header until we hit a non-hidden argument.
+    bool printed_keyword_header = false;
     for(size_t i = 0; i < p->keyword.count; i++){
         ArgToParse* arg = &p->keyword.args[i];
         if(arg->hidden)
             continue;
+        if(!printed_keyword_header){
+            printed_keyword_header = true;
+            fputs("Keyword Arguments:\n"
+                 "------------------", stdout);
+            }
         putchar('\n');
         print_arg_help(arg, columns);
         }
@@ -780,6 +824,7 @@ parse_arg(ArgToParse* arg, StringView s){
             }break;
         case ARG_FLOAT32:{
             char* endptr;
+            // I'd rather roll my own strtof, but that's too much work right now.
             float value = strtof(s.text, &endptr);
             if(endptr == s.text)
                 return ARGPARSE_CONVERSION_ERROR;
@@ -789,6 +834,7 @@ parse_arg(ArgToParse* arg, StringView s){
             }break;
         case ARG_FLOAT64:{
             char* endptr;
+            // Ditto on rolling my own.
             double value = strtod(s.text, &endptr);
             if(endptr == s.text)
                 return ARGPARSE_CONVERSION_ERROR;
@@ -829,16 +875,14 @@ parse_arg(ArgToParse* arg, StringView s){
         case ARG_ENUM:{
             if(!s.length) return ARGPARSE_CONVERSION_ERROR;
             const ArgParseEnumType* enu = arg->dest.enum_pointer;
-            // We just do a linear search over the strings.
-            // In theory this is very bad, but in practice
-            // a typical parse line will need to match against a
-            // given enum once so any fancy algorithm would
-            // require a pre-pass over all the data anyway.
-            // We could be faster if we required enums to be
-            // sorted, but this harms usability too much.
-            // If you need to parse a lot of enums with weird
-            // requirements, then just a create a user defined
-            // type instead of using this.
+            // We just do a linear search over the strings.  In theory this is
+            // very bad, but in practice a typical parse line will need to
+            // match against a given enum once so any fancy algorithm would
+            // require a pre-pass over all the data anyway.  We could be faster
+            // if we required enums to be sorted, but this harms usability too
+            // much.  If you need to parse a lot of enums with weird
+            // requirements, then just a create a user defined type instead of
+            // using this.
             for(size_t i = 0; i < enu->enum_count; i++){
                 if(LS_SV_equals(enu->enum_names[i], s)){
                     switch(enu->enum_size){
@@ -855,11 +899,33 @@ parse_arg(ArgToParse* arg, StringView s){
                             APPEND_ARG(uint64_t, i);
                             }return 0;
                         default:
-                            return ARGPARSE_CONVERSION_ERROR;
+                            return ARGPARSE_INTERNAL_ERROR;
                         }
                     }
                 }
-            return ARGPARSE_CONVERSION_ERROR;
+            // allow specifying enums by numeric value.
+            struct Uint64Result uint_res = parse_unsigned_human(s.text, s.length);
+            if(uint_res.errored){
+                return ARGPARSE_CONVERSION_ERROR;
+                }
+            if(uint_res.result >= enu->enum_count)
+                return ARGPARSE_CONVERSION_ERROR;
+            switch(enu->enum_size){
+                case 1:{
+                    APPEND_ARG(uint8_t, uint_res.result);
+                    }return 0;
+                case 2:{
+                    APPEND_ARG(uint16_t, uint_res.result);
+                    }return 0;
+                case 4:{
+                    APPEND_ARG(uint32_t, uint_res.result);
+                    }return 0;
+                case 8:{
+                    APPEND_ARG(uint64_t, uint_res.result);
+                    }return 0;
+                default:
+                    return ARGPARSE_INTERNAL_ERROR;
+                }
             }break;
         }
     return 0;
@@ -933,6 +999,8 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
     const char*const* argv_end = args->argv?(args->argv+args->argc):NULL;
     for(const char*const* arg = args->argv; arg != argv_end; ++arg){
         StringView s = cstr_to_SV(*arg);
+        if(!s.length && (flags & ARGPARSE_FLAGS_SKIP_EMPTY_STRINGS))
+            continue;
         if(s.length > 1){
             if(s.text[0] == '-'){
                 switch(s.text[1]){
