@@ -1072,6 +1072,7 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
     success:;
     cleanup:;
     msb_destroy(&msb);
+    report_size(&ctx, SV("source.length = "), source.length);
     report_size(&ctx, SV("la_.high_water = "), la_.high_water);
     if(!(flags & DNDC_NO_CLEANUP)){
         auto before = get_t();

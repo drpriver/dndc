@@ -1,5 +1,6 @@
 #ifndef LOG_PRINT_H
 #define LOG_PRINT_H
+#include "long_string.h"
 
 // Escape codes for colored text.
 // I should really be checking if stdout/stderr is interactive
