@@ -25,7 +25,7 @@ msb_detach_as_ns_string(MStringBuilder*sb){
     auto text = msb_detach(sb);
     PushDiagnostic();
     SuppressCastQual();
-    NSData* data = [NSData dataWithBytesNoCopy:(void*)text.text length:text.length+1 freeWhenDone:YES];
+    NSData* data = [NSData dataWithBytesNoCopy:(void*)text.text length:text.length freeWhenDone:YES];
     PopDiagnostic();
     NSString* str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     return str;
@@ -353,7 +353,7 @@ static NSImage* appimage;
         if(not [self fileURL])
             return @"Untitled";
         PushDiagnostic();
-#pragma clang diagnostic ignored "-Wnullable-to-nonnull-conversion"
+        #pragma clang diagnostic ignored "-Wnullable-to-nonnull-conversion"
         return [[[self fileURL] path] lastPathComponent];
         PopDiagnostic();
     }
@@ -806,7 +806,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     if([title isEqualToString:@"This"]){
         return;
     }
-    else {
+    else if ([title length]){
         [NSApp mainWindow].title = title;
     }
 }

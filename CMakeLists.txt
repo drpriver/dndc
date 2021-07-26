@@ -98,3 +98,6 @@ add_executable(TestDndc Dndc/TestDndc.c PythonEmbed/frozenstdlib.c)
 add_test(dndc TestDndc -C ${CMAKE_SOURCE_DIR})
 target_link_libraries(TestDndc ${Python3_LIBRARIES})
 target_include_directories(TestDndc PRIVATE ${Python3_INCLUDE_DIRS})
+
+# installs
+install(TARGETS dndc DESTINATION bin)

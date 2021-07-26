@@ -407,7 +407,8 @@ int main(int argc, char**argv){
                 .help = "Print this help and exit.",
             },
             [VERSION] = {
-                .name = SV("--version"),
+                .name = SV("-v"),
+                .altname1 = SV("--version"),
                 .help = "Print version information and exit.",
             },
             [HIDDEN_HELP] = {
@@ -430,7 +431,7 @@ int main(int argc, char**argv){
         Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
         switch(check_for_early_out_args(&argparser, &args)){
             case HELP:{
-                auto columns = get_terminal_size().columns;
+                int columns = get_terminal_size().columns;
                 if(columns > 80)
                     columns = 80;
                 print_argparse_help(&argparser, columns);
@@ -447,7 +448,7 @@ int main(int argc, char**argv){
                 fputs(
                     "Hidden Arguments:\n"
                     "-----------------", stdout);
-                auto columns = get_terminal_size().columns;
+                int columns = get_terminal_size().columns;
                 if(columns > 80)
                     columns = 80;
                 for(int i = 0; i < arrlen(kw_args); i++){
