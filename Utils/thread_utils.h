@@ -153,7 +153,14 @@ join_thread(ThreadHandle handle){
     }
 
 #elif defined(WASM)
-#define THREADFUNC(name) unsigned long (name)(Nullable(void*)thread_arg)
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnullability-completeness"
+#endif
+
+#define THREADFUNC(name) unsigned long (name)(void* thread_arg)
 typedef THREADFUNC(thread_func);
 typedef struct ThreadHandle {
     int unused;
@@ -161,7 +168,7 @@ typedef struct ThreadHandle {
 
 static
 void
-create_thread(ThreadHandle* handle, thread_func* func, Nullable(void*)thread_arg){
+create_thread(ThreadHandle* handle, thread_func* func, void* thread_arg){
     (void)handle;
     (void)func;
     }
@@ -171,6 +178,10 @@ void
 join_thread(ThreadHandle handle){
     (void)handle;
     }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
 #else
 #error "Unhandled threading platform."
 #endif

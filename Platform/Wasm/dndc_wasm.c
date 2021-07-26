@@ -1,5 +1,6 @@
+#include "dndc.h"
 #include "dndc.c"
-#include "dndc_flags.h"
+#include "msb_format.h"
 
 static
 void dndc_error_func(void* error_user_data, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
@@ -10,9 +11,9 @@ void dndc_error_func(void* error_user_data, int type, const char* filename, int 
         msb.capacity = sizeof(buff);
         msb_write_str(&msb, filename, filename_len);
         msb_write_char(&msb, ':');
-        msb_write_int(&msb, line);
+        msb_write_int32(&msb, line);
         msb_write_char(&msb, ':');
-        msb_write_int(&msb, col);
+        msb_write_int32(&msb, col);
         msb_write_char(&msb, ':');
         msb_write_str(&msb, message, message_len);
         msb_nul_terminate(&msb);
@@ -37,7 +38,12 @@ make_html(PString* source){
         | DNDC_DONT_INLINE_IMAGES
         | DNDC_INPUT_IS_UNTRUSTED
         ;
-    auto e = run_the_dndc(flags, base, text, &output, (DependsArg){}, NULL, NULL, dndc_error_func, NULL);
+    auto e = run_the_dndc(
+            flags, base, text, &output,
+            NULL, NULL,            // caches
+            dndc_error_func, NULL, // error func
+            NULL, NULL             // dependency funcs
+            );
     if(e.errored)
         return NULL;
     // Wow, this is a lot of copies.
@@ -53,9 +59,9 @@ void logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, 
     char buff[4096];
     msb.data = buff;
     msb.capacity = sizeof(buff);
-    msb_write_str(&msb, file, strlen(afile));
+    msb_write_str(&msb, file, strlen(file));
     msb_write_str(&msb, func, strlen(func));
-    msb_write_int(&msb, line);
+    msb_write_int32(&msb, line);
     msb_write_str(&msb, fmt, strlen(fmt));
     msb_nul_terminate(&msb);
     log_string(buff, msb.cursor);

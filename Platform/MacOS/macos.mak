@@ -1,4 +1,4 @@
-CC=clang
+CC=clang $(ARCHES)
 PYTHON:=python3
 PYCFLAGS:=-F/Library/Frameworks -isystem /Library/Frameworks/Python.framework/Headers
 PYLDFLAGS:=-framework Python

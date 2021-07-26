@@ -1185,9 +1185,20 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
 #include "dndc_parser.c"
 #include "dndc_context.c"
 #include "allocator.c"
+
 #ifndef WASM
+
 #include "dndc_python.c"
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 #else
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 static
 Errorable_f(void)
 internal_init_dndc_python_interpreter(uint64_t flags){
@@ -1206,9 +1217,6 @@ execute_python_string(DndcContext* ctx, const char* str, NodeHandle node){
 
 #endif
 
-#ifdef __clang__
-#pragma clang assume_nonnull begin
-#endif
 
 #ifndef PYTHONMODULE
 #ifndef WASM

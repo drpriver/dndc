@@ -1,6 +1,11 @@
 #ifndef STDLIB_H
 #define STDLIB_H
 #include "allstd.h"
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#pragma clang diagnostic push
+#pragma clang diagnostic ignore "-Wnullability-completeness"
+#endif
 #define alloca __builtin_alloca
 typedef int comparator(const void*, const void*);
 
@@ -35,7 +40,7 @@ array_sort_insertion(void* data, size_t n_items, comparator* cmp, size_t item_si
 
 static inline
 void
-array_sort(Nonnull(void*) data, size_t n_items, Nonnull(comparator*) cmp, size_t item_size){
+array_sort(void* data, size_t n_items, comparator* cmp, size_t item_size){
     if(n_items*item_size <= 256 || n_items < 4){
         array_sort_insertion(data, n_items, cmp, item_size);
         return;
@@ -45,7 +50,7 @@ array_sort(Nonnull(void*) data, size_t n_items, Nonnull(comparator*) cmp, size_t
 
 static inline
 void
-memswap(Nonnull(void*)a, Nonnull(void*) b, size_t memsize){
+memswap(void* a, void* b, size_t memsize){
     if(a == b)
         return;
     void* temp = alloca(memsize);
@@ -56,7 +61,7 @@ memswap(Nonnull(void*)a, Nonnull(void*) b, size_t memsize){
 
 static inline
 void
-array_sort_d(Nonnull(void*) data, size_t n_items, Nonnull(comparator*) cmp, size_t item_size, size_t depth){
+array_sort_d(void*  data, size_t n_items, comparator* cmp, size_t item_size, size_t depth){
     const size_t short_sort_better = 1024/item_size > 32? 1024/item_size : 32;
     UntypedSlice r = {.data=data, .count = n_items};
     void* pivot = alloca(item_size);
@@ -102,7 +107,7 @@ array_sort_d(Nonnull(void*) data, size_t n_items, Nonnull(comparator*) cmp, size
 
 static inline
 void
-short_sort(Nonnull(void*) data, size_t n_items, Nonnull(comparator*) cmp, size_t item_size){
+short_sort(void* data, size_t n_items, comparator* cmp, size_t item_size){
     switch(n_items){
         case 0: case 1: return;
         case 2:{
@@ -202,7 +207,7 @@ short_sort(Nonnull(void*) data, size_t n_items, Nonnull(comparator*) cmp, size_t
     }
 static inline
 size_t
-get_pivot(Nonnull(UntypedSlice*) r, Nonnull(comparator*) cmp, size_t item_size){
+get_pivot(UntypedSlice* r, comparator* cmp, size_t item_size){
     void* data = r->data;
     size_t mid = r->count / 2;
     if(r->count < 512){
@@ -265,7 +270,7 @@ get_pivot(Nonnull(UntypedSlice*) r, Nonnull(comparator*) cmp, size_t item_size){
 
 static inline
 void
-sift_down(Nonnull(UntypedSlice*)r, size_t parent, size_t end, Nonnull(comparator*)cmp, size_t item_size){
+sift_down(UntypedSlice* r, size_t parent, size_t end, comparator* cmp, size_t item_size){
     void* data = r->data;
     for(;;){
         size_t child = (parent+1) * 2;
@@ -287,7 +292,7 @@ sift_down(Nonnull(UntypedSlice*)r, size_t parent, size_t end, Nonnull(comparator
 
 static inline
 bool
-is_heap(Nonnull(UntypedSlice*)r, Nonnull(comparator*)cmp, size_t item_size){
+is_heap(UntypedSlice* r, comparator* cmp, size_t item_size){
     size_t parent = 0;
     for(size_t child = 1; child < r->count; child++){
         if(cmp(r->data+parent*item_size, r->data+child*item_size) < 0)
@@ -299,7 +304,7 @@ is_heap(Nonnull(UntypedSlice*)r, Nonnull(comparator*)cmp, size_t item_size){
 
 static inline
 void
-build_heap(Nonnull(UntypedSlice*)r, Nonnull(comparator*)cmp, size_t item_size){
+build_heap(UntypedSlice* r, comparator* cmp, size_t item_size){
     // DBGPrint("building heap");
     size_t n = r->count;
     for(size_t i = n / 2; i-- > 0; ){
@@ -310,7 +315,7 @@ build_heap(Nonnull(UntypedSlice*)r, Nonnull(comparator*)cmp, size_t item_size){
 
 static inline
 void
-percolate(Nonnull(UntypedSlice*)r, size_t parent, size_t end, Nonnull(comparator*)cmp, size_t item_size){
+percolate(UntypedSlice* r, size_t parent, size_t end, comparator* cmp, size_t item_size){
     void* data = r->data;
     const size_t root = parent;
     for(;;){
@@ -339,7 +344,7 @@ percolate(Nonnull(UntypedSlice*)r, size_t parent, size_t end, Nonnull(comparator
 
 static inline
 void
-heap_sort(Nonnull(UntypedSlice*)r, Nonnull(comparator*)cmp, size_t item_size){
+heap_sort(UntypedSlice* r, comparator* cmp, size_t item_size){
     if(r->count < 2)
         return;
     build_heap(r, cmp, item_size);
@@ -354,7 +359,7 @@ heap_sort(Nonnull(UntypedSlice*)r, Nonnull(comparator*)cmp, size_t item_size){
 
 static inline
 bool
-is_sorted(Nonnull(void*) data, size_t n_items, Nonnull(comparator*)cmp , size_t item_size){
+is_sorted(void* data, size_t n_items, comparator* cmp , size_t item_size){
     void* before = data;
     for(size_t i = 0; i < n_items; i++){
         if(cmp(data+i*item_size, before) < 0){
@@ -370,5 +375,9 @@ qsort(void* base, size_t nel, size_t width, int(*compar)(const void*, const void
     array_sort(base, nel, compar, width);
     }
 
+#ifdef __clang__
+#pragma clang diagnostic pop
+#pragma clang assume_nonnull end
+#endif
 
 #endif
