@@ -8,6 +8,7 @@
 #import "MStringBuilder.h"
 #import "mallocator.h"
 #import "msb_format.h"
+#import "dndc_funcs.h"
 #define LOGIT(...) NSLog(@ "%d: " #__VA_ARGS__ "= %@", __LINE__, __VA_ARGS__)
 // Convenience macro for writing inline javascript without a million quotes.
 // Note that you need to semi-colon terminate all of your lines.
@@ -271,6 +272,7 @@ typedef enum GdndInsertTag{
 @public NSURL* file_url;
 @public DndUrlHandler* handler;
 @public NSString* scroll_resto_string;
+@public NSString* doc_title;
 }
 -(LongString)get_text;
 -(void)recalc_html:(LongString)text;
@@ -337,28 +339,18 @@ static NSImage* appimage;
     return window;
 }
 -(void)makeWindowControllers{
-    auto mainwindow = [NSApp mainWindow];
     NSWindow* docwindow = [self make_window];
     DndWindowController* winc = [[DndWindowController alloc] initWithWindow:docwindow];
     // is there a method for this or are you supposed to assign them like this?
     [self addWindowController:winc];
+    auto mainwindow = [NSApp mainWindow];
     if(mainwindow){
         [mainwindow addTabbedWindow:docwindow ordered:NSWindowAbove];
     }
     [docwindow makeKeyAndOrderFront: nil];
 }
--(NSString*)wv_title{
-    auto title = self->view_controller->webview.title;
-    if([title isEqualToString:@"This"]){
-        if(not [self fileURL])
-            return @"Untitled";
-        PushDiagnostic();
-        #pragma clang diagnostic ignored "-Wnullable-to-nonnull-conversion"
-        return [[[self fileURL] path] lastPathComponent];
-        PopDiagnostic();
-    }
-    else
-        return title;
+-(NSString*)doc_title{
+    return self->view_controller->doc_title;
 }
 
 - (NSData*_Nullable)dataOfType:(NSString *)typeName error:(NSError **)outError {
@@ -396,6 +388,21 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(cons
         return;
     [sd->storage addAttribute:NSForegroundColorAttributeName value:SYNTAX_COLORS[type] range:NSMakeRange(begin-sd->begin, length)];
     return;
+}
+static
+int
+gdndc_ast_func(void*_Nullable data, DndcContext* ctx){
+    if(!data)
+        return 0;
+    if(!NodeHandle_eq(ctx->titlenode, INVALID_NODE_HANDLE)){
+        Node* node = get_node(ctx, ctx->titlenode);
+        MStringBuilder sb = {.allocator = get_mallocator()};
+        msb_write_str(&sb, node->header.text, node->header.length);
+        NSString* str = msb_detach_as_ns_string(&sb);
+        DndViewController* vc = (__bridge DndViewController*)data;
+        vc->doc_title = str;
+    }
+    return 0;
 }
 void
 gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
@@ -799,17 +806,6 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 @end
 #define DND_THIS_URL @"dnd://gdndc/this.html"
 @implementation WebNavDel: NSObject
--(void)webView:(WKWebView *)webView
-    didFinishNavigation:(WKNavigation *_Null_unspecified)navigation{
-    auto title = webView.title;
-    // Hack
-    if([title isEqualToString:@"This"]){
-        return;
-    }
-    else if ([title length]){
-        [NSApp mainWindow].title = title;
-    }
-}
 -(void)webView:(WKWebView *)webView
     decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction
     decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler{
@@ -1327,7 +1323,8 @@ BOOL show_stats;
     // flags |= DNDC_USE_DND_URL_SCHEME;
     error_text.editable = YES;
     [[error_text textStorage].mutableString setString:@""];
-    auto err = dndc_compile_dnd_file(flags, base_dir, source, &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL);
+    auto err = run_the_dndc(flags, base_dir, source, &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL, gdndc_ast_func, (__bridge void*)self).errored;
+    // auto err = dndc_compile_dnd_file(flags, base_dir, source, &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL);
     error_text.editable = NO;
     // auto t1 = get_t();
     // HERE("dndc_compile_dnd_file: %.3fms", (t1-t0)/1000.);
@@ -1411,7 +1408,7 @@ completionHandler:(void (^)(NSString *result))completionHandler{
 
 @implementation DndWindowController : NSWindowController
 -(NSString*)windowTitleForDocumentDisplayName:(NSString*)displayName{
-    auto result = [self.document wv_title];
+    auto result = [self.document doc_title];
     if(!result)
         return displayName;
     return result;

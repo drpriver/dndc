@@ -72,6 +72,10 @@ enum ArgParseFlags {
 
     // Skip 0 length strings.
     ARGPARSE_FLAGS_SKIP_EMPTY_STRINGS = 1 << 1,
+    // Skip NULL strings.
+    // This is useful if you do a pre-pass on the args and want to
+    // remove arguments without having to shuffle the entire argv.
+    ARGPARSE_FLAGS_SKIP_NULL_STRINGS = 1 << 2,
 };
 
 typedef struct Args {
@@ -998,6 +1002,10 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
     ArgToParse* kwarg = NULL;
     const char*const* argv_end = args->argv?(args->argv+args->argc):NULL;
     for(const char*const* arg = args->argv; arg != argv_end; ++arg){
+        if(!arg && (flags & ARGPARSE_FLAGS_SKIP_NULL_STRINGS))
+            continue;
+        if(!arg)
+            return ARGPARSE_INTERNAL_ERROR;
         StringView s = cstr_to_SV(*arg);
         if(!s.length && (flags & ARGPARSE_FLAGS_SKIP_EMPTY_STRINGS))
             continue;

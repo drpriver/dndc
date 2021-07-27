@@ -492,7 +492,8 @@ int main(int argc, char**argv){
                 &output_path,
                 NULL, NULL,
                 dndc_stderr_error_func, NULL,
-                dependency_func, &dependency_user_data);
+                dependency_func, &dependency_user_data,
+                NULL, NULL);
 
     assert(!e.errored);
     flags |= DNDC_PYTHON_IS_INIT;
@@ -502,7 +503,7 @@ int main(int argc, char**argv){
                 &output_path,
                 NULL, NULL,
                 dndc_stderr_error_func, NULL,
-                dependency_func, &dependency_user_data);
+                dependency_func, &dependency_user_data, NULL, NULL);
         assert(!e.errored);
         }
     end_interpreter();
@@ -513,7 +514,7 @@ int main(int argc, char**argv){
                  output_path.length? &output_path : NULL,
                  NULL, NULL,
                  dndc_stderr_error_func, NULL,
-                 dependency_func, &dependency_user_data);
+                 dependency_func, &dependency_user_data, NULL, NULL);
     return e.errored;
     #endif
     }
@@ -560,6 +561,7 @@ dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths){
     }
 #endif
 
+
 static
 Errorable_f(void)
 run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_path,
@@ -568,7 +570,12 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         Nullable(FileCache*)external_textcache,
         Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data,
         Nullable(DndcDependencyFunc*)dependency_func,
-        Nullable(void*)dependency_user_data){
+        Nullable(void*)dependency_user_data,
+        // TEMPORARY HACK
+        // Might want to have an API that yields a parse context + ast?
+        Nullable(DndcPostParseAstFunc*)ast_func,
+        Nullable(void*)ast_func_user_data
+        ){
     if(flags & DNDC_REFORMAT_ONLY)
         flags |= DNDC_NO_PYTHON;
     if(flags & DNDC_INPUT_IS_UNTRUSTED){
@@ -1001,6 +1008,13 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         report_time(&ctx, SV("Data blob rendering took: "), after_data-before_data);
         report_size(&ctx, SV("ctx.rendered_data.count = "), ctx.rendered_data.count);
     }
+    if(ast_func){
+        int err = ast_func(ast_func_user_data, &ctx);
+        if(err){
+            report_system_error(&ctx, SV("Error during user defined ast func"));
+            goto cleanup;
+            }
+        }
     // Render the actual document into a string as html.
     {
         // msb_reset(&msb);
@@ -1230,7 +1244,7 @@ dndc_format(LongString source_text, LongString* output, Nullable(DndcErrorFunc*)
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_REFORMAT_ONLY
         ;
-    auto e = run_the_dndc(flags, SV(""), source_text, output, NULL, NULL, error_func, error_user_data, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source_text, output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL);
     return e.errored;
     }
 DNDC_API
@@ -1770,7 +1784,7 @@ dndc_compile_dnd_file(unsigned long long flags, struct DndcStringView base_direc
     uint64_t new_flags = flags & DNDC_VALID_FLAGS;
     if(new_flags != flags)
         return GENERIC_ERROR;
-    auto err = run_the_dndc(flags, base_directory, source_path, output_path, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data);
+    auto err = run_the_dndc(flags, base_directory, source_path, output_path, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL);
     return err.errored;
     }
 

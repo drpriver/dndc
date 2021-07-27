@@ -83,6 +83,7 @@
 // On failure, an error will be indicated.
 //
 
+typedef int (DndcPostParseAstFunc)(Nullable(void*)user_data, Nonnull(DndcContext*));
 static
 Errorable_f(void)
 run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_path,
@@ -91,7 +92,12 @@ run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_pat
         Nullable(FileCache*)external_textcache,
         Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data,
         Nullable(DndcDependencyFunc*)dependency_func,
-        Nullable(void*)dependency_user_data);
+        Nullable(void*)dependency_user_data,
+        // TEMPORARY HACK
+        // Might want to have an API that yields a parse context + ast?
+        Nullable(DndcPostParseAstFunc*)ast_func,
+        Nullable(void*)ast_func_user_data
+        );
 
 //
 // The following functions are for reporting errors and warnings. ONLY use

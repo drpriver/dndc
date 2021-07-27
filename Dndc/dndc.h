@@ -136,7 +136,8 @@ typedef void DndcErrorFunc(DNDC_NULLABLE(void*) error_user_data, int type,
         int col, const char* message, int message_len);
 
 //
-// An error reporting function that prints to stderr. For use with the dndc
+// An error reporting function that prints to stderr. For use with the
+// `dndc_compile_dnd_file`.
 //
 DNDC_API void dndc_stderr_error_func(DNDC_NULLABLE(void*) error_user_data,
         int type, const char* filename, int filename_len,

@@ -97,13 +97,13 @@ typedef struct Node {
     // For NODE_STRING, this is instead the contents of that node
     StringView header;            // 16 bytes
     // Handles to child nodes.
-    union{
+    union {
         Marray(NodeHandle) children;   // 24 bytes
         struct {
             size_t children_count;
             NodeHandle inline_children[4];
-            };
         };
+    };
     Rarray(Attribute)*_Nullable attributes;  // 8 bytes
     Rarray(StringView)*_Nullable classes;    // 8 bytes
     // Source filename (used for reporting errors)
@@ -113,7 +113,7 @@ typedef struct Node {
     // for the general human-readable version.
     int row, col;                  // 4 + 4 bytes.
     // no padding in this struct
-}Node;
+} Node;
 
 static inline
 force_inline
