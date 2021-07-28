@@ -1,6 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #import <Webkit/WebKit.h>
 #import <dispatch/dispatch.h>
+#define DNDC_API static inline
 #import "dndc_long_string.h"
 #import "common_macros.h"
 #import "measure_time.h"
@@ -193,7 +194,10 @@ cache_watch_file(void* cache_, StringView path){
     dispatch_resume(source);
 }
 
+static NSFont* EDITOR_FONT;
+
 static FileWatchCache FILE_WATCH_CACHE;
+
 static
 int
 cache_watch_files(void* unused, size_t npaths, StringView*paths){
@@ -226,6 +230,10 @@ typedef enum GdndInsertTag{
 }GdndInsertTag;
 @interface DndWindowController: NSWindowController
 // Has a NSWindow* window
+@end
+
+@interface DndFontDelegate: NSObject<NSWindowDelegate>
+-(void)changeFont:(nullable id)sender;
 @end
 
 //
@@ -286,6 +294,7 @@ typedef enum GdndInsertTag{
 // this is kind of janky, but whatever
 DndViewController* view_controller;
 }
+-(void)change_font:(NSFont*)font;
 @end
 
 // The App delegate!
@@ -309,6 +318,9 @@ static NSImage* appimage;
 @implementation DndDocument
 +(BOOL)autosavesInPlace {
     return YES;
+}
+-(void)change_font:(NSFont*)font{
+    self->view_controller->text.font = font;
 }
 -(instancetype)init {
     self = [super init];
@@ -341,7 +353,6 @@ static NSImage* appimage;
 -(void)makeWindowControllers{
     NSWindow* docwindow = [self make_window];
     DndWindowController* winc = [[DndWindowController alloc] initWithWindow:docwindow];
-    // is there a method for this or are you supposed to assign them like this?
     [self addWindowController:winc];
     auto mainwindow = [NSApp mainWindow];
     if(mainwindow){
@@ -404,6 +415,7 @@ gdndc_ast_func(void*_Nullable data, DndcContext* ctx){
     }
     return 0;
 }
+static
 void
 gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
     if(!data)
@@ -450,7 +462,6 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     if(self.controller){
         [self.controller recalc_html: [self.controller get_text]];
     }
-#if 1
     // NSRange currentLineRange = NSMakeRange(0, [string length]);
     NSRange currentLineRange = [string lineRangeForRange:editedRange];
     // auto before= get_t();
@@ -482,71 +493,6 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     // auto t1 = get_t();
     // HERE("dndc_analyze_syntax: %.3fms", (t1-t0)/1000.);
     return;
-#else
-    // We take advantage of the fact that .dnd can mostly be tokenized
-    // linewise (technically you need to know what the parent node is, but
-    // that only affects python blocks really).
-    // NSRange currentLineRange = NSMakeRange(0, [string length]);
-    NSRange currentLineRange = [string lineRangeForRange:editedRange];
-    [textStorage removeAttribute:NSForegroundColorAttributeName range:currentLineRange];
-    [textStorage removeAttribute:NSBackgroundColorAttributeName range:currentLineRange];
-    NSUInteger rowstart = currentLineRange.location;
-    BOOL saw_colon = NO;
-    BOOL saw_double_colon = NO;
-    BOOL all_spaces = YES;
-    NSUInteger double_colon = 0;
-    auto end = currentLineRange.location + currentLineRange.length;
-    for (NSUInteger i = currentLineRange.location; i < end; i++){
-        unichar c = [string characterAtIndex:i];
-        if(all_spaces && c != ' '){
-            all_spaces = NO;
-        }
-        if(c == '\n'){
-            if(saw_double_colon){
-                if(rowstart < double_colon){
-                    [textStorage addAttribute:NSForegroundColorAttributeName value:[NSColor blueColor] range:NSMakeRange(rowstart, double_colon-rowstart)];
-                }
-                [textStorage addAttribute:NSForegroundColorAttributeName value:[NSColor lightGrayColor] range:NSMakeRange(double_colon, i-double_colon)];
-                saw_double_colon = NO;
-                saw_colon = NO;
-            }
-            all_spaces = YES;
-            rowstart = i+1;
-            continue;
-        }
-        if(c == ':'){
-            if(saw_double_colon)
-                continue;
-            if(saw_colon){
-                double_colon = i-1;
-                saw_double_colon = YES;
-                continue;
-            }
-            saw_colon = YES;
-            continue;
-        }
-        if(c == ' ' && all_spaces){
-            saw_colon = NO;
-            continue;
-        }
-        if(c == '*' && all_spaces){
-            [textStorage addAttribute:NSForegroundColorAttributeName value:[NSColor grayColor] range:NSMakeRange(i, 1)];
-            all_spaces = NO;
-            saw_colon = NO;
-            continue;
-        }
-        all_spaces = NO;
-        saw_colon = NO;
-    }
-    if(saw_double_colon){
-        [textStorage addAttribute:NSForegroundColorAttributeName value:[NSColor blueColor] range:NSMakeRange(rowstart, double_colon-rowstart)];
-        [textStorage addAttribute:NSForegroundColorAttributeName value:[NSColor lightGrayColor] range:NSMakeRange(double_colon, end-double_colon)];
-        saw_double_colon = NO;
-        saw_colon = NO;
-    }
-    auto t1 = get_t();
-    HERE("dndc_analyze_syntax: %.3fms", (t1-t0)/1000.);
-#endif
 }
 @end
 
@@ -923,6 +869,9 @@ BOOL show_stats;
 #define DND_COORD_HELPER_LABEL @"Coord Helper"
 #define DND_SHOW_ERRORS_LABEL @"Show Errors"
 #define DND_SHOW_STATS_LABEL @"Show Stats"
+-(void)refresh{
+    [self recalc_html:[self get_text]];
+}
 -(void)button_click:(id)a{
     // Being lazy and just doing string comparisons
     NSButton* button = a;
@@ -994,12 +943,11 @@ BOOL show_stats;
     }
     auto split_view = [[NSSplitView alloc] initWithFrame:screenrect];
     split_view.vertical = YES;
-    auto font=[NSFont fontWithName:@"Menlo" size:11];
-    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:(id)font, NSFontAttributeName, nil];
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:(id)EDITOR_FONT, NSFontAttributeName, nil];
     auto Msize = [[NSAttributedString alloc] initWithString:@"M" attributes:attributes].size.width;
     auto textwidth  = 84*Msize;
     NSRect textrect = {.origin={screenrect.size.width-textwidth,0}, .size={textwidth,screenrect.size.height}};
-    text = [[DndTextView alloc] initWithFrame:textrect font:font];
+    text = [[DndTextView alloc] initWithFrame:textrect font:EDITOR_FONT];
     highlighter = [[DndHighlighter alloc] init];
     highlighter.controller = self;
     text.textStorage.delegate = highlighter;
@@ -1015,7 +963,7 @@ BOOL show_stats;
     editor_container.vertical = NO;
 
     error_text = [[NSTextView alloc] init];
-    error_text.textStorage.font = font;
+    error_text.textStorage.font = EDITOR_FONT;
     error_text.editable = NO;
     error_text.usesAdaptiveColorMappingForDarkAppearance = YES;
 
@@ -1416,7 +1364,7 @@ completionHandler:(void (^)(NSString *result))completionHandler{
 // !!! this doesn't go here !!!
 -(void)keyDown:(NSEvent*) event{
     if(event.modifierFlags & NSEventModifierFlagCommand){
-        auto num = [event.characters integerValue];
+        NSInteger num = [event.characters integerValue];
         if(num){
             num -= 1;
            auto tabs =  [NSApp mainWindow].tabbedWindows;
@@ -1430,12 +1378,16 @@ completionHandler:(void (^)(NSString *result))completionHandler{
 }
 @end
 
-@implementation DndAppDelegate : NSObject
+@implementation DndAppDelegate{
+    DndFontDelegate* fontdel;
+}
 -(void)applicationWillFinishLaunching:(NSNotification *)notification{
     do_menus();
 }
 - (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)sender{
     auto controller = [NSDocumentController sharedDocumentController];
+    // Dude, there's no way this is how you are supposed to do this.
+    // What was I thinking?
     [controller openDocument:nil];
     return NO;
 }
@@ -1455,12 +1407,37 @@ completionHandler:(void (^)(NSString *result))completionHandler{
     dndc_filecache_clear(TEXTCACHE);
 }
 
+-(void)change_font{
+    auto mgr = [NSFontManager sharedFontManager];
+    LOGIT([mgr selectedFont]);
+}
 -(void)applicationDidFinishLaunching:(NSNotification *)notification{
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     [NSApp activateIgnoringOtherApps:YES];
     NSApp.applicationIconImage = appimage;
+    auto panel = [NSFontPanel sharedFontPanel];
+    fontdel = [[DndFontDelegate alloc] init];
+    panel.delegate = fontdel;
+
+    [panel setPanelFont:EDITOR_FONT isMultiple:NO];
+    auto mgr = [NSFontManager sharedFontManager];
+    [mgr setTarget:fontdel];
+    // [mgr setAction:@selector(change_font)];
 }
 
+@end
+
+@implementation DndFontDelegate
+// this shit is deprecated apparently.
+// but uh. Whatever.
+-(void)changeFont:(nullable id)sender{
+    EDITOR_FONT = [sender convertFont:EDITOR_FONT];
+    auto controller = [NSDocumentController sharedDocumentController];
+    auto documents = [controller documents];
+    for(DndDocument* doc in documents){
+        [doc change_font:EDITOR_FONT];
+    }
+}
 @end
 
 
@@ -1481,6 +1458,7 @@ int
 main(int argc, const char *_Null_unspecified *_Nonnull argv) {
     if(dndc_init_python() != 0)
         return 1;
+    EDITOR_FONT = [NSFont fontWithName:@"Courier" size:11];
     BASE64CACHE = dndc_create_filecache();
     TEXTCACHE = dndc_create_filecache();
     NSApplication* app = [NSApplication sharedApplication];
@@ -1562,7 +1540,7 @@ do_menus(void){
         [menu addItem:[NSMenuItem separatorItem]];
         [menu addItemWithTitle:@"Close Window" action:@selector(performClose:) keyEquivalent:@"w"];
         [menu addItemWithTitle:@"Save" action:@selector(saveDocument:) keyEquivalent:@"s"];
-        [menu addItemWithTitle:@"Revert to Saved" action:@selector(revertDocumentToSaved:) keyEquivalent:@"r"];
+        [menu addItemWithTitle:@"Revert to Saved" action:@selector(revertDocumentToSaved:) keyEquivalent:@""];
         [menu addItem:[NSMenuItem separatorItem]];
         [menu addItemWithTitle:@"Empty File Caches" action:@selector(purge_file_caches:) keyEquivalent:@""];
         NSMenuItem* menu_item = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
@@ -1574,6 +1552,11 @@ do_menus(void){
         NSMenu* menu = [[NSMenu alloc] initWithTitle:@"Edit"];
         [menu addItemWithTitle:@"Undo" action:@selector(undo:) keyEquivalent:@"z"];
         [menu addItemWithTitle:@"Redo" action:@selector(redo:) keyEquivalent:@"Z"];
+        NSMenuItem* fontmi = [[NSMenuItem alloc] initWithTitle:@"Font" action:nil keyEquivalent:@""];
+        NSFontManager *fontManager = [NSFontManager sharedFontManager];
+        NSMenu *fontMenu = [fontManager fontMenu:YES];
+        [fontmi setSubmenu:fontMenu];
+        [menu addItem:fontmi];
         [menu addItem:[NSMenuItem separatorItem]];
         [menu addItemWithTitle:@"Cut" action:@selector(cut:) keyEquivalent:@"x"];
         [menu addItemWithTitle:@"Copy" action:@selector(copy:) keyEquivalent:@"c"];
@@ -1638,9 +1621,12 @@ do_menus(void){
         [menu addItemWithTitle:@"Toggle Editor" action:@selector(toggle_editor:) keyEquivalent:@"j"];
         [menu addItemWithTitle:@"Flop Editor" action:@selector(flop_editors:) keyEquivalent:@""];
         [menu addItem:[NSMenuItem separatorItem]];
+        [menu addItemWithTitle:@"Refresh" action:@selector(refresh) keyEquivalent:@"r"];
+        [menu addItem:[NSMenuItem separatorItem]];
         [menu addItemWithTitle:@"Zoom Out" action:@selector(zoom_out:) keyEquivalent:@"-"];
         [menu addItemWithTitle:@"Zoom In" action:@selector(zoom_in:) keyEquivalent:@"+"];
         [menu addItemWithTitle:@"Actual Size" action:@selector(zoom_normal:) keyEquivalent:@"0"];
+
 
         NSMenuItem* menu_item = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
         [menu_item setSubmenu:menu];

@@ -56,7 +56,7 @@ class Identer:
     def tag(self, cursor) -> None:
         filename = normpath(cursor.location.file.name)
         if filename not in self.file_lines:
-            with open(filename) as f:
+            with open(filename, encoding='utf-8', errors='ignore') as f:
                 self.file_lines[filename] = f.readlines()
         t = self.infos[filename]
         line = self.file_lines[filename][cursor.location.line-1].rstrip()

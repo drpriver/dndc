@@ -130,8 +130,7 @@ set_frozen_modules(void){
     // Code for monitoring the size of the frozen modules
     for(int i = 0;i < arrlen(_PyImport_FrozenModules);i++){
         auto f = &_PyImport_FrozenModules[i];
-        HEREPrint(f->name);
-        HEREPrint(f->size);
+        fprintf(stdout, "%s: %d", f->name, f->size);
     }
 #endif
     PyImport_FrozenModules = _PyImport_FrozenModules;

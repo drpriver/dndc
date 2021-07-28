@@ -77,6 +77,13 @@
 // dependency_user_data:
 //   A pointer that will be passed to the dependency_func.
 //
+// ast_func:
+//   A function that will be called right before html generation. This exposes
+//   the ctx to the caller.
+//
+// ast_func_user_data:
+//   A pointer that will be passed to the ast_func.
+//
 // Returns
 // -------
 // Nothing is returned upon success (.errored == NO_ERROR).
