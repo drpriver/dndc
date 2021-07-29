@@ -1431,7 +1431,10 @@ completionHandler:(void (^)(NSString *result))completionHandler{
 // this shit is deprecated apparently.
 // but uh. Whatever.
 -(void)changeFont:(nullable id)sender{
-    EDITOR_FONT = [sender convertFont:EDITOR_FONT];
+    auto font = [sender convertFont:EDITOR_FONT];
+    if(!font)
+        return;
+    EDITOR_FONT = font;
     auto controller = [NSDocumentController sharedDocumentController];
     auto documents = [controller documents];
     for(DndDocument* doc in documents){
@@ -1458,7 +1461,12 @@ int
 main(int argc, const char *_Null_unspecified *_Nonnull argv) {
     if(dndc_init_python() != 0)
         return 1;
-    EDITOR_FONT = [NSFont fontWithName:@"Courier" size:11];
+    auto font = [NSFont fontWithName:@"SF Mono" size:11];
+    if(!font)
+        font = [NSFont fontWithName:@"Courier" size:11];
+    if(!font)
+        font = [NSFont fontWithName:@"Menlo" size:11];
+    EDITOR_FONT = font;
     BASE64CACHE = dndc_create_filecache();
     TEXTCACHE = dndc_create_filecache();
     NSApplication* app = [NSApplication sharedApplication];
