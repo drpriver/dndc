@@ -554,6 +554,20 @@ parse_binary_inner(const char* str, size_t length){
 static inline
 warn_unused
 struct Uint64Result
+parse_string_integer_inner(const char* str, size_t length){
+    struct Uint64Result result = {};
+    if(length > sizeof(uint64_t)){
+        result.errored = PARSENUMBER_OVERFLOWED_VALUE;
+        return result;
+        }
+    if(length)
+        memcpy(&result.result, str, length);
+    return result;
+    }
+
+static inline
+warn_unused
+struct Uint64Result
 parse_unsigned_human(const char* str, size_t length){
     struct Uint64Result result = {};
     if(!length){
@@ -567,6 +581,15 @@ parse_unsigned_human(const char* str, size_t length){
             return parse_hex(str, length);
         if(str[1] == 'b' || str[1] == 'B')
             return parse_binary(str, length);
+        if(str[1] == 's' || str[1] == 'S')
+            return parse_string_integer_inner(str+2, length-2);
+        if(str[1] == 'p' || str[1] == 'P'){
+            result = parse_hex_inner(str+2, length-2);
+            int err = __builtin_mul_overflow(result.result, sizeof(uintptr_t), &result.result);
+            if(err)
+                result.errored = PARSENUMBER_OVERFLOWED_VALUE;
+            return result;
+            }
         }
     return parse_uint64(str, length);
     }
