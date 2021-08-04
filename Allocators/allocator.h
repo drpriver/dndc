@@ -77,12 +77,6 @@ enum AllocatorType {
     ALLOCATOR_ARENA = 4,
 };
 
-typedef struct ArenaAllocator {
-    struct Arena*_Nullable arena;
-    struct BigAllocation*_Nullable big_allocations;
-} ArenaAllocator;
-
-
 typedef struct Allocator {
     enum AllocatorType type;
     // 4 bytes of padding

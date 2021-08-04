@@ -131,8 +131,8 @@ static inline
 warn_unused
 // force_inline
 void*
-Allocator_dupe(Allocator allocator, const void* data, size_t size){
-    void* result = Allocator_alloc(allocator, size);
+Allocator_dupe(Allocator a, const void* data, size_t size){
+    void* result = Allocator_alloc(a, size);
     memcpy(result, data, size);
     return result;
     }
@@ -141,8 +141,8 @@ MALLOC_FUNC
 static inline
 warn_unused
 char*
-Allocator_strndup(Allocator allocator, const char* str, size_t length){
-    char* result = Allocator_alloc(allocator, length+1);
+Allocator_strndup(Allocator a, const char* str, size_t length){
+    char* result = Allocator_alloc(a, length+1);
     unhandled_error_condition(!result);
     if(length)
         memcpy(result, str, length);

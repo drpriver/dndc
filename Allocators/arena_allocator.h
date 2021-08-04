@@ -31,6 +31,10 @@
 // If the allocation is bigger than would fit in an arena, it allocates it
 // independently and maintains a linked list of these big allocations.
 //
+typedef struct ArenaAllocator {
+    struct Arena*_Nullable arena;
+    struct BigAllocation*_Nullable big_allocations;
+} ArenaAllocator;
 
 //
 // TODO: Currently we back the arena allocator with malloc, but we could just

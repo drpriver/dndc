@@ -2,6 +2,7 @@
 #define RECORDING_ALLOCATOR_H
 #include <stdlib.h>
 #include <string.h>
+#include "arena_allocator.h"
 #include "allocator.h"
 
 #ifdef __clang__
