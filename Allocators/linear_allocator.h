@@ -10,6 +10,10 @@
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
+#else
+#ifndef _Nullable
+#define _Nullable
+#endif
 #endif
 
 //
@@ -28,19 +32,13 @@
 // in place with no copy. But if you need to realloc at random times it
 // will always copy, which is a disaster.
 //
-// If capacity is exceeded, falls back to mallocing the data. That allocation
-// will be leaked, so this failure is logged. Most users will either be
-// reallocing in a loop to benefit from perfect reallocation or not freeing at
-// all and relying on the ability to free all by just setting cursor to 0.
-// However, if we have fallen back to malloc, we have lost track of that pointer
-// and thus it will not get freed when we do the free-all!
+// If capacity is exceeded, falls back to mallocing the data and storing the
+// overflow allocations in a linked list, which isn't great so don't overflow.
 //
-// Possibly we could combine this with the RecordingAllocator to track these
-// leaks, but in practice you can either calculate exactly how much memory
-// you will need in the worse case scenario or try to cause the worse case
-// scenario and just measure it. The high_water field is present for that
-// second strategy and helps in tuning the size of the allocated buffer.
-//
+struct OverflowAllocation {
+    struct OverflowAllocation*_Nullable next;
+    char buff[];
+    };
 typedef struct LinearAllocator {
     // The buffer to allocate from.
     void*_Null_unspecified  _data;
@@ -52,6 +50,7 @@ typedef struct LinearAllocator {
     size_t high_water;
     // The name of this allocator. Used for logging when we exceed capacity.
     const char*_Nullable name; // for logging purposes
+    struct OverflowAllocation*_Nullable overflow;
 } LinearAllocator;
 
 //
@@ -101,6 +100,11 @@ static inline
 void
 destroy_linear_storage(LinearAllocator* s){
     free(s->_data);
+    for(struct OverflowAllocation*oa = s->overflow;oa;){
+        struct OverflowAllocation* next = oa->next;
+        free(oa);
+        oa = next;
+        }
     s->name = NULL;
     s->_data = NULL;
     s->_capacity = 0;
@@ -129,9 +133,11 @@ linear_aligned_alloc(LinearAllocator* restrict s, size_t size, size_t alignment)
 #endif
         s->high_water = s->_cursor + size;
         // leak
-        void* result =  malloc(size);
+        struct OverflowAllocation* result =  malloc(size + sizeof(struct OverflowAllocation));
         unhandled_error_condition(!result);
-        return result;
+        result->next = s->overflow;
+        s->overflow = result;
+        return result->buff;
         }
     void* result = ((char*)s->_data) + s->_cursor;
     s->_cursor += size;
