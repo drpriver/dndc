@@ -18,6 +18,7 @@
 #include "mallocator.h"
 #include "linear_allocator.h"
 #include "recording_allocator.h"
+#include "arena_allocator.h"
 #include "long_string.h"
 #include "MStringBuilder.h"
 #include "measure_time.h"

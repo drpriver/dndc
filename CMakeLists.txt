@@ -101,3 +101,4 @@ target_include_directories(TestDndc PRIVATE ${Python3_INCLUDE_DIRS})
 
 # installs
 install(TARGETS dndc DESTINATION bin)
+install(TARGETS dndc-lib DESTINATION lib)

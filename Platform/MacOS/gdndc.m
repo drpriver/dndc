@@ -1668,5 +1668,5 @@ do_menus(void){
 
 #pragma clang assume_nonnull end
 
-#import "allocator.c"
 #import "dndc.c"
+#import "allocator.c"
