@@ -29,13 +29,30 @@ target_compile_definitions(dndc PRIVATE DNDCMAIN)
 # Cmake sucks and doesn't allow a library and
 # executable with the same name, even though the output files are different!
 add_library(dndc-lib
+    STATIC
     Dndc/dndc.c
     PythonEmbed/frozenstdlib.c
-	)
+    )
+add_library(dndc-dylib
+    SHARED
+    Dndc/dndc.c
+    PythonEmbed/frozenstdlib.c
+    )
 target_link_libraries(dndc-lib ${Python3_LIBRARIES})
 target_include_directories(dndc-lib PRIVATE ${Python3_INCLUDE_DIRS})
 set_target_properties(dndc-lib
-        PROPERTIES OUTPUT_NAME dndc)
+    PROPERTIES OUTPUT_NAME dndc
+    VERSION ${PROJECT_VERSION}
+    )
+target_link_libraries(dndc-dylib ${Python3_LIBRARIES})
+target_include_directories(dndc-dylib PRIVATE ${Python3_INCLUDE_DIRS})
+# change the SOVERSION thing when I decide to release 1.0
+set_target_properties(dndc-dylib
+    PROPERTIES OUTPUT_NAME dndc
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 0.${PROJECT_VERSION_MINOR}
+    PUBLIC_HEADER "Dndc/dndc.h"
+    )
 
 Python3_add_library(pydndc
     MODULE
@@ -102,3 +119,7 @@ target_include_directories(TestDndc PRIVATE ${Python3_INCLUDE_DIRS})
 # installs
 install(TARGETS dndc DESTINATION bin)
 install(TARGETS dndc-lib DESTINATION lib)
+install(TARGETS dndc-dylib
+    LIBRARY DESTINATION lib
+    PUBLIC_HEADER DESTINATION include/Dndc
+    )
