@@ -1,4 +1,5 @@
 project('Dndc', 'c', version: '0.6.2')
+# FIXME: meson is producing x64 binaries on my m1 mac. Idk why.
 COMPAT_VERSION = '0.6.0'
 thread_dep = dependency('threads')
 pymod = import('python')

@@ -238,7 +238,7 @@ typedef struct ArgParseEnumType {
     // parsing strings into the enum, so they should be in a
     // format that you would type in a command line.
     const LongString* enum_names;
-}ArgParseEnumType;
+} ArgParseEnumType;
 
 typedef struct ArgParseDestination {
     // The type of what pointer points to.
@@ -562,7 +562,7 @@ print_enum_options(const ArgParseEnumType*_Nullable enu_){
     printf("    Options:\n");
     printf("    --------\n");
     for(size_t i = 0; i < enu->enum_count; i++){
-        printf("    %s\n", enu->enum_names[i].text);
+        printf("    [%2zu] %s\n", i, enu->enum_names[i].text);
         }
     }
 
