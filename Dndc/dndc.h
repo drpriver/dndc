@@ -45,6 +45,9 @@ extern "C" {
 #endif
 
 //
+// DndcLongString, DndcStringView, DndcStringViewUtf16
+// ---------------------------------------------------
+//
 // `DndcLongString`s and `DndcStringView`s are very similar. A `DndcLongString`
 // is a `DndcStringView` with a guaranteed nul-terminator. It is unspecified if
 // a `DndcStringView` has a nul-terminator (allowing it to point to
@@ -56,24 +59,24 @@ extern "C" {
 // empty string (""). Thus, the length field should always be checked to see if
 // it is nonzero.
 //
-struct DndcLongString {
+typedef struct DndcLongString {
     size_t length; // excludes the terminating NUL
     DNDC_NULLDEP(const char*) text; // utf-8 encoded text
-};
+} DndcLongString;
 
-struct DndcStringView {
+typedef struct DndcStringView {
     size_t length;
     // utf-8 encoded text, might not be nul-terminated
     DNDC_NULLDEP(const char*) text;
-};
+} DndcStringView;
 
 // Avoiding including <stdint.h> in public header.
 _Static_assert(sizeof(unsigned short) == 2, "unsigned short is not uint16_t");
-struct DndcStringViewUtf16 {
+typedef struct DndcStringViewUtf16 {
     size_t length; // in code units
     // utf-16 encoded code points, native endianness
     DNDC_NULLDEP(const unsigned short*) text;
-};
+} DndcStringViewUtf16;
 
 //
 // The type of the error message.
@@ -97,6 +100,9 @@ enum DndcErrorMessageType {
     DNDC_DEBUG_MESSAGE = 4,
 };
 
+//
+// DndcErrorFunc
+// -------------
 //
 // A function type for reporting errors. For use with one of the dndc entry
 // point functions, as declared in this file.
@@ -136,6 +142,9 @@ typedef void DndcErrorFunc(DNDC_NULLABLE(void*) error_user_data, int type,
         int col, const char* message, int message_len);
 
 //
+// dndc_stderr_error_func
+// ----------------------
+//
 // An error reporting function that prints to stderr. For use with the
 // `dndc_compile_dnd_file`.
 //
@@ -143,6 +152,9 @@ DNDC_API void dndc_stderr_error_func(DNDC_NULLABLE(void*) error_user_data,
         int type, const char* filename, int filename_len,
         int line, int col, const char* message, int message_len);
 
+//
+// DndcDependencyFunc
+// ------------------
 //
 // A function type for reporting dependencies. For use with
 // `dndc_compile_dnd_file`.
@@ -171,8 +183,11 @@ DNDC_API void dndc_stderr_error_func(DNDC_NULLABLE(void*) error_user_data,
 //
 typedef int DndcDependencyFunc(DNDC_NULLABLE(void*) dependency_user_data,
         size_t dependency_paths_count,
-        struct DndcStringView* dependency_paths);
+        DndcStringView* dependency_paths);
 
+//
+// dndc_format
+// -----------
 //
 // You do *not* need to call dndc_init_python before calling this function.
 //
@@ -216,11 +231,14 @@ typedef int DndcDependencyFunc(DNDC_NULLABLE(void*) dependency_user_data,
 //
 DNDC_API
 int
-dndc_format(struct DndcLongString source_text,
-        struct DndcLongString* output,
+dndc_format(DndcLongString source_text,
+        DndcLongString* output,
         DNDC_NULLABLE(DndcErrorFunc*) error_func,
         DNDC_NULLABLE(void*) error_user_data);
 
+//
+// dndc_free_string
+// ----------------
 //
 // On windows, if you load a dll, it will have its own crt and thus its own
 // heap.  This function is provided so you can free the returned string with
@@ -229,8 +247,11 @@ dndc_format(struct DndcLongString source_text,
 //
 DNDC_API
 void
-dndc_free_string(struct DndcLongString);
+dndc_free_string(DndcLongString);
 
+//
+// dndc_init_python
+// ----------------
 //
 // Initializes the python interpreter and imports the dndc types. If you do
 // not call this before calling `dndc_compile_dnd_file`, that function will
@@ -250,6 +271,9 @@ DNDC_API
 int
 dndc_init_python(void);
 
+//
+// dndc_init_python_types
+// ----------------------
 //
 // Initializes and imports the dndc types for when the python interpreter has
 // already been started.
@@ -284,6 +308,9 @@ enum DndcSyntax {
 enum{DNDC_SYNTAX_MAX=8};
 
 //
+// DndcSyntaxFunc
+// --------------
+//
 // A function type for marking syntactic regions, for use with
 // `dndc_analyze_syntax`.
 //
@@ -314,6 +341,9 @@ enum{DNDC_SYNTAX_MAX=8};
 typedef void DndcSyntaxFunc(DNDC_NULLABLE(void*) user_data, int type, int line,
         int col, const char* begin, size_t length);
 
+//
+// DndcSyntaxFuncUtf16
+// -------------------
 //
 // A function type for marking syntactic regions, for use with
 // `dndc_analyze_syntax_utf16`.
@@ -347,6 +377,9 @@ typedef void DndcSyntaxFuncUtf16(DNDC_NULLABLE(void*) user_data, int type,
         int line, int col, const unsigned short* begin,
         size_t length);
 
+//
+// dndc_analyze_syntax
+// -------------------
 //
 // Analyzes a string, identifiying the syntax of parts of the string.
 //
@@ -385,16 +418,19 @@ typedef void DndcSyntaxFuncUtf16(DNDC_NULLABLE(void*) user_data, int type,
 //
 DNDC_API
 int
-dndc_analyze_syntax(struct DndcStringView source_text,
+dndc_analyze_syntax(DndcStringView source_text,
         DndcSyntaxFunc* syntax_func,
         DNDC_NULLABLE(void*) syntax_data);
 
+//
+// dndc_analyze_syntax_utf16
+// -------------------------
 //
 // Ditto, but for utf-16 code units of native endianness.
 //
 DNDC_API
 int
-dndc_analyze_syntax_utf16(struct DndcStringViewUtf16 source_text,
+dndc_analyze_syntax_utf16(DndcStringViewUtf16 source_text,
         DndcSyntaxFuncUtf16* syntax_func,
         DNDC_NULLABLE(void*) syntax_data);
 
@@ -402,20 +438,32 @@ dndc_analyze_syntax_utf16(struct DndcStringViewUtf16 source_text,
 // A cache for storing files across repeated invocations.
 // Opaque structure (PIMPL).
 //
-struct DndcFileCache;
+typedef struct DndcFileCache DndcFileCache;
+
+//
+// dndc_create_filecache
+// ---------------------
 //
 // Allocate a new file cache.
 //
 DNDC_API
-struct DndcFileCache*
+DndcFileCache*
 dndc_create_filecache(void);
+
+//
+// dndc_filecache_destroy
+// ----------------------
 //
 // Cleanup all allocated resources and deallocate the filecache.
 //
 DNDC_API
 // int // should we allow for possibility of error?
 void
-dndc_filecache_destroy(struct DndcFileCache* cache);
+dndc_filecache_destroy(DndcFileCache* cache);
+
+//
+// dndc_filecache_remove
+// ---------------------
 //
 // Remove a given path from the filecache.
 //
@@ -426,15 +474,22 @@ dndc_filecache_destroy(struct DndcFileCache* cache);
 //
 DNDC_API
 int
-dndc_filecache_remove(struct DndcFileCache* cache, struct DndcStringView path);
+dndc_filecache_remove(DndcFileCache* cache, DndcStringView path);
+
+//
+// dndc_filecache_clear
+// -------------------
 //
 // Remove all paths from the filecache.
 //
 DNDC_API
 // int // should we allow for possibility of error?
 void
-dndc_filecache_clear(struct DndcFileCache* cache);
+dndc_filecache_clear(DndcFileCache* cache);
 
+//
+// dndc_filecache_has_path
+// -----------------------
 //
 // Check if a path is in the filecache.
 //
@@ -444,8 +499,11 @@ dndc_filecache_clear(struct DndcFileCache* cache);
 //
 DNDC_API
 int
-dndc_filecache_has_path(struct DndcFileCache*, struct DndcStringView path);
+dndc_filecache_has_path(DndcFileCache*, DndcStringView path);
 
+//
+// dndc_compile_dnd_file
+// ---------------------
 //
 // Low-level function to compile a dnd source file. The behavior of this
 // function is complex and is greatly controlled by the flags argument.
@@ -528,17 +586,18 @@ DNDC_API
 int
 dndc_compile_dnd_file(
     unsigned long long flags,
-    struct DndcStringView base_directory,
-    struct DndcLongString source,
-    DNDC_NULLABLE(struct DndcLongString*) output,
-    DNDC_NULLABLE(struct DndcFileCache*) base64cache,
-    DNDC_NULLABLE(struct DndcFileCache*) textcache,
+    DndcStringView base_directory,
+    DndcLongString source,
+    DNDC_NULLABLE(DndcLongString*) output,
+    DNDC_NULLABLE(DndcFileCache*) base64cache,
+    DNDC_NULLABLE(DndcFileCache*) textcache,
     DNDC_NULLABLE(DndcErrorFunc*) error_func,
     DNDC_NULLABLE(void*) error_user_data,
     DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
     DNDC_NULLABLE(void*) dependency_user_data
 );
 
+//
 //
 // The flags that can be passed as the `flags` argument to
 // `dndc_compile_dnd_file`. Combine them together via bitwise-or.

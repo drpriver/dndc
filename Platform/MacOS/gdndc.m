@@ -33,8 +33,8 @@ msb_detach_as_ns_string(MStringBuilder*sb){
     return str;
 }
 
-static struct DndcFileCache*_Nonnull BASE64CACHE;
-static struct DndcFileCache*_Nonnull TEXTCACHE;
+static DndcFileCache*_Nonnull BASE64CACHE;
+static DndcFileCache*_Nonnull TEXTCACHE;
 typedef struct FileWatchItem {
     uint64_t hash;
     uint64_t last_eight_chars;

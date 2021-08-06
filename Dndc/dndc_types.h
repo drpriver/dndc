@@ -74,6 +74,8 @@ typedef union NodeHandle {
 //
 // As 0 is the root node, we use this as the invalid value instead.
 //
+const NodeHandle INVALID_NODE_HANDLE = {._value=-1}; // for debugging
+// Shadow the above symbol intentionally.
 #define INVALID_NODE_HANDLE ((NodeHandle){._value=-1})
 
 static inline

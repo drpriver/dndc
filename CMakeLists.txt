@@ -73,7 +73,7 @@ if(APPLE)
         MACOSX_BUNDLE YES
         MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Platform/Macos/Info.plist)
     # this is kind of weird
-    target_compile_definitions(gdndc PRIVATE APP_ICON_PATH="../Platform/MacOS/app_icon.png")
+    target_compile_definitions(gdndc PRIVATE APP_ICON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/Platform/MacOS/app_icon.png")
 
     target_link_libraries(gdndc
         ${Python3_LIBRARIES}
