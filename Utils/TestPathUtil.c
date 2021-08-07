@@ -1,5 +1,5 @@
 #include "testing.h"
-#define BACKSLASH_IS_A_PATH_SEP
+#define BACKSLASH_IS_A_PATH_SEP 1
 #include "path_util.h"
 
 struct PathTestCase {
