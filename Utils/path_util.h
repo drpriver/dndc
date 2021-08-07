@@ -9,10 +9,14 @@
 // StringView and currently force_inline, which is kind of janky.
 #include "long_string.h"
 
-#ifdef _WIN32
 #ifndef BACKSLASH_IS_A_PATH_SEP
-#define BACKSLASH_IS_A_PATH_SEP
+enum {
+#ifdef _WIN32
+    BACKSLASH_IS_A_PATH_SEP=1
+#else
+    BACKSLASH_IS_A_PATH_SEP=0
 #endif
+};
 #endif
 
 #ifdef __clang__
@@ -28,11 +32,10 @@ static inline
 force_inline
 bool
 is_sep(char c){
-    #ifdef BACKSLASH_IS_A_PATH_SEP
-    return c == '/' || c == '\\';
-    #else
-    return c == '/';
-    #endif
+    if(BACKSLASH_IS_A_PATH_SEP)
+        return c == '/' || c == '\\';
+    else
+        return c == '/';
     }
 
 // Helper to find the next slash in a string, but also finding backslashes
@@ -42,24 +45,19 @@ force_inline
 void*_Nullable
 memsep(const char* str, size_t length){
     char* slash = memchr(str, '/', length);
-    #ifdef BACKSLASH_IS_A_PATH_SEP
-    if(!slash)
+    if(BACKSLASH_IS_A_PATH_SEP && !slash)
         slash = memchr(str, '\\', length);
-    #endif
     return slash;
     }
 
 //
 // Returns if the path is an absolute path (aka starts from /).
-// BUG: This doesn't handle windows correctly.
-//      In the future, it will handle things like drives.
 //
 static inline
 bool
 path_is_abspath(StringView path){
     if(!path.length)
         return false;
-    // FIXME: this is wrong on windows as you can include a drive letter.
 #ifndef _WIN32
     return is_sep(path.text[0]);
 #else
