@@ -749,6 +749,12 @@ RENDERFUNC(IMAGE){
     Errorable(void) result = {};
     msb_write_literal(sb, "<div");
     write_classes(sb, node);
+    auto id = node_get_id(node);
+    if(id){
+        msb_write_literal(sb, " id=\"");
+        msb_write_kebab(sb, id->text, id->length);
+        msb_write_literal(sb, "\" ");
+        }
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;

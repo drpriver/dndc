@@ -1174,6 +1174,8 @@ BOOL show_stats;
                   let request = new XMLHttpRequest();
                   request.open("GET", "dnd:///scrollresto", true);
                   request.onload = function(){
+                    if(!request.response)
+                        return;
                     const SCROLLRESTO = JSON.parse(request.response);
                     for(let [key, value] of Object.entries(SCROLLRESTO)){
                         if(key == "html"){
