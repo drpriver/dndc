@@ -18,6 +18,8 @@
 #ifndef force_inline
 #if defined(__GNUC__) || defined(__clang__)
 #define force_inline __attribute__((always_inline))
+#elif defined(_MSC_VER)
+#define force_inline __forceinline
 #else
 #define force_inline
 #endif
