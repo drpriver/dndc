@@ -1,0 +1,74 @@
+#ifndef DIRECTORY_UTIL_H
+#define DIRECTORY_UTIL_H
+#include <string.h>
+#ifndef _WIN32
+#include <errno.h>
+#include <dirent.h>
+
+#else
+// windows stuff
+
+#endif
+#include "long_string.h"
+#include "error_handling.h"
+#include "str_util.h"
+
+#ifndef HAVE_MARRY_LONGSTRING
+#define MARRAY_T LongString
+#include "Marray.h"
+#endif
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
+static
+Errorable_f(void)
+directory_gather_files_ending_with(LongString dirpath, StringView suffix, Marray(LongString)* results, Allocator array_allocator, Allocator string_allocator);
+
+const char* get_directory_error(void);
+#ifndef _WIN32
+const char* get_directory_error(void){
+    return strerror(errno);
+    }
+static
+Errorable_f(void)
+directory_gather_files_ending_with(LongString dirpath, StringView suffix, Marray(LongString)* results, Allocator array_allocator, Allocator string_allocator){
+    Errorable(void) result = {};
+    DIR* dir = opendir(dirpath.text);
+    if(!dir){
+        result.errored = OS_ERROR;
+        return result;
+        }
+    struct dirent* entry;
+    while((entry = readdir(dir))){
+        if(entry->d_type != DT_REG && entry->d_type != DT_LNK)
+            continue;
+        StringView name = {.length = entry->d_namlen, .text = entry->d_name};
+        if(name.length >= suffix.length){
+            const char* tail = name.text+name.length-suffix.length;
+            if(memcmp(tail, suffix.text, suffix.length)==0){
+                char* text = Allocator_strndup(string_allocator, name.text, name.length);
+                LongString filename = {.text=text, .length=name.length};
+                Marray_push(LongString)(results, array_allocator, filename);
+                }
+            }
+        }
+    closedir(dir);
+    return result;
+    }
+#else
+static
+Errorable_f(void)
+directory_gather_files_ending_with(LongString dirpath, StringView suffix, Marray(LongString)* results, Allocator array_allocator, Allocator string_allocator){
+    Errorable(void) result = {};
+    unimplemented();
+    return result;
+    }
+#endif
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
+
+#endif

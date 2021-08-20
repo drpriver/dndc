@@ -488,6 +488,14 @@ static inline
 void
 ctx_add_builtins(DndcContext* ctx);
 
+//
+// Scans the base directory for files ending with .dnd
+// and adds them as links.
+//
+static inline
+Errorable_f(void)
+ctx_add_auto_index_links(DndcContext* ctx);
+
 #ifdef __clang__
 #pragma clang assume_nonnull end
 #endif
