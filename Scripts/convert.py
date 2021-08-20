@@ -6,14 +6,16 @@ from typing import List, Tuple
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('files', nargs='*')
+    parser.add_argument('--base-dir', default='.')
     parser.add_argument('--strip_only', action='store_true')
     parser.add_argument('--extensions', default=('.h', '.c', '.hpp', '.cpp', '.d', '.m', '.py', '.pyi', '.pyw', '.dave', '.mak', 'Makefile', '.dasm', 'CMakeLists.txt'), nargs='*')
+    parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
     run(**vars(args))
 
-def run(files:List[str], extensions:List[str], strip_only:bool=False) -> None:
+def run(files:List[str], extensions:List[str], base_dir:str='.', strip_only:bool=False, dry_run:bool=False) -> None:
     if not files:
-        files = find_files('.', tuple(extensions))
+        files = find_files(base_dir, tuple(extensions))
     for f in files:
         changed = 0
         with open(f, 'rb') as rp:
@@ -27,11 +29,15 @@ def run(files:List[str], extensions:List[str], strip_only:bool=False) -> None:
                 lines.append(line)
                 changed += ((line+'\n') != oldline)
         # only rewrite files we actually are changing
-        if changed:
-            with open(f, 'wb') as wp:
-                for line in lines:
-                    wp.write(line.encode('utf8')+b'\n')
-                wp.flush()
+        if not changed:
+            continue
+        if dry_run:
+            print(f, 'would change')
+            continue
+        with open(f, 'wb') as wp:
+            for line in lines:
+                wp.write(line.encode('utf8')+b'\n')
+            wp.flush()
 
 def find_files(d:str, extensions:Tuple[str, ...]) -> List[str]:
     result: List[str] = []
