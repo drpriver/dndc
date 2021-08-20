@@ -224,7 +224,7 @@ cache_watch_files(void* unused, size_t npaths, StringView*paths){
 typedef enum GdndInsertTag{
     GDND_INSERT_IMG,
     GDND_INSERT_IMGLINKS,
-    GDND_INSERT_JS,
+    GDND_INSERT_SCRIPT,
     GDND_INSERT_CSS,
     GDND_INSERT_DND,
 }GdndInsertTag;
@@ -577,8 +577,8 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         case GDND_INSERT_DND:
             [self insert_block:path at:r indent_amount:rel name:SV("::import\n")];
             break;
-        case GDND_INSERT_JS:
-            [self insert_block:path at:r indent_amount:rel name:SV("::js\n")];
+        case GDND_INSERT_SCRIPT:
+            [self insert_block:path at:r indent_amount:rel name:SV("::script\n")];
             break;
         case GDND_INSERT_CSS:
             [self insert_block:path at:r indent_amount:rel name:SV("::css\n")];
@@ -664,11 +664,11 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     item.tag = GDND_INSERT_CSS;
 
     [result addItem:item];
-    item = [[NSMenuItem alloc] initWithTitle:@"Insert JS" action:@selector(insert_file:) keyEquivalent:@""];
-    item.tag = GDND_INSERT_JS;
+    item = [[NSMenuItem alloc] initWithTitle:@"Insert Script" action:@selector(insert_file:) keyEquivalent:@""];
+    item.tag = GDND_INSERT_SCRIPT;
 
     [result addItem:item];
-    item = [[NSMenuItem alloc] initWithTitle:@"Insert DND" action:@selector(insert_file:) keyEquivalent:@""];
+    item = [[NSMenuItem alloc] initWithTitle:@"Insert Import" action:@selector(insert_file:) keyEquivalent:@""];
     item.tag = GDND_INSERT_DND;
 
     [result addItem:item];
@@ -1040,7 +1040,7 @@ BOOL show_stats;
         case GDND_INSERT_CSS:
             panel.allowedFileTypes = @[@"css"];
             break;
-        case GDND_INSERT_JS:
+        case GDND_INSERT_SCRIPT:
             panel.allowedFileTypes = @[@"js"];
             break;
         case GDND_INSERT_DND:
@@ -1166,7 +1166,7 @@ BOOL show_stats;
     // Inject javascript that will restore the scroll position in the window.
     string = [string stringByAppendingString:
         @"\n"
-        "::js @inline\n"
+        "::script @inline\n"
     ];
     string = [string stringByAppendingString:
         @"  "
@@ -1202,7 +1202,7 @@ BOOL show_stats;
     if(coord_helper){
         string = [string stringByAppendingString:
             @"\n"
-            "::js @inline\n  "
+            "::script @inline\n  "
             JSRAW(
             document.addEventListener("DOMContentLoaded", function(){
               const svgs = document.getElementsByTagName("svg");
@@ -1614,8 +1614,8 @@ do_menus(void){
         mi.tag = GDND_INSERT_CSS;
         [menu addItem:mi];
 
-        mi = [[NSMenuItem alloc] initWithTitle:@"JS" action:@selector(insert_file:) keyEquivalent:@""];
-        mi.tag = GDND_INSERT_JS;
+        mi = [[NSMenuItem alloc] initWithTitle:@"Script" action:@selector(insert_file:) keyEquivalent:@""];
+        mi.tag = GDND_INSERT_SCRIPT;
         [menu addItem:mi];
 
         mi = [[NSMenuItem alloc] initWithTitle:@"Import" action:@selector(insert_file:) keyEquivalent:@""];
