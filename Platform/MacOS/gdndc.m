@@ -1252,14 +1252,14 @@ BOOL show_stats;
         return;
     LongString html = {};
     NSString* dir = [[self->file_url URLByDeletingLastPathComponent] path];
-    StringView base_dir;
+    LongString base_dir;
     if(dir){
         const char* dir_text = [dir UTF8String];
         base_dir.text = dir_text;
         base_dir.length = strlen(dir_text);
     }
     else {
-        base_dir = SV("");
+        base_dir = LS("");
     }
     // auto t0 = get_t();
     uint64_t flags = 0;
