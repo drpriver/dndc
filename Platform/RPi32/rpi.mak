@@ -24,6 +24,7 @@ TOUCH=touch
 MKDIR=mkdir
 CP=cp
 EXE=
+SO=.so
 INSTALL=install
 PYEXTENSION=.so
 PYEXTFLAGS=-shared -fPIC

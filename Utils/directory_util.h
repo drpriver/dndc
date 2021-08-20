@@ -44,7 +44,11 @@ directory_gather_files_ending_with(LongString dirpath, StringView suffix, Marray
     while((entry = readdir(dir))){
         if(entry->d_type != DT_REG && entry->d_type != DT_LNK)
             continue;
+#ifdef __APPLE__
         StringView name = {.length = entry->d_namlen, .text = entry->d_name};
+#else
+        StringView name = {.length = strlen(entry->d_name), .text = entry->d_name};
+#endif
         if(name.length >= suffix.length){
             const char* tail = name.text+name.length-suffix.length;
             if(memcmp(tail, suffix.text, suffix.length)==0){
