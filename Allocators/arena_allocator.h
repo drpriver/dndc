@@ -48,6 +48,7 @@ typedef struct ArenaAllocator {
 // Header for a large allocation. Used to maintain a linked list of allocations.
 typedef struct BigAllocation {
     struct BigAllocation*_Nullable next;
+    size_t size;
 }BigAllocation;
 
 enum {ARENA_PAGE_SIZE=4096};
@@ -94,6 +95,7 @@ ArenaAllocator_alloc(ArenaAllocator* aa, size_t size){
     if(size > ARENA_BUFFER_SIZE){
         BigAllocation* ba = malloc(sizeof(*ba)+size);
         ba->next = aa->big_allocations;
+        ba->size = size;
         aa->big_allocations = ba;
         return ba+1;
         }
@@ -126,6 +128,7 @@ ArenaAllocator_zalloc(ArenaAllocator* aa, size_t size){
     if(size > ARENA_SIZE/2){
         BigAllocation* ba = calloc(1, sizeof(*ba)+size);
         ba->next = aa->big_allocations;
+        ba->size = size;
         aa->big_allocations = ba;
         return ba+1;
         }
@@ -168,6 +171,7 @@ ArenaAllocator_realloc(ArenaAllocator* aa, void*_Nullable ptr, size_t old_size, 
     if(new_size > ARENA_BUFFER_SIZE){
         BigAllocation* ba = malloc(sizeof(*ba)+new_size);
         ba->next = aa->big_allocations;
+        ba->size = new_size;
         aa->big_allocations = ba;
         void* result = ba+1;
         if(old_size < new_size)
@@ -220,6 +224,26 @@ ArenaAllocator_free_all(ArenaAllocator*_Nullable aa){
     aa->arena = NULL;
     aa->big_allocations = NULL;
     return;
+    }
+
+typedef struct ArenaAllocatorStats {
+    size_t used, capacity, big_used, big_count, arena_count;
+} ArenaAllocatorStats;
+
+static inline
+ArenaAllocatorStats
+ArenaAllocator_stats(ArenaAllocator* aa){
+    ArenaAllocatorStats result = {};
+    for(Arena* arena = aa->arena; arena; arena = arena->prev){
+        result.used += arena->used;
+        result.capacity += sizeof(arena->buff);
+        result.arena_count++;
+        }
+    for(BigAllocation* ba = aa->big_allocations; ba; ba = ba->next){
+        result.big_used += ba->size;
+        result.big_count++;
+        }
+    return result;
     }
 
 //
