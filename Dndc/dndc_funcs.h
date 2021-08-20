@@ -93,7 +93,7 @@
 typedef int (DndcPostParseAstFunc)(Nullable(void*)user_data, Nonnull(DndcContext*));
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_path,
+run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_path,
         Nullable(LongString*) output_path,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,
@@ -477,8 +477,7 @@ add_link_from_header(DndcContext* ctx, StringView str);
 // Makes a copy of the indicated node, turns the original node into a container
 // node and then adds the copy to the container.
 //
-static
-inline
+static inline
 void
 convert_node_to_container_containing_clone_of_former_self(DndcContext* ctx, NodeHandle handle);
 

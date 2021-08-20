@@ -423,7 +423,7 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
     DndcErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
-    auto e = run_the_dndc(flags, SV(""), source, &output, NULL, NULL, func, error_list, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, LS(""), source, &output, NULL, NULL, func, error_list, NULL, NULL, NULL, NULL);
     if(PyErr_Occurred()){
         goto finally;
         }
@@ -504,7 +504,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         return NULL;
         }
     LongString source = pystring_borrow_longstring(text);
-    StringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
+    LongString base_str = base_dir? pystring_borrow_longstring(base_dir): LS("");
     flags |= DNDC_PYTHON_IS_INIT;
     // flags |= DNDC_DONT_PRINT_ERRORS;
     // flags |= DNDC_SUPPRESS_WARNINGS;

@@ -522,7 +522,7 @@ dndc_filecache_has_path(DndcFileCache*, DndcStringView path);
 //    A bitwise-or combination of `enum DndcFlags`.
 //
 // base_directory:
-//    May be a zero-length string view.  For relative filepaths referenced in
+//    May be a zero-length LongString.  For relative filepaths referenced in
 //    the document, what those paths are relative to. Defaults to the current
 //    directory for a zero length string view.
 //
@@ -586,7 +586,7 @@ DNDC_API
 int
 dndc_compile_dnd_file(
     unsigned long long flags,
-    DndcStringView base_directory,
+    DndcLongString base_directory,
     DndcLongString source,
     DNDC_NULLABLE(DndcLongString*) output,
     DNDC_NULLABLE(DndcFileCache*) base64cache,

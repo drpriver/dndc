@@ -229,7 +229,7 @@ typedef struct DndcContext {
     StringView filename;
     // Base directory. All filepaths are relative to this directory.
     // If it is the empty string, filepaths are unaltered.
-    StringView base_directory;
+    LongString base_directory;
 
     // Special nodes we need to track. Store them here
     // so we don't have to scan for them later.

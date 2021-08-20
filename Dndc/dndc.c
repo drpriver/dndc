@@ -230,6 +230,7 @@ int main(int argc, char**argv){
         ;
     bool print_syntax = false;
     bool print_depends = false;
+    bool cleanup = false;
     {
         ArgToParse pos_args[] = {
             [0] = {
@@ -345,7 +346,7 @@ int main(int argc, char**argv){
             {
                 .name = SV("--cleanup"),
                 .max_num = 1,
-                .dest = ArgBitFlagDest(&flags, DNDC_NO_CLEANUP),
+                .dest = ARGDEST(&cleanup),
                 .help = "Cleanup all resources (memory allocations, etc.).\n"
                         "Development debugging tool, useless in regular cli use.",
                 .hidden = true,
@@ -471,6 +472,8 @@ int main(int argc, char**argv){
             fprintf(stderr, "Use --help to see usage.\n");
             return e;
             }
+        if(!cleanup)
+            flags |= DNDC_NO_CLEANUP;
     }
     if(print_syntax){
         dndc_print_out_syntax(source_path);
@@ -489,7 +492,7 @@ int main(int argc, char**argv){
     #ifdef BENCHMARKING
     flags &= ~DNDC_NO_CLEANUP;
     auto e = run_the_dndc(flags,
-                LS_to_SV(base_dir), source_path,
+                base_dir, source_path,
                 &output_path,
                 NULL, NULL,
                 dndc_stderr_error_func, NULL,
@@ -500,7 +503,7 @@ int main(int argc, char**argv){
     flags |= DNDC_PYTHON_IS_INIT;
     for(int i = 0; i < BENCHMARKITERS; i++){
         e = run_the_dndc(flags,
-                LS_to_SV(base_dir), source_path,
+                base_dir, source_path,
                 &output_path,
                 NULL, NULL,
                 dndc_stderr_error_func, NULL,
@@ -511,7 +514,7 @@ int main(int argc, char**argv){
     return 0;
     #else
     auto e = run_the_dndc(flags,
-                 LS_to_SV(base_dir), source_path,
+                 base_dir, source_path,
                  output_path.length? &output_path : NULL,
                  NULL, NULL,
                  dndc_stderr_error_func, NULL,
@@ -565,7 +568,7 @@ dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths){
 
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, StringView base_directory, LongString source_or_path,
+run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_path,
         Nullable(LongString*) output_path,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,
@@ -1245,7 +1248,7 @@ dndc_format(LongString source_text, LongString* output, Nullable(DndcErrorFunc*)
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_REFORMAT_ONLY
         ;
-    auto e = run_the_dndc(flags, SV(""), source_text, output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, LS(""), source_text, output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL);
     return e.errored;
     }
 DNDC_API
@@ -1275,19 +1278,46 @@ dndc_stderr_error_func(Nullable(void*)unused, int type, const char* filename, in
     (void)message_len;
     switch((enum DndcErrorMessageType)type){
         case DNDC_NODELESS_MESSAGE:
-            fprintf(stderr, "Error: %s\n", message);
+            fprintf(stderr, "[ERROR]: %s\n", message);
             return;
         case DNDC_STATISTIC_MESSAGE:
-            fprintf(stderr, "Info: %s\n", message);
+            fprintf(stderr, "[INFO] %s\n", message);
             return;
         case DNDC_DEBUG_MESSAGE:
-            if(filename_len)
-                fprintf(stderr, "%.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+            if(filename_len){
+                if(col >= 0){
+                    fprintf(stderr, "[DEBUG] %.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+                    }
+                else {
+                    fprintf(stderr, "[DEBUG] %.*s:%d: %s\n", filename_len, filename, line+1, message);
+                    }
+                }
             else
-                fprintf(stderr, "%s\n", message);
+                fprintf(stderr, "[DEBUG] %s\n", message);
+            return;
+        case DNDC_ERROR_MESSAGE:
+            if(col >= 0){
+                fprintf(stderr, "[ERROR] %.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+                }
+            else {
+                fprintf(stderr, "[ERROR] %.*s:%d: %s\n", filename_len, filename, line+1, message);
+                }
+            return;
+        case DNDC_WARNING_MESSAGE:
+            if(col >= 0){
+                fprintf(stderr, "[WARN] %.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+                }
+            else {
+                fprintf(stderr, "[WARN] %.*s:%d: %s\n", filename_len, filename, line+1, message);
+                }
             return;
         default:
-            fprintf(stderr, "%.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+            if(col >= 0){
+                fprintf(stderr, "%.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+                }
+            else {
+                fprintf(stderr, "%.*s:%d: %s\n", filename_len, filename, line+1, message);
+                }
             return;
         }
     }
@@ -1746,7 +1776,7 @@ dndc_filecache_has_path(struct DndcFileCache* cache, StringView path){
 
 DNDC_API
 int
-dndc_compile_dnd_file(unsigned long long flags, struct DndcStringView base_directory,
+dndc_compile_dnd_file(unsigned long long flags, struct DndcLongString base_directory,
     struct DndcLongString source_path,
     struct DndcLongString*_Nullable output_path,
     struct DndcFileCache*_Nullable base64cache,

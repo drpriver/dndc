@@ -79,7 +79,7 @@ PopDiagnostic();
 typedef struct NodeTypeEnum {
     PyObject_HEAD
     NodeType type;
-    }NodeTypeEnum;
+}NodeTypeEnum;
 
 static
 Nullable(PyObject*)
@@ -229,7 +229,7 @@ typedef struct DndclassesList {
     PyObject_HEAD
     DndcContext* ctx;
     NodeHandle handle;
-    } DndclassesList;
+} DndclassesList;
 
 static
 Py_ssize_t
@@ -615,13 +615,13 @@ DndNode_repr(DndNode* self){
     MStringBuilder msb = {.allocator=self->ctx->temp_allocator};
     size_t class_count = node->classes?node->classes->count:0;
     if(not class_count)
-        MSB_FORMAT(&msb, "Node(", NODENAMES[node->type], ", '", node->header, "', [", (int)node->children.count, "children])");
+        MSB_FORMAT(&msb, "Node(", NODENAMES[node->type], ", '", node->header, "', [", (int)node->children.count, " children])");
     else {
         MSB_FORMAT(&msb, "Node(", NODENAMES[node->type].text);
         RARRAY_FOR_EACH(class, node->classes){
             MSB_FORMAT(&msb, ".", *class);
             }
-        MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node->children.count, "children])");
+        MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node->children.count, " children])");
     }
     auto text = msb_borrow(&msb);
     auto result = PyUnicode_FromStringAndSize(text.text, text.length);
@@ -832,7 +832,7 @@ py_make_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObj
             }
         }
     node->type = type->type;
-    Marray(NodeHandle)* node_store = NULL;;
+    Marray(NodeHandle)* node_store = NULL;
     switch(node->type){
         case NODE_IMPORT:
             PyErr_SetString(PyExc_ValueError, "Creating import nodes from python is not supported");
@@ -987,8 +987,8 @@ py_replace_child_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nulla
         return NULL;
         }
     PopDiagnostic();
-    NodeHandle new_handle = child->handle;
-    NodeHandle prev_handle = newchild->handle;
+    NodeHandle new_handle = newchild->handle;
+    NodeHandle prev_handle = child->handle;
     auto prevchild_node = get_node(ctx, prev_handle);
     auto newchild_node = get_node(ctx, new_handle);
     if(!NodeHandle_eq(newchild_node->parent, INVALID_NODE_HANDLE)){
@@ -1573,7 +1573,7 @@ Dndcontext_getattr_ls(Dndcontext* pyctx, LongString name){
             if(CHECK("base", 4)){
                 auto base = ctx->base_directory;
                 if(!base.length)
-                    base = SV(".");
+                    base = LS(".");
                 return PyUnicode_FromStringAndSize(base.text, base.length);
                 }
         }break;

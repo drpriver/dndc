@@ -27,7 +27,7 @@ extern
 PString*
 make_html(PString* source){
     LongString text = {.text=(char*)source->text, .length=source->length-1};
-    StringView base = SV("");
+    LongString base = SV("");
     LongString output;
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS

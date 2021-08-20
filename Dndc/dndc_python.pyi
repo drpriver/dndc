@@ -50,7 +50,8 @@ class Node:
     id: str
     def parse(self, text:str) -> None:
         '''
-        Parses the given string as a dnd document, using this node as the root node (effectively appending the nodes as children of this node).
+        Parses the given string as a dnd document, using this node as the root
+        node (effectively appending the nodes as children of this node).
 
         Note that embedded python nodes will be queued to be executed.
         '''
@@ -105,12 +106,14 @@ class DndcContext:
         ...
     def add_dependency(self, text:str) -> None:
         '''
-        Adds the given string as a dependency (thus it will be present in for the make-style dependency file).
+        Adds the given string as a dependency (thus it will be present in the
+        make-style dependency file).
         '''
         ...
     def kebab(self, text:str) -> str:
         '''
-        Converts the given string into a 'kebabed' string, which is the string that is suitable for use as an id in the resulting html document.
+        Converts the given string into a 'kebabed' string, which is the string
+        that is suitable for use as an id in the resulting html document.
         '''
         ...
     def set_data(self, key:str, value:str) -> None:
@@ -120,8 +123,10 @@ class DndcContext:
         ...
     def select_nodes(self, type:DndcNodeType=None, classes:Sequence[str]=None, attributes:Sequence[str]=None) -> List[Node]:
         '''
-        Selects nodes from the document, that are the intersection of the given queries. If no constraints are given, returns all nodes in the document.
-        For example, type=NodeType.TABLE and classes=['random'] will select all tables with the .random class.
+        Selects nodes from the document, that are the intersection of the given
+        queries. If no constraints are given, returns all nodes in the
+        document.  For example, type=NodeType.TABLE and classes=['random'] will
+        select all tables with the .random class.
         '''
         ...
     def read_file(self, path:str) -> str:
