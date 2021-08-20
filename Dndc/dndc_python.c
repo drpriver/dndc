@@ -849,8 +849,9 @@ py_make_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObj
         case NODE_SCRIPTS:
             node_store = &ctx->script_nodes;
             break;
+        case NODE_JS:
         case NODE_PYTHON:
-            node_store = &ctx->python_nodes;
+            node_store = &ctx->user_script_nodes;
             break;
         case NODE_DATA:
             node_store = &ctx->data_nodes;
@@ -1696,14 +1697,14 @@ internal_dndc_python_init_types(void){
     }
 
 
-#ifndef PYTHONMODULE
-static struct _inittab mods[] = {
-    {NULL, 0}, // sentinel
-    };
 
-static
+static inline
 int
 init_python_interpreter(uint64_t flags){
+#ifdef PYTHONMODULE
+    (void)flags;
+    return 0;
+#else
     if(flags & DNDC_PYTHON_UNISOLATED){
         Py_Initialize();
         return 0;
@@ -1740,10 +1741,6 @@ init_python_interpreter(uint64_t flags){
     PyConfig_SetString(&config, &config.base_prefix, L"");
     PyConfig_SetString(&config, &config.exec_prefix, L"");
     PyConfig_SetString(&config, &config.base_exec_prefix, L"");
-    int import_fail = PyImport_ExtendInittab(&mods[0]);
-    if(import_fail < 0){
-        goto fail;
-        }
     status = Py_InitializeFromConfig(&config);
     if(PyStatus_Exception(status)){
         goto fail;
@@ -1761,8 +1758,10 @@ init_python_interpreter(uint64_t flags){
     Py_Initialize();
     return 0;
 #endif
+#endif
     }
 
+#ifndef PYTHONMODULE
 #ifdef __clang__
 #pragma clang assume_nonnull end
 #include "frozenstdlib.h"
@@ -1770,12 +1769,16 @@ init_python_interpreter(uint64_t flags){
 #else
 #include "frozenstdlib.h"
 #endif
+#endif
 
-static Errorable_f(void) internal_dndc_python_init_types(void);
 static
 Errorable_f(void)
 internal_init_dndc_python_interpreter(uint64_t flags){
     Errorable(void) result = {};
+#ifdef PYTHONMODULE
+    (void)flags;
+    return result;
+#else
     if(flags & DNDC_PYTHON_IS_INIT)
         return result;
     if(Py_IsInitialized())
@@ -1803,6 +1806,7 @@ internal_init_dndc_python_interpreter(uint64_t flags){
             return e;
     }
     return result;
+#endif
     }
 
 PushDiagnostic();
@@ -1810,10 +1814,11 @@ SuppressUnusedFunction();
 static inline
 void
 end_interpreter(void){
+#ifndef PYTHONMODULE
     Py_Finalize();
+#endif
     }
 PopDiagnostic();
-#endif
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

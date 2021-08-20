@@ -16,6 +16,7 @@ class NodeType:
     STYLESHEETS  : DndcNodeType
     DEPENDENCIES : DndcNodeType
     LINKS        : DndcNodeType
+    JS           : DndcNodeType
     SCRIPTS      : DndcNodeType
     IMPORT       : DndcNodeType
     IMAGE        : DndcNodeType

@@ -664,8 +664,8 @@ DNDC_REFORMAT_ONLY      = 0x08000,
 // Instead of base64-ing the image, use a link.
 DNDC_DONT_INLINE_IMAGES =  0x10000,
 
-// This flag is currently unused.
-DNDC_UNUSED_RESERVED_FLAG_SLOT = 0x20000,
+// Don't execute js blocks.
+DNDC_NO_COMPILETIME_JS = 0x20000,
 
 // For imgs, don't base64 them and don't use regular links.
 // Instead, use a dnd:absolute/path/to/img url instead.

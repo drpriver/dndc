@@ -419,7 +419,6 @@ alloc_handle(DndcContext*);
 static
 Errorable_f(void)
 execute_python_string(DndcContext*, Nonnull(const char*), NodeHandle);
-#ifndef PYTHONMODULE
 //
 // Initialize the python interpreter and the dndc python data types. Takes a
 // flags argument, which is the same flags passed to run_the_dndc. This handles
@@ -429,6 +428,7 @@ static
 Errorable_f(void)
 internal_init_dndc_python_interpreter(uint64_t flags);
 
+#ifndef PYTHONMODULE
 //
 // Shutdown the python interpreter, mostly freeing any resources it allocated.
 // This is mostly for detecting memory leaks. There's some reference leaks

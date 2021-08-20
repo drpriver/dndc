@@ -1140,8 +1140,9 @@ JSMETHOD(js_dndc_context_make_node){
         case NODE_SCRIPTS:
             node_store = &ctx->script_nodes;
             break;
+        case NODE_JS:
         case NODE_PYTHON:
-            node_store = &ctx->python_nodes;
+            node_store = &ctx->user_script_nodes;
             break;
         case NODE_DATA:
             node_store = &ctx->data_nodes;

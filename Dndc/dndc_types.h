@@ -234,8 +234,7 @@ typedef struct DndcContext {
     // Special nodes we need to track. Store them here
     // so we don't have to scan for them later.
     struct {
-        Marray(NodeHandle) python_nodes;
-        Marray(NodeHandle) js_nodes;
+        Marray(NodeHandle) user_script_nodes;
         Marray(NodeHandle) imports;
         Marray(NodeHandle) stylesheets_nodes;
         Marray(NodeHandle) dependencies_nodes;

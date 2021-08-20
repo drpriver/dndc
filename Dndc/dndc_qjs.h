@@ -17,7 +17,7 @@ QJSRuntime*
 new_qjs_rt(ArenaAllocator*);
 
 static
-void 
+void
 free_qjs_rt(QJSRuntime*, ArenaAllocator*);
 
 #ifdef __clang__

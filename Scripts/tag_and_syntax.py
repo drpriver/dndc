@@ -1,3 +1,5 @@
+# I release this file into the public domain.
+# - D.
 import argparse
 import os
 from collections import defaultdict
@@ -11,8 +13,13 @@ import re
 from . import clang
 from .clang import cindex
 libclang_locations = [
+    # Mac
     '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/',
+    # this is sketch, for linux
     '/usr/lib/llvm-10/lib',
+    '/usr/lib/llvm-11/lib',
+    '/usr/lib/llvm-12/lib',
+    # windows
     r'C:\Program Files\LLVM\bin',
     ]
 for loc in libclang_locations:
@@ -40,7 +47,14 @@ class IdentInfo(NamedTuple):
         if '..' in fn:
             fn = self.filename
         line = self.line.replace('\\', '\\\\')
-        return '{}\t{}\t/^{}$'.format(self.name, fn, line)
+        # line could have a '/' in it, which vim would interpret as part of the search
+        # XXX: proper escaping of the line
+        first_slash = line.find('/')
+        if first_slash != -1:
+            line = line[:first_slash]
+        else:
+            line = line+'$'
+        return '{}\t{}\t/^{}'.format(self.name, fn, line)
 
 class Identer:
     tags  : List[str]
@@ -56,6 +70,7 @@ class Identer:
     def tag(self, cursor) -> None:
         filename = normpath(cursor.location.file.name)
         if filename not in self.file_lines:
+            # ignore decode errors as some system headers include invalid unicode.
             with open(filename, encoding='utf-8', errors='ignore') as f:
                 self.file_lines[filename] = f.readlines()
         t = self.infos[filename]
@@ -117,7 +132,7 @@ def clang_default_include() -> str:
 CLANG_DEFAULT_INCLUDES = clang_default_include()
 CWD = os.getcwd()
 
-def normpath(p:str, paths={}) -> str:
+def normpath(p:str, paths={}) -> str: # default argument used as a cache.
     result = paths.get(p)
     if result:
         return result
@@ -128,7 +143,12 @@ def normpath(p:str, paths={}) -> str:
     paths[p] = abspath
     return abspath
 
-def fix_args(args:List[str], source_file) -> List[str]:
+def fix_args(args:List[str], source_file:str) -> List[str]:
+    """
+    libclang is nuts and calling it to parse a translation unit with certain arguments will actually
+    generate files.
+    So, you need to remove certain arguments from the compiler arguments.
+    """
     fixed = []
     skip = False
     for a in args:
@@ -142,8 +162,9 @@ def fix_args(args:List[str], source_file) -> List[str]:
             continue
         if '=' in a:
             head, tail = a.split('=')
-            # compiledb fucks strings that are defined as macros
-            if head in {'-DBENCHMARKINPUTPATH', '-DBENCHMARKDIRECTORY', '-DBENCHMARKOUTPUTPATH',}:
+            # compiledb fucks strings that are defined as macros.
+            # You can unfuck them here.
+            if head in set():
                 a = '{}="{}"'.format(head, tail)
         fixed.append(a)
     fixed.remove('clang')
@@ -220,7 +241,7 @@ def is_definition(cursor):
             CursorKind.OBJC_INTERFACE_DECL
             ])
 
-def should_exclude(name:str, excludes={}) -> bool:
+def should_exclude(name:str, excludes={}) -> bool: # default arg used as a cache
     result = excludes.get(name)
     if result is not None:
         return result
@@ -267,8 +288,13 @@ def add_extra(filename:str, stuff:List[str]) -> None:
             stuff.append(l)
 
 def get_proj_dirs() -> List[str]:
-    EXCLUDED = {'Bin', 'Objs', 'Depends', 'venv', 'vendored', 'TestCases', 'frozen', 'Release'}
-    dirs = [d for d in os.listdir('.') if os.path.isdir(d) and d not in EXCLUDED and not d.startswith(('.', '_')) and not d.lower().startswith('build') and '.app' not in d]
+    """
+    Vim works better if you specify exactly which folders it can find files in.
+    Get the list of relevant folders by scanning the project.
+    """
+    # this is project specific.
+    EXCLUDED = {'Bin', 'Objs', 'Depends', 'venv', 'vendored', 'TestCases', 'Release'}
+    dirs = [d for d in os.listdir('.') if os.path.isdir(d) and d not in EXCLUDED and not d.startswith(('.', '_')) and not 'build' in d.lower() and '.app' not in d]
     subdirs = []
     for d in dirs:
         for subdir in os.listdir(d):
@@ -286,8 +312,8 @@ def write_vim(funcs:List[str], enums:List[str], types:List[str], globs:List[str]
     # remove some special macros
     macros_ = set(macros)
     macros_.difference_update([
-        'auto',
-        'bool', 'true', 'false', 'YES', 'NO',
+        'auto', 'QJSValueConst',
+        'bool', 'true', 'false', 'YES', 'NO', # technically macros, but vim already recognizes them.
         'Nonnull', 'Nullable', 'NullUnspec',
         'or', 'and', 'not',
         'Raise', 'attempt', 'unwrap',
@@ -297,34 +323,40 @@ def write_vim(funcs:List[str], enums:List[str], types:List[str], globs:List[str]
     macros_.difference_update(types)
     macros_.difference_update(globs)
     macros = sorted(macros_)
+    types.append('QJSValueConst')
     dirs = get_proj_dirs()
     with open('.vimrc', 'w') as fp:
-        fp.write('set tags+=dtags\n')
         fp.write('set grepprg=git\ --no-pager\ grep\ --no-color\ -n\ $*\n')
         fp.write('set grepformat=%f:%l:%m,%m\ %f\ match%ts,%f\n')
         fp.write('set path=.,,{}\n'.format(','.join(dirs)))
+        # these are my preferences.
         fp.write('hi Error ctermfg=none ctermbg=none guifg=fg guibg=bg\n')
         fp.write('hi cConstant ctermfg=2 guifg=DarkGreen\n')
         fp.write('hi Constant ctermfg=2 guifg=DarkGreen\n')
         fp.write('hi cFunction ctermfg=109 guifg=#664499\n')
         fp.write('hi cEnum cterm=bold gui=bold\n')
         fp.write('hi cPreProc ctermfg=5\n')
-        fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cFunction ')
-        fp.write(' '.join(funcs))
-        fp.write('\n')
-        fp.write('\n')
-        fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cType ')
-        fp.write(' '.join(types))
-        fp.write('\n')
-        fp.write('\n')
-        fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cEnum ')
-        fp.write(' '.join(enums))
-        fp.write('\n')
-        fp.write('\n')
-        fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cPreProc ')
-        fp.write(' '.join(macros))
-        fp.write('\n')
-        fp.write('\n')
+        # using BufEnter as I never learned the proper way to do this.
+        if funcs:
+            fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cFunction ')
+            fp.write(' '.join(funcs))
+            fp.write('\n')
+            fp.write('\n')
+        if types:
+            fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cType ')
+            fp.write(' '.join(types))
+            fp.write('\n')
+            fp.write('\n')
+        if enums:
+            fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cEnum ')
+            fp.write(' '.join(enums))
+            fp.write('\n')
+            fp.write('\n')
+        if macros:
+            fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cPreProc ')
+            fp.write(' '.join(macros))
+            fp.write('\n')
+            fp.write('\n')
         fp.flush()
 
 
@@ -358,8 +390,8 @@ def do_command(args) -> Identer:
     identer.analyze()
     return identer
 
-def run(pool_size:int) -> None:
-    compile_commands = json.load(open('compile_commands.json'))
+def run(pool_size:int, compile_commands_path:str='compile_commands.json') -> None:
+    compile_commands = json.load(open(compile_commands_path))
 
     pool_arguments = []
     for command in compile_commands:
@@ -369,7 +401,7 @@ def run(pool_size:int) -> None:
         arguments = fix_args(command['arguments'], f)
         pool_arguments.append((arguments, f))
 
-    if pool_size:
+    if pool_size > 0:
         with Pool(pool_size) as p:
             identers = p.map(do_command, pool_arguments)
     else:
@@ -383,6 +415,7 @@ def run(pool_size:int) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--pool_size', '-p', type=int, default=12)
+    parser.add_argument('compile_commands_path', default='compile_commands.json', nargs='?')
     args = parser.parse_args()
     run(**vars(args))
 

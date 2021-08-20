@@ -62,46 +62,86 @@ THREADFUNC(binary_worker){
         }
     bb_destroy(&bb);
     memcpy(jobp->b64cache, &cache, sizeof(cache));
+    // auto after = get_t();
+    // fprintf(stderr, "binary worker: %.3fms\n", (after-before)/1000.);
     return 0;
     }
 
 static
 Errorable_f(void)
-do_js(DndcContext* ctx){
+execute_user_scripts(DndcContext* ctx){
     Errorable(void) result = {};
+    auto flags = ctx->flags;
     ArenaAllocator aa = {};
+    // The rt and python are lazily initialized as they are pretty expensive
+    // if not actually used.
     QJSRuntime* rt = NULL;
-    if(/*!(flags & DNDC_NO_PYTHON) and*/ ctx->js_nodes.count){
-        auto before = get_t();
-        rt = new_qjs_rt(&aa);
-        for(size_t i = 0; i < ctx->js_nodes.count; i++){
-            auto handle = ctx->js_nodes.data[i];
-            {
-            auto node = get_node(ctx, handle);
-            if(node->type != NODE_JS)
+#ifdef PYTHONMODULE
+    bool python_is_initialized = true;
+#else
+    bool python_is_initialized = !!(flags & DNDC_PYTHON_IS_INIT);
+#endif
+    auto before = get_t();
+    // Count must be re-read each time through the loop as more scripts
+    // can be added by scripts.
+    for(size_t i = 0; i < ctx->user_script_nodes.count; i++){
+        NodeHandle handle = ctx->user_script_nodes.data[i];
+        NodeType type;
+        LongString str;
+        {
+            Node* node = get_node(ctx, handle);
+            type = node->type;
+            if(type != NODE_JS && type != NODE_PYTHON)
                 continue;
-            MStringBuilder msb = {.allocator=ctx->string_allocator};
-            msb_write_literal(&msb, "\"use strict\"\n");
-            msb_write_nchar(&msb, '\n', node->row);
+            if(type == NODE_PYTHON && (flags & DNDC_NO_PYTHON))
+                continue;
+            if(type == NODE_JS && (flags & DNDC_NO_COMPILETIME_JS))
+                continue;
+            MStringBuilder msb = (MStringBuilder){.allocator=ctx->string_allocator};
             NODE_CHILDREN_FOR_EACH(it, node){
-                auto child = *it;
-                auto child_node = get_node(ctx, child);
+                auto child_node = get_node(ctx, *it);
                 msb_write_str(&msb, child_node->header.text, child_node->header.length);
                 msb_write_char(&msb, '\n');
                 }
-            if(!msb.cursor)
+            if(!msb.cursor) // empty script block.
                 continue;
-            auto str = msb_detach(&msb);
-            auto qjs_err = execute_qjs_string(rt, ctx, str.text, str.length, handle);
-            if(qjs_err.errored){
+            str = msb_detach(&msb);
+        }
+        if(type == NODE_PYTHON){
+            if(!python_is_initialized){
+                auto before_init = get_t();
+                auto e = internal_init_dndc_python_interpreter(flags);
+                if(e.errored){
+                    report_system_error(ctx, SV("Failed to initialize python"));
+                    result.errored = e.errored;
+                    goto cleanup;
+                    }
+                python_is_initialized = true;
+                auto after_init = get_t();
+                report_time(ctx, SV("Python init took: "), after_init-before_init);
+                }
+            auto py_err = execute_python_string(ctx, str.text, handle);
+            if(py_err.errored){
                 report_set_error(ctx);
-                result.errored = qjs_err.errored;
+                result.errored = py_err.errored;
                 goto cleanup;
                 }
             }
-            auto node = get_node(ctx, handle);
-            // unsure if this is right, but doing it for now.
-            auto parent = get_node(ctx, node->parent);
+        else {
+            assert(type == NODE_JS);
+            if(!rt){
+                rt = new_qjs_rt(&aa);
+                }
+            auto js_err = execute_qjs_string(rt, ctx, str.text, str.length, handle);
+            if(js_err.errored){
+                report_set_error(ctx);
+                result.errored = js_err.errored;
+                goto cleanup;
+                }
+            }
+        Node* node = get_node(ctx, handle);
+        if(!NodeHandle_eq(node->parent, INVALID_NODE_HANDLE)){
+            Node* parent = get_node(ctx, node->parent);
             node->parent = INVALID_NODE_HANDLE;
             for(size_t j = 0; j < parent->children.count; j++){
                 if(NodeHandle_eq(handle, node_children(parent)[j])){
@@ -112,24 +152,26 @@ do_js(DndcContext* ctx){
             // don't both warning here, but leave the scaffolding in case I want to.
             after:;
             }
-        auto after_qjs = get_t();
-        report_time(ctx, SV("qjs total took: "), after_qjs-before);
         }
+    auto after_scripts = get_t();
+    report_time(ctx, SV("user scripts took: "), after_scripts-before);
     cleanup:
-    if(rt)
+    if(rt){
         free_qjs_rt(rt, &aa);
+        }
     return result;
     }
+
 // NOTE: we can have larger scope than this if we want.
 // Slicing the work here this way is not inherent.
 // However, care must be taken that the spawned thread is
 // joined by the time we exit.
 static
 Errorable_f(void)
-do_python_and_load_images(DndcContext* ctx){
+execute_user_scripts_and_load_images(DndcContext* ctx){
     Errorable(void) result = {};
-    // Setup for the worker thread.
     auto flags = ctx->flags;
+    // Setup the worker thread.
     BinaryJob job = {
         .b64cache = &ctx->b64cache,
         };
@@ -168,9 +210,10 @@ do_python_and_load_images(DndcContext* ctx){
                     }
                 }
             }
-    }
+        }
     ThreadHandle worker = {};
     bool binary_work_to_be_done = !!job.sourcepaths.count;
+    bool thread_created = false;
     if(binary_work_to_be_done){
         if(flags & DNDC_NO_THREADS){
             // Do it ourselves in this thread.
@@ -178,86 +221,20 @@ do_python_and_load_images(DndcContext* ctx){
             }
         else{
             create_thread(&worker, &binary_worker, &job);
+            thread_created = true;
             }
         }
-    // Execute the python blocks.
-    size_t n_python = 0;
-    for(size_t i = 0; i < ctx->python_nodes.count; i++){
-        auto handle = ctx->python_nodes.data[i];
-        auto node = get_node(ctx, handle);
-        if(node->type != NODE_PYTHON)
-            continue;
-        n_python++;
-        }
 
-    if(!(flags & DNDC_NO_PYTHON) && n_python){
+    result = execute_user_scripts(ctx);
+
+    if(thread_created){
         auto before = get_t();
-
-        #ifndef PYTHONMODULE
-        // This call handles the DNDC_PYTHON_IS_INIT flag.
-        auto e = internal_init_dndc_python_interpreter(flags);
-        if(e.errored){
-            report_system_error(ctx, SV("Failed to initialize python"));
-            result.errored = e.errored;
-            goto cleanup;
-            }
-        #endif
-
+        join_thread(worker);
         auto after = get_t();
-        report_time(ctx, SV("Python startup took: "), after-before);
-        for(size_t i = 0; i < ctx->python_nodes.count; i++){
-            auto handle = ctx->python_nodes.data[i];
-            {
-            auto node = get_node(ctx, handle);
-            if(node->type != NODE_PYTHON)
-                continue;
-            MStringBuilder msb = {.allocator=ctx->string_allocator};
-            NODE_CHILDREN_FOR_EACH(it, node){
-                auto child = *it;
-                auto child_node = get_node(ctx, child);
-                msb_write_str(&msb, child_node->header.text, child_node->header.length);
-                msb_write_char(&msb, '\n');
-                }
-            if(!msb.cursor)
-                continue;
-            auto str = msb_detach(&msb);
-            auto py_err = execute_python_string(ctx, str.text, handle);
-            if(py_err.errored){
-                report_set_error(ctx);
-                result.errored = py_err.errored;
-                goto cleanup;
-                }
-            }
-            auto node = get_node(ctx, handle);
-            // unsure if this is right, but doing it for now.
-            auto parent = get_node(ctx, node->parent);
-            node->parent = INVALID_NODE_HANDLE;
-            for(size_t j = 0; j < parent->children.count; j++){
-                if(NodeHandle_eq(handle, node_children(parent)[j])){
-                    node_remove_child(parent, j, ctx->allocator);
-                    goto after;
-                    }
-                }
-            // don't both warning here, but leave the scaffolding in case I want to.
-            after:;
-            }
-        auto after_python = get_t();
-        report_time(ctx, SV("Python scripts took: "), after_python-after);
-        report_time(ctx, SV("Python total took: "), after_python-before);
+        // This is usually very fast as the worker thread finished before python.
+        report_time(ctx, SV("Joining took: "), after-before);
         }
-    // Python blocks are done, join with the base64 thread.
-    // We could actually join later now that I think about it.
-    // We only need to join by the time we start rendering any of the nodes into html.
-    // Well, todo, we almost always finish by the time python is done.
-    cleanup:
     if(binary_work_to_be_done){
-        if(!(flags & DNDC_NO_THREADS)){
-            auto before = get_t();
-            join_thread(worker);
-            auto after = get_t();
-            // This is usually very fast as the worker thread finished before python.
-            report_time(ctx, SV("Joining took: "), after-before);
-            }
         Marray_cleanup(StringView)(&job.sourcepaths, ctx->allocator);
         }
     else {
@@ -265,7 +242,6 @@ do_python_and_load_images(DndcContext* ctx){
         }
     return result;
     }
-
 
 #ifdef DNDCMAIN
 static
@@ -341,6 +317,13 @@ int main(int argc, char**argv){
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_NO_PYTHON),
                 .help = "Don't execute python nodes.",
+                .hidden = true,
+            },
+            {
+                .name = SV("--no-js"),
+                .max_num = 1,
+                .dest = ArgBitFlagDest(&flags, DNDC_NO_COMPILETIME_JS),
+                .help = "Don't execute js nodes.",
                 .hidden = true,
             },
             {
@@ -840,17 +823,17 @@ run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_pat
             result.errored = PARSE_ERROR;
             goto cleanup;
             }
-        if(ctx.python_nodes.count){
-            auto handle = ctx.python_nodes.data[0];
+        if(ctx.user_script_nodes.count){
+            auto handle = ctx.user_script_nodes.data[0];
             auto node = get_node(&ctx, handle);
-            node_print_err(&ctx, node, SV("Python blocks are illegal for untrusted input."));
+            node_print_err(&ctx, node, SV("Python blocks and JS blocks are illegal for untrusted input."));
             result.errored = PARSE_ERROR;
             goto cleanup;
             }
         if(ctx.script_nodes.count){
             auto handle = ctx.script_nodes.data[0];
             auto node = get_node(&ctx, handle);
-            node_print_err(&ctx, node, SV("JS blocks are illegal for untrusted input."));
+            node_print_err(&ctx, node, SV("Script blocks are illegal for untrusted input."));
             result.errored = PARSE_ERROR;
             goto cleanup;
             }
@@ -910,23 +893,17 @@ run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_pat
     }
 
     // Speculatively load imgs and imglinks and preprocess them.
-    // Do this at the same time as we execute the Python nodes.
-    // Python blocks can add imgs or change the paths of the img nodes,
+    // Do this at the same time as we execute the Python and js nodes.
+    // Python/js blocks can add imgs or change the paths of the img nodes,
     // but they usually don't, so doing these in parallel is a win as
-    // Python startup (and execution) is very slow.
+    // Python startup (and execution) is very slow. JS startup is quicker, but not
+    // free.
     {
         // This is shoved in its own function as we need to guarantee
         // the worker has joined before continuing beyond this point.
         // Putting it in its own function with single-point-of-exit style
         // makes that easier to do.
-        auto e = do_python_and_load_images(&ctx);
-        if(e.errored){
-            result.errored = e.errored;
-            goto cleanup;
-            }
-    }
-    {
-        auto e = do_js(&ctx);
+        auto e = execute_user_scripts_and_load_images(&ctx);
         if(e.errored){
             result.errored = e.errored;
             goto cleanup;
@@ -934,7 +911,7 @@ run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_pat
     }
     // Do some reporting as we don't add any nodes after this.
     report_size(&ctx, SV("ctx.nodes.count = "), ctx.nodes.count);
-    report_size(&ctx, SV("ctx.python_nodes.count = "), ctx.python_nodes.count);
+    report_size(&ctx, SV("ctx.user_script_nodes.count = "), ctx.user_script_nodes.count);
     report_size(&ctx, SV("ctx.imports.count = "), ctx.imports.count);
     report_size(&ctx, SV("ctx.script_nodes.count = "), ctx.script_nodes.count);
     report_size(&ctx, SV("ctx.dependencies_nodes.count = "), ctx.dependencies_nodes.count);
@@ -1896,6 +1873,7 @@ dndc_compile_dnd_file(unsigned long long flags, struct DndcLongString base_direc
             | DNDC_PRINT_STATS
             | DNDC_REPORT_ORPHANS
             | DNDC_NO_PYTHON
+            | DNDC_NO_COMPILETIME_JS
             | DNDC_PYTHON_IS_INIT
             | DNDC_PRINT_TREE
             | DNDC_PRINT_LINKS
