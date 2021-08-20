@@ -288,7 +288,7 @@ class LineNumberArea(QWidget):
         self.codeEditor.lineNumberAreaPaintEvent(event)
 
 COORD_HELPER_SCRIPT='''
-::js @inline
+::script @inline
   document.addEventListener('DOMContentLoaded', function(){
     const svgs = document.getElementsByTagName('svg');
     for(let i = 0; i < svgs.length; i++){
@@ -317,7 +317,7 @@ COORD_HELPER_SCRIPT='''
   });
 '''
 SCROLL_RESTO_SCRIPT='''
-::js @inline
+::script @inline
     document.addEventListener('DOMContentLoaded', function(){
         console.log(SCROLLRESTO);
         for(let [key, value] of Object.entries(SCROLLRESTO)){
@@ -513,8 +513,8 @@ class DndEditor(QPlainTextEdit):
         self.insert_dnd_block('::import\n  ' + fname + '\n')
     def insert_css(self, fname:str) -> None:
         self.insert_dnd_block('::css\n  ' + fname + '\n')
-    def insert_js(self, fname:str) -> None:
-        self.insert_dnd_block('::js\n  ' + fname + '\n')
+    def insert_script(self, fname:str) -> None:
+        self.insert_dnd_block('::script\n  ' + fname + '\n')
     def insert_image_links(self, fullname:str, fname:str) -> None:
         img = QImage()
         img.load(fullname)
@@ -733,7 +733,7 @@ class Page(QSplitter):
         if self.coord_helper and not self.textedit.isReadOnly():
             text += COORD_HELPER_SCRIPT
         if self.scroll_pos_string:
-            text += '\n::js @inline\n  const SCROLLRESTO = {}\n'.format(self.scroll_pos_string)
+            text += '\n::script @inline\n  const SCROLLRESTO = {}\n'.format(self.scroll_pos_string)
             text += SCROLL_RESTO_SCRIPT
         return text
 
@@ -874,11 +874,11 @@ class Page(QSplitter):
         if not fname:
             return
         self.textedit.insert_css(fname)
-    def insert_js(self) -> None:
+    def insert_script(self) -> None:
         fname = self.get_fname('Choose a JavaScript file', 'JS files (*.js)')
         if not fname:
             return
-        self.textedit.insert_js(fname)
+        self.textedit.insert_script(fname)
     def export_as_html(self) -> None:
         try:
             html, _ = pydndc.htmlgen(self.textedit.toPlainText(), base_dir=self.dirname)
@@ -1126,8 +1126,8 @@ def add_menus() -> None:
     action.triggered.connect(insert_func(Page.insert_dnd))
     insert.addAction(action)
 
-    action = QAction('&JS', WINDOW)
-    action.triggered.connect(insert_func(Page.insert_js))
+    action = QAction('&JavaScript', WINDOW)
+    action.triggered.connect(insert_func(Page.insert_script))
     insert.addAction(action)
 
     action = QAction('&CSS', WINDOW)
