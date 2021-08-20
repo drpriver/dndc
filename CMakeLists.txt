@@ -37,6 +37,17 @@ add_library(quickjs-lib
 		Vendored/quickjs/cutils.c
 		)
 target_compile_definitions(quickjs-dylib PRIVATE CONFIG_VERSION="2021-03-27")
+# Just use our project version as their version is date based.
+set_target_properties(quickjs-lib
+    PROPERTIES OUTPUT_NAME quickjs
+    VERSION ${PROJECT_VERSION}
+    )
+set_target_properties(quickjs-dylib
+    PROPERTIES OUTPUT_NAME quickjs
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 0.${PROJECT_VERSION_MINOR}
+    )
+target_compile_definitions(quickjs-lib PRIVATE CONFIG_VERSION="2021-03-27")
 
 target_link_libraries(dndc ${Python3_LIBRARIES} quickjs-dylib)
 target_include_directories(dndc PRIVATE ${Python3_INCLUDE_DIRS})
@@ -60,7 +71,7 @@ set_target_properties(dndc-lib
     PROPERTIES OUTPUT_NAME dndc
     VERSION ${PROJECT_VERSION}
     )
-target_link_libraries(dndc-dylib ${Python3_LIBRARIES} quickjs-dylib)
+target_link_libraries(dndc-dylib ${Python3_LIBRARIES} quickjs-lib)
 target_include_directories(dndc-dylib PRIVATE ${Python3_INCLUDE_DIRS})
 # change the SOVERSION thing when I decide to release 1.0
 set_target_properties(dndc-dylib

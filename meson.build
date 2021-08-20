@@ -6,9 +6,9 @@ pymod = import('python')
 pyinstall = pymod.find_installation()
 pydep = pyinstall.dependency(embed: true)
 if host_machine.system() == 'windows'
-includes = include_directories('Allocators', 'Utils', 'PythonEmbed', 'Dndc', 'Platform/Windows')
+includes = include_directories('Allocators', 'Utils', 'PythonEmbed', 'Dndc', 'Platform/Windows', 'Vendored/quickjs')
 else
-includes = include_directories('Allocators', 'Utils', 'PythonEmbed', 'Dndc')
+includes = include_directories('Allocators', 'Utils', 'PythonEmbed', 'Dndc', 'Vendored/quickjs')
 endif
 
 install_headers('Dndc/dndc.h', subdir:'Dndc')
@@ -81,6 +81,20 @@ frozen_modules = freezer.process(
   'PythonEmbed/vendored/pdb.py',
 )
 
+quickjs = both_libraries(
+  'quickjs',
+  'Vendored/quickjs/quickjs.c',
+  'Vendored/quickjs/libregexp.c',
+  'Vendored/quickjs/libunicode.c',
+  'Vendored/quickjs/cutils.c',
+  include_directories: 'Vendored/quickjs',
+  c_args:['-DCONFIG_VERSION="2021-03-27"'],
+  install: true,
+  version: meson.project_version(),
+  soversion: meson.project_version(),
+  darwin_versions: [COMPAT_VERSION, meson.project_version()],
+  )
+
 executable(
   'dndc',
   'Dndc/dndc.c',
@@ -90,6 +104,7 @@ executable(
   dependencies:[pydep, thread_dep],
   c_args: ['-DDNDCMAIN'],
   install: true,
+  link_with: quickjs,
   )
 executable(
   'dndcbench',
@@ -100,6 +115,7 @@ executable(
   dependencies:[pydep, thread_dep],
   c_args: ['-DDNDCMAIN', '-DBENCHMARKING', '-DBENCHMARKITERS=1000', '-g'],
   install: false,
+  link_with: quickjs,
   )
 both_libraries(
   'dndc',
@@ -112,12 +128,15 @@ both_libraries(
   version: meson.project_version(),
   soversion: meson.project_version(),
   darwin_versions: [COMPAT_VERSION, meson.project_version()],
+  link_with: quickjs,
   )
+
 
 pyinstall.extension_module(
   'pydndc',
   'Dndc/pydndc.c',
   include_directories: includes,
+  link_with: quickjs,
   dependencies:pyinstall.dependency(),
   )
 
@@ -132,6 +151,7 @@ if host_machine.system() == 'darwin'
     include_directories: includes,
     objc_args: ['-fobjc-arc'],
     link_args: '-Wl,-sectcreate,__TEXT,__info_plist,'+meson.source_root() + '/Platform/MacOS/Info.plist',
+    link_with: quickjs,
     install: true,
     )
 endif
@@ -158,5 +178,6 @@ t = executable('TestDndc',
   frozen_modules,
   include_directories:includes,
   dependencies:[pydep, thread_dep],
+  link_with: quickjs,
   )
 test('dndc', t, args:['-C', meson.source_root()])
