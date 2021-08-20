@@ -64,6 +64,21 @@ node_get_attribute(const Node* node, StringView attr){
     }
 
 static inline
+void
+node_set_attribute(Node* node, Allocator allocator, StringView attr, StringView value){
+    RARRAY_FOR_EACH(a, node->attributes){
+        if(SV_equals(a->key, attr)){
+            a->value = value;
+            return;
+            }
+        }
+    auto a = Rarray_alloc(Attribute)(&node->attributes, allocator);
+    a->key = attr;
+    a->value = value;
+    return;
+    }
+
+static inline
 Nullable(const StringView*)
 node_get_id(const Node* node){
     if(node_has_attribute(node, SV("noid")))
