@@ -125,7 +125,16 @@ do_python_and_load_images(DndcContext* ctx){
             }
         }
     // Execute the python blocks.
-    if(!(flags & DNDC_NO_PYTHON) and ctx->python_nodes.count){
+    size_t n_python = 0;
+    for(size_t i = 0; i < ctx->python_nodes.count; i++){
+        auto handle = ctx->python_nodes.data[i];
+        auto node = get_node(ctx, handle);
+        if(node->type != NODE_PYTHON)
+            continue;
+        n_python++;
+        }
+
+    if(!(flags & DNDC_NO_PYTHON) && n_python){
         auto before = get_t();
 
         #ifndef PYTHONMODULE
