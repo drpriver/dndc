@@ -11,6 +11,7 @@
 #include "dndc_format.c"
 #include "dndc_types.h"
 #include "dndc_funcs.h"
+#include "dndc_qjs.h"
 
 #include "path_util.h"
 #include "msb_extensions.h"
@@ -64,27 +65,15 @@ THREADFUNC(binary_worker){
     return 0;
     }
 
-// FIXME: these store the runtime in a void* because I
-// am lazy and didn't want to forward declare the
-// QJSRuntime
-static
-Errorable_f(void)
-execute_qjs_string(void*rt, DndcContext* ctx, const char* str, size_t length, NodeHandle handle);
-
-static
-void* get_qjs_rt(void);
-
-static
-void free_qjs_rt(void*);
-
 static
 Errorable_f(void)
 do_js(DndcContext* ctx){
     Errorable(void) result = {};
+    ArenaAllocator aa = {};
+    QJSRuntime* rt = NULL;
     if(/*!(flags & DNDC_NO_PYTHON) and*/ ctx->js_nodes.count){
         auto before = get_t();
-        auto after = get_t();
-        void* rt = get_qjs_rt();
+        rt = new_qjs_rt(&aa);
         for(size_t i = 0; i < ctx->js_nodes.count; i++){
             auto handle = ctx->js_nodes.data[i];
             {
@@ -123,12 +112,12 @@ do_js(DndcContext* ctx){
             // don't both warning here, but leave the scaffolding in case I want to.
             after:;
             }
-        free_qjs_rt(rt);
         auto after_qjs = get_t();
-        report_time(ctx, SV("qjs scripts took: "), after_qjs-after);
         report_time(ctx, SV("qjs total took: "), after_qjs-before);
         }
     cleanup:
+    if(rt)
+        free_qjs_rt(rt, &aa);
     return result;
     }
 // NOTE: we can have larger scope than this if we want.

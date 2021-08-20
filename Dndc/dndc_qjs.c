@@ -270,40 +270,41 @@ void*_Nullable js_arena_realloc(JSMallocState*s, void* pointer, size_t size){
     return result;
     }
 
-static ArenaAllocator arena = {};
-void*
-get_qjs_rt(void){
+static
+QJSRuntime*
+new_qjs_rt(ArenaAllocator* aa){
     static const JSMallocFunctions mf = {
         .js_malloc = js_arena_malloc,
         .js_free = js_arena_free,
         .js_realloc = js_arena_realloc,
         };
     QJSRuntime* rt = NULL;
-    rt = JS_NewRuntime2(&mf, &arena);
+    rt = JS_NewRuntime2(&mf, aa);
     JS_NewClassID(&JS_DNDC_CONTEXT_CLASS_ID);
     if(JS_NewClass(rt, JS_DNDC_CONTEXT_CLASS_ID, &JS_DNDC_CONTEXT_CLASS) < 0){
-        assert(0);
+        unhandled_error_condition(0);
         }
     JS_NewClassID(&JS_DNDC_ATTRIBUTES_CLASS_ID);
     if(JS_NewClass(rt, JS_DNDC_ATTRIBUTES_CLASS_ID, &JS_DNDC_ATTRIBUTES_CLASS) < 0){
-        assert(0);
+        unhandled_error_condition(0);
         }
     JS_NewClassID(&JS_DNDC_CLASSLIST_CLASS_ID);
     if(JS_NewClass(rt, JS_DNDC_CLASSLIST_CLASS_ID, &JS_DNDC_CLASSLIST_CLASS) < 0){
-        assert(0);
+        unhandled_error_condition(0);
         }
     JS_NewClassID(&JS_DNDC_NODE_CLASS_ID);
     if(JS_NewClass(rt, JS_DNDC_NODE_CLASS_ID, &JS_DNDC_NODE_CLASS) < 0){
-        assert(0);
+        unhandled_error_condition(0);
         }
     return rt;
     }
 
+static
 void
-free_qjs_rt(void* rt){
+free_qjs_rt(QJSRuntime* rt, ArenaAllocator* arena){
     (void)rt;
 #if 0
-    ArenaAllocatorStats stats = ArenaAllocator_stats(&arena);
+    ArenaAllocatorStats stats = ArenaAllocator_stats(arena);
     fprintf(stderr, "used: %zu\n", stats.used);
     fprintf(stderr, "capacity: %zu\n", stats.capacity);
     fprintf(stderr, "%% used: %f\n", 100.*(double)stats.used / (double)stats.capacity);
@@ -311,7 +312,7 @@ free_qjs_rt(void* rt){
     fprintf(stderr, "total big: %zu\n", stats.big_used);
     fprintf(stderr, "n big: %zu\n", stats.big_count);
 #endif
-    ArenaAllocator_free_all(&arena);
+    ArenaAllocator_free_all(arena);
     }
 
 //
@@ -319,9 +320,8 @@ free_qjs_rt(void* rt){
 //
 static
 Errorable_f(void)
-execute_qjs_string(void* rt_, DndcContext* ctx, const char* str, size_t length, NodeHandle handle){
+execute_qjs_string(QJSRuntime* rt, DndcContext* ctx, const char* str, size_t length, NodeHandle handle){
     Errorable(void) result = {};
-    QJSRuntime* rt = rt_;
     QJSContext* jsctx = NULL;
     // rt = JS_NewRuntime();
     if(!rt){
