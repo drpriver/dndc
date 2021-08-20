@@ -49,10 +49,10 @@ extern const uint32_t qjsc_qjscalc_size;
 static int bignum_ext;
 #endif
 
-static int eval_buf(JSContext *ctx, const void *buf, int buf_len,
+static int eval_buf(QJSContext *ctx, const void *buf, int buf_len,
                     const char *filename, int eval_flags)
 {
-    JSValue val;
+    QJSValue val;
     int ret;
 
     if ((eval_flags & JS_EVAL_TYPE_MASK) == JS_EVAL_TYPE_MODULE) {
@@ -77,7 +77,7 @@ static int eval_buf(JSContext *ctx, const void *buf, int buf_len,
     return ret;
 }
 
-static int eval_file(JSContext *ctx, const char *filename, int module)
+static int eval_file(QJSContext *ctx, const char *filename, int module)
 {
     uint8_t *buf;
     int ret, eval_flags;
@@ -103,9 +103,9 @@ static int eval_file(JSContext *ctx, const char *filename, int module)
 }
 
 /* also used to initialize the worker context */
-static JSContext *JS_NewCustomContext(JSRuntime *rt)
+static QJSContext *JS_NewCustomContext(QJSRuntime *rt)
 {
-    JSContext *ctx;
+    QJSContext *ctx;
     ctx = JS_NewContext(rt);
     if (!ctx)
         return NULL;
@@ -306,8 +306,8 @@ void help(void)
 
 int main(int argc, char **argv)
 {
-    JSRuntime *rt;
-    JSContext *ctx;
+    QJSRuntime *rt;
+    QJSContext *ctx;
     struct trace_malloc_data trace_data = { NULL };
     int optind;
     char *expr = NULL;

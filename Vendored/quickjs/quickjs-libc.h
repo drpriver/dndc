@@ -33,24 +33,24 @@
 extern "C" {
 #endif
 
-JSModuleDef *js_init_module_std(JSContext *ctx, const char *module_name);
-JSModuleDef *js_init_module_os(JSContext *ctx, const char *module_name);
-void js_std_add_helpers(JSContext *ctx, int argc, char **argv);
-void js_std_loop(JSContext *ctx);
-void js_std_init_handlers(JSRuntime *rt);
-void js_std_free_handlers(JSRuntime *rt);
-void js_std_dump_error(JSContext *ctx);
-uint8_t *js_load_file(JSContext *ctx, size_t *pbuf_len, const char *filename);
-int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val,
+JSModuleDef *js_init_module_std(QJSContext *ctx, const char *module_name);
+JSModuleDef *js_init_module_os(QJSContext *ctx, const char *module_name);
+void js_std_add_helpers(QJSContext *ctx, int argc, char **argv);
+void js_std_loop(QJSContext *ctx);
+void js_std_init_handlers(QJSRuntime *rt);
+void js_std_free_handlers(QJSRuntime *rt);
+void js_std_dump_error(QJSContext *ctx);
+uint8_t *js_load_file(QJSContext *ctx, size_t *pbuf_len, const char *filename);
+int js_module_set_import_meta(QJSContext *ctx, QJSValueConst func_val,
                               JS_BOOL use_realpath, JS_BOOL is_main);
-JSModuleDef *js_module_loader(JSContext *ctx,
+JSModuleDef *js_module_loader(QJSContext *ctx,
                               const char *module_name, void *opaque);
-void js_std_eval_binary(JSContext *ctx, const uint8_t *buf, size_t buf_len,
+void js_std_eval_binary(QJSContext *ctx, const uint8_t *buf, size_t buf_len,
                         int flags);
-void js_std_promise_rejection_tracker(JSContext *ctx, JSValueConst promise,
-                                      JSValueConst reason,
+void js_std_promise_rejection_tracker(QJSContext *ctx, QJSValueConst promise,
+                                      QJSValueConst reason,
                                       JS_BOOL is_handled, void *opaque);
-void js_std_set_worker_new_context_func(JSContext *(*func)(JSRuntime *rt));
+void js_std_set_worker_new_context_func(QJSContext *(*func)(QJSRuntime *rt));
 
 #ifdef __cplusplus
 } /* extern "C" { */

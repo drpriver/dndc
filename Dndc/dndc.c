@@ -66,7 +66,7 @@ THREADFUNC(binary_worker){
 
 // FIXME: these store the runtime in a void* because I
 // am lazy and didn't want to forward declare the
-// JSRuntime
+// QJSRuntime
 static
 Errorable_f(void)
 execute_qjs_string(void*rt, DndcContext* ctx, const char* str, size_t length, NodeHandle handle);

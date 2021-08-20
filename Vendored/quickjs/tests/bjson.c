@@ -24,12 +24,12 @@
 #include "../quickjs-libc.h"
 #include "../cutils.h"
 
-static JSValue js_bjson_read(JSContext *ctx, JSValueConst this_val,
-                             int argc, JSValueConst *argv)
+static QJSValue js_bjson_read(QJSContext *ctx, QJSValueConst this_val,
+                             int argc, QJSValueConst *argv)
 {
     uint8_t *buf;
     uint64_t pos, len;
-    JSValue obj;
+    QJSValue obj;
     size_t size;
     int flags;
 
@@ -49,12 +49,12 @@ static JSValue js_bjson_read(JSContext *ctx, JSValueConst this_val,
     return obj;
 }
 
-static JSValue js_bjson_write(JSContext *ctx, JSValueConst this_val,
-                              int argc, JSValueConst *argv)
+static QJSValue js_bjson_write(QJSContext *ctx, QJSValueConst this_val,
+                              int argc, QJSValueConst *argv)
 {
     size_t len;
     uint8_t *buf;
-    JSValue array;
+    QJSValue array;
     int flags;
 
     flags = 0;
@@ -73,7 +73,7 @@ static const JSCFunctionListEntry js_bjson_funcs[] = {
     JS_CFUNC_DEF("write", 2, js_bjson_write ),
 };
 
-static int js_bjson_init(JSContext *ctx, JSModuleDef *m)
+static int js_bjson_init(QJSContext *ctx, JSModuleDef *m)
 {
     return JS_SetModuleExportList(ctx, m, js_bjson_funcs,
                                   countof(js_bjson_funcs));
@@ -85,7 +85,7 @@ static int js_bjson_init(JSContext *ctx, JSModuleDef *m)
 #define JS_INIT_MODULE js_init_module_bjson
 #endif
 
-JSModuleDef *JS_INIT_MODULE(JSContext *ctx, const char *module_name)
+JSModuleDef *JS_INIT_MODULE(QJSContext *ctx, const char *module_name)
 {
     JSModuleDef *m;
     m = JS_NewCModule(ctx, module_name, js_bjson_init);

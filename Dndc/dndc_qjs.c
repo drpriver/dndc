@@ -22,61 +22,61 @@ NodeHandle_to_opaque(NodeHandle handle){
     }
 
 #define JSMETHOD(name) \
-    static JSValue \
-    name(JSContext* jsctx, JSValueConst thisValue, int argc, JSValueConst* argv)
+    static QJSValue \
+    name(QJSContext* jsctx, QJSValueConst thisValue, int argc, QJSValueConst* argv)
 #define JSSETTER(name) \
-    static JSValue \
-    name(JSContext* jsctx, JSValueConst thisValue, JSValueConst arg)
+    static QJSValue \
+    name(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst arg)
 #define JSGETTER(name) \
-    static JSValue \
-    name(JSContext* jsctx, JSValueConst thisValue)
+    static QJSValue \
+    name(QJSContext* jsctx, QJSValueConst thisValue)
 
 //
 // Utility or free functions
 //
 //
 static
-JSValue
-js_make_dndc_context(JSContext*, DndcContext*);
+QJSValue
+js_make_dndc_context(QJSContext*, DndcContext*);
 
 static
-JSValue
-js_make_dndc_node(JSContext*, NodeHandle);
+QJSValue
+js_make_dndc_node(QJSContext*, NodeHandle);
 
 static
 void
-set_js_traceback(DndcContext* ctx, JSContext* jsctx);
+set_js_traceback(DndcContext* ctx, QJSContext* jsctx);
 
 static
 warn_unused
 bool
-js_dndc_get_node_handle(JSContext* jsctx, JSValueConst obj, NodeHandle* out);
+js_dndc_get_node_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out);
 static
 warn_unused
 bool
-js_dndc_get_attributes_handle(JSContext* jsctx, JSValueConst obj, NodeHandle* out);
+js_dndc_get_attributes_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out);
 static
 warn_unused
 bool
-js_dndc_get_classlist_handle(JSContext* jsctx, JSValueConst obj, NodeHandle* out);
+js_dndc_get_classlist_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out);
 
 static inline
 LongString
-jsstring_to_longstring(JSContext* jsctx, JSValueConst v, Allocator a);
+jsstring_to_longstring(QJSContext* jsctx, QJSValueConst v, Allocator a);
 
 static inline
 force_inline
 StringView
-jsstring_to_stringview(JSContext* jsctx, JSValueConst v, Allocator a);
+jsstring_to_stringview(QJSContext* jsctx, QJSValueConst v, Allocator a);
 
 static inline
 force_inline
 StringView
-jsstring_make_stringview_js_allocated(JSContext* jsctx, JSValueConst v);
+jsstring_make_stringview_js_allocated(QJSContext* jsctx, QJSValueConst v);
 
 static
-JSValue
-js_freeze_object(JSContext* jsctx, JSValueConst obj);
+QJSValue
+js_freeze_object(QJSContext* jsctx, QJSValueConst obj);
 
 JSMETHOD(js_console_log);
 
@@ -93,7 +93,7 @@ JSClassDef JS_DNDC_CONTEXT_CLASS = {
 
 static
 DndcContext*_Nullable
-js_get_dndc_context(JSContext*, JSValue);
+js_get_dndc_context(QJSContext*, QJSValue);
 
 //
 // DndcContext methods
@@ -278,7 +278,7 @@ get_qjs_rt(void){
         .js_free = js_arena_free,
         .js_realloc = js_arena_realloc,
         };
-    JSRuntime* rt = NULL;
+    QJSRuntime* rt = NULL;
     rt = JS_NewRuntime2(&mf, &arena);
     JS_NewClassID(&JS_DNDC_CONTEXT_CLASS_ID);
     if(JS_NewClass(rt, JS_DNDC_CONTEXT_CLASS_ID, &JS_DNDC_CONTEXT_CLASS) < 0){
@@ -321,8 +321,8 @@ static
 Errorable_f(void)
 execute_qjs_string(void* rt_, DndcContext* ctx, const char* str, size_t length, NodeHandle handle){
     Errorable(void) result = {};
-    JSRuntime* rt = rt_;
-    JSContext* jsctx = NULL;
+    QJSRuntime* rt = rt_;
+    QJSContext* jsctx = NULL;
     // rt = JS_NewRuntime();
     if(!rt){
         result.errored = ALLOC_FAILURE;
@@ -336,37 +336,37 @@ execute_qjs_string(void* rt_, DndcContext* ctx, const char* str, size_t length, 
 
     // setup DndcContext class
     {
-        JSValue proto = JS_NewObject(jsctx); // new ref
+        QJSValue proto = JS_NewObject(jsctx); // new ref
         JS_SetPropertyFunctionList(jsctx, proto, JS_DNDC_CONTEXT_FUNCS, arrlen(JS_DNDC_CONTEXT_FUNCS));
         JS_SetClassProto(jsctx, JS_DNDC_CONTEXT_CLASS_ID, proto); // steals ref
     }
 
     // setup DndcAttributes class
     {
-        JSValue proto = JS_NewObject(jsctx); // new ref
+        QJSValue proto = JS_NewObject(jsctx); // new ref
         JS_SetPropertyFunctionList(jsctx, proto, JS_DNDC_ATTRIBUTES_FUNCS, arrlen(JS_DNDC_ATTRIBUTES_FUNCS));
         JS_SetClassProto(jsctx, JS_DNDC_ATTRIBUTES_CLASS_ID, proto); // steals ref
     }
     // setup DndcClassList class
     {
-        JSValue proto = JS_NewObject(jsctx); // new ref
+        QJSValue proto = JS_NewObject(jsctx); // new ref
         JS_SetPropertyFunctionList(jsctx, proto, JS_DNDC_CLASSLIST_FUNCS, arrlen(JS_DNDC_CLASSLIST_FUNCS));
         JS_SetClassProto(jsctx, JS_DNDC_CLASSLIST_CLASS_ID, proto); // steals ref
     }
 
     // setup DndcNode class
     {
-        JSValue proto = JS_NewObject(jsctx); // new ref
+        QJSValue proto = JS_NewObject(jsctx); // new ref
         JS_SetPropertyFunctionList(jsctx, proto, JS_DNDC_NODE_FUNCS, arrlen(JS_DNDC_NODE_FUNCS));
         JS_SetClassProto(jsctx, JS_DNDC_NODE_CLASS_ID, proto); // steals ref
     }
 
-    // Stash the DndcContext into the JSContext...
+    // Stash the DndcContext into the QJSContext...
     // That's a lot of context!
     JS_SetContextOpaque(jsctx, ctx);
 
     {
-        JSValue global_obj, console, dctx, node, node_types;
+        QJSValue global_obj, console, dctx, node, node_types;
         global_obj = JS_GetGlobalObject(jsctx); // new ref
         dctx = js_make_dndc_context(jsctx, ctx); // new_ref
         node = js_make_dndc_node(jsctx, handle); // new_ref
@@ -390,7 +390,7 @@ execute_qjs_string(void* rt_, DndcContext* ctx, const char* str, size_t length, 
             filename = Allocator_strndup(ctx->string_allocator, node->filename.text, node->filename.length);
         }
 
-        JSValue err = JS_Eval(jsctx, str, length, filename, 0);
+        QJSValue err = JS_Eval(jsctx, str, length, filename, 0);
         if(JS_IsException(err)){
             // FIXME: More robust signalling of errors.
             if(ctx->error.message.length){
@@ -418,7 +418,7 @@ execute_qjs_string(void* rt_, DndcContext* ctx, const char* str, size_t length, 
 
 static inline
 LongString
-jsstring_to_longstring(JSContext* jsctx, JSValueConst v, Allocator a){
+jsstring_to_longstring(QJSContext* jsctx, QJSValueConst v, Allocator a){
     size_t len;
     const char* str = JS_ToCStringLen(jsctx, &len, v);
     if(!str){
@@ -434,14 +434,14 @@ jsstring_to_longstring(JSContext* jsctx, JSValueConst v, Allocator a){
 static inline
 force_inline
 StringView
-jsstring_to_stringview(JSContext* jsctx, JSValueConst v, Allocator a){
+jsstring_to_stringview(QJSContext* jsctx, QJSValueConst v, Allocator a){
     return LS_to_SV(jsstring_to_longstring(jsctx, v, a));
     }
 
 static inline
 force_inline
 StringView
-jsstring_make_stringview_js_allocated(JSContext* jsctx, JSValueConst v){
+jsstring_make_stringview_js_allocated(QJSContext* jsctx, QJSValueConst v){
     size_t len;
     const char* str = JS_ToCStringLen(jsctx, &len, v);
     if(!str){
@@ -455,7 +455,7 @@ jsstring_make_stringview_js_allocated(JSContext* jsctx, JSValueConst v){
 static
 warn_unused
 bool
-js_dndc_get_node_handle(JSContext* jsctx, JSValueConst obj, NodeHandle* out){
+js_dndc_get_node_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out){
     uintptr_t p = (uintptr_t)(JS_GetOpaque2(jsctx, obj, JS_DNDC_NODE_CLASS_ID));
     if(!p){
         return false;
@@ -470,7 +470,7 @@ js_dndc_get_node_handle(JSContext* jsctx, JSValueConst obj, NodeHandle* out){
 static
 warn_unused
 bool
-js_dndc_get_attributes_handle(JSContext* jsctx, JSValueConst obj, NodeHandle* out){
+js_dndc_get_attributes_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out){
     uintptr_t p = (uintptr_t)(JS_GetOpaque2(jsctx, obj, JS_DNDC_ATTRIBUTES_CLASS_ID));
     if(!p){
         return false;
@@ -485,7 +485,7 @@ js_dndc_get_attributes_handle(JSContext* jsctx, JSValueConst obj, NodeHandle* ou
 static
 warn_unused
 bool
-js_dndc_get_classlist_handle(JSContext* jsctx, JSValueConst obj, NodeHandle* out){
+js_dndc_get_classlist_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out){
     uintptr_t p = (uintptr_t)(JS_GetOpaque2(jsctx, obj, JS_DNDC_CLASSLIST_CLASS_ID));
     if(!p){
         return false;
@@ -499,9 +499,9 @@ js_dndc_get_classlist_handle(JSContext* jsctx, JSValueConst obj, NodeHandle* out
 
 static
 void
-set_js_traceback(DndcContext* ctx, JSContext* jsctx){
+set_js_traceback(DndcContext* ctx, QJSContext* jsctx){
     MStringBuilder msb = {.allocator = ctx->string_allocator};
-    JSValue exception_val = JS_GetException(jsctx);
+    QJSValue exception_val = JS_GetException(jsctx);
     int is_error = JS_IsError(jsctx, exception_val);
     {
         const char *str = JS_ToCString(jsctx, exception_val);
@@ -515,7 +515,7 @@ set_js_traceback(DndcContext* ctx, JSContext* jsctx){
         }
     }
     if(is_error){
-        JSValue val = JS_GetPropertyStr(jsctx, exception_val, "stack");
+        QJSValue val = JS_GetPropertyStr(jsctx, exception_val, "stack");
         if(!JS_IsUndefined(val)){
             const char *str = JS_ToCString(jsctx, val);
             if(str){
@@ -535,8 +535,8 @@ set_js_traceback(DndcContext* ctx, JSContext* jsctx){
     }
 
 static
-JSValue
-js_console_log(JSContext *jsctx, JSValueConst thisValue, int argc, JSValueConst *argv)
+QJSValue
+js_console_log(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst *argv)
 {
     (void)thisValue;
     int line_num = -1;
@@ -569,12 +569,12 @@ js_console_log(JSContext *jsctx, JSValueConst thisValue, int argc, JSValueConst 
 
 
 static
-JSValue
-js_freeze_object(JSContext* jsctx, JSValueConst obj){
-    JSValue global_obj = JS_GetGlobalObject(jsctx); // new ref
-    JSValue Object = JS_GetPropertyStr(jsctx, global_obj, "Object");
-    JSValue freeze = JS_GetPropertyStr(jsctx, Object, "freeze");
-    JSValue called = JS_Call(jsctx, freeze, Object, 1, &obj);
+QJSValue
+js_freeze_object(QJSContext* jsctx, QJSValueConst obj){
+    QJSValue global_obj = JS_GetGlobalObject(jsctx); // new ref
+    QJSValue Object = JS_GetPropertyStr(jsctx, global_obj, "Object");
+    QJSValue freeze = JS_GetPropertyStr(jsctx, Object, "freeze");
+    QJSValue called = JS_Call(jsctx, freeze, Object, 1, &obj);
     JS_FreeValue(jsctx, global_obj);
     JS_FreeValue(jsctx, Object);
     JS_FreeValue(jsctx, freeze);
@@ -591,7 +591,7 @@ JSMETHOD(js_dndc_node_parse){
     if(argc != 1){
         return JS_ThrowTypeError(jsctx, "parse must be given a single string argument");
         }
-    JSValueConst str = argv[0];
+    QJSValueConst str = argv[0];
     if(!JS_IsString(str)){
         return JS_ThrowTypeError(jsctx, "parse must be given a single string argument");
         }
@@ -649,7 +649,7 @@ JSMETHOD(js_dndc_node_add_child){
         return JS_ThrowTypeError(jsctx, "need 1 argument to add_child");
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
-    JSValueConst arg = argv[0];
+    QJSValueConst arg = argv[0];
     NodeHandle child;
     if(JS_IsString(arg)){
         StringView sv = jsstring_to_stringview(jsctx, arg, ctx->string_allocator);
@@ -683,8 +683,8 @@ JSMETHOD(js_dndc_node_replace_child){
         return JS_ThrowTypeError(jsctx, "need 2 arguments to replace_child");
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
-    JSValueConst child_arg = argv[0];
-    JSValueConst newchild_arg = argv[1];
+    QJSValueConst child_arg = argv[0];
+    QJSValueConst newchild_arg = argv[1];
     NodeHandle child, new_child;
     if(!js_dndc_get_node_handle(jsctx, child_arg, &child))
         return JS_EXCEPTION;
@@ -725,9 +725,9 @@ JSMETHOD(js_dndc_node_replace_child){
     }
 
 static
-JSValue
-js_make_dndc_node(JSContext*jsctx, NodeHandle handle){
-    JSValue obj = JS_NewObjectClass(jsctx, JS_DNDC_NODE_CLASS_ID);
+QJSValue
+js_make_dndc_node(QJSContext*jsctx, NodeHandle handle){
+    QJSValue obj = JS_NewObjectClass(jsctx, JS_DNDC_NODE_CLASS_ID);
     if(JS_IsException(obj))
         return obj;
     JS_SetOpaque(obj, NodeHandle_to_opaque(handle));
@@ -735,8 +735,8 @@ js_make_dndc_node(JSContext*jsctx, NodeHandle handle){
     }
 
 static
-JSValue
-js_dndc_node_set_type(JSContext* jsctx, JSValueConst thisValue, JSValueConst arg){
+QJSValue
+js_dndc_node_set_type(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst arg){
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
     NodeHandle handle;
@@ -806,8 +806,8 @@ js_dndc_node_set_type(JSContext* jsctx, JSValueConst thisValue, JSValueConst arg
     }
 
 static
-JSValue
-js_dndc_node_get_type(JSContext* jsctx, JSValueConst thisValue){
+QJSValue
+js_dndc_node_get_type(QJSContext* jsctx, QJSValueConst thisValue){
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
     NodeHandle handle;
@@ -819,8 +819,8 @@ js_dndc_node_get_type(JSContext* jsctx, JSValueConst thisValue){
     }
 
 static
-JSValue
-js_dndc_node_get_children(JSContext* jsctx, JSValueConst thisValue){
+QJSValue
+js_dndc_node_get_children(QJSContext* jsctx, QJSValueConst thisValue){
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
     NodeHandle handle;
@@ -828,20 +828,20 @@ js_dndc_node_get_children(JSContext* jsctx, JSValueConst thisValue){
         return JS_EXCEPTION;
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
     Node* node = get_node(ctx, handle);
-    JSValue array = JS_NewArray(jsctx);
+    QJSValue array = JS_NewArray(jsctx);
     if(JS_IsException(array))
         return JS_EXCEPTION;
     // TODO: do these as a batch.
     NODE_CHILDREN_FOR_EACH(child, node){
-        JSValue n = js_make_dndc_node(jsctx, *child);
-        JSValue call = JS_ArrayPush(jsctx, array, 1, &n);
+        QJSValue n = js_make_dndc_node(jsctx, *child);
+        QJSValue call = JS_ArrayPush(jsctx, array, 1, &n);
         JS_FreeValue(jsctx, n);
         if(JS_IsException(call)){
             JS_FreeValue(jsctx, array);
             return call;
             }
         }
-    JSValue froze = js_freeze_object(jsctx, array);
+    QJSValue froze = js_freeze_object(jsctx, array);
     if(JS_IsException(froze)){
         JS_FreeValue(jsctx, array);
         return froze;
@@ -894,7 +894,7 @@ JSGETTER(js_dndc_node_get_id){
     MStringBuilder msb = {.allocator = ctx->temp_allocator};
     msb_write_kebab(&msb, id->text, id->length);
     StringView keb = msb_borrow(&msb);
-    JSValue result = JS_NewStringLen(jsctx, keb.text, keb.length);
+    QJSValue result = JS_NewStringLen(jsctx, keb.text, keb.length);
     msb_destroy(&msb);
     return result;
     }
@@ -916,8 +916,8 @@ JSSETTER(js_dndc_node_set_id){
     }
 
 static
-JSValue
-js_dndc_node_to_string(JSContext* jsctx, JSValueConst thisValue, int argc, JSValueConst* argv){
+QJSValue
+js_dndc_node_to_string(QJSContext* jsctx, QJSValueConst thisValue, int argc, QJSValueConst* argv){
     (void)argc, (void)argv;
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
@@ -938,14 +938,14 @@ js_dndc_node_to_string(JSContext* jsctx, JSValueConst thisValue, int argc, JSVal
         MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node->children.count, " children])");
         }
     StringView text = msb_borrow(&msb);
-    JSValue result = JS_NewStringLen(jsctx, text.text, text.length);
+    QJSValue result = JS_NewStringLen(jsctx, text.text, text.length);
     msb_destroy(&msb);
     return result;
     }
 
 static
-JSValue
-js_dndc_node_get_parent(JSContext* jsctx, JSValueConst thisValue){
+QJSValue
+js_dndc_node_get_parent(QJSContext* jsctx, QJSValueConst thisValue){
     NodeHandle handle;
     if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
         return JS_EXCEPTION;
@@ -964,7 +964,7 @@ JSGETTER(js_dndc_node_get_attributes){
     NodeHandle handle;
     if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
         return JS_EXCEPTION;
-    JSValue obj = JS_NewObjectClass(jsctx, JS_DNDC_ATTRIBUTES_CLASS_ID);
+    QJSValue obj = JS_NewObjectClass(jsctx, JS_DNDC_ATTRIBUTES_CLASS_ID);
     if(JS_IsException(obj))
         return obj;
     JS_SetOpaque(obj, NodeHandle_to_opaque(handle));
@@ -975,7 +975,7 @@ JSGETTER(js_dndc_node_get_classes){
     NodeHandle handle;
     if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
         return JS_EXCEPTION;
-    JSValue obj = JS_NewObjectClass(jsctx, JS_DNDC_CLASSLIST_CLASS_ID);
+    QJSValue obj = JS_NewObjectClass(jsctx, JS_DNDC_CLASSLIST_CLASS_ID);
     if(JS_IsException(obj))
         return obj;
     JS_SetOpaque(obj, NodeHandle_to_opaque(handle));
@@ -1032,7 +1032,7 @@ JSMETHOD(js_dndc_context_make_string){
         return JS_EXCEPTION;
     if(argc != 1)
         return JS_ThrowTypeError(jsctx, "Need 1 string arg to make_string");
-    JSValueConst arg = argv[1];
+    QJSValueConst arg = argv[1];
     if(!JS_IsString(arg))
         return JS_ThrowTypeError(jsctx, "Need 1 string arg to make_string");
     StringView sv = jsstring_to_stringview(jsctx, arg, ctx->string_allocator);
@@ -1051,16 +1051,16 @@ JSMETHOD(js_dndc_context_make_node){
         return JS_EXCEPTION;
     if(argc == 0 or argc > 2)
         return JS_ThrowTypeError(jsctx, "Need type arg and an optional options obj as arguments to make_node");
-    JSValueConst obj = argc == 1? JS_UNDEFINED:argv[1];
+    QJSValueConst obj = argc == 1? JS_UNDEFINED:argv[1];
     int32_t type;
     if(JS_ToInt32(jsctx, &type, argv[0]))
         return JS_EXCEPTION;
     if(type < 0 || type >= NODE_INVALID)
         return JS_ThrowTypeError(jsctx, "type argument invalid");
-    JSValue header = JS_UNDEFINED;
-    JSValue classes = JS_UNDEFINED;
-    JSValue attributes = JS_UNDEFINED;
-    JSValue failure = JS_UNDEFINED;
+    QJSValue header = JS_UNDEFINED;
+    QJSValue classes = JS_UNDEFINED;
+    QJSValue attributes = JS_UNDEFINED;
+    QJSValue failure = JS_UNDEFINED;
     if(argc != 1){
         header = JS_GetPropertyStr(jsctx, obj, "header");
         classes = JS_GetPropertyStr(jsctx, obj, "classes");
@@ -1082,7 +1082,7 @@ JSMETHOD(js_dndc_context_make_node){
             failure = JS_ThrowTypeError(jsctx, "classes should be an array");
             goto fail;
             }
-        JSValue length_ = JS_GetPropertyStr(jsctx, classes, "length");
+        QJSValue length_ = JS_GetPropertyStr(jsctx, classes, "length");
         int32_t length;
         if(JS_ToInt32(jsctx, &length, length_)){
             JS_FreeValue(jsctx, length_);
@@ -1090,7 +1090,7 @@ JSMETHOD(js_dndc_context_make_node){
             goto fail;
             }
         for(int32_t i = 0; i < length; i++){
-            JSValue s = JS_GetPropertyUint32(jsctx, classes, i);
+            QJSValue s = JS_GetPropertyUint32(jsctx, classes, i);
             StringView sv = jsstring_to_stringview(jsctx, s, ctx->string_allocator);
             JS_FreeValue(jsctx, s);
             if(!sv.text){
@@ -1105,7 +1105,7 @@ JSMETHOD(js_dndc_context_make_node){
             failure = JS_ThrowTypeError(jsctx, "attributes should be an array");
             goto fail;
             }
-        JSValue length_ = JS_GetPropertyStr(jsctx, attributes, "length");
+        QJSValue length_ = JS_GetPropertyStr(jsctx, attributes, "length");
         int32_t length;
         if(JS_ToInt32(jsctx, &length, length_)){
             JS_FreeValue(jsctx, length_);
@@ -1113,7 +1113,7 @@ JSMETHOD(js_dndc_context_make_node){
             goto fail;
             }
         for(int32_t i = 0; i < length; i++){
-            JSValue s = JS_GetPropertyUint32(jsctx, attributes, i);
+            QJSValue s = JS_GetPropertyUint32(jsctx, attributes, i);
             StringView sv = jsstring_to_stringview(jsctx, s, ctx->string_allocator);
             JS_FreeValue(jsctx, s);
             if(!sv.text){
@@ -1194,7 +1194,7 @@ JSMETHOD(js_dndc_context_kebab){
     MStringBuilder msb = {.allocator = ctx->temp_allocator};
     msb_write_kebab(&msb, sv.text, sv.length);
     auto keb = msb_borrow(&msb);
-    JSValue result = JS_NewStringLen(jsctx, keb.text, keb.length);
+    QJSValue result = JS_NewStringLen(jsctx, keb.text, keb.length);
     msb_destroy(&msb);
     Allocator_free(ctx->temp_allocator, sv.text, sv.length);
     return result;
@@ -1230,7 +1230,7 @@ JSMETHOD(js_dndc_context_read_file){
     auto e = ctx_load_source_file(ctx, path);
     Allocator_free(ctx->temp_allocator, path.text, path.length);
     if(e.errored){
-        JSValue error = JS_ThrowTypeError(jsctx, "bad path");
+        QJSValue error = JS_ThrowTypeError(jsctx, "bad path");
         return error;
         }
     auto text = e.result;
@@ -1243,7 +1243,7 @@ JSMETHOD(js_dndc_context_select_nodes){
         return JS_EXCEPTION;
     if(argc != 1)
         return JS_ThrowTypeError(jsctx, "Need 1 obj argument to select_nodes");
-    JSValue arg = argv[0];
+    QJSValue arg = argv[0];
     if(!JS_IsObject(arg))
         return JS_ThrowTypeError(jsctx, "Need 1 obj argument to select_nodes");
     LinearAllocator la = new_linear_storage(1024*1024, "select_nodes allocator");
@@ -1252,7 +1252,7 @@ JSMETHOD(js_dndc_context_select_nodes){
     Marray(StringView) attributes_array = {};
     Marray(StringView) classes_array = {};
     {
-        JSValue jstype_ = JS_GetPropertyStr(jsctx, arg, "type");
+        QJSValue jstype_ = JS_GetPropertyStr(jsctx, arg, "type");
         if(JS_IsException(jstype_))
             return jstype_;
         if(!JS_IsUndefined(jstype_)){
@@ -1264,9 +1264,9 @@ JSMETHOD(js_dndc_context_select_nodes){
             type = type_;
             }
     }
-    JSValue classes = JS_UNDEFINED;
-    JSValue attributes = JS_UNDEFINED;
-    JSValue failure = JS_UNDEFINED;
+    QJSValue classes = JS_UNDEFINED;
+    QJSValue attributes = JS_UNDEFINED;
+    QJSValue failure = JS_UNDEFINED;
     classes = JS_GetPropertyStr(jsctx, arg, "classes");
     attributes = JS_GetPropertyStr(jsctx, arg, "attributes");
     if(!JS_IsUndefined(classes)){
@@ -1274,7 +1274,7 @@ JSMETHOD(js_dndc_context_select_nodes){
             failure = JS_ThrowTypeError(jsctx, "classes should be an array");
             goto fail;
             }
-        JSValue length_ = JS_GetPropertyStr(jsctx, classes, "length");
+        QJSValue length_ = JS_GetPropertyStr(jsctx, classes, "length");
         int32_t length;
         if(JS_ToInt32(jsctx, &length, length_)){
             JS_FreeValue(jsctx, length_);
@@ -1284,7 +1284,7 @@ JSMETHOD(js_dndc_context_select_nodes){
         if(length > 0)
             Marray_ensure_total(StringView)(&classes_array, tmp, length);
         for(int32_t i = 0; i < length; i++){
-            JSValue s = JS_GetPropertyUint32(jsctx, classes, i);
+            QJSValue s = JS_GetPropertyUint32(jsctx, classes, i);
             StringView sv = jsstring_to_stringview(jsctx, s, tmp);
             JS_FreeValue(jsctx, s);
             if(!sv.text){
@@ -1299,7 +1299,7 @@ JSMETHOD(js_dndc_context_select_nodes){
             failure = JS_ThrowTypeError(jsctx, "attributes should be an array");
             goto fail;
             }
-        JSValue length_ = JS_GetPropertyStr(jsctx, attributes, "length");
+        QJSValue length_ = JS_GetPropertyStr(jsctx, attributes, "length");
         int32_t length;
         if(JS_ToInt32(jsctx, &length, length_)){
             JS_FreeValue(jsctx, length_);
@@ -1309,7 +1309,7 @@ JSMETHOD(js_dndc_context_select_nodes){
         if(length > 0)
             Marray_ensure_total(StringView)(&attributes_array, tmp, length);
         for(int32_t i = 0; i < length; i++){
-            JSValue s = JS_GetPropertyUint32(jsctx, attributes, i);
+            QJSValue s = JS_GetPropertyUint32(jsctx, attributes, i);
             StringView sv = jsstring_to_stringview(jsctx, s, tmp);
             JS_FreeValue(jsctx, s);
             if(!sv.text){
@@ -1319,7 +1319,7 @@ JSMETHOD(js_dndc_context_select_nodes){
             attributes_array.data[attributes_array.count++] = sv;
             }
         }
-    JSValue result = JS_NewArray(jsctx);
+    QJSValue result = JS_NewArray(jsctx);
     if(!classes_array.count && !attributes_array.count && type < 0){
         for(size_t i = 0; i < ctx->nodes.count; i++){
             JS_SetPropertyUint32(jsctx, result, i, js_make_dndc_node(jsctx, (NodeHandle){.index=i}));
@@ -1375,21 +1375,21 @@ JSMETHOD(js_dndc_context_to_string){
     MSB_FORMAT(&msb, "  flags: ", ctx->flags, ",\n");
     msb_write_literal(&msb, "}");
     StringView text = msb_borrow(&msb);
-    JSValue result = JS_NewStringLen(jsctx, text.text, text.length);
+    QJSValue result = JS_NewStringLen(jsctx, text.text, text.length);
     msb_destroy(&msb);
     return result;
     }
 
 static
 DndcContext*_Nullable
-js_get_dndc_context(JSContext* ctx, JSValue thisValue){
+js_get_dndc_context(QJSContext* ctx, QJSValue thisValue){
     return JS_GetOpaque2(ctx, thisValue, JS_DNDC_CONTEXT_CLASS_ID);
     }
 
 static
-JSValue
-js_make_dndc_context(JSContext*jsctx, DndcContext* ctx){
-    JSValue obj = JS_NewObjectClass(jsctx, JS_DNDC_CONTEXT_CLASS_ID);
+QJSValue
+js_make_dndc_context(QJSContext*jsctx, DndcContext* ctx){
+    QJSValue obj = JS_NewObjectClass(jsctx, JS_DNDC_CONTEXT_CLASS_ID);
     if(JS_IsException(obj))
         return obj;
     JS_SetOpaque(obj, ctx);
@@ -1397,8 +1397,8 @@ js_make_dndc_context(JSContext*jsctx, DndcContext* ctx){
     }
 
 static
-JSValue
-js_dndc_context_get_root(JSContext* jsctx, JSValueConst thisValue){
+QJSValue
+js_dndc_context_get_root(QJSContext* jsctx, QJSValueConst thisValue){
     DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
     if(!ctx)
         return JS_EXCEPTION;
@@ -1409,8 +1409,8 @@ js_dndc_context_get_root(JSContext* jsctx, JSValueConst thisValue){
     }
 
 static
-JSValue
-js_dndc_context_set_root(JSContext* jsctx, JSValueConst thisValue, JSValueConst node){
+QJSValue
+js_dndc_context_set_root(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst node){
     DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
     if(!ctx)
         return JS_EXCEPTION;
@@ -1465,9 +1465,9 @@ JSGETTER(js_dndc_context_get_all_nodes){
     DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
     if(!ctx)
         return JS_EXCEPTION;
-    JSValue result = JS_NewArray(jsctx);
+    QJSValue result = JS_NewArray(jsctx);
     for(size_t i = 0; i < ctx->nodes.count; i++){
-        JSValue n = js_make_dndc_node(jsctx, (NodeHandle){._value=i});
+        QJSValue n = js_make_dndc_node(jsctx, (NodeHandle){._value=i});
         JS_ArrayPush(jsctx, result, 1, &n);
         JS_FreeValue(jsctx, n);
         }
@@ -1481,7 +1481,7 @@ JSGETTER(js_dndc_context_get_all_nodes){
 JSMETHOD(js_dndc_attributes_get){
     if(argc != 1)
         return JS_ThrowTypeError(jsctx, "get takes 1 argument");
-    JSValueConst arg = argv[0];
+    QJSValueConst arg = argv[0];
     if(!JS_IsString(arg))
         return JS_ThrowTypeError(jsctx, "get takes 1 string argument");
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
@@ -1505,7 +1505,7 @@ JSMETHOD(js_dndc_attributes_get){
 JSMETHOD(js_dndc_attributes_set){
     if(argc == 0 || argc > 2)
         return JS_ThrowTypeError(jsctx, "set takes 1 or 2 arguments");
-    JSValueConst key_arg = argv[0];
+    QJSValueConst key_arg = argv[0];
     if(!JS_IsString(key_arg))
         return JS_ThrowTypeError(jsctx, "get takes 1 string argument");
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
@@ -1550,7 +1550,7 @@ JSMETHOD(js_dndc_attributes_to_string){
     msb_erase(&msb, 1);
     msb_write_literal(&msb, "\n}");
     StringView text = msb_borrow(&msb);
-    JSValue result = JS_NewStringLen(jsctx, text.text, text.length);
+    QJSValue result = JS_NewStringLen(jsctx, text.text, text.length);
     msb_destroy(&msb);
     return result;
     }
@@ -1567,22 +1567,22 @@ JSMETHOD(js_dndc_attributes_entries){
         return JS_EXCEPTION;
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
     Node* node = get_node(ctx, handle);
-    JSValue result = JS_NewArray(jsctx);
+    QJSValue result = JS_NewArray(jsctx);
     RARRAY_FOR_EACH(kv, node->attributes){
-        JSValue pair = JS_NewArray(jsctx);
-        JSValue js_kv[2] = {
+        QJSValue pair = JS_NewArray(jsctx);
+        QJSValue js_kv[2] = {
             JS_NewStringLen(jsctx, kv->key.text, kv->key.length),
             JS_NewStringLen(jsctx, kv->value.text, kv->value.length),
             };
-        JSValue call = JS_ArrayPush(jsctx, pair, 2, js_kv);
+        QJSValue call = JS_ArrayPush(jsctx, pair, 2, js_kv);
         assert(!JS_IsException(call));
         JS_FreeValue(jsctx, js_kv[0]);
         JS_FreeValue(jsctx, js_kv[1]);
         JS_ArrayPush(jsctx, result, 1, &pair);
         JS_FreeValue(jsctx, pair);
         }
-    JSValue values = JS_GetPropertyStr(jsctx, result, "values");
-    JSValue realresult = JS_Call(jsctx, values, result, 0, NULL);
+    QJSValue values = JS_GetPropertyStr(jsctx, result, "values");
+    QJSValue realresult = JS_Call(jsctx, values, result, 0, NULL);
     JS_FreeValue(jsctx, values);
     JS_FreeValue(jsctx, result);
     result = realresult;
@@ -1595,7 +1595,7 @@ JSMETHOD(js_dndc_attributes_entries){
 JSMETHOD(js_dndc_classlist_append){
     if(argc != 1)
         return JS_ThrowTypeError(jsctx, "append takes 1 string argument");
-    JSValueConst arg = argv[0];
+    QJSValueConst arg = argv[0];
     if(!JS_IsString(arg))
         return JS_ThrowTypeError(jsctx, "append takes 1 string argument");
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
@@ -1630,7 +1630,7 @@ JSMETHOD(js_dndc_classlist_to_string){
         msb_erase(&msb, 2);
     msb_write_char(&msb, ']');
     StringView text = msb_borrow(&msb);
-    JSValue result = JS_NewStringLen(jsctx, text.text, text.length);
+    QJSValue result = JS_NewStringLen(jsctx, text.text, text.length);
     msb_destroy(&msb);
     return result;
     }
@@ -1645,14 +1645,14 @@ JSMETHOD(js_dndc_classlist_values){
     if(!js_dndc_get_classlist_handle(jsctx, thisValue, &handle))
         return JS_EXCEPTION;
     Node* node = get_node(ctx, handle);
-    JSValue array = JS_NewArray(jsctx);
+    QJSValue array = JS_NewArray(jsctx);
     unsigned i = 0;
     RARRAY_FOR_EACH(c, node->classes){
         JS_SetPropertyUint32(jsctx, array, i, JS_NewStringLen(jsctx, c->text, c->length));
         i++;
         }
-    JSValue values = JS_GetPropertyStr(jsctx, array, "values");
-    JSValue result = JS_Call(jsctx, values, array, 0, NULL);
+    QJSValue values = JS_GetPropertyStr(jsctx, array, "values");
+    QJSValue result = JS_Call(jsctx, values, array, 0, NULL);
     JS_FreeValue(jsctx, array);
     JS_FreeValue(jsctx, values);
     return result;

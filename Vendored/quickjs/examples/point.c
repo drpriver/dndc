@@ -35,20 +35,20 @@ typedef struct {
 
 static JSClassID js_point_class_id;
 
-static void js_point_finalizer(JSRuntime *rt, JSValue val)
+static void js_point_finalizer(QJSRuntime *rt, QJSValue val)
 {
     JSPointData *s = JS_GetOpaque(val, js_point_class_id);
     /* Note: 's' can be NULL in case JS_SetOpaque() was not called */
     js_free_rt(rt, s);
 }
 
-static JSValue js_point_ctor(JSContext *ctx,
-                             JSValueConst new_target,
-                             int argc, JSValueConst *argv)
+static QJSValue js_point_ctor(QJSContext *ctx,
+                             QJSValueConst new_target,
+                             int argc, QJSValueConst *argv)
 {
     JSPointData *s;
-    JSValue obj = JS_UNDEFINED;
-    JSValue proto;
+    QJSValue obj = JS_UNDEFINED;
+    QJSValue proto;
 
     s = js_mallocz(ctx, sizeof(*s));
     if (!s)
@@ -74,7 +74,7 @@ static JSValue js_point_ctor(JSContext *ctx,
     return JS_EXCEPTION;
 }
 
-static JSValue js_point_get_xy(JSContext *ctx, JSValueConst this_val, int magic)
+static QJSValue js_point_get_xy(QJSContext *ctx, QJSValueConst this_val, int magic)
 {
     JSPointData *s = JS_GetOpaque2(ctx, this_val, js_point_class_id);
     if (!s)
@@ -85,7 +85,7 @@ static JSValue js_point_get_xy(JSContext *ctx, JSValueConst this_val, int magic)
         return JS_NewInt32(ctx, s->y);
 }
 
-static JSValue js_point_set_xy(JSContext *ctx, JSValueConst this_val, JSValue val, int magic)
+static QJSValue js_point_set_xy(QJSContext *ctx, QJSValueConst this_val, QJSValue val, int magic)
 {
     JSPointData *s = JS_GetOpaque2(ctx, this_val, js_point_class_id);
     int v;
@@ -100,8 +100,8 @@ static JSValue js_point_set_xy(JSContext *ctx, JSValueConst this_val, JSValue va
     return JS_UNDEFINED;
 }
 
-static JSValue js_point_norm(JSContext *ctx, JSValueConst this_val,
-                             int argc, JSValueConst *argv)
+static QJSValue js_point_norm(QJSContext *ctx, QJSValueConst this_val,
+                             int argc, QJSValueConst *argv)
 {
     JSPointData *s = JS_GetOpaque2(ctx, this_val, js_point_class_id);
     if (!s)
@@ -120,9 +120,9 @@ static const JSCFunctionListEntry js_point_proto_funcs[] = {
     JS_CFUNC_DEF("norm", 0, js_point_norm),
 };
 
-static int js_point_init(JSContext *ctx, JSModuleDef *m)
+static int js_point_init(QJSContext *ctx, JSModuleDef *m)
 {
-    JSValue point_proto, point_class;
+    QJSValue point_proto, point_class;
 
     /* create the Point class */
     JS_NewClassID(&js_point_class_id);
@@ -140,7 +140,7 @@ static int js_point_init(JSContext *ctx, JSModuleDef *m)
     return 0;
 }
 
-JSModuleDef *js_init_module(JSContext *ctx, const char *module_name)
+JSModuleDef *js_init_module(QJSContext *ctx, const char *module_name)
 {
     JSModuleDef *m;
     m = JS_NewCModule(ctx, module_name, js_point_init);

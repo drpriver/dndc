@@ -172,8 +172,8 @@ static void dump_hex(FILE *f, const uint8_t *buf, size_t len)
         fprintf(f, "\n");
 }
 
-static void output_object_code(JSContext *ctx,
-                               FILE *fo, JSValueConst obj, const char *c_name,
+static void output_object_code(QJSContext *ctx,
+                               FILE *fo, QJSValueConst obj, const char *c_name,
                                BOOL load_only)
 {
     uint8_t *out_buf;
@@ -200,7 +200,7 @@ static void output_object_code(JSContext *ctx,
     js_free(ctx, out_buf);
 }
 
-static int js_module_dummy_init(JSContext *ctx, JSModuleDef *m)
+static int js_module_dummy_init(QJSContext *ctx, JSModuleDef *m)
 {
     /* should never be called when compiling JS code */
     abort();
@@ -228,7 +228,7 @@ static void find_unique_cname(char *cname, size_t cname_size)
     pstrcpy(cname, cname_size, cname1);
 }
 
-JSModuleDef *jsc_module_loader(JSContext *ctx,
+JSModuleDef *jsc_module_loader(QJSContext *ctx,
                               const char *module_name, void *opaque)
 {
     JSModuleDef *m;
@@ -251,7 +251,7 @@ JSModuleDef *jsc_module_loader(JSContext *ctx,
     } else {
         size_t buf_len;
         uint8_t *buf;
-        JSValue func_val;
+        QJSValue func_val;
         char cname[1024];
 
         buf = js_load_file(ctx, &buf_len, module_name);
@@ -280,7 +280,7 @@ JSModuleDef *jsc_module_loader(JSContext *ctx,
     return m;
 }
 
-static void compile_file(JSContext *ctx, FILE *fo,
+static void compile_file(QJSContext *ctx, FILE *fo,
                          const char *filename,
                          const char *c_name1,
                          int module)
@@ -288,7 +288,7 @@ static void compile_file(JSContext *ctx, FILE *fo,
     uint8_t *buf;
     char c_name[1024];
     int eval_flags;
-    JSValue obj;
+    QJSValue obj;
     size_t buf_len;
 
     buf = js_load_file(ctx, &buf_len, filename);
@@ -323,8 +323,8 @@ static void compile_file(JSContext *ctx, FILE *fo,
 static const char main_c_template1[] =
     "int main(int argc, char **argv)\n"
     "{\n"
-    "  JSRuntime *rt;\n"
-    "  JSContext *ctx;\n"
+    "  QJSRuntime *rt;\n"
+    "  QJSContext *ctx;\n"
     "  rt = JS_NewRuntime();\n"
     "  js_std_set_worker_new_context_func(JS_NewCustomContext);\n"
     "  js_std_init_handlers(rt);\n"
@@ -487,8 +487,8 @@ int main(int argc, char **argv)
     const char *out_filename, *cname;
     char cfilename[1024];
     FILE *fo;
-    JSRuntime *rt;
-    JSContext *ctx;
+    QJSRuntime *rt;
+    QJSContext *ctx;
     BOOL use_lto;
     int module;
     OutputTypeEnum output_type;
@@ -673,9 +673,9 @@ int main(int argc, char **argv)
 
     if (output_type != OUTPUT_C) {
         fprintf(fo,
-                "static JSContext *JS_NewCustomContext(JSRuntime *rt)\n"
+                "static QJSContext *JS_NewCustomContext(QJSRuntime *rt)\n"
                 "{\n"
-                "  JSContext *ctx = JS_NewContextRaw(rt);\n"
+                "  QJSContext *ctx = JS_NewContextRaw(rt);\n"
                 "  if (!ctx)\n"
                 "    return NULL;\n");
         /* add the basic objects */
@@ -704,7 +704,7 @@ int main(int argc, char **argv)
 
             fprintf(fo,
                     "  {\n"
-                    "    extern JSModuleDef *js_init_module_%s(JSContext *ctx, const char *name);\n"
+                    "    extern JSModuleDef *js_init_module_%s(QJSContext *ctx, const char *name);\n"
                     "    js_init_module_%s(ctx, \"%s\");\n"
                     "  }\n",
                     e->short_name, e->short_name, e->name);
