@@ -1,18 +1,34 @@
+Version 0.7.0::md
+  * js blocks have been renamed to script (which is what they used to be).
+  * A new scripting language has been added - javascript.
+    - Use 'js' blocks for them (thus why js blocks were renamed).
+    - You can now use javascript instead of python to programmatically interact
+      with the document.
+    - Just like with the python blocks, you have access to the document via a
+      'ctx' variable and the block itself via the 'node' variable.
+    - Using the quickjs library to implement this.
+
 Version 0.6.2::md
-  * Scroll position within the document is now preserved between refreshes in some cases.
+  * Scroll position within the document is now preserved between refreshes in
+    some cases.
+
 Version 0.6.1::md
   * Internal API changes
   * Bug fixes and performance improvements.
+
 Version 0.6.0::md
   * Internal API changes
   * Bug fixes and performance improvements.
+
 Version 0.5.2::md
   * Fixed an issue where single item rows of tables were being ignored.
   * Nodes with ids but no heading will no longer be shown in the generated nav.
+
 Version 0.5.1::md
-  * It is no longer possible to crash the formatter by having a table
-    with more than 100 items in a single row.
+  * It is no longer possible to crash the formatter by having a table with more
+    than 100 items in a single row.
   * Data blobs are only generated if there is data to put in them now.
+
 Version 0.5.0::md
   * Internal API changes
   * Bug fixes and performance improvements.
@@ -67,7 +83,7 @@ Version 0.4.0::md
     - Rules/religion.dnd. It shows linking to external sites.
   * Clicking links to external urls now opens them in your system's default
     browser instead of blocking the request.
-    
+
 Version 0.3.15::md
   * Implemented new syntax highlighter, is actually accurate now.
     - The colors are kind of wonky. Idk I'm not a graphic designer.

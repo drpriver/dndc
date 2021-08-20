@@ -1,4 +1,4 @@
-DNDCVERSION = 0.6.2
+DNDCVERSION = 0.7.0
 
 $(BINDIR)/libquickjs$(SO): Vendored/quickjs/libquickjs$(SO)
 	cp $< $@
