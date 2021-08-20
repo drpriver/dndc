@@ -17,6 +17,7 @@ TOUCH=$(PYTHON) -m Scripts.win_utils touch
 MKDIR=$(PYTHON) -m Scripts.win_utils mkdir
 CP=$(PYTHON) -m Scripts.win_utils cp
 EXE=.exe
+SO=.dll
 INSTALL=$(PYTHON) -m Scripts.win_utils install
 
 ifeq ($(PYCFLAGS), )

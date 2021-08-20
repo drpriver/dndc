@@ -25,6 +25,7 @@ TOUCH=touch
 MKDIR=mkdir
 CP=cp
 EXE=
+SO=.so
 INSTALL=install
 PYEXTENSION=.cpython-38-x86_64-linux-gnu.so
 PYEXTFLAGS=-shared -fPIC
