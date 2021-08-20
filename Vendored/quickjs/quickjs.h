@@ -22,6 +22,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Modifications by D. Priver are released into the public domain.
+ */
 #ifndef QUICKJS_H
 #define QUICKJS_H
 
@@ -1042,12 +1046,18 @@ int JS_SetModuleExportList(JSContext *ctx, JSModuleDef *m,
 #undef js_unlikely
 #undef js_force_inline
 
+//
 // NOTE(dpriver): This was not originally in quickjs
 // I added it so I could implement logging
 //
 // returns -1 on error, without setting exception.
 int
 JS_get_caller_location(JSContext* ctx, const char** filename, const char** funcname, int* line_num);
+
+//
+// NOTE(dpriver): This not being exposed was super annoying.
+JSValue
+JS_ArrayPush(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
 
 #ifdef __cplusplus
 } /* extern "C" { */

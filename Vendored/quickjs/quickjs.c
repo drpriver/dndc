@@ -22,6 +22,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+/*
+ * Modifications by D. Priver are released into the public domain.
+ */
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -54061,3 +54065,12 @@ JS_get_caller_location(JSContext* ctx, const char** filename, const char** funcn
     }
     return 0;
 }
+
+//
+// NOTE(dpriver): This not being exposed was super
+// annoying.
+//
+JSValue
+JS_ArrayPush(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv){
+    return js_array_push(ctx, this_val, argc, argv, 0);
+    }

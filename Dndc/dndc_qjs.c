@@ -831,20 +831,16 @@ js_dndc_node_get_children(JSContext* jsctx, JSValueConst thisValue){
     JSValue array = JS_NewArray(jsctx);
     if(JS_IsException(array))
         return JS_EXCEPTION;
-    JSValue push = JS_GetPropertyStr(jsctx, array, "push");
     // TODO: do these as a batch.
     NODE_CHILDREN_FOR_EACH(child, node){
         JSValue n = js_make_dndc_node(jsctx, *child);
-        // returns ints, so don't bother freeing
-        JSValue call = JS_Call(jsctx, push, array, 1, &n);
+        JSValue call = JS_ArrayPush(jsctx, array, 1, &n);
         JS_FreeValue(jsctx, n);
         if(JS_IsException(call)){
             JS_FreeValue(jsctx, array);
-            JS_FreeValue(jsctx, push);
             return call;
             }
         }
-    JS_FreeValue(jsctx, push);
     JSValue froze = js_freeze_object(jsctx, array);
     if(JS_IsException(froze)){
         JS_FreeValue(jsctx, array);
@@ -1470,13 +1466,11 @@ JSGETTER(js_dndc_context_get_all_nodes){
     if(!ctx)
         return JS_EXCEPTION;
     JSValue result = JS_NewArray(jsctx);
-    JSValue push = JS_GetPropertyStr(jsctx, result, "push");
     for(size_t i = 0; i < ctx->nodes.count; i++){
         JSValue n = js_make_dndc_node(jsctx, (NodeHandle){._value=i});
-        JS_Call(jsctx, push, result, 1, &n);
+        JS_ArrayPush(jsctx, result, 1, &n);
         JS_FreeValue(jsctx, n);
         }
-    JS_FreeValue(jsctx, push);
     return result;
     }
 
@@ -1574,22 +1568,19 @@ JSMETHOD(js_dndc_attributes_entries){
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
     Node* node = get_node(ctx, handle);
     JSValue result = JS_NewArray(jsctx);
-    JSValue push = JS_GetPropertyStr(jsctx, result, "push");
-    assert(!JS_IsUndefined(push));
     RARRAY_FOR_EACH(kv, node->attributes){
         JSValue pair = JS_NewArray(jsctx);
         JSValue js_kv[2] = {
             JS_NewStringLen(jsctx, kv->key.text, kv->key.length),
             JS_NewStringLen(jsctx, kv->value.text, kv->value.length),
             };
-        JSValue call = JS_Call(jsctx, push, pair, 2, js_kv);
+        JSValue call = JS_ArrayPush(jsctx, pair, 2, js_kv);
         assert(!JS_IsException(call));
         JS_FreeValue(jsctx, js_kv[0]);
         JS_FreeValue(jsctx, js_kv[1]);
-        JS_Call(jsctx, push, result, 1, &pair);
+        JS_ArrayPush(jsctx, result, 1, &pair);
         JS_FreeValue(jsctx, pair);
         }
-    JS_FreeValue(jsctx, push);
     JSValue values = JS_GetPropertyStr(jsctx, result, "values");
     JSValue realresult = JS_Call(jsctx, values, result, 0, NULL);
     JS_FreeValue(jsctx, values);
