@@ -8,7 +8,7 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 
 find_package(Python3 3.8 COMPONENTS Development)
 
-include_directories(Utils Dndc PythonEmbed Allocators PythonEmbed/frozen)
+include_directories(Utils Dndc PythonEmbed Allocators PythonEmbed/frozen Vendored/quickjs)
 
 if(WIN32)
 include_directories(Platform/Windows)
@@ -22,7 +22,23 @@ add_executable(dndc
     PythonEmbed/frozenstdlib.c
     )
 
-target_link_libraries(dndc ${Python3_LIBRARIES})
+add_library(quickjs-dylib
+		SHARED
+		Vendored/quickjs/quickjs.c
+		Vendored/quickjs/libregexp.c
+		Vendored/quickjs/libunicode.c
+		Vendored/quickjs/cutils.c
+		)
+add_library(quickjs-lib
+		STATIC
+		Vendored/quickjs/quickjs.c
+		Vendored/quickjs/libregexp.c
+		Vendored/quickjs/libunicode.c
+		Vendored/quickjs/cutils.c
+		)
+target_compile_definitions(quickjs-dylib PRIVATE CONFIG_VERSION="2021-03-27")
+
+target_link_libraries(dndc ${Python3_LIBRARIES} quickjs-dylib)
 target_include_directories(dndc PRIVATE ${Python3_INCLUDE_DIRS})
 target_compile_definitions(dndc PRIVATE DNDCMAIN)
 
@@ -44,7 +60,7 @@ set_target_properties(dndc-lib
     PROPERTIES OUTPUT_NAME dndc
     VERSION ${PROJECT_VERSION}
     )
-target_link_libraries(dndc-dylib ${Python3_LIBRARIES})
+target_link_libraries(dndc-dylib ${Python3_LIBRARIES} quickjs-dylib)
 target_include_directories(dndc-dylib PRIVATE ${Python3_INCLUDE_DIRS})
 # change the SOVERSION thing when I decide to release 1.0
 set_target_properties(dndc-dylib
@@ -77,6 +93,7 @@ if(APPLE)
 
     target_link_libraries(gdndc
         ${Python3_LIBRARIES}
+		quickjs-dylib
         "-framework Cocoa"
         "-framework WebKit"
         )
@@ -90,7 +107,10 @@ add_executable(gdndc
     Dndc/dndc.c
     PythonEmbed/frozenstdlib.c
     )
-target_link_libraries(gdndc ${Python3_LIBRARIES})
+target_link_libraries(gdndc
+		${Python3_LIBRARIES}
+		quickjs-dylib
+		)
 target_include_directories(gdndc PRIVATE ${Python3_INCLUDE_DIRS} Dndc)
 endif()
 
@@ -113,12 +133,17 @@ add_test(rarray TestRarray)
 
 add_executable(TestDndc Dndc/TestDndc.c PythonEmbed/frozenstdlib.c)
 add_test(dndc TestDndc -C ${CMAKE_SOURCE_DIR})
-target_link_libraries(TestDndc ${Python3_LIBRARIES})
+target_link_libraries(TestDndc
+		${Python3_LIBRARIES}
+		quickjs-lib
+		)
 target_include_directories(TestDndc PRIVATE ${Python3_INCLUDE_DIRS})
 
 # installs
 install(TARGETS dndc DESTINATION bin)
 install(TARGETS dndc-lib DESTINATION lib)
+install(TARGETS quickjs-dylib DESTINATION lib)
+install(TARGETS quickjs-lib DESTINATION lib)
 install(TARGETS dndc-dylib
     LIBRARY DESTINATION lib
     PUBLIC_HEADER DESTINATION include/Dndc

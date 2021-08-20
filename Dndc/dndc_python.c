@@ -1413,6 +1413,9 @@ DndNode_setattr_ls(DndNode* obj, LongString name, Nullable(PyObject*) value){
                         case NODE_DATA:
                             Marray_push(NodeHandle)(&ctx->data_nodes, ctx->allocator, obj->handle);
                             break;
+                        case NODE_JS:
+                            PyErr_SetString(PyExc_ValueError, "Setting a node to JS not supported.");
+                            return -1;
                         case NODE_PYTHON:
                             PyErr_SetString(PyExc_ValueError, "Setting a node to PYTHON not supported.");
                             return -1;

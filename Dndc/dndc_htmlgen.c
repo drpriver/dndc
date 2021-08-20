@@ -294,6 +294,7 @@ build_nav_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
         case NODE_LINKS:
         case NODE_SCRIPTS:
         case NODE_PYTHON:
+        case NODE_JS:
         case NODE_STRING:
         case NODE_NAV:
         case NODE_COMMENT:
@@ -854,6 +855,14 @@ RENDERFUNC(PYTHON){
     (void)header_depth;
     return (Errorable(void)){};
     }
+RENDERFUNC(JS){
+    // intentionally not outputting this
+    (void)ctx;
+    (void)sb;
+    (void)node;
+    (void)header_depth;
+    return (Errorable(void)){};
+    }
 RENDERFUNC(RAW){
     // Don't let people smuggle <script> tags in!
     // Changes the semantics a bit, but oh well.
@@ -1170,7 +1179,7 @@ RENDERFUNC(IMGLINKS){
     for(size_t i = 4; i < node->children.count; i++){
         auto child = get_node(ctx, children[i]);
         if(child->type != NODE_STRING){
-            if(child->type == NODE_PYTHON)
+            if(child->type == NODE_PYTHON || child->type == NODE_JS || child->type == NODE_COMMENT)
                 continue;
             node_print_warning2(ctx, child, SV("Non-string node child of imglinks node: "), LS_to_SV(NODENAMES[child->type]));
             continue;

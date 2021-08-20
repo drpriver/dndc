@@ -64,6 +64,73 @@ THREADFUNC(binary_worker){
     return 0;
     }
 
+// FIXME: these store the runtime in a void* because I
+// am lazy and didn't want to forward declare the
+// JSRuntime
+static
+Errorable_f(void)
+execute_qjs_string(void*rt, DndcContext* ctx, const char* str, size_t length, NodeHandle handle);
+
+static
+void* get_qjs_rt(void);
+
+static
+void free_qjs_rt(void*);
+
+static
+Errorable_f(void)
+do_js(DndcContext* ctx){
+    Errorable(void) result = {};
+    if(/*!(flags & DNDC_NO_PYTHON) and*/ ctx->js_nodes.count){
+        auto before = get_t();
+        auto after = get_t();
+        void* rt = get_qjs_rt();
+        for(size_t i = 0; i < ctx->js_nodes.count; i++){
+            auto handle = ctx->js_nodes.data[i];
+            {
+            auto node = get_node(ctx, handle);
+            if(node->type != NODE_JS)
+                continue;
+            MStringBuilder msb = {.allocator=ctx->string_allocator};
+            msb_write_literal(&msb, "\"use strict\"\n");
+            msb_write_nchar(&msb, '\n', node->row);
+            NODE_CHILDREN_FOR_EACH(it, node){
+                auto child = *it;
+                auto child_node = get_node(ctx, child);
+                msb_write_str(&msb, child_node->header.text, child_node->header.length);
+                msb_write_char(&msb, '\n');
+                }
+            if(!msb.cursor)
+                continue;
+            auto str = msb_detach(&msb);
+            auto qjs_err = execute_qjs_string(rt, ctx, str.text, str.length, handle);
+            if(qjs_err.errored){
+                report_set_error(ctx);
+                result.errored = qjs_err.errored;
+                goto cleanup;
+                }
+            }
+            auto node = get_node(ctx, handle);
+            // unsure if this is right, but doing it for now.
+            auto parent = get_node(ctx, node->parent);
+            node->parent = INVALID_NODE_HANDLE;
+            for(size_t j = 0; j < parent->children.count; j++){
+                if(NodeHandle_eq(handle, node_children(parent)[j])){
+                    node_remove_child(parent, j, ctx->allocator);
+                    goto after;
+                    }
+                }
+            // don't both warning here, but leave the scaffolding in case I want to.
+            after:;
+            }
+        free_qjs_rt(rt);
+        auto after_qjs = get_t();
+        report_time(ctx, SV("qjs scripts took: "), after_qjs-after);
+        report_time(ctx, SV("qjs total took: "), after_qjs-before);
+        }
+    cleanup:
+    return result;
+    }
 // NOTE: we can have larger scope than this if we want.
 // Slicing the work here this way is not inherent.
 // However, care must be taken that the spawned thread is
@@ -869,6 +936,13 @@ run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_pat
             goto cleanup;
             }
     }
+    {
+        auto e = do_js(&ctx);
+        if(e.errored){
+            result.errored = e.errored;
+            goto cleanup;
+            }
+    }
     // Do some reporting as we don't add any nodes after this.
     report_size(&ctx, SV("ctx.nodes.count = "), ctx.nodes.count);
     report_size(&ctx, SV("ctx.python_nodes.count = "), ctx.python_nodes.count);
@@ -1184,6 +1258,7 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
         case NODE_RAW:
         case NODE_PRE:
         case NODE_PYTHON:
+        case NODE_JS:
         case NODE_BULLETS:
         case NODE_STYLESHEETS:
         case NODE_DEPENDENCIES:
@@ -1243,6 +1318,7 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
 #ifndef WASM
 
 #include "dndc_python.c"
+#include "dndc_qjs.c"
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif

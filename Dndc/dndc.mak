@@ -1,7 +1,16 @@
 DNDCVERSION = 0.6.2
 
-$(BINDIR)/dndc$(EXE): Dndc/dndc.c $(DEPDIR)/dndc.dep  $(OBJDIR)/frozenstdlib.o opt.mak | $(DIRECTORIES)
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DDNDCMAIN
+$(BINDIR)/libquickjs.dylib: Vendored/quickjs/libquickjs.dylib
+	cp $< $@
+$(OBJDIR)/libquickjs.a: Vendored/quickjs/libquickjs.a
+	cp $< $@
+ifeq ($(UNAME),Darwin)
+RPATH:=-rpath @executable_path
+else
+RPATH:=
+endif
+$(BINDIR)/dndc$(EXE): Dndc/dndc.c $(DEPDIR)/dndc.dep  $(OBJDIR)/frozenstdlib.o opt.mak $(BINDIR)/libquickjs.dylib | $(DIRECTORIES)
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DDNDCMAIN $(BINDIR)/libquickjs.dylib $(RPATH)
 dndc: $(BINDIR)/dndc$(EXE)
 
 $(OBJDIR)/dndc.o: Dndc/dndc.c $(DEPDIR)/dndc_o.dep opt.mak | $(DIRECTORIES)
@@ -9,8 +18,8 @@ $(OBJDIR)/dndc.o: Dndc/dndc.c $(DEPDIR)/dndc_o.dep opt.mak | $(DIRECTORIES)
 
 
 BENCHMARKITERS ?= 10000
-$(BINDIR)/dndcbench$(EXE): Dndc/dndc.c $(DEPDIR)/dndcbench.dep Dndc/dndc.mak $(OBJDIR)/frozenstdlib.o
-	$(CC) $(FLAGS) $(PLATFORM_FLAGS) -O1 -g $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/dndcbench.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DBENCHMARKING -DBENCHMARKITERS=$(BENCHMARKITERS) -DDNDCMAIN
+$(BINDIR)/dndcbench$(EXE): Dndc/dndc.c $(DEPDIR)/dndcbench.dep Dndc/dndc.mak $(OBJDIR)/frozenstdlib.o $(BINDIR)/libquickjs.dylib
+	$(CC) $(FLAGS) $(PLATFORM_FLAGS) -O1 -g $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/dndcbench.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DBENCHMARKING -DBENCHMARKITERS=$(BENCHMARKITERS) -DDNDCMAIN $(BINDIR)/libquickjs.dylib $(RPATH)
 dndcbench: $(BINDIR)/dndcbench$(EXE)
 
 $(BINDIR)/dndcfuzz$(EXE): Dndc/dndcfuzz.c $(DEPDIR)/dndcfuzz.dep $(OBJDIR)/frozenstdlib.o
@@ -21,16 +30,16 @@ FUZZDIR=FuzzCorpus
 $(FUZZDIR): ; @$(MKDIR) -p $@
 
 
-$(BINDIR)/TestDndc_fast$(EXE): Dndc/TestDndc.c $(DEPDIR)/TestDndc_fast.dep $(OBJDIR)/frozenstdlib.o | $(DIRECTORIES)
-	$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndc_fast.dep $(OBJDIR)/frozenstdlib.o $< -o $@ -g  $(LINK_FLAGS) $(PYLDFLAGS)
+$(BINDIR)/TestDndc_fast$(EXE): Dndc/TestDndc.c $(DEPDIR)/TestDndc_fast.dep $(OBJDIR)/frozenstdlib.o $(BINDIR)/libquickjs.dylib | $(DIRECTORIES)
+	$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndc_fast.dep $(OBJDIR)/frozenstdlib.o $< -o $@ -g  $(LINK_FLAGS) $(PYLDFLAGS) $(BINDIR)/libquickjs.dylib $(RPATH)
 	$@
-$(BINDIR)/TestDndc_debug$(EXE): Dndc/TestDndc.c $(DEPDIR)/TestDndc_debug.dep $(OBJDIR)/frozenstdlib.o | $(DIRECTORIES)
-	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndc_debug.dep $(OBJDIR)/frozenstdlib.o $< -o $@ -g  $(LINK_FLAGS) $(PYLDFLAGS)
+$(BINDIR)/TestDndc_debug$(EXE): Dndc/TestDndc.c $(DEPDIR)/TestDndc_debug.dep $(OBJDIR)/frozenstdlib.o $(BINDIR)/libquickjs.dylib | $(DIRECTORIES)
+	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndc_debug.dep $(OBJDIR)/frozenstdlib.o $< -o $@ -g  $(LINK_FLAGS) $(PYLDFLAGS) $(BINDIR)/libquickjs.dylib $(RPATH)
 	$@
 TestDndc: $(BINDIR)/TestDndc_debug$(EXE) $(BINDIR)/TestDndc_fast$(EXE)
 
-$(BINDIR)/pydndc$(PYEXTENSION): Dndc/pydndc.c
-	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -O2 $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS)
+$(BINDIR)/pydndc$(PYEXTENSION): Dndc/pydndc.c $(OBJDIR)/libquickjs.a
+	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -O2 $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS) $(OBJDIR)/libquickjs.a
 pydndc: $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pydndc$(PYEXTENSION) PyGdndc/pydndc.pyi
 
 PyGdndc/pydndc.pyi: Dndc/pydndc.pyi

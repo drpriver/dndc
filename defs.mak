@@ -42,6 +42,7 @@ INCLUDE_FLAGS=-I.\
 	-IPythonEmbed\
 	-IAllocators\
 	-IDndc\
+	-IVendored/quickjs\
 
 LINK_FLAGS=
 FAST_FLAGS=-Ofast

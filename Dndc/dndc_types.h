@@ -235,6 +235,7 @@ typedef struct DndcContext {
     // so we don't have to scan for them later.
     struct {
         Marray(NodeHandle) python_nodes;
+        Marray(NodeHandle) js_nodes;
         Marray(NodeHandle) imports;
         Marray(NodeHandle) stylesheets_nodes;
         Marray(NodeHandle) dependencies_nodes;

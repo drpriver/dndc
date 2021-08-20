@@ -208,6 +208,9 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                     case NODE_PYTHON:
                         Marray_push(NodeHandle)(&ctx->python_nodes, ctx->allocator, node_handle);
                         break;
+                    case NODE_JS:
+                        Marray_push(NodeHandle)(&ctx->js_nodes, ctx->allocator, node_handle);
+                        break;
                     case NODE_IMPORT:
                         Marray_push(NodeHandle)(&ctx->imports, ctx->allocator, node_handle);
                         break;
@@ -340,6 +343,7 @@ PARSEFUNC(parse_node){
         case NODE_PRE:
         case NODE_RAW:
         case NODE_PYTHON:
+        case NODE_JS:
         case NODE_COMMENT:
             return parse_raw_node(ctx, parent_handle, indentation);
         case NODE_TABLE:
