@@ -317,25 +317,13 @@ free_qjs_rt(QJSRuntime* rt, ArenaAllocator* arena){
     ArenaAllocator_free_all(arena);
     }
 
-//
-// The main execution function.
-//
 static
-Errorable_f(void)
-execute_qjs_string(QJSRuntime* rt, DndcContext* ctx, const char* str, size_t length, NodeHandle handle){
-    Errorable(void) result = {};
+QJSContext*_Nullable
+new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx){
     QJSContext* jsctx = NULL;
-    // rt = JS_NewRuntime();
-    if(!rt){
-        result.errored = ALLOC_FAILURE;
-        goto cleanup;
-    }
     jsctx = JS_NewContext(rt);
-    if(!jsctx){
-        result.errored = ALLOC_FAILURE;
-        goto cleanup;
-    }
-
+    if(!jsctx)
+        goto fail;
     // setup DndcContext class
     {
         QJSValue proto = JS_NewObject(jsctx); // new ref
@@ -368,10 +356,9 @@ execute_qjs_string(QJSRuntime* rt, DndcContext* ctx, const char* str, size_t len
     JS_SetContextOpaque(jsctx, ctx);
 
     {
-        QJSValue global_obj, console, dctx, node, node_types;
+        QJSValue global_obj, console, dctx, node_types;
         global_obj = JS_GetGlobalObject(jsctx); // new ref
         dctx = js_make_dndc_context(jsctx, ctx); // new_ref
-        node = js_make_dndc_node(jsctx, handle); // new_ref
         node_types = JS_NewObject(jsctx); // new ref
         for(size_t i = 0; i < arrlen(NODENAMES)-1;i++){
             JS_SetPropertyStr(jsctx, node_types, NODENAMES[i].text, JS_NewUint32(jsctx, i));
@@ -382,6 +369,32 @@ execute_qjs_string(QJSRuntime* rt, DndcContext* ctx, const char* str, size_t len
         JS_SetPropertyStr(jsctx, console, "log", JS_NewCFunction(jsctx, js_console_log, "log", 1)); // create and steal ref all in one go.
         JS_SetPropertyStr(jsctx, global_obj, "console", console); // steals ref
         JS_SetPropertyStr(jsctx, global_obj, "ctx", dctx); // steals ref
+        JS_FreeValue(jsctx, global_obj); // decref
+    }
+
+    return jsctx;
+
+
+    fail:
+    if(jsctx)
+        JS_FreeContext(jsctx);
+    return NULL;
+    }
+
+//
+// The main execution function.
+//
+static
+Errorable_f(void)
+execute_qjs_string(QJSContext* jsctx, DndcContext* ctx, const char* str, size_t length, NodeHandle handle){
+    Errorable(void) result = {};
+
+
+    {
+        QJSValue global_obj, node;
+        global_obj = JS_GetGlobalObject(jsctx); // new ref
+        node = js_make_dndc_node(jsctx, handle); // new_ref
+
         JS_SetPropertyStr(jsctx, global_obj, "node", node); // steals ref
         JS_FreeValue(jsctx, global_obj); // decref
     }
@@ -406,11 +419,6 @@ execute_qjs_string(QJSRuntime* rt, DndcContext* ctx, const char* str, size_t len
         JS_FreeValue(jsctx, err);
     }
 
-    cleanup:
-    if(jsctx)
-        JS_FreeContext(jsctx);
-    // if(rt)
-        // JS_FreeRuntime(rt);
     return result;
     }
 

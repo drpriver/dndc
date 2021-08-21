@@ -76,6 +76,7 @@ execute_user_scripts(DndcContext* ctx){
     // The rt and python are lazily initialized as they are pretty expensive
     // if not actually used.
     QJSRuntime* rt = NULL;
+    QJSContext* jsctx = NULL;
 #ifdef PYTHONMODULE
     bool python_is_initialized = true;
 #else
@@ -130,9 +131,19 @@ execute_user_scripts(DndcContext* ctx){
         else {
             assert(type == NODE_JS);
             if(!rt){
+                auto before_init = get_t();
                 rt = new_qjs_rt(&aa);
+                assert(!jsctx);
+                jsctx = new_qjs_ctx(rt, ctx);
+                if(!jsctx){
+                    report_system_error(ctx, SV("Failed to initialize javascript context"));
+                    result.errored = GENERIC_ERROR;
+                    goto cleanup;
+                    }
+                auto after_init = get_t();
+                report_time(ctx, SV("qjs init took: "), after_init-before_init);
                 }
-            auto js_err = execute_qjs_string(rt, ctx, str.text, str.length, handle);
+            auto js_err = execute_qjs_string(jsctx, ctx, str.text, str.length, handle);
             if(js_err.errored){
                 report_set_error(ctx);
                 result.errored = js_err.errored;
