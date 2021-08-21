@@ -1,0 +1,1 @@
+It'd be nice to consolidate file caching and file loading into a single abstraction (would also help embedding).

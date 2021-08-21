@@ -1,0 +1,1 @@
+If threads are enabled, I spawn a new thread every invocation, which is kind of silly.

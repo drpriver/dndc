@@ -1,0 +1,2 @@
+Benchmarks showed 15% of runtime spent on just creating new js contexts.
+Need to investigate implications of recycling contexts.
