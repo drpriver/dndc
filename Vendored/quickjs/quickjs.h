@@ -35,6 +35,8 @@
 #ifndef QJS_API
 #ifdef _WIN32
 #define QJS_API __declspec(dllimport)
+#elif defined(__GNUC__) || defined(__clang__)
+#define QJS_API __attribute__((visibility("default")))
 #else
 #define QJS_API extern
 #endif

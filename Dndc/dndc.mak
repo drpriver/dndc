@@ -1,14 +1,12 @@
-DNDCVERSION = 0.7.0
+DNDCVERSION=0.7.0
+DNDC_COMPAT_VERSION=0.7.0
 
-$(BINDIR)/libquickjs$(SO): Vendored/quickjs/libquickjs$(SO)
-	cp $< $@
-$(OBJDIR)/libquickjs.a: Vendored/quickjs/libquickjs.a
-	cp $< $@
 ifeq ($(UNAME),Darwin)
 RPATH:=-rpath @executable_path
 else
 RPATH:=
 endif
+
 $(BINDIR)/dndc$(EXE): Dndc/dndc.c $(DEPDIR)/dndc.dep  $(OBJDIR)/frozenstdlib.o opt.mak $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
 	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DDNDCMAIN $(BINDIR)/libquickjs$(SO) $(RPATH)
 dndc: $(BINDIR)/dndc$(EXE)
@@ -38,8 +36,8 @@ $(BINDIR)/TestDndc_debug$(EXE): Dndc/TestDndc.c $(DEPDIR)/TestDndc_debug.dep $(O
 	$@
 TestDndc: $(BINDIR)/TestDndc_debug$(EXE) $(BINDIR)/TestDndc_fast$(EXE)
 
-$(BINDIR)/pydndc$(PYEXTENSION): Dndc/pydndc.c $(OBJDIR)/libquickjs.a
-	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -O2 $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS) $(OBJDIR)/libquickjs.a
+$(BINDIR)/pydndc$(PYEXTENSION): Dndc/pydndc.c $(OBJDIR)/libquickjs.o
+	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -O2 $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS) $(OBJDIR)/libquickjs.o
 pydndc: $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pydndc$(PYEXTENSION) PyGdndc/pydndc.pyi
 
 PyGdndc/pydndc.pyi: Dndc/pydndc.pyi

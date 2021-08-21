@@ -22,6 +22,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+$(error "Don't use this Makefile. This is kept for reference.")
+
 ifeq ($(shell uname -s),Darwin)
 CONFIG_DARWIN=y
 endif

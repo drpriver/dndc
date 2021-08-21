@@ -1,4 +1,5 @@
 include defs.mak
+include Vendored/quickjs.mak
 include PythonEmbed/pythonembed.mak
 include Dndc/dndc.mak
 

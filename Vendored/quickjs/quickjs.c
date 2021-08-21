@@ -54,12 +54,8 @@ typedef intptr_t ssize_t;
 #endif
 
 // define this before including quickjs.h
-#ifndef QJS_API
-#ifdef _WIN32
+#if !defined(QJS_API) && defined(_WIN32)
 #define QJS_API __declspec(export)
-#else
-#define QJS_API extern
-#endif
 #endif
 
 #include "quickjs.h"

@@ -30,10 +30,10 @@ install-gdndc: $(BINDIR)/gdndc
 	$(INSTALL) -C $< $(INSTALLDIR)/gdndc
 $(OBJDIR)/libdndc.a: $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o
 	ar crs $@ $^
-$(OBJDIR)/libdndc.dylib: $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o $(OBJDIR)/libquickjs.a
-	$(CC) $^ -o $@ -Wl,-dead_strip_dylibs -Wl,-headerpad_max_install_names -Wl,-undefined,error -shared -install_name @rpath/libdndc.0.6.2.dylib -compatibility_version 0.7.0 -current_version 0.7.0 -g -F/Library/Frameworks -framework Python -install_name $(OBJDIR)/libquickjs.a
+$(BINDIR)/libdndc.dylib: $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o $(OBJDIR)/libquickjs.o
+	$(CC) $^ -o $@ -Wl,-dead_strip_dylibs -Wl,-headerpad_max_install_names -Wl,-undefined,error -shared -install_name @rpath/libdndc.$(DNDCVERSION).dylib -compatibility_version $(DNDC_COMPAT_VERSION) -current_version $(DNDCVERSION) -g -F/Library/Frameworks -framework Python
 
 PYEXTENSION=.cpython-38-darwin.so
 PYEXTFLAGS=-bundle -bundle_loader /usr/local/bin/python3 -arch x86_64
 
-all: gdndc $(OBJDIR)/libdndc.a $(OBJDIR)/libdndc.dylib
+all: gdndc $(OBJDIR)/libdndc.a $(BINDIR)/libdndc.dylib
