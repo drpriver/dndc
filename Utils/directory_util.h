@@ -40,7 +40,7 @@ get_directory_error(void){
 static
 void
 free_directory_error(const char* err){
-    void(err);
+    (void)err;
     }
 static
 Errorable_f(void)
