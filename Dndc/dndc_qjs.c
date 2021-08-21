@@ -458,7 +458,8 @@ static
 warn_unused
 bool
 js_dndc_get_node_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out){
-    uintptr_t p = (uintptr_t)(JS_GetOpaque2(jsctx, obj, JS_DNDC_NODE_CLASS_ID));
+    void* pointer = JS_GetOpaque2(jsctx, obj, JS_DNDC_NODE_CLASS_ID);
+    uintptr_t p = (uintptr_t)pointer;
     if(!p){
         return false;
         }
@@ -473,7 +474,8 @@ static
 warn_unused
 bool
 js_dndc_get_attributes_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out){
-    uintptr_t p = (uintptr_t)(JS_GetOpaque2(jsctx, obj, JS_DNDC_ATTRIBUTES_CLASS_ID));
+    void* pointer = JS_GetOpaque2(jsctx, obj, JS_DNDC_ATTRIBUTES_CLASS_ID);
+    uintptr_t p = (uintptr_t)pointer;
     if(!p){
         return false;
         }
@@ -488,7 +490,8 @@ static
 warn_unused
 bool
 js_dndc_get_classlist_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out){
-    uintptr_t p = (uintptr_t)(JS_GetOpaque2(jsctx, obj, JS_DNDC_CLASSLIST_CLASS_ID));
+    void* pointer = JS_GetOpaque2(jsctx, obj, JS_DNDC_CLASSLIST_CLASS_ID);
+    uintptr_t p = (uintptr_t)pointer;
     if(!p){
         return false;
         }

@@ -5,8 +5,8 @@ else ifeq ($(UNAME), Rpi)
 	QUICKJS_CEXTRA=
 	QUICKJS_LDEXTRA=-lm -lpthread -fPIC
 else ifeq ($(UNAME), Linux)
-	QUICKJS_CEXTRA=
-	QUICKJS_LDEXTRA=-lm -lpthread -fPIC
+	QUICKJS_CEXTRA=-fPIC
+	QUICKJS_LDEXTRA=-lm -lpthread
 else ifeq ($(UNAME), Darwin)
 	QUICKJS_CEXTRA=
 	QUICKJS_LDEXTRA=-install_name @rpath/$(notdir $@) -compatibility_version $(DNDC_COMPAT_VERSION) -current_version $(DNDCVERSION)

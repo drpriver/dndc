@@ -238,6 +238,7 @@ typedef struct QJSValue {
 
 static inline QJSValue __JS_NewFloat64(QJSContext *ctx, double d)
 {
+    (void)ctx;
     QJSValue v;
     v.tag = JS_TAG_FLOAT64;
     v.u.float64 = d;
@@ -518,16 +519,19 @@ QJS_API int JS_IsRegisteredClass(QJSRuntime *rt, JSClassID class_id);
 
 static js_force_inline QJSValue JS_NewBool(QJSContext *ctx, JS_BOOL val)
 {
+    (void)ctx;
     return JS_MKVAL(JS_TAG_BOOL, (val != 0));
 }
 
 static js_force_inline QJSValue JS_NewInt32(QJSContext *ctx, int32_t val)
 {
+    (void)ctx;
     return JS_MKVAL(JS_TAG_INT, val);
 }
 
 static js_force_inline QJSValue JS_NewCatchOffset(QJSContext *ctx, int32_t val)
 {
+    (void)ctx;
     return JS_MKVAL(JS_TAG_CATCH_OFFSET, val);
 }
 
@@ -585,6 +589,7 @@ static inline JS_BOOL JS_IsNumber(QJSValueConst v)
 
 static inline JS_BOOL JS_IsBigInt(QJSContext *ctx, QJSValueConst v)
 {
+    (void)ctx;
     int tag = JS_VALUE_GET_TAG(v);
     return tag == JS_TAG_BIG_INT;
 }
@@ -676,6 +681,7 @@ static inline void JS_FreeValueRT(QJSRuntime *rt, QJSValue v)
 
 static inline QJSValue JS_DupValue(QJSContext *ctx, QJSValueConst v)
 {
+    (void)ctx;
     if (JS_VALUE_HAS_REF_COUNT(v)) {
         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
         p->ref_count++;
@@ -685,6 +691,7 @@ static inline QJSValue JS_DupValue(QJSContext *ctx, QJSValueConst v)
 
 static inline QJSValue JS_DupValueRT(QJSRuntime *rt, QJSValueConst v)
 {
+    (void)rt;
     if (JS_VALUE_HAS_REF_COUNT(v)) {
         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
         p->ref_count++;
@@ -969,7 +976,8 @@ static inline QJSValue JS_NewCFunctionMagic(QJSContext *ctx, JSCFunctionMagic *f
                                            const char *name,
                                            int length, JSCFunctionEnum cproto, int magic)
 {
-    return JS_NewCFunction2(ctx, (JSCFunction *)func, name, length, cproto, magic);
+    // XXX: suppress bad function cast.
+    return JS_NewCFunction2(ctx, (JSCFunction *)(void*)func, name, length, cproto, magic);
 }
 QJS_API void JS_SetConstructor(QJSContext *ctx, QJSValueConst func_obj,
                        QJSValueConst proto);

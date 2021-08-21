@@ -7,6 +7,9 @@
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
+#elif defined(__GNUC__)
+PushDiagnostic();
+#pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
 
 typedef struct DndcPyFileCache {
@@ -622,4 +625,6 @@ pydndc_anaylze_syntax_for_highlight(PyObject* mod, PyObject* args, PyObject* kwa
 }
 #ifdef __clang__
 #pragma clang assume_nonnull end
+#elif defined(__GNUC__)
+PopDiagnostic();
 #endif

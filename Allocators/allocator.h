@@ -62,6 +62,7 @@
 #define const_free(ptr) do{\
     _Pragma("GCC diagnostic push");\
     _Pragma("GCC diagnostic ignored \"-Wdiscarded-qualifiers\"");\
+    _Pragma("GCC diagnostic ignored \"-Wcast-qual\"");\
     free((void*)ptr); \
     _Pragma("GCC diagnostic pop");\
     }while(0)
