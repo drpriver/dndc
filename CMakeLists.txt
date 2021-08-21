@@ -85,6 +85,7 @@ Python3_add_library(pydndc
     MODULE
     Dndc/pydndc.c
     )
+target_link_libraries(pydndc PRIVATE quickjs-lib)
 
 if(APPLE)
     # TODO: We want code signing, but whatever for now.
@@ -123,6 +124,8 @@ target_link_libraries(gdndc
 		quickjs-dylib
 		)
 target_include_directories(gdndc PRIVATE ${Python3_INCLUDE_DIRS} Dndc)
+target_compile_options(quickjs-lib PUBLIC "-mrdseed")
+target_compile_options(quickjs-dylib PUBLIC "-mrdseed")
 endif()
 
 # tests

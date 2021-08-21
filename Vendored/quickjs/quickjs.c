@@ -32,7 +32,6 @@
 #include <inttypes.h>
 #include <string.h>
 #include <assert.h>
-#include <sys/time.h>
 #include <time.h>
 #include <fenv.h>
 #include <math.h>
@@ -42,6 +41,16 @@
 #include <malloc.h>
 #elif defined(__FreeBSD__)
 #include <malloc_np.h>
+#endif
+
+
+#ifndef _WIN32
+#include <sys/time.h>
+#else
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#define alloca(x) _alloca(x)
+typedef intptr_t ssize_t;
 #endif
 
 #include "cutils.h"
@@ -114,7 +123,9 @@
 //#define FORCE_GC_AT_MALLOC
 
 #ifdef CONFIG_ATOMICS
+#ifndef _WIN32
 #include <pthread.h>
+#endif
 #include <stdatomic.h>
 #include <errno.h>
 #endif
@@ -41890,9 +41901,13 @@ static uint64_t xorshift64star(uint64_t *pstate)
 
 static void js_random_init(QJSContext *ctx)
 {
+#ifdef _WIN32
+    __builtin_ia32_rdseed64_step(&ctx->random_state);
+#else
     struct timeval tv;
     gettimeofday(&tv, NULL);
     ctx->random_state = ((int64_t)tv.tv_sec * 1000000) + tv.tv_usec;
+#endif
     /* the state must be non zero */
     if (ctx->random_state == 0)
         ctx->random_state = 1;
@@ -41983,9 +41998,24 @@ static QJSValue js___date_clock(QJSContext *ctx, QJSValueConst this_val,
                                int argc, QJSValueConst *argv)
 {
     int64_t d;
+#ifndef _WIN32
     struct timeval tv;
     gettimeofday(&tv, NULL);
     d = (int64_t)tv.tv_sec * 1000000 + tv.tv_usec;
+#else
+    // in 100-nanosecond intervals.
+    const uint64_t time_between_1601_and_unix_epoch = (uint64_t)116444736000000000ull;
+    SYSTEMTIME st;
+    FILETIME ft;
+    GetSystemTime(&st);
+    SystemTimeToFileTime(&st, &ft);
+    d = (uint64_t)ft.dwLowDateTime;
+    d += (uint64_t)ft.dwHighDateTime << 32;
+    // at this point we have tte number of 100-nanoseconds intervals since Jan
+    // 1, 1601 (UTC).
+    d -= time_between_1601_and_unix_epoch;
+    d /= 10ull;
+#endif
     return JS_NewInt64(ctx, d);
 }
 
@@ -48192,9 +48222,27 @@ static QJSValue get_date_string(QJSContext *ctx, QJSValueConst this_val,
 
 /* OS dependent: return the UTC time in ms since 1970. */
 static int64_t date_now(void) {
+#ifndef _WIN32
     struct timeval tv;
     gettimeofday(&tv, NULL);
     return (int64_t)tv.tv_sec * 1000 + (tv.tv_usec / 1000);
+#else
+    uint64_t d;
+    // copy pasta
+    // in 100-nanosecond intervals.
+    const uint64_t time_between_1601_and_unix_epoch = (uint64_t)116444736000000000ull;
+    SYSTEMTIME st;
+    FILETIME ft;
+    GetSystemTime(&st);
+    SystemTimeToFileTime(&st, &ft);
+    d = (uint64_t)ft.dwLowDateTime;
+    d += (uint64_t)ft.dwHighDateTime << 32;
+    // at this point we have the number of 100-nanoseconds intervals since Jan
+    // 1, 1601 (UTC).
+    d -= time_between_1601_and_unix_epoch;
+    d /= 10000ull;
+    return d;
+#endif
 }
 
 static QJSValue js_date_constructor(QJSContext *ctx, QJSValueConst new_target,
@@ -53785,11 +53833,19 @@ static QJSValue js_atomics_isLockFree(QJSContext *ctx,
 typedef struct JSAtomicsWaiter {
     struct list_head link;
     BOOL linked;
+#ifdef _WIN32
+    CONDITION_VARIABLE cond;
+#else
     pthread_cond_t cond;
+#endif
     int32_t *ptr;
 } JSAtomicsWaiter;
 
+#ifdef _WIN32
+static CRITICAL_SECTION js_atomics_mutex;
+#else
 static pthread_mutex_t js_atomics_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 static struct list_head js_atomics_waiter_list =
     LIST_HEAD_INIT(js_atomics_waiter_list);
 
@@ -53835,27 +53891,46 @@ static QJSValue js_atomics_wait(QJSContext *ctx,
     /* XXX: inefficient if large number of waiters, should hash on
        'ptr' value */
     /* XXX: use Linux futexes when available ? */
+#ifdef _WIN32
+    EnterCriticalSection(&js_atomics_mutex);
+#else
     pthread_mutex_lock(&js_atomics_mutex);
+#endif
     if (size_log2 == 3) {
         res = *(int64_t *)ptr != v;
     } else {
         res = *(int32_t *)ptr != v;
     }
     if (res) {
+#ifndef _WIN32
         pthread_mutex_unlock(&js_atomics_mutex);
+#else
+        LeaveCriticalSection(&js_atomics_mutex);
+#endif
         return JS_AtomToString(ctx, JS_ATOM_not_equal);
     }
 
     waiter = &waiter_s;
     waiter->ptr = ptr;
+#ifdef _WIN32
+    InitializeConditionVariable(&waiter->cond);
+#else
     pthread_cond_init(&waiter->cond, NULL);
+#endif
     waiter->linked = TRUE;
     list_add_tail(&waiter->link, &js_atomics_waiter_list);
 
     if (timeout == INT64_MAX) {
+#ifdef _WIN32
+        SleepConditionVariableCS(&waiter->cond, &js_atomics_mutex, INFINITE);
+#else
         pthread_cond_wait(&waiter->cond, &js_atomics_mutex);
+#endif
         ret = 0;
     } else {
+#ifdef _WIN32
+        ret = SleepConditionVariableCS(&waiter->cond, &js_atomics_mutex, timeout)? 0 : ETIMEDOUT;
+#else
         /* XXX: use clock monotonic */
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec += timeout / 1000;
@@ -53864,13 +53939,18 @@ static QJSValue js_atomics_wait(QJSContext *ctx,
             ts.tv_nsec -= 1000000000;
             ts.tv_sec++;
         }
-        ret = pthread_cond_timedwait(&waiter->cond, &js_atomics_mutex,
-                                     &ts);
+        ret = pthread_cond_timedwait(&waiter->cond, &js_atomics_mutex, &ts);
+#endif
     }
     if (waiter->linked)
         list_del(&waiter->link);
+#ifdef _WIN32
+    LeaveCriticalSection(&js_atomics_mutex);
+    // You don't have to destroy condition variables on windows.
+#else
     pthread_mutex_unlock(&js_atomics_mutex);
     pthread_cond_destroy(&waiter->cond);
+#endif
     if (ret == ETIMEDOUT) {
         return JS_AtomToString(ctx, JS_ATOM_timed_out);
     } else {
@@ -53903,7 +53983,11 @@ static QJSValue js_atomics_notify(QJSContext *ctx,
 
     n = 0;
     if (abuf->shared && count > 0) {
+#ifdef _WIN32
+        EnterCriticalSection(&js_atomics_mutex);
+#else
         pthread_mutex_lock(&js_atomics_mutex);
+#endif
         init_list_head(&waiter_list);
         list_for_each_safe(el, el1, &js_atomics_waiter_list) {
             waiter = list_entry(el, JSAtomicsWaiter, link);
@@ -53918,9 +54002,17 @@ static QJSValue js_atomics_notify(QJSContext *ctx,
         }
         list_for_each(el, &waiter_list) {
             waiter = list_entry(el, JSAtomicsWaiter, link);
+#ifdef _WIN32
+            WakeConditionVariable(&waiter->cond);
+#else
             pthread_cond_signal(&waiter->cond);
+#endif
         }
+#ifdef _WIN32
+        LeaveCriticalSection(&js_atomics_mutex);
+#else
         pthread_mutex_unlock(&js_atomics_mutex);
+#endif
     }
     return JS_NewInt32(ctx, n);
 }

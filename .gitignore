@@ -32,3 +32,5 @@ PyGdndc/pydndc.pyi
 *.dylib
 *build*
 *.a
+*.lib
+*.pdb

@@ -27,6 +27,9 @@
 #include <inttypes.h>
 #include <string.h>
 #include <assert.h>
+#ifdef _WIN32
+#define alloca(x) _alloca(x)
+#endif
 
 #include "cutils.h"
 #include "libregexp.h"

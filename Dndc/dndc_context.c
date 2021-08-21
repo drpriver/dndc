@@ -684,7 +684,9 @@ ctx_add_auto_index_links(DndcContext* ctx){
     auto e = directory_gather_files_ending_with(base, SV(".dnd"), &filenames, ctx->temp_allocator, ctx->string_allocator);
     if(e.errored){
         MStringBuilder tmp = {.allocator = ctx->temp_allocator};
-        MSB_FORMAT(&tmp, "Error when auto indexing directory '", base, "': ", get_directory_error());
+        const char* direrr = get_directory_error();
+        MSB_FORMAT(&tmp, "Error when auto indexing directory '", base, "': ", direrr);
+        free_directory_error(direrr);
         auto msg = msb_borrow(&tmp);
         report_system_error(ctx, msg);
         msb_destroy(&tmp);
