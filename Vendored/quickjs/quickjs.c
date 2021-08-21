@@ -53,9 +53,18 @@
 typedef intptr_t ssize_t;
 #endif
 
+// define this before including quickjs.h
+#ifndef QJS_API
+#ifdef _WIN32
+#define QJS_API __declspec(export)
+#else
+#define QJS_API extern
+#endif
+#endif
+
+#include "quickjs.h"
 #include "cutils.h"
 #include "list.h"
-#include "quickjs.h"
 #include "libregexp.h"
 #ifdef CONFIG_BIGNUM
 #include "libbf.h"
@@ -1163,7 +1172,6 @@ static QJSValue JS_ToBigDecimalFree(QJSContext *ctx, QJSValue val,
                                    BOOL allow_null_or_undefined);
 static bfdec_t *JS_ToBigDecimal(QJSContext *ctx, QJSValueConst val);
 #endif
-QJSValue JS_ThrowOutOfMemory(QJSContext *ctx);
 static QJSValue JS_ThrowTypeErrorRevokedProxy(QJSContext *ctx);
 static QJSValue js_proxy_getPrototypeOf(QJSContext *ctx, QJSValueConst obj);
 static int js_proxy_setPrototypeOf(QJSContext *ctx, QJSValueConst obj,
@@ -1297,26 +1305,31 @@ static size_t js_malloc_usable_size_unknown(const void *ptr)
     return 0;
 }
 
+QJS_API
 void *js_malloc_rt(QJSRuntime *rt, size_t size)
 {
     return rt->mf.js_malloc(&rt->malloc_state, size);
 }
 
+QJS_API
 void js_free_rt(QJSRuntime *rt, void *ptr)
 {
     rt->mf.js_free(&rt->malloc_state, ptr);
 }
 
+QJS_API
 void *js_realloc_rt(QJSRuntime *rt, void *ptr, size_t size)
 {
     return rt->mf.js_realloc(&rt->malloc_state, ptr, size);
 }
 
+QJS_API
 size_t js_malloc_usable_size_rt(QJSRuntime *rt, const void *ptr)
 {
     return rt->mf.js_malloc_usable_size(ptr);
 }
 
+QJS_API
 void *js_mallocz_rt(QJSRuntime *rt, size_t size)
 {
     void *ptr;
@@ -1336,6 +1349,7 @@ static void *js_bf_realloc(void *opaque, void *ptr, size_t size)
 #endif /* CONFIG_BIGNUM */
 
 /* Throw out of memory in case of error */
+QJS_API
 void *js_malloc(QJSContext *ctx, size_t size)
 {
     void *ptr;
@@ -1348,6 +1362,7 @@ void *js_malloc(QJSContext *ctx, size_t size)
 }
 
 /* Throw out of memory in case of error */
+QJS_API
 void *js_mallocz(QJSContext *ctx, size_t size)
 {
     void *ptr;
@@ -1359,12 +1374,14 @@ void *js_mallocz(QJSContext *ctx, size_t size)
     return ptr;
 }
 
+QJS_API
 void js_free(QJSContext *ctx, void *ptr)
 {
     js_free_rt(ctx->rt, ptr);
 }
 
 /* Throw out of memory in case of error */
+QJS_API
 void *js_realloc(QJSContext *ctx, void *ptr, size_t size)
 {
     void *ret;
@@ -1377,6 +1394,7 @@ void *js_realloc(QJSContext *ctx, void *ptr, size_t size)
 }
 
 /* store extra allocated size in *pslack if successful */
+QJS_API
 void *js_realloc2(QJSContext *ctx, void *ptr, size_t size, size_t *pslack)
 {
     void *ret;
@@ -1392,12 +1410,14 @@ void *js_realloc2(QJSContext *ctx, void *ptr, size_t size, size_t *pslack)
     return ret;
 }
 
+QJS_API
 size_t js_malloc_usable_size(QJSContext *ctx, const void *ptr)
 {
     return js_malloc_usable_size_rt(ctx->rt, ptr);
 }
 
 /* Throw out of memory exception in case of error */
+QJS_API
 char *js_strndup(QJSContext *ctx, const char *s, size_t n)
 {
     char *ptr;
@@ -1409,6 +1429,7 @@ char *js_strndup(QJSContext *ctx, const char *s, size_t n)
     return ptr;
 }
 
+QJS_API
 char *js_strdup(QJSContext *ctx, const char *str)
 {
     return js_strndup(ctx, str, strlen(str));
@@ -1610,7 +1631,7 @@ static inline BOOL js_check_stack_overflow(QJSRuntime *rt, size_t alloca_size)
     return unlikely(sp < rt->stack_limit);
 }
 #endif
-
+QJS_API
 QJSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
 {
     QJSRuntime *rt;
@@ -1678,11 +1699,13 @@ QJSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
     return NULL;
 }
 
+QJS_API
 void *JS_GetRuntimeOpaque(QJSRuntime *rt)
 {
     return rt->user_opaque;
 }
 
+QJS_API
 void JS_SetRuntimeOpaque(QJSRuntime *rt, void *opaque)
 {
     rt->user_opaque = opaque;
@@ -1779,17 +1802,20 @@ static const JSMallocFunctions def_malloc_funcs = {
 #endif
 };
 
+QJS_API
 QJSRuntime *JS_NewRuntime(void)
 {
     return JS_NewRuntime2(&def_malloc_funcs, NULL);
 }
 
+QJS_API
 void JS_SetMemoryLimit(QJSRuntime *rt, size_t limit)
 {
     rt->malloc_state.malloc_limit = limit;
 }
 
 /* use -1 to disable automatic GC */
+QJS_API
 void JS_SetGCThreshold(QJSRuntime *rt, size_t gc_threshold)
 {
     rt->malloc_gc_threshold = gc_threshold;
@@ -1799,17 +1825,20 @@ void JS_SetGCThreshold(QJSRuntime *rt, size_t gc_threshold)
 #define free(p) free_is_forbidden(p)
 #define realloc(p,s) realloc_is_forbidden(p,s)
 
+QJS_API
 void JS_SetInterruptHandler(QJSRuntime *rt, JSInterruptHandler *cb, void *opaque)
 {
     rt->interrupt_handler = cb;
     rt->interrupt_opaque = opaque;
 }
 
+QJS_API
 void JS_SetCanBlock(QJSRuntime *rt, BOOL can_block)
 {
     rt->can_block = can_block;
 }
 
+QJS_API
 void JS_SetSharedArrayBufferFunctions(QJSRuntime *rt,
                                       const JSSharedArrayBufferFunctions *sf)
 {
@@ -1817,6 +1846,7 @@ void JS_SetSharedArrayBufferFunctions(QJSRuntime *rt,
 }
 
 /* return 0 if OK, < 0 if exception */
+QJS_API
 int JS_EnqueueJob(QJSContext *ctx, JSJobFunc *job_func,
                   int argc, QJSValueConst *argv)
 {
@@ -1837,6 +1867,7 @@ int JS_EnqueueJob(QJSContext *ctx, JSJobFunc *job_func,
     return 0;
 }
 
+QJS_API
 BOOL JS_IsJobPending(QJSRuntime *rt)
 {
     return !list_empty(&rt->job_list);
@@ -1844,6 +1875,7 @@ BOOL JS_IsJobPending(QJSRuntime *rt)
 
 /* return < 0 if exception, 0 if no job pending, 1 if a job was
    executed successfully. the context of the job is stored in '*pctx' */
+QJS_API
 int JS_ExecutePendingJob(QJSRuntime *rt, QJSContext **pctx)
 {
     QJSContext *ctx;
@@ -1933,12 +1965,13 @@ static inline void js_free_string(QJSRuntime *rt, JSString *str)
     }
 }
 
+QJS_API
 void JS_SetRuntimeInfo(QJSRuntime *rt, const char *s)
 {
     if (rt)
         rt->rt_info = s;
 }
-
+QJS_API
 void JS_FreeRuntime(QJSRuntime *rt)
 {
     struct list_head *el, *el1;
@@ -2127,6 +2160,7 @@ void JS_FreeRuntime(QJSRuntime *rt)
     }
 }
 
+QJS_API
 QJSContext *JS_NewContextRaw(QJSRuntime *rt)
 {
     QJSContext *ctx;
@@ -2162,6 +2196,7 @@ QJSContext *JS_NewContextRaw(QJSRuntime *rt)
     return ctx;
 }
 
+QJS_API
 QJSContext *JS_NewContext(QJSRuntime *rt)
 {
     QJSContext *ctx;
@@ -2186,11 +2221,13 @@ QJSContext *JS_NewContext(QJSRuntime *rt)
     return ctx;
 }
 
+QJS_API
 void *JS_GetContextOpaque(QJSContext *ctx)
 {
     return ctx->user_opaque;
 }
 
+QJS_API
 void JS_SetContextOpaque(QJSContext *ctx, void *opaque)
 {
     ctx->user_opaque = opaque;
@@ -2206,6 +2243,7 @@ static inline void set_value(QJSContext *ctx, QJSValue *pval, QJSValue new_val)
     JS_FreeValue(ctx, old_val);
 }
 
+QJS_API
 void JS_SetClassProto(QJSContext *ctx, JSClassID class_id, QJSValue obj)
 {
     QJSRuntime *rt = ctx->rt;
@@ -2213,6 +2251,7 @@ void JS_SetClassProto(QJSContext *ctx, JSClassID class_id, QJSValue obj)
     set_value(ctx, &ctx->class_proto[class_id], obj);
 }
 
+QJS_API
 QJSValue JS_GetClassProto(QJSContext *ctx, JSClassID class_id)
 {
     QJSRuntime *rt = ctx->rt;
@@ -2240,6 +2279,7 @@ static void js_free_modules(QJSContext *ctx, JSFreeModuleEnum flag)
     }
 }
 
+QJS_API
 QJSContext *JS_DupContext(QJSContext *ctx)
 {
     ctx->header.ref_count++;
@@ -2285,6 +2325,7 @@ static void JS_MarkContext(QJSRuntime *rt, QJSContext *ctx,
         mark_func(rt, &ctx->array_shape->header);
 }
 
+QJS_API
 void JS_FreeContext(QJSContext *ctx)
 {
     QJSRuntime *rt = ctx->rt;
@@ -2352,6 +2393,7 @@ void JS_FreeContext(QJSContext *ctx)
     js_free_rt(ctx->rt, ctx);
 }
 
+QJS_API
 QJSRuntime *JS_GetRuntime(QJSContext *ctx)
 {
     return ctx->rt;
@@ -2366,12 +2408,14 @@ static void update_stack_limit(QJSRuntime *rt)
     }
 }
 
+QJS_API
 void JS_SetMaxStackSize(QJSRuntime *rt, size_t stack_size)
 {
     rt->stack_size = stack_size;
     update_stack_limit(rt);
 }
 
+QJS_API
 void JS_UpdateStackTop(QJSRuntime *rt)
 {
     rt->stack_top = js_get_stack_pointer();
@@ -2637,6 +2681,7 @@ static JSAtom JS_DupAtomRT(QJSRuntime *rt, JSAtom v)
     return v;
 }
 
+QJS_API
 JSAtom JS_DupAtom(QJSContext *ctx, JSAtom v)
 {
     QJSRuntime *rt;
@@ -2964,6 +3009,7 @@ static JSAtom JS_NewAtomStr(QJSContext *ctx, JSString *p)
     return __JS_NewAtom(rt, p, JS_ATOM_TYPE_STRING);
 }
 
+QJS_API
 JSAtom JS_NewAtomLen(QJSContext *ctx, const char *str, size_t len)
 {
     QJSValue val;
@@ -2979,11 +3025,13 @@ JSAtom JS_NewAtomLen(QJSContext *ctx, const char *str, size_t len)
     return JS_NewAtomStr(ctx, JS_VALUE_GET_STRING(val));
 }
 
+QJS_API
 JSAtom JS_NewAtom(QJSContext *ctx, const char *str)
 {
     return JS_NewAtomLen(ctx, str, strlen(str));
 }
 
+QJS_API
 JSAtom JS_NewAtomUInt32(QJSContext *ctx, uint32_t n)
 {
     if (n <= JS_ATOM_MAX_INT) {
@@ -3125,11 +3173,13 @@ static QJSValue __JS_AtomToValue(QJSContext *ctx, JSAtom atom, BOOL force_string
     }
 }
 
+QJS_API
 QJSValue JS_AtomToValue(QJSContext *ctx, JSAtom atom)
 {
     return __JS_AtomToValue(ctx, atom, FALSE);
 }
 
+QJS_API
 QJSValue JS_AtomToString(QJSContext *ctx, JSAtom atom)
 {
     return __JS_AtomToValue(ctx, atom, TRUE);
@@ -3257,12 +3307,14 @@ static int JS_AtomIsNumericIndex(QJSContext *ctx, JSAtom atom)
     return TRUE;
 }
 
+QJS_API
 void JS_FreeAtom(QJSContext *ctx, JSAtom v)
 {
     if (!__JS_AtomIsConst(v))
         __JS_FreeAtom(ctx->rt, v);
 }
 
+QJS_API
 void JS_FreeAtomRT(QJSRuntime *rt, JSAtom v)
 {
     if (!__JS_AtomIsConst(v))
@@ -3324,6 +3376,7 @@ static __maybe_unused void print_atom(QJSContext *ctx, JSAtom atom)
 }
 
 /* free with JS_FreeCString() */
+QJS_API
 const char *JS_AtomToCString(QJSContext *ctx, JSAtom atom)
 {
     QJSValue str;
@@ -3385,6 +3438,7 @@ static inline BOOL JS_IsEmptyString(QJSValueConst v)
 /* JSClass support */
 
 /* a new class ID is allocated if *pclass_id != 0 */
+QJS_API
 JSClassID JS_NewClassID(JSClassID *pclass_id)
 {
     JSClassID class_id;
@@ -3397,6 +3451,7 @@ JSClassID JS_NewClassID(JSClassID *pclass_id)
     return class_id;
 }
 
+QJS_API
 BOOL JS_IsRegisteredClass(QJSRuntime *rt, JSClassID class_id)
 {
     return (class_id < rt->class_count &&
@@ -3454,6 +3509,7 @@ static int JS_NewClass1(QJSRuntime *rt, JSClassID class_id,
     return 0;
 }
 
+QJS_API
 int JS_NewClass(QJSRuntime *rt, JSClassID class_id, const JSClassDef *class_def)
 {
     int ret, len;
@@ -3877,6 +3933,7 @@ static QJSValue string_buffer_end(StringBuffer *s)
 }
 
 /* create a string from a UTF-8 buffer */
+QJS_API
 QJSValue JS_NewStringLen(QJSContext *ctx, const char *buf, size_t buf_len)
 {
     const uint8_t *p, *p_end, *p_start, *p_next;
@@ -3968,11 +4025,13 @@ static QJSValue JS_ConcatString3(QJSContext *ctx, const char *str1,
     return JS_EXCEPTION;
 }
 
+QJS_API
 QJSValue JS_NewString(QJSContext *ctx, const char *str)
 {
     return JS_NewStringLen(ctx, str, strlen(str));
 }
 
+QJS_API
 QJSValue JS_NewAtomString(QJSContext *ctx, const char *str)
 {
     JSAtom atom = JS_NewAtom(ctx, str);
@@ -3986,6 +4045,7 @@ QJSValue JS_NewAtomString(QJSContext *ctx, const char *str)
 /* return (NULL, 0) if exception. */
 /* return pointer into a JSString with a live ref_count */
 /* cesu8 determines if non-BMP1 codepoints are encoded as 1 or 2 utf-8 sequences */
+QJS_API
 const char *JS_ToCStringLen2(QJSContext *ctx, size_t *plen, QJSValueConst val1, BOOL cesu8)
 {
     QJSValue val;
@@ -4083,6 +4143,7 @@ const char *JS_ToCStringLen2(QJSContext *ctx, size_t *plen, QJSValueConst val1, 
     return NULL;
 }
 
+QJS_API
 void JS_FreeCString(QJSContext *ctx, const char *ptr)
 {
     JSString *p;
@@ -4849,6 +4910,7 @@ static JSObject *get_proto_obj(QJSValueConst proto_val)
 }
 
 /* WARNING: proto must be an object or JS_NULL */
+QJS_API
 QJSValue JS_NewObjectProtoClass(QJSContext *ctx, QJSValueConst proto_val,
                                JSClassID class_id)
 {
@@ -4920,22 +4982,26 @@ static int JS_SetObjectData(QJSContext *ctx, QJSValueConst obj, QJSValue val)
     return -1;
 }
 
+QJS_API
 QJSValue JS_NewObjectClass(QJSContext *ctx, int class_id)
 {
     return JS_NewObjectProtoClass(ctx, ctx->class_proto[class_id], class_id);
 }
 
+QJS_API
 QJSValue JS_NewObjectProto(QJSContext *ctx, QJSValueConst proto)
 {
     return JS_NewObjectProtoClass(ctx, proto, JS_CLASS_OBJECT);
 }
 
+QJS_API
 QJSValue JS_NewArray(QJSContext *ctx)
 {
     return JS_NewObjectFromShape(ctx, js_dup_shape(ctx->array_shape),
                                  JS_CLASS_ARRAY);
 }
 
+QJS_API
 QJSValue JS_NewObject(QJSContext *ctx)
 {
     /* inline JS_NewObjectClass(ctx, JS_CLASS_OBJECT); */
@@ -5064,6 +5130,7 @@ static QJSValue JS_NewCFunction3(QJSContext *ctx, JSCFunction *func,
 }
 
 /* Note: at least 'length' arguments will be readable in 'argv' */
+QJS_API
 QJSValue JS_NewCFunction2(QJSContext *ctx, JSCFunction *func,
                          const char *name,
                          int length, JSCFunctionEnum cproto, int magic)
@@ -5128,6 +5195,7 @@ static QJSValue js_c_function_data_call(QJSContext *ctx, QJSValueConst func_obj,
     return s->func(ctx, this_val, argc, arg_buf, s->magic, s->data);
 }
 
+QJS_API
 QJSValue JS_NewCFunctionData(QJSContext *ctx, JSCFunctionData *func,
                             int length, int magic, int data_len,
                             QJSValueConst *data)
@@ -5486,6 +5554,7 @@ static void free_zero_refcount(QJSRuntime *rt)
 }
 
 /* called with the ref_count of 'v' reaches zero. */
+QJS_API
 void __JS_FreeValueRT(QJSRuntime *rt, QJSValue v)
 {
     uint32_t tag = JS_VALUE_GET_TAG(v);
@@ -5561,6 +5630,7 @@ void __JS_FreeValueRT(QJSRuntime *rt, QJSValue v)
     }
 }
 
+QJS_API
 void __JS_FreeValue(QJSContext *ctx, QJSValue v)
 {
     __JS_FreeValueRT(ctx->rt, v);
@@ -5581,6 +5651,7 @@ static void remove_gc_object(JSGCObjectHeader *h)
     list_del(&h->link);
 }
 
+QJS_API
 void JS_MarkValue(QJSRuntime *rt, QJSValueConst val, JS_MarkFunc *mark_func)
 {
     if (JS_VALUE_HAS_REF_COUNT(val)) {
@@ -5808,6 +5879,7 @@ static void gc_free_cycles(QJSRuntime *rt)
     init_list_head(&rt->gc_zero_ref_count_list);
 }
 
+QJS_API
 void JS_RunGC(QJSRuntime *rt)
 {
     /* decrement the reference of the children of each object. mark =
@@ -5824,6 +5896,7 @@ void JS_RunGC(QJSRuntime *rt)
 /* Return false if not an object or if the object has already been
    freed (zombie objects are visible in finalizers when freeing
    cycles). */
+QJS_API
 BOOL JS_IsLiveObject(QJSRuntime *rt, QJSValueConst obj)
 {
     JSObject *p;
@@ -5913,6 +5986,7 @@ static void compute_value_size(QJSValueConst val, JSMemoryUsage_helper *hp)
     }
 }
 
+QJS_API
 void JS_ComputeMemoryUsage(QJSRuntime *rt, JSMemoryUsage *s)
 {
     struct list_head *el, *el1;
@@ -6203,6 +6277,7 @@ void JS_ComputeMemoryUsage(QJSRuntime *rt, JSMemoryUsage *s)
         s->js_func_size + s->js_func_code_size + s->js_func_pc2line_size;
 }
 
+QJS_API
 void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, QJSRuntime *rt)
 {
     fprintf(fp, "QuickJS memory usage -- "
@@ -6332,12 +6407,14 @@ void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, QJSRuntime *rt)
     }
 }
 
+QJS_API
 QJSValue JS_GetGlobalObject(QJSContext *ctx)
 {
     return JS_DupValue(ctx, ctx->global_obj);
 }
 
 /* WARNING: obj is freed */
+QJS_API
 QJSValue JS_Throw(QJSContext *ctx, QJSValue obj)
 {
     QJSRuntime *rt = ctx->rt;
@@ -6721,6 +6798,7 @@ QJSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(QJSContext 
     return val;
 }
 
+QJS_API
 QJSValue JS_ThrowOutOfMemory(QJSContext *ctx)
 {
     QJSRuntime *rt = ctx->rt;
@@ -6881,6 +6959,7 @@ static int JS_SetPrototypeInternal(QJSContext *ctx, QJSValueConst obj,
 }
 
 /* return -1 (exception) or TRUE/FALSE */
+QJS_API
 int JS_SetPrototype(QJSContext *ctx, QJSValueConst obj, QJSValueConst proto_val)
 {
     return JS_SetPrototypeInternal(ctx, obj, proto_val, TRUE);
@@ -6925,6 +7004,7 @@ static QJSValueConst JS_GetPrototypePrimitive(QJSContext *ctx, QJSValueConst val
 }
 
 /* Return an Object, JS_NULL or JS_EXCEPTION in case of Proxy object. */
+QJS_API
 QJSValue JS_GetPrototype(QJSContext *ctx, QJSValueConst obj)
 {
     QJSValue val;
@@ -7029,6 +7109,7 @@ done:
 }
 
 /* return TRUE, FALSE or (-1) in case of exception */
+QJS_API
 int JS_IsInstanceOf(QJSContext *ctx, QJSValueConst val, QJSValueConst obj)
 {
     QJSValue method;
@@ -7086,6 +7167,7 @@ static int JS_AutoInitProperty(QJSContext *ctx, JSObject *p, JSAtom prop,
     return 0;
 }
 
+QJS_API
 QJSValue JS_GetPropertyInternal(QJSContext *ctx, QJSValueConst obj,
                                JSAtom prop, QJSValueConst this_obj,
                                BOOL throw_ref_error)
@@ -7651,6 +7733,7 @@ static int __exception JS_GetOwnPropertyNamesInternal(QJSContext *ctx,
     return 0;
 }
 
+QJS_API
 int JS_GetOwnPropertyNames(QJSContext *ctx, JSPropertyEnum **ptab,
                            uint32_t *plen, QJSValueConst obj, int flags)
 {
@@ -7743,6 +7826,7 @@ retry:
     return FALSE;
 }
 
+QJS_API
 int JS_GetOwnProperty(QJSContext *ctx, JSPropertyDescriptor *desc,
                       QJSValueConst obj, JSAtom prop)
 {
@@ -7754,6 +7838,7 @@ int JS_GetOwnProperty(QJSContext *ctx, JSPropertyDescriptor *desc,
 }
 
 /* return -1 if exception (Proxy object only) or TRUE/FALSE */
+QJS_API
 int JS_IsExtensible(QJSContext *ctx, QJSValueConst obj)
 {
     JSObject *p;
@@ -7768,6 +7853,7 @@ int JS_IsExtensible(QJSContext *ctx, QJSValueConst obj)
 }
 
 /* return -1 if exception (Proxy object only) or TRUE/FALSE */
+QJS_API
 int JS_PreventExtensions(QJSContext *ctx, QJSValueConst obj)
 {
     JSObject *p;
@@ -7782,6 +7868,7 @@ int JS_PreventExtensions(QJSContext *ctx, QJSValueConst obj)
 }
 
 /* return -1 if exception otherwise TRUE or FALSE */
+QJS_API
 int JS_HasProperty(QJSContext *ctx, QJSValueConst obj, JSAtom prop)
 {
     JSObject *p;
@@ -7832,6 +7919,7 @@ static JSAtom js_symbol_to_atom(QJSContext *ctx, QJSValue val)
 }
 
 /* return JS_ATOM_NULL in case of exception */
+QJS_API
 JSAtom JS_ValueToAtom(QJSContext *ctx, QJSValueConst val)
 {
     JSAtom atom;
@@ -7916,6 +8004,7 @@ static QJSValue JS_GetPropertyValue(QJSContext *ctx, QJSValueConst this_obj,
     }
 }
 
+QJS_API
 QJSValue JS_GetPropertyUint32(QJSContext *ctx, QJSValueConst this_obj,
                              uint32_t idx)
 {
@@ -7976,6 +8065,7 @@ static QJSValue JS_GetPropertyInt64(QJSContext *ctx, QJSValueConst obj, int64_t 
     return val;
 }
 
+QJS_API
 QJSValue JS_GetPropertyStr(QJSContext *ctx, QJSValueConst this_obj,
                           const char *prop)
 {
@@ -8435,6 +8525,7 @@ static int JS_SetPropertyGeneric(QJSContext *ctx,
    freed by the function. 'flags' is a bitmask of JS_PROP_NO_ADD,
    JS_PROP_THROW or JS_PROP_THROW_STRICT. If JS_PROP_NO_ADD is set,
    the new property is not added and an error is raised. */
+QJS_API
 int JS_SetPropertyInternal(QJSContext *ctx, QJSValueConst this_obj,
                            JSAtom prop, QJSValue val, int flags)
 {
@@ -8788,6 +8879,7 @@ static int JS_SetPropertyValue(QJSContext *ctx, QJSValueConst this_obj,
     }
 }
 
+QJS_API
 int JS_SetPropertyUint32(QJSContext *ctx, QJSValueConst this_obj,
                          uint32_t idx, QJSValue val)
 {
@@ -8795,6 +8887,7 @@ int JS_SetPropertyUint32(QJSContext *ctx, QJSValueConst this_obj,
                                JS_PROP_THROW);
 }
 
+QJS_API
 int JS_SetPropertyInt64(QJSContext *ctx, QJSValueConst this_obj,
                         int64_t idx, QJSValue val)
 {
@@ -8816,6 +8909,7 @@ int JS_SetPropertyInt64(QJSContext *ctx, QJSValueConst this_obj,
     return res;
 }
 
+QJS_API
 int JS_SetPropertyStr(QJSContext *ctx, QJSValueConst this_obj,
                       const char *prop, QJSValue val)
 {
@@ -9031,6 +9125,7 @@ static int js_update_property_flags(QJSContext *ctx, JSObject *p,
    define_own_property callback.
    return -1 (exception), FALSE or TRUE.
 */
+QJS_API
 int JS_DefineProperty(QJSContext *ctx, QJSValueConst this_obj,
                       JSAtom prop, QJSValueConst val,
                       QJSValueConst getter, QJSValueConst setter, int flags)
@@ -9330,6 +9425,7 @@ static int JS_DefineAutoInitProperty(QJSContext *ctx, QJSValueConst this_obj,
 }
 
 /* shortcut to add or redefine a new property value */
+QJS_API
 int JS_DefinePropertyValue(QJSContext *ctx, QJSValueConst this_obj,
                            JSAtom prop, QJSValue val, int flags)
 {
@@ -9356,6 +9452,7 @@ int JS_DefinePropertyValueValue(QJSContext *ctx, QJSValueConst this_obj,
     return ret;
 }
 
+QJS_API
 int JS_DefinePropertyValueUint32(QJSContext *ctx, QJSValueConst this_obj,
                                  uint32_t idx, QJSValue val, int flags)
 {
@@ -9370,6 +9467,7 @@ int JS_DefinePropertyValueInt64(QJSContext *ctx, QJSValueConst this_obj,
                                        val, flags);
 }
 
+QJS_API
 int JS_DefinePropertyValueStr(QJSContext *ctx, QJSValueConst this_obj,
                               const char *prop, QJSValue val, int flags)
 {
@@ -9382,6 +9480,7 @@ int JS_DefinePropertyValueStr(QJSContext *ctx, QJSValueConst this_obj,
 }
 
 /* shortcut to add getter & setter */
+QJS_API
 int JS_DefinePropertyGetSet(QJSContext *ctx, QJSValueConst this_obj,
                             JSAtom prop, QJSValue getter, QJSValue setter,
                             int flags)
@@ -9679,6 +9778,7 @@ static int JS_SetGlobalVar(QJSContext *ctx, JSAtom prop, QJSValue val,
 /* return -1, FALSE or TRUE. return FALSE if not configurable or
    invalid object. return -1 in case of exception.
    flags can be 0, JS_PROP_THROW or JS_PROP_THROW_STRICT */
+QJS_API
 int JS_DeleteProperty(QJSContext *ctx, QJSValueConst obj, JSAtom prop, int flags)
 {
     QJSValue obj1;
@@ -9718,6 +9818,7 @@ int JS_DeletePropertyInt64(QJSContext *ctx, QJSValueConst obj, int64_t idx, int 
     return res;
 }
 
+QJS_API
 BOOL JS_IsFunction(QJSContext *ctx, QJSValueConst val)
 {
     JSObject *p;
@@ -9746,6 +9847,7 @@ BOOL JS_IsCFunction(QJSContext *ctx, QJSValueConst val, JSCFunction *func, int m
         return FALSE;
 }
 
+QJS_API
 BOOL JS_IsConstructor(QJSContext *ctx, QJSValueConst val)
 {
     JSObject *p;
@@ -9755,6 +9857,7 @@ BOOL JS_IsConstructor(QJSContext *ctx, QJSValueConst val)
     return p->is_constructor;
 }
 
+QJS_API
 BOOL JS_SetConstructorBit(QJSContext *ctx, QJSValueConst func_obj, BOOL val)
 {
     JSObject *p;
@@ -9765,6 +9868,7 @@ BOOL JS_SetConstructorBit(QJSContext *ctx, QJSValueConst func_obj, BOOL val)
     return TRUE;
 }
 
+QJS_API
 BOOL JS_IsError(QJSContext *ctx, QJSValueConst val)
 {
     JSObject *p;
@@ -9799,6 +9903,7 @@ void JS_ResetUncatchableError(QJSContext *ctx)
     JS_SetUncatchableError(ctx, ctx->rt->current_exception, FALSE);
 }
 
+QJS_API
 void JS_SetOpaque(QJSValue obj, void *opaque)
 {
    JSObject *p;
@@ -9809,6 +9914,7 @@ void JS_SetOpaque(QJSValue obj, void *opaque)
 }
 
 /* return NULL if not an object of class class_id */
+QJS_API
 void *JS_GetOpaque(QJSValueConst obj, JSClassID class_id)
 {
     JSObject *p;
@@ -9820,6 +9926,7 @@ void *JS_GetOpaque(QJSValueConst obj, JSClassID class_id)
     return p->u.opaque;
 }
 
+QJS_API
 void *JS_GetOpaque2(QJSContext *ctx, QJSValueConst obj, JSClassID class_id)
 {
     void *p = JS_GetOpaque(obj, class_id);
@@ -9914,6 +10021,7 @@ static QJSValue JS_ToPrimitive(QJSContext *ctx, QJSValueConst val, int hint)
     return JS_ToPrimitiveFree(ctx, JS_DupValue(ctx, val), hint);
 }
 
+QJS_API
 void JS_SetIsHTMLDDA(QJSContext *ctx, QJSValueConst obj)
 {
     JSObject *p;
@@ -9989,6 +10097,7 @@ static int JS_ToBoolFree(QJSContext *ctx, QJSValue val)
     }
 }
 
+QJS_API
 int JS_ToBool(QJSContext *ctx, QJSValueConst val)
 {
     return JS_ToBoolFree(ctx, JS_DupValue(ctx, val));
@@ -10579,6 +10688,7 @@ static inline int JS_ToFloat64Free(QJSContext *ctx, double *pres, QJSValue val)
     }
 }
 
+QJS_API
 int JS_ToFloat64(QJSContext *ctx, double *pres, QJSValueConst val)
 {
     return JS_ToFloat64Free(ctx, pres, JS_DupValue(ctx, val));
@@ -10861,11 +10971,13 @@ static int JS_ToInt64Free(QJSContext *ctx, int64_t *pres, QJSValue val)
     return 0;
 }
 
+QJS_API
 int JS_ToInt64(QJSContext *ctx, int64_t *pres, QJSValueConst val)
 {
     return JS_ToInt64Free(ctx, pres, JS_DupValue(ctx, val));
 }
 
+QJS_API
 int JS_ToInt64Ext(QJSContext *ctx, int64_t *pres, QJSValueConst val)
 {
     if (JS_IsBigInt(ctx, val))
@@ -10936,6 +11048,7 @@ static int JS_ToInt32Free(QJSContext *ctx, int32_t *pres, QJSValue val)
     return 0;
 }
 
+QJS_API
 int JS_ToInt32(QJSContext *ctx, int32_t *pres, QJSValueConst val)
 {
     return JS_ToInt32Free(ctx, pres, JS_DupValue(ctx, val));
@@ -11091,6 +11204,7 @@ static BOOL is_safe_integer(double d)
         fabs(d) <= (double)MAX_SAFE_INTEGER;
 }
 
+QJS_API
 int JS_ToIndex(QJSContext *ctx, uint64_t *plen, QJSValueConst val)
 {
     int64_t v;
@@ -11615,6 +11729,7 @@ QJSValue JS_ToStringInternal(QJSContext *ctx, QJSValueConst val, BOOL is_ToPrope
     }
 }
 
+QJS_API
 QJSValue JS_ToString(QJSContext *ctx, QJSValueConst val)
 {
     return JS_ToStringInternal(ctx, val, FALSE);
@@ -11635,6 +11750,7 @@ static QJSValue JS_ToLocaleStringFree(QJSContext *ctx, QJSValue val)
     return JS_InvokeFree(ctx, val, JS_ATOM_toLocaleString, 0, NULL);
 }
 
+QJS_API
 QJSValue JS_ToPropertyKey(QJSContext *ctx, QJSValueConst val)
 {
     return JS_ToStringInternal(ctx, val, TRUE);
@@ -11981,6 +12097,7 @@ static __maybe_unused void JS_PrintValue(QJSContext *ctx,
 }
 
 /* return -1 if exception (proxy case) or TRUE/FALSE */
+QJS_API
 int JS_IsArray(QJSContext *ctx, QJSValueConst val)
 {
     JSObject *p;
@@ -12022,6 +12139,7 @@ QJSValue JS_NewBigInt64_1(QJSContext *ctx, int64_t v)
     return val;
 }
 
+QJS_API
 QJSValue JS_NewBigInt64(QJSContext *ctx, int64_t v)
 {
     if (is_math_mode(ctx) &&
@@ -12032,6 +12150,7 @@ QJSValue JS_NewBigInt64(QJSContext *ctx, int64_t v)
     }
 }
 
+QJS_API
 QJSValue JS_NewBigUint64(QJSContext *ctx, uint64_t v)
 {
     QJSValue val;
@@ -12285,6 +12404,7 @@ static int JS_ToBigInt64Free(QJSContext *ctx, int64_t *pres, QJSValue val)
     return 0;
 }
 
+QJS_API
 int JS_ToBigInt64(QJSContext *ctx, int64_t *pres, QJSValueConst val)
 {
     return JS_ToBigInt64Free(ctx, pres, JS_DupValue(ctx, val));
@@ -18724,6 +18844,7 @@ static QJSValue JS_CallInternal(QJSContext *caller_ctx, QJSValueConst func_obj,
     return ret_val;
 }
 
+QJS_API
 QJSValue JS_Call(QJSContext *ctx, QJSValueConst func_obj, QJSValueConst this_obj,
                 int argc, QJSValueConst *argv)
 {
@@ -18864,6 +18985,7 @@ static QJSValue JS_CallConstructorInternal(QJSContext *ctx,
     }
 }
 
+QJS_API
 QJSValue JS_CallConstructor2(QJSContext *ctx, QJSValueConst func_obj,
                             QJSValueConst new_target,
                             int argc, QJSValueConst *argv)
@@ -18873,6 +18995,7 @@ QJSValue JS_CallConstructor2(QJSContext *ctx, QJSValueConst func_obj,
                                       JS_CALL_FLAG_COPY_ARGV);
 }
 
+QJS_API
 QJSValue JS_CallConstructor(QJSContext *ctx, QJSValueConst func_obj,
                            int argc, QJSValueConst *argv)
 {
@@ -18881,6 +19004,7 @@ QJSValue JS_CallConstructor(QJSContext *ctx, QJSValueConst func_obj,
                                       JS_CALL_FLAG_COPY_ARGV);
 }
 
+QJS_API
 QJSValue JS_Invoke(QJSContext *ctx, QJSValueConst this_val, JSAtom atom,
                   int argc, QJSValueConst *argv)
 {
@@ -21504,6 +21628,7 @@ static int peek_token(JSParseState *s, BOOL no_line_terminator)
    Heuristic: skip comments and expect 'import' keyword not followed
    by '(' or '.' or export keyword.
 */
+QJS_API
 BOOL JS_DetectModule(const char *input, size_t input_len)
 {
     const uint8_t *p = (const uint8_t *)input;
@@ -27208,6 +27333,7 @@ static int add_star_export_entry(QJSContext *ctx, JSModuleDef *m,
 }
 
 /* create a C module */
+QJS_API
 JSModuleDef *JS_NewCModule(QJSContext *ctx, const char *name_str,
                            JSModuleInitFunc *func)
 {
@@ -27221,6 +27347,7 @@ JSModuleDef *JS_NewCModule(QJSContext *ctx, const char *name_str,
     return m;
 }
 
+QJS_API
 int JS_AddModuleExport(QJSContext *ctx, JSModuleDef *m, const char *export_name)
 {
     JSExportEntry *me;
@@ -27237,6 +27364,7 @@ int JS_AddModuleExport(QJSContext *ctx, JSModuleDef *m, const char *export_name)
         return 0;
 }
 
+QJS_API
 int JS_SetModuleExport(QJSContext *ctx, JSModuleDef *m, const char *export_name,
                        QJSValue val)
 {
@@ -27256,6 +27384,7 @@ int JS_SetModuleExport(QJSContext *ctx, JSModuleDef *m, const char *export_name,
     return -1;
 }
 
+QJS_API
 void JS_SetModuleLoaderFunc(QJSRuntime *rt,
                             JSModuleNormalizeFunc *module_normalize,
                             JSModuleLoaderFunc *module_loader, void *opaque)
@@ -28127,6 +28256,7 @@ static int js_link_module(QJSContext *ctx, JSModuleDef *m)
 
 /* return JS_ATOM_NULL if the name cannot be found. Only works with
    not striped bytecode functions. */
+QJS_API
 JSAtom JS_GetScriptOrModuleName(QJSContext *ctx, int n_stack_levels)
 {
     JSStackFrame *sf;
@@ -28154,11 +28284,13 @@ JSAtom JS_GetScriptOrModuleName(QJSContext *ctx, int n_stack_levels)
     return JS_DupAtom(ctx, b->debug.filename);
 }
 
+QJS_API
 JSAtom JS_GetModuleName(QJSContext *ctx, JSModuleDef *m)
 {
     return JS_DupAtom(ctx, m->module_name);
 }
 
+QJS_API
 QJSValue JS_GetImportMeta(QJSContext *ctx, JSModuleDef *m)
 {
     QJSValue obj;
@@ -28195,6 +28327,7 @@ static QJSValue js_import_meta(QJSContext *ctx)
 }
 
 /* used by os.Worker() and import() */
+QJS_API
 JSModuleDef *JS_RunModule(QJSContext *ctx, const char *basename,
                           const char *filename)
 {
@@ -33557,6 +33690,7 @@ static QJSValue JS_EvalFunctionInternal(QJSContext *ctx, QJSValue fun_obj,
     return ret_val;
 }
 
+QJS_API
 QJSValue JS_EvalFunction(QJSContext *ctx, QJSValue fun_obj)
 {
     return JS_EvalFunctionInternal(ctx, fun_obj, ctx->global_obj, NULL, NULL);
@@ -33728,6 +33862,7 @@ static QJSValue JS_EvalObject(QJSContext *ctx, QJSValueConst this_obj,
 
 }
 
+QJS_API
 QJSValue JS_EvalThis(QJSContext *ctx, QJSValueConst this_obj,
                     const char *input, size_t input_len,
                     const char *filename, int eval_flags)
@@ -33742,6 +33877,7 @@ QJSValue JS_EvalThis(QJSContext *ctx, QJSValueConst this_obj,
     return ret;
 }
 
+QJS_API
 QJSValue JS_Eval(QJSContext *ctx, const char *input, size_t input_len,
                 const char *filename, int eval_flags)
 {
@@ -33749,6 +33885,7 @@ QJSValue JS_Eval(QJSContext *ctx, const char *input, size_t input_len,
                        eval_flags);
 }
 
+QJS_API
 int JS_ResolveModule(QJSContext *ctx, QJSValueConst obj)
 {
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_MODULE) {
@@ -34740,6 +34877,7 @@ static int JS_WriteObjectAtoms(BCWriterState *s)
     return -1;
 }
 
+QJS_API
 uint8_t *JS_WriteObject2(QJSContext *ctx, size_t *psize, QJSValueConst obj,
                          int flags, uint8_t ***psab_tab, size_t *psab_tab_len)
 {
@@ -34786,6 +34924,7 @@ uint8_t *JS_WriteObject2(QJSContext *ctx, size_t *psize, QJSValueConst obj,
     return NULL;
 }
 
+QJS_API
 uint8_t *JS_WriteObject(QJSContext *ctx, size_t *psize, QJSValueConst obj,
                         int flags)
 {
@@ -35921,6 +36060,7 @@ static void bc_reader_free(BCReaderState *s)
     js_free(s->ctx, s->objects);
 }
 
+QJS_API
 QJSValue JS_ReadObject(QJSContext *ctx, const uint8_t *buf, size_t buf_len,
                        int flags)
 {
@@ -36116,6 +36256,7 @@ static int JS_InstantiateFunctionListItem(QJSContext *ctx, QJSValueConst obj,
     return 0;
 }
 
+QJS_API
 void JS_SetPropertyFunctionList(QJSContext *ctx, QJSValueConst obj,
                                 const JSCFunctionListEntry *tab, int len)
 {
@@ -36129,6 +36270,7 @@ void JS_SetPropertyFunctionList(QJSContext *ctx, QJSValueConst obj,
     }
 }
 
+QJS_API
 int JS_AddModuleExportList(QJSContext *ctx, JSModuleDef *m,
                            const JSCFunctionListEntry *tab, int len)
 {
@@ -36140,6 +36282,7 @@ int JS_AddModuleExportList(QJSContext *ctx, JSModuleDef *m,
     return 0;
 }
 
+QJS_API
 int JS_SetModuleExportList(QJSContext *ctx, JSModuleDef *m,
                            const JSCFunctionListEntry *tab, int len)
 {
@@ -36193,6 +36336,7 @@ static void JS_SetConstructor2(QJSContext *ctx,
     set_cycle_flag(ctx, proto);
 }
 
+QJS_API
 void JS_SetConstructor(QJSContext *ctx, QJSValueConst func_obj,
                        QJSValueConst proto)
 {
@@ -40300,6 +40444,7 @@ exception:
 }
 
 /* only used in test262 */
+QJS_API
 QJSValue js_string_codePointRange(QJSContext *ctx, QJSValueConst this_val,
                                  int argc, QJSValueConst *argv)
 {
@@ -41702,6 +41847,7 @@ static const JSCFunctionListEntry js_string_proto_normalize[] = {
 };
 #endif
 
+QJS_API
 void JS_AddIntrinsicStringNormalize(QJSContext *ctx)
 {
 #ifdef CONFIG_ALL_UNICODE
@@ -43525,11 +43671,13 @@ static const JSCFunctionListEntry js_regexp_string_iterator_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "RegExp String Iterator", JS_PROP_CONFIGURABLE ),
 };
 
+QJS_API
 void JS_AddIntrinsicRegExpCompiler(QJSContext *ctx)
 {
     ctx->compile_regexp = js_compile_regexp;
 }
 
+QJS_API
 void JS_AddIntrinsicRegExp(QJSContext *ctx)
 {
     QJSValueConst obj;
@@ -43689,6 +43837,7 @@ static QJSValue json_parse_value(JSParseState *s)
     return JS_EXCEPTION;
 }
 
+QJS_API
 QJSValue JS_ParseJSON2(QJSContext *ctx, const char *buf, size_t buf_len,
                       const char *filename, int flags)
 {
@@ -43713,6 +43862,7 @@ QJSValue JS_ParseJSON2(QJSContext *ctx, const char *buf, size_t buf_len,
     return JS_EXCEPTION;
 }
 
+QJS_API
 QJSValue JS_ParseJSON(QJSContext *ctx, const char *buf, size_t buf_len,
                      const char *filename)
 {
@@ -44095,6 +44245,7 @@ exception:
     return -1;
 }
 
+QJS_API
 QJSValue JS_JSONStringify(QJSContext *ctx, QJSValueConst obj,
                          QJSValueConst replacer, QJSValueConst space0)
 {
@@ -44246,6 +44397,7 @@ static const JSCFunctionListEntry js_json_obj[] = {
     JS_OBJECT_DEF("JSON", js_json_funcs, countof(js_json_funcs), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE ),
 };
 
+QJS_API
 void JS_AddIntrinsicJSON(QJSContext *ctx)
 {
     /* add JSON as autoinit object */
@@ -45352,6 +45504,7 @@ static const JSClassShortDef js_proxy_class_def[] = {
     { JS_ATOM_Object, js_proxy_finalizer, js_proxy_mark }, /* JS_CLASS_PROXY */
 };
 
+QJS_API
 void JS_AddIntrinsicProxy(QJSContext *ctx)
 {
     QJSRuntime *rt = ctx->rt;
@@ -46232,6 +46385,7 @@ static const uint8_t js_map_proto_funcs_count[6] = {
     countof(js_set_iterator_proto_funcs),
 };
 
+QJS_API
 void JS_AddIntrinsicMapSet(QJSContext *ctx)
 {
     int i;
@@ -46361,6 +46515,7 @@ static QJSValue promise_reaction_job(QJSContext *ctx, int argc,
     return res2;
 }
 
+QJS_API
 void JS_SetHostPromiseRejectionTracker(QJSRuntime *rt,
                                        JSHostPromiseRejectionTracker *cb,
                                        void *opaque)
@@ -46714,6 +46869,7 @@ static QJSValue js_new_promise_capability(QJSContext *ctx,
     return JS_EXCEPTION;
 }
 
+QJS_API
 QJSValue JS_NewPromiseCapability(QJSContext *ctx, QJSValue *resolving_funcs)
 {
     return js_new_promise_capability(ctx, resolving_funcs, JS_UNDEFINED);
@@ -47501,6 +47657,7 @@ static JSClassShortDef const js_async_class_def[] = {
     { JS_ATOM_AsyncGenerator, js_async_generator_finalizer, js_async_generator_mark },  /* JS_CLASS_ASYNC_GENERATOR */
 };
 
+QJS_API
 void JS_AddIntrinsicPromise(QJSContext *ctx)
 {
     QJSRuntime *rt = ctx->rt;
@@ -48824,6 +48981,7 @@ static const JSCFunctionListEntry js_date_proto_funcs[] = {
     JS_CFUNC_DEF("toJSON", 1, js_date_toJSON ),
 };
 
+QJS_API
 void JS_AddIntrinsicDate(QJSContext *ctx)
 {
     QJSValueConst obj;
@@ -48839,6 +48997,7 @@ void JS_AddIntrinsicDate(QJSContext *ctx)
 
 /* eval */
 
+QJS_API
 void JS_AddIntrinsicEval(QJSContext *ctx)
 {
     ctx->eval_internal = __JS_EvalInternal;
@@ -49123,6 +49282,7 @@ static const JSCFunctionListEntry js_operators_funcs[] = {
 };
 
 /* must be called after all overloadable base types are initialized */
+QJS_API
 void JS_AddIntrinsicOperators(QJSContext *ctx)
 {
     QJSValue obj;
@@ -49464,6 +49624,7 @@ static const JSCFunctionListEntry js_bigint_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "BigInt", JS_PROP_CONFIGURABLE ),
 };
 
+QJS_API
 void JS_AddIntrinsicBigInt(QJSContext *ctx)
 {
     QJSRuntime *rt = ctx->rt;
@@ -50361,6 +50522,7 @@ static const JSCFunctionListEntry js_float_env_proto_funcs[] = {
     JS_CFUNC_DEF("clearStatus", 0, js_float_env_clearStatus ),
 };
 
+QJS_API
 void JS_AddIntrinsicBigFloat(QJSContext *ctx)
 {
     QJSRuntime *rt = ctx->rt;
@@ -50851,6 +51013,7 @@ static const JSCFunctionListEntry js_bigdecimal_funcs[] = {
     JS_CFUNC_MAGIC_DEF("sqrt", 1, js_bigdecimal_fop, MATH_OP_SQRT ),
 };
 
+QJS_API
 void JS_AddIntrinsicBigDecimal(QJSContext *ctx)
 {
     QJSRuntime *rt = ctx->rt;
@@ -50873,6 +51036,7 @@ void JS_AddIntrinsicBigDecimal(QJSContext *ctx)
                                countof(js_bigdecimal_funcs));
 }
 
+QJS_API
 void JS_EnableBignumExt(QJSContext *ctx, BOOL enable)
 {
     ctx->bignum_ext = enable;
@@ -50942,6 +51106,7 @@ static void JS_AddIntrinsicBasicObjects(QJSContext *ctx)
     //    assert(ctx->rt->atom_count == JS_ATOM_END);
 }
 
+QJS_API
 void JS_AddIntrinsicBaseObjects(QJSContext *ctx)
 {
     int i;
@@ -51230,6 +51395,7 @@ static QJSValue js_array_buffer_constructor1(QJSContext *ctx,
                                         JS_CLASS_ARRAY_BUFFER);
 }
 
+QJS_API
 QJSValue JS_NewArrayBuffer(QJSContext *ctx, uint8_t *buf, size_t len,
                           JSFreeArrayBufferDataFunc *free_func, void *opaque,
                           BOOL is_shared)
@@ -51240,6 +51406,7 @@ QJSValue JS_NewArrayBuffer(QJSContext *ctx, uint8_t *buf, size_t len,
 }
 
 /* create a new ArrayBuffer of length 'len' and copy 'buf' to it */
+QJS_API
 QJSValue JS_NewArrayBufferCopy(QJSContext *ctx, const uint8_t *buf, size_t len)
 {
     return js_array_buffer_constructor3(ctx, JS_UNDEFINED, len,
@@ -51328,6 +51495,7 @@ static QJSValue js_array_buffer_get_byteLength(QJSContext *ctx,
     return JS_NewUint32(ctx, abuf->byte_length);
 }
 
+QJS_API
 void JS_DetachArrayBuffer(QJSContext *ctx, QJSValueConst obj)
 {
     JSArrayBuffer *abuf = JS_GetOpaque(obj, JS_CLASS_ARRAY_BUFFER);
@@ -51373,6 +51541,7 @@ static JSArrayBuffer *js_get_array_buffer(QJSContext *ctx, QJSValueConst obj)
 
 /* return NULL if exception. WARNING: any JS call can detach the
    buffer and render the returned pointer invalid */
+QJS_API
 uint8_t *JS_GetArrayBuffer(QJSContext *ctx, size_t *psize, QJSValueConst obj)
 {
     JSArrayBuffer *abuf = js_get_array_buffer(ctx, obj);
@@ -51592,6 +51761,7 @@ static QJSValue js_typed_array_get_byteOffset(QJSContext *ctx,
 /* Return the buffer associated to the typed array or an exception if
    it is not a typed array or if the buffer is detached. pbyte_offset,
    pbyte_length or pbytes_per_element can be NULL. */
+QJS_API
 QJSValue JS_GetTypedArrayBuffer(QJSContext *ctx, QJSValueConst obj,
                                size_t *pbyte_offset,
                                size_t *pbyte_length,
@@ -54037,6 +54207,7 @@ static const JSCFunctionListEntry js_atomics_obj[] = {
     JS_OBJECT_DEF("Atomics", js_atomics_funcs, countof(js_atomics_funcs), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE ),
 };
 
+// This is neither static nor in the header?
 void JS_AddIntrinsicAtomics(QJSContext *ctx)
 {
     /* add Atomics as autoinit object */
@@ -54045,6 +54216,7 @@ void JS_AddIntrinsicAtomics(QJSContext *ctx)
 
 #endif /* CONFIG_ATOMICS */
 
+QJS_API
 void JS_AddIntrinsicTypedArrays(QJSContext *ctx)
 {
     QJSValue typed_array_base_proto, typed_array_base_func;
@@ -54135,6 +54307,7 @@ void JS_AddIntrinsicTypedArrays(QJSContext *ctx)
 // NOTE(dpriver): This was not originally in quickjs
 // I added it so I could implement logging
 //
+QJS_API
 int
 JS_get_caller_location(QJSContext* ctx, const char** filename, const char** funcname, int* line_num){
     JSStackFrame* sf = ctx->rt->current_stack_frame;
@@ -54162,6 +54335,7 @@ JS_get_caller_location(QJSContext* ctx, const char** filename, const char** func
 // NOTE(dpriver): This not being exposed was super
 // annoying.
 //
+QJS_API
 QJSValue
 JS_ArrayPush(QJSContext *ctx, QJSValueConst this_val, int argc, QJSValueConst *argv){
     return js_array_push(ctx, this_val, argc, argv, 0);
