@@ -44,7 +44,7 @@
 #elif defined(_WIN32)
 #define QJS_API __declspec(dllexport)
 #else
-#define QJS_API extern
+#define QJS_API extern __attribute__((visibility("default")))
 #endif
 
 #include "quickjs/quickjs.c"
