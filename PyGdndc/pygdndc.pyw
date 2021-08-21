@@ -24,11 +24,16 @@ import logging
 import datetime
 import zipfile
 import io
+QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+APPNAME = 'PyGdndc'
+APP = QApplication(sys.argv)
+APP.setApplicationName(APPNAME)
+APP.setApplicationDisplayName(APPNAME)
+
 IS_WINDOWS = sys.platform == 'win32'
 APPLOCAL = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation)
 if IS_WINDOWS:
     APPLOCAL = APPLOCAL.replace('/', '\\')
-APPNAME = 'PyGdndc'
 APPFOLDER = os.path.join(APPLOCAL, APPNAME)
 LOGS_FOLDER = os.path.join(APPFOLDER, 'Logs')
 os.makedirs(LOGS_FOLDER, exist_ok=True)
@@ -142,10 +147,6 @@ whitespace_re = re.compile(r'^\s+')
 APPHOST = 'invalid.'
 
 
-# QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-APP = QApplication(sys.argv)
-APP.setApplicationName(APPNAME)
-APP.setApplicationDisplayName(APPNAME)
 handler = SCHEME_Handler()
 QWebEngineProfile.defaultProfile().installUrlSchemeHandler(b'dnd', handler)  # type: ignore
 all_windows: Dict[str, 'Page'] = {}

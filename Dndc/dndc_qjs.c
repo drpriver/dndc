@@ -4,14 +4,16 @@
 #include "dndc_funcs.h"
 #include "dndc_types.h"
 PushDiagnostic();
+#ifdef __clang__
 #pragma clang diagnostic ignored "-Wunused-parameter"
+#endif
 #include "quickjs.h"
 PopDiagnostic();
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
 
-enum { ZERO_NODE_VALUE = (INVALID_NODE_HANDLE._value-1) };
+enum { ZERO_NODE_VALUE = (uint32_t)-2 };
 static inline
 void*_Nullable
 NodeHandle_to_opaque(NodeHandle handle){

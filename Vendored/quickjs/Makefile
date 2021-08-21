@@ -39,6 +39,8 @@ ifdef CONFIG_DARWIN
 CONFIG_CLANG=y
 CONFIG_DEFAULT_AR=y
 endif
+# always do it, yolo
+CONFIG_CLANG=y
 
 # installation directory
 prefix=/usr/local
@@ -61,16 +63,19 @@ ifdef CONFIG_WIN32
   EXE=.exe
   SO=.dll
   INSTALL_NAME=
+  SHARED_LINK=
 else
   CROSS_PREFIX=
 ifdef CONFIG_DARWIN
   SO=.dylib
   EXE=
   INSTALL_NAME=-install_name @rpath/$@
+  SHARED_LINK=
 else
   SO=.so
   EXE=
   INSTALL_NAME=
+  SHARED_LINK=-lm
 endif
 endif
 
@@ -247,8 +252,7 @@ libquickjs.a: $(patsubst %.o, %.nolto.o, $(QJS_LIB_OBJS))
 endif # CONFIG_LTO
 
 libquickjs$(SO): $(QJS_LIB_OBJS)
-	$(CC) -shared -o $@ $^ $(INSTALL_NAME)
-
+	$(CC) -shared -o $@ $^ $(INSTALL_NAME) $(SHARED_LINK)
 
 repl.c: $(QJSC) repl.js
 	$(QJSC) -c -o $@ -m repl.js
@@ -276,7 +280,7 @@ run-test262-32: $(patsubst %.o, %.m32.o, $(OBJDIR)/run-test262.o $(QJS_LIB_OBJS)
 # object suffix order: nolto, [m32|m32s]
 
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
-	$(CC) $(CFLAGS_OPT) -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) -c -o $@ $< -fPIC
 
 $(OBJDIR)/%.host.o: %.c | $(OBJDIR)
 	$(HOST_CC) $(CFLAGS_OPT) -c -o $@ $<
@@ -285,7 +289,7 @@ $(OBJDIR)/%.pic.o: %.c | $(OBJDIR)
 	$(CC) $(CFLAGS_OPT) -fPIC -DJS_SHARED_LIBRARY -c -o $@ $<
 
 $(OBJDIR)/%.nolto.o: %.c | $(OBJDIR)
-	$(CC) $(CFLAGS_NOLTO) -c -o $@ $<
+	$(CC) $(CFLAGS_NOLTO) -c -o $@ $< -fPIC
 
 $(OBJDIR)/%.m32.o: %.c | $(OBJDIR)
 	$(CC) -m32 $(CFLAGS_OPT) -c -o $@ $<
@@ -294,7 +298,7 @@ $(OBJDIR)/%.m32s.o: %.c | $(OBJDIR)
 	$(CC) -m32 $(CFLAGS_SMALL) -c -o $@ $<
 
 $(OBJDIR)/%.debug.o: %.c | $(OBJDIR)
-	$(CC) $(CFLAGS_DEBUG) -c -o $@ $<
+	$(CC) $(CFLAGS_DEBUG) -c -o $@ $< -fPIC
 
 $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<

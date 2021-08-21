@@ -81,6 +81,8 @@ frozen_modules = freezer.process(
   'PythonEmbed/vendored/pdb.py',
 )
 
+cc = meson.get_compiler('c')
+m_dep = cc.find_library('m', required : false)
 quickjs = both_libraries(
   'quickjs',
   'Vendored/quickjs/quickjs.c',
@@ -93,6 +95,7 @@ quickjs = both_libraries(
   version: meson.project_version(),
   soversion: meson.project_version(),
   darwin_versions: [COMPAT_VERSION, meson.project_version()],
+  dependencies:[m_dep],
   )
 
 executable(

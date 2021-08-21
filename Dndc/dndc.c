@@ -1151,8 +1151,9 @@ run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_pat
     report_size(&ctx, SV("source.length = "), source.length);
     report_size(&ctx, SV("la_.high_water = "), la_.high_water);
     if(!(flags & DNDC_NO_CLEANUP)){
-        auto before = get_t();
+        auto before_cleanup = get_t();
         if(ctx.flags & DNDC_PRINT_STATS){
+            auto before = get_t();
             RecordingAllocator* recorder = allocator._data;
             report_size(&ctx, SV("N allocations: "), recorder->count);
             size_t total = 0;
@@ -1191,7 +1192,7 @@ run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_pat
             report_time(&ctx, SV("Cleaning b64 cache: "), after-before);
         }
         auto after = get_t();
-        report_time(&ctx, SV("Cleaning up memory took: "), after-before);
+        report_time(&ctx, SV("Cleaning up memory took: "), after-before_cleanup);
         }
     if(external_b64cache){
         memcpy(external_b64cache, &ctx.b64cache, sizeof(ctx.b64cache));
@@ -1389,15 +1390,15 @@ dndc_stderr_error_func(Nullable(void*)unused, int type, const char* filename, in
                 fprintf(stderr, "[WARN] %.*s:%d: %s\n", filename_len, filename, line+1, message);
                 }
             return;
-        default:
-            if(col >= 0){
-                fprintf(stderr, "%.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
-                }
-            else {
-                fprintf(stderr, "%.*s:%d: %s\n", filename_len, filename, line+1, message);
-                }
-            return;
         }
+    // default
+    if(col >= 0){
+        fprintf(stderr, "%.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+        }
+    else {
+        fprintf(stderr, "%.*s:%d: %s\n", filename_len, filename, line+1, message);
+        }
+    return;
     }
 #endif
 #endif
