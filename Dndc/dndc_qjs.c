@@ -36,7 +36,7 @@ NodeHandle_to_opaque(NodeHandle handle){
 //
 // Utility or free functions
 //
-//
+
 static
 QJSValue
 js_make_dndc_context(QJSContext*, DndcContext*);
@@ -65,6 +65,10 @@ js_dndc_get_classlist_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* o
 static inline
 LongString
 jsstring_to_longstring(QJSContext* jsctx, QJSValueConst v, Allocator a);
+
+static inline
+LongString
+jsstring_to_kebabed(QJSContext* jsctx, QJSValueConst v, Allocator a);
 
 static inline
 force_inline
@@ -103,6 +107,7 @@ js_get_dndc_context(QJSContext*, QJSValue);
 JSGETTER(js_dndc_context_get_root);
 JSSETTER(js_dndc_context_set_root);
 JSGETTER(js_dndc_context_get_outfile);
+JSGETTER(js_dndc_context_get_outdir);
 JSGETTER(js_dndc_context_get_outpath);
 JSGETTER(js_dndc_context_get_sourcepath);
 JSGETTER(js_dndc_context_get_base);
@@ -115,12 +120,14 @@ JSMETHOD(js_dndc_context_set_data);
 JSMETHOD(js_dndc_context_read_file);
 JSMETHOD(js_dndc_context_select_nodes);
 JSMETHOD(js_dndc_context_to_string);
+JSMETHOD(js_dndc_context_add_link);
 
 static
 const
 JSCFunctionListEntry JS_DNDC_CONTEXT_FUNCS[] = {
     JS_CGETSET_DEF("root", js_dndc_context_get_root, js_dndc_context_set_root),
     JS_CGETSET_DEF("outfile", js_dndc_context_get_outfile, NULL),
+    JS_CGETSET_DEF("outdir", js_dndc_context_get_outdir, NULL),
     JS_CGETSET_DEF("outpath", js_dndc_context_get_outpath, NULL),
     JS_CGETSET_DEF("sourcepath", js_dndc_context_get_sourcepath, NULL),
     JS_CGETSET_DEF("base", js_dndc_context_get_base, NULL),
@@ -133,6 +140,7 @@ JSCFunctionListEntry JS_DNDC_CONTEXT_FUNCS[] = {
     JS_CFUNC_DEF("read_file", 2, js_dndc_context_read_file),
     JS_CFUNC_DEF("select_nodes", 1, js_dndc_context_select_nodes),
     JS_CFUNC_DEF("toString", 0, js_dndc_context_to_string),
+    JS_CFUNC_DEF("add_link", 2, js_dndc_context_add_link),
     };
 //
 // DndcNode
@@ -448,6 +456,19 @@ force_inline
 StringView
 jsstring_to_stringview(QJSContext* jsctx, QJSValueConst v, Allocator a){
     return LS_to_SV(jsstring_to_longstring(jsctx, v, a));
+    }
+
+static inline
+LongString
+jsstring_to_kebabed(QJSContext* jsctx, QJSValueConst v, Allocator a){
+    size_t len;
+    const char* str = JS_ToCStringLen(jsctx, &len, v);
+    if(!str){
+        return (LongString){};
+        }
+    MStringBuilder msb = {.allocator=a};
+    msb_write_kebab(&msb, str, len);
+    return msb_detach(&msb);
     }
 
 static inline
@@ -1396,6 +1417,23 @@ JSMETHOD(js_dndc_context_to_string){
     return result;
     }
 
+JSMETHOD(js_dndc_context_add_link){
+    DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
+    if(!ctx)
+        return JS_EXCEPTION;
+    if(argc != 2)
+        return JS_ThrowTypeError(jsctx, "Need 2 string argument to set_data");
+    LongString kebabed_ = jsstring_to_kebabed(jsctx, argv[0], ctx->string_allocator);
+    if(!kebabed_.text)
+        return JS_EXCEPTION;
+    StringView kebabed = LS_to_SV(kebabed_);
+    StringView value = jsstring_to_stringview(jsctx, argv[1], ctx->string_allocator);
+    if(!value.text)
+        return JS_EXCEPTION;
+    add_link_from_pair(ctx, kebabed, value);
+    return JS_UNDEFINED;
+    }
+
 static
 DndcContext*_Nullable
 js_get_dndc_context(QJSContext* ctx, QJSValue thisValue){
@@ -1449,6 +1487,15 @@ JSGETTER(js_dndc_context_get_outfile){
         return JS_EXCEPTION;
     StringView filename = ctx->outputfile.length?path_basename(LS_to_SV(ctx->outputfile)):SV("");
     return JS_NewStringLen(jsctx, filename.text, filename.length);
+    }
+JSGETTER(js_dndc_context_get_outdir){
+    DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
+    if(!ctx)
+        return JS_EXCEPTION;
+    StringView outdir = path_dirname(LS_to_SV(ctx->outputfile));
+    if(!outdir.length)
+        outdir = SV(".");
+    return JS_NewStringLen(jsctx, outdir.text, outdir.length);
     }
 
 JSGETTER(js_dndc_context_get_outpath){

@@ -157,7 +157,7 @@ node_print_err(DndcContext* ctx, const Node* node, StringView msg){
     auto filename = node->filename;
     auto lineno = node->row;
     int col = node->col;
-    ctx->error_func(ctx->error_user_data, DNDC_WARNING_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
+    ctx->error_func(ctx->error_user_data, DNDC_ERROR_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
     }
 
 static
@@ -472,6 +472,14 @@ add_link_from_header(DndcContext* ctx, StringView str){
     }
 
 static inline
+void
+add_link_from_pair(DndcContext* ctx, StringView kebabed, StringView value){
+    auto li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
+    li->key = kebabed;
+    li->value = value;
+    }
+
+static inline
 force_inline
 NodeHandle
 alloc_handle(DndcContext* ctx){
@@ -694,14 +702,12 @@ ctx_add_auto_index_links(DndcContext* ctx){
         }
     MARRAY_FOR_EACH(filename, filenames){
         MStringBuilder msb = {.allocator = ctx->string_allocator};
-        msb_write_kebab(&msb, filename->text, filename->length-4);
+        msb_write_kebab(&msb, filename->text, filename->length-(sizeof(".dnd")-1));
         msb_write_literal(&msb, ".html");
         LongString kebab = msb_detach(&msb);
-        StringView key = {.text = kebab.text, .length = kebab.length-5};
+        StringView key = {.text = kebab.text, .length = kebab.length-(sizeof(".html")-1)};
         StringView value = LS_to_SV(kebab);
-        auto li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
-        li->key = key;
-        li->value = value;
+        add_link_from_pair(ctx, key, value);
         }
     auto after = get_t();
     report_time(ctx, SV("auto index links took: "), after-before);

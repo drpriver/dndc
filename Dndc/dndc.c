@@ -1004,6 +1004,8 @@ run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_pat
                 }
             NODE_CHILDREN_FOR_EACH(it, link_node){
                 auto link_str_node = get_node(&ctx, *it);
+                if(link_str_node->type != NODE_STRING)
+                    continue;
                 auto e = add_link_from_sv(&ctx, link_str_node);
                 if(e.errored){
                     result.errored = e.errored;
