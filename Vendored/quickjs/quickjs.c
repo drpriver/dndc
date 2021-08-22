@@ -53,11 +53,6 @@
 typedef intptr_t ssize_t;
 #endif
 
-// define this before including quickjs.h
-#if !defined(QJS_API) && defined(_WIN32)
-#define QJS_API __declspec(export)
-#endif
-
 #include "quickjs.h"
 #include "cutils.h"
 #include "list.h"
@@ -54023,7 +54018,9 @@ static QJSValue js_atomics_wait(QJSContext *ctx,
     int32_t v32;
     void *ptr;
     int64_t timeout;
+#ifndef _WIN32
     struct timespec ts;
+#endif
     JSAtomicsWaiter waiter_s, *waiter;
     int ret, size_log2, res;
     double d;

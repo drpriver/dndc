@@ -18,6 +18,7 @@ MKDIR=$(PYTHON) -m Scripts.win_utils mkdir
 CP=$(PYTHON) -m Scripts.win_utils cp
 EXE=.exe
 SO=.dll
+SOLIB=.lib
 INSTALL=$(PYTHON) -m Scripts.win_utils install
 
 ifeq ($(PYCFLAGS), )
@@ -41,8 +42,8 @@ PYEXTFLAGS=-shared
 GDNDCINCLUDES=-ID:\WebView2Samples\GettingStartedGuides\Win32_GettingStarted\packages\Microsoft.Web.WebView2.1.0.774.44\build\native\include -ID:\WebView2Samples\GettingStartedGuides\Win32_GettingStarted\packages\Microsoft.Windows.ImplementationLibrary.1.0.210204.1\include
 GDNDCLINKER=-LD:\WebView2Samples\GettingStartedGuides\Win32_GettingStarted\packages\Microsoft.Web.WebView2.1.0.774.44\build\native\x64
 gdndc: $(BINDIR)/gdndc.exe
-$(BINDIR)/gdndc.exe: Platform/Windows/gdndc.cpp $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o  Platform/Windows/windows.mak
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(GDNDCINCLUDES) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/gdndc.dep $< $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) $(GDNDCLINKER) -std=c++17 -Wno-deprecated-dynamic-exception-spec -Wno-missing-noreturn -Wno-c99-designator
+$(BINDIR)/gdndc.exe: Platform/Windows/gdndc.cpp $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o  Platform/Windows/windows.mak $(BINDIR)/libquickjs$(SO)
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(GDNDCINCLUDES) $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/gdndc.dep $< $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) $(GDNDCLINKER) -std=c++17 -Wno-deprecated-dynamic-exception-spec -Wno-missing-noreturn -Wno-c99-designator -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB)
 #this is untested
 $(OBJDIR)/dndc.lib: $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o
 	llvm-ar crs $@ $^

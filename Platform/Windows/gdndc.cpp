@@ -16,6 +16,11 @@
 #undef ERROR
 #include "dndc_api_def.h"
 #include "dndc.h"
+typedef struct DndcLongString LongString;
+typedef struct DndcLongStringUtf16 LongStringUtf16;
+typedef struct DndcStringView StringView;
+typedef struct DndcStringViewUtf16 StringViewUtf16;
+#define LONGSTRING_DEFINED
 #include "long_string.h"
 #pragma comment(lib, "user32.lib")
 // #pragma comment(lib, "WebView2Loader.dll.lib")
@@ -162,7 +167,7 @@ thread_worker(void*){
                     | DNDC_DONT_PRINT_ERRORS
                     | DNDC_SUPPRESS_WARNINGS
                     ,
-                    SV(""),
+                    LS(""),
                     source,
                     &output,
                     NULL,
@@ -193,10 +198,10 @@ thread_worker(void*){
                     print_error(L"Failed to write the html");
                     }
                 }
-                free((void*)output.text);
+                dndc_free_string(output);
                 }
             else {
-                MessageBox(NULL, TEXT("Unable to compile the dndc file"), TEXT("Error"), MB_OK);
+                // MessageBox(NULL, TEXT("Unable to compile the dndc file"), TEXT("Error"), MB_OK);
                 }
             free((void*)text);
             }

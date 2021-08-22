@@ -23,20 +23,17 @@ add_executable(dndc
     )
 
 add_library(quickjs-dylib
-		SHARED
-		Vendored/quickjs/quickjs.c
-		Vendored/quickjs/libregexp.c
-		Vendored/quickjs/libunicode.c
-		Vendored/quickjs/cutils.c
-		)
+    SHARED
+    Vendored/libquickjs.c
+    )
 add_library(quickjs-lib
-		STATIC
-		Vendored/quickjs/quickjs.c
-		Vendored/quickjs/libregexp.c
-		Vendored/quickjs/libunicode.c
-		Vendored/quickjs/cutils.c
-		)
-target_compile_definitions(quickjs-dylib PRIVATE CONFIG_VERSION="2021-03-27")
+    STATIC
+    Vendored/libquickjs.c
+    )
+target_compile_definitions(quickjs-dylib PRIVATE
+    CONFIG_VERSION="2021-03-27"
+    BUILDING_SHARED_OBJECT
+    )
 # Just use our project version as their version is date based.
 set_target_properties(quickjs-lib
     PROPERTIES OUTPUT_NAME quickjs
@@ -51,7 +48,7 @@ target_compile_definitions(quickjs-lib PRIVATE CONFIG_VERSION="2021-03-27")
 
 target_link_libraries(dndc ${Python3_LIBRARIES} quickjs-dylib)
 target_include_directories(dndc PRIVATE ${Python3_INCLUDE_DIRS})
-target_compile_definitions(dndc PRIVATE DNDCMAIN)
+target_compile_definitions(dndc PRIVATE DNDCMAIN QJS_SHARED_LIBRARY)
 
 # Cmake sucks and doesn't allow a library and
 # executable with the same name, even though the output files are different!
@@ -105,25 +102,27 @@ if(APPLE)
 
     target_link_libraries(gdndc
         ${Python3_LIBRARIES}
-		quickjs-dylib
+        quickjs-dylib
         "-framework Cocoa"
         "-framework WebKit"
         )
     target_compile_options(gdndc PUBLIC "-fobjc-arc")
+    target_compile_definitions(gdndc PRIVATE QJS_SHARED_LIBRARY)
     target_include_directories(gdndc PRIVATE ${Python3_INCLUDE_DIRS} Dndc)
 endif()
 
 if(WIN32)
-add_executable(gdndc
-    Platform/Windows/gdndc.cpp
-    Dndc/dndc.c
-    PythonEmbed/frozenstdlib.c
-    )
-target_link_libraries(gdndc
-		${Python3_LIBRARIES}
-		quickjs-dylib
-		)
-target_include_directories(gdndc PRIVATE ${Python3_INCLUDE_DIRS} Dndc)
+    # this was an experiment.
+    #add_executable(gdndc
+    #    Platform/Windows/gdndc.cpp
+    #    Dndc/dndc.c
+    #    PythonEmbed/frozenstdlib.c
+    #    )
+    #target_link_libraries(gdndc
+    #    ${Python3_LIBRARIES}
+    #    quickjs-dylib
+    #    )
+    #target_include_directories(gdndc PRIVATE ${Python3_INCLUDE_DIRS} Dndc)
 target_compile_options(quickjs-lib PUBLIC "-mrdseed")
 target_compile_options(quickjs-dylib PUBLIC "-mrdseed")
 endif()
@@ -146,11 +145,12 @@ add_executable(TestRarray Utils/TestRarray.c)
 add_test(rarray TestRarray)
 
 add_executable(TestDndc Dndc/TestDndc.c PythonEmbed/frozenstdlib.c)
+target_compile_definitions(TestDndc PRIVATE QJS_SHARED_LIBRARY)
 add_test(dndc TestDndc -C ${CMAKE_SOURCE_DIR})
 target_link_libraries(TestDndc
-		${Python3_LIBRARIES}
-		quickjs-lib
-		)
+    ${Python3_LIBRARIES}
+    quickjs-dylib
+    )
 target_include_directories(TestDndc PRIVATE ${Python3_INCLUDE_DIRS})
 
 # installs

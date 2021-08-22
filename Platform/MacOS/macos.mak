@@ -22,9 +22,10 @@ CP=cp
 EXE=
 INSTALL=install
 SO=.dylib
+SOLIB=.dylib
 
 $(BINDIR)/gdndc: Platform/MacOS/gdndc.m $(OBJDIR)/frozenstdlib.o Platform/MacOS/Info.plist Platform/MacOS/app_icon.png opt.mak $(BINDIR)/libquickjs.dylib
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/gdndc.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -framework Cocoa -framework WebKit -fobjc-arc -Wl,-sectcreate,__TEXT,__info_plist,Platform/MacOS/Info.plist $(BINDIR)/libquickjs.dylib -rpath @executable_path
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/gdndc.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -framework Cocoa -framework WebKit -fobjc-arc -Wl,-sectcreate,__TEXT,__info_plist,Platform/MacOS/Info.plist -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs.dylib -rpath @executable_path
 gdndc: $(BINDIR)/gdndc
 install-gdndc: $(BINDIR)/gdndc
 	$(INSTALL) -C $< $(INSTALLDIR)/gdndc

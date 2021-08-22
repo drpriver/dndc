@@ -88,7 +88,14 @@ get_directory_error(void){
 static
 void
 free_directory_error(const char* err){
+#ifdef PushDiagnostic
+    PushDiagnostic();
+    SuppressCastQual();
     LocalFree((void*)err);
+    PopDiagnostic();
+#else
+    LocalFree((void*)err);
+#endif
     }
 static
 Errorable_f(void)

@@ -6,6 +6,12 @@ pymod = import('python')
 pyinstall = pymod.find_installation()
 pydep = pyinstall.dependency(embed: true)
 if host_machine.system() == 'windows'
+  ignore_bogus_deprecations = ['-D_CRT_NONSTDC_NO_WARNINGS', '-D_CRT_SECURE_NO_WARNINGS']
+else
+  ignore_bogus_deprecations = []
+endif
+
+if host_machine.system() == 'windows'
 includes = include_directories('Allocators', 'Utils', 'PythonEmbed', 'Dndc', 'Platform/Windows', 'Vendored/quickjs')
 else
 includes = include_directories('Allocators', 'Utils', 'PythonEmbed', 'Dndc', 'Vendored/quickjs')
@@ -18,6 +24,7 @@ freeze_exec = executable(
   'PythonEmbed/freeze_py_module.c',
   include_directories: includes,
   dependencies:pydep,
+  c_args: ignore_bogus_deprecations,
   )
 freezer = generator(
   freeze_exec,
@@ -83,14 +90,25 @@ frozen_modules = freezer.process(
 
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m', required : false)
-quickjs = both_libraries(
+if host_machine.system() == 'windows'
+  qjs_extra_args = ['-mrdseed']
+else
+  qjs_extra_args = []
+endif
+
+quickjs_static = static_library(
   'quickjs',
-  'Vendored/quickjs/quickjs.c',
-  'Vendored/quickjs/libregexp.c',
-  'Vendored/quickjs/libunicode.c',
-  'Vendored/quickjs/cutils.c',
+  'Vendored/libquickjs.c',
   include_directories: 'Vendored/quickjs',
-  c_args:['-DCONFIG_VERSION="2021-03-27"'],
+  c_args: qjs_extra_args+ignore_bogus_deprecations,
+  install: true,
+  dependencies:[m_dep],
+  )
+quickjs_dylib = shared_library(
+  'quickjs',
+  'Vendored/libquickjs.c',
+  include_directories: 'Vendored/quickjs',
+  c_args: qjs_extra_args+['-DBUILDING_SHARED_OBJECT']+ignore_bogus_deprecations,
   install: true,
   version: meson.project_version(),
   soversion: meson.project_version(),
@@ -107,7 +125,7 @@ executable(
   dependencies:[pydep, thread_dep],
   c_args: ['-DDNDCMAIN'],
   install: true,
-  link_with: quickjs,
+  link_with: quickjs_static,
   )
 executable(
   'dndcbench',
@@ -118,7 +136,7 @@ executable(
   dependencies:[pydep, thread_dep],
   c_args: ['-DDNDCMAIN', '-DBENCHMARKING', '-DBENCHMARKITERS=1000', '-g'],
   install: false,
-  link_with: quickjs,
+  link_with: quickjs_static,
   )
 both_libraries(
   'dndc',
@@ -131,7 +149,7 @@ both_libraries(
   version: meson.project_version(),
   soversion: meson.project_version(),
   darwin_versions: [COMPAT_VERSION, meson.project_version()],
-  link_with: quickjs,
+  link_with: quickjs_static,
   )
 
 
@@ -139,7 +157,7 @@ pyinstall.extension_module(
   'pydndc',
   'Dndc/pydndc.c',
   include_directories: includes,
-  link_with: quickjs,
+  link_with: quickjs_static,
   dependencies:pyinstall.dependency(),
   )
 
@@ -152,28 +170,28 @@ if host_machine.system() == 'darwin'
     frozen_modules,
     dependencies:[pydep, dependency('appleframeworks', modules: ['Cocoa', 'WebKit'])],
     include_directories: includes,
-    objc_args: ['-fobjc-arc'],
+    objc_args: ['-fobjc-arc', '-DQJS_SHARED_LIBRARY'],
     link_args: '-Wl,-sectcreate,__TEXT,__info_plist,'+meson.source_root() + '/Platform/MacOS/Info.plist',
-    link_with: quickjs,
+    link_with: quickjs_dylib,
     install: true,
     )
 endif
 
 # tests
 testkw = {'include_directories': includes}
-t = executable('TestArgumentParsing', 'Utils/TestArgumentParsing.c', kwargs:testkw)
+t = executable('TestArgumentParsing', 'Utils/TestArgumentParsing.c', kwargs:testkw, c_args:ignore_bogus_deprecations)
 test('argumentparsing', t)
-t = executable('TestBase64', 'Utils/TestBase64.c', kwargs:testkw)
+t = executable('TestBase64', 'Utils/TestBase64.c', kwargs:testkw, c_args:ignore_bogus_deprecations)
 test('base64', t)
-t = executable('TestByteBuilder', 'Utils/TestByteBuilder.c', kwargs:testkw)
+t = executable('TestByteBuilder', 'Utils/TestByteBuilder.c', kwargs:testkw, c_args:ignore_bogus_deprecations)
 test('bytebuilder', t)
-t = executable('TestMStringBuilder', 'Utils/TestMStringBuilder.c', kwargs:testkw)
+t = executable('TestMStringBuilder', 'Utils/TestMStringBuilder.c', kwargs:testkw, c_args:ignore_bogus_deprecations)
 test('mstringbuilder', t)
-t = executable('TestPathUtil', 'Utils/TestPathUtil.c', kwargs:testkw)
+t = executable('TestPathUtil', 'Utils/TestPathUtil.c', kwargs:testkw, c_args:ignore_bogus_deprecations)
 test('pathutil', t)
-t = executable('TestStrUtils', 'Utils/TestStrUtils.c', kwargs:testkw)
+t = executable('TestStrUtils', 'Utils/TestStrUtils.c', kwargs:testkw, c_args:ignore_bogus_deprecations)
 test('strutil', t)
-t = executable('TestRarray', 'Utils/TestRarray.c', kwargs:testkw)
+t = executable('TestRarray', 'Utils/TestRarray.c', kwargs:testkw, c_args:ignore_bogus_deprecations)
 test('rarray', t)
 t = executable('TestDndc',
   'Dndc/TestDndc.c',
@@ -181,6 +199,7 @@ t = executable('TestDndc',
   frozen_modules,
   include_directories:includes,
   dependencies:[pydep, thread_dep],
-  link_with: quickjs,
+  c_args: ['-DQJS_SHARED_LIBRARY']+ignore_bogus_deprecations,
+  link_with: quickjs_dylib,
   )
 test('dndc', t, args:['-C', meson.source_root()])

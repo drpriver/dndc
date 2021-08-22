@@ -32,15 +32,22 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#ifndef QJS_API
-#ifdef _WIN32
+
+#if !defined(QJS_API)
+#if defined(QJS_SHARED_LIBRARY)
+
+#if defined(_WIN32)
 #define QJS_API __declspec(dllimport)
-#elif defined(__GNUC__) || defined(__clang__)
-#define QJS_API __attribute__((visibility("default")))
 #else
-#define QJS_API extern
+#define QJS_API extern __attribute__((visibility("default")))
+#endif
+
+#else
+#define QJS_API extern __attribute__((visibility("hidden")))
+
 #endif
 #endif
+
 
 #ifdef __cplusplus
 extern "C" {

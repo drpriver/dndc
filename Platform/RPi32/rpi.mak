@@ -25,6 +25,7 @@ MKDIR=mkdir
 CP=cp
 EXE=
 SO=.so
+SOLIB=.so
 INSTALL=install
 PYEXTENSION=.so
 PYEXTFLAGS=-shared -fPIC

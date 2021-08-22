@@ -3,6 +3,9 @@
 #define CONFIG_VERSION "2021-03-27"
 
 #if defined(__clang__)
+#ifdef _WIN32
+#pragma clang diagnostic ignored "-Wmicrosoft-enum-forward-reference"
+#endif
 // These are basically harmless.
 #pragma clang diagnostic ignored "-Wunused-parameter"
 #pragma clang diagnostic ignored "-Wcast-qual"
@@ -23,9 +26,7 @@
 // What is up with these?
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
-#if !defined(BUILDING_SHARED_OBJECT) && !defined(QJS_API)
-#define QJS_API extern __attribute__((visibility("hidden")))
-#endif
+
 
 #include "quickjs/cutils.c"
 
@@ -37,4 +38,13 @@
 #undef compute_stack_size
 
 #include "quickjs/libunicode.c"
+
+#if !defined(BUILDING_SHARED_OBJECT)
+#define QJS_API extern __attribute__((visibility("hidden")))
+#elif defined(_WIN32)
+#define QJS_API __declspec(dllexport)
+#else
+#define QJS_API extern
+#endif
+
 #include "quickjs/quickjs.c"

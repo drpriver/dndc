@@ -1,8 +1,5 @@
 #ifndef TESTING_H
 #define TESTING_H
-#include <string.h>
-#include <stdio.h>
-#include <errno.h>
 #ifdef _WIN32
 // for chdir
 #include <direct.h>
@@ -10,6 +7,9 @@
 #else
 #include <unistd.h>
 #endif
+#include <string.h>
+#include <stdio.h>
+#include <errno.h>
 #include "common_macros.h"
 #include "log_print.h"
 #include "long_string.h"
