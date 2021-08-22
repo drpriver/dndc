@@ -196,6 +196,7 @@ JSClassDef JS_DNDC_ATTRIBUTES_CLASS = {
 // DndcNodeAttributes methods
 //
 JSMETHOD(js_dndc_attributes_get);
+JSMETHOD(js_dndc_attributes_has);
 JSMETHOD(js_dndc_attributes_set);
 JSMETHOD(js_dndc_attributes_to_string);
 JSMETHOD(js_dndc_attributes_entries);
@@ -204,6 +205,7 @@ static
 const
 JSCFunctionListEntry JS_DNDC_ATTRIBUTES_FUNCS[] = {
     JS_CFUNC_DEF("get", 1, js_dndc_attributes_get),
+    JS_CFUNC_DEF("has", 1, js_dndc_attributes_has),
     JS_CFUNC_DEF("set", 1, js_dndc_attributes_set),
     JS_CFUNC_DEF("toString", 0, js_dndc_attributes_to_string),
     JS_CFUNC_DEF("entries", 0, js_dndc_attributes_entries),
@@ -405,7 +407,7 @@ execute_qjs_string(QJSContext* jsctx, DndcContext* ctx, const char* str, size_t 
             filename = Allocator_strndup(ctx->string_allocator, node->filename.text, node->filename.length);
         }
 
-        QJSValue err = JS_Eval(jsctx, str, length, filename, 0);
+        QJSValue err = JS_Eval(jsctx, str, length, filename, 1);
         if(JS_IsException(err)){
             // FIXME: More robust signalling of errors.
             if(ctx->error.message.length){
@@ -1514,6 +1516,30 @@ JSMETHOD(js_dndc_attributes_get){
         return JS_UNDEFINED;
     else
         return JS_NewStringLen(jsctx, value->text, value->length);
+    }
+
+JSMETHOD(js_dndc_attributes_has){
+    if(argc != 1)
+        return JS_ThrowTypeError(jsctx, "get takes 1 argument");
+    QJSValueConst arg = argv[0];
+    if(!JS_IsString(arg))
+        return JS_ThrowTypeError(jsctx, "get takes 1 string argument");
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    NodeHandle handle;
+    if(!js_dndc_get_attributes_handle(jsctx, thisValue, &handle))
+        return JS_EXCEPTION;
+    assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
+    StringView key = jsstring_make_stringview_js_allocated(jsctx, arg);
+    if(!key.text)
+        return JS_EXCEPTION;
+    Node* node = get_node(ctx, handle);
+    StringView* value = node_get_attribute(node, key);
+    JS_FreeCString(jsctx, key.text);
+    if(!value)
+        return JS_FALSE;
+    else
+        return JS_TRUE;
     }
 
 JSMETHOD(js_dndc_attributes_set){

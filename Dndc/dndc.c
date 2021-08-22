@@ -99,6 +99,10 @@ execute_user_scripts(DndcContext* ctx){
             if(type == NODE_JS && (flags & DNDC_NO_COMPILETIME_JS))
                 continue;
             MStringBuilder msb = (MStringBuilder){.allocator=ctx->string_allocator};
+            if(type == NODE_JS){
+                msb_write_nchar(&msb, '\n', node->row);
+                msb_write_literal(&msb, "\"use strict\";\n");
+                }
             NODE_CHILDREN_FOR_EACH(it, node){
                 auto child_node = get_node(ctx, *it);
                 msb_write_str(&msb, child_node->header.text, child_node->header.length);
