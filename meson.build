@@ -170,9 +170,9 @@ if host_machine.system() == 'darwin'
     frozen_modules,
     dependencies:[pydep, dependency('appleframeworks', modules: ['Cocoa', 'WebKit'])],
     include_directories: includes,
-    objc_args: ['-fobjc-arc', '-DQJS_SHARED_LIBRARY'],
+    objc_args: ['-fobjc-arc'],
     link_args: '-Wl,-sectcreate,__TEXT,__info_plist,'+meson.source_root() + '/Platform/MacOS/Info.plist',
-    link_with: quickjs_dylib,
+    link_with: quickjs_static,
     install: true,
     )
 endif
