@@ -130,7 +130,7 @@ PyTypeObject DndcPyFileCache_Type = {
     .tp_basicsize = sizeof(DndcPyFileCache),
     .tp_doc = "An object that manages a cache of files to avoid io between repeated invocations.",
     .tp_new = DndcPyFileCache_new,
-    .tp_dealloc = (destructor)DndcPyFileCache_dealloc,
+    .tp_dealloc = DndcPyFileCache_dealloc,
     .tp_methods = DndcPyFileCache_methods,
 };
 

@@ -13,7 +13,7 @@ PopDiagnostic();
 #pragma clang assume_nonnull begin
 #endif
 
-enum { ZERO_NODE_VALUE = (uint32_t)-2 };
+enum { ZERO_NODE_VALUE = INVALID_NODE_HANDLE_VALUE-1 };
 static inline
 void*_Nullable
 NodeHandle_to_opaque(NodeHandle handle){

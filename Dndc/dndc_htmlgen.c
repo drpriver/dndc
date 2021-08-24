@@ -876,6 +876,22 @@ RENDERFUNC(RAW){
             }
         return (Errorable(void)){};
         }
+    if(node_has_attribute(node, SV("import"))){
+        NODE_CHILDREN_FOR_EACH(it, node){
+            auto child = get_node(ctx, *it);
+            if(unlikely(child->type != NODE_STRING)){
+                node_print_warning(ctx, child, SV("Raw node with a non-string child"));
+                continue;
+                }
+            auto e = ctx_load_source_file(ctx, child->header);
+            if(e.errored){
+                node_set_err_q(ctx, child, SV("Unable to load file: "), child->header);
+                return (Errorable(void)){.errored=e.errored};
+                }
+            LongString contents = e.result;
+            msb_write_str(sb, contents.text, contents.length);
+            }
+        }
     // ignoring the header for now. Idk what the semantics are supposed to be.
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
@@ -897,12 +913,35 @@ RENDERFUNC(PRE){
         if(e.errored) return e;
         }
     msb_write_literal(sb, "<pre>\n");
-    NODE_CHILDREN_FOR_EACH(it, node){
-        auto child = get_node(ctx, *it);
-        if(unlikely(child->type != NODE_STRING))
-            node_print_warning(ctx, child, SV("pre node with a non-string child"));
-        write_tag_escaped_str(sb, child->header.text, child->header.length);
-        msb_write_char(sb, '\n');
+    if(node_has_attribute(node, SV("import"))){
+        NODE_CHILDREN_FOR_EACH(it, node){
+            auto child = get_node(ctx, *it);
+            if(unlikely(child->type != NODE_STRING)){
+                node_print_warning(ctx, child, SV("pre node with a non-string child"));
+                continue;
+                }
+            auto e = ctx_load_source_file(ctx, child->header);
+            if(e.errored){
+                node_set_err_q(ctx, child, SV("Unable to load file: "), child->header);
+                return (Errorable(void)){.errored=e.errored};
+                }
+            auto contents = e.result;
+            for(StringView remainder = LS_to_SV(contents); remainder.length;){
+                SplitPair pair = string_split(remainder.text, remainder.length, '\n');
+                write_tag_escaped_str(sb, pair.head.text, pair.head.length);
+                msb_write_char(sb, '\n');
+                remainder = pair.tail;
+                }
+            }
+        }
+    else {
+        NODE_CHILDREN_FOR_EACH(it, node){
+            auto child = get_node(ctx, *it);
+            if(unlikely(child->type != NODE_STRING))
+                node_print_warning(ctx, child, SV("pre node with a non-string child"));
+            write_tag_escaped_str(sb, child->header.text, child->header.length);
+            msb_write_char(sb, '\n');
+            }
         }
     msb_write_literal(sb, "</pre>\n</div>\n");
     return (Errorable(void)){};

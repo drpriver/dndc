@@ -406,13 +406,11 @@ But Wait, There's More::md
   embed the text.
 
   ::python
-    prenode = ctx.make_node(NodeType.PRE, classes=['embedded'])
+    prenode = ctx.make_node(NodeType.PRE, classes=['embedded'], attributes=['import'], header='This Document')
     # `add_child` can accept two kinds of arguments: nodes and strings
     # strings are converted to STRING nodes.
+    prenode.add_child(ctx.sourcepath)
     ctx.root.add_child(prenode)
-    for line in ctx.read_file(ctx.sourcepath).splitlines():
-      prenode.add_child(line.rstrip())
-
     # the endpython comment is not necessary. I only include it so that
     # vim knows when the python block ends for syntax highlighting purposes.
     #endpython

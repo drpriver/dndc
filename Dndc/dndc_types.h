@@ -66,6 +66,9 @@ typedef struct Attribute {
 // (skinny nodes being things like string nodes), which could potentially result
 // in some good savings.
 //
+// The issue with that is many things assume these node handles are stable
+// and we support turning string nodes into other nodes.
+//
 typedef union NodeHandle {
     struct { uint32_t index; };
     uint32_t _value;
@@ -74,9 +77,11 @@ typedef union NodeHandle {
 //
 // As 0 is the root node, we use this as the invalid value instead.
 //
-const NodeHandle INVALID_NODE_HANDLE = {._value=-1}; // for debugging
+enum {INVALID_NODE_HANDLE_VALUE = (uint32_t)-1};
+// NOTE: not static so it is visible in the debugger.
+const NodeHandle INVALID_NODE_HANDLE = {._value=INVALID_NODE_HANDLE_VALUE};
 // Shadow the above symbol intentionally.
-#define INVALID_NODE_HANDLE ((NodeHandle){._value=-1})
+#define INVALID_NODE_HANDLE ((NodeHandle){._value=INVALID_NODE_HANDLE_VALUE})
 
 static inline
 force_inline
@@ -124,6 +129,12 @@ node_children(Nonnull(Node*)node){
     if(node->children.count > 4)
         return node->children.data;
     return node->inline_children;
+}
+static inline
+force_inline
+size_t
+node_children_count(Nonnull(Node*)node){
+    return node->children.count;
 }
 
 static inline

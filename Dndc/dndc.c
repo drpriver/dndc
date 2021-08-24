@@ -89,6 +89,7 @@ execute_user_scripts(DndcContext* ctx){
         NodeHandle handle = ctx->user_script_nodes.data[i];
         NodeType type;
         LongString str;
+        NodeHandle firstchild;
         {
             Node* node = get_node(ctx, handle);
             type = node->type;
@@ -98,10 +99,33 @@ execute_user_scripts(DndcContext* ctx){
                 continue;
             if(type == NODE_JS && (flags & DNDC_NO_COMPILETIME_JS))
                 continue;
+            if(!node_children_count(node))
+                continue;
+            firstchild = node_children(node)[0];
+            // HACK: turn the filename into the text of the script.
+            if(node_has_attribute(node, SV("import"))){
+                if(node_children_count(node) != 1){
+                    node_print_err(ctx, node, SV("Only 1 child of imported node allowed"));
+                    result.errored = PARSE_ERROR;
+                    goto cleanup;
+                    }
+                // NodeHandle childhandle
+                Node* firstchild_node = get_node(ctx, firstchild);
+                auto e = ctx_load_source_file(ctx, firstchild_node->header);
+                if(e.errored){
+                    node_print_err(ctx, firstchild_node, SV("Unable to load file"));
+                    result.errored = e.errored;
+                    goto cleanup;
+                    }
+                firstchild_node->filename = firstchild_node->header;
+                firstchild_node->col = 0;
+                firstchild_node->row = 1;
+                firstchild_node->header = LS_to_SV(e.result);
+                }
             MStringBuilder msb = (MStringBuilder){.allocator=ctx->string_allocator};
             if(type == NODE_JS){
+                msb_write_literal(&msb, "\"use strict\";");
                 msb_write_nchar(&msb, '\n', node->row);
-                msb_write_literal(&msb, "\"use strict\";\n");
                 }
             NODE_CHILDREN_FOR_EACH(it, node){
                 auto child_node = get_node(ctx, *it);
@@ -125,7 +149,7 @@ execute_user_scripts(DndcContext* ctx){
                 auto after_init = get_t();
                 report_time(ctx, SV("Python init took: "), after_init-before_init);
                 }
-            auto py_err = execute_python_string(ctx, str.text, handle);
+            auto py_err = execute_python_string(ctx, str.text, firstchild);
             if(py_err.errored){
                 report_set_error(ctx);
                 result.errored = py_err.errored;
@@ -147,7 +171,7 @@ execute_user_scripts(DndcContext* ctx){
                 auto after_init = get_t();
                 report_time(ctx, SV("qjs init took: "), after_init-before_init);
                 }
-            auto js_err = execute_qjs_string(jsctx, ctx, str.text, str.length, handle);
+            auto js_err = execute_qjs_string(jsctx, ctx, str.text, str.length, firstchild);
             if(js_err.errored){
                 report_set_error(ctx);
                 result.errored = js_err.errored;
