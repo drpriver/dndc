@@ -314,6 +314,8 @@ format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, 
         if(state.col != state.lead)
             msb_write_char(sb, '\n');
         }
+    if(!bullet_depth)
+        msb_write_char(sb, '\n');
     return result;
     }
 FORMATFUNC(md_list){

@@ -19,7 +19,9 @@ void
 advance_row(DndcContext*);
 
 #define PARSEFUNC(name) static Errorable_f(void) name(DndcContext* ctx, NodeHandle parent_handle, int indentation)
-PARSEFUNC(parse_node);
+static
+Errorable_f(void)
+parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int indentation);
 PARSEFUNC(parse_text_node);
 PARSEFUNC(parse_table_node);
 PARSEFUNC(parse_keyvalue_node);
@@ -120,7 +122,7 @@ dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const 
     ctx->nspaces = 0;
     ctx->lineno = 0;
     ctx->filename = filename;
-    auto e = parse_node(ctx, root_handle, -1);
+    auto e = parse_node(ctx, root_handle, NODE_MD, -1);
     if(e.errored) return e;
     return result;
     }
@@ -140,16 +142,18 @@ parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
         if(e.errored) return e;
     }
     append_child(ctx, parent_handle, new_node_handle);
+    NodeType type;
     {
         auto node = get_node(ctx, new_node_handle);
         const char* header = ctx->linestart + ctx->nspaces;
         node->header = stripped_view(header, ctx->doublecolon - header);
         if(node_has_attribute(node, SV("comment")))
             node->type = NODE_COMMENT;
+        type = node->type;
     }
     auto new_indent = ctx->nspaces;
     advance_row(ctx);
-    auto e = parse_node(ctx, new_node_handle, new_indent);
+    auto e = parse_node(ctx, new_node_handle, type, new_indent);
     if(e.errored) return e;
     return result;
     }
@@ -330,15 +334,15 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
     }
 
 // generic parsing function
-PARSEFUNC(parse_node){
-    {
-    auto parent = get_node(ctx, parent_handle);
+static
+Errorable_f(void)
+parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int indentation){
     if(unlikely(indentation > 64)){
-        node_set_err(ctx, parent, LS("Too deep! Indentation greater than 64 is unsupported."));
+        node_set_err(ctx, get_node(ctx, parent_handle), LS("Too deep! Indentation greater than 64 is unsupported."));
 
         return (Errorable(void)){.errored=PARSE_ERROR};
         }
-    switch((NodeType)parent->type){
+    switch(parent_type){
         case NODE_PRE:
         case NODE_RAW:
         case NODE_PYTHON:
@@ -358,7 +362,7 @@ PARSEFUNC(parse_node){
         case NODE_LINKS:
         case NODE_SCRIPTS:
             // kind of gross
-            if(node_has_attribute(parent, SV("inline"))){
+            if(node_has_attribute(get_node(ctx, parent_handle), SV("inline"))){
                 return parse_raw_node(ctx, parent_handle, indentation);
                 }
         case NODE_IMPORT:
@@ -372,7 +376,7 @@ PARSEFUNC(parse_node){
             break; // do regular string parsing
         case NODE_STYLESHEETS:
             // kind of gross
-            if(node_has_attribute(parent, SV("inline"))){
+            if(node_has_attribute(get_node(ctx, parent_handle), SV("inline"))){
                 return parse_raw_node(ctx, parent_handle, indentation);
                 }
             break; // do regular string parsing
@@ -388,7 +392,6 @@ PARSEFUNC(parse_node){
         case NODE_LIST:
             unreachable();
         }
-    }
     Errorable(void) result = {};
     for(;ctx->cursor[0];){
         analyze_line(ctx);

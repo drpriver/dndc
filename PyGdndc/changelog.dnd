@@ -1,25 +1,24 @@
 Version 0.7.0::md
-  * js blocks have been renamed to script (which is what they used to be).
+  * `js` blocks have been renamed to `script` (which is what they used to be).
   * A new scripting language has been added --- javascript.
-    - Use 'js' blocks for them (thus why js blocks were renamed).
+    - Use `js` blocks for them (thus why `js` blocks were renamed).
     - You can now use javascript instead of python to programmatically interact
       with the document.
     - Just like with the python blocks, you have access to the document via a
-      'ctx' variable and the block itself via the 'node' variable.
+      `ctx` variable and the block itself via the `node` variable.
     - Using the quickjs library to implement this.
     - Implements ECMAscript 2020.
-  * Certain nodes can now be imported by tagging them with an @import
-    attribute. 
+  * Certain nodes can now be imported by tagging them with an @import attribute.
     - The nodes are:
-      - python
-      - js
-      - raw
-      - pre
-    - The block should contain a single line with is the path to the
-      file to be imported. That file will then be inserted unparsed into
-      the document.
-    - Effectively, this means you can reuse commonly used js or python
-      blocks by writing files.
+      + `python`
+      + `js`
+      + `raw`
+      + `pre`
+    - The block should contain a single line with is the path to the file to be
+      imported. That file will then be inserted unparsed into the document.
+    - Effectively, this means you can reuse commonly used js or python blocks by
+      writing files.
+  * The reformat tool gives slightly different results.
 
 Version 0.6.2::md
   * Scroll position within the document is now preserved between refreshes in
@@ -150,6 +149,9 @@ Version 0.3.11::md
   body > div {
     margin: auto;
     max-width: 50em;
-    font-family: Sans;
+        font-family: -apple-system, BlinkMacSystemFont,
+                     "Segoe UI", Roboto,
+                     Oxygen-Sans, Ubuntu,
+                     Cantarell, "Helvetica Neue", sans-serif;
   }
   /*endcss*/
