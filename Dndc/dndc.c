@@ -124,7 +124,7 @@ execute_user_scripts(DndcContext* ctx){
                 }
             MStringBuilder msb = (MStringBuilder){.allocator=ctx->string_allocator};
             if(type == NODE_JS){
-                msb_write_literal(&msb, "\"use strict\";");
+                msb_write_literal(&msb, "\"use strict\";\n");
                 msb_write_nchar(&msb, '\n', node->row);
                 }
             NODE_CHILDREN_FOR_EACH(it, node){
@@ -149,7 +149,7 @@ execute_user_scripts(DndcContext* ctx){
                 auto after_init = get_t();
                 report_time(ctx, SV("Python init took: "), after_init-before_init);
                 }
-            auto py_err = execute_python_string(ctx, str.text, firstchild);
+            auto py_err = execute_python_string(ctx, str.text, handle, firstchild);
             if(py_err.errored){
                 report_set_error(ctx);
                 result.errored = py_err.errored;
@@ -171,7 +171,7 @@ execute_user_scripts(DndcContext* ctx){
                 auto after_init = get_t();
                 report_time(ctx, SV("qjs init took: "), after_init-before_init);
                 }
-            auto js_err = execute_qjs_string(jsctx, ctx, str.text, str.length, firstchild);
+            auto js_err = execute_qjs_string(jsctx, ctx, str.text, str.length, handle, firstchild);
             if(js_err.errored){
                 report_set_error(ctx);
                 result.errored = js_err.errored;

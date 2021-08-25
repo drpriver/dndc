@@ -396,7 +396,7 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx){
 //
 static
 Errorable_f(void)
-execute_qjs_string(QJSContext* jsctx, DndcContext* ctx, const char* str, size_t length, NodeHandle handle){
+execute_qjs_string(QJSContext* jsctx, DndcContext* ctx, const char* str, size_t length, NodeHandle handle, NodeHandle firstline){
     Errorable(void) result = {};
 
 
@@ -411,7 +411,7 @@ execute_qjs_string(QJSContext* jsctx, DndcContext* ctx, const char* str, size_t 
     {
         const char* filename;
         {
-            Node* node = get_node(ctx, handle);
+            Node* node = get_node(ctx, firstline);
             filename = Allocator_strndup(ctx->string_allocator, node->filename.text, node->filename.length);
         }
 

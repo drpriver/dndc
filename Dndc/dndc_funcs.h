@@ -418,7 +418,7 @@ alloc_handle(DndcContext*);
 //
 static
 Errorable_f(void)
-execute_python_string(DndcContext*, Nonnull(const char*), NodeHandle);
+execute_python_string(DndcContext*, Nonnull(const char*), NodeHandle, NodeHandle);
 //
 // Initialize the python interpreter and the dndc python data types. Takes a
 // flags argument, which is the same flags passed to run_the_dndc. This handles

@@ -11,7 +11,7 @@ typedef struct QJSContext QJSContext;
 
 static
 Errorable_f(void)
-execute_qjs_string(QJSContext*jsctx, DndcContext* ctx, const char* str, size_t length, NodeHandle handle);
+execute_qjs_string(QJSContext*jsctx, DndcContext* ctx, const char* str, size_t length, NodeHandle handle, NodeHandle firstline);
 
 static
 QJSRuntime*

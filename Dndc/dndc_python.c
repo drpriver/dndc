@@ -1146,7 +1146,7 @@ static Nullable(PyObject*) make_py_ctx(DndcContext*);
 
 static
 Errorable_f(void)
-execute_python_string(DndcContext* ctx, const char* text, NodeHandle handle){
+execute_python_string(DndcContext* ctx, const char* text, NodeHandle handle, NodeHandle firstline){
     PyCompilerFlags flags = {
 #if PY_MINOR_VERSION > 7
         .cf_flags = PyCF_SOURCE_IS_UTF8,
@@ -1209,7 +1209,7 @@ execute_python_string(DndcContext* ctx, const char* text, NodeHandle handle){
         else{
             PyObject* exc_str = PyObject_Str(value);
             const char* exc_text = PyUnicode_AsUTF8(exc_str);
-            auto python_block = get_node(ctx, handle);
+            auto python_block = get_node(ctx, firstline);
             auto old_row = python_block->row;
             auto new_row = old_row;
             if(traceback){
