@@ -142,6 +142,9 @@
               const text = prompt("input:");
               return marshall_string(text);
           },
+          abort: function(){
+            throw new WebAssembly.RuntimeError('abort');
+          }
       }
   };
   const wasm_buffer = Uint8Array.from(atob(prog64), c => c.charCodeAt(0)).buffer;
