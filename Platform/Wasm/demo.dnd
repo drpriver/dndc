@@ -4,7 +4,7 @@
   ::raw
     <textarea class="right">
     </textarea>
-::js @inline
+::script @inline
   //endjs
 ::python
   ctx.add_dependency('Objs/dndc.wasm')
@@ -32,7 +32,7 @@
     font-family: Menlo, Mono;
   }
   /*endcss*/
-::js @inline
+::script @inline
   var wasm;
   var wasm_instance;
   var decoder = new TextDecoder();

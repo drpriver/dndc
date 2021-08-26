@@ -27,7 +27,7 @@ extern
 PString*
 make_html(PString* source){
     LongString text = {.text=(char*)source->text, .length=source->length-1};
-    LongString base = SV("");
+    LongString base = LS("");
     LongString output;
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
@@ -42,7 +42,8 @@ make_html(PString* source){
             flags, base, text, &output,
             NULL, NULL,            // caches
             dndc_error_func, NULL, // error func
-            NULL, NULL             // dependency funcs
+            NULL, NULL,            // dependency funcs
+            NULL, NULL             // ast funcs
             );
     if(e.errored)
         return NULL;

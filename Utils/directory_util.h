@@ -1,11 +1,11 @@
 #ifndef DIRECTORY_UTIL_H
 #define DIRECTORY_UTIL_H
 #include <string.h>
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(WASM)
 #include <errno.h>
 #include <dirent.h>
 
-#else
+#elif !defined(WASM)
 #include "windowsheader.h"
 // windows stuff
 
@@ -31,7 +31,7 @@ static
 const char* get_directory_error(void);
 static
 void free_directory_error(const char*);
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(WASM)
 static
 const char*
 get_directory_error(void){
@@ -72,7 +72,7 @@ directory_gather_files_ending_with(LongString dirpath, StringView suffix, Marray
     closedir(dir);
     return result;
     }
-#else
+#elif !defined(WASM)
 static
 const char*
 get_directory_error(void){
@@ -116,6 +116,20 @@ directory_gather_files_ending_with(LongString dirpath, StringView suffix, Marray
         Marray_push(LongString)(results, array_allocator, filename);
     }while(FindNextFile(h, &finddata));
     FindClose(h);
+    return result;
+    }
+#else
+static const char* get_directory_error(void){
+    return "Operation unsupported in wasm";
+    }
+static void free_directory_error(const char* err){
+    (void)err;
+    }
+
+static Errorable_f(void)
+directory_gather_files_ending_with(LongString dirpath, StringView suffix, Marray(LongString)* results, Allocator array_allocator, Allocator string_allocator){
+    (void)dirpath, (void)suffix, (void)results, (void)array_allocator, (void)string_allocator;
+    Errorable(void) result = {.errored=OS_ERROR};
     return result;
     }
 #endif

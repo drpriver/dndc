@@ -1348,9 +1348,36 @@ internal_init_dndc_python_interpreter(uint64_t flags){
 }
 static
 Errorable_f(void)
-execute_python_string(DndcContext* ctx, const char* str, NodeHandle node){
-    (void)ctx, (void)str, (void)node;
+execute_python_string(DndcContext* ctx, const char* str, NodeHandle node, NodeHandle child){
+    (void)ctx, (void)str, (void)node, (void)child;
     return (Errorable(void)){.errored=OS_ERROR};
+    }
+
+static
+Errorable_f(void)
+execute_qjs_string(QJSContext*jsctx, DndcContext*ctx, const char* str, size_t length, NodeHandle handle, NodeHandle firstline){
+    (void)jsctx, (void)ctx, (void)str, (void)length, (void)handle, (void)firstline;
+    return (Errorable(void)){.errored=OS_ERROR};
+    }
+
+static
+QJSRuntime*
+new_qjs_rt(ArenaAllocator*aa){
+    (void)aa;
+    return NULL;
+    }
+
+static
+QJSContext*_Nullable
+new_qjs_ctx(QJSRuntime*rt, DndcContext*ctx){
+    (void)rt, (void)ctx;
+    return NULL;
+    }
+
+static
+void
+free_qjs_rt(QJSRuntime*rt, ArenaAllocator*aa){
+    (void)rt, (void)aa;
     }
 
 #endif
