@@ -21,13 +21,19 @@ LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_NO_PYTHON
         | DNDC_NO_THREADS
-        | DNDC_INPUT_IS_UNTRUSTED
+        // | DNDC_INPUT_IS_UNTRUSTED
 #ifdef FUZZ_FORMAT
         | DNDC_REFORMAT_ONLY
 #endif
         ;
     LongString source = {.text=str, .length=size};
-    auto e = run_the_dndc(flags, SV(""), source, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, LS(""),
+            source, NULL,
+            NULL, NULL, // caches
+            NULL, NULL, // errors
+            NULL, NULL, // dependency
+            NULL, NULL // astfunc
+            );
     (void)e;
     free(str);
     return 0;

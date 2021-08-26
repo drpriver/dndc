@@ -20,8 +20,8 @@ $(BINDIR)/dndcbench$(EXE): Dndc/dndc.c $(DEPDIR)/dndcbench.dep Dndc/dndc.mak $(O
 	$(CC) $(FLAGS) $(PLATFORM_FLAGS) -O1 -g $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/dndcbench.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DBENCHMARKING -DBENCHMARKITERS=$(BENCHMARKITERS) -DDNDCMAIN -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
 dndcbench: $(BINDIR)/dndcbench$(EXE)
 
-$(BINDIR)/dndcfuzz$(EXE): Dndc/dndcfuzz.c $(DEPDIR)/dndcfuzz.dep $(OBJDIR)/frozenstdlib.o
-	$(CC) $(FLAGS) $(PLATFORM_FLAGS) -O1 -g $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/dndcfuzz.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -fsanitize=fuzzer,address,undefined
+$(BINDIR)/dndcfuzz$(EXE): Dndc/dndcfuzz.c $(DEPDIR)/dndcfuzz.dep $(OBJDIR)/frozenstdlib.o $(OBJDIR)/libquickjs.o
+	$(CC) $(FLAGS) $(PLATFORM_FLAGS) -O1 -g $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/dndcfuzz.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(OBJDIR)/libquickjs.o $(LINK_FLAGS) $(PYLDFLAGS) -fsanitize=fuzzer,address,undefined
 dndcfuzz: $(BINDIR)/dndcfuzz$(EXE)
 
 FUZZDIR=FuzzCorpus
