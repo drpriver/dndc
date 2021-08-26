@@ -3,12 +3,52 @@
     <iframe></iframe>
   ::raw
     <textarea class="right">
+    ::nav
+    Dnd Document!::title
+    This is the document format I have been developing. Check it out, we've got:
+
+    * Bullets
+      - Nested bullets
+        + Really nested bullets
+        1. Lists even
+    * Tables
+    * Inline css tags
+    * Auto nav population.
+
+    Awesome::table
+      Pro                    | Cons
+      Is Awesome             | None!
+      Nice to look at        |
+      Plain text is readable |
+      Nicely structure       |
+      In document scripting  | Not available in web.
+    ::css @inline
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; }
+      table {
+        text-align: center;
+      }
+      td {
+        padding: 0px 2px;
+      }
+      img { width: 100%;}
+      body {max-width: 60em; margin: auto; padding: 8px;}
+    ::comment
+      This is a comment block!
+
+    1. One
+    2. Two
+    3. Three
+    Behold, a Dragon!::img
+      https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/02f95934-e91a-4065-933a-0964e25e13a1/d4r9jru-842f076c-b9f9-44b5-b58f-f717d4dd41de.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcLzAyZjk1OTM0LWU5MWEtNDA2NS05MzNhLTA5NjRlMjVlMTNhMVwvZDRyOWpydS04NDJmMDc2Yy1iOWY5LTQ0YjUtYjU4Zi1mNzE3ZDRkZDQxZGUucG5nIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.ni1-J1bWdKiY7YIXX5PHUP51X60r0n5UeRvGC3OAWNg
+
     </textarea>
     <div id="checkboxes">
       <input type="checkbox" id="autoapply" name="autoapply" value="autoapply" checked>
       <label for="autoapply">Auto-Apply Changes</label>
       <button id="apply-button">Apply</button>
       <button id="format-button">Format</button>
+      <button id="save-button">Save</button>
+      <button id="export-button">Export as HTML</button>
     </div>
     <div id="log"></div>
 ::script @inline
@@ -25,6 +65,7 @@
   * {
     box-sizing: border-box;
   }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; }
   body {
     margin: 0;
     width: 100%;
@@ -92,6 +133,27 @@
         const ta = document.getElementsByTagName('textarea')[0];
         ta.value = format_dnd(ta.value);
       });
+      let save_button = document.getElementById('save-button');
+      save_button.addEventListener('click', function(e){
+        e.stopPropagation();
+        e.preventDefault();
+        const ta = document.getElementsByTagName('textarea')[0];
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([ta.value], {type:'text/plain'}));
+        a.download = "demo.dnd";
+        a.click();
+      });
+      let export_button = document.getElementById('export-button');
+      export_button.addEventListener('click', function(e){
+        e.stopPropagation();
+        e.preventDefault();
+        const ta = document.getElementsByTagName('textarea')[0];
+        const s = dndc_make_html(ta.value);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([s], {type:'text/html'}));
+        a.download = "demo.html";
+        a.click();
+      });
   });
   var wasm;
   var wasm_instance;
@@ -151,6 +213,7 @@
           wasm_instance = x;
           wasm_instance.exports.memory.grow(1024);
           memory = new Uint8Array(wasm_instance.exports.memory.buffer);
+          apply_changes();
       });
   });
 
@@ -172,14 +235,14 @@
   function format_dnd(string){
     if(!string.length)
       return "";
-      wasm_instance.exports.reset_memory();
-      const marshalled = marshall_string(string);
-      let result = wasm_instance.exports.format_dnd(marshalled);
-      if(result){
-        const jsresult = wasm_string_to_js(result);
-        return jsresult;
-      }
-      throw new Error("Some error in htmlgen");
+    wasm_instance.exports.reset_memory();
+    const marshalled = marshall_string(string);
+    let result = wasm_instance.exports.format_dnd(marshalled);
+    if(result){
+      const jsresult = wasm_string_to_js(result);
+      return jsresult;
+    }
+    throw new Error("Some error in htmlgen");
   }
 
   function set_dnd(string){
@@ -198,6 +261,16 @@
       if(AUTOAPPLY){
         apply_changes();
       }
+    });
+    ta.addEventListener('keydown', function(e){
+      if(e.key != 'Tab')
+        return;
+      e.preventDefault();
+      let start = ta.selectionStart;
+      let end = ta.selectionEnd;
+      ta.value = ta.value.substring(0, start) + "  " + ta.value.substring(end);
+      // restore cursor position
+      ta.selectionStart = ta.selectionEnd = start+2;
     });
   });
   //endjs
