@@ -586,12 +586,10 @@ js_console_log(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
     MStringBuilder msb = {.allocator = ctx->temp_allocator};
 
     for(int i = 0; i < argc; i++){
-        if(i != 0)
-            msb_write_char(&msb, ' ');
+        if(i != 0) msb_write_char(&msb, ' ');
         size_t len;
         const char *str = JS_ToCStringLen(jsctx, &len, argv[i]);
-        if(!str)
-            return JS_EXCEPTION;
+        if(!str) return JS_EXCEPTION;
         msb_write_str(&msb, str, len);
         JS_FreeCString(jsctx, str);
     }
