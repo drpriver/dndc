@@ -4,6 +4,13 @@
   ::raw
     <textarea class="right">
     </textarea>
+    <div id="checkboxes">
+      <input type="checkbox" id="autoapply" name="autoapply" value="autoapply" checked>
+      <label for="autoapply">Auto-Apply Changes</label>
+      <button id="apply-button">Apply</button>
+      <button id="format-button">Format</button>
+    </div>
+    <div id="log"></div>
 ::script @inline
   //endjs
 ::python
@@ -15,17 +22,28 @@
   #endpython
 
 ::css @inline
+  * {
+    box-sizing: border-box;
+  }
   body {
     margin: 0;
+    width: 100%;
+    height: 100vh;
   }
   .container {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr;
+    grid-template-rows: auto 2em 6em;
+    height: 100%;
+    width: 100%;
+  }
+  body > div {
+    height: 100%;
+    width: 100%;
   }
   iframe {
     grid-column: 1;
-    grid-row: 1;
+    grid-row: 1 / 4;
     height: 100%;
     width: 100%;
   }
@@ -37,14 +55,53 @@
   }
   textarea {
     font-family: Menlo, Mono;
+    resize: none;
+  }
+  #log {
+    grid-column: 2;
+    grid-row: 3;
+    height: 100%;
+    width: 100%;
+    border: 1px solid gray;
+  }
+  #checkboxes{
+    grid-column: 2;
+    grid-row: 2;
+  }
+  #log * {
+    padding: 3px;
   }
   /*endcss*/
 ::script @inline
+  let AUTOAPPLY = true;
+  document.addEventListener('DOMContentLoaded', function(){
+      let autoapply = document.getElementById('autoapply');
+      autoapply.addEventListener('input', function(){
+        AUTOAPPLY = autoapply.checked;
+      });
+      let apply_button = document.getElementById('apply-button');
+      apply_button.addEventListener('click', function(e){
+        apply_changes();
+        e.stopPropagation();
+        e.preventDefault();
+      });
+      let format_button = document.getElementById('format-button');
+      format_button.addEventListener('click', function(e){
+        e.stopPropagation();
+        e.preventDefault();
+        const ta = document.getElementsByTagName('textarea')[0];
+        ta.value = format_dnd(ta.value);
+      });
+  });
   var wasm;
   var wasm_instance;
   var decoder = new TextDecoder();
   var encoder = new TextEncoder();
   var memory;
+  function clear_log(){
+      const log = document.getElementById('log');
+      log.innerHTML = '';
+  }
   function marshall_string(string){
       let encoded = encoder.encode(string)
       let p = wasm_instance.exports.malloc(encoded.length+1);
@@ -56,8 +113,6 @@
       let sub = memory.subarray(p+4, p+4+encoded.length);
       memory[p+4+encoded.length] = 0;
       sub.set(encoded);
-      console.log(string);
-      console.log(memory.subarray(p, p+4+encoded.length+1));
       return p;
   }
   function wasm_string_to_js(pstring){
@@ -74,7 +129,10 @@
           },
           log_string: function(p, len){
               let sub = memory.subarray(p, p+len);
-              console.log(decoder.decode(sub));
+              const log = document.getElementById('log');
+              const pp = document.createElement('pre');
+              pp.innerHTML = decoder.decode(sub);
+              log.appendChild(pp);
           },
           dom_write: function(p, len){
               let sub = memory.subarray(p, p+len);
@@ -99,15 +157,27 @@
   function dndc_make_html(string){
       if(!string.length)
         return "";
-      const before = performance.now();
+      //const before = performance.now();
       wasm_instance.exports.reset_memory();
       const marshalled = marshall_string(string);
       let result = wasm_instance.exports.make_html(marshalled);
       if(result){
           const jsresult = wasm_string_to_js(result);
-          const after = performance.now();
-          console.log(`after-before: ${after-before}ms`);
+          //const after = performance.now();
+          //console.log(`after-before: ${after-before}ms`);
           return jsresult;
+      }
+      throw new Error("Some error in htmlgen");
+  }
+  function format_dnd(string){
+    if(!string.length)
+      return "";
+      wasm_instance.exports.reset_memory();
+      const marshalled = marshall_string(string);
+      let result = wasm_instance.exports.format_dnd(marshalled);
+      if(result){
+        const jsresult = wasm_string_to_js(result);
+        return jsresult;
       }
       throw new Error("Some error in htmlgen");
   }
@@ -117,13 +187,17 @@
       const iframe = document.getElementsByTagName('iframe')[0];
       iframe.srcdoc = html;
   }
+  let apply_changes;
   document.addEventListener('DOMContentLoaded', function(){
     const ta = document.getElementsByTagName('textarea')[0];
+    apply_changes = function(){
+        clear_log();
+        set_dnd(ta.value);
+    };
     ta.addEventListener('input', function(){
-      // const before = window.performance.now();
-      set_dnd(ta.value);
-      // const after = window.performance.now();
-      // console.log(after - before);
+      if(AUTOAPPLY){
+        apply_changes();
+      }
     });
   });
   //endjs

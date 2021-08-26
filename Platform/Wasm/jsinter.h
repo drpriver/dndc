@@ -33,7 +33,7 @@ LongString_to_new_PString(LongString source){
 
 extern
 void
-log_string(void*, size_t);
+log_string(const void*, size_t);
 extern void logi32(int32_t);
 #ifdef __clang__
 #pragma clang assume_nonnull end

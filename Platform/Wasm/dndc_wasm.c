@@ -51,6 +51,34 @@ make_html(PString* source){
     PString* result = LongString_to_new_PString(output);
     return result;
 }
+extern
+PString*
+format_dnd(PString* source){
+    LongString text = PString_to_LongString(source); 
+    LongString base = LS("");
+    LongString output;
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_ALLOW_BAD_LINKS
+        | DNDC_NO_CLEANUP
+        | DNDC_NO_PYTHON
+        | DNDC_NO_THREADS
+        | DNDC_DONT_INLINE_IMAGES
+        | DNDC_INPUT_IS_UNTRUSTED
+        | DNDC_REFORMAT_ONLY
+        ;
+    auto e = run_the_dndc(
+            flags, base, text, &output,
+            NULL, NULL,            // caches
+            dndc_error_func, NULL, // error func
+            NULL, NULL,            // dependency funcs
+            NULL, NULL             // ast funcs
+            );
+    if(e.errored)
+        return NULL;
+    PString* result = LongString_to_new_PString(output);
+    return result;
+    }
 printf_func(5, 6)
 static
 void logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, ...){
