@@ -36,8 +36,6 @@ _Static_assert(sizeof(uint32_t)==4, "");
 _Static_assert(sizeof(int32_t)==4, "");
 _Static_assert(sizeof(int64_t)==8, "");
 _Static_assert(sizeof(uint64_t)==8, "");
-extern void logi32(int32_t);
-extern void log_string(const char*_Nonnull, size_t);
 
 #define bool _Bool
 #define true 1
@@ -243,8 +241,4 @@ memmove(void* dst, const void* src, size_t len){
 #define stdin (FILE*)0xcafebabe
 #define stderr (FILE*)0xcafebabe
 
-typedef struct PString {
-    size_t length;
-    unsigned char text[];
-} PString;
 #endif

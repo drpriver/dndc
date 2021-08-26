@@ -1,6 +1,6 @@
 ::div.container
   ::raw
-    <iframe width=800 height=800></iframe>
+    <iframe></iframe>
   ::raw
     <textarea class="right">
     </textarea>
@@ -15,6 +15,9 @@
   #endpython
 
 ::css @inline
+  body {
+    margin: 0;
+  }
   .container {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -23,10 +26,14 @@
   iframe {
     grid-column: 1;
     grid-row: 1;
+    height: 100%;
+    width: 100%;
   }
   .right {
     grid-column: 2;
     grid-row: 1;
+    height: 100%;
+    width: 100%;
   }
   textarea {
     font-family: Menlo, Mono;
@@ -40,7 +47,7 @@
   var memory;
   function marshall_string(string){
       let encoded = encoder.encode(string)
-      let p = wasm_instance.exports.malloc(encoded.length);
+      let p = wasm_instance.exports.malloc(encoded.length+1);
       let lengthp = memory.subarray(p, p+4);
       lengthp[0] = (encoded.length >> 0) & 255;
       lengthp[1] = (encoded.length >> 8) & 255;
@@ -49,6 +56,8 @@
       let sub = memory.subarray(p+4, p+4+encoded.length);
       memory[p+4+encoded.length] = 0;
       sub.set(encoded);
+      console.log(string);
+      console.log(memory.subarray(p, p+4+encoded.length+1));
       return p;
   }
   function wasm_string_to_js(pstring){

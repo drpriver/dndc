@@ -1,6 +1,7 @@
 #include "dndc.h"
 #include "dndc.c"
 #include "msb_format.h"
+#include "jsinter.h"
 
 static
 void dndc_error_func(void* error_user_data, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
@@ -26,7 +27,7 @@ void dndc_error_func(void* error_user_data, int type, const char* filename, int 
 extern
 PString*
 make_html(PString* source){
-    LongString text = {.text=(char*)source->text, .length=source->length-1};
+    LongString text = PString_to_LongString(source); 
     LongString base = LS("");
     LongString output;
     uint64_t flags = DNDC_FLAGS_NONE
@@ -47,10 +48,7 @@ make_html(PString* source){
             );
     if(e.errored)
         return NULL;
-    // Wow, this is a lot of copies.
-    PString* result = malloc(sizeof(*result) + output.length);
-    result->length = output.length;
-    memcpy(result->text, output.text, output.length);
+    PString* result = LongString_to_new_PString(output);
     return result;
 }
 printf_func(5, 6)
