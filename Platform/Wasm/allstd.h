@@ -2,6 +2,10 @@
 #define ALLSTD_H
 // Just put everything in one header and have
 // the other headers just include this one.
+typedef __builtin_va_list va_list;
+#define va_start(ap, param) __builtin_va_start(ap, param)
+#define va_end(ap)          __builtin_va_end(ap)
+#define va_arg(ap, type)    __builtin_va_arg(ap, type)
 extern unsigned char __heap_base[];
 static unsigned char*_Nonnull _base_ptr = __heap_base;
 typedef typeof(sizeof(1)) size_t;
@@ -21,13 +25,16 @@ typedef long ptrdiff_t;
 typedef unsigned long uintptr_t;
 typedef long intptr_t;
 #define UINTPTR_MAX 0xFFFFFFFF
-#define INT32_MAX  2147483647
+#define INT32_MAX 2147483647
+#define UINT32_MAX 4294967295u
+#define UINT64_MAX 18446744073709551615llu
+
 #define INT32_MIN  (-INT32_MAX-1)
 _Static_assert(sizeof(int32_t) == sizeof(int), "");
 #define INT_MAX INT32_MAX
 #define INT_MIN INT32_MIN
-#define INT64_MAX  9223372036854775807LL
-#define INT64_MIN  (-INT64_MAX-1)
+#define INT64_MAX 9223372036854775807ll
+#define INT64_MIN (-INT64_MAX-1)
 _Static_assert(sizeof(uint8_t)==1, "");
 _Static_assert(sizeof(int8_t)==1, "");
 _Static_assert(sizeof(uint16_t)==2, "");
@@ -61,6 +68,17 @@ size_t strlen(const char* p){
         if(p[i] == 0)
             return i;
         }
+    }
+
+static
+void*_Nullable
+strchr(const char*_Nonnull pointer, int c){
+    while(*pointer!= 0){
+        if(*pointer == c)
+            return pointer;
+        pointer++;
+        }
+    return NULL;
     }
 
 // static inline
@@ -188,10 +206,10 @@ sane_realloc(void* p, size_t orig_size, size_t size){
         }
     return result;
 }
-void
-abort(void){
-    // TODO
-    }
+
+extern
+void __attribute__((noreturn))
+abort(void);
 
 int
 memcmp(const void* s1, const void* s2, size_t n){
