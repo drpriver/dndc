@@ -608,86 +608,76 @@ dndc_compile_dnd_file(
 // `dndc_compile_dnd_file`. Combine them together via bitwise-or.
 //
 enum DndcFlags {
-DNDC_FLAGS_NONE        = 0x0,
-
-// Don't error on bad links.
-DNDC_ALLOW_BAD_LINKS   = 0x0001,
-
-// Don't report any non-fatal errors via the `error_func`.
-DNDC_SUPPRESS_WARNINGS = 0x0002,
-
-// Log stats during execution of timings and counts.
-DNDC_PRINT_STATS       = 0x0004,
-
-// Reserved
-DNDC_RESERVED_UNUSED   = 0x0008,
-
-// Don't execute python blocks.
-DNDC_NO_PYTHON         = 0x0010,
-
-// The python interpreter and dndc_python types have already been
-// initialized.
-DNDC_PYTHON_IS_INIT    = 0x0020,
-
-// Reserved
-DNDC_RESERVED_UNUSED2   = 0x0040,
-
-// Reserved
-DNDC_RESERVED_UNUSED3  = 0x0080,
-
-// Don't spawn any worker threads. No parallelism.
-DNDC_NO_THREADS        = 0x0100,
-
-// Don't write out the final result.
-DNDC_DONT_WRITE        = 0x0200,
-
-// Don't cleanup allocations or anything.
-// Appropriate for batch use.
-DNDC_NO_CLEANUP        = 0x0400,
+DNDC_FLAGS_NONE = 0x0,
 
 // The `source` argument is actually a filepath to the file containing the
 // data.
-DNDC_SOURCE_IS_PATH_NOT_DATA = 0x0800,
+DNDC_SOURCE_IS_PATH_NOT_DATA = 0x1,
 
-// Don't report errors via the `error_func`.
-DNDC_DONT_PRINT_ERRORS = 0x01000,
-
-// Don't bother isolating python from site
-// Greatly slows startup, but allows importing user-installed
-// libraries.
-DNDC_PYTHON_UNISOLATED = 0x02000,
-
-// Reserved
-DNDC_RESERVED_UNUSED4 = 0x04000,
-
-// Instead of rendering to html, render to .dnd with trailing
-// spaces removed, text aligned to 80 columns (if semantically equivelant)
-// etc.
-DNDC_REFORMAT_ONLY      = 0x08000,
-
-// Instead of base64-ing the image, use a link.
-DNDC_DONT_INLINE_IMAGES =  0x10000,
-
-// Don't execute js blocks.
-DNDC_NO_COMPILETIME_JS = 0x20000,
-
-// For imgs, don't base64 them and don't use regular links.
-// Instead, use a dnd:absolute/path/to/img url instead.
-// Applications can then implement custom url handlers for this url scheme.
-DNDC_USE_DND_URL_SCHEME  = 0x40000,
-
-// Input is untrusted and thus should not be allowed to read files, execute
-// python blocks or embed javascript in the output. As raw nodes are
-// inserted literally, raw nodes are ignored.
-DNDC_INPUT_IS_UNTRUSTED  = 0x80000,
-
-// Strip trailing and leading whitespace from all output lines.
-DNDC_STRIP_WHITESPACE    = 0x100000,
+// Don't write out the final result.
+DNDC_DONT_WRITE = 0x2,
 
 // Don't read any files not already in the file cache (with the exception
 // of the initial input file).
 // Python blocks can bypass this by calling `open` directly.
-DNDC_DONT_READ           = 0x200000,
+DNDC_DONT_READ = 0x4,
+
+// Input is untrusted and thus should not be allowed to read files, execute
+// python blocks or embed javascript in the output. As raw nodes are
+// inserted literally, raw nodes are ignored.
+DNDC_INPUT_IS_UNTRUSTED  = 0x8,
+
+// Instead of rendering to html, render to .dnd with trailing
+// spaces removed, text aligned to 80 columns (if semantically equivelant)
+// etc.
+DNDC_REFORMAT_ONLY = 0x10,
+
+// Don't report any non-fatal errors via the `error_func`.
+DNDC_SUPPRESS_WARNINGS = 0x20,
+
+// Don't report errors via the `error_func`.
+DNDC_DONT_PRINT_ERRORS = 0x40,
+
+// Log stats during execution of timings and counts.
+DNDC_PRINT_STATS = 0x80,
+
+// Don't error on bad links.
+DNDC_ALLOW_BAD_LINKS = 0x100,
+
+// Don't execute js blocks.
+DNDC_NO_COMPILETIME_JS = 0x200,
+
+// Don't execute python blocks.
+DNDC_NO_PYTHON = 0x400,
+
+// The python interpreter and dndc_python types have already been
+// initialized.
+DNDC_PYTHON_IS_INIT = 0x800,
+
+// Don't bother isolating python from site
+// Greatly slows startup, but allows importing user-installed
+// libraries.
+DNDC_PYTHON_UNISOLATED = 0x1000,
+
+// Don't spawn any worker threads. No parallelism.
+DNDC_NO_THREADS = 0x2000,
+
+// Don't cleanup allocations or anything.
+// Appropriate for batch use.
+DNDC_NO_CLEANUP = 0x4000,
+
+// Strip trailing and leading whitespace from all output lines.
+DNDC_STRIP_WHITESPACE = 0x8000,
+
+// Instead of base64-ing the image, use a link.
+DNDC_DONT_INLINE_IMAGES = 0x10000,
+
+// For imgs, don't base64 them and don't use regular links.
+// Instead, use a dnd:absolute/path/to/img url instead.
+// Applications can then implement custom url handlers for this url scheme.
+DNDC_USE_DND_URL_SCHEME = 0x20000,
+
+
 };
 
 #ifdef __cplusplus
