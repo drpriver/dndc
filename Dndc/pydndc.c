@@ -1,7 +1,7 @@
 //
 // Exposes dndc as a c-extension for python.
 //
-
+#define DNDC_API static inline
 #define PYTHONMODULE
 #include "dndc.c"
 
@@ -124,6 +124,7 @@ PyMethodDef DndcPyFileCache_methods[] = {
 };
 
 
+static
 PyTypeObject DndcPyFileCache_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "pydndc.FileCache",

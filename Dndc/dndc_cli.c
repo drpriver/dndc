@@ -1,6 +1,13 @@
-#include "dndc.c"
+#define DNDC_API static inline
+#include "dndc.h"
+#include "dndc_long_string.h"
+#include "dndc_funcs.h"
+#include "dndc_types.h"
+#include "dndc_node_types.h"
 #include "argument_parsing.h"
 #include "term_util.h"
+#include "file_util.h"
+#include "MStringBuilder.h"
 
 static
 void
@@ -592,3 +599,4 @@ dndc_print_out_syntax(LongString source_path){
         }
     }
 
+#include "dndc.c"
