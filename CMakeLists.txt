@@ -18,7 +18,7 @@ elseif(UNIX)
 endif()
 
 add_executable(dndc
-    Dndc/dndc.c
+    Dndc/dndc_cli.c
     PythonEmbed/frozenstdlib.c
     )
 
@@ -48,7 +48,7 @@ target_compile_definitions(quickjs-lib PRIVATE CONFIG_VERSION="2021-03-27")
 
 target_link_libraries(dndc ${Python3_LIBRARIES} quickjs-dylib)
 target_include_directories(dndc PRIVATE ${Python3_INCLUDE_DIRS})
-target_compile_definitions(dndc PRIVATE DNDCMAIN QJS_SHARED_LIBRARY)
+target_compile_definitions(dndc PRIVATE QJS_SHARED_LIBRARY)
 
 # Cmake sucks and doesn't allow a library and
 # executable with the same name, even though the output files are different!

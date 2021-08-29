@@ -7,8 +7,8 @@ else
 RPATH:=
 endif
 
-$(BINDIR)/dndc$(EXE): Dndc/dndc.c $(DEPDIR)/dndc.dep  $(OBJDIR)/frozenstdlib.o opt.mak $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DDNDCMAIN $(OBJDIR)/libquickjs.o $(RPATH)
+$(BINDIR)/dndc$(EXE): Dndc/dndc_cli.c $(DEPDIR)/dndc.dep  $(OBJDIR)/frozenstdlib.o opt.mak $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SO) $(RPATH)
 dndc: $(BINDIR)/dndc$(EXE)
 
 $(OBJDIR)/dndc.o: Dndc/dndc.c $(DEPDIR)/dndc_o.dep opt.mak | $(DIRECTORIES)
@@ -16,8 +16,8 @@ $(OBJDIR)/dndc.o: Dndc/dndc.c $(DEPDIR)/dndc_o.dep opt.mak | $(DIRECTORIES)
 
 
 BENCHMARKITERS ?= 10000
-$(BINDIR)/dndcbench$(EXE): Dndc/dndc.c $(DEPDIR)/dndcbench.dep Dndc/dndc.mak $(OBJDIR)/frozenstdlib.o $(BINDIR)/libquickjs$(SO)
-	$(CC) $(FLAGS) $(PLATFORM_FLAGS) -O1 -g $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/dndcbench.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DBENCHMARKING -DBENCHMARKITERS=$(BENCHMARKITERS) -DDNDCMAIN -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
+$(BINDIR)/dndcbench$(EXE): Dndc/dndc_cli.c $(DEPDIR)/dndcbench.dep Dndc/dndc.mak $(OBJDIR)/frozenstdlib.o $(BINDIR)/libquickjs$(SO)
+	$(CC) $(FLAGS) $(PLATFORM_FLAGS) -O1 -g $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/dndcbench.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DBENCHMARKING -DBENCHMARKITERS=$(BENCHMARKITERS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
 dndcbench: $(BINDIR)/dndcbench$(EXE)
 
 $(BINDIR)/dndcfuzz$(EXE): Dndc/dndcfuzz.c $(DEPDIR)/dndcfuzz.dep $(OBJDIR)/frozenstdlib.o $(OBJDIR)/libquickjs.o
