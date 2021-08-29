@@ -40,7 +40,7 @@ make_html(PString* source){
         | DNDC_INPUT_IS_UNTRUSTED
         ;
     auto e = run_the_dndc(
-            flags, base, text, &output,
+            flags, base, text, LS("demo.html"), &output,
             NULL, NULL,            // caches
             dndc_error_func, NULL, // error func
             NULL, NULL,            // dependency funcs
@@ -68,7 +68,7 @@ format_dnd(PString* source){
         | DNDC_REFORMAT_ONLY
         ;
     auto e = run_the_dndc(
-            flags, base, text, &output,
+            flags, base, text, LS(""), &output,
             NULL, NULL,            // caches
             dndc_error_func, NULL, // error func
             NULL, NULL,            // dependency funcs

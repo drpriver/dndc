@@ -38,14 +38,18 @@
 //    file to parse, or if .length is 0, stdin will be read instead. This path
 //    is adjusted by the base_directory argument.
 //
-// output_path:
-//    A filepath to write the generated html to. If NULL, the html will be
-//    printed to stdout instead. Printing at all can be suppressed by flags.
-//
-//    Flags can make this an out param instead, in which case a malloced string
-//    that is the generated html will be stored in this instead.
+// outpath:
+//    Several features depend on knowing what the ultimate name of the file will be.
+//    APIs such as ctx.outpath etc. in js or python blocks for example.
+//    Note that we do not actually write to this path.
 //
 //    This path is *NOT* adjusted by the base_directory argument.
+//
+// outstring:
+//    A pointer to a string structure to write the data to. The text will be
+//    allocated via malloc. You can call `dndc_free_string` on the text if you
+//    are on a platform where each dynamic library has its own heap (aka
+//    Windows).
 //
 // external_b64cache:
 //    An optional pointer to an external cache for base64 images. If NULL,
@@ -93,15 +97,17 @@
 typedef int (DndcPostParseAstFunc)(Nullable(void*)user_data, Nonnull(DndcContext*));
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_path,
-        Nullable(LongString*) output_path,
+run_the_dndc(uint64_t flags,
+        LongString base_directory,
+        LongString source_or_path,
+        LongString outpath,
+        Nonnull(LongString*) outstring,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,
-        Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data,
+        Nullable(DndcErrorFunc*)error_func,
+        Nullable(void*)error_user_data,
         Nullable(DndcDependencyFunc*)dependency_func,
         Nullable(void*)dependency_user_data,
-        // TEMPORARY HACK
-        // Might want to have an API that yields a parse context + ast?
         Nullable(DndcPostParseAstFunc*)ast_func,
         Nullable(void*)ast_func_user_data
         );

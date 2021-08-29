@@ -316,7 +316,6 @@ print_node_and_children(Nonnull(DndcContext*), NodeHandle handle, int depth);
 static
 int
 dndc_main_ast_func(void*_Nullable user_data, DndcContext*_Nonnull ctx){
-    assert(user_data);
     uint64_t flags = (uintptr_t)user_data;
     if(flags & DNDC_MAIN_PRINT_TREE){
         print_node_and_children(ctx, ctx->root_handle, 0);
@@ -332,17 +331,14 @@ dndc_main_ast_func(void*_Nullable user_data, DndcContext*_Nonnull ctx){
 
 int
 main(int argc, char**argv){
-    LongString source_path = LS("");
+    LongString source_path = {};
     LongString output_path = LS("");
     DndcDependencyFunc*dependency_func = NULL;
     LongString dependency_path = LS("");
     struct DependencyUserData dependency_user_data = {};
     LongString base_dir = LS("");
     uint64_t ast_func_flags = DNDC_MAIN_NONE;
-    uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_SOURCE_IS_PATH_NOT_DATA
-        | DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM
-        ;
+    uint64_t flags = DNDC_FLAGS_NONE ;
     bool print_syntax = false;
     bool print_depends = false;
     bool cleanup = false;
@@ -589,6 +585,23 @@ main(int argc, char**argv){
             }
         if(!cleanup)
             flags |= DNDC_NO_CLEANUP;
+        if(!source_path.text){
+            // read from stdin
+            MStringBuilder sb = {.allocator=get_mallocator()};
+            for(;;){
+                enum {N = 4096};
+                msb_ensure_additional(&sb, N);
+                char* buff = sb.data + sb.cursor;
+                auto numread = fread(buff, 1, N, stdin);
+                sb.cursor += numread;
+                if(numread != N)
+                    break;
+                }
+            source_path = msb_detach(&sb);
+            }
+        else {
+            flags |= DNDC_SOURCE_IS_PATH_NOT_DATA;
+            }
     }
     if(print_syntax){
         dndc_print_out_syntax(source_path);
@@ -606,37 +619,61 @@ main(int argc, char**argv){
 
     #ifdef BENCHMARKING
     flags &= ~DNDC_NO_CLEANUP;
+    LongString output;
     auto e = run_the_dndc(flags,
-                base_dir, source_path,
-                &output_path,
+                base_dir,
+                source_path,
+                output_path,
+                &output,
                 NULL, NULL,
                 dndc_stderr_error_func, NULL,
                 dependency_func, &dependency_user_data,
                 NULL, NULL);
 
     assert(!e.errored);
+    dndc_free_string(output);
     flags |= DNDC_PYTHON_IS_INIT;
     for(int i = 0; i < BENCHMARKITERS; i++){
         e = run_the_dndc(flags,
-                base_dir, source_path,
-                &output_path,
+                base_dir,
+                source_path,
+                output_path,
+                &output,
                 NULL, NULL,
                 dndc_stderr_error_func, NULL,
                 dependency_func, &dependency_user_data,
                  dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags);
         assert(!e.errored);
         }
+    dndc_free_string(output);
     end_interpreter();
     return 0;
     #else
+    LongString output;
     auto e = run_the_dndc(flags,
-                 base_dir, source_path,
-                 output_path.length? &output_path : NULL,
+                 base_dir,
+                 source_path,
+                 output_path,
+                 &output,
                  NULL, NULL,
                  dndc_stderr_error_func, NULL,
                  dependency_func, &dependency_user_data,
                  dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags);
-    return e.errored;
+    if(e.errored) return e.errored;
+    if(flags & DNDC_DONT_WRITE)
+        return 0;
+    if(output_path.length){
+        auto write_err = write_file(output_path.text, output.text, output.length);
+        if(write_err.errored){
+            // TODO: retrieve platform specific error message.
+            fprintf(stderr, "Failed to write to output path: %s\n", output_path.text);
+            return write_err.errored;
+            }
+        }
+    else {
+        puts(output.text);
+        }
+    return 0;
     #endif
     }
 static
@@ -749,15 +786,16 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
 
 static
 Errorable_f(void)
-run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_path,
-        Nullable(LongString*) output_path,
+run_the_dndc(uint64_t flags,
+        LongString base_directory,
+        LongString source_or_path,
+        LongString outpath,
+        Nonnull(LongString*) outstring,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,
         Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data,
         Nullable(DndcDependencyFunc*)dependency_func,
         Nullable(void*)dependency_user_data,
-        // TEMPORARY HACK
-        // Might want to have an API that yields a parse context + ast?
         Nullable(DndcPostParseAstFunc*)ast_func,
         Nullable(void*)ast_func_user_data
         ){
@@ -776,16 +814,6 @@ run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_pat
         path = LS_to_SV(source_or_path);
     else
         path = SV("(string input)");
-    LongString outpath;
-    if(!output_path){
-        outpath = LS("");
-        }
-    else if(flags & DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM){
-        outpath = *output_path;
-        }
-    else {
-        outpath = LS("this.html");
-        }
     ArenaAllocator arena_allocator = {};
     const Allocator string_allocator = {.type=ALLOCATOR_ARENA, ._data=&arena_allocator};
     const Allocator allocator = (flags & DNDC_NO_CLEANUP)?
@@ -827,50 +855,32 @@ run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_pat
     ctx_add_builtins(&ctx);
     LongString source;
     if(flags & DNDC_SOURCE_IS_PATH_NOT_DATA){
-        if(!path.length){
-            // read from stdin
-            MStringBuilder sb = {.allocator=ctx.allocator};
-            for(;;){
-                enum {N = 4096};
-                msb_ensure_additional(&sb, N);
-                char* buff = sb.data + sb.cursor;
-                auto numread = fread(buff, 1, N, stdin);
-                sb.cursor += numread;
-                if(numread != N)
-                    break;
+        // Temporarily clear the DONT_READ flag.
+        auto old_flags = ctx.flags;
+        ctx.flags &= ~DNDC_DONT_READ;
+        auto source_err = ctx_load_source_file(&ctx, path);
+        ctx.flags = old_flags;
+        if(source_err.errored){
+            if(ctx.base_directory.length){
+                MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
+                MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", path, "'");
+                report_system_error(&ctx, msb_borrow(&err_builder));
+                msb_destroy(&err_builder);
                 }
-            source = msb_detach(&sb);
-            path = SV("(stdin)");
-            ctx_store_builtin_file(&ctx, LS("(stdin)"), source);
-            }
-        else {
-            // Temporarily clear the DONT_READ flag.
-            auto old_flags = ctx.flags;
-            ctx.flags &= ~DNDC_DONT_READ;
-            auto source_err = ctx_load_source_file(&ctx, path);
-            ctx.flags = old_flags;
-            if(source_err.errored){
-                if(ctx.base_directory.length){
-                    MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
-                    MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", path, "'");
-                    report_system_error(&ctx, msb_borrow(&err_builder));
-                    msb_destroy(&err_builder);
-                    }
-                else{
-                    MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
-                    MSB_FORMAT(&err_builder, "Unable to open '", path, "'");
-                    report_system_error(&ctx, msb_borrow(&err_builder));
-                    msb_destroy(&err_builder);
-                    }
-                result.errored = source_err.errored;
-                goto cleanup;
+            else{
+                MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
+                MSB_FORMAT(&err_builder, "Unable to open '", path, "'");
+                report_system_error(&ctx, msb_borrow(&err_builder));
+                msb_destroy(&err_builder);
                 }
-            source = source_err.result;
+            result.errored = source_err.errored;
+            goto cleanup;
             }
+        source = source_err.result;
         }
     else {
         source = source_or_path;
-        if(!source.length){
+        if(!source.text){
             report_system_error(&ctx, SV("String with no data given as input"));
             result.errored = UNEXPECTED_END;
             goto cleanup;
@@ -904,48 +914,25 @@ run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_pat
             }
     }
     if(flags & DNDC_REFORMAT_ONLY){
-        msb_reset(&msb);
+        MStringBuilder outsb = {.allocator = get_mallocator()};
         auto before = get_t();
-        auto format_error = format_tree(&ctx, &msb);
-        auto after = get_t();
-        report_time(&ctx, SV("Formatting took: "), after-before);
+        auto format_error = format_tree(&ctx, &outsb);
         if(format_error.errored){
+            msb_destroy(&outsb);
             result.errored = format_error.errored;
             goto cleanup;
             }
+        auto after = get_t();
+        report_time(&ctx, SV("Formatting took: "), after-before);
+        report_size(&ctx, SV("Total output size (bytes): "), outsb.cursor);
 
-        auto str = msb_borrow(&msb);
-        auto before_write = get_t();
         if(flags & DNDC_DONT_WRITE){
-            goto success;
-            }
-        else if(!output_path || outpath.length == 0){
-            fputs(str.text, stdout);
-            goto success;
-            }
-        else if(!(flags & DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM)){
-            assert(output_path);
-            // We don't use the allocator as this needs to outlive the recording
-            // allocator.
-            //
-            // We could do this without the extra copy, but this will work for now.
-            char* text = malloc(str.length+1);
-            memcpy(text, str.text, str.length);
-            text[str.length] = '\0';
-            output_path->text = text;
-            output_path->length = str.length;
+            msb_destroy(&outsb);
             }
         else {
-            auto write_err = write_file(outpath.text, str.text, str.length);
-            if(write_err.errored){
-                perror("Error on write");
-                result.errored = write_err.errored;
-                goto cleanup;
-                }
+            assert(outstring);
+            *outstring = msb_detach(&outsb);
             }
-        auto after_write = get_t();
-        report_time(&ctx, SV("Writing took: "), after_write-before_write);
-        report_size(&ctx, SV("Total output size (bytes): "), str.length);
         goto success;
         }
     if(unlikely(flags & DNDC_INPUT_IS_UNTRUSTED)){
@@ -1184,51 +1171,27 @@ run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_pat
         }
     // Render the actual document into a string as html.
     {
-        // msb_reset(&msb);
         MStringBuilder output_sb = {.allocator = get_mallocator()};
         auto before_render = get_t();
         auto e = render_tree(&ctx, &output_sb);
-        auto after_render = get_t();
-        report_time(&ctx, SV("Rendering took: "), after_render-before_render);
 
         if(e.errored){
             report_set_error(&ctx);
+            msb_destroy(&output_sb);
             result.errored = e.errored;
             goto cleanup;
             }
-        auto before_write = get_t();
+        auto after_render = get_t();
+        report_time(&ctx, SV("Rendering took: "), after_render-before_render);
+
         if(flags & DNDC_DONT_WRITE){
             msb_destroy(&output_sb);
             goto success;
             }
-        else if(!output_path || outpath.length == 0){
-            auto str = msb_borrow(&output_sb);
-            fputs(str.text, stdout);
-            msb_destroy(&output_sb);
-            goto skip_report;
-            }
-        else if(!(flags & DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM)){
-            assert(output_path);
-            // We don't use the allocator as this needs to outlive the recording
-            // allocator.
-            //
-            // We could do this without the extra copy, but this will work for now.
-            *output_path = msb_detach(&output_sb);
-            }
         else {
-            auto str = msb_borrow(&output_sb);
-            auto write_err = write_file(outpath.text, str.text, str.length);
-            msb_destroy(&output_sb);
-            if(write_err.errored){
-                perror("Error on write");
-                result.errored = write_err.errored;
-                goto cleanup;
-                }
-            report_size(&ctx, SV("Total output size (bytes): "), str.length);
+            assert(outstring);
+            *outstring = msb_detach(&output_sb);
             }
-        auto after_write = get_t();
-        report_time(&ctx, SV("Writing took: "), after_write-before_write);
-        skip_report:;
     }
     // Write the make-style dependency file to the Dependency directory.
     if(dependency_func){
@@ -1395,7 +1358,7 @@ dndc_format(LongString source_text, LongString* output, Nullable(DndcErrorFunc*)
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_REFORMAT_ONLY
         ;
-    auto e = run_the_dndc(flags, LS(""), source_text, output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, LS(""), source_text, LS(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL);
     return e.errored;
     }
 DNDC_API
@@ -1923,16 +1886,18 @@ dndc_filecache_has_path(struct DndcFileCache* cache, StringView path){
 
 DNDC_API
 int
-dndc_compile_dnd_file(unsigned long long flags, struct DndcLongString base_directory,
-    struct DndcLongString source_path,
-    struct DndcLongString*_Nullable output_path,
-    struct DndcFileCache*_Nullable base64cache,
-    struct DndcFileCache*_Nullable textcache,
-    DndcErrorFunc*_Nullable error_func,
-    void*_Nullable error_user_data,
-    DndcDependencyFunc*_Nullable dependency_func,
-    void*_Nullable dependency_user_data
-
+dndc_compile_dnd_file(
+    unsigned long long flags,
+    DndcLongString base_directory,
+    DndcLongString source_or_path,
+    DndcLongString outpath,
+    DndcLongString* outstring,
+    DNDC_NULLABLE(DndcFileCache*) base64cache,
+    DNDC_NULLABLE(DndcFileCache*) textcache,
+    DNDC_NULLABLE(DndcErrorFunc*) error_func,
+    DNDC_NULLABLE(void*) error_user_data,
+    DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
+    DNDC_NULLABLE(void*) dependency_user_data
 ){
     enum {
         // All the valid flags.
@@ -1949,7 +1914,6 @@ dndc_compile_dnd_file(unsigned long long flags, struct DndcLongString base_direc
             | DNDC_SOURCE_IS_PATH_NOT_DATA
             | DNDC_DONT_PRINT_ERRORS
             | DNDC_PYTHON_UNISOLATED
-            | DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM
             | DNDC_REFORMAT_ONLY
             | DNDC_DONT_INLINE_IMAGES
             | DNDC_USE_DND_URL_SCHEME
@@ -1960,7 +1924,9 @@ dndc_compile_dnd_file(unsigned long long flags, struct DndcLongString base_direc
     uint64_t new_flags = flags & DNDC_VALID_FLAGS;
     if(new_flags != flags)
         return GENERIC_ERROR;
-    auto err = run_the_dndc(flags, base_directory, source_path, output_path, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL);
+    if(!outstring)
+        return GENERIC_ERROR;
+    auto err = run_the_dndc(flags, base_directory, source_or_path, outpath, outstring, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL);
     return err.errored;
     }
 

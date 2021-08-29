@@ -529,22 +529,26 @@ dndc_filecache_has_path(DndcFileCache*, DndcStringView path);
 //    Specifically, this string plus a directory separator will be prepended to
 //    all paths for the purposes of opening those paths.
 //
-// source:
+// source_or_path:
 //    The string to be parsed and compiled.
 //
 //    Alternatively, if the flag DNDC_SOURCE_IS_PATH_NOT_DATA is set, this
 //    argument is treated as a filepath to the source data. If this string's
 //    length is zero, input will be read from stdin.
 //
-// output:
+//
+// outpath:
+//    Several features depend on knowing what the ultimate name of the file will be.
+//    APIs such as ctx.outpath etc. in js or python blocks for example.
+//    Note that we do not actually write to this path.
+//
+//    This path is *NOT* adjusted by the base_directory argument.
+//
+// outstring:
 //    A pointer to a string structure to write the data to. The text will be
 //    allocated via malloc. You can call `dndc_free_string` on the text if you
 //    are on a platform where each dynamic library has its own heap (aka
 //    Windows).
-//
-//    Alternatively, if the flag DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM is set,
-//    the argument is a pointer to the path to write the result to. If null,
-//    will write to stdout instead.
 //
 // base64filecache:
 //    A pointer to a filecache (created with dndc_create_filecache) that is
@@ -587,8 +591,9 @@ int
 dndc_compile_dnd_file(
     unsigned long long flags,
     DndcLongString base_directory,
-    DndcLongString source,
-    DNDC_NULLABLE(DndcLongString*) output,
+    DndcLongString source_or_path,
+    DndcLongString outpath,
+    DndcLongString* outstring,
     DNDC_NULLABLE(DndcFileCache*) base64cache,
     DNDC_NULLABLE(DndcFileCache*) textcache,
     DNDC_NULLABLE(DndcErrorFunc*) error_func,
@@ -652,9 +657,8 @@ DNDC_DONT_PRINT_ERRORS = 0x01000,
 // libraries.
 DNDC_PYTHON_UNISOLATED = 0x02000,
 
-// The output path is actually a pointer to a filepath to write the data
-// to.
-DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM = 0x04000,
+// Reserved
+DNDC_RESERVED_UNUSED4 = 0x04000,
 
 // Instead of rendering to html, render to .dnd with trailing
 // spaces removed, text aligned to 80 columns (if semantically equivelant)

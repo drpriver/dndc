@@ -426,7 +426,7 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
     DndcErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
-    auto e = run_the_dndc(flags, LS(""), source, &output, NULL, NULL, func, error_list, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, LS(""), source, LS(""), &output, NULL, NULL, func, error_list, NULL, NULL, NULL, NULL);
     if(PyErr_Occurred()){
         goto finally;
         }
@@ -524,7 +524,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         textcache = &cache->text_cache;
         b64cache = &cache->b64_cache;
         }
-    auto e = run_the_dndc(flags, base_str, source, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, NULL);
+    auto e = run_the_dndc(flags, base_str, source, LS("this.html"), &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, NULL);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
