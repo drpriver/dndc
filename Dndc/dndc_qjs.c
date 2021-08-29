@@ -1603,7 +1603,7 @@ JSMETHOD(js_dndc_attributes_set){
     if(!key.text)
         return JS_EXCEPTION;
     Node* node = get_node(ctx, handle);
-    if(argc == 1){
+    if(argc == 2){
         StringView value = jsstring_to_stringview(jsctx, argv[1], ctx->string_allocator);
         if(!value.text)
             return JS_EXCEPTION;
