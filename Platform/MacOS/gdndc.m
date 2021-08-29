@@ -1251,11 +1251,21 @@ BOOL show_stats;
     if(!auto_recalc)
         return;
     LongString html = {};
+    NSString* dir = [[self->file_url URLByDeletingLastPathComponent] path];
     NSString* final = [[self->file_url path] lastPathComponent];
     LongString outputpath;
     outputpath.text = [final UTF8String];
     outputpath.length = strlen(outputpath.text);
-    LongString base_dir = LS("this.html");
+    outputpath = LS("this.html");
+    LongString base_dir;
+    if(dir){
+        const char* dir_text = [dir UTF8String];
+        base_dir.text = dir_text;
+        base_dir.length = strlen(dir_text);
+    }
+    else {
+        base_dir = LS("");
+    }
     // auto t0 = get_t();
     uint64_t flags = 0;
     flags |= DNDC_PYTHON_IS_INIT;
