@@ -110,6 +110,7 @@ void*
 Allocator_dupe(Allocator allocator, const void* data, size_t size);
 
 static inline
+// force_inline
 void
 Allocator_free(Allocator allocator, const void*_Nullable data, size_t size);
 

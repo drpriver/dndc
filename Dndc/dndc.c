@@ -619,7 +619,7 @@ main(int argc, char**argv){
 
     #ifdef BENCHMARKING
     flags &= ~DNDC_NO_CLEANUP;
-    LongString output;
+    LongString output = {};
     auto e = run_the_dndc(flags,
                 base_dir,
                 source_path,
@@ -628,7 +628,7 @@ main(int argc, char**argv){
                 NULL, NULL,
                 dndc_stderr_error_func, NULL,
                 dependency_func, &dependency_user_data,
-                NULL, NULL);
+                dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags);
 
     assert(!e.errored);
     dndc_free_string(output);
@@ -642,7 +642,7 @@ main(int argc, char**argv){
                 NULL, NULL,
                 dndc_stderr_error_func, NULL,
                 dependency_func, &dependency_user_data,
-                 dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags);
+                dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags);
         assert(!e.errored);
         }
     dndc_free_string(output);
