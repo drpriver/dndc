@@ -899,6 +899,29 @@ py_set_data(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObje
 
 static
 Nullable(PyObject*)
+py_add_link(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
+    (void)handle;
+    PyObject* key = NULL;
+    PyObject* value = NULL;
+    const char* const keywords[] = { "key", "value", NULL, };
+    PushDiagnostic();
+    SuppressCastQual();
+    // This call is guaranteed to not modify keywords, but it's declared as char**
+    // as const in C is kind of broken.
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!:set_data", (char**)keywords, &PyUnicode_Type, &key, &PyUnicode_Type, &value)){
+        return NULL;
+        }
+    PopDiagnostic();
+    MStringBuilder key_builder = {.allocator = ctx->string_allocator};
+    StringView key_sv = pystring_borrow_stringview(key);
+    msb_write_kebab(&key_builder, key_sv.text, key_sv.length);
+    StringView value_sv = pystring_to_stringview(value, ctx->string_allocator);
+    StringView kebabed = LS_to_SV(msb_detach(&key_builder));
+    add_link_from_pair(ctx, kebabed, value_sv);
+    Py_RETURN_NONE;
+    }
+static
+Nullable(PyObject*)
 py_detach_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
     const char* const keywords[] = { NULL, };
     PushDiagnostic();
@@ -1609,6 +1632,9 @@ Dndcontext_getattr_ls(Dndcontext* pyctx, LongString name){
                 }
             if(CHECK("set_data", 8)){
                 return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_set_data);
+                }
+            if(CHECK("add_link", 8)){
+                return make_node_bound_method(ctx, INVALID_NODE_HANDLE, &py_add_link);
                 }
         }break;
         case 9:{

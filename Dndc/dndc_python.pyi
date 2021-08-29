@@ -138,6 +138,11 @@ class DndcContext:
         The path will be adjusted by the ctx's base, unless it's an absolute path.
         '''
         ...
+    def add_link(self, key:str, value:str) -> None:
+        '''
+        Adds the link to the link table. They key will be kebabed.
+        '''
+        ...
 
 ctx: DndcContext
 node: Node
