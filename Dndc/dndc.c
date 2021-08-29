@@ -345,13 +345,6 @@ int main(int argc, char**argv){
                         "If not given, everything is relative to cwd.",
             },
             {
-                .name = SV("--report-orphans"),
-                .max_num = 1,
-                .dest = ArgBitFlagDest(&flags, DNDC_REPORT_ORPHANS),
-                .help = "Report orphaned nodes (for debugging scripts).",
-                .hidden = true,
-            },
-            {
                 .name = SV("--no-python"),
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_NO_PYTHON),
@@ -955,16 +948,6 @@ run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_pat
     report_size(&ctx, SV("ctx.script_nodes.count = "), ctx.script_nodes.count);
     report_size(&ctx, SV("ctx.dependencies_nodes.count = "), ctx.dependencies_nodes.count);
     report_size(&ctx, SV("ctx.link_nodes.count = "), ctx.link_nodes.count);
-    if(flags & DNDC_REPORT_ORPHANS){
-        MARRAY_FOR_EACH(node, ctx.nodes){
-            // python nodes get orphaned after execution
-            if(node->type == NODE_PYTHON)
-                continue;
-            if(NodeHandle_eq(node->parent, INVALID_NODE_HANDLE)){
-                node_print_warning(&ctx, node, SV("Orphaned node (invalid parent node handle)"));
-                }
-            }
-        }
     // Python blocks can detach the root node and then forget to attach a new
     // one.
     if(NodeHandle_eq(ctx.root_handle, INVALID_NODE_HANDLE)){
@@ -1940,7 +1923,6 @@ dndc_compile_dnd_file(unsigned long long flags, struct DndcLongString base_direc
             | DNDC_ALLOW_BAD_LINKS
             | DNDC_SUPPRESS_WARNINGS
             | DNDC_PRINT_STATS
-            | DNDC_REPORT_ORPHANS
             | DNDC_NO_PYTHON
             | DNDC_NO_COMPILETIME_JS
             | DNDC_PYTHON_IS_INIT

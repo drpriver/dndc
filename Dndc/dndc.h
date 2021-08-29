@@ -615,7 +615,7 @@ DNDC_SUPPRESS_WARNINGS = 0x0002,
 DNDC_PRINT_STATS       = 0x0004,
 
 // Log orphaned nodes.
-DNDC_REPORT_ORPHANS    = 0x0008,
+DNDC_RESERVED_UNUSED   = 0x0008,
 
 // Don't execute python blocks.
 DNDC_NO_PYTHON         = 0x0010,
