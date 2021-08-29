@@ -614,7 +614,7 @@ DNDC_SUPPRESS_WARNINGS = 0x0002,
 // Log stats during execution of timings and counts.
 DNDC_PRINT_STATS       = 0x0004,
 
-// Log orphaned nodes.
+// Reserved
 DNDC_RESERVED_UNUSED   = 0x0008,
 
 // Don't execute python blocks.
@@ -624,11 +624,11 @@ DNDC_NO_PYTHON         = 0x0010,
 // initialized.
 DNDC_PYTHON_IS_INIT    = 0x0020,
 
-// Print out the document tree
-DNDC_PRINT_TREE        = 0x0040,
+// Reserved
+DNDC_RESERVED_UNUSED2   = 0x0040,
 
-// Print out all links and what they resolve to
-DNDC_PRINT_LINKS       = 0x0080,
+// Reserved
+DNDC_RESERVED_UNUSED3  = 0x0080,
 
 // Don't spawn any worker threads. No parallelism.
 DNDC_NO_THREADS        = 0x0100,

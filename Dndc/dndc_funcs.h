@@ -340,15 +340,6 @@ dndc_parse(DndcContext*, NodeHandle root, StringView filename, const char* text)
 
 
 //
-// Prints out a representation of the final document tree.
-// I might remove this later, it's mostly for debugging.
-// Calls itself recursively, thus the depth argument.
-//
-static
-void
-print_node_and_children(Nonnull(DndcContext*), NodeHandle handle, int depth);
-
-//
 // Writes the document tree (starting from the context's root node)
 // as html into the given builder. The result is a fully valid html
 // document including head tags, etc.

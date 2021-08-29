@@ -295,15 +295,50 @@ struct DependencyUserData {
     LongString depfile;
 };
 
+enum DndcMainFlags {
+    DNDC_MAIN_NONE = 0x0,
+    DNDC_MAIN_PRINT_TREE = 0x1,
+    DNDC_MAIN_PRINT_LINKS = 0x2,
+};
+
+
 static int depends_print_callback(void*_Nullable, size_t, StringView*);
 
-int main(int argc, char**argv){
+//
+// Prints out a representation of the final document tree.
+// I might remove this later, it's mostly for debugging.
+// Calls itself recursively, thus the depth argument.
+//
+static inline
+void
+print_node_and_children(Nonnull(DndcContext*), NodeHandle handle, int depth);
+
+static
+int
+dndc_main_ast_func(void*_Nullable user_data, DndcContext*_Nonnull ctx){
+    assert(user_data);
+    uint64_t flags = (uintptr_t)user_data;
+    if(flags & DNDC_MAIN_PRINT_TREE){
+        print_node_and_children(ctx, ctx->root_handle, 0);
+        }
+    if(flags & DNDC_MAIN_PRINT_LINKS){
+        for(size_t i = 0; i < ctx->links.count; i++){
+            auto li = &ctx->links.data[i];
+            fprintf(stderr, "[%zu] key: '%.*s', value: '%.*s'\n", i, (int)li->key.length, li->key.text, (int)li->value.length, li->value.text);
+            }
+        }
+    return 0;
+    }
+
+int
+main(int argc, char**argv){
     LongString source_path = LS("");
     LongString output_path = LS("");
     DndcDependencyFunc*dependency_func = NULL;
     LongString dependency_path = LS("");
     struct DependencyUserData dependency_user_data = {};
     LongString base_dir = LS("");
+    uint64_t ast_func_flags = DNDC_MAIN_NONE;
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SOURCE_IS_PATH_NOT_DATA
         | DNDC_OUTPUT_IS_FILE_PATH_NOT_OUT_PARAM
@@ -361,14 +396,14 @@ int main(int argc, char**argv){
             {
                 .name = SV("--print-tree"),
                 .max_num = 1,
-                .dest = ArgBitFlagDest(&flags, DNDC_PRINT_TREE),
+                .dest = ArgBitFlagDest(&ast_func_flags, DNDC_MAIN_PRINT_TREE),
                 .help = "Print out the entire document tree.",
                 .hidden = true,
             },
             {
                 .name = SV("--print-links"),
                 .max_num = 1,
-                .dest = ArgBitFlagDest(&flags, DNDC_PRINT_LINKS),
+                .dest = ArgBitFlagDest(&ast_func_flags, DNDC_MAIN_PRINT_LINKS),
                 .help = "Print out all links (and what they target) known by "
                         "the system.",
                 .hidden = true,
@@ -587,7 +622,8 @@ int main(int argc, char**argv){
                 &output_path,
                 NULL, NULL,
                 dndc_stderr_error_func, NULL,
-                dependency_func, &dependency_user_data, NULL, NULL);
+                dependency_func, &dependency_user_data,
+                 dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags);
         assert(!e.errored);
         }
     end_interpreter();
@@ -598,7 +634,8 @@ int main(int argc, char**argv){
                  output_path.length? &output_path : NULL,
                  NULL, NULL,
                  dndc_stderr_error_func, NULL,
-                 dependency_func, &dependency_user_data, NULL, NULL);
+                 dependency_func, &dependency_user_data,
+                 dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags);
     return e.errored;
     #endif
     }
@@ -643,6 +680,70 @@ dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths){
         }
     return 0;
     }
+
+static inline
+void
+print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
+    auto node = get_node(ctx, handle);
+    for(int i = 0 ; i < depth*2; i++){
+        putchar(' ');
+        }
+    printf("[%-8s]", NODENAMES[node->type].text);
+    switch((NodeType)node->type){
+        case NODE_PARA:
+        case NODE_TABLE_ROW:
+        case NODE_LIST_ITEM:
+        case NODE_KEYVALUEPAIR:
+            break;
+        case NODE_RAW:
+        case NODE_PRE:
+        case NODE_PYTHON:
+        case NODE_JS:
+        case NODE_BULLETS:
+        case NODE_STYLESHEETS:
+        case NODE_DEPENDENCIES:
+        case NODE_LINKS:
+        case NODE_SCRIPTS:
+        case NODE_IMPORT:
+        case NODE_IMAGE:
+        case NODE_TABLE:
+        case NODE_TEXT:
+        case NODE_TITLE:
+        case NODE_HEADING:
+        case NODE_LIST:
+        case NODE_COMMENT:
+        case NODE_DATA:
+        case NODE_NAV:
+        case NODE_KEYVALUE:
+        case NODE_IMGLINKS:
+        case NODE_MD:
+        case NODE_CONTAINER:
+        case NODE_INVALID:
+        case NODE_QUOTE:
+        case NODE_HR:
+        case NODE_DIV:{
+            printf(" '%.*s' ", (int)node->header.length, node->header.text);
+            RARRAY_FOR_EACH(c, node->classes){
+                printf(".%.*s ", (int)c->length, c->text);
+                }
+            RARRAY_FOR_EACH(a, node->attributes){
+                printf("@%.*s", (int)a->key.length, a->key.text);
+                if(a->value.length)
+                    printf("(%.*s) ", (int)a->value.length, a->value.text);
+                else
+                    putchar(' ');
+                }
+            }break;
+        case NODE_STRING:{
+            printf(" '%.*s'", (int)node->header.length, node->header.text);
+            }break;
+        }
+    putchar('\n');
+    NODE_CHILDREN_FOR_EACH(it, node){
+        print_node_and_children(ctx, *it, depth+1);
+        }
+    }
+
 #endif
 
 
@@ -982,11 +1083,6 @@ run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_pat
             }
     }
 
-    // Maybe should remove this option as it clogs up the cli and was just for
-    // debugging before rendering was off the ground.
-    if(flags & DNDC_PRINT_TREE)
-        print_node_and_children(&ctx, ctx.root_handle, 0);
-
     // Render the nav block if we have one.
     {
         auto before = get_t();
@@ -1027,21 +1123,6 @@ run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_pat
             #else
                 qsort(ctx.links.data, ctx.links.count, sizeof(ctx.links.data[0]), StringView_cmp);
             #endif
-            }
-        if(flags & DNDC_PRINT_LINKS){
-            if(!ctx.error_func){
-                result.errored = PARSE_ERROR;
-                goto cleanup;
-                }
-            MStringBuilder temp = {.allocator = ctx.temp_allocator};
-            for(size_t i = 0; i < ctx.links.count; i++){
-                auto li = &ctx.links.data[i];
-                MSB_FORMAT(&temp, "[", i, "] key: '", li->key, "', value: '", li->value, "'");
-                auto msg = msb_borrow(&temp);
-                ctx.error_func(ctx.error_user_data, DNDC_DEBUG_MESSAGE, "", 0, 0, 0, msg.text, msg.length);
-                msb_reset(&temp);
-                }
-            msb_destroy(&temp);
             }
         report_size(&ctx, SV("ctx.links.count = "), ctx.links.count);
     }
@@ -1229,70 +1310,6 @@ run_the_dndc(uint64_t flags, LongString base_directory, LongString source_or_pat
     if(!(flags & DNDC_NO_CLEANUP))
         destroy_linear_storage(&la_);
     return result;
-    }
-
-// Idk where to put this.
-static
-void
-print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
-    auto node = get_node(ctx, handle);
-    for(int i = 0 ; i < depth*2; i++){
-        putchar(' ');
-        }
-    printf("[%-8s]", NODENAMES[node->type].text);
-    switch((NodeType)node->type){
-        case NODE_PARA:
-        case NODE_TABLE_ROW:
-        case NODE_LIST_ITEM:
-        case NODE_KEYVALUEPAIR:
-            break;
-        case NODE_RAW:
-        case NODE_PRE:
-        case NODE_PYTHON:
-        case NODE_JS:
-        case NODE_BULLETS:
-        case NODE_STYLESHEETS:
-        case NODE_DEPENDENCIES:
-        case NODE_LINKS:
-        case NODE_SCRIPTS:
-        case NODE_IMPORT:
-        case NODE_IMAGE:
-        case NODE_TABLE:
-        case NODE_TEXT:
-        case NODE_TITLE:
-        case NODE_HEADING:
-        case NODE_LIST:
-        case NODE_COMMENT:
-        case NODE_DATA:
-        case NODE_NAV:
-        case NODE_KEYVALUE:
-        case NODE_IMGLINKS:
-        case NODE_MD:
-        case NODE_CONTAINER:
-        case NODE_INVALID:
-        case NODE_QUOTE:
-        case NODE_HR:
-        case NODE_DIV:{
-            printf(" '%.*s' ", (int)node->header.length, node->header.text);
-            RARRAY_FOR_EACH(c, node->classes){
-                printf(".%.*s ", (int)c->length, c->text);
-                }
-            RARRAY_FOR_EACH(a, node->attributes){
-                printf("@%.*s", (int)a->key.length, a->key.text);
-                if(a->value.length)
-                    printf("(%.*s) ", (int)a->value.length, a->value.text);
-                else
-                    putchar(' ');
-                }
-            }break;
-        case NODE_STRING:{
-            printf(" '%.*s'", (int)node->header.length, node->header.text);
-            }break;
-        }
-    putchar('\n');
-    NODE_CHILDREN_FOR_EACH(it, node){
-        print_node_and_children(ctx, *it, depth+1);
-        }
     }
 
 #ifdef __clang__
@@ -1926,8 +1943,6 @@ dndc_compile_dnd_file(unsigned long long flags, struct DndcLongString base_direc
             | DNDC_NO_PYTHON
             | DNDC_NO_COMPILETIME_JS
             | DNDC_PYTHON_IS_INIT
-            | DNDC_PRINT_TREE
-            | DNDC_PRINT_LINKS
             | DNDC_NO_THREADS
             | DNDC_DONT_WRITE
             | DNDC_NO_CLEANUP
