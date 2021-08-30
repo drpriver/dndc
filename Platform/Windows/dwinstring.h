@@ -1,7 +1,8 @@
-#ifndef WINSTRING_H
-#define WINSTRING_H
+#ifndef DWINSTRING_H
+#define DWINSTRING_H
 // NOTE: This file might be include from c++. So it needs to be a dual-lang
 // header.
+#include "long_string.h"
 #include "allocator.h"
 
 #ifndef _WIN32

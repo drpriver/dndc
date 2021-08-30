@@ -169,6 +169,7 @@ thread_worker(void*){
                     ,
                     LS(""),
                     source,
+                    LS("this.html"),
                     &output,
                     NULL,
                     NULL,

@@ -717,6 +717,7 @@ class Page(QSplitter):
             'Warning',
             'System Error',
             'Info',
+            'Debug',
             )
         if error_type < 0 or error_type >= len(error_types):
             LOGGER.error('unrecognized error type: %d', error_type)
