@@ -35,13 +35,6 @@
     do it programmatically) and (x,y) are the coordinates to be displayed at.
     Note that the string is centered on the x,y coordinate.
     
-    If you need help calculating the coordinates on the map, use this special
-    builtin js block (as a child of a non-commented block).
-    ::js
-      builtins/coords.js
-    It will add a coordinate readout below the image when you move your pointer
-    over it.
-    
     Having the nodes and where they are positioned be separated is annoying,
     so below is an example of how to get all the nodes that have the .room class
     and the @coord attribute and then programatically adding them to the imglinks
