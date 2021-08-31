@@ -14,16 +14,16 @@
 #include "dndc_qjs.h"
 
 #include "path_util.h"
+#include "MStringBuilder.h"
 #include "msb_extensions.h"
 #include "allocator.h"
 #include "mallocator.h"
 #include "linear_allocator.h"
 #include "recording_allocator.h"
 #include "arena_allocator.h"
-#include "long_string.h"
-#include "MStringBuilder.h"
 #include "measure_time.h"
 #include "thread_utils.h"
+#include "ByteBuilder.h"
 #include "bb_extensions.h"
 
 #define DSORT_T LinkItem
