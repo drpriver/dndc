@@ -70,18 +70,19 @@ analyze_line(DndcContext* ctx){
         break;
         }
     ctx->doublecolon = doublecolon;
-    ctx->lineend = endline;
+    ctx->line_end = endline;
     ctx->linestart = ctx->cursor;
     ctx->nspaces = nspace;
     }
+
 static inline
 void
 force_inline
 advance_row(DndcContext* ctx){
-    if(unlikely(!ctx->lineend[0]))
-        ctx->cursor = ctx->lineend;
+    if(unlikely(!ctx->line_end[0]))
+        ctx->cursor = ctx->line_end;
     else
-        ctx->cursor = ctx->lineend+1;
+        ctx->cursor = ctx->line_end+1;
     ctx->lineno++;
     }
 
@@ -98,6 +99,7 @@ init_node(DndcContext* ctx, NodeHandle handle, const char* src_char, NodeType ty
     node->row = ctx->lineno;
     node->type = type;
     }
+
 static inline
 void
 force_inline
@@ -118,7 +120,7 @@ dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const 
     ctx->cursor = text;
     ctx->linestart = NULL;
     ctx->doublecolon = NULL;
-    ctx->lineend = NULL;
+    ctx->line_end = NULL;
     ctx->nspaces = 0;
     ctx->lineno = 0;
     ctx->filename = filename;
@@ -133,7 +135,7 @@ parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
     Errorable(void) result = {};
     // parse the node header
     const char* starttext = ctx->doublecolon + 2;
-    size_t length = ctx->lineend - starttext;
+    size_t length = ctx->line_end - starttext;
     StringView postcolon = stripped_view(starttext, length);
     auto new_node_handle = alloc_handle(ctx);
     init_node(ctx, new_node_handle, ctx->linestart+ctx->nspaces, NODE_INVALID);
@@ -147,6 +149,7 @@ parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
         auto node = get_node(ctx, new_node_handle);
         const char* header = ctx->linestart + ctx->nspaces;
         node->header = stripped_view(header, ctx->doublecolon - header);
+        // This is wrong... uggh.
         if(node_has_attribute(node, SV("comment")))
             node->type = NODE_COMMENT;
         type = node->type;
@@ -395,7 +398,7 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
     Errorable(void) result = {};
     for(;ctx->cursor[0];){
         analyze_line(ctx);
-        if(ctx->linestart+ctx->nspaces == ctx->lineend){
+        if(ctx->linestart+ctx->nspaces == ctx->line_end){
             advance_row(ctx);
             continue;
             }
@@ -408,7 +411,7 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
             }
         // default: string node
         StringView content = stripped_view(ctx->linestart + ctx->nspaces,
-            (ctx->lineend - ctx->linestart)-ctx->nspaces);
+            (ctx->line_end - ctx->linestart)-ctx->nspaces);
         auto new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
         append_child(ctx, parent_handle, new_node_handle);
@@ -425,7 +428,7 @@ PARSEFUNC(parse_list_node){
     for(;ctx->cursor[0];){
         analyze_line(ctx);
         // skip blanks
-        if(ctx->linestart+ctx->nspaces == ctx->lineend){
+        if(ctx->linestart+ctx->nspaces == ctx->line_end){
             advance_row(ctx);
             continue;
             }
@@ -457,7 +460,7 @@ PARSEFUNC(parse_list_node){
         auto li_handle = alloc_handle(ctx);
         init_node(ctx, li_handle, ctx->linestart+ctx->nspaces, NODE_LIST_ITEM);
         append_child(ctx, parent_handle, li_handle);
-        StringView text = stripped_view(firstchar, ctx->lineend - firstchar);
+        StringView text = stripped_view(firstchar, ctx->line_end - firstchar);
         auto first_child = alloc_handle(ctx);
         init_string_node(ctx, first_child, text);
         advance_row(ctx);
@@ -466,6 +469,7 @@ PARSEFUNC(parse_list_node){
         }
     return result;
     }
+
 PARSEFUNC(parse_list_item){
     Errorable(void) result = {};
     {
@@ -475,7 +479,7 @@ PARSEFUNC(parse_list_item){
     for(;ctx->cursor[0];){
         top:;
         analyze_line(ctx);
-        if(ctx->linestart+ctx->nspaces == ctx->lineend){
+        if(ctx->linestart+ctx->nspaces == ctx->line_end){
             advance_row(ctx);
             continue;
             }
@@ -504,7 +508,7 @@ PARSEFUNC(parse_list_item){
             }
         after:;
         // default: string node
-        StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->lineend - ctx->linestart)-ctx->nspaces);
+        StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);
         auto new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
         append_child(ctx, parent_handle, new_node_handle);
@@ -525,16 +529,16 @@ PARSEFUNC(parse_raw_node){
     int leading_indent = 0;
     for(;ctx->cursor[0];){
         analyze_line(ctx);
-        if(!have_leading_indent and ctx->linestart+ctx->nspaces != ctx->lineend){
+        if(!have_leading_indent and ctx->linestart+ctx->nspaces != ctx->line_end){
             leading_indent = ctx->nspaces;
             have_leading_indent = true;
             }
         size_t length;
         const char* text;
-        if(ctx->linestart + ctx->nspaces != ctx->lineend){
+        if(ctx->linestart + ctx->nspaces != ctx->line_end){
             if(ctx->nspaces <= indentation)
                 break;
-            length = ctx->lineend - ctx->linestart;
+            length = ctx->line_end - ctx->linestart;
             auto effective_indent = leading_indent < ctx->nspaces?leading_indent: ctx->nspaces;
             length -= effective_indent;
             text = ctx->linestart + effective_indent;
@@ -566,7 +570,7 @@ PARSEFUNC(parse_table_node){
     for(;ctx->cursor[0];){
         analyze_line(ctx);
         // skip blanks
-        if(ctx->linestart+ctx->nspaces == ctx->lineend){
+        if(ctx->linestart+ctx->nspaces == ctx->line_end){
             advance_row(ctx);
             continue;
             }
@@ -582,11 +586,11 @@ PARSEFUNC(parse_table_node){
             continue;
             }
         const char* cursor = ctx->linestart+ctx->nspaces;
-        const char* pipe = memchr(cursor, '|', ctx->lineend - cursor);
+        const char* pipe = memchr(cursor, '|', ctx->line_end - cursor);
         if(!pipe){
             if(!NodeHandle_eq(last_cell_handle, INVALID_NODE_HANDLE)){
                 if(ctx->nspaces > previous_row_indentation){
-                    StringView content = stripped_view(cursor, ctx->lineend-cursor);
+                    StringView content = stripped_view(cursor, ctx->line_end-cursor);
                     if(content.length){
                         if(!converted){
                             convert_node_to_container_containing_clone_of_former_self(ctx, last_cell_handle);
@@ -614,11 +618,11 @@ PARSEFUNC(parse_table_node){
             init_string_node(ctx, cell_index, content);
             append_child(ctx, new_node_handle, cell_index);
             cursor = pipe+1;
-            pipe = memchr(cursor, '|', ctx->lineend - cursor);
+            pipe = memchr(cursor, '|', ctx->line_end - cursor);
             }
         auto cell_index = alloc_handle(ctx);
         last_cell_handle = cell_index;
-        StringView content = stripped_view(cursor, ctx->lineend-cursor);
+        StringView content = stripped_view(cursor, ctx->line_end-cursor);
         init_string_node(ctx, cell_index, content);
         append_child(ctx, new_node_handle, cell_index);
         advance_row(ctx);
@@ -637,7 +641,7 @@ PARSEFUNC(parse_keyvalue_node){
     for(;ctx->cursor[0];){
         analyze_line(ctx);
         // skip blanks
-        if(ctx->linestart+ctx->nspaces == ctx->lineend){
+        if(ctx->linestart+ctx->nspaces == ctx->line_end){
             advance_row(ctx);
             continue;
             }
@@ -654,7 +658,7 @@ PARSEFUNC(parse_keyvalue_node){
                     convert_node_to_container_containing_clone_of_former_self(ctx, previous_value);
                     previous_value_was_converted = true;
                     }
-                StringView content = stripped_view(ctx->linestart+ctx->nspaces, ctx->lineend-(ctx->linestart+ctx->nspaces));
+                StringView content = stripped_view(ctx->linestart+ctx->nspaces, ctx->line_end-(ctx->linestart+ctx->nspaces));
                 auto str_handle = alloc_handle(ctx);
                 init_string_node(ctx, str_handle, content);
                 append_child(ctx, previous_value, str_handle);
@@ -666,7 +670,7 @@ PARSEFUNC(parse_keyvalue_node){
         init_node(ctx, new_node_handle, ctx->linestart + ctx->nspaces, NODE_KEYVALUEPAIR);
         append_child(ctx, parent_handle, new_node_handle);
         const char* cursor = ctx->linestart+ctx->nspaces;
-        const char* colon = memchr(cursor, ':', ctx->lineend - cursor);
+        const char* colon = memchr(cursor, ':', ctx->line_end - cursor);
         if(!colon){
             parse_set_err(ctx, cursor, LS("Expected a colon for key value pairs"));
             Raise(PARSE_ERROR);
@@ -674,7 +678,7 @@ PARSEFUNC(parse_keyvalue_node){
         const char* pre_text = ctx->linestart+ctx->nspaces;
 
         StringView pre = stripped_view(pre_text,colon - pre_text);
-        StringView post = stripped_view(colon+1, (ctx->lineend-colon)-1);
+        StringView post = stripped_view(colon+1, (ctx->line_end-colon)-1);
         auto key_idx = alloc_handle(ctx);
         init_string_node(ctx, key_idx, pre);
         auto val_idx = alloc_handle(ctx);
@@ -698,7 +702,7 @@ PARSEFUNC(parse_bullets_node){
     for(;ctx->cursor[0];){
         analyze_line(ctx);
         // skip blanks
-        if(ctx->linestart+ctx->nspaces == ctx->lineend){
+        if(ctx->linestart+ctx->nspaces == ctx->line_end){
             advance_row(ctx);
             continue;
             }
@@ -717,7 +721,7 @@ PARSEFUNC(parse_bullets_node){
             Raise(PARSE_ERROR);
             }
         firstchar++;
-        StringView bullet_text = stripped_view(firstchar, ctx->lineend - firstchar);
+        StringView bullet_text = stripped_view(firstchar, ctx->line_end - firstchar);
         auto bullet_node_handle = alloc_handle(ctx);
         init_node(ctx, bullet_node_handle, ctx->linestart+ctx->nspaces, NODE_LIST_ITEM);
         append_child(ctx, parent_handle, bullet_node_handle);
@@ -739,7 +743,7 @@ PARSEFUNC(parse_bullet_node){
     }
     for(;ctx->cursor[0];){
         analyze_line(ctx);
-        if(ctx->linestart+ctx->nspaces == ctx->lineend){
+        if(ctx->linestart+ctx->nspaces == ctx->line_end){
             advance_row(ctx);
             continue;
             }
@@ -760,7 +764,7 @@ PARSEFUNC(parse_bullet_node){
             continue;
             }
         // default: string node
-        StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->lineend - ctx->linestart)-ctx->nspaces);
+        StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);
         auto new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
         append_child(ctx, parent_handle, new_node_handle);
@@ -779,7 +783,7 @@ PARSEFUNC(parse_text_node){
     for(;ctx->cursor[0];){
         analyze_line(ctx);
         // blank line
-        if(ctx->linestart+ctx->nspaces == ctx->lineend){
+        if(ctx->linestart+ctx->nspaces == ctx->line_end){
             in_para_node = false;
             advance_row(ctx);
             continue;
@@ -800,7 +804,7 @@ PARSEFUNC(parse_text_node){
             }
         in_para_node = true;
         // default: new paragraph node
-        StringView content = stripped_view(ctx->linestart+ctx->nspaces, (ctx->lineend - ctx->linestart)-ctx->nspaces);
+        StringView content = stripped_view(ctx->linestart+ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);
         auto new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
         append_child(ctx, para_handle, new_node_handle);
@@ -833,7 +837,7 @@ PARSEFUNC(parse_md_node){
     for(;ctx->cursor[0];){
         analyze_line(ctx);
         // skip_blanks
-        if(ctx->linestart+ctx->nspaces == ctx->lineend){
+        if(ctx->linestart+ctx->nspaces == ctx->line_end){
             state = NONE;
             advance_row(ctx);
             continue;
@@ -969,7 +973,7 @@ PARSEFUNC(parse_md_node){
             s->item = alloc_handle(ctx);
             init_node(ctx, s->item, ctx->linestart+ctx->nspaces, NODE_LIST_ITEM);
             append_child(ctx, s->list, s->item);
-            StringView content = stripped_view(ctx->linestart + ctx->nspaces+prefix_length, (ctx->lineend - ctx->linestart)-ctx->nspaces-prefix_length);
+            StringView content = stripped_view(ctx->linestart + ctx->nspaces+prefix_length, (ctx->line_end - ctx->linestart)-ctx->nspaces-prefix_length);
             NodeHandle new_node_handle = alloc_handle(ctx);
             init_string_node(ctx, new_node_handle, content);
             append_child(ctx, s->item, new_node_handle);
@@ -984,7 +988,7 @@ PARSEFUNC(parse_md_node){
                 init_node(ctx, para_handle, ctx->linestart+ctx->nspaces, NODE_PARA);
                 append_child(ctx, parent_handle, para_handle);
                 }
-            StringView content = stripped_view( ctx->linestart + ctx->nspaces, (ctx->lineend - ctx->linestart)-ctx->nspaces);
+            StringView content = stripped_view( ctx->linestart + ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);
             auto new_node_handle = alloc_handle(ctx);
             init_string_node(ctx, new_node_handle, content);
             append_child(ctx, para_handle, new_node_handle);
@@ -998,7 +1002,7 @@ PARSEFUNC(parse_md_node){
             Raise(PARSE_ERROR);
             }
         // don't change state for these
-        StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->lineend - ctx->linestart)-ctx->nspaces);
+        StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);
         auto new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
         append_child(ctx, stack[si].item, new_node_handle);

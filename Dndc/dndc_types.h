@@ -232,7 +232,7 @@ typedef struct DndcContext {
         const char*_Nonnull cursor;
         const char*_Null_unspecified linestart;
         const char*_Nullable doublecolon;
-        const char*_Null_unspecified lineend;
+        const char*_Null_unspecified line_end;
         int nspaces;
         int lineno;
     };

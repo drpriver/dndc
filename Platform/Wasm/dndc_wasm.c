@@ -27,7 +27,7 @@ void dndc_error_func(void* error_user_data, int type, const char* filename, int 
 extern
 PString*
 make_html(PString* source){
-    LongString text = PString_to_LongString(source); 
+    LongString text = PString_to_LongString(source);
     LongString base = LS("");
     LongString output;
     uint64_t flags = DNDC_FLAGS_NONE
@@ -54,7 +54,7 @@ make_html(PString* source){
 extern
 PString*
 format_dnd(PString* source){
-    LongString text = PString_to_LongString(source); 
+    LongString text = PString_to_LongString(source);
     LongString base = LS("");
     LongString output;
     uint64_t flags = DNDC_FLAGS_NONE
