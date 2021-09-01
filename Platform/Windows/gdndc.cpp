@@ -139,12 +139,15 @@ static struct {
     CONDITION_VARIABLE cond;
 } worker_data;
 
+DndcWorkerThread* B64WORKER = NULL;
+
 static HWND mainwindow;
 
 static
 DWORD
 thread_worker(void*){
     dndc_init_python();
+    B64WORKER = dndc_worker_thread_create();
     for(;;){
         const char* text = NULL;
         EnterCriticalSection(&worker_data.lock);
@@ -176,7 +179,8 @@ thread_worker(void*){
                     NULL,
                     NULL,
                     NULL,
-                    NULL
+                    NULL,
+                    B64WORKER
                     );
             if(!fail){
                 {

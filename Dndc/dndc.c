@@ -202,7 +202,7 @@ execute_user_scripts(DndcContext* ctx){
 // joined by the time we exit.
 static
 Errorable_f(void)
-execute_user_scripts_and_load_images(DndcContext* ctx){
+execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) worker){
     Errorable(void) result = {};
     auto flags = ctx->flags;
     // Setup the worker thread.
@@ -245,7 +245,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx){
                 }
             }
         }
-    ThreadHandle worker = {};
+    ThreadHandle thread_worker = {};
     bool binary_work_to_be_done = !!job.sourcepaths.count;
     bool thread_created = false;
     if(binary_work_to_be_done){
@@ -254,7 +254,11 @@ execute_user_scripts_and_load_images(DndcContext* ctx){
             binary_worker(&job);
             }
         else{
-            create_thread(&worker, &binary_worker, &job);
+            if(worker)
+                worker_submit(worker, &job);
+            else{
+                create_thread(&thread_worker, &binary_worker, &job);
+                }
             thread_created = true;
             }
         }
@@ -263,7 +267,10 @@ execute_user_scripts_and_load_images(DndcContext* ctx){
 
     if(thread_created){
         auto before = get_t();
-        join_thread(worker);
+        if(worker)
+            worker_wait(worker);
+        else
+            join_thread(thread_worker);
         auto after = get_t();
         // This is usually very fast as the worker thread finished before python.
         report_time(ctx, SV("Joining took: "), after-before);
@@ -291,7 +298,8 @@ run_the_dndc(uint64_t flags,
         Nullable(DndcDependencyFunc*)dependency_func,
         Nullable(void*)dependency_user_data,
         Nullable(DndcPostParseAstFunc*)ast_func,
-        Nullable(void*)ast_func_user_data
+        Nullable(void*)ast_func_user_data,
+        Nullable(WorkerThread*)worker
         ){
     if(flags & DNDC_REFORMAT_ONLY)
         flags |= DNDC_NO_PYTHON;
@@ -517,7 +525,7 @@ run_the_dndc(uint64_t flags,
         // the worker has joined before continuing beyond this point.
         // Putting it in its own function with single-point-of-exit style
         // makes that easier to do.
-        auto e = execute_user_scripts_and_load_images(&ctx);
+        auto e = execute_user_scripts_and_load_images(&ctx, worker);
         if(e.errored){
             result.errored = e.errored;
             goto cleanup;
@@ -850,7 +858,7 @@ dndc_format(LongString source_text, LongString* output, Nullable(DndcErrorFunc*)
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_REFORMAT_ONLY
         ;
-    auto e = run_the_dndc(flags, LS(""), source_text, LS(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, LS(""), source_text, LS(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL);
     return e.errored;
     }
 DNDC_API
@@ -1290,6 +1298,18 @@ dndc_filecache_has_path(struct DndcFileCache* cache, StringView path){
     }
 
 DNDC_API
+DndcWorkerThread*
+dndc_worker_thread_create(void){
+    return (DndcWorkerThread*)worker_create(binary_worker, "b64 worker");
+    }
+
+DNDC_API
+void
+dndc_worker_thread_destroy(DndcWorkerThread* w){
+    worker_destroy((WorkerThread*)w);
+    }
+
+DNDC_API
 int
 dndc_compile_dnd_file(
     unsigned long long flags,
@@ -1302,7 +1322,8 @@ dndc_compile_dnd_file(
     DNDC_NULLABLE(DndcErrorFunc*) error_func,
     DNDC_NULLABLE(void*) error_user_data,
     DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
-    DNDC_NULLABLE(void*) dependency_user_data
+    DNDC_NULLABLE(void*) dependency_user_data,
+    DNDC_NULLABLE(DndcWorkerThread*) worker_thread
 ){
     enum {
         // All the valid flags.
@@ -1331,7 +1352,7 @@ dndc_compile_dnd_file(
         return GENERIC_ERROR;
     if(!outstring)
         return GENERIC_ERROR;
-    auto err = run_the_dndc(flags, base_directory, source_or_path, outpath, outstring, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL);
+    auto err = run_the_dndc(flags, base_directory, source_or_path, outpath, outstring, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread);
     return err.errored;
     }
 

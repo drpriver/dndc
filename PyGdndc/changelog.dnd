@@ -1,3 +1,6 @@
+Version 0.7.1::md
+  * Fix bug in js api.
+  * Internal API changes.
 Version 0.7.0::md
   * `js` blocks have been renamed to `script` (which is what they used to be).
   * A new scripting language has been added --- javascript.

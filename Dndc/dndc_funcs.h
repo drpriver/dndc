@@ -88,11 +88,16 @@
 // ast_func_user_data:
 //   A pointer that will be passed to the ast_func.
 //
+// worker_thread:
+//   A worker thread that can be reused for parallel tasks.
+//
 // Returns
 // -------
 // Nothing is returned upon success (.errored == NO_ERROR).
 // On failure, an error will be indicated.
 //
+
+typedef struct WorkerThread WorkerThread;
 
 typedef int (DndcPostParseAstFunc)(Nullable(void*)user_data, Nonnull(DndcContext*));
 static
@@ -109,7 +114,8 @@ run_the_dndc(uint64_t flags,
         Nullable(DndcDependencyFunc*)dependency_func,
         Nullable(void*)dependency_user_data,
         Nullable(DndcPostParseAstFunc*)ast_func,
-        Nullable(void*)ast_func_user_data
+        Nullable(void*)ast_func_user_data,
+        Nullable(WorkerThread*) worker_thread
         );
 
 //

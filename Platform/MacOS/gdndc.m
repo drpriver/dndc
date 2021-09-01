@@ -35,6 +35,7 @@ msb_detach_as_ns_string(MStringBuilder*sb){
 
 static DndcFileCache*_Nonnull BASE64CACHE;
 static DndcFileCache*_Nonnull TEXTCACHE;
+static DndcWorkerThread*_Nonnull B64WORKER;
 typedef struct FileWatchItem {
     uint64_t hash;
     uint64_t last_eight_chars;
@@ -1278,7 +1279,7 @@ BOOL show_stats;
     // flags |= DNDC_USE_DND_URL_SCHEME;
     error_text.editable = YES;
     [[error_text textStorage].mutableString setString:@""];
-    auto err = run_the_dndc(flags, base_dir, source, outputpath, &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL, gdndc_ast_func, (__bridge void*)self).errored;
+    auto err = run_the_dndc(flags, base_dir, source, outputpath, &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL, gdndc_ast_func, (__bridge void*)self, (WorkerThread*)B64WORKER).errored;
     // auto err = dndc_compile_dnd_file(flags, base_dir, source, &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL);
     error_text.editable = NO;
     // auto t1 = get_t();
@@ -1476,6 +1477,7 @@ main(int argc, const char *_Null_unspecified *_Nonnull argv) {
     EDITOR_FONT = font;
     BASE64CACHE = dndc_create_filecache();
     TEXTCACHE = dndc_create_filecache();
+    B64WORKER = dndc_worker_thread_create();
     NSApplication* app = [NSApplication sharedApplication];
     DndAppDelegate* appDelegate = [DndAppDelegate new];
     app.delegate = appDelegate;

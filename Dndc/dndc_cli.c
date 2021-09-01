@@ -330,6 +330,9 @@ main(int argc, char**argv){
         dependency_user_data.depfile = dependency_path;
         }
     dependency_user_data.outfile = output_path;
+    WorkerThread* worker = NULL;
+    if(!(flags & DNDC_NO_THREADS))
+        worker = (WorkerThread*)dndc_worker_thread_create();
 
     #ifdef BENCHMARKING
     flags &= ~DNDC_NO_CLEANUP;
@@ -342,7 +345,8 @@ main(int argc, char**argv){
                 NULL, NULL,
                 dndc_stderr_error_func, NULL,
                 dependency_func, &dependency_user_data,
-                dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags);
+                dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
+                worker);
 
     assert(!e.errored);
     dndc_free_string(output);
@@ -356,7 +360,8 @@ main(int argc, char**argv){
                 NULL, NULL,
                 dndc_stderr_error_func, NULL,
                 dependency_func, &dependency_user_data,
-                dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags);
+                dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
+                worker);
         assert(!e.errored);
         }
     dndc_free_string(output);
@@ -372,7 +377,9 @@ main(int argc, char**argv){
                  NULL, NULL,
                  dndc_stderr_error_func, NULL,
                  dependency_func, &dependency_user_data,
-                 dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags);
+                 dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
+                 worker
+                 );
     if(e.errored) return e.errored;
     if(flags & DNDC_DONT_WRITE)
         return 0;

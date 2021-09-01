@@ -8,7 +8,7 @@
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
 #define DNDC_MAJOR 0
 #define DNDC_MINOR 7
-#define DNDC_MICRO 0
+#define DNDC_MICRO 1
 #define DNDC_VERSION DNDC_STRINGIFY(DNDC_MAJOR) "." DNDC_STRINGIFY(DNDC_MINOR) "." DNDC_STRINGIFY(DNDC_MICRO)
 
 // for size_t
@@ -501,6 +501,16 @@ DNDC_API
 int
 dndc_filecache_has_path(DndcFileCache*, DndcStringView path);
 
+typedef struct DndcWorkerThread DndcWorkerThread;
+
+DNDC_API
+DndcWorkerThread*
+dndc_worker_thread_create(void);
+
+DNDC_API
+void
+dndc_worker_thread_destroy(DndcWorkerThread*);
+
 //
 // dndc_compile_dnd_file
 // ---------------------
@@ -582,6 +592,9 @@ dndc_filecache_has_path(DndcFileCache*, DndcStringView path);
 // dependency_user_data:
 //   A pointer that will be passed to the dependency_func.
 //
+// worker_thread:
+//   A thread created with `dndc_worker_create`.
+//
 // Returns
 // -------
 // Returns 0 on success, a non-zero error code otherwise.
@@ -599,7 +612,8 @@ dndc_compile_dnd_file(
     DNDC_NULLABLE(DndcErrorFunc*) error_func,
     DNDC_NULLABLE(void*) error_user_data,
     DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
-    DNDC_NULLABLE(void*) dependency_user_data
+    DNDC_NULLABLE(void*) dependency_user_data,
+    DNDC_NULLABLE(DndcWorkerThread*) worker_thread
 );
 
 //
