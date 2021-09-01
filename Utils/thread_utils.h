@@ -106,7 +106,7 @@ static void join_thread(ThreadHandle);
 typedef struct WorkerThread WorkerThread;
 static THREADFUNC(worker_thread_main);
 // Create a new worker, with the given job func.
-static WorkerThread* worker_create(thread_func*, const char* name);
+static WorkerThread* worker_create(thread_func*);
 // Shutdown the worker and free the resources associated with it.
 static void worker_destroy(WorkerThread* w);
 // Submit a job to the worker
@@ -123,7 +123,6 @@ typedef struct WorkerThread {
     ThreadHandle thrd;
     pthread_cond_t worker_cond;
     pthread_mutex_t mutex;
-    const char* name;
     thread_func* job;
     void*_Nullable job_data;
     bool shutdown;
@@ -134,7 +133,6 @@ static
 THREADFUNC(worker_thread_main){
     pthread_detach(pthread_self());
     WorkerThread* w = thread_arg;
-    pthread_setname_np(w->name);
     pthread_mutex_lock(&w->mutex);
     void* (*job)(void*) = w->job;
     for(;;){
@@ -155,10 +153,9 @@ THREADFUNC(worker_thread_main){
 
 static
 WorkerThread*
-worker_create(thread_func* job, const char* name){
+worker_create(thread_func* job){
     WorkerThread* w = calloc(1, sizeof(*w));
     w->job = job;
-    w->name = name;
     pthread_cond_init(&w->worker_cond, NULL);
     pthread_mutex_init(&w->mutex, NULL);
     create_thread(&w->thrd, worker_thread_main, w);

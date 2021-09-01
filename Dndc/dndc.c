@@ -1300,7 +1300,7 @@ dndc_filecache_has_path(struct DndcFileCache* cache, StringView path){
 DNDC_API
 DndcWorkerThread*
 dndc_worker_thread_create(void){
-    return (DndcWorkerThread*)worker_create(binary_worker, "b64 worker");
+    return (DndcWorkerThread*)worker_create(binary_worker);
     }
 
 DNDC_API
