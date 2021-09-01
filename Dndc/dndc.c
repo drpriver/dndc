@@ -607,11 +607,14 @@ run_the_dndc(uint64_t flags,
             }
         // Sort so we can do a binary search.
         if(ctx.links.count){
+            auto before_sort = get_t();
             #if 1
                 LinkItem__array_sort(ctx.links.data, ctx.links.count);
             #else
                 qsort(ctx.links.data, ctx.links.count, sizeof(ctx.links.data[0]), StringView_cmp);
             #endif
+            auto after_sort = get_t();
+            report_time(&ctx, SV("Sorting links took: "), (after_sort-before_sort));
             }
         report_size(&ctx, SV("ctx.links.count = "), ctx.links.count);
     }
