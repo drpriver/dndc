@@ -29,7 +29,9 @@ int main(int argc, char** argv){
     RegisterTest(TestCrashesFixed);
     RegisterTest(TestExamplesWork);
     RegisterTest(TestUntrusted);
-    return test_main(argc, argv);
+    int ret = test_main(argc, argv);
+    end_interpreter();
+    return ret;
 }
 
 TestFunction(TestDndc1){
