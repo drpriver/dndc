@@ -262,7 +262,7 @@ MainWindow::add_menus(void){
     filemenu->addAction(action);
     #ifndef __APPLE__
         action = new QAction(QS("&Exit"), this);
-        conect(action, &QAction::triggered, this, &QWindow::close);
+        connect(action, &QAction::triggered, this, &QMainWindow::close);
         filemenu->addAction(action);
     #endif
     auto editmenu = menubar->addMenu(QS("Edit"));
@@ -748,14 +748,7 @@ DndWebPage::acceptNavigationRequest(const QUrl& url, QWebEnginePage::NavigationT
             return false;
             }
         if(path.endsWith(QS(".html"))){
-            #ifdef _WIN32
-            #define PATHSEP QS("\\")
-                trimmed = trimmed.replace(QS("/"), QS("\\"));
-            #else
-            #define PATHSEP QS("/")
-            #endif
-            auto filepath = basedir + PATHSEP +  path.left(path.length()-5)+QS(".dnd");
-            #undef PATHSEP
+            auto filepath = QDir::cleanPath(basedir + '/' +  path.left(path.length()-5)+QS(".dnd"));
             auto info = QFileInfo(filepath);
             if(info.exists())
                 add_tab(filepath);
@@ -1249,8 +1242,11 @@ add_tab(const QString& filename, bool focus, bool allow_fail){
         return;
         }
     auto page = make_page_widget(TABS, filename, allow_fail);
-    if(!page)
+    if(!page){
+        qDebug() << "Failed to make tab for" << filename;
         return;
+    }
+    qDebug() << "Opened tab for" << filename;
     auto url = QUrl(filename);
     TABS->addTab(page, url.fileName());
     if(focus)

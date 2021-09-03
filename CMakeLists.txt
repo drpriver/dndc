@@ -35,10 +35,17 @@ target_compile_definitions(quickjs-dylib PRIVATE
     BUILDING_SHARED_OBJECT
     )
 # Just use our project version as their version is date based.
+if(WIN32)
+set_target_properties(quickjs-lib
+    PROPERTIES OUTPUT_NAME quickjs-static
+    VERSION ${PROJECT_VERSION}
+    )
+else()
 set_target_properties(quickjs-lib
     PROPERTIES OUTPUT_NAME quickjs
     VERSION ${PROJECT_VERSION}
     )
+endif()
 set_target_properties(quickjs-dylib
     PROPERTIES OUTPUT_NAME quickjs
     VERSION ${PROJECT_VERSION}
@@ -52,6 +59,8 @@ target_compile_definitions(dndc PRIVATE QJS_SHARED_LIBRARY)
 
 # Cmake sucks and doesn't allow a library and
 # executable with the same name, even though the output files are different!
+# Well, it turns out that is because on windows, both dlls and static libraries
+# output a .lib file, which is nutso banannas.
 add_library(dndc-lib
     STATIC
     Dndc/dndc.c
@@ -64,10 +73,17 @@ add_library(dndc-dylib
     )
 target_link_libraries(dndc-lib ${Python3_LIBRARIES})
 target_include_directories(dndc-lib PRIVATE ${Python3_INCLUDE_DIRS})
+if(WIN32)
+set_target_properties(dndc-lib
+    PROPERTIES OUTPUT_NAME dndc-static
+    VERSION ${PROJECT_VERSION}
+    )
+else()
 set_target_properties(dndc-lib
     PROPERTIES OUTPUT_NAME dndc
     VERSION ${PROJECT_VERSION}
     )
+endif()
 target_link_libraries(dndc-dylib ${Python3_LIBRARIES} quickjs-lib)
 target_include_directories(dndc-dylib PRIVATE ${Python3_INCLUDE_DIRS})
 # change the SOVERSION thing when I decide to release 1.0
