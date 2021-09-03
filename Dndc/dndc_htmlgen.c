@@ -920,6 +920,8 @@ RENDERFUNC(PRE){
                 node_print_warning(ctx, child, SV("pre node with a non-string child"));
                 continue;
                 }
+            if(!child->header.length)
+                continue;
             auto e = ctx_load_source_file(ctx, child->header);
             if(e.errored){
                 node_set_err_q(ctx, child, SV("Unable to load file: "), child->header);

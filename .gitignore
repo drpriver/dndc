@@ -34,3 +34,4 @@ PyGdndc/pydndc.pyi
 *.a
 *.lib
 *.pdb
+*.user

@@ -31,8 +31,8 @@ static inline
 void
 msb_write_kebab(MStringBuilder* msb, const char* text, size_t length){
     msb_ensure_additional(msb, length+2);
-    auto data = msb->data;
-    auto cursor = msb->cursor;
+    char* data = msb->data;
+    size_t cursor = msb->cursor;
     // A bit of explanation is in order.
     //
     // Essentially, when a dash is called for, we first check if we have

@@ -13,14 +13,15 @@
 #include <QPalette>
 #include <QStyle>
 #define QS(x) QStringLiteral(x)
-QString APPHOST = QS("invalid.");
-QString APPURL = QS("https://invalid./this.html");
-QString APPNAME = QS("DndEdit");
+const QString APPHOST = QS("invalid.");
+const QString APPURL = QS("https://invalid./this.html");
+const QString APPNAME = QS("DndEdit");
+QString LOGS_FOLDER;
 QFont* FONT;
 QFontMetrics* FONTMETRICS;
 int EIGHTYCHARS;
 bool EDITOR_ON_LEFT = true;
-bool PRINT_STATS = true;
+bool PRINT_STATS = false;
 QSettings* SETTINGS;
 QFileSystemWatcher* watcher;
 DndcFileCache *b64cache, *textcache;
@@ -50,7 +51,7 @@ DNDC_LOGIT(QtMsgType type, const QMessageLogContext& context, const QString& msg
         case QtFatalMsg:    type_string = &Fatal;    break;
         }
 
-    LOGFILE->write(QS("%1 %2 %3:%4: %5\n").arg(QDateTime::currentDateTime().toString()).arg(*type_string, QUrl(context.file).fileName()).arg(context.line).arg(msg).toUtf8());
+    LOGFILE->write(QS("%1 %2 %3:%4: %5\n").arg(QDateTime::currentDateTime().toString(), *type_string, QUrl(context.file).fileName()).arg(context.line).arg(msg).toUtf8());
     }
 
 
@@ -170,7 +171,7 @@ void MainWindow::closeEvent(QCloseEvent* e){
     SETTINGS->setValue(QS("filenames"), filenames);
     SETTINGS->setValue(QS("editor_on_left"), EDITOR_ON_LEFT);
     SETTINGS->setValue(QS("window_geometry"), saveGeometry());
-    for(auto page: ALL_WINDOWS.values())
+    for(auto page: qAsConst(ALL_WINDOWS))
         page->save();
     e->accept();
     }
@@ -279,11 +280,130 @@ MainWindow::add_menus(void){
             QFont font = QFontDialog::getFont(&ok, *FONT, this);
             if(!ok) return;
             *FONT = font;
-            for(auto page: ALL_WINDOWS.values())
+            for(auto page: qAsConst(ALL_WINDOWS))
                 page->textedit->setFont(*FONT);
             });
     editmenu->addAction(action);
-    // TODO: the rest of the menus.
+
+    action = new QAction(QS("&Indent"), this);
+    connect(action, &QAction::triggered, [this](){
+            auto page = get_current_page();
+            if(!page) return;
+            page->textedit->alter_indent(true);
+            });
+    action->setShortcut(QKeySequence(QS("Ctrl+>")));
+    editmenu->addAction(action);
+
+    action = new QAction(QS("&Dedent"), this);
+    action->setShortcut(QKeySequence(QS("Ctrl+<")));
+    connect(action, &QAction::triggered, [this](){
+            auto page = get_current_page();
+            if(!page) return;
+            page->textedit->alter_indent(false);
+            });
+    editmenu->addAction(action);
+
+    auto insert = menubar->addMenu(QS("Insert"));
+    #define INSERT(name, method) do { \
+        action = new QAction(QS(name), this); \
+        connect(action, &QAction::triggered, [this](){ \
+                auto page = get_current_page(); \
+                if(!page) return; \
+                page->method(); \
+                }); \
+        insert->addAction(action); } while(0)
+    INSERT("&Image", insert_image);
+    INSERT("Image &Links", insert_image_links);
+    INSERT("&Dnd Import", insert_dnd);
+    INSERT("&JavaScript", insert_script);
+    INSERT("&CSS", insert_css);
+    #undef INSERT
+
+    auto viewmenu = menubar->addMenu(QS("View"));
+    action = new QAction("&Toggle Editors", this);
+    connect(action, &QAction::triggered, [this](){
+        bool first_is_hidden = false;
+        bool checked = false;
+        for(auto page: qAsConst(ALL_WINDOWS)){
+            if(!checked){
+                checked = true;
+                first_is_hidden = page->isHidden();
+                }
+            if(first_is_hidden)
+                page->show_editor();
+            else
+                page->hide_editor();
+            }
+        });
+    viewmenu->addAction(action);
+
+    action = new QAction("&Flip Editors", this);
+    connect(action, &QAction::triggered, [this](){
+        for(auto page: qAsConst(ALL_WINDOWS)){
+            if(EDITOR_ON_LEFT) page->put_editor_right();
+            else page->put_editor_left();
+            }
+        EDITOR_ON_LEFT = !EDITOR_ON_LEFT;
+        });
+    viewmenu->addAction(action);
+
+    action = new QAction("&Refresh Highlighting", this);
+    connect(action, &QAction::triggered, [this](){
+        auto page = get_current_page();
+        if(!page) return;
+        page->textedit->highlight->rehighlight();
+        });
+    viewmenu->addAction(action);
+
+    auto helpmenu = menubar->addMenu("Help");
+    action = new QAction("&Version", this);
+    connect(action, &QAction::triggered, [this](){
+            QMessageBox::about(this, "Version",
+                    "Dndc Version:" DNDC_VERSION "\n");
+            });
+    helpmenu->addAction(action);
+
+    action = new QAction("&Open Logs Folder", this);
+    connect(action, &QAction::triggered, [this](){
+            auto url = QUrl(LOGS_FOLDER);
+            QDesktopServices::openUrl(url);
+            });
+    helpmenu->addAction(action);
+
+    // Not sure this is even needed anymore, and I am too lazy
+    // to do the work of getting zlib in a cross platform manner.
+#if 0
+    action = new QAction("&Compress Logs", this);
+    connect(action, &QAction::triggered, [this](){
+        auto url = QUrl(LOGS_FOLDER);
+        QDesktopServices.openUrl(url);
+        });
+#endif
+
+    auto developmenu = menubar->addMenu("Developer");
+    action = new QAction("&Clear Caches", this);
+    connect(action, &QAction::triggered, [this](){
+            dndc_filecache_clear(b64cache);
+            dndc_filecache_clear(textcache);
+            QWebEngineProfile::defaultProfile()->clearHttpCache();
+            for(auto page: qAsConst(ALL_WINDOWS))
+                page->update_html();
+        });
+    developmenu->addAction(action);
+
+    action = new QAction("&Recalculate HTML", this);
+    connect(action, &QAction::triggered, [this](){
+            auto page = get_current_page();
+            if(!page) return;
+            page->update_html();
+        });
+    developmenu->addAction(action);
+
+    action = new QAction("&Toggle Timings", this);
+    connect(action, &QAction::triggered, [this](){
+        PRINT_STATS = !PRINT_STATS;
+        });
+    developmenu->addAction(action);
     }
 
 DndSyntaxHighlighter::~DndSyntaxHighlighter(){
@@ -576,7 +696,7 @@ class DndcSchemeHandler: public QWebEngineUrlSchemeHandler {
             parts.removeLast();
             parts.removeLast();
             auto name = parts.join(',');
-            QTimer::singleShot(0, [=](){
+            QTimer::singleShot(0, this, [=](){
                 append_room_with_name_at(name, x, y);
                 });
             return;
@@ -1143,11 +1263,32 @@ add_tab(const QString& filename, bool focus, bool allow_fail){
 int
 main(int argc, char** argv)
 {
-    LOGFILE = new QFile("log.txt"); // TODO: real log folder
+    auto logfolder = QDir(
+            QStandardPaths::writableLocation(QStandardPaths::StandardLocation::AppLocalDataLocation)
+            + '/'
+            + APPNAME
+            + '/'
+            + QS("Logs")
+            );
+    if(!logfolder.mkpath(".")){
+        QMessageBox::critical(
+                nullptr,
+                QS("Unable to create log directory"),
+                QS("Unable to create log directory at ") + logfolder.absolutePath());
+        }
+    else {
+        }
+    LOGS_FOLDER = logfolder.absolutePath();
+    auto logfile = QDir(LOGS_FOLDER + '/' + QDate::currentDate().toString(Qt::ISODate)+QS(".txt")).absolutePath();
+
+
+    LOGFILE = new QFile(logfile);
     LOGFILE->open(QFile::Append|QFile::WriteOnly|QFile::Text|QFile::Unbuffered);
     LOGSTREAM = new QTextStream(LOGFILE);
     qInstallMessageHandler(DNDC_LOGIT);
-    qDebug("Hello");
+    qInfo("--------------------");
+    qInfo("Starting new session");
+    qInfo("Dndc Version: %s", DNDC_VERSION);
     QApplication a(argc, argv);
     a.setApplicationDisplayName(QS("DndcEdit"));
     a.setApplicationName(QS("DndcEdit"));
@@ -1190,5 +1331,9 @@ main(int argc, char** argv)
         return 0;
     w.add_menus();
     w.show();
-    return a.exec();
+    auto ret = a.exec();
+    LOGFILE->flush();
+    LOGFILE->close();
+    qDebug("Shutdown normal.");
+    return ret;
 }

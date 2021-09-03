@@ -162,3 +162,38 @@ install(TARGETS dndc-dylib
     LIBRARY DESTINATION lib
     PUBLIC_HEADER DESTINATION include/Dndc
     )
+
+# Qt
+find_package(QT NAMES Qt6 COMPONENTS Widgets WebEngineWidgets)
+find_package(Qt6 COMPONENTS Widgets WebEngineWidgets)
+
+if(Qt6_FOUND)
+    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_AUTOUIC ON)
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTORCC ON)
+
+    qt_add_executable(DndcEdit
+        MANUAL_FINALIZATION
+        QtDndcEdit/DndcEdit.cpp
+    )
+
+    target_include_directories(DndcEdit PRIVATE ${CMAKE_SOURCE_DIR})
+    target_link_libraries(DndcEdit PRIVATE
+        Qt6::Widgets
+        Qt6::WebEngineWidgets
+        dndc-dylib)
+
+    if(APPLE)
+        set_target_properties(DndcEdit PROPERTIES
+            MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
+            MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+            MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+        )
+    endif()
+
+
+    qt_finalize_executable(DndcEdit)
+
+endif()

@@ -76,8 +76,8 @@ class DndEditor: public QPlainTextEdit
 {
     Q_OBJECT
     LineNumberArea* lineNumberArea;
-    DndSyntaxHighlighter* highlight;
 public:
+    DndSyntaxHighlighter* highlight;
     int error_line = -1;
     DndEditor(QWidget* parent=nullptr);
     ~DndEditor();
