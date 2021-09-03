@@ -42,6 +42,7 @@
 
 #ifdef __cplusplus
 extern "C" {
+#define _Static_assert static_assert
 #endif
 
 //

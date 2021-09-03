@@ -1,10 +1,10 @@
+#include <Dndc/dndc.h>
 #include <QMainWindow>
 #include <QSplitter>
 #include <QPlainTextEdit>
 #include <QSyntaxHighlighter>
 #include <QWebEnginePage>
 #include <QWebEngineView>
-#include <Dndc/dndc.h>
 #include <QCheckBox>
 #include <QHBoxLayout>
 #include <QPainter>

@@ -12,6 +12,7 @@
 #include <QMessageBox>
 #include <QPalette>
 #include <QStyle>
+#include <QWebEngineProfile>
 #define QS(x) QStringLiteral(x)
 const QString APPHOST = QS("invalid.");
 const QString APPURL = QS("https://invalid./this.html");
@@ -515,7 +516,7 @@ DndEditor::highlightCurrentLine(void){
     }
 void
 DndEditor::lineNumberAreaPaintEvent(QPaintEvent* event){
-    auto painter = QPainter(lineNumberArea);
+    QPainter painter(lineNumberArea);
     QPalette palette = QApplication::palette(this);
     painter.fillRect(event->rect(), palette.base());
     auto block = firstVisibleBlock();
@@ -630,7 +631,7 @@ DndEditor::alter_indent(bool indent){
     auto block = first_block;
     // Idk if this is the best way to do this, but I am just going to
     // build a list then join it.
-    QVector<QString> s;
+    QStringList s;
     // use bounded loop out of paranoia
     for(int i = 0; i < 10000; i++){
         if(indent){
@@ -725,7 +726,9 @@ create_scheme(void){
     DndScheme->setFlags(
         QWebEngineUrlScheme::Flag::SecureScheme
         | QWebEngineUrlScheme::Flag::LocalAccessAllowed
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
         | QWebEngineUrlScheme::Flag::CorsEnabled
+#endif
         );
     DndScheme->setSyntax(QWebEngineUrlScheme::Syntax::Path);
     QWebEngineUrlScheme::registerScheme(*DndScheme);
@@ -849,8 +852,8 @@ Page::Page(QWidget*parent): QSplitter(parent) {
     // Aren't these globals? Why am I doing this
     if(ALL_WINDOWS.size()){
         auto first_window = ALL_WINDOWS.constKeyValueBegin();
-        left = first_window->second->editor_is_on_left;
-        show_errors = first_window->second->show_errors;
+        left = (*first_window).second->editor_is_on_left;
+        show_errors = (*first_window).second->show_errors;
         }
     if(left)
         put_editor_left();
@@ -1092,7 +1095,7 @@ void
 Page::save(void){
     if(!filename.length())
         return;
-    auto savefile = QSaveFile(this);
+    QSaveFile savefile(this);
     savefile.setFileName(filename);
     savefile.open(QSaveFile::WriteOnly);
     auto text = textedit->toPlainText();
@@ -1185,7 +1188,7 @@ Page::export_as_html(void){
             nullptr, nullptr,
             dndc_worker);
     if(err) {
-        auto mbox = QMessageBox();
+        QMessageBox mbox;
         mbox.critical(
             this,
             QS("Unable to convert current document"),
@@ -1198,7 +1201,7 @@ Page::export_as_html(void){
         return;
     if(!fname.endsWith(QS(".html")))
         fname += QS(".html");
-    auto savefile = QSaveFile(this);
+    QSaveFile savefile(this);
     savefile.setFileName(fname);
     savefile.open(savefile.WriteOnly);
     savefile.write({outstring.text, (qsizetype)outstring.length});
@@ -1211,11 +1214,11 @@ Page*
 make_page_widget(QWidget* parent, const QString& filename, bool allow_fail){
     if(ALL_WINDOWS.contains(filename))
         return nullptr;
-    auto file = QFile(filename);
+    QFile file(filename);
     if(!file.open(QFile::ReadOnly))
         return nullptr;
     Page* result = new Page(parent);
-    auto stream = QTextStream(&file);
+    QTextStream stream(&file);
     auto text = stream.readAll();
     if(text.endsWith(QS("\n")))
         text.chop(1);
@@ -1293,14 +1296,18 @@ main(int argc, char** argv)
     create_caches();
     WHITESPACE_RE = new QRegularExpression(QS("^\\s+"));
     FONT = new QFont();
-#ifdef _WIN32
-    FONT->setPointSize(8);
-#else
-    FONT->setPointSize(11);
-#endif
+    #ifdef _WIN32
+        FONT->setPointSize(8);
+    #else
+        FONT->setPointSize(11);
+    #endif
     FONT->setFixedPitch(true);
-    QStringList fonts = {QS("Menlo"), QS("Cascadia Mono"), QS("Consolas"), QS("Ubuntu Mono"), QS("Mono")};
-    FONT->setFamilies(fonts);
+    #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
+        QStringList fonts = {QS("Menlo"), QS("Cascadia Mono"), QS("Consolas"), QS("Ubuntu Mono"), QS("Mono")};
+        FONT->setFamilies(fonts);
+    #else
+        FONT->setFamily(QS("Menlo"));
+    #endif
     FONTMETRICS = new QFontMetrics(*FONT);
     EIGHTYCHARS = FONTMETRICS->horizontalAdvance('M')*80;
     SETTINGS = new QSettings(QS("DavidTechnology"), APPNAME);

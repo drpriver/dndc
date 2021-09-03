@@ -7,6 +7,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
 find_package(Python3 3.8 COMPONENTS Development)
+find_package(Threads REQUIRED)
 
 include_directories(Utils Dndc PythonEmbed Allocators PythonEmbed/frozen Vendored/quickjs)
 
@@ -30,6 +31,8 @@ add_library(quickjs-lib
     STATIC
     Vendored/libquickjs.c
     )
+set_target_properties(quickjs-lib
+        PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_definitions(quickjs-dylib PRIVATE
     CONFIG_VERSION="2021-03-27"
     BUILDING_SHARED_OBJECT
@@ -53,7 +56,7 @@ set_target_properties(quickjs-dylib
     )
 target_compile_definitions(quickjs-lib PRIVATE CONFIG_VERSION="2021-03-27")
 
-target_link_libraries(dndc ${Python3_LIBRARIES} quickjs-dylib)
+target_link_libraries(dndc ${Python3_LIBRARIES} quickjs-dylib Threads::Threads)
 target_include_directories(dndc PRIVATE ${Python3_INCLUDE_DIRS})
 target_compile_definitions(dndc PRIVATE QJS_SHARED_LIBRARY)
 
@@ -166,6 +169,7 @@ add_test(dndc TestDndc -C ${CMAKE_SOURCE_DIR})
 target_link_libraries(TestDndc
     ${Python3_LIBRARIES}
     quickjs-dylib
+    Threads::Threads
     )
 target_include_directories(TestDndc PRIVATE ${Python3_INCLUDE_DIRS})
 
@@ -180,25 +184,31 @@ install(TARGETS dndc-dylib
     )
 
 # Qt
-find_package(QT NAMES Qt6 COMPONENTS Widgets WebEngineWidgets)
-find_package(Qt6 COMPONENTS Widgets WebEngineWidgets)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets WebEngineWidgets)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets WebEngineWidgets)
 
-if(Qt6_FOUND)
+if(Qt${QT_VERSION_MAJOR}_FOUND)
     set(CMAKE_CXX_STANDARD 11)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
     set(CMAKE_AUTOUIC ON)
     set(CMAKE_AUTOMOC ON)
     set(CMAKE_AUTORCC ON)
 
-    qt_add_executable(DndcEdit
-        MANUAL_FINALIZATION
-        QtDndcEdit/DndcEdit.cpp
-    )
+    if(QT_VERSION_MAJOR GREATER_EQUAL 6)
+        qt_add_executable(DndcEdit
+            MANUAL_FINALIZATION
+            QtDndcEdit/DndcEdit.cpp
+            )
+    else()
+        add_executable(DndcEdit
+            QtDndcEdit/DndcEdit.cpp
+            )
+    endif()
 
     target_include_directories(DndcEdit PRIVATE ${CMAKE_SOURCE_DIR})
     target_link_libraries(DndcEdit PRIVATE
-        Qt6::Widgets
-        Qt6::WebEngineWidgets
+        Qt${QT_VERSION_MAJOR}::Widgets
+        Qt${QT_VERSION_MAJOR}::WebEngineWidgets
         dndc-dylib)
 
     if(APPLE)
@@ -210,6 +220,8 @@ if(Qt6_FOUND)
     endif()
 
 
-    qt_finalize_executable(DndcEdit)
+    if(QT_VERSION_MAJOR GREATER_EQUAL 6)
+        qt_finalize_executable(DndcEdit)
+    endif()
 
 endif()

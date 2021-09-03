@@ -1,4 +1,4 @@
-project('Dndc', 'c', version: '0.7.1')
+project('Dndc', 'c', 'cpp', version: '0.7.1')
 # FIXME: meson is producing x64 binaries on my m1 mac. Idk why.
 COMPAT_VERSION = '0.7.1'
 thread_dep = dependency('threads')
@@ -137,7 +137,7 @@ executable(
   install: false,
   link_with: quickjs_static,
   )
-both_libraries(
+dndc_lib = both_libraries(
   'dndc',
   'Dndc/dndc.c',
   'PythonEmbed/frozenstdlib.c',
@@ -202,3 +202,9 @@ t = executable('TestDndc',
   link_with: quickjs_dylib,
   )
 test('dndc', t, args:['-C', meson.source_root()])
+
+qt5 = import('qt5')
+qt5_dep = dependency('qt5', modules: ['Core', 'Gui', 'Widgets', 'WebEngineWidgets'])
+
+moc_files = qt5.compile_moc(headers: 'QtDndcEdit/DndcEdit.h', dependencies: qt5_dep)
+executable('DndcEdit', 'QtDndcEdit/DndcEdit.cpp', moc_files, dependencies: qt5_dep, link_with:dndc_lib)
