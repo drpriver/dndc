@@ -218,8 +218,8 @@ typedef struct WorkerThread {
 
 static
 THREADFUNC(worker_thread_main){
-    CloseHandle(w->thrd.thread);
     WorkerThread* w = thread_arg;
+    CloseHandle(w->thrd.thread);
     EnterCriticalSection(&w->mutex);
     unsigned long (*job)(void*) = w->job;
     for(;;){
