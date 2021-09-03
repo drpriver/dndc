@@ -286,6 +286,12 @@ MainWindow::add_menus(void){
     // TODO: the rest of the menus.
     }
 
+DndSyntaxHighlighter::~DndSyntaxHighlighter(){
+    }
+
+LineNumberArea::~LineNumberArea(){
+    }
+
 
 DndEditor::DndEditor(QWidget* parent): QPlainTextEdit(parent){
         this->lineNumberArea = new LineNumberArea(this);
@@ -390,7 +396,7 @@ DndEditor::highlightCurrentLine(void){
 void
 DndEditor::lineNumberAreaPaintEvent(QPaintEvent* event){
     auto painter = QPainter(lineNumberArea);
-    auto palette = QApplication::palette(this);
+    QPalette palette = QApplication::palette(this);
     painter.fillRect(event->rect(), palette.base());
     auto block = firstVisibleBlock();
     auto blockNumber = block.blockNumber();
@@ -504,7 +510,7 @@ DndEditor::alter_indent(bool indent){
     auto block = first_block;
     // Idk if this is the best way to do this, but I am just going to
     // build a list then join it.
-    QStringList s;
+    QVector<QString> s;
     // use bounded loop out of paranoia
     for(int i = 0; i < 10000; i++){
         if(indent){
@@ -606,6 +612,9 @@ create_scheme(void){
     QWebEngineProfile::defaultProfile()->installUrlSchemeHandler("dnd", new DndcSchemeHandler());
 }
 
+DndWebPage::~DndWebPage(){
+    // qDebug("DndWebPage dtor");
+    }
 
 bool
 DndWebPage::acceptNavigationRequest(const QUrl& url, QWebEnginePage::NavigationType navtype, bool isMainFrame){
@@ -619,7 +628,6 @@ DndWebPage::acceptNavigationRequest(const QUrl& url, QWebEnginePage::NavigationT
             return false;
             }
         if(path.endsWith(QS(".html"))){
-            auto trimmed = path.trimmed();
             #ifdef _WIN32
             #define PATHSEP QS("\\")
                 trimmed = trimmed.replace(QS("/"), QS("\\"));
@@ -651,6 +659,8 @@ SplitterHandler::eventFilter(QObject* watched, QEvent* event){
         return true;
         }
     return false;
+    }
+SplitterHandler::~SplitterHandler(){
     }
 
 void
@@ -686,7 +696,7 @@ void add_tab(const QString& filename){
     }
 
 Page::Page(QWidget*parent): QSplitter(parent) {
-    webpage = new DndWebPage(parent);
+    webpage = new DndWebPage(this);
     web = new QWebEngineView(this);
     web->setPage(webpage);
     webpage->setHtml(QS(" "), QUrl(APPURL));
@@ -738,6 +748,9 @@ Page::Page(QWidget*parent): QSplitter(parent) {
     else
         hide_error();
     handle(1)->installEventFilter(new SplitterHandler(this));
+}
+Page::~Page(){
+    // qDebug("Page dtor");
 }
 void
 Page::contents_changed(void){
@@ -1080,8 +1093,6 @@ Page::export_as_html(void){
     dndc_free_string(outstring);
     }
 
-Page::~Page(){
-}
 
 Page*
 make_page_widget(QWidget* parent, const QString& filename, bool allow_fail){
@@ -1169,6 +1180,7 @@ main(int argc, char** argv)
         TABS->removeTab(index);
         ALL_WINDOWS.remove(page->filename);
         page->setParent(nullptr);
+        page->deleteLater();
     });
     w.setCentralWidget(TABS);
     w.restore_everything();

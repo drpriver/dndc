@@ -39,6 +39,7 @@ class DndSyntaxHighlighter: public QSyntaxHighlighter
     };
 
 public:
+    ~DndSyntaxHighlighter();
         DndSyntaxHighlighter(QTextDocument* parent): QSyntaxHighlighter(parent), highlight_regions(){
             }
         virtual void highlightBlock(const QString& text) override{
@@ -64,6 +65,7 @@ class LineNumberArea : public QWidget {
     Q_OBJECT
     QPlainTextEdit* codeEditor;
 public:
+    ~LineNumberArea();
     LineNumberArea(QPlainTextEdit* parent):
         QWidget(parent), codeEditor(parent) { }
     virtual QSize sizeHint() const override;
@@ -101,6 +103,7 @@ class DndWebPage : public QWebEnginePage {
     Q_OBJECT
 public:
     DndWebPage(QWidget* parent): QWebEnginePage(parent) {}
+    ~DndWebPage();
     QString basedir = "";
     virtual bool acceptNavigationRequest(const QUrl& url, QWebEnginePage::NavigationType navtype, bool isMainFrame) override;
 };
@@ -108,6 +111,7 @@ public:
 class SplitterHandler : public QObject {
     Q_OBJECT
     public:
+        ~SplitterHandler();
         SplitterHandler(QWidget* parent): QObject(parent) {}
         virtual bool eventFilter(QObject* watched, QEvent* event) override;
 };
