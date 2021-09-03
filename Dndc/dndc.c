@@ -255,7 +255,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
             }
         else{
             if(worker)
-                worker_submit(worker, &job);
+                worker_submit((WorkerThread*)worker, &job);
             else{
                 create_thread(&thread_worker, &binary_worker, &job);
                 }
@@ -268,7 +268,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
     if(thread_created){
         auto before = get_t();
         if(worker)
-            worker_wait(worker);
+            worker_wait((WorkerThread*)worker);
         else
             join_thread(thread_worker);
         auto after = get_t();
