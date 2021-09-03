@@ -35,10 +35,17 @@ target_compile_definitions(quickjs-dylib PRIVATE
     BUILDING_SHARED_OBJECT
     )
 # Just use our project version as their version is date based.
+if(WIN32)
+set_target_properties(quickjs-lib
+    PROPERTIES OUTPUT_NAME quickjs-static
+    VERSION ${PROJECT_VERSION}
+    )
+else()
 set_target_properties(quickjs-lib
     PROPERTIES OUTPUT_NAME quickjs
     VERSION ${PROJECT_VERSION}
     )
+endif()
 set_target_properties(quickjs-dylib
     PROPERTIES OUTPUT_NAME quickjs
     VERSION ${PROJECT_VERSION}
@@ -52,6 +59,8 @@ target_compile_definitions(dndc PRIVATE QJS_SHARED_LIBRARY)
 
 # Cmake sucks and doesn't allow a library and
 # executable with the same name, even though the output files are different!
+# Well, it turns out that is because on windows, both dlls and static libraries
+# output a .lib file, which is nutso banannas.
 add_library(dndc-lib
     STATIC
     Dndc/dndc.c
@@ -64,10 +73,17 @@ add_library(dndc-dylib
     )
 target_link_libraries(dndc-lib ${Python3_LIBRARIES})
 target_include_directories(dndc-lib PRIVATE ${Python3_INCLUDE_DIRS})
+if(WIN32)
+set_target_properties(dndc-lib
+    PROPERTIES OUTPUT_NAME dndc-static
+    VERSION ${PROJECT_VERSION}
+    )
+else()
 set_target_properties(dndc-lib
     PROPERTIES OUTPUT_NAME dndc
     VERSION ${PROJECT_VERSION}
     )
+endif()
 target_link_libraries(dndc-dylib ${Python3_LIBRARIES} quickjs-lib)
 target_include_directories(dndc-dylib PRIVATE ${Python3_INCLUDE_DIRS})
 # change the SOVERSION thing when I decide to release 1.0
@@ -162,3 +178,38 @@ install(TARGETS dndc-dylib
     LIBRARY DESTINATION lib
     PUBLIC_HEADER DESTINATION include/Dndc
     )
+
+# Qt
+find_package(QT NAMES Qt6 COMPONENTS Widgets WebEngineWidgets)
+find_package(Qt6 COMPONENTS Widgets WebEngineWidgets)
+
+if(Qt6_FOUND)
+    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_AUTOUIC ON)
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTORCC ON)
+
+    qt_add_executable(DndcEdit
+        MANUAL_FINALIZATION
+        QtDndcEdit/DndcEdit.cpp
+    )
+
+    target_include_directories(DndcEdit PRIVATE ${CMAKE_SOURCE_DIR})
+    target_link_libraries(DndcEdit PRIVATE
+        Qt6::Widgets
+        Qt6::WebEngineWidgets
+        dndc-dylib)
+
+    if(APPLE)
+        set_target_properties(DndcEdit PROPERTIES
+            MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
+            MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+            MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+        )
+    endif()
+
+
+    qt_finalize_executable(DndcEdit)
+
+endif()

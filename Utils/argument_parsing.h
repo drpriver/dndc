@@ -250,11 +250,11 @@ typedef struct ArgParseDestination {
         // to a structure that defines how to convert a string to the
         // value, how to print, etc.
         // See the struct definition for more information.
-        const ArgParseUserDefinedType*_Nullable user_pointer;
+        const ArgParseUserDefinedType* user_pointer;
         // This should be set if type == ARG_ENUM. It's a pointer to a
         // structure that defines the value enum values, its size, etc.
         // See the struct definition for more information.
-        const ArgParseEnumType*_Nullable enum_pointer;
+        const ArgParseEnumType* enum_pointer;
         // For the ARG_BITFLAG type, this will be '|='ed into the destination.
         uint64_t bitflag;
     };

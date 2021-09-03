@@ -13,14 +13,15 @@
 #include <QPalette>
 #include <QStyle>
 #define QS(x) QStringLiteral(x)
-QString APPHOST = QS("invalid.");
-QString APPURL = QS("https://invalid./this.html");
-QString APPNAME = QS("DndEdit");
+const QString APPHOST = QS("invalid.");
+const QString APPURL = QS("https://invalid./this.html");
+const QString APPNAME = QS("DndEdit");
+QString LOGS_FOLDER;
 QFont* FONT;
 QFontMetrics* FONTMETRICS;
 int EIGHTYCHARS;
 bool EDITOR_ON_LEFT = true;
-bool PRINT_STATS = true;
+bool PRINT_STATS = false;
 QSettings* SETTINGS;
 QFileSystemWatcher* watcher;
 DndcFileCache *b64cache, *textcache;
@@ -50,7 +51,7 @@ DNDC_LOGIT(QtMsgType type, const QMessageLogContext& context, const QString& msg
         case QtFatalMsg:    type_string = &Fatal;    break;
         }
 
-    LOGFILE->write(QS("%1 %2 %3:%4: %5\n").arg(QDateTime::currentDateTime().toString()).arg(*type_string, QUrl(context.file).fileName()).arg(context.line).arg(msg).toUtf8());
+    LOGFILE->write(QS("%1 %2 %3:%4: %5\n").arg(QDateTime::currentDateTime().toString(), *type_string, QUrl(context.file).fileName()).arg(context.line).arg(msg).toUtf8());
     }
 
 
@@ -170,7 +171,7 @@ void MainWindow::closeEvent(QCloseEvent* e){
     SETTINGS->setValue(QS("filenames"), filenames);
     SETTINGS->setValue(QS("editor_on_left"), EDITOR_ON_LEFT);
     SETTINGS->setValue(QS("window_geometry"), saveGeometry());
-    for(auto page: ALL_WINDOWS.values())
+    for(auto page: qAsConst(ALL_WINDOWS))
         page->save();
     e->accept();
     }
@@ -261,7 +262,7 @@ MainWindow::add_menus(void){
     filemenu->addAction(action);
     #ifndef __APPLE__
         action = new QAction(QS("&Exit"), this);
-        conect(action, &QAction::triggered, this, &QWindow::close);
+        connect(action, &QAction::triggered, this, &QMainWindow::close);
         filemenu->addAction(action);
     #endif
     auto editmenu = menubar->addMenu(QS("Edit"));
@@ -279,11 +280,136 @@ MainWindow::add_menus(void){
             QFont font = QFontDialog::getFont(&ok, *FONT, this);
             if(!ok) return;
             *FONT = font;
-            for(auto page: ALL_WINDOWS.values())
+            for(auto page: qAsConst(ALL_WINDOWS))
                 page->textedit->setFont(*FONT);
             });
     editmenu->addAction(action);
-    // TODO: the rest of the menus.
+
+    action = new QAction(QS("&Indent"), this);
+    connect(action, &QAction::triggered, [this](){
+            auto page = get_current_page();
+            if(!page) return;
+            page->textedit->alter_indent(true);
+            });
+    action->setShortcut(QKeySequence(QS("Ctrl+>")));
+    editmenu->addAction(action);
+
+    action = new QAction(QS("&Dedent"), this);
+    action->setShortcut(QKeySequence(QS("Ctrl+<")));
+    connect(action, &QAction::triggered, [this](){
+            auto page = get_current_page();
+            if(!page) return;
+            page->textedit->alter_indent(false);
+            });
+    editmenu->addAction(action);
+
+    auto insert = menubar->addMenu(QS("Insert"));
+    #define INSERT(name, method) do { \
+        action = new QAction(QS(name), this); \
+        connect(action, &QAction::triggered, [this](){ \
+                auto page = get_current_page(); \
+                if(!page) return; \
+                page->method(); \
+                }); \
+        insert->addAction(action); } while(0)
+    INSERT("&Image", insert_image);
+    INSERT("Image &Links", insert_image_links);
+    INSERT("&Dnd Import", insert_dnd);
+    INSERT("&JavaScript", insert_script);
+    INSERT("&CSS", insert_css);
+    #undef INSERT
+
+    auto viewmenu = menubar->addMenu(QS("View"));
+    action = new QAction("&Toggle Editors", this);
+    connect(action, &QAction::triggered, [this](){
+        bool first_is_hidden = false;
+        bool checked = false;
+        for(auto page: qAsConst(ALL_WINDOWS)){
+            if(!checked){
+                checked = true;
+                first_is_hidden = page->isHidden();
+                }
+            if(first_is_hidden)
+                page->show_editor();
+            else
+                page->hide_editor();
+            }
+        });
+    viewmenu->addAction(action);
+
+    action = new QAction("&Flip Editors", this);
+    connect(action, &QAction::triggered, [this](){
+        for(auto page: qAsConst(ALL_WINDOWS)){
+            if(EDITOR_ON_LEFT) page->put_editor_right();
+            else page->put_editor_left();
+            }
+        EDITOR_ON_LEFT = !EDITOR_ON_LEFT;
+        });
+    viewmenu->addAction(action);
+
+    action = new QAction("&Refresh Highlighting", this);
+    connect(action, &QAction::triggered, [this](){
+        auto page = get_current_page();
+        if(!page) return;
+        page->textedit->highlight->rehighlight();
+        });
+    viewmenu->addAction(action);
+
+    auto helpmenu = menubar->addMenu("Help");
+    action = new QAction("&Version", this);
+    connect(action, &QAction::triggered, [this](){
+            QMessageBox::about(this, "Version",
+                    "Dndc Version:" DNDC_VERSION "\n");
+            });
+    helpmenu->addAction(action);
+
+    action = new QAction("&Open Logs Folder", this);
+    connect(action, &QAction::triggered, [this](){
+            auto url = QUrl(LOGS_FOLDER);
+            QDesktopServices::openUrl(url);
+            });
+    helpmenu->addAction(action);
+
+    // Not sure this is even needed anymore, and I am too lazy
+    // to do the work of getting zlib in a cross platform manner.
+#if 0
+    action = new QAction("&Compress Logs", this);
+    connect(action, &QAction::triggered, [this](){
+        auto url = QUrl(LOGS_FOLDER);
+        QDesktopServices.openUrl(url);
+        });
+#endif
+
+    auto developmenu = menubar->addMenu("Developer");
+    action = new QAction("&Clear Caches", this);
+    connect(action, &QAction::triggered, [this](){
+            dndc_filecache_clear(b64cache);
+            dndc_filecache_clear(textcache);
+            QWebEngineProfile::defaultProfile()->clearHttpCache();
+            for(auto page: qAsConst(ALL_WINDOWS))
+                page->update_html();
+        });
+    developmenu->addAction(action);
+
+    action = new QAction("&Recalculate HTML", this);
+    connect(action, &QAction::triggered, [this](){
+            auto page = get_current_page();
+            if(!page) return;
+            page->update_html();
+        });
+    developmenu->addAction(action);
+
+    action = new QAction("&Toggle Timings", this);
+    connect(action, &QAction::triggered, [this](){
+        PRINT_STATS = !PRINT_STATS;
+        });
+    developmenu->addAction(action);
+    }
+
+DndSyntaxHighlighter::~DndSyntaxHighlighter(){
+    }
+
+LineNumberArea::~LineNumberArea(){
     }
 
 
@@ -390,7 +516,7 @@ DndEditor::highlightCurrentLine(void){
 void
 DndEditor::lineNumberAreaPaintEvent(QPaintEvent* event){
     auto painter = QPainter(lineNumberArea);
-    auto palette = QApplication::palette(this);
+    QPalette palette = QApplication::palette(this);
     painter.fillRect(event->rect(), palette.base());
     auto block = firstVisibleBlock();
     auto blockNumber = block.blockNumber();
@@ -504,7 +630,7 @@ DndEditor::alter_indent(bool indent){
     auto block = first_block;
     // Idk if this is the best way to do this, but I am just going to
     // build a list then join it.
-    QStringList s;
+    QVector<QString> s;
     // use bounded loop out of paranoia
     for(int i = 0; i < 10000; i++){
         if(indent){
@@ -570,7 +696,7 @@ class DndcSchemeHandler: public QWebEngineUrlSchemeHandler {
             parts.removeLast();
             parts.removeLast();
             auto name = parts.join(',');
-            QTimer::singleShot(0, [=](){
+            QTimer::singleShot(0, this, [=](){
                 append_room_with_name_at(name, x, y);
                 });
             return;
@@ -606,6 +732,9 @@ create_scheme(void){
     QWebEngineProfile::defaultProfile()->installUrlSchemeHandler("dnd", new DndcSchemeHandler());
 }
 
+DndWebPage::~DndWebPage(){
+    // qDebug("DndWebPage dtor");
+    }
 
 bool
 DndWebPage::acceptNavigationRequest(const QUrl& url, QWebEnginePage::NavigationType navtype, bool isMainFrame){
@@ -619,15 +748,7 @@ DndWebPage::acceptNavigationRequest(const QUrl& url, QWebEnginePage::NavigationT
             return false;
             }
         if(path.endsWith(QS(".html"))){
-            auto trimmed = path.trimmed();
-            #ifdef _WIN32
-            #define PATHSEP QS("\\")
-                trimmed = trimmed.replace(QS("/"), QS("\\"));
-            #else
-            #define PATHSEP QS("/")
-            #endif
-            auto filepath = basedir + PATHSEP +  path.left(path.length()-5)+QS(".dnd");
-            #undef PATHSEP
+            auto filepath = QDir::cleanPath(basedir + '/' +  path.left(path.length()-5)+QS(".dnd"));
             auto info = QFileInfo(filepath);
             if(info.exists())
                 add_tab(filepath);
@@ -651,6 +772,8 @@ SplitterHandler::eventFilter(QObject* watched, QEvent* event){
         return true;
         }
     return false;
+    }
+SplitterHandler::~SplitterHandler(){
     }
 
 void
@@ -686,7 +809,7 @@ void add_tab(const QString& filename){
     }
 
 Page::Page(QWidget*parent): QSplitter(parent) {
-    webpage = new DndWebPage(parent);
+    webpage = new DndWebPage(this);
     web = new QWebEngineView(this);
     web->setPage(webpage);
     webpage->setHtml(QS(" "), QUrl(APPURL));
@@ -738,6 +861,9 @@ Page::Page(QWidget*parent): QSplitter(parent) {
     else
         hide_error();
     handle(1)->installEventFilter(new SplitterHandler(this));
+}
+Page::~Page(){
+    // qDebug("Page dtor");
 }
 void
 Page::contents_changed(void){
@@ -1080,8 +1206,6 @@ Page::export_as_html(void){
     dndc_free_string(outstring);
     }
 
-Page::~Page(){
-}
 
 Page*
 make_page_widget(QWidget* parent, const QString& filename, bool allow_fail){
@@ -1118,8 +1242,11 @@ add_tab(const QString& filename, bool focus, bool allow_fail){
         return;
         }
     auto page = make_page_widget(TABS, filename, allow_fail);
-    if(!page)
+    if(!page){
+        qDebug() << "Failed to make tab for" << filename;
         return;
+    }
+    qDebug() << "Opened tab for" << filename;
     auto url = QUrl(filename);
     TABS->addTab(page, url.fileName());
     if(focus)
@@ -1132,11 +1259,32 @@ add_tab(const QString& filename, bool focus, bool allow_fail){
 int
 main(int argc, char** argv)
 {
-    LOGFILE = new QFile("log.txt"); // TODO: real log folder
+    auto logfolder = QDir(
+            QStandardPaths::writableLocation(QStandardPaths::StandardLocation::AppLocalDataLocation)
+            + '/'
+            + APPNAME
+            + '/'
+            + QS("Logs")
+            );
+    if(!logfolder.mkpath(".")){
+        QMessageBox::critical(
+                nullptr,
+                QS("Unable to create log directory"),
+                QS("Unable to create log directory at ") + logfolder.absolutePath());
+        }
+    else {
+        }
+    LOGS_FOLDER = logfolder.absolutePath();
+    auto logfile = QDir(LOGS_FOLDER + '/' + QDate::currentDate().toString(Qt::ISODate)+QS(".txt")).absolutePath();
+
+
+    LOGFILE = new QFile(logfile);
     LOGFILE->open(QFile::Append|QFile::WriteOnly|QFile::Text|QFile::Unbuffered);
     LOGSTREAM = new QTextStream(LOGFILE);
     qInstallMessageHandler(DNDC_LOGIT);
-    qDebug("Hello");
+    qInfo("--------------------");
+    qInfo("Starting new session");
+    qInfo("Dndc Version: %s", DNDC_VERSION);
     QApplication a(argc, argv);
     a.setApplicationDisplayName(QS("DndcEdit"));
     a.setApplicationName(QS("DndcEdit"));
@@ -1169,6 +1317,7 @@ main(int argc, char** argv)
         TABS->removeTab(index);
         ALL_WINDOWS.remove(page->filename);
         page->setParent(nullptr);
+        page->deleteLater();
     });
     w.setCentralWidget(TABS);
     w.restore_everything();
@@ -1178,5 +1327,9 @@ main(int argc, char** argv)
         return 0;
     w.add_menus();
     w.show();
-    return a.exec();
+    auto ret = a.exec();
+    LOGFILE->flush();
+    LOGFILE->close();
+    qDebug("Shutdown normal.");
+    return ret;
 }
