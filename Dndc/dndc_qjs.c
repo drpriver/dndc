@@ -99,7 +99,7 @@ JSClassDef JS_DNDC_CONTEXT_CLASS = {
 
 static
 DndcContext*_Nullable
-js_get_dndc_context(QJSContext*, QJSValue);
+js_get_dndc_context(QJSContext*, QJSValueConst);
 
 //
 // DndcContext methods
@@ -1278,7 +1278,7 @@ JSMETHOD(js_dndc_context_select_nodes){
         return JS_EXCEPTION;
     if(argc != 1)
         return JS_ThrowTypeError(jsctx, "Need 1 obj argument to select_nodes");
-    QJSValue arg = argv[0];
+    QJSValueConst arg = argv[0];
     if(!JS_IsObject(arg))
         return JS_ThrowTypeError(jsctx, "Need 1 obj argument to select_nodes");
     LinearAllocator la = new_linear_storage(1024*1024, "select_nodes allocator");
@@ -1434,7 +1434,7 @@ JSMETHOD(js_dndc_context_add_link){
 
 static
 DndcContext*_Nullable
-js_get_dndc_context(QJSContext* ctx, QJSValue thisValue){
+js_get_dndc_context(QJSContext* ctx, QJSValueConst thisValue){
     return JS_GetOpaque2(ctx, thisValue, JS_DNDC_CONTEXT_CLASS_ID);
     }
 

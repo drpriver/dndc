@@ -163,7 +163,7 @@ FONT.setFixedPitch(True)
 FONT.setFamilies(['Menlo','Cascadia Mono', 'Consolas','Ubuntu Mono', 'Mono'])
 FONTMETRICS = QFontMetrics(FONT)
 EIGHTYCHARS = FONTMETRICS.horizontalAdvance('M')*80
-EDITOR_ON_LEFT = True
+EDITOR_ON_LEFT = False
 PRINT_STATS = False
 FILE_CACHE = pydndc.FileCache()
 
@@ -213,6 +213,7 @@ class DndMainWindow(QMainWindow):
 
 WINDOW = DndMainWindow()
 TABWIDGET = QTabWidget()
+TABWIDGET.setDocumentMode(True)
 TABWIDGET.setTabsClosable(True)
 def close_tab(index:int) -> None:
     page = TABWIDGET.widget(index)
