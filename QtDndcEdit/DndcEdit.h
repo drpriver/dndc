@@ -1,13 +1,13 @@
 #include <Dndc/dndc.h>
-#include <QMainWindow>
-#include <QSplitter>
-#include <QPlainTextEdit>
-#include <QSyntaxHighlighter>
-#include <QWebEnginePage>
-#include <QWebEngineView>
-#include <QCheckBox>
-#include <QHBoxLayout>
-#include <QPainter>
+#include <QtGui/QPainter>
+#include <QtGui/QSyntaxHighlighter>
+#include <QtWebEngineCore/QWebEnginePage>
+#include <QtWebEngineWidgets/QWebEngineView>
+#include <QtWidgets/QCheckBox>
+#include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QMainWindow>
+#include <QtWidgets/QPlainTextEdit>
+#include <QtWidgets/QSplitter>
 class MainWindow : public QMainWindow
 {
     Q_OBJECT

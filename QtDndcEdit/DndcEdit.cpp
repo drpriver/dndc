@@ -1,18 +1,18 @@
 #include "DndcEdit.h"
-#include <QFileSystemWatcher>
-#include <QSettings>
-#include <QApplication>
 #include <Dndc/dndc.h>
-#include <QtWebEngineCore>
-#include <QMenuBar>
-#include <QFileDialog>
-#include <QFontDialog>
-#include <QRegularExpressionMatch>
-#include <QDesktopServices>
-#include <QMessageBox>
-#include <QPalette>
-#include <QStyle>
-#include <QWebEngineProfile>
+#include <QtCore/QFileSystemWatcher>
+#include <QtCore/QRegularExpressionMatch>
+#include <QtCore/QSettings>
+#include <QtGui/QDesktopServices>
+#include <QtGui/QPalette>
+#include <QtWebEngineCore/QWebEngineProfile>
+#include <QtWebEngineCore/QtWebEngineCore>
+#include <QtWidgets/QApplication>
+#include <QtWidgets/QFileDialog>
+#include <QtWidgets/QFontDialog>
+#include <QtWidgets/QMenuBar>
+#include <QtWidgets/QMessageBox>
+#include <QtWidgets/QStyle>
 #define QS(x) QStringLiteral(x)
 const QString APPHOST = QS("invalid.");
 const QString APPURL = QS("https://invalid./this.html");
@@ -179,7 +179,11 @@ void MainWindow::closeEvent(QCloseEvent* e){
 
 void
 MainWindow::restore_everything(){
-    restoreGeometry(SETTINGS->value(QS("window_geometry")).toByteArray());
+    auto bytes = SETTINGS->value(QS("window_geometry")).toByteArray();
+    if(bytes.length())
+     restoreGeometry(SETTINGS->value(QS("window_geometry")).toByteArray());
+    else
+        showMaximized();
     auto von_left = SETTINGS->value(QS("editor_on_left"));
     if(von_left.canConvert<bool>())
         EDITOR_ON_LEFT = von_left.toBool();
@@ -360,19 +364,21 @@ MainWindow::add_menus(void){
     action = new QAction("&Version", this);
     connect(action, &QAction::triggered, [this](){
             QMessageBox::about(this, "Version",
-                    "Dndc Version:" DNDC_VERSION "\n");
+                    "Dndc Version: " DNDC_VERSION "\n");
             });
     helpmenu->addAction(action);
 
     action = new QAction("&Open Logs Folder", this);
     connect(action, &QAction::triggered, [this](){
-            auto url = QUrl(LOGS_FOLDER);
-            QDesktopServices::openUrl(url);
-            });
+        auto url = QUrl::fromLocalFile(QDir::fromNativeSeparators(LOGS_FOLDER));
+        auto success = QDesktopServices::openUrl(url);
+        if(!success)
+            QMessageBox::warning(this, "Unable to open log folder.", "Unable to open the log folder (it might not exist).\nTried to open " + LOGS_FOLDER);
+        });
     helpmenu->addAction(action);
 
     // Not sure this is even needed anymore, and I am too lazy
-    // to do the work of getting zlib in a cross platform manner.
+    // to do the work of getting this working.
 #if 0
     action = new QAction("&Compress Logs", this);
     connect(action, &QAction::triggered, [this](){
@@ -950,6 +956,7 @@ Page::update_html(void){
         return;
     inflight = true;
     webpage->runJavaScript(GET_SCROLL_POSITION_SCRIPT, 0, [this](const QVariant& x){
+
         set_scroll_pos(std::move(x.toString()));
         });
     }
@@ -1331,13 +1338,11 @@ main(int argc, char** argv)
     w.restore_everything();
     if(!TABS->currentWidget())
         w.open_file();
-    if(!TABS->currentWidget())
-        return 0;
     w.add_menus();
     w.show();
     auto ret = a.exec();
+    qDebug("Shutdown normal.");
     LOGFILE->flush();
     LOGFILE->close();
-    qDebug("Shutdown normal.");
     return ret;
 }
