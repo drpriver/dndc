@@ -35,3 +35,4 @@ PyGdndc/pydndc.pyi
 *.lib
 *.pdb
 *.user
+Generated
