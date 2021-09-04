@@ -204,7 +204,8 @@ t = executable('TestDndc',
 test('dndc', t, args:['-C', meson.source_root()])
 
 qt5 = import('qt5')
-qt5_dep = dependency('qt5', modules: ['Core', 'Gui', 'Widgets', 'WebEngineWidgets'])
-
-moc_files = qt5.compile_moc(headers: 'QtDndcEdit/DndcEdit.h', dependencies: qt5_dep)
-executable('DndcEdit', 'QtDndcEdit/DndcEdit.cpp', moc_files, dependencies: qt5_dep, link_with:dndc_lib)
+qt5_dep = dependency('qt5', modules: ['Core', 'Gui', 'Widgets', 'WebEngineWidgets'], required:false)
+if qt5_dep.found()
+  moc_files = qt5.compile_moc(headers: 'QtDndcEdit/DndcEdit.h', dependencies: qt5_dep)
+  executable('DndcEdit', 'QtDndcEdit/DndcEdit.cpp', moc_files, dependencies: qt5_dep, link_with:dndc_lib)
+endif

@@ -433,11 +433,12 @@ DndEditor::update_syntax(void){
     auto text = toPlainText();
     DndcStringViewUtf16 textu16 = {(size_t)text.size(), text.utf16()};
     QHash<int, QList<HighlightRegion>> highlight_regions;
-    dndc_analyze_syntax_utf16(textu16, [](void* user_data, int type, int line, int col, const unsigned short* begin, size_t length){
-            auto regions = (QHash<int, QList<HighlightRegion>>*)user_data;
-            HighlightRegion region = {type, col, (int)length};
-            (*regions)[line].append(region);
-        }, &highlight_regions);
+    DndcSyntaxFuncUtf16* synf = [](void* user_data, int type, int line, int col, const unsigned short* begin, size_t length){
+        auto regions = (QHash<int, QList<HighlightRegion>>*)user_data;
+        HighlightRegion region = {type, col, (int)length};
+        (*regions)[line].append(region);
+        };
+    dndc_analyze_syntax_utf16(textu16, synf, &highlight_regions);
     highlight->update_regions(std::move(highlight_regions));
     }
 int
