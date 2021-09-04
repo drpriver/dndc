@@ -1,4 +1,5 @@
 CC=clang
+CXX=clang++
 PYTHON:=python3
 PYCFLAGS?=$(shell pkg-config --cflags python3)
 PYLDFLAGS?=$(shell pkg-config --libs python3)

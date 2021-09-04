@@ -19,3 +19,17 @@ INSTALLDIR?=/usr/local/bin
 # PYCFLAGS=
 # PYLDFLAGS=
 # PYDLL=
+#
+# set to true to enable building the qt-based gui editor.
+QTGUI=false
+# You will need to set the following variables to define say where
+# qt is installed.
+# Or you can just build it using cmake or meson, a bit easier.
+
+QTMOC=
+# MacOS
+QTFRAMEWORKDIR=
+# Others
+QTINCLUDEDIR=
+QTLIBDIR=
+QTVERSION?=6

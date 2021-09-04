@@ -1,5 +1,6 @@
 PYTHON:=py
 CC=clang
+CXX=clang++
 # These flags were copied from another project, probably excessive.
 PLATFORM_FLAGS=-D_CRT_NONSTDC_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -Wno-gnu-empty-initializer -Wno-gnu-auto-type -Wno-nullability-extension -Wno-gnu-statement-expression -Wno-extra-semi -Wno-gnu-case-range  -Wno-language-extension-token -Wno-gnu -Wno-extra-semi-stmt
 INCLUDE_FLAGS+=-IPlatform\Windows

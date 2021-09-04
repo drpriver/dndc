@@ -1,4 +1,5 @@
 CC=clang
+CXX=clang++
 PYTHON:=python3
 PYCFLAGS?=-I/usr/include/python3.8
 PYLDFLAGS?=-L/usr/lib/python3.8/config-3.8-x64_64-linux-gnu -lpython3.8
