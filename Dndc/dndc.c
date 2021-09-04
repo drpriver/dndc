@@ -740,7 +740,6 @@ run_the_dndc(uint64_t flags,
             report_size(&ctx, SV("Allocations outstanding total (bytes): "), total);
             auto after = get_t();
             report_time(&ctx, SV("Reporting sizes: "), after-before);
-
             }
         {
             auto before = get_t();
@@ -750,17 +749,17 @@ run_the_dndc(uint64_t flags,
         }
         {
             auto before = get_t();
-        Allocator_free_all(allocator);
-        shallow_free_recorded_mallocator(allocator);
+            Allocator_free_all(allocator);
+            shallow_free_recorded_mallocator(allocator);
             auto after = get_t();
             report_time(&ctx, SV("Cleaning allocator: "), after-before);
         }
         {
             auto before = get_t();
-        if(!external_b64cache){
-            Allocator_free_all(ctx.b64cache.allocator);
-            shallow_free_recorded_mallocator(ctx.b64cache.allocator);
-            }
+            if(!external_b64cache){
+                Allocator_free_all(ctx.b64cache.allocator);
+                shallow_free_recorded_mallocator(ctx.b64cache.allocator);
+                }
             auto after = get_t();
             report_time(&ctx, SV("Cleaning b64 cache: "), after-before);
         }
