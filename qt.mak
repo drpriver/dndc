@@ -5,7 +5,7 @@ $(error QTMOC command not defined)
 endif
 
 # Idk if these need to be set.
-QTFLAGS=
+QTFLAGS=-fPIC
 
 ifeq ($(UNAME),Darwin)
 # MacOS
@@ -35,7 +35,8 @@ QTLINK=$(QTLIBDIR)/libQt$(QTVERSION)Core.so \
 	$(QTLIBDIR)/libQt$(QTVERSION)Gui.so \
 	$(QTLIBDIR)/libQt$(QTVERSION)Widgets.so \
 	$(QTLIBDIR)/libQt$(QTVERSION)WebEngineCore.so \
-	$(QTLIBDIR)/libQt$(QTVERSION)WebEngineWidgets.so
+	$(QTLIBDIR)/libQt$(QTVERSION)WebEngineWidgets.so \
+	-lpthread
 DNDCLINK=$(PYLDFLAGS)
 else
 $(error Unsupported platform for qt gui)

@@ -1,7 +1,11 @@
 #include <Dndc/dndc.h>
 #include <QtGui/QPainter>
 #include <QtGui/QSyntaxHighlighter>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
 #include <QtWebEngineCore/QWebEnginePage>
+#else
+#include <QtWebEngineWidgets/QWebEnginePage>
+#endif
 #include <QtWebEngineWidgets/QWebEngineView>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QHBoxLayout>

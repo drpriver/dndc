@@ -5,7 +5,11 @@
 #include <QtCore/QSettings>
 #include <QtGui/QDesktopServices>
 #include <QtGui/QPalette>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
 #include <QtWebEngineCore/QWebEngineProfile>
+#else
+#include <QtWebEngineWidgets/QWebEngineProfile>
+#endif
 #include <QtWebEngineCore/QtWebEngineCore>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QFileDialog>
@@ -1212,7 +1216,7 @@ Page::export_as_html(void){
     QSaveFile savefile(this);
     savefile.setFileName(fname);
     savefile.open(savefile.WriteOnly);
-    savefile.write({outstring.text, (qsizetype)outstring.length});
+    savefile.write(QByteArray(outstring.text, (qsizetype)outstring.length));
     savefile.commit();
     dndc_free_string(outstring);
     }
