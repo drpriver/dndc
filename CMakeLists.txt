@@ -219,6 +219,9 @@ if(Qt${QT_VERSION_MAJOR}_FOUND)
         )
     endif()
 
+    if(WIN32)
+        target_link_options(DndcEdit PRIVATE /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
+    endif()
 
     if(QT_VERSION_MAJOR GREATER_EQUAL 6)
         qt_finalize_executable(DndcEdit)
