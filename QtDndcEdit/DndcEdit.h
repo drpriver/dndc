@@ -32,14 +32,14 @@ class DndSyntaxHighlighter: public QSyntaxHighlighter
     Q_OBJECT
     QHash<int, QList<HighlightRegion>> highlight_regions;
     QString light_color_names[8] = {
-        [0] = "salmon",
+        [0] = "#111",
         [DNDC_SYNTAX_DOUBLE_COLON] =  "darkgray",
         [DNDC_SYNTAX_HEADER] = "blue",
         [DNDC_SYNTAX_NODE_TYPE] = "lightslategray",
         [DNDC_SYNTAX_ATTRIBUTE] = "lightsteelblue",
         [DNDC_SYNTAX_ATTRIBUTE_ARGUMENT] = "darkkhaki",
         [DNDC_SYNTAX_CLASS] = "burlywood",
-        [DNDC_SYNTAX_RAW_STRING] = "gold",
+        [DNDC_SYNTAX_RAW_STRING] = "#111",
     };
 
 public:
