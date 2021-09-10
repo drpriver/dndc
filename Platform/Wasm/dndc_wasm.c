@@ -40,11 +40,14 @@ make_html(PString* source){
         | DNDC_INPUT_IS_UNTRUSTED
         ;
     auto e = run_the_dndc(
-            flags, base, text, LS("demo.html"), &output,
+            flags,
+            base, text, LS("demo.html"), // base_directory, source, outpath
+            &output,               // outstring
             NULL, NULL,            // caches
             dndc_error_func, NULL, // error func
             NULL, NULL,            // dependency funcs
-            NULL, NULL             // ast funcs
+            NULL, NULL,            // ast funcs
+            NULL                   // worker
             );
     if(e.errored)
         return NULL;
@@ -72,7 +75,8 @@ format_dnd(PString* source){
             NULL, NULL,            // caches
             dndc_error_func, NULL, // error func
             NULL, NULL,            // dependency funcs
-            NULL, NULL             // ast funcs
+            NULL, NULL,            // ast funcs
+            NULL                   // worker
             );
     if(e.errored)
         return NULL;

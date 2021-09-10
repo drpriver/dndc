@@ -296,7 +296,7 @@ typedef struct ThreadHandle {
 
 static
 void
-create_thread(ThreadHandle* handle, thread_func* func, void* thread_arg){
+create_thread(ThreadHandle* handle, thread_func* func, void*_Nullable thread_arg){
     (void)handle;
     (void)func;
     unimplemented();
