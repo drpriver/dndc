@@ -3,6 +3,14 @@
 #include "msb_format.h"
 #include "jsinter.h"
 
+struct {
+    size_t length;
+    char data[sizeof(DNDC_VERSION)];
+} VERSION = {
+    .length = sizeof(DNDC_VERSION)-1,
+    .data = DNDC_VERSION,
+};
+
 static
 void dndc_error_func(void* error_user_data, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
     if(message_len+filename_len < 4096-64){

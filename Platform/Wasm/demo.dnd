@@ -223,6 +223,8 @@
           wasm_instance = x;
           wasm_instance.exports.memory.grow(1024);
           memory = new Uint8Array(wasm_instance.exports.memory.buffer);
+          // let version = wasm_string_to_js(wasm_instance.exports.VERSION);
+          // console.log('dndc VERSION:', version);
           apply_changes();
       });
   });
