@@ -84,12 +84,6 @@ endif
 endif
 endif
 
-ifeq ($(QTGUI),true)
-include qt.mak
-endif
-
-
-
 ifeq ($(CC),clang)
 WARNING_FLAGS+=-Wassign-enum\
 	-Wshadow \

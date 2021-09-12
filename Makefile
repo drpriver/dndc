@@ -2,6 +2,9 @@ include defs.mak
 include Vendored/quickjs.mak
 include PythonEmbed/pythonembed.mak
 include Dndc/dndc.mak
+ifeq ($(QTGUI),true)
+include qt.mak
+endif
 
 DNDC:=$(BINDIR)/dndc$(EXE)
 
