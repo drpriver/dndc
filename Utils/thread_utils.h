@@ -3,6 +3,11 @@
 
 #if defined(__linux__) || defined(__APPLE__)
 #include <pthread.h>
+#if defined(__linux__)
+#include <semaphore.h>
+#elif defined(__APPLE__)
+#include <dispatch/dispatch.h>
+#endif
 #elif defined(_WIN32)
 #include "windowsheader.h"
 #endif
@@ -123,6 +128,11 @@ typedef struct WorkerThread {
     ThreadHandle thrd;
     pthread_cond_t worker_cond;
     pthread_mutex_t mutex;
+#ifdef __APPLE__
+    dispatch_semaphore_t sem;
+#else
+    sem_t sem;
+#endif
     thread_func* job;
     void*_Nullable job_data;
     bool shutdown;
@@ -143,10 +153,17 @@ THREADFUNC(worker_thread_main){
         w->job_data = NULL;
         if(job_data)
             job(job_data);
+#ifdef __APPLE__
+        dispatch_semaphore_signal(w->sem);
+#else
+        sem_post(&w->sem);
+#endif
         }
     pthread_mutex_unlock(&w->mutex);
     pthread_mutex_destroy(&w->mutex);
     pthread_cond_destroy(&w->worker_cond);
+    // leak?
+    // dispatch_release(w->sem);
     free(w);
     return 0;
     }
@@ -158,6 +175,11 @@ worker_create(thread_func* job){
     w->job = job;
     pthread_cond_init(&w->worker_cond, NULL);
     pthread_mutex_init(&w->mutex, NULL);
+#ifdef __APPLE__
+    w->sem = dispatch_semaphore_create(0);
+#else
+    sem_init(&w->sem, 0, 0);
+#endif
     create_thread(&w->thrd, worker_thread_main, w);
     return w;
     }
@@ -183,8 +205,11 @@ worker_submit(WorkerThread* w, void* job_data){
 static
 void
 worker_wait(WorkerThread* w){
-    pthread_mutex_lock(&w->mutex);
-    pthread_mutex_unlock(&w->mutex);
+#ifdef __APPLE__
+    dispatch_semaphore_wait(w->sem, DISPATCH_TIME_FOREVER);
+#else
+    sem_wait(&w->sem);
+#endif
     }
 
 static
@@ -211,6 +236,7 @@ typedef struct WorkerThread {
     ThreadHandle thrd;
     CONDITION_VARIABLE worker_cond;
     CRITICAL_SECTION mutex;
+    HANDLE sem;
     thread_func* job;
     void*_Nullable job_data;
     bool shutdown;
@@ -230,9 +256,11 @@ THREADFUNC(worker_thread_main){
         w->job_data = NULL;
         if(job_data)
             job(job_data);
+        ReleaseSemaphore(w->sem, 1, NULL);
         }
     LeaveCriticalSection(&w->mutex);
     DeleteCriticalSection(&w->mutex);
+    CloseHandle(w->sem);
     // no need to destroy win32 condition variable
     free(w);
     return 0;
@@ -246,6 +274,7 @@ worker_create(thread_func* job){
     InitializeCriticalSection(&w->mutex);
     InitializeConditionVariable(&w->worker_cond);
     create_thread(&w->thrd, worker_thread_main, w);
+    w->sem = CreateSemaphoreW(NULL, 0, LONG_MAX, NULL);
     return w;
     }
 
@@ -270,8 +299,7 @@ worker_submit(WorkerThread* w, void* job_data){
 static
 void
 worker_wait(WorkerThread* w){
-    EnterCriticalSection(&w->mutex);
-    LeaveCriticalSection(&w->mutex);
+    WaitForSingleObject(w->sem, INFINITE);
     }
 
 static

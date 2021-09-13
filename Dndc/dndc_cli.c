@@ -62,7 +62,8 @@ main(int argc, char**argv){
                 .name = SV("source"),
                 .max_num = 1,
                 .dest = ARGDEST(&source_path),
-                .help = "Source file (.dnd file) to read from.",
+                .help = "Source file (.dnd file) to read from.\n"
+                        "If not given, will read from stdin.",
                 },
             };
         ArgToParse kw_args[] = {
@@ -71,7 +72,8 @@ main(int argc, char**argv){
                 .altname1 = SV("--output"),
                 .max_num = 1,
                 .dest = ARGDEST(&output_path),
-                .help = "output path (.html file) to write to.",
+                .help = "Output path (.html file) to write to.\n"
+                        "If not given, will write to stdout.",
             },
             {
                 .name = SV("-d"),
@@ -183,6 +185,7 @@ main(int argc, char**argv){
                 .help = "Don't isolate python, import site, etc.\n"
                         "Greatly slows startup, but allows importing user "
                         "installed packages.",
+                .hidden = true,
             },
             {
                 .name = SV("--format"),
@@ -224,7 +227,7 @@ main(int argc, char**argv){
                 .dest = ArgBitFlagDest(&flags, DNDC_STRIP_WHITESPACE),
                 .help = "Strip trailing and leading whitespace from all output "
                         "lines.",
-                .hidden = false,
+                .hidden = true,
             },
             {
                 .name = SV("--dont-read"),
@@ -272,9 +275,6 @@ main(int argc, char**argv){
                     columns = 80;
                 print_argparse_help(&argparser, columns);
                 putchar('\n');
-                print_wrapped("If a source argument is not given, dndc will "
-                              "read from stdin. If an output argument is not "
-                              "given, dndc will write to stdout.", columns);
                 return 0;
                 }
             case VERSION:

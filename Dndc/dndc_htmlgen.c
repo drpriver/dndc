@@ -220,6 +220,13 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
     msb_write_literal(msb, "</head>\n");
     msb_write_literal(msb, "<body>\n");
     auto root_node = get_node(ctx, ctx->root_handle);
+    if(root_node->type == NODE_MD && node_children_count(root_node) == 1){
+        if(!root_node->attributes && !root_node->classes){
+            auto child = get_node(ctx, node_children(root_node)[0]);
+            if(child->type == NODE_DIV || child->type == NODE_MD)
+                root_node = child;
+            }
+        }
     auto e = render_node(ctx, msb, root_node, 1);
     if(e.errored) return e;
     msb_write_literal(msb,
