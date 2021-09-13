@@ -350,6 +350,18 @@ static
 Errorable_f(void)
 dndc_parse(DndcContext*, NodeHandle root, StringView filename, const char* text);
 
+//
+// Writes the document tree (starting from the context's root node)
+// as a .dnd file into the given builder. The result is a .dnd file
+// that should parse into a tree that will render to be the same
+// as the current tree. (The exact internal representation will be
+// different as some nodes can't be created from the regular syntax,
+// like CONTAINER nodes).
+//
+static
+Errorable_f(void)
+expand_to_dnd(DndcContext*, MStringBuilder*);
+
 
 //
 // Writes the document tree (starting from the context's root node)

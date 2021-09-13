@@ -8,7 +8,7 @@
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
 #define DNDC_MAJOR 0
 #define DNDC_MINOR 7
-#define DNDC_MICRO 1
+#define DNDC_MICRO 2
 #define DNDC_VERSION DNDC_STRINGIFY(DNDC_MAJOR) "." DNDC_STRINGIFY(DNDC_MINOR) "." DNDC_STRINGIFY(DNDC_MICRO)
 
 // for size_t
@@ -692,6 +692,9 @@ DNDC_DONT_INLINE_IMAGES = 0x10000,
 // Applications can then implement custom url handlers for this url scheme.
 DNDC_USE_DND_URL_SCHEME = 0x20000,
 
+// After resolving imports and executing user scripts, output
+// as a single file .dnd file instead of html.
+DNDC_OUTPUT_EXPANDED_DND = 0x40000,
 
 };
 

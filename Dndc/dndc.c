@@ -303,6 +303,8 @@ run_the_dndc(uint64_t flags,
         ){
     if(flags & DNDC_REFORMAT_ONLY)
         flags |= DNDC_NO_PYTHON;
+    if(flags & DNDC_OUTPUT_EXPANDED_DND)
+        flags |= DNDC_DONT_INLINE_IMAGES;
     if(flags & DNDC_INPUT_IS_UNTRUSTED){
         flags |= DNDC_NO_PYTHON;
         flags |= DNDC_NO_THREADS;
@@ -674,8 +676,29 @@ run_the_dndc(uint64_t flags,
             goto cleanup;
             }
         }
+    if(flags & DNDC_OUTPUT_EXPANDED_DND){
+        MStringBuilder output_sb = {.allocator = get_mallocator()};
+        auto before_render = get_t();
+        auto e = expand_to_dnd(&ctx, &output_sb);
+        if(e.errored){
+            report_set_error(&ctx);
+            msb_destroy(&output_sb);
+            result.errored = e.errored;
+            goto cleanup;
+            }
+        auto after_render = get_t();
+        report_time(&ctx, SV("Expanding to .dnd took: "), after_render - before_render);
+        if(flags & DNDC_DONT_WRITE){
+            msb_destroy(&output_sb);
+            goto success;
+            }
+        else {
+            assert(outstring);
+            *outstring = msb_detach(&output_sb);
+            }
+    }
     // Render the actual document into a string as html.
-    {
+    else {
         MStringBuilder output_sb = {.allocator = get_mallocator()};
         auto before_render = get_t();
         auto e = render_tree(&ctx, &output_sb);
@@ -783,6 +806,7 @@ run_the_dndc(uint64_t flags,
 #pragma clang assume_nonnull end
 #endif
 
+#include "dndc_expand.c"
 #include "dndc_htmlgen.c"
 #include "dndc_parser.c"
 #include "dndc_context.c"

@@ -1,3 +1,5 @@
+Version 0.7.2::md
+  * Bug fixes
 Version 0.7.1::md
   * Fix bug in js api.
   * Internal API changes.

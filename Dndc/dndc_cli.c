@@ -193,6 +193,15 @@ main(int argc, char**argv){
                         "(if semantically equivalent), etc." ,
             },
             {
+                .name = SV("--expand"),
+                .altname1 = SV("--expand-only"),
+                .max_num = 1,
+                .dest = ArgBitFlagDest(&flags, DNDC_OUTPUT_EXPANDED_DND),
+                .help = "After resolving imports and executing user scripts, "
+                        "output as a single file .dnd file instead of html.",
+                .hidden = true,
+            },
+            {
                 .name = SV("--dont-inline-images"),
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_DONT_INLINE_IMAGES),
@@ -296,6 +305,10 @@ main(int argc, char**argv){
             print_argparse_error(&argparser, e);
             fprintf(stderr, "Use --help to see usage.\n");
             return e;
+            }
+        if((flags & DNDC_OUTPUT_EXPANDED_DND) && (flags & DNDC_REFORMAT_ONLY)){
+            fprintf(stderr, "Do not specify both --expand and --format. Only one is allowed\n");
+            return 1;
             }
         if(!cleanup)
             flags |= DNDC_NO_CLEANUP;
