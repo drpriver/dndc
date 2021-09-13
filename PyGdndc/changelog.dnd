@@ -1,5 +1,8 @@
 Version 0.7.2::md
   * Bug fixes
+  * A useless wrapper div will now be elided if the document's root node has no
+    attributes or classes and has exactly one child node that is a legal root
+    node.
 Version 0.7.1::md
   * Fix bug in js api.
   * Internal API changes.
