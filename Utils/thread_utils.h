@@ -162,8 +162,16 @@ THREADFUNC(worker_thread_main){
     pthread_mutex_unlock(&w->mutex);
     pthread_mutex_destroy(&w->mutex);
     pthread_cond_destroy(&w->worker_cond);
-    // leak?
-    // dispatch_release(w->sem);
+#ifdef __APPLE__
+#if !__has_feature(objc_arc)
+    dispatch_release(w->sem);
+#else
+    // effectively releases it.
+    w->sem = NULL;
+#endif
+#else
+    sem_destroy(&w->sem);
+#endif
     free(w);
     return 0;
     }
