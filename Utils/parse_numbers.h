@@ -188,7 +188,7 @@ parse_uint64(const char* str, size_t length){
     int bad = false;
     uint64_t value = 0;
     for(size_t i=0;i < length-1; i++){
-        unsigned cval = str[i];
+        unsigned cval = (unsigned char)str[i];
         cval -= '0';
         if(cval > 9u)
             bad = true;
@@ -202,7 +202,7 @@ parse_uint64(const char* str, size_t length){
     // Handle the last char differently as it's the only
     // one that can overflow.
     {
-        unsigned cval = str[length-1];
+        unsigned cval = (unsigned char)str[length-1];
         cval -= '0';
         if(cval > 9u){
             result.errored = PARSENUMBER_INVALID_CHARACTER;
@@ -248,7 +248,7 @@ parse_int64(const char* str, size_t length){
     int bad = false;
     uint64_t value = 0;
     for(size_t i=0;i < length-1; i++){
-        unsigned cval = str[i];
+        unsigned cval = (unsigned char)str[i];
         cval -= '0';
         if(cval > 9u)
             bad = true;
@@ -262,7 +262,7 @@ parse_int64(const char* str, size_t length){
     // Handle the last char differently as it's the only
     // one that can overflow.
     {
-        unsigned cval = str[length-1];
+        unsigned cval = (unsigned char)str[length-1];
         cval -= '0';
         if(cval > 9u){
             result.errored = PARSENUMBER_INVALID_CHARACTER;
@@ -282,15 +282,15 @@ parse_int64(const char* str, size_t length){
             result.errored = PARSENUMBER_OVERFLOWED_VALUE;
             return result;
             }
-        value *= -1;
+        result.result = -(int64_t)value;
         }
     else{
         if(value > (uint64_t)INT64_MAX){
             result.errored = PARSENUMBER_OVERFLOWED_VALUE;
             return result;
             }
+        result.result = (int64_t)value;
         }
-    result.result = value;
     return result;
     }
 
@@ -315,7 +315,7 @@ parse_uint32(const char*str, size_t length){
     int bad = false;
     uint32_t value = 0;
     for(size_t i=0;i < length-1; i++){
-        unsigned cval = str[i];
+        unsigned cval = (unsigned char)str[i];
         cval -= '0';
         if(cval > 9u)
             bad = true;
@@ -329,7 +329,7 @@ parse_uint32(const char*str, size_t length){
     // Handle the last char differently as it's the only
     // one that can overflow.
     {
-        unsigned cval = str[length-1];
+        unsigned cval = (unsigned char)str[length-1];
         cval -= '0';
         if(cval > 9u){
             result.errored = PARSENUMBER_INVALID_CHARACTER;
@@ -374,7 +374,7 @@ parse_int32(const char*str, size_t length){
     int bad = false;
     uint32_t value = 0;
     for(size_t i=0;i < length-1; i++){
-        unsigned cval = str[i];
+        unsigned cval = (unsigned char)str[i];
         cval -= '0';
         if(cval > 9u)
             bad = true;
@@ -388,7 +388,7 @@ parse_int32(const char*str, size_t length){
     // Handle the last char differently as it's the only
     // one that can overflow.
     {
-        unsigned cval = str[length-1];
+        unsigned cval = (unsigned char)str[length-1];
         cval -= '0';
         if(cval > 9u){
             result.errored = PARSENUMBER_INVALID_CHARACTER;
@@ -408,15 +408,15 @@ parse_int32(const char*str, size_t length){
             result.errored = PARSENUMBER_OVERFLOWED_VALUE;
             return result;
             }
-        value *= -1;
+        result.result = -(int32_t)value;
         }
     else{
         if(value > (uint32_t)INT32_MAX){
             result.errored = PARSENUMBER_OVERFLOWED_VALUE;
             return result;
             }
+        result.result = (int32_t)value;
         }
-    result.result = value;
     return result;
 }
 
@@ -446,13 +446,13 @@ parse_hex_inner(const char* str, size_t length){
         uint64_t char_value;
         switch(c){
             case '0'...'9':
-                char_value = c - '0';
+                char_value = (uint64_t)(c - '0');
                 break;
             case 'a'...'f':
-                char_value = c - 'a' + 10;
+                char_value = (uint64_t)(c - 'a' + 10);
                 break;
             case 'A'...'F':
-                char_value = c - 'A' + 10;
+                char_value = (uint64_t)(c - 'A' + 10);
                 break;
             default:
                 result.errored = PARSENUMBER_INVALID_CHARACTER;
