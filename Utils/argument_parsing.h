@@ -250,11 +250,11 @@ typedef struct ArgParseDestination {
         // to a structure that defines how to convert a string to the
         // value, how to print, etc.
         // See the struct definition for more information.
-        const ArgParseUserDefinedType* user_pointer;
+        const ArgParseUserDefinedType*_Nullable user_pointer;
         // This should be set if type == ARG_ENUM. It's a pointer to a
         // structure that defines the value enum values, its size, etc.
         // See the struct definition for more information.
-        const ArgParseEnumType* enum_pointer;
+        const ArgParseEnumType*_Nullable enum_pointer;
         // For the ARG_BITFLAG type, this will be '|='ed into the destination.
         uint64_t bitflag;
     };
@@ -774,12 +774,12 @@ print_wrapped_help(const char*_Nullable help, int columns){
     putchar('\n');
     }
 
-static inline int set_flag(ArgToParse* arg);
+static inline enum ArgParseError set_flag(ArgToParse* arg);
 // Parse a single argument from a string.
 // Used internally. I guess you could use it if you really wanted to, but you
 // don't need this type generic version?
 static inline
-int
+enum ArgParseError
 parse_arg(ArgToParse* arg, StringView s){
     // Append_procs should signal their own error.
     if(arg->num_parsed >= arg->max_num)
@@ -938,7 +938,7 @@ parse_arg(ArgToParse* arg, StringView s){
 
 // Set a flag. I really don't see why you would use this outside of this.
 static inline
-int
+enum ArgParseError
 set_flag(ArgToParse* arg){
     if(arg->dest.type == ARG_BITFLAG){
         uint64_t* dest = arg->dest.pointer;

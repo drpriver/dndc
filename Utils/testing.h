@@ -19,6 +19,9 @@
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
+#else
+#define _Nonnull
+#define _Nullable
 #endif
 
 
@@ -28,13 +31,13 @@
 
 // Internal use color definitions. They will be set to escape codes if
 // stderr is detected to be interactive.
-const char* _test_color_gray  = "";
-const char* _test_color_reset = "";
+static const char* _test_color_gray  = "";
+static const char* _test_color_reset = "";
 #if 0
 // Currently these are unused.
-const char* _test_color_blue  = ""
-const char* _test_color_green = ""
-const char* _test_color_red   = ""
+static const char* _test_color_blue  = ""
+static const char* _test_color_green = ""
+static const char* _test_color_red   = ""
 #endif
 
 #ifndef TestPrintValue
@@ -160,7 +163,7 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags);
 static LongString test_names[1000];
 static TestCase test_funcs[1000];
 // How many were registered. Internal use.
-static int test_funcs_count;
+static size_t test_funcs_count;
 
 static inline
 void
@@ -392,7 +395,7 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
 // As a special case, 0 means to run all the tests.
 static
 struct TestStats
-run_the_tests(size_t*_Nullable which_tests, size_t test_count){
+run_the_tests(size_t*_Nullable which_tests, int test_count){
     struct TestStats result = {};
     if(test_count){
         for(size_t i = 0; i < test_count; i++){
@@ -432,7 +435,9 @@ run_the_tests(size_t*_Nullable which_tests, size_t test_count){
 #ifndef SUPPRESS_TEST_MAIN
 #include "argument_parsing.h"
 #include "term_util.h"
-int test_main(int argc, char*_Nonnull *_Nonnull argv){
+static
+int 
+test_main(int argc, char*_Nonnull *_Nonnull argv){
     if(argc < 1){
         fprintf(stderr, "Somehow this program was called without an argv.\n");
         return 1;
