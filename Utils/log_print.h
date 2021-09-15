@@ -131,10 +131,10 @@ logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int l
         logfunc(log_level, file, func, line, "%s = " fmt, expr, ##__VA_ARGS__); \
         }
 #ifdef __clang__
-_Pragma("clang diagnostic push");
-_Pragma("clang diagnostic ignored \"-Wnullability-completeness\"")
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnullability-completeness"
 LOGFUNCS(LOGFUNC);
-_Pragma("clang diagnostic pop");
+#pragma clang diagnostic pop;
 #else
 LOGFUNCS(LOGFUNC);
 #endif
