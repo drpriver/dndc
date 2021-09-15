@@ -1464,6 +1464,7 @@ DndNode_setattr_ls(DndNode* obj, LongString name, Nullable(PyObject*) value){
                         case NODE_KEYVALUEPAIR:
                         case NODE_IMGLINKS:
                         case NODE_COMMENT:
+                        case NODE_DETAILS:
                         case NODE_MD:
                         case NODE_CONTAINER:
                         case NODE_INVALID:

@@ -3,6 +3,8 @@ Version 0.7.2::md
   * A useless wrapper div will now be elided if the document's root node has no
     attributes or classes and has exactly one child node that is a legal root
     node.
+  * A new block type, "details", has been added. It is parsed
+    like a md block and generates a <details> tag.
 Version 0.7.1::md
   * Fix bug in js api.
   * Internal API changes.

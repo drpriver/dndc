@@ -356,6 +356,7 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
             return parse_table_node(ctx, parent_handle, indentation);
         case NODE_KEYVALUE:
             return parse_keyvalue_node(ctx, parent_handle, indentation);
+        case NODE_DETAILS:
         case NODE_MD:
             return parse_md_node(ctx, parent_handle, indentation);
         case NODE_IMGLINKS:
@@ -815,7 +816,7 @@ PARSEFUNC(parse_text_node){
 PARSEFUNC(parse_md_node){
     {
     auto parent = get_node(ctx, parent_handle);
-    assert(parent->type == NODE_MD);
+    assert(parent->type == NODE_MD || parent->type == NODE_DETAILS);
     }
     enum MDSTATE {
         NONE = 0,

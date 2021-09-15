@@ -506,6 +506,7 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
         case NODE_NAV:
         case NODE_KEYVALUE:
         case NODE_IMGLINKS:
+        case NODE_DETAILS:
         case NODE_MD:
         case NODE_CONTAINER:
         case NODE_INVALID:

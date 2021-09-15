@@ -136,6 +136,7 @@ format_node(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
             return format_text_node(ctx, sb, node, indent);
         case NODE_KEYVALUE:
             return format_kv_node(ctx, sb, node, indent);
+        case NODE_DETAILS:
         case NODE_MD:
             return format_md_node(ctx, sb, node, indent);
         case NODE_RAW:

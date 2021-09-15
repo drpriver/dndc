@@ -264,6 +264,7 @@ build_nav_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
         case NODE_LIST:
         case NODE_KEYVALUE:
         case NODE_IMGLINKS:
+        case NODE_DETAILS:
         case NODE_MD:
         case NODE_QUOTE:
         case NODE_CONTAINER:{
@@ -1305,7 +1306,6 @@ RENDERFUNC(MD){
         }
     msb_write_literal(sb, "</div>\n");
     return (Errorable(void)){};
-    return (Errorable(void)){};
     }
 RENDERFUNC(CONTAINER){
     if(node->header.length){
@@ -1325,6 +1325,27 @@ RENDERFUNC(INVALID){
     (void)node;
     (void)header_depth;
     return (Errorable(void)){.errored=GENERIC_ERROR};
+    }
+RENDERFUNC(DETAILS){
+    msb_write_literal(sb, "<details");
+    write_classes(sb, node);
+    auto id = node_get_id(node);
+    if(id){
+        MSB_FORMAT(sb, " id=\"", *id, "\"");
+        }
+    msb_write_literal(sb, ">\n");
+    msb_write_literal(sb, "<summary style=\"cursor:pointer\">\n");
+    if(node->header.length){
+        msb_write_str(sb, node->header.text, node->header.length);
+        }
+    msb_write_literal(sb, "</summary>\n");
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
+        auto e = render_node(ctx, sb, child, header_depth);
+        if(e.errored) return e;
+        }
+    msb_write_literal(sb, "</div>\n");
+    return (Errorable(void)){};
     }
 #undef RENDERFUNC
 #undef RENDERFUNCNAME
