@@ -112,5 +112,3 @@ int main(int argc, char** argv){
     RegisterTest(TestStripExtension);
     return test_main(argc, argv);
 }
-
-#include "allocator.c"
