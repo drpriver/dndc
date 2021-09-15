@@ -11,7 +11,6 @@
 #else
 #include <unistd.h>
 #endif
-#include "log_print.h"
 #include "long_string.h"
 
 #ifndef arrlen
@@ -23,11 +22,61 @@
 #endif
 
 
-// TODO:
-// Some of these testing macros use HEREPrint, which is nice as it tells you
-// what the actual values are, but that will fail for types it can't handle.
-// I can' currently think of a way to handle this without reimplementing
-// HEREPrint. But maybe I want to do that anyway for modularity reasons.
+// BUG:
+// We use __auto_type in the testing macros, so this will only compile
+// with gcc and clang.
+
+// Internal use color definitions. They will be set to escape codes if
+// stderr is detected to be interactive.
+const char* _test_color_gray  = "";
+const char* _test_color_reset = "";
+#if 0
+// Currently these are unused.
+const char* _test_color_blue  = ""
+const char* _test_color_green = ""
+const char* _test_color_red   = ""
+#endif
+
+#ifndef TestPrintValue
+
+#define TestPrintFuncs(apply) \
+    apply(bool, _Bool, "%s", x?"true":"false")\
+    apply(char, char, "%c", x)\
+    apply(uchar, unsigned char, "%u", x) \
+    apply(schar, signed char, "%d", x) \
+    apply(float, float, "%f", (double)x) \
+    apply(double, double, "%f", x) \
+    apply(short, short, "%d", x) \
+    apply(ushort, unsigned short, "%u", x) \
+    apply(int, int, "%d", x)\
+    apply(uint, unsigned int, "%u", x) \
+    apply(long, long, "%ld", x) \
+    apply(ulong, unsigned long, "%lu", x) \
+    apply(llong, long long, "%lld", x) \
+    apply(ullong, unsigned long long, "%llu", x) \
+    apply(cstr, char*, "\"%s\"", x) \
+    apply(ccstr, const char*, "\"%s\"", x) \
+    apply(pvoid, void*, "%p", x) \
+    apply(pcvoid, const void*, "%p", x) \
+    apply(LongString, LongString, "\"%s\"", x.text) \
+    apply(StringView, StringView, "\"%.*s\"", (int)x.length, x.text)
+#define TestPrintFunc(suffix, type, unused, ...) type: TestPrintImpl_##suffix,
+
+#define TestPrintValue(str, val) \
+    _Generic(val, \
+    TestPrintFuncs(TestPrintFunc) \
+    struct{}: 0)(__FILE__, __func__, __LINE__, str, val)
+    
+#define TestPrintImpl_(suffix, type, fmt, ...) \
+    static inline __attribute__((always_inline)) void \
+    TestPrintImpl_##suffix(const char* file, const char* func, int line, const char* str, type x){ \
+        fprintf(stderr, "%s%s:%s:%d%s %s = " fmt "\n",\
+                _test_color_gray, file, func, line, _test_color_reset, str, __VA_ARGS__); \
+        }
+TestPrintFuncs(TestPrintImpl_)
+
+#endif
+
 
 
 //
@@ -126,16 +175,6 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
     }
 
 
-// Internal use color definitions. They will be set to escape codes if
-// stderr is detected to be interactive.
-const char* _test_color_gray  = "";
-const char* _test_color_reset = "";
-#if 0
-// Currently these are unused.
-Nonnull(const char*) _test_color_blue  = ""
-Nonnull(const char*) _test_color_green = ""
-Nonnull(const char*) _test_color_red   = ""
-#endif
 //
 // Internal use macro to report test results within a failed condition.
 // You can use it if you want in your test functions if you need more reporting.
@@ -160,8 +199,8 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++;\
             TestReport("Test condition failed");\
             TestReport("%s", #cond);\
-        }\
-    }while(0)
+            }\
+        }while(0)
 //
 // Expects lhs == rhs, using the == operator
 //
@@ -173,10 +212,10 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s == %s", #lhs, #rhs); \
-            HEREPrint(_lhs);\
-            HEREPrint(_rhs);\
-        }\
-    }while(0)
+            TestPrintValue(#lhs, _lhs);\
+            TestPrintValue(#rhs, _rhs);\
+            }\
+        }while(0)
 //
 // Expects lhs == rhs, using the passed in binary function instead of == operator
 //
@@ -188,10 +227,10 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("!%s(%s, %s)", #func, #lhs, #rhs); \
-            HEREPrint(_lhs);\
-            HEREPrint(_rhs);\
-        }\
-    }while(0)
+            TestPrintValue(#lhs, _lhs);\
+            TestPrintValue(#rhs, _rhs);\
+            }\
+        }while(0)
 
 //
 // Expects lhs != rhs, using the != operator
@@ -204,10 +243,10 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s != %s", #lhs, #rhs); \
-            HEREPrint(_lhs);\
-            HEREPrint(_rhs);\
-        }\
-    }while(0)
+            TestPrintValue(#lhs, _lhs);\
+            TestPrintValue(#rhs, _rhs);\
+            }\
+        }while(0)
 
 //
 // Expects the condition is truthy (for the usual C definition of truth).
@@ -220,8 +259,8 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s", #cond);\
-        }\
-    }while(0)
+            }\
+        }while(0)
 
 //
 // Expects the condition is falsey (for the usual C definition of truth).
@@ -231,9 +270,9 @@ Nonnull(const char*) _test_color_red   = ""
         if ((cond)){ \
             TEST_stats.failures++; \
             TestReport("Test condition failed (expected falsey)");\
-            HEREPrint(cond);\
-        }\
-    }while(0)
+            TestPrintValue(#cond, cond);\
+            }\
+        }while(0)
 
 //
 // For an Errorable, expects .errored is NO_ERROR
@@ -244,8 +283,8 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s = %d", #cond, (cond).errored);\
-        }\
-    }while(0)
+            }\
+        }while(0)
 
 //
 // For an Errorable, expects .errored is not NO_ERROR
@@ -256,8 +295,8 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s = %d", #cond, (cond).errored);\
-        }\
-    }while(0)
+            }\
+        }while(0)
 
 //
 // Unlike the TestExpect* family of macros, TestAssert* macros immediately end
@@ -279,8 +318,8 @@ Nonnull(const char*) _test_color_red   = ""
             TestReport("%s prematurely ended", __func__);\
             TestReport("%s", #cond); \
             return TEST_stats;\
-        }\
-    }while(0)
+            }\
+        }while(0)
 
 //
 // Asserts lhs is equal to rhs, using ==
@@ -295,11 +334,11 @@ Nonnull(const char*) _test_color_red   = ""
             TestReport("Test condition failed");\
             TestReport("%s prematurely ended", __func__);\
             TestReport("%s == %s", #lhs, #rhs); \
-            HEREPrint(_lhs);\
-            HEREPrint(_rhs); \
+            TestPrintValue(#lhs, _lhs);\
+            TestPrintValue(#rhs, _rhs); \
             return TEST_stats;\
-        }\
-    }while(0)
+            }\
+        }while(0)
 
 //
 // For an Errorable, asserts .errored is NO_ERROR
@@ -313,8 +352,8 @@ Nonnull(const char*) _test_color_red   = ""
             TestReport("%s prematurely ended", __func__);\
             TestReport("%s = %d", #cond, (cond).errored); \
             return TEST_stats;\
-        }\
-    }while(0)
+            }\
+        }while(0)
 
 //
 // For an Errorable, asserts .errored is not NO_ERROR
@@ -328,8 +367,8 @@ Nonnull(const char*) _test_color_red   = ""
             TestReport("%s prematurely ended", __func__);\
             TestReport("%s = %d", #cond, (cond).errored); \
             return TEST_stats;\
-        }\
-    }while(0)
+            }\
+        }while(0)
 
 //
 // Immediately ends the test function, counting as an early termination of
@@ -340,7 +379,7 @@ Nonnull(const char*) _test_color_red   = ""
         TestReport("Reason: %s", reason); \
         TEST_stats.assert_failures++;\
         return TEST_stats;\
-    }while(0)
+        }while(0)
 
 //
 // The actual test runner.
@@ -539,7 +578,6 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
     return result.failures + result.assert_failures == 0? 0 : 1;
     }
 
-#include "terminal_logger.c"
 #endif
 
 #endif

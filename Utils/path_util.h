@@ -114,8 +114,8 @@ path_dirname(StringView path){
             break;
         basename = slash+1;
         }
-    auto result = (StringView){.text=path.text, .length = basename - path.text};
-    while(result.length > 1 and is_sep(result.text[result.length-1])){
+    StringView result = {.text=path.text, .length = basename - path.text};
+    while(result.length > 1 && is_sep(result.text[result.length-1])){
         result.length--;
         }
     return result;

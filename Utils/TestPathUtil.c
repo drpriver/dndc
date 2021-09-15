@@ -1,6 +1,6 @@
-#include "testing.h"
 #define BACKSLASH_IS_A_PATH_SEP 1
 #include "path_util.h"
+#include "testing.h"
 
 struct PathTestCase {
     StringView input;
@@ -24,13 +24,13 @@ TestFunction(TestBaseName){
         {SV("\\\\bar\\"), SV("")},
     };
     for(int i = 0; i < arrlen(cases); i++){
-        auto expected = cases[i].expected;
-        auto result = path_basename(cases[i].input);
-        auto equality = SV_equals(expected, result);
+        StringView expected = cases[i].expected;
+        StringView result = path_basename(cases[i].input);
+        bool equality = SV_equals(expected, result);
         TestExpectTrue(equality);
         if(!equality){
-            HERE("result: '%.*s'", (int)result.length, result.text);
-            HERE("expected: '%.*s'", (int)expected.length, expected.text);
+            TestPrintValue("result", result);
+            TestPrintValue("expected", expected);
             }
         }
     TESTEND();
@@ -54,13 +54,13 @@ TestFunction(TestDirName){
         {SV("\\\\bar\\"), SV("\\\\bar")},
     };
     for(int i = 0; i < arrlen(cases); i++){
-        auto expected = cases[i].expected;
-        auto result = path_dirname(cases[i].input);
-        auto equality = SV_equals(expected, result);
+        StringView expected = cases[i].expected;
+        StringView result = path_dirname(cases[i].input);
+        bool equality = SV_equals(expected, result);
         TestExpectTrue(equality);
         if(!equality){
-            HERE("result: '%.*s'", (int)result.length, result.text);
-            HERE("expected: '%.*s'", (int)expected.length, expected.text);
+            TestPrintValue("result", result);
+            TestPrintValue("expected", expected);
             }
         }
     TESTEND();
@@ -94,13 +94,13 @@ TestFunction(TestStripExtension){
         {SV("lmao.txt"), SV("lmao")},
     };
     for(int i = 0; i < arrlen(cases); i++){
-        auto expected = cases[i].expected;
-        auto result = path_strip_extension(cases[i].input);
-        auto equality = SV_equals(expected, result);
+        StringView expected = cases[i].expected;
+        StringView result = path_strip_extension(cases[i].input);
+        bool equality = SV_equals(expected, result);
         TestExpectTrue(equality);
         if(!equality){
-            HERE("result: '%.*s'", (int)result.length, result.text);
-            HERE("expected: '%.*s'", (int)expected.length, expected.text);
+            TestPrintValue("result", result);
+            TestPrintValue("expected", expected);
             }
         }
     TESTEND();

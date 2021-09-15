@@ -2,12 +2,25 @@
 #include "testing.h"
 #include "argument_parsing.h"
 
+#define MARRAY_T short
+#include "Marray.h"
+#include "mallocator.h"
+#include "str_util.h"
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#else
+#ifndef _Null_unspecified
+#define _Null_unspecified
+#endif
+#endif
+
 // make an argparser ready to parse again.
 // ArgParsers are usually single shot and we don't
 // want this to be a public API.
 static inline
 void
-clear_parser(Nonnull(ArgParser*) parser){
+clear_parser(ArgParser* parser){
     for(size_t i = 0; i < parser->positional.count; i++){
         auto arg = &parser->positional.args[i];
         arg->num_parsed = 0;
@@ -268,9 +281,8 @@ TestFunction(TestArgumentParsing4){
 typedef struct Point {
     int x, y;
 } Point;
-#include "str_util.h"
 int
-point_parse(NullUnspec(void*)ud, Nonnull(const char*)s, size_t length, Nonnull(void*) dest){
+point_parse(void* _Null_unspecified ud, const char*s, size_t length, void* dest){
     (void)ud;
     auto split = stripped_split(s, length, ',');
     if(!split.tail.length) return 1;
@@ -283,7 +295,7 @@ point_parse(NullUnspec(void*)ud, Nonnull(const char*)s, size_t length, Nonnull(v
     return 0;
     }
 
-void point_print(Nonnull(void*)vp){
+void point_print(void*vp){
     Point*p = vp;
     printf(" = %d,%d", p->x, p->y);
     }
@@ -616,10 +628,7 @@ TestFunction(TestBitFlags){
     TESTEND();
     }
 
-#define MARRAY_T short
-#include "Marray.h"
-#include "mallocator.h"
-int append_short(Nonnull(void*)dest, Nonnull(const void*) arg){
+int append_short(void* dest, const void* arg){
     Marray(short*) marray = dest;
     int value = *(const int*)arg;
     _Static_assert(sizeof(short) == sizeof(int16_t),"");
@@ -710,5 +719,8 @@ int main(int argc, char** argv){
     RegisterTest(TestAppender);
     return test_main(argc, argv);
 }
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 #include "allocator.c"
 
