@@ -1,6 +1,27 @@
 #ifndef LOG_PRINT_H
 #define LOG_PRINT_H
 #include "long_string.h"
+#ifndef arrlen
+#define arrlen(arr) (sizeof(arr)/sizeof(arr[0]))
+#endif
+
+#ifndef force_inline
+#if defined(__GNUC__) || defined(__clang__)
+#define force_inline __attribute__((always_inline))
+#else
+#define force_inline
+#endif
+#endif
+
+#ifndef printf_func
+
+#if defined(__GNUC__) || defined(__clang__)
+#define printf_func(fmt_idx, vararg_idx) __attribute__((__format__ (__printf__, fmt_idx, vararg_idx)))
+#else
+#define printf_func(...)
+#endif
+
+#endif
 
 // Escape codes for colored text.
 // I should really be checking if stdout/stderr is interactive
@@ -105,15 +126,19 @@ logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int l
     apply(StringView, StringView, "\"%.*s\"", (int)x.length, x.text) \
 
 
-PushDiagnostic();
-SuppressNullabilityComplete();
 #define LOGFUNC(name, type, fmt, ...) \
     static inline force_inline void log_##name(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull expr, type x){ \
         logfunc(log_level, file, func, line, "%s = " fmt, expr, ##__VA_ARGS__); \
         }
+#ifdef __clang__
+_Pragma("clang diagnostic push");
+_Pragma("clang diagnostic ignored \"-Wnullability-completeness\"")
 LOGFUNCS(LOGFUNC);
+_Pragma("clang diagnostic pop");
+#else
+LOGFUNCS(LOGFUNC);
+#endif
 #undef LOGFUNC
-PopDiagnostic();
 
 #define LOGFUNC(name, type, ...) type: log_##name,
 #define DBGPrintIMPL(loglevel, x) \

@@ -1,5 +1,9 @@
 #ifndef TESTING_H
 #define TESTING_H
+#include <assert.h>
+#include <string.h>
+#include <stdio.h>
+#include <errno.h>
 #ifdef _WIN32
 // for chdir
 #include <direct.h>
@@ -7,12 +11,12 @@
 #else
 #include <unistd.h>
 #endif
-#include <string.h>
-#include <stdio.h>
-#include <errno.h>
-#include "common_macros.h"
 #include "log_print.h"
 #include "long_string.h"
+
+#ifndef arrlen
+#define arrlen(arr) (sizeof(arr)/sizeof(arr[0]))
+#endif
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -75,7 +79,7 @@ enum TestCaseFlags {
 // Internal use.
 typedef struct TestCase {
     LongString test_name;
-    Nonnull(TestFunc*) test_func;
+    TestFunc* test_func;
     enum TestCaseFlags flags;
 } TestCase;
 
@@ -124,8 +128,8 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
 
 // Internal use color definitions. They will be set to escape codes if
 // stderr is detected to be interactive.
-Nonnull(const char*) _test_color_gray  = "";
-Nonnull(const char*) _test_color_reset = "";
+const char* _test_color_gray  = "";
+const char* _test_color_reset = "";
 #if 0
 // Currently these are unused.
 Nonnull(const char*) _test_color_blue  = ""
@@ -162,8 +166,8 @@ Nonnull(const char*) _test_color_red   = ""
 // Expects lhs == rhs, using the == operator
 //
 #define TestExpectEquals(lhs, rhs) do{\
-        auto _lhs = lhs; \
-        auto _rhs = rhs; \
+        __auto_type _lhs = lhs; \
+        __auto_type _rhs = rhs; \
         TEST_stats.executed++;\
         if (!(_lhs == _rhs)) {\
             TEST_stats.failures++; \
@@ -177,8 +181,8 @@ Nonnull(const char*) _test_color_red   = ""
 // Expects lhs == rhs, using the passed in binary function instead of == operator
 //
 #define TestExpectEquals2(func, lhs, rhs) do{\
-        auto _lhs = lhs; \
-        auto _rhs = rhs; \
+        __auto_type _lhs = lhs; \
+        __auto_type _rhs = rhs; \
         TEST_stats.executed++;\
         if (!(func(_lhs, _rhs))) {\
             TEST_stats.failures++; \
@@ -193,8 +197,8 @@ Nonnull(const char*) _test_color_red   = ""
 // Expects lhs != rhs, using the != operator
 //
 #define TestExpectNotEquals(lhs, rhs) do{\
-        auto _lhs = lhs; \
-        auto _rhs = rhs; \
+        __auto_type _lhs = lhs; \
+        __auto_type _rhs = rhs; \
         TEST_stats.executed++;\
         if (!(_lhs != _rhs)) {\
             TEST_stats.failures++; \
@@ -282,8 +286,8 @@ Nonnull(const char*) _test_color_red   = ""
 // Asserts lhs is equal to rhs, using ==
 //
 #define TestAssertEquals(lhs, rhs) do{\
-        auto _lhs = lhs; \
-        auto _rhs = rhs; \
+        __auto_type _lhs = lhs; \
+        __auto_type _rhs = rhs; \
         TEST_stats.executed++;\
         if (! (_lhs==_rhs)){ \
             TEST_stats.failures++; \
@@ -349,13 +353,13 @@ Nonnull(const char*) _test_color_red   = ""
 // As a special case, 0 means to run all the tests.
 static
 struct TestStats
-run_the_tests(Nullable(size_t*) which_tests, size_t test_count){
+run_the_tests(size_t*_Nullable which_tests, size_t test_count){
     struct TestStats result = {};
     if(test_count){
         for(size_t i = 0; i < test_count; i++){
-            auto func = test_funcs[which_tests[i]].test_func;
+            TestFunc* func = test_funcs[which_tests[i]].test_func;
             assert(func);
-            auto func_result = func();
+            struct TestStats func_result = func();
             result.funcs_executed++;
             result.failures += func_result.failures;
             result.executed += func_result.executed;
@@ -366,9 +370,9 @@ run_the_tests(Nullable(size_t*) which_tests, size_t test_count){
         for (int i = 0; i < test_funcs_count; i++){
             if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED)
                 continue;
-            auto func = test_funcs[i].test_func;
+            TestFunc* func = test_funcs[i].test_func;
             assert(func);
-            auto func_result = func();
+            struct TestStats func_result = func();
             result.funcs_executed++;
             result.failures += func_result.failures;
             result.executed += func_result.executed;
@@ -451,7 +455,7 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
     Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
     switch(check_for_early_out_args(&argparser, &args)){
         case HELP:{
-            auto columns = get_terminal_size().columns;
+            int columns = get_terminal_size().columns;
             if(columns > 80)
                 columns = 80;
             print_argparse_help(&argparser, columns);
@@ -469,7 +473,7 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
         default:
             break;
         }
-    auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
+    enum ArgParseError e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
     if(e){
         print_argparse_error(&argparser, e);
         fprintf(stderr, "Use --help to see usage.\n");
@@ -485,7 +489,7 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
         }
 
     filename = strrchr(filename, '/')? strrchr(filename, '/')+1 : filename;
-    bool use_colors = not no_colors && isatty(fileno(stderr));
+    bool use_colors = !no_colors && isatty(fileno(stderr));
     const char* gray  = use_colors? "\033[97m"    : "";
     const char* blue  = use_colors? "\033[94m"    : "";
     const char* green = use_colors? "\033[92m"    : "";
@@ -500,7 +504,7 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
 #endif
 
     assert(SV_equals(kw_args[2].name, SV("-t")));
-    auto result = run_the_tests(tests_to_run, kw_args[2].num_parsed);
+    struct TestStats result = run_the_tests(tests_to_run, kw_args[2].num_parsed);
 
     const char* text = result.funcs_executed == 1?
         "test function executed"
@@ -537,6 +541,5 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
 
 #include "terminal_logger.c"
 #endif
-
 
 #endif
