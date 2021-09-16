@@ -262,8 +262,6 @@ Marray_alloc_index(MARRAY_T)(MARRAY*, Allocator);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 
-#else
-
 #endif
 
 MARRAY_LINKAGE
@@ -373,8 +371,6 @@ Marray_cleanup(MARRAY_T)(MARRAY* marray, Allocator a){
 
 #elif defined(__GNUC__)
 #pragma GCC diagnostic pop
-
-#else
 
 #endif
 

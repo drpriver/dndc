@@ -4,6 +4,7 @@
 #include "dndc.h"
 #include "long_string.h"
 #include "dndc_node_types.h"
+#include "common_macros.h"
 // Type definitions for dndc, shared across components.
 
 //

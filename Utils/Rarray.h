@@ -7,8 +7,7 @@
 // assert
 #include <assert.h>
 // Allocator functions
-#include "allocator.h"
-#include "common_macros.h"
+#include "Allocators/allocator.h"
 
 #define Rarray(type) RarrayI(type)
 #define RarrayI(type) Rarray__##type
@@ -51,6 +50,17 @@ for(typeof((rarray)->data[0]) \
 #error "Must define RARRAY_T"
 #endif
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#else
+#ifndef _Nullable
+#define _Nullable
+#endif
+#ifndef _Nonnull
+#define _Nonnull
+#endif
+#endif
+
 typedef struct Rarray(RARRAY_T){
     size_t count;
     size_t capacity;
@@ -71,8 +81,8 @@ typedef struct Rarray(RARRAY_T){
 //   assert(myarray->capacity > 0);
 //
 static inline
-Nonnull(RARRAY*)
-Rarray_check_size(RARRAY_T)(Nullable(RARRAY*) rarray, Allocator a){
+RARRAY*
+Rarray_check_size(RARRAY_T)(RARRAY*_Nullable rarray, Allocator a){
     if(!rarray){
         enum {INITIAL_CAPACITY=4};
         enum {INITIAL_SIZE=INITIAL_CAPACITY*sizeof(RARRAY_T)+sizeof(RARRAY)};
@@ -82,7 +92,7 @@ Rarray_check_size(RARRAY_T)(Nullable(RARRAY*) rarray, Allocator a){
         }
     if(rarray->count == rarray->capacity){
         size_t old_size = rarray->capacity*sizeof(RARRAY_T)+sizeof(RARRAY);
-        auto new_array = Allocator_realloc(a, rarray, old_size, old_size*2);
+        void* new_array = Allocator_realloc(a, rarray, old_size, old_size*2);
         rarray = new_array;
         rarray->capacity *= 2;
         }
@@ -107,8 +117,8 @@ Rarray_check_size(RARRAY_T)(Nullable(RARRAY*) rarray, Allocator a){
 //   assert(myarray->data[2] == 3);
 //
 static inline
-Nonnull(RARRAY*)
-Rarray_push(RARRAY_T)(Nullable(RARRAY*) rarray, Allocator a, RARRAY_T item){
+RARRAY*
+Rarray_push(RARRAY_T)(RARRAY*_Nullable rarray, Allocator a, RARRAY_T item){
     rarray = Rarray_check_size(RARRAY_T)(rarray,a);
     rarray->data[rarray->count++] = item;
     return (RARRAY*)rarray; // cast away nullability
@@ -140,8 +150,8 @@ Rarray_push(RARRAY_T)(Nullable(RARRAY*) rarray, Allocator a, RARRAY_T item){
 //   assert(myarray->data[1] == 4);
 //
 static inline
-Nonnull(RARRAY_T*)
-Rarray_alloc(RARRAY_T)(Nonnull(Nullable(RARRAY*)*) rarray, Allocator a){
+RARRAY_T*
+Rarray_alloc(RARRAY_T)(RARRAY*_Nullable*_Nonnull rarray, Allocator a){
     *rarray = Rarray_check_size(RARRAY_T)(*rarray, a);
     return &(*rarray)->data[(*rarray)->count++];
     }
@@ -163,7 +173,7 @@ Rarray_alloc(RARRAY_T)(Nonnull(Nullable(RARRAY*)*) rarray, Allocator a){
 //
 static inline
 void
-Rarray_remove(RARRAY_T)(Nonnull(RARRAY*) rarray, size_t i){
+Rarray_remove(RARRAY_T)(RARRAY* rarray, size_t i){
     assert(i < rarray->count);
     if(i == rarray->count-1){
         rarray->count--;
@@ -176,3 +186,7 @@ Rarray_remove(RARRAY_T)(Nonnull(RARRAY*) rarray, size_t i){
 
 #undef RARRAY
 #undef RARRAY_T
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif

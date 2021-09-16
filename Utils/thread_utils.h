@@ -17,8 +17,16 @@
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
-PushDiagnostic();
-SuppressUnusedFunction();
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+
+#endif
 
 //
 // Implements a very basic portability layer to spawn a worker thread with an
@@ -376,6 +384,13 @@ static void worker_wait(WorkerThread* w){
 #ifdef __clang__
 #pragma clang assume_nonnull end
 #endif
-PopDiagnostic();
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+
+#endif
 
 #endif

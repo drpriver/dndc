@@ -1,5 +1,5 @@
 #include "testing.h"
-#include "mallocator.h"
+#include "Allocators/mallocator.h"
 #define RARRAY_T int
 #include "Rarray.h"
 
@@ -81,4 +81,4 @@ int main(int argc, char** argv){
     return test_main(argc, argv);
 }
 
-#include "allocator.c"
+#include "Allocators/allocator.c"
