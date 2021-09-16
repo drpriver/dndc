@@ -1339,12 +1339,13 @@ RENDERFUNC(DETAILS){
         msb_write_str(sb, node->header.text, node->header.length);
         }
     msb_write_literal(sb, "</summary>\n");
+    msb_write_literal(sb, "<div>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         }
-    msb_write_literal(sb, "</div>\n");
+    msb_write_literal(sb, "</div>\n</details>\n");
     return (Errorable(void)){};
     }
 #undef RENDERFUNC
