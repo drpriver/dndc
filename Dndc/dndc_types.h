@@ -213,7 +213,7 @@ int
 FileCache_maybe_remove(FileCache* cache, StringView path){
     Allocator al = cache->allocator;
     for(size_t i = 0; i < cache->files.count; i++){
-        auto src = cache->files.data[i];
+        LoadedSource src = cache->files.data[i];
         if(LS_SV_equals(src.sourcepath, path)){
             Marray_remove(LoadedSource)(&cache->files, i);
             Allocator_free(al, src.sourcepath.text, src.sourcepath.length+1);

@@ -178,7 +178,7 @@ execute_user_scripts(DndcContext* ctx){
         if(!NodeHandle_eq(node->parent, INVALID_NODE_HANDLE)){
             Node* parent = get_node(ctx, node->parent);
             node->parent = INVALID_NODE_HANDLE;
-            for(size_t j = 0; j < parent->children.count; j++){
+            for(size_t j = 0; j < node_children_count(parent); j++){
                 if(NodeHandle_eq(handle, node_children(parent)[j])){
                     node_remove_child(parent, j, ctx->allocator);
                     goto after;
@@ -219,7 +219,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
             auto nodes = img_nodes[n];
             MARRAY_FOR_EACH(it, *nodes){
                 auto node = get_node(ctx, *it);
-                if(!node->children.count)
+                if(!node_children_count(node))
                     continue;
                 auto child = get_node(ctx, node_children(node)[0]);
                 if(!child->header.length)
@@ -478,7 +478,7 @@ run_the_dndc(uint64_t flags,
                 goto cleanup;
                 }
             // NOTE: re-get the node every loop as the pointer is invalidated.
-            for(size_t j = 0; j < node->children.count; j++, node=get_node(&ctx, handle)){
+            for(size_t j = 0; j < node_children_count(node); j++, node=get_node(&ctx, handle)){
                 auto child_handle = node_children(node)[j];
                 auto child = get_node(&ctx, child_handle);
                 if(child->type != NODE_STRING){

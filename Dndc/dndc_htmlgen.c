@@ -181,8 +181,8 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
                 }
             if(node_has_attribute(node, SV("noinline"))){
                 msb_erase(msb, sizeof("<script>\n")-1);
-                if(node->children.count != 1){
-                    if(node->children.count)
+                if(node_children_count(node) != 1){
+                    if(node_children_count(node))
                         node_print_warning(ctx, node, SV("Lines afer the first of a noninline js block are ignored"));
                     else {
                         node_print_warning(ctx, node, SV("Empty noinline js block"));
@@ -543,7 +543,7 @@ RENDERFUNC(STRING){
     (void)header_depth;
     if(unlikely(node->classes))
         node_print_warning(ctx, node, SV("Ignoring classes on string node"));
-    if(unlikely(node->children.count))
+    if(unlikely(node_children_count(node)))
         node_print_warning(ctx, node, SV("Ignoring children of string node"));
     auto e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
     if(e.errored) return e;
@@ -598,7 +598,7 @@ RENDERFUNC(NAV){
     if(node->header.length){
         node_print_warning(ctx, node, SV("Headers on navs unsupported"));
         }
-    if(node->children.count){
+    if(node_children_count(node)){
         node_print_warning(ctx, node, SV("Children on navs unsupported"));
         }
     msb_write_str(sb, ctx->renderednav.text, ctx->renderednav.length);
@@ -626,7 +626,7 @@ RENDERFUNC(TITLE){
     auto e = write_header(ctx, sb, node, header_depth);
     if(e.errored) return e;
     msb_write_char(sb, '\n');
-    if(node->children.count){
+    if(node_children_count(node)){
         node_print_warning(ctx, node, SV("Ignoring children of title"));
         }
     if(node->classes){
@@ -638,7 +638,7 @@ RENDERFUNC(HEADING){
     auto e = write_header(ctx, sb, node, header_depth+1);
     if(e.errored) return e;
     msb_write_char(sb, '\n');
-    if(node->children.count){
+    if(node_children_count(node)){
         node_print_warning(ctx, node, SV("Ignoring children of heading"));
         }
     if(node->classes){
@@ -651,7 +651,7 @@ RENDERFUNC(HR){
     if(node->header.length){
         node_print_warning(ctx, node, SV("Ignoring header of hr"));
         }
-    if(node->children.count){
+    if(node_children_count(node)){
         node_print_warning(ctx, node, SV("Ignoring children of hr"));
         }
     msb_write_char(sb, '\n');
@@ -668,7 +668,7 @@ RENDERFUNC(TABLE){
         if(e.errored) return e;
         }
     msb_write_literal(sb, "<table>\n<thead>\n");
-    auto count = node->children.count;
+    auto count = node_children_count(node);
     auto children = node_children(node);
     if(count){
         auto child = get_node(ctx, children[0]);
@@ -771,7 +771,7 @@ RENDERFUNC(IMAGE){
         if(e.errored) return e;
         msb_write_char(sb, '\n');
         }
-    auto count = node->children.count;
+    auto count = node_children_count(node);
     if(!count){
         node_set_err(ctx, node, LS("Image node missing any children (first should be a string that is path to the image"));
         Raise(PARSE_ERROR);
@@ -990,7 +990,7 @@ RENDERFUNC(LIST_ITEM){
         node_print_warning(ctx, node, SV("ignoring header on list item"));
     if(unlikely(node->classes))
         node_print_warning(ctx, node, SV("Ignoring classes on list item"));
-    auto count = node->children.count;
+    auto count = node_children_count(node);
     auto children = node_children(node);
     for(size_t i = 0; i < count; i++){
         if(i != 0)
@@ -1042,7 +1042,7 @@ RENDERFUNC(IMGLINKS){
         auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         }
-    if(node->children.count < 4){
+    if(node_children_count(node) < 4){
         node_set_err(ctx, node, LS("Too few children of an imglinks node (expected path to the image, width, height, viewBox in that order)"));
         Raise(PARSE_ERROR);
         }
@@ -1225,7 +1225,7 @@ RENDERFUNC(IMGLINKS){
         report_time(ctx, SV("Copying the base64 data of an imglinks took "), after-before);
         msb_write_literal(sb, "');\">\n");
         }
-    for(size_t i = 4; i < node->children.count; i++){
+    for(size_t i = 4; i < node_children_count(node); i++){
         auto child = get_node(ctx, children[i]);
         if(child->type != NODE_STRING){
             if(child->type == NODE_PYTHON || child->type == NODE_JS || child->type == NODE_COMMENT)

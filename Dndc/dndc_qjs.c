@@ -667,7 +667,7 @@ JSMETHOD(js_dndc_node_detach){
         }
     Node* parent = get_node(ctx, node->parent);
     node->parent = INVALID_NODE_HANDLE;
-    for(size_t i = 0; i < parent->children.count; i++){
+    for(size_t i = 0; i < node_children_count(parent); i++){
         if(NodeHandle_eq(handle, node_children(parent)[i])){
             node_remove_child(parent, i, ctx->allocator);
             goto after;
@@ -745,7 +745,7 @@ JSMETHOD(js_dndc_node_replace_child){
         return JS_ThrowTypeError(jsctx, "Node to replace is not a child of this node");
         }
     Node* parent_node = get_node(ctx, handle);
-    size_t count = parent_node->children.count;
+    size_t count = node_children_count(parent_node);
     NodeHandle* data = node_children(parent_node);
     for(size_t i = 0; i < count; i++){
         NodeHandle c = data[i];
@@ -964,13 +964,13 @@ js_dndc_node_to_string(QJSContext* jsctx, QJSValueConst thisValue, int argc, QJS
     MStringBuilder msb = {.allocator=ctx->temp_allocator};
     size_t class_count = node->classes?node->classes->count:0;
     if(!class_count)
-        MSB_FORMAT(&msb, "Node(", NODENAMES[node->type], ", '", node->header, "', [", (int)node->children.count, " children])");
+        MSB_FORMAT(&msb, "Node(", NODENAMES[node->type], ", '", node->header, "', [", (int)node_children_count(node), " children])");
     else {
         MSB_FORMAT(&msb, "Node(", NODENAMES[node->type].text);
         RARRAY_FOR_EACH(class, node->classes){
             MSB_FORMAT(&msb, ".", *class);
             }
-        MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node->children.count, " children])");
+        MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node_children_count(node), " children])");
         }
     StringView text = msb_borrow(&msb);
     QJSValue result = JS_NewStringLen(jsctx, text.text, text.length);

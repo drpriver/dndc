@@ -615,13 +615,13 @@ DndNode_repr(DndNode* self){
     MStringBuilder msb = {.allocator=self->ctx->temp_allocator};
     size_t class_count = node->classes?node->classes->count:0;
     if(not class_count)
-        MSB_FORMAT(&msb, "Node(", NODENAMES[node->type], ", '", node->header, "', [", (int)node->children.count, " children])");
+        MSB_FORMAT(&msb, "Node(", NODENAMES[node->type], ", '", node->header, "', [", (int)node_children_count(node), " children])");
     else {
         MSB_FORMAT(&msb, "Node(", NODENAMES[node->type].text);
         RARRAY_FOR_EACH(class, node->classes){
             MSB_FORMAT(&msb, ".", *class);
             }
-        MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node->children.count, " children])");
+        MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node_children_count(node), " children])");
     }
     auto text = msb_borrow(&msb);
     auto result = PyUnicode_FromStringAndSize(text.text, text.length);
@@ -944,7 +944,7 @@ py_detach_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyO
         }
     auto parent = get_node(ctx, node->parent);
     node->parent = INVALID_NODE_HANDLE;
-    for(size_t i = 0; i < parent->children.count; i++){
+    for(size_t i = 0; i < node_children_count(parent); i++){
         if(NodeHandle_eq(handle, node_children(parent)[i])){
             node_remove_child(parent, i, ctx->allocator);
             goto after;
@@ -1029,7 +1029,7 @@ py_replace_child_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nulla
         return NULL;
         }
     auto parent_node = get_node(ctx, handle);
-    auto count = parent_node->children.count;
+    auto count = node_children_count(parent_node);
     auto data = node_children(parent_node);
     for(size_t i = 0; i < count; i++){
         auto c = data[i];
@@ -1336,10 +1336,10 @@ DndNode_getattr_ls(DndNode* obj, LongString name){
         case 8:{
             if(CHECK("children", 8)){
                 auto node = get_node(ctx, obj->handle);
-                auto result = PyTuple_New(node->children.count);
+                auto result = PyTuple_New(node_children_count(node));
                 if(!result)
                     return result;
-                for(size_t i = 0; i < node->children.count; i++){
+                for(size_t i = 0; i < node_children_count(node); i++){
                     auto child = node_children(node)[i];
                     auto pynode = make_py_node(ctx, child);
                     auto fail = PyTuple_SetItem(result, i, pynode);

@@ -629,7 +629,7 @@ convert_node_to_container_containing_clone_of_former_self(DndcContext* ctx, Node
     auto new_handle = alloc_handle(ctx);
     auto new_node = get_node(ctx, new_handle);
     auto old_node = get_node(ctx, handle);
-    assert(!old_node->children.count);
+    assert(!node_children_count(old_node));
     memcpy(new_node, old_node, sizeof(*new_node));
     new_node->parent = handle;
     old_node->children.count = 1;

@@ -91,8 +91,10 @@ Rarray_check_size(RARRAY_T)(RARRAY*_Nullable rarray, Allocator a){
         rarray->capacity = INITIAL_CAPACITY;
         }
     if(rarray->count == rarray->capacity){
-        size_t old_size = rarray->capacity*sizeof(RARRAY_T)+sizeof(RARRAY);
-        void* new_array = Allocator_realloc(a, rarray, old_size, old_size*2);
+        size_t datasize = rarray->capacity*sizeof(RARRAY_T);
+        size_t old_size = datasize + sizeof(RARRAY);
+        size_t new_size = datasize*2 + sizeof(RARRAY);
+        void* new_array = Allocator_realloc(a, rarray, old_size, new_size);
         rarray = new_array;
         rarray->capacity *= 2;
         }
