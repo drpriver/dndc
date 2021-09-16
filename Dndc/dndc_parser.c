@@ -95,7 +95,7 @@ init_node(DndcContext* ctx, NodeHandle handle, const char* src_char, NodeType ty
     int col = (int)(src_char - ctx->linestart);
     node->col = col;
     assert(node->col >= 0);
-    node->filename = ctx->filename;
+    node->filename_idx = ctx->filenames.count-1;
     node->row = ctx->lineno;
     node->type = type;
     }
@@ -107,7 +107,7 @@ init_string_node(DndcContext* ctx, NodeHandle handle, StringView sv){
     auto node = get_node(ctx, handle);
     int col = (int)(sv.text - ctx->linestart);
     node->col = col;
-    node->filename = ctx->filename;
+    node->filename_idx = ctx->filenames.count-1;
     node->row = ctx->lineno;
     node->type = NODE_STRING;
     node->header = sv;
@@ -124,6 +124,7 @@ dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const 
     ctx->nspaces = 0;
     ctx->lineno = 0;
     ctx->filename = filename;
+    Marray_push(StringView)(&ctx->filenames, ctx->allocator, filename);
     auto e = parse_node(ctx, root_handle, NODE_MD, -1);
     if(e.errored) return e;
     return result;

@@ -412,7 +412,8 @@ execute_qjs_string(QJSContext* jsctx, DndcContext* ctx, const char* str, size_t 
         const char* filename;
         {
             Node* node = get_node(ctx, firstline);
-            filename = Allocator_strndup(ctx->string_allocator, node->filename.text, node->filename.length);
+            auto node_filename = ctx->filenames.data[node->filename_idx];
+            filename = Allocator_strndup(ctx->string_allocator, node_filename.text, node_filename.length);
         }
 
         QJSValue err = JS_Eval(jsctx, str, length, filename, 1);

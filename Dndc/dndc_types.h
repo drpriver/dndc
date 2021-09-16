@@ -126,20 +126,21 @@ typedef struct Node {
     Rarray(Attribute)*_Nullable attributes;  // 8 bytes
     Rarray(StringView)*_Nullable classes;    // 8 bytes
     // Source filename (used for reporting errors)
-    StringView filename;           // 16 bytes
+    unsigned filename_idx; // 4 bytes
     // Location of first character of where this node originated from.
     // These are 0-based. Functions that report errors add 1 to this number
     // for the general human-readable version.
     int row, col;                  // 4 + 4 bytes.
+    // 4 bytes of padding in this struct
     // no padding in this struct
 } Node;
 
 #if UINTPTR_MAX != 0xFFFFFFFF
-_Static_assert(sizeof(Node) == 11*sizeof(size_t), "");
+_Static_assert(sizeof(Node) == 10*sizeof(size_t), "");
 // Damn these are fat.
 // As a huge number of nodes are string nodes, we need a different scheme
 // for storing children attributes and classes.
-_Static_assert(sizeof(Node) == 88, "");
+_Static_assert(sizeof(Node) == 80, "");
 #endif
 
 #define MARRAY_T Node
@@ -253,6 +254,7 @@ typedef struct DndcContext {
         int nspaces;
         int lineno;
     };
+    Marray(StringView) filenames;
     // current file we are parsing. When not parsing, it is the entry point.
     StringView filename;
     // Base directory. All filepaths are relative to this directory.

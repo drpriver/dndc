@@ -808,7 +808,8 @@ py_make_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObj
     if(frame){
         node->row = PyFrame_GetLineNumber(frame) - 1;
         auto code = frame->f_code;
-        node->filename = pystring_to_stringview(code->co_filename, ctx->string_allocator);
+        Marray_push(StringView)(&ctx->filenames, ctx->allocator, pystring_to_stringview(code->co_filename, ctx->string_allocator));
+        node->filename_idx = ctx->filenames.count-1;
         }
     }
     if(text){
@@ -1200,12 +1201,13 @@ execute_python_string(DndcContext* ctx, const char* text, NodeHandle handle, Nod
 
     auto node = get_node(ctx, handle);
     char buff[1024];
-    if(node->filename.length < 1024){
-        memcpy(buff, node->filename.text, node->filename.length);
-        buff[node->filename.length] = 0;
+    auto node_filename = ctx->filenames.data[node->filename_idx];
+    if(node_filename.length < 1024){
+        memcpy(buff, node_filename.text, node_filename.length);
+        buff[node_filename.length] = 0;
         }
     else {
-        memcpy(buff, node->filename.text, 1023);
+        memcpy(buff, node_filename.text, 1023);
         buff[1023] = 0;
         }
     PyObject* code = Py_CompileStringExFlags(text, buff, Py_file_input, &flags, 0);

@@ -112,7 +112,8 @@ execute_user_scripts(DndcContext* ctx){
                     result.errored = e.errored;
                     goto cleanup;
                     }
-                firstchild_node->filename = firstchild_node->header;
+                Marray_push(StringView)(&ctx->filenames, ctx->allocator, firstchild_node->header);
+                firstchild_node->filename_idx = ctx->filenames.count-1;
                 firstchild_node->col = 0;
                 firstchild_node->row = 1;
                 firstchild_node->header = LS_to_SV(e.result);
@@ -403,7 +404,8 @@ run_the_dndc(uint64_t flags,
         auto root = get_node(&ctx, root_handle);
         root->col = 0;
         root->row = 0;
-        root->filename = path;
+        Marray_push(StringView)(&ctx.filenames, ctx.allocator, path);
+        root->filename_idx = ctx.filenames.count-1;
         root->type = NODE_MD;
         root->parent = root_handle;
     }

@@ -119,7 +119,7 @@ static
 void
 node_set_err_q(DndcContext* ctx, const Node* node, StringView msg, StringView quoted){
     MStringBuilder msb = {.allocator=ctx->string_allocator};
-    ctx->error.filename = node->filename;
+    ctx->error.filename = ctx->filenames.data[node->filename_idx];
     ctx->error.line = node->row;
     ctx->error.col = node->col;
     msb_write_str(&msb, msg.text, msg.length);
@@ -132,7 +132,7 @@ node_set_err_q(DndcContext* ctx, const Node* node, StringView msg, StringView qu
 static
 void
 node_set_err(DndcContext* ctx, const Node* node, LongString ls){
-    ctx->error.filename = node->filename;
+    ctx->error.filename = ctx->filenames.data[node->filename_idx];
     ctx->error.line = node->row;
     ctx->error.col = node->col;
     ctx->error.message = ls;
@@ -141,7 +141,7 @@ node_set_err(DndcContext* ctx, const Node* node, LongString ls){
 static
 void
 node_set_err_offset(DndcContext* ctx, const Node* node, int offset, LongString message){
-    ctx->error.filename = node->filename;
+    ctx->error.filename = ctx->filenames.data[node->filename_idx];
     ctx->error.line = node->row;
     ctx->error.col = node->col+offset;
     ctx->error.message = message;
@@ -154,7 +154,7 @@ node_print_err(DndcContext* ctx, const Node* node, StringView msg){
         return;
     if(not ctx->error_func)
         return;
-    auto filename = node->filename;
+    auto filename = ctx->filenames.data[node->filename_idx];
     auto lineno = node->row;
     int col = node->col;
     ctx->error_func(ctx->error_user_data, DNDC_ERROR_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
@@ -169,7 +169,7 @@ node_print_warning(DndcContext* ctx, const Node* node, StringView msg){
         return;
     if(not ctx->error_func)
         return;
-    auto filename = node->filename;
+    auto filename = ctx->filenames.data[node->filename_idx];
     auto lineno = node->row;
     int col = node->col;
     ctx->error_func(ctx->error_user_data, DNDC_WARNING_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
@@ -183,7 +183,7 @@ node_print_warning2(DndcContext* ctx, const Node* node, StringView a, StringView
         return;
     if(not ctx->error_func)
         return;
-    auto filename = node->filename;
+    auto filename = ctx->filenames.data[node->filename_idx];
     auto lineno = node->row;
     int col = node->col;
     MStringBuilder msb = {.allocator = ctx->temp_allocator};
