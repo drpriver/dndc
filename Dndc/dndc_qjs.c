@@ -167,10 +167,12 @@ JSMETHOD(js_dndc_node_parse);
 JSMETHOD(js_dndc_node_detach);
 JSMETHOD(js_dndc_node_add_child);
 JSMETHOD(js_dndc_node_replace_child);
+JSMETHOD(js_dndc_node_insert_child);
 JSGETTER(js_dndc_node_get_attributes);
 JSGETTER(js_dndc_node_get_classes);
 JSMETHOD(js_dndc_node_err);
 JSMETHOD(js_dndc_node_has_class);
+JSMETHOD(js_dndc_node_clone);
 
 static
 const
@@ -185,10 +187,12 @@ JSCFunctionListEntry JS_DNDC_NODE_FUNCS[] = {
     JS_CFUNC_DEF("detach", 0, js_dndc_node_detach),
     JS_CFUNC_DEF("add_child", 1, js_dndc_node_add_child),
     JS_CFUNC_DEF("replace_child", 2, js_dndc_node_replace_child),
+    JS_CFUNC_DEF("insert_child", 2, js_dndc_node_insert_child),
     JS_CGETSET_DEF("attributes", js_dndc_node_get_attributes, NULL),
     JS_CGETSET_DEF("classes", js_dndc_node_get_classes, NULL),
     JS_CFUNC_DEF("err", 1, js_dndc_node_err),
     JS_CFUNC_DEF("has_class", 1, js_dndc_node_has_class),
+    JS_CFUNC_DEF("clone", 0, js_dndc_node_clone),
 };
 
 //
@@ -759,6 +763,35 @@ JSMETHOD(js_dndc_node_replace_child){
     return JS_ThrowInternalError(jsctx, "Internal logic error when replacing nodes");
     }
 
+JSMETHOD(js_dndc_node_insert_child){
+    if(argc != 2)
+        return JS_ThrowTypeError(jsctx, "need 2 arguments to insert_child");
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    int32_t index;
+    if(JS_ToInt32(jsctx, &index, argv[0]))
+        return JS_ThrowTypeError(jsctx, "Expected an integer index.");
+    QJSValueConst newchild_arg = argv[1];
+    NodeHandle new_child;
+    if(!js_dndc_get_node_handle(jsctx, newchild_arg, &new_child))
+        return JS_EXCEPTION;
+    assert(!NodeHandle_eq(new_child, INVALID_NODE_HANDLE));
+    NodeHandle handle;
+    if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
+        return JS_EXCEPTION;
+    assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
+    Node* newchild_node = get_node(ctx, new_child);
+
+    if(!NodeHandle_eq(newchild_node->parent, INVALID_NODE_HANDLE)){
+        return JS_ThrowTypeError(jsctx, "Node needs to be an orphan to be added as a child of another node");
+        }
+    if(NodeHandle_eq(handle, new_child))
+        return JS_ThrowTypeError(jsctx, "Node can't be a child of itself");
+    node_insert_child(ctx, handle, index, new_child);
+    return JS_UNDEFINED;
+    return JS_ThrowInternalError(jsctx, "Internal logic error when replacing nodes");
+    }
+
 static
 QJSValue
 js_make_dndc_node(QJSContext*jsctx, NodeHandle handle){
@@ -1056,6 +1089,18 @@ JSMETHOD(js_dndc_node_has_class){
     bool has_it = node_has_class(node, msg);
     Allocator_free(ctx->temp_allocator, msg.text, msg.length);
     return has_it? JS_TRUE : JS_FALSE;
+    }
+JSMETHOD(js_dndc_node_clone){
+    (void)argv;
+    if(argc != 0)
+        return JS_ThrowTypeError(jsctx, "clone must have no arguments");
+    NodeHandle handle;
+    if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
+        return JS_EXCEPTION;
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    NodeHandle newnode = node_clone(ctx, handle);
+    return js_make_dndc_node(jsctx, newnode);
     }
 
 //

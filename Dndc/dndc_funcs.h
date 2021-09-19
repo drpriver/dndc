@@ -464,6 +464,14 @@ void
 append_child(DndcContext* , NodeHandle parent, NodeHandle child);
 
 //
+// Insert the node as a child of the parent at index i.
+// If i >= count, just appends to the end.
+//
+static inline
+void
+node_insert_child(DndcContext* ctx, NodeHandle parent, size_t i, NodeHandle child);
+
+//
 // Find the target that the kebabed string view is actually a link to.
 // Can return NULL if the link can't be resolved.
 //
@@ -510,6 +518,10 @@ ctx_add_builtins(DndcContext* ctx);
 static inline
 Errorable_f(void)
 ctx_add_auto_index_links(DndcContext* ctx);
+
+static inline
+NodeHandle
+node_clone(DndcContext* ctx, NodeHandle);
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

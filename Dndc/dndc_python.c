@@ -955,6 +955,21 @@ py_detach_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyO
     after:;
     Py_RETURN_NONE;
     }
+static
+Nullable(PyObject*)
+py_clone_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
+    const char* const keywords[] = { NULL, };
+    PushDiagnostic();
+    SuppressCastQual();
+    // This call is guaranteed to not modify keywords, but it's declared as char**
+    // as const in C is kind of broken.
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, ":clone", (char**)keywords)){
+        return NULL;
+        }
+    PopDiagnostic();
+    NodeHandle clone = node_clone(ctx, handle);
+    return make_py_node(ctx, clone);
+    }
 
 static
 Nullable(PyObject*)
@@ -1042,6 +1057,38 @@ py_replace_child_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nulla
         }
     PyErr_SetString(PyExc_AssertionError, "Internal logic error when replacing nodes");
     return NULL;
+    }
+
+static
+Nullable(PyObject*)
+py_insert_child(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
+    const char* const keywords[] = { "index", "newchild", NULL, };
+    int index;
+    DndNode* newchild;
+    PushDiagnostic();
+    SuppressCastQual();
+    // This call is guaranteed to not modify keywords, but it's declared as char**
+    // as const in C is kind of broken.
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "iO!:replace_child", (char**)keywords, &index, &DndNodeType, &newchild)){
+        return NULL;
+        }
+    PopDiagnostic();
+    if(index < 0){
+        PyErr_SetString(PyExc_ValueError, "Negative indexes are not supported");
+        return NULL;
+        }
+    NodeHandle new_handle = newchild->handle;
+    auto newchild_node = get_node(ctx, new_handle);
+    if(!NodeHandle_eq(newchild_node->parent, INVALID_NODE_HANDLE)){
+        PyErr_SetString(PyExc_ValueError, "Node needs to be an orphan to be added as a child of another node.");
+        return NULL;
+        }
+    if(NodeHandle_eq(handle, new_handle)){
+        PyErr_SetString(PyExc_ValueError, "Node can't be a child of itself");
+        return NULL;
+        }
+    node_insert_child(ctx, handle, index, new_handle);
+    Py_RETURN_NONE;
     }
 
 static
@@ -1314,6 +1361,9 @@ DndNode_getattr_ls(DndNode* obj, LongString name){
             if(CHECK("parse", 5)){
                 return make_node_bound_method(ctx, obj->handle, &py_parse_and_append_children);
             }
+            if(CHECK("clone", 5)){
+                return make_node_bound_method(ctx, obj->handle, &py_clone_node);
+                }
         }break;
         case 6:{
             if(CHECK("header", 6)){
@@ -1362,6 +1412,11 @@ DndNode_getattr_ls(DndNode* obj, LongString name){
                 return make_attributes_map(ctx, obj->handle);
                 }
         }break;
+        case 12:{
+            if(CHECK("insert_child", 12)){
+                return make_node_bound_method(ctx, obj->handle, &py_insert_child);
+                }
+            }break;
         case 13:{
             if(CHECK("replace_child", 13)){
                 return make_node_bound_method(ctx, obj->handle, &py_replace_child_node);

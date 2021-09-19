@@ -187,8 +187,8 @@ node_remove_child(Node* node, size_t i, const Allocator a){
         }
     }
 
-#define NODE_CHILDREN_FOR_EACH(iter, n) for(NodeHandle *iter = node_children(n), *iter##end__=node_children(n)+n->children.count;iter != iter##end__;++iter)
 
+#define NODE_CHILDREN_FOR_EACH(iter, n) for(NodeHandle *iter = node_children(n), *iter##end__=node_children(n)+node_children_count(n);iter != iter##end__;++iter)
 
 
 struct DndcFileCache {

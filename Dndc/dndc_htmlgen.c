@@ -1331,7 +1331,9 @@ RENDERFUNC(DETAILS){
     write_classes(sb, node);
     auto id = node_get_id(node);
     if(id){
-        MSB_FORMAT(sb, " id=\"", *id, "\"");
+        msb_write_literal(sb, " id=\"");
+        msb_write_kebab(sb, id->text, id->length);
+        msb_write_literal(sb, "\"");
         }
     msb_write_literal(sb, ">\n");
     msb_write_literal(sb, "<summary style=\"cursor:pointer\">\n");

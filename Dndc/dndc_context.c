@@ -90,6 +90,34 @@ node_get_id(const Node* node){
         }
     return id;
     }
+
+static inline
+NodeHandle
+node_clone(DndcContext* ctx, NodeHandle handle){
+    NodeHandle result = alloc_handle(ctx);
+    Node* dstnode = get_node(ctx, result);
+    Node* srcnode = get_node(ctx, handle);
+    dstnode->type = srcnode->type;
+    dstnode->parent = INVALID_NODE_HANDLE;
+    dstnode->header = srcnode->header;
+    if(node_children_count(srcnode) <= 4){
+        dstnode->children = srcnode->children;
+        }
+    else {
+        Marray_extend(NodeHandle)(&dstnode->children, ctx->allocator, node_children(srcnode), node_children_count(srcnode));
+        }
+    RARRAY_FOR_EACH(at, srcnode->attributes){
+        dstnode->attributes = Rarray_push(Attribute)(dstnode->attributes, ctx->allocator, *at);
+        }
+    RARRAY_FOR_EACH(cls, srcnode->classes){
+        dstnode->classes = Rarray_push(StringView)(dstnode->classes, ctx->allocator, *cls);
+        }
+    dstnode->filename_idx = srcnode->filename_idx;
+    dstnode->row = srcnode->row;
+    dstnode->col = srcnode->col;
+    return result;
+    }
+
 static
 void
 parse_set_err(DndcContext* ctx, NullUnspec(const char*) errchar, LongString msg){
@@ -525,6 +553,27 @@ append_child(DndcContext* ctx, NodeHandle parent_handle, NodeHandle child_handle
         parent->children = children;
         }
     Marray_push(NodeHandle)(&parent->children, ctx->allocator, child_handle);
+    }
+
+static inline
+void
+node_insert_child(DndcContext* ctx, NodeHandle parent, size_t i, NodeHandle child){
+    Node* node = get_node(ctx, parent);
+    if(i >= node_children_count(node)){
+        append_child(ctx, parent, child);
+        return;
+        }
+    // This is a sloppy way of doing things, but appending
+    // a child means we already have the right amount of
+    // space.
+    // It's sloppy as we could end up memmoving twice in a row.
+    append_child(ctx, parent, child);
+    NodeHandle* data = node_children(node);
+    size_t count = node_children_count(node);
+    size_t nmove = count - i - 1;
+    if(nmove)
+        memmove(data+i+1, data+i, nmove*sizeof(*data));
+    data[i] = child;
     }
 
 static Errorable_f(void) check_node_depth(DndcContext* ctx, NodeHandle handle, int depth);

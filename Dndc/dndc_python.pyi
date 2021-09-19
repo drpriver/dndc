@@ -72,10 +72,17 @@ class Node:
         Replaces the given child with newchild. Newchild must be an orphan and the given child will be an orphan afterwards.
         '''
         ...
+    def insert_child(self, index:int, newchild:'Node') -> None:
+        '''
+        Places the child at the given index, shifting all other nodes down by 1.
+        '''
+        ...
     def err(self, msg:str) -> NoReturn:
         '''
         Issue an error message originating from this node (throws an exception).
         '''
+        ...
+    def clone(self) -> 'Node':
         ...
 
 class DndcContext:

@@ -5,6 +5,10 @@ Version 0.7.2::md
     node.
   * A new block type, "details", has been added. It is parsed
     like a md block and generates a <details> tag.
+  * Added new methods to nodes in js and python blocks:
+    - clone(): returns an orphaned copy of the node.
+    - insert_child(index, newchild): inserts the node as a child
+      at the given index, shifting the other children down by 1.
 Version 0.7.1::md
   * Fix bug in js api.
   * Internal API changes.
