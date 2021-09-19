@@ -4,7 +4,7 @@
 
 #define MARRAY_T short
 #include "Marray.h"
-#include "Allocators/mallocator.h"
+#include "Allocators/recording_allocator.h"
 #include "str_util.h"
 
 #ifdef __clang__
@@ -632,29 +632,39 @@ TestFunction(TestBitFlags){
     TESTEND();
     }
 
+struct ShortContext {
+    Marray(short)* marray;
+    Allocator a;
+};
+
 static
 int 
 append_short(void* dest, const void* arg){
-    Marray(short*) marray = dest;
+    struct ShortContext* ctx = dest;
+    Marray(short)* marray = ctx->marray;
     int value = *(const int*)arg;
     _Static_assert(sizeof(short) == sizeof(int16_t),"");
     if(value < INT16_MIN)
         return 1;
     if(value > INT16_MAX)
         return 1;
-    Marray_push(short)(marray, get_mallocator(), value);
+    Marray_push(short)(marray, ctx->a, value);
     return 0;
     }
 TestFunction(TestAppender){
     TESTBEGIN();
     Marray(short) shorts = {};
+    struct ShortContext ctx = {
+        .marray = &shorts,
+        .a = new_recorded_mallocator(),
+        };
     ArgToParse pos_args[] = {
         [0] = {
             .name = SV("shorts"),
             .min_num = 2,
             .max_num = 1<<16,
             .dest = {
-                .pointer = &shorts,
+                .pointer = &ctx,
                 .type = ARG_INT, // parse as int, handle overfow in append func.
                 },
             .append_proc = append_short,
@@ -672,7 +682,7 @@ TestFunction(TestAppender){
         enum ArgParseError e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, ARGPARSE_CONVERSION_ERROR);
         TestExpectEquals(shorts.count, 0);
-        Marray_cleanup(short)(&shorts, get_mallocator());
+        Marray_cleanup(short)(&shorts, ctx.a);
         clear_parser(&argparser);
     }
     {
@@ -682,7 +692,7 @@ TestFunction(TestAppender){
         TestExpectEquals(e, ARGPARSE_INSUFFICIENT_ARGS);
         TestAssertEquals(shorts.count, 1);
         TestExpectEquals(shorts.data[0], -1);
-        Marray_cleanup(short)(&shorts, get_mallocator());
+        Marray_cleanup(short)(&shorts, ctx.a);
         clear_parser(&argparser);
     }
     {
@@ -696,7 +706,7 @@ TestFunction(TestAppender){
         TestExpectEquals(shorts.data[2], 8);
         TestExpectEquals(shorts.data[3], 10);
         TestExpectEquals(shorts.data[4], 12);
-        Marray_cleanup(short)(&shorts, get_mallocator());
+        Marray_cleanup(short)(&shorts, ctx.a);
         clear_parser(&argparser);
     }
     {
@@ -705,9 +715,10 @@ TestFunction(TestAppender){
         enum ArgParseError e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         TestExpectEquals(e, ARGPARSE_CONVERSION_ERROR);
         TestExpectEquals(shorts.count, 0);
-        Marray_cleanup(short)(&shorts, get_mallocator());
+        Marray_cleanup(short)(&shorts, ctx.a);
         clear_parser(&argparser);
     }
+    shallow_free_recorded_mallocator(ctx.a);
     TESTEND();
     }
 

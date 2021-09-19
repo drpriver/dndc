@@ -19,6 +19,7 @@
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
+
 enum FormatType {
     FORMATTYPE_STRING = 0,
     FORMATTYPE_INT32 = 1,
@@ -198,6 +199,15 @@ uint32_to_str_buffer(char*  buff, uint32_t value){
 //
 // The math is:
 //   ptrdiff_t length = (buff+20) - p for this, as UINT64_MAX is 20 characters.
+
+//
+// buff: A pointer to a buffer that is at least 20 bytes long.
+// value: the value to be turned into a string.
+//
+// Returns: A pointer into the buffer that is the first character of the string.
+// Note that this is not necessarily the first character of the buffer.
+// You can get the length of the written string via pointer arithmetic:
+//
 static inline
 char*
 uint64_to_str_buffer(char*  buff, uint64_t value){

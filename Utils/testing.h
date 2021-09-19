@@ -68,7 +68,7 @@ static const char* _test_color_red   = ""
 #define TestPrintValue(str, val) \
     _Generic(val, \
     TestPrintFuncs(TestPrintFunc) \
-    struct{}: 0)(__FILE__, __func__, __LINE__, str, val)
+    struct{int foo;}: 0)(__FILE__, __func__, __LINE__, str, val)
     
 #define TestPrintImpl_(suffix, type, fmt, ...) \
     static inline __attribute__((always_inline)) void \
@@ -398,7 +398,7 @@ struct TestStats
 run_the_tests(size_t*_Nullable which_tests, int test_count){
     struct TestStats result = {};
     if(test_count){
-        for(size_t i = 0; i < test_count; i++){
+        for(int i = 0; i < test_count; i++){
             TestFunc* func = test_funcs[which_tests[i]].test_func;
             assert(func);
             struct TestStats func_result = func();
@@ -409,7 +409,7 @@ run_the_tests(size_t*_Nullable which_tests, int test_count){
             }
         }
     else {
-        for (int i = 0; i < test_funcs_count; i++){
+        for (size_t i = 0; i < test_funcs_count; i++){
             if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED)
                 continue;
             TestFunc* func = test_funcs[i].test_func;
@@ -506,7 +506,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
             return 1;
             }
         case LIST:
-            for(int i = 0; i < test_funcs_count; i++){
+            for(size_t i = 0; i < test_funcs_count; i++){
                 fprintf(stdout, "%s\t", test_funcs[i].test_name.text);
                 if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED){
                     fprintf(stdout, "Will-Skip");
@@ -521,7 +521,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     if(e){
         print_argparse_error(&argparser, e);
         fprintf(stderr, "Use --help to see usage.\n");
-        return e;
+        return (int)e;
         }
     if(directory.length){
         int changed = chdir(directory.text);

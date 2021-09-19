@@ -1,11 +1,12 @@
 #include "testing.h"
 #include "long_string.h"
 #include "base64.h"
-#include "mallocator.h"
+#include "Allocators/recording_allocator.h"
 
 TestFunction(TestBase64){
     TESTBEGIN();
-    MStringBuilder sb = {.allocator=get_mallocator()};
+    Allocator a = new_recorded_mallocator();
+    MStringBuilder sb = {.allocator=a};
     {
         StringView text = SV("any carnal pleasur");
         msb_write_b64(&sb, text.text, text.length);
@@ -48,12 +49,13 @@ TestFunction(TestBase64){
         TestExpectNotEquals(e2, BASE64_NO_ERROR);
     }
     msb_destroy(&sb);
+    shallow_free_recorded_mallocator(a);
     TESTEND();
     }
 
 TestFunction(TestBase64_2){
     TESTBEGIN();
-    Allocator a = get_mallocator();
+    Allocator a = new_recorded_mallocator();
     {
         StringView data = SV("YW55IGNhcm5hbCBwbGVhc3Vy");
         ByteBuilder bb = {.allocator = a};
@@ -74,6 +76,7 @@ TestFunction(TestBase64_2){
         TestExpectEquals(memcmp(decoded, data, sizeof(data)), 0);
         msb_destroy(&sb);
     }
+    shallow_free_recorded_mallocator(a);
     TESTEND();
     }
 
@@ -82,4 +85,4 @@ int main(int argc, char** argv){
     RegisterTest(TestBase64_2);
     return test_main(argc, argv);
     }
-#include "allocator.c"
+#include "Allocators/allocator.c"

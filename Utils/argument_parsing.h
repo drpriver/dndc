@@ -708,7 +708,7 @@ next_tokenize_help(const char* help){
             case ' ': case '\n': case '\r': case '\t': case '\f': case '\0':{
                 return (struct HelpTokenized){
                     .token.text = begin,
-                    .token.length = help - begin,
+                    .token.length = (size_t)(help - begin),
                     .rest = help,
                     };
                 }break;
@@ -870,7 +870,7 @@ parse_arg(ArgToParse* arg, StringView s){
                 }
             else {
                 char* dest = arg->dest.pointer;
-                dest += arg->dest.user_pointer->type_size * arg->num_parsed;
+                dest += arg->dest.user_pointer->type_size * (size_t)arg->num_parsed;
                 int e = arg->dest.user_pointer->converter(arg->dest.user_pointer->user_data, s.text, s.length, dest);
                 if(e) return ARGPARSE_CONVERSION_ERROR;
                 }
@@ -965,9 +965,9 @@ check_for_early_out_args(ArgParser* parser, const Args* args){
         for(size_t j = 0; j < parser->early_out.count; j++){
             ArgToParse* early = &parser->early_out.args[j];
             if(SV_equals(argstring, early->name))
-                return j;
+                return (intptr_t)j;
             if(early->altname1.length && SV_equals(argstring, early->altname1))
-                return j;
+                return (intptr_t)j;
             }
         }
     return -1;
@@ -1035,7 +1035,7 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
                         kwarg = new_kwarg;
                         kwarg->visited = true;
                         if(kwarg->dest.type == ARG_FLAG || kwarg->dest.type == ARG_BITFLAG){
-                            int error = set_flag(kwarg);
+                            enum ArgParseError error = set_flag(kwarg);
                             if(error) {
                                 parser->failed.arg_to_parse = kwarg;
                                 parser->failed.arg = *arg;
@@ -1049,7 +1049,7 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
                 }
             }
         if(kwarg){
-            int err = parse_arg(kwarg, s);
+            enum ArgParseError err = parse_arg(kwarg, s);
             if(err){
                 parser->failed.arg = *arg;
                 parser->failed.arg_to_parse = kwarg;
@@ -1060,7 +1060,7 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
             }
         else if(pos_arg && pos_arg != past_the_end){
             pos_arg->visited = true;
-            int err = parse_arg(pos_arg, s);
+            enum ArgParseError err = parse_arg(pos_arg, s);
             if(err){
                 parser->failed.arg = *arg;
                 parser->failed.arg_to_parse = pos_arg;

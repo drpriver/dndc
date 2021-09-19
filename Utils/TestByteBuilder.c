@@ -1,10 +1,12 @@
 #include "testing.h"
 #include "ByteBuilder.h"
+#include "Allocators/recording_allocator.h"
 
 TestFunction(TestByteBuilder1){
     TESTBEGIN();
-    ByteBuilder bb = {};
-    ByteBuilder bb2 = {};
+    Allocator a = new_recorded_mallocator();
+    ByteBuilder bb = {.allocator = a};
+    ByteBuilder bb2 = {.allocator = a};
     uint16_t word = 0;
     word |= 'a' << 8;
     word |= 'b';
@@ -16,6 +18,7 @@ TestFunction(TestByteBuilder1){
     TestExpectEquals(memcmp(b.buff, b2.buff, sizeof(word)), 0);
     bb_destroy(&bb);
     bb_destroy(&bb2);
+    shallow_free_recorded_mallocator(a);
     TESTEND();
     }
 

@@ -2,21 +2,24 @@
 #include "long_string.h"
 #include "testing.h"
 #include "MStringBuilder.h"
-#include "Allocators/mallocator.h"
+#include "Allocators/recording_allocator.h"
 #include "msb_format.h"
 
 TestFunction(TestMStringBuilder1){
     TESTBEGIN();
-    MStringBuilder sb = {.allocator=get_mallocator()};
+    Allocator a = new_recorded_mallocator();
+    MStringBuilder sb = {.allocator=a};
     MSB_FORMAT(&sb, "hello there", " = ", 5, "\n");
     StringView s = msb_borrow(&sb);
     TestExpectEquals2(SV_equals, s, SV("hello there = 5\n"));
     msb_destroy(&sb);
+    shallow_free_recorded_mallocator(a);
     TESTEND();
     }
 TestFunction(TestMStringBuilder2){
     TESTBEGIN();
-    MStringBuilder sb = {.allocator=get_mallocator()};
+    Allocator a = new_recorded_mallocator();
+    MStringBuilder sb = {.allocator=a};
     struct test_case {
         int integer;
         StringView sv;
@@ -59,11 +62,13 @@ TestFunction(TestMStringBuilder2){
         }
     }
     msb_destroy(&sb);
+    shallow_free_recorded_mallocator(a);
     TESTEND();
     }
 TestFunction(TestMStringBuilder3){
     TESTBEGIN();
-    MStringBuilder sb = {.allocator=get_mallocator()};
+    Allocator a = new_recorded_mallocator();
+    MStringBuilder sb = {.allocator=a};
     MSB_FORMAT(&sb, "I have ", 2, " apples!");
     {
         StringView s = msb_borrow(&sb);
@@ -75,10 +80,12 @@ TestFunction(TestMStringBuilder3){
         TestExpectEquals2(SV_equals, s, SV("I have 2 apples!\nYou owe me 97 apples!"));
     }
     msb_destroy(&sb);
+    shallow_free_recorded_mallocator(a);
     TESTEND();
     }
 
-int main(int argc, char** argv){
+int 
+main(int argc, char** argv){
     RegisterTest(TestMStringBuilder1);
     RegisterTest(TestMStringBuilder2);
     RegisterTest(TestMStringBuilder3);

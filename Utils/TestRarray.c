@@ -1,22 +1,23 @@
 #include "testing.h"
-#include "Allocators/mallocator.h"
+#include "Allocators/recording_allocator.h"
 #define RARRAY_T int
 #include "Rarray.h"
 
 TestFunction(TestCheckSizeExample){
     TESTBEGIN();
-    Allocator al = get_mallocator();
+    Allocator al = new_recorded_mallocator();
     Rarray(int)* myarray = NULL;
     myarray = Rarray_check_size(int)(myarray, al);
     TestAssert(myarray);
     TestAssertEquals(myarray->capacity > 0, 1);
-    Allocator_free(al, myarray, sizeof(*myarray)*sizeof(*myarray->data)*myarray->capacity);
+    Allocator_free(al, myarray, sizeof(*myarray)+sizeof(*myarray->data)*myarray->capacity);
+    shallow_free_recorded_mallocator(al);
     TESTEND();
     }
 
 TestFunction(TestPushExample){
     TESTBEGIN();
-    Allocator al = get_mallocator();
+    Allocator al = new_recorded_mallocator();
     Rarray(int)* myarray = NULL;
     myarray = Rarray_push(int)(myarray, al, 1);
     TestAssert(myarray);
@@ -28,13 +29,14 @@ TestFunction(TestPushExample){
     TestAssertEquals(myarray->data[0], 1);
     TestAssertEquals(myarray->data[1], 2);
     TestAssertEquals(myarray->data[2], 3);
-    Allocator_free(al, myarray, sizeof(*myarray)*sizeof(*myarray->data)*myarray->capacity);
+    Allocator_free(al, myarray, sizeof(*myarray)+sizeof(*myarray->data)*myarray->capacity);
+    shallow_free_recorded_mallocator(al);
     TESTEND();
     }
 
 TestFunction(TestAllocExample){
     TESTBEGIN();
-    Allocator al = get_mallocator();
+    Allocator al = new_recorded_mallocator();
     Rarray(int)* myarray = NULL;
     // Use a block to scope the allocation as the returned pointer is unstable
     {
@@ -52,12 +54,13 @@ TestFunction(TestAllocExample){
     TestAssertEquals(myarray->count, 2);
     TestAssertEquals(myarray->data[0], 3);
     TestAssertEquals(myarray->data[1], 4);
+    shallow_free_recorded_mallocator(al);
     TESTEND();
     }
 
 TestFunction(TestRemoveExample){
     TESTBEGIN();
-    Allocator al = get_mallocator();
+    Allocator al = new_recorded_mallocator();
     Rarray(int)* myarray = NULL;
     myarray = Rarray_push(int)(myarray, al, 1);
     TestAssert(myarray);
@@ -69,6 +72,7 @@ TestFunction(TestRemoveExample){
     TestAssertEquals(myarray->count, 2);
     TestAssertEquals(myarray->data[0], 1);
     TestAssertEquals(myarray->data[1], 3);
+    shallow_free_recorded_mallocator(al);
     TESTEND();
     }
 
