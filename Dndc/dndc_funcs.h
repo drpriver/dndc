@@ -2,6 +2,7 @@
 #define DNDC_FUNCS_H
 #include "dndc.h"
 #include "errorable_long_string.h"
+#include "common_macros.h"
 #include "MStringBuilder.h"
 #include "ByteBuilder.h"
 #include "dndc_types.h"
@@ -461,7 +462,7 @@ end_interpreter(void);
 //
 static
 void
-append_child(DndcContext* , NodeHandle parent, NodeHandle child);
+append_child(DndcContext*, NodeHandle parent, NodeHandle child);
 
 //
 // Insert the node as a child of the parent at index i.

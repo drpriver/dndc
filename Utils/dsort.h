@@ -138,6 +138,7 @@ DSORT_IMPL(array_sort_d)(DSORT_T* data, size_t n_items, size_t depth){
         }
     DSORT_IMPL(short_sort)(r.data, r.count);
     }
+
 static inline
 void
 DSORT_IMPL(short_sort)(DSORT_T* data, size_t n_items){

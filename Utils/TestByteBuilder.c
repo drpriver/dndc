@@ -10,8 +10,8 @@ TestFunction(TestByteBuilder1){
     word |= 'b';
     bb_write_word(&bb, word);
     bb_write(&bb2, &word, 2);
-    auto b = bb_borrow(&bb);
-    auto b2 = bb_borrow(&bb2);
+    ByteBuffer b = bb_borrow(&bb);
+    ByteBuffer b2 = bb_borrow(&bb2);
     TestExpectEquals(memcmp(b.buff, &word, sizeof(word)), 0);
     TestExpectEquals(memcmp(b.buff, b2.buff, sizeof(word)), 0);
     bb_destroy(&bb);
@@ -34,4 +34,4 @@ main(int argc, char** argv){
     return test_main(argc, argv);
 }
 
-#include "allocator.c"
+#include "Allocators/allocator.c"

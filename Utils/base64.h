@@ -1,14 +1,34 @@
 #ifndef BASE64_H
 #define BASE64_H
+#include <stddef.h>
 #include <stdint.h>
 #include <assert.h>
 #include "MStringBuilder.h"
 #include "ByteBuilder.h"
-#include "error_handling.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
+
+#ifndef unreachable
+#define unreachable() __builtin_unreachable()
+#endif
+
+#ifndef warn_unused
+#if defined(__GNUC__) || defined(__clang__)
+#define warn_unused __attribute__((warn_unused_result))
+#elif defined(_MSC_VER)
+#define warn_unused _Check_return
+#else
+#define warn_unused
+#endif
+#endif
+
+typedef enum Base64Error{
+    BASE64_NO_ERROR = 0,
+    BASE64_DECODING_ERROR = 1,
+    BASE64_WOULD_OVERFLOW = 2,
+} Base64Error;
 
 // The size needed to encode a data buffer into a string.
 static inline
@@ -120,7 +140,7 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
     size_t i = 0;
     uint8_t* d = (uint8_t*) dst;
     const uint8_t* str = src;
-    auto len = src_length;
+    size_t len = src_length;
 
     /* unsigned here is important! */
     uint8_t t1, t2, t3, t4, t5, t6;
@@ -175,7 +195,7 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
             *d++ = base64_encode_table1[((t1 & 0b11) << 4) | ((t2 >> 4) & 0b1111)];
             *d++ = base64_encode_table2[(t2 & 0b1111) << 2];
     }
-    auto used_length = d - (uint8_t*)dst;
+    ptrdiff_t used_length = d - (uint8_t*)dst;
     assert(used_length == dst_length);
     return used_length;
 #if 0
@@ -281,9 +301,9 @@ msb_write_b64(MStringBuilder* restrict sb, const void* data, size_t length){
 // Returns a DECODING_ERROR if data is not a base64 character, like it's a '}' or something.
 // Doesn't support '=' as zero end-padding.
 static inline
-Errorable_f(void)
+warn_unused
+Base64Error
 base64_decode(void* restrict dst, size_t dst_length, const uint8_t* restrict src, size_t src_length){
-    Errorable(void) result = {};
     // In order to detect invalid inputs, but without introducing a branch on
     // every byte of input, we set bad inputs to have the 0b11000000  bits set
     // (which is outside the range of a 64 bit number). We then OR our bad mask
@@ -319,11 +339,11 @@ base64_decode(void* restrict dst, size_t dst_length, const uint8_t* restrict src
         [123 ... 255] = BAD,
         };
     size_t size_needed = base64_decode_size(src_length);
-    if(!size_needed) return result;
+    if(!size_needed) return BASE64_NO_ERROR;
     // we allow a 1 byte under in case last few bits were just padding.
     // AUDITME: make sure the math actually works out. Tests are passing for now.
     if(dst_length +1 < size_needed)
-        Raise(WOULD_OVERFLOW);
+        return BASE64_WOULD_OVERFLOW;
     unsigned bad = 0;
     uint8_t* out = dst;
     size_t length = src_length;
@@ -396,30 +416,30 @@ base64_decode(void* restrict dst, size_t dst_length, const uint8_t* restrict src
     else {
         // Assuming the last bits are always 0. Check that assumption here.
         if(remainder)
-            Raise(DECODING_ERROR);
+            return BASE64_DECODING_ERROR;
         }
     }
     // Return error if we read a bad input character.
     if(unlikely(bad & 0b11000000))
-        Raise(DECODING_ERROR);
+        return BASE64_DECODING_ERROR;
 
-    return result;
+    return BASE64_NO_ERROR;
     }
 
 // Decodes a base64 string into a ByteBuilder.
 // ByteBuilder handles things like allocating the proper size, etc.
 static inline
-Errorable_f(void)
+warn_unused
+Base64Error
 bb_decode_b64(ByteBuilder* bb, const uint8_t* restrict src, size_t src_length){
-    Errorable(void) result = {};
-    auto reserved_size = base64_decode_size(src_length);
-    if(!reserved_size) return result;
+    size_t reserved_size = base64_decode_size(src_length);
+    if(!reserved_size) return BASE64_NO_ERROR;
     bb_reserve(bb, reserved_size);
     void* dst = bb->data + bb->cursor;
-    auto e = base64_decode(dst, reserved_size, src, src_length);
-    if(e.errored) return e;
+    Base64Error e = base64_decode(dst, reserved_size, src, src_length);
+    if(e) return e;
     bb->cursor += reserved_size;
-    return result;
+    return BASE64_NO_ERROR;
     }
 
 #ifdef __clang__

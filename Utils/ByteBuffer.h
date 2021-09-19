@@ -1,12 +1,18 @@
 #ifndef BYTE_BUFFER_H
 #define BYTE_BUFFER_H
 // for size_t
-#include <stdlib.h>
-#include "common_macros.h"
-#include "error_handling.h"
+#include <stddef.h>
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
 typedef struct ByteBuffer {
-    Nonnull(void*) buff;
     size_t n_bytes;
+    void* buff;
 } ByteBuffer;
-Errorable_declare(ByteBuffer);
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
+
 #endif

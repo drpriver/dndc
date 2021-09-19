@@ -12,10 +12,12 @@
 #include "windowsheader.h"
 #endif
 
-#include "common_macros.h"
-
 #ifdef __clang__
 #pragma clang assume_nonnull begin
+#else
+#ifndef _Nullable
+#define _Nullable
+#endif
 #endif
 
 #ifdef __clang__
@@ -68,7 +70,7 @@
 //
 
 //
-// #define THREADFUNC(name) ret_type_differs (name)(Nullable(void*)thread_arg)
+// #define THREADFUNC(name) ret_type_differs (name)(void*_Nullable thread_arg)
 
 //
 // This structure is the handle to the thread. You will pass an unitialized one
@@ -80,7 +82,7 @@ typedef struct ThreadHandle ThreadHandle;
 #ifdef _WIN32
 typedef unsigned long ThreadReturnValue;
 #else
-typedef Nullable(void*) ThreadReturnValue;
+typedef void*_Nullable ThreadReturnValue;
 #endif
 
 
@@ -101,14 +103,14 @@ typedef Nullable(void*) ThreadReturnValue;
 //          return 0;
 //      }
 //
-#define THREADFUNC(name) ThreadReturnValue (name)(Nullable(void*)thread_arg)
+#define THREADFUNC(name) ThreadReturnValue (name)(void*_Nullable thread_arg)
 typedef THREADFUNC(thread_func);
 
 //
 // Creates and launches that thread, with the given thread func and argument.
 // Initializes the given handle with the info that identifies that thread.
 // thread_arg should be what the thread_func expects.
-static void create_thread(ThreadHandle* handle, thread_func* func, Nullable(void*)thread_arg);
+static void create_thread(ThreadHandle* handle, thread_func* func, void*_Nullable thread_arg);
 //
 // Waits for the corresponding thread to finish.
 // This is a synchronization event between the joiner and the joinee.
@@ -320,7 +322,7 @@ worker_wait(WorkerThread* w){
 
 static
 void
-create_thread(ThreadHandle* handle, thread_func* func, Nullable(void*)thread_arg){
+create_thread(ThreadHandle* handle, thread_func* func, void*_Nullable thread_arg){
     handle->thread = CreateThread(NULL, 0, func, thread_arg, 0, NULL);
     unhandled_error_condition(handle->thread == NULL);
     }

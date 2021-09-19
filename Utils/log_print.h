@@ -1,9 +1,6 @@
 #ifndef LOG_PRINT_H
 #define LOG_PRINT_H
 #include "long_string.h"
-#ifndef arrlen
-#define arrlen(arr) (sizeof(arr)/sizeof(arr[0]))
-#endif
 
 #ifndef force_inline
 #if defined(__GNUC__) || defined(__clang__)

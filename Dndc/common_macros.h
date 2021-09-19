@@ -18,16 +18,12 @@
 #include <assert.h>
 #include <stdbool.h>
 
-
+#ifndef force_inline
 #if defined(__GNUC__) || defined(__clang__)
 #define force_inline __attribute__((always_inline))
-#define never_inline __attribute__((noinline))
-#elif defined(_MSC_VER)
-#define force_inline __forceinline
-#define never_inline /*TODO*/
 #else
 #define force_inline
-#define never_inline
+#endif
 #endif
 
 #ifndef __cplusplus
@@ -80,13 +76,6 @@
 // which is not at all what you want, yet still compiles!
 #ifndef arrlen
 #define arrlen(arr) (sizeof(arr) / sizeof((arr)[0]) + __must_be_array(arr))
-#endif
-
-#ifndef ARRAY_FOR_EACH
-#define ARRAY_FOR_EACH(it, arr) \
-    for(typeof((arr)[0])*it = arr;\
-        it != arr + arrlen(arr);\
-        ++it)
 #endif
 
 #ifndef unreachable

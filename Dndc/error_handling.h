@@ -31,9 +31,6 @@
     apply(DECODING_ERROR, 7)\
     /*Math Errors*/ \
     apply(OVERFLOWED_VALUE, 8) \
-    /*File IO Errors*/ \
-    apply(FILE_ERROR, 9) \
-    apply(FILE_NOT_OPENED, 10) \
     /*Some low level routine failed*/ \
     apply(OS_ERROR, 11) \
     /*idk man*/ \

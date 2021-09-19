@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "dndc.h"
 #include "long_string.h"
+#include "common_macros.h"
 #include "dndc_node_types.h"
 // Type definitions for dndc, shared across components.
 

@@ -1,11 +1,12 @@
 #ifndef PYHEAD_H
 #define PYHEAD_H
 #define PY_SSIZE_T_CLEAN
-#include "common_macros.h"
 
 // Python's pytime.h triggers a visibility warning (at least on windows). We really don't care.
-PushDiagnostic();
-SuppressVisibility();
+#ifdef __clang___
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvisibility"
+#endif
 
 #if defined(_WIN32) && defined(_DEBUG)
 // Windows release of python only ships with release lib, but the _DEBUG macro
@@ -20,7 +21,9 @@ SuppressVisibility();
 #include <Python.h>
 #endif
 
-PopDiagnostic();
+#ifdef __clang___
+#pragma clang diagnostic pop
+#endif
 
 
 #if PY_MAJOR_VERSION < 3

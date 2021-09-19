@@ -24,6 +24,7 @@ get_t(void){
 
 #elif defined(_WIN32)
 
+#include <assert.h>
 #include "windowsheader.h"
 // Due to this static, we should call this very soon after entering main.
 static LARGE_INTEGER freq;

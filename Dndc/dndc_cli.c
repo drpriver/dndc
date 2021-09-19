@@ -398,10 +398,10 @@ main(int argc, char**argv){
         return 0;
     if(output_path.length){
         auto write_err = write_file(output_path.text, output.text, output.length);
-        if(write_err.errored){
+        if(write_err){
             // TODO: retrieve platform specific error message.
             fprintf(stderr, "Failed to write to output path: %s\n", output_path.text);
-            return write_err.errored;
+            return write_err;
             }
         }
     else {
@@ -448,9 +448,9 @@ dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths){
     auto deptext = msb_borrow(&msb);
     auto write_err = write_file(ud->depfile.text, deptext.text, deptext.length);
     msb_destroy(&msb);
-    if(write_err.errored){
+    if(write_err){
         perror("Error on write");
-        return write_err.errored;
+        return write_err;
         }
     return 0;
     }
@@ -606,7 +606,7 @@ dndc_print_out_syntax(LongString source_path){
         source_text = msb_detach(&sb);
         }
     else {
-        auto load_err = read_file(allocator, source_path.text);
+        auto load_err = read_file( source_path.text, allocator);
         if(load_err.errored){
             fprintf(stderr, "Unable to read: '%s'\n", source_path.text);
             return;

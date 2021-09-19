@@ -6,8 +6,15 @@
 #include <string.h>
 #include <stddef.h>
 #include "MStringBuilder.h"
-#include "common_macros.h"
 #include "long_string.h"
+
+#ifndef force_inline
+#if defined(__GNUC__) || defined(__clang__)
+#define force_inline __attribute__((always_inline))
+#else
+#define force_inline
+#endif
+#endif
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -273,7 +280,7 @@ msb_write_int_space_padded(MStringBuilder* sb, int32_t value, int width){
         size = (buff+10) - p;
         }
     size_t needed_size = size + is_negative;
-    auto cursor = sb->cursor;
+    size_t cursor = sb->cursor;
     char* data;
     if(needed_size >= width){
         _check_msb_remaining_size(sb, needed_size);
@@ -282,7 +289,7 @@ msb_write_int_space_padded(MStringBuilder* sb, int32_t value, int width){
     else {
         _check_msb_remaining_size(sb, width);
         data = sb->data;
-        auto pad = width - needed_size;
+        intptr_t pad = width - needed_size;
         memset(data+cursor, ' ', pad);
         cursor += pad;
         }

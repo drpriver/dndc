@@ -335,7 +335,7 @@ ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
     msb_destroy(&temp_builder);
 
     auto before = get_t();
-    auto load_err = read_file(ctx->textcache.allocator, path);
+    auto load_err = read_file(path, ctx->textcache.allocator);
     auto after = get_t();
     if(!load_err.errored){
         report_time(ctx, SV("Loading a file took "), after-before);
@@ -347,7 +347,7 @@ ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
     else {
         Allocator_free(ctx->textcache.allocator, path, sourcepath.length+1);
         }
-    return load_err;
+    return (Errorable(LongString)){.errored=load_err.errored, .result=load_err.result};
     }
 
 static
