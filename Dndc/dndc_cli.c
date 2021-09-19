@@ -8,6 +8,8 @@
 #include "term_util.h"
 #include "file_util.h"
 #include "MStringBuilder.h"
+#define GET_INPUT_API static inline
+#include "get_input.h"
 
 static
 void
@@ -315,15 +317,32 @@ main(int argc, char**argv){
         if(!source_path.text){
             // read from stdin
             MStringBuilder sb = {.allocator=get_mallocator()};
-            for(;;){
-                enum {N = 4096};
-                msb_ensure_additional(&sb, N);
-                char* buff = sb.data + sb.cursor;
-                auto numread = fread(buff, 1, N, stdin);
-                sb.cursor += numread;
-                if(numread != N)
-                    break;
+            if(isatty(fileno(stdin))){
+                char buff[4096];
+                struct LineHistory history = {};
+                for(;;){
+                    ssize_t len = get_input_line(&history, LS("> "), buff, sizeof(buff));
+                    if(len < 0)
+                        break;
+                    add_line_to_history(&history, (LongString){.length=len, .text=buff});
+                    msb_write_str(&sb, buff, len);
+                    msb_write_char(&sb, '\n');
+                    }
+                puts("^D");
                 }
+            else {
+                for(;;){
+                    enum {N = 4096};
+                    msb_ensure_additional(&sb, N);
+                    char* buff = sb.data + sb.cursor;
+                    auto numread = fread(buff, 1, N, stdin);
+                    sb.cursor += numread;
+                    if(numread != N)
+                        break;
+                    }
+                }
+            if(!sb.cursor)
+                msb_write_char(&sb, ' ');
             source_path = msb_detach(&sb);
             }
         else {
@@ -621,3 +640,4 @@ dndc_print_out_syntax(LongString source_path){
     }
 
 #include "dndc.c"
+#include "get_input.c"

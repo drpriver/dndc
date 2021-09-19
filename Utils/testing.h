@@ -444,6 +444,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
         }
     const char* filename = argv[0];
     bool no_colors = false;
+    bool force_colors = false;
     LongString directory = {};
     size_t tests_to_run[arrlen(test_funcs)] = {};
     struct ArgParseEnumType targets = {
@@ -465,6 +466,12 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
             .max_num = 1,
             .dest = ARGDEST(&no_colors),
             .help = "Dont use ANSI escape codes to print colors in reporting.",
+        },
+        {
+            .name = SV("--force-colors"),
+            .max_num = 1,
+            .dest = ARGDEST(&force_colors),
+            .help = "Always use ANSI escape codes to print colors in reporting, even if output is not a tty.",
         },
         {
             .name = SV("-t"),
@@ -533,7 +540,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
         }
 
     filename = strrchr(filename, '/')? strrchr(filename, '/')+1 : filename;
-    bool use_colors = !no_colors && isatty(fileno(stderr));
+    bool use_colors = force_colors || (!no_colors && isatty(fileno(stderr)));
     const char* gray  = use_colors? "\033[97m"    : "";
     const char* blue  = use_colors? "\033[94m"    : "";
     const char* green = use_colors? "\033[92m"    : "";
@@ -547,8 +554,8 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     _test_color_red = red;
 #endif
 
-    assert(SV_equals(kw_args[2].name, SV("-t")));
-    struct TestStats result = run_the_tests(tests_to_run, kw_args[2].num_parsed);
+    assert(SV_equals(kw_args[3].name, SV("-t")));
+    struct TestStats result = run_the_tests(tests_to_run, kw_args[3].num_parsed);
 
     const char* text = result.funcs_executed == 1?
         "test function executed"
