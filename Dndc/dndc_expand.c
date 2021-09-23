@@ -146,6 +146,7 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
             node_set_err(ctx, n, LS("INVALID_NODE"));
             Raise(PARSE_ERROR);
         }
+    unreachable();
     }
 
 static
@@ -245,6 +246,7 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
             node_set_err_q(ctx, n, SV("Node can't be expanded into text format: "), NODETYPE_TO_NODE_ALIASES[n->type]);
             Raise(PARSE_ERROR);
         }
+    unreachable();
     }
 static
 Errorable_f(void)

@@ -41,10 +41,14 @@
 #define STRINGIFY_IMPL(x) #x
 #define STRINGIFY(x) STRINGIFY_IMPL(x)
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 printf_func(5, 6)
 static
 void
-logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, ...);
+logfunc(int log_level, const char* file, const char* func, int line, const char* fmt, ...);
 // The log levels.
 #define LOG_LEVEL_HERE  0
 #define LOG_LEVEL_ERROR 1
@@ -124,7 +128,7 @@ logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int l
 
 
 #define LOGFUNC(name, type, fmt, ...) \
-    static inline force_inline void log_##name(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull expr, type x){ \
+    static inline force_inline void log_##name(int log_level, const char* file, const char* func, int line, const char* expr, type x){ \
         logfunc(log_level, file, func, line, "%s = " fmt, expr, ##__VA_ARGS__); \
         }
 #ifdef __clang__
@@ -142,5 +146,9 @@ LOGFUNCS(LOGFUNC);
 _Generic(x, \
         LOGFUNCS(LOGFUNC) \
         struct{}: 0)(loglevel, __FILE__, __func__, __LINE__, #x, x)
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
 #endif
