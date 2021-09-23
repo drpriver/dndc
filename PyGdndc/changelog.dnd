@@ -6,9 +6,14 @@ Version 0.7.2::md
   * A new block type, "details", has been added. It is parsed
     like a md block and generates a <details> tag.
   * Added new methods to nodes in js and python blocks:
-    - clone(): returns an orphaned copy of the node.
-    - insert_child(index, newchild): inserts the node as a child
-      at the given index, shifting the other children down by 1.
+    - <code>clone()</code>: returns an orphaned copy of the node.
+    - <code>insert_child(index, newchild)</code>: inserts the
+      node as a child at the given index, shifting the other
+      children down by 1.
+  * Previously only certain inline html tags were allowed.
+    The complete list is now: <code>&lt;s&gt;</code>,
+    <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>,
+    <code>&lt;br&gt;</code>, <code>&lt;code&gt;</code>.
 Version 0.7.1::md
   * Fix bug in js api.
   * Internal API changes.

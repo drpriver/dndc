@@ -429,7 +429,19 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
                     }
                 msb_write_char(sb, c);
                 }break;
-            case '&':{
+            case '&':{ // allow &lt;, &gt;
+                if(length - i >= 4){
+                    if(memcmp(text+i, "&lt;", 4) == 0){
+                        msb_write_literal(sb, "&lt;");
+                        i += 3;
+                        continue;
+                        }
+                    if(memcmp(text+i, "&gt;", 4) == 0){
+                        msb_write_literal(sb, "&gt;");
+                        i += 3;
+                        continue;
+                        }
+                    }
                 msb_write_literal(sb, "&amp;");
                 }break;
             case '<':{
