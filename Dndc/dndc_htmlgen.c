@@ -433,9 +433,28 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
                 msb_write_literal(sb, "&amp;");
                 }break;
             case '<':{
-                // we allow inline <b>, <s>, <i>, </b>, </s>, </i>
-                if(i < length - 1){
+                // we allow inline <b>, <s>, <i>, </b>, </s>, </i>, <br>, <code>, </code>
+                // This is a big mess and should be done in an easier to do way.
+                if(length - i >= 2){
                     char peek1 = text[i+1];
+                    if(peek1 == 'c'){ // could be <code> tag
+                        if(length - i >= sizeof("<code>")-2){
+                            if(memcmp(text+i, "<code>", sizeof("<code>")-1) == 0){
+                                msb_write_literal(sb, "<code>");
+                                i += 5;
+                                continue;
+                                }
+                            }
+                        }
+                    if(peek1 == '/'){
+                        if(length - i >= sizeof("</code>")-2){
+                            if(memcmp(text+i, "</code>", sizeof("</code>")-1) == 0){
+                                msb_write_literal(sb, "</code>");
+                                i += sizeof("</code>")-2;
+                                continue;
+                                }
+                            }
+                        }
                     switch(peek1){
                         case 'b':
                         case 's':
@@ -446,8 +465,15 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
                             msb_write_literal(sb, "&lt;");
                             continue;
                         }
-                    if(i < length - 2){
+                    if(length - i >= 3){
                         char peek2 = text[i+2];
+                        if(peek1 == 'b' && peek2 == 'r'){
+                            if(length - i >= 4 && text[i+3] == '>'){
+                                msb_write_literal(sb, "<br>");
+                                i += 3;
+                                continue;
+                                }
+                            }
                         if(peek1 != '/'){
                             if(peek2 == '>'){
                                 msb_write_char(sb, c);
@@ -468,7 +494,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
                                 msb_write_literal(sb, "&lt;");
                                 continue;
                             }
-                        if(i < length - 3){
+                        if(length -i >= 4){
                             char peek3 = text[i+3];
                             if(peek3 == '>'){
                                 msb_write_char(sb, c);
