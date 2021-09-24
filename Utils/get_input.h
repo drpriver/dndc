@@ -56,11 +56,15 @@ destroy_history(struct LineHistory*);
 
 GET_INPUT_API
 void
-add_line_to_history(struct LineHistory*, LongString line);
+add_line_to_history(struct LineHistory*, StringView line);
+
+GET_INPUT_API
+void
+add_line_to_history_len(struct LineHistory*, const char*, size_t);
 
 GET_INPUT_API
 ssize_t
-get_input_line(struct LineHistory*, LongString prompt, char* buff, size_t buff_len);
+get_input_line(struct LineHistory*, StringView prompt, char* buff, size_t buff_len);
 
 GET_INPUT_API
 int

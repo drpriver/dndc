@@ -67,8 +67,8 @@ void dbg(const char*fmt, ...){
 static int get_line_is_init;
 static void get_line_init(void);
 static int get_cols(void);
-static ssize_t get_line_internal(struct LineHistory* ,char* buff, size_t buffsize, LongString prompt);
-static ssize_t get_line_internal_loop(struct LineHistory*, char* buff, size_t buffsize, LongString prompt);
+static ssize_t get_line_internal(struct LineHistory* ,char* buff, size_t buffsize, StringView prompt);
+static ssize_t get_line_internal_loop(struct LineHistory*, char* buff, size_t buffsize, StringView prompt);
 
 struct TermState;
 static void enable_raw(struct TermState*);
@@ -77,7 +77,7 @@ static void disable_raw(struct TermState*);
 struct LineState {
     char* buff;
     size_t buffsize;
-    LongString prompt;
+    StringView prompt;
     size_t curr_pos;
     size_t length;
     size_t cols;
@@ -188,7 +188,7 @@ memdup(const void* src, size_t size){
 
 GET_INPUT_API
 ssize_t
-get_input_line(struct LineHistory* history, LongString prompt, char* buff, size_t buff_len){
+get_input_line(struct LineHistory* history, StringView prompt, char* buff, size_t buff_len){
     history->cursor = history->count;
     ssize_t length = get_line_internal(history, buff, buff_len, prompt);
     return length;
@@ -254,7 +254,7 @@ disable_raw(struct TermState*ts){
 
 static
 ssize_t
-get_line_internal(struct LineHistory* history, char* buff, size_t buffsize, LongString prompt){
+get_line_internal(struct LineHistory* history, char* buff, size_t buffsize, StringView prompt){
     if(!get_line_is_init)
         get_line_init();
     struct TermState termstate;
@@ -267,7 +267,7 @@ get_line_internal(struct LineHistory* history, char* buff, size_t buffsize, Long
 
 static
 ssize_t
-get_line_internal_loop(struct LineHistory* history, char* buff, size_t buffsize, LongString prompt){
+get_line_internal_loop(struct LineHistory* history, char* buff, size_t buffsize, StringView prompt){
     DBG("Enter Loop\n");
     DBG("----------\n");
     struct LineState ls = {
@@ -278,7 +278,6 @@ get_line_internal_loop(struct LineHistory* history, char* buff, size_t buffsize,
     };
     write_data(prompt.text, prompt.length);
     memset(buff, 0, buffsize);
-    buff[0] = '\0';
     redisplay(&ls);
     enum {
         CTRL_A = 1,         // Ctrl-a
@@ -616,26 +615,33 @@ insert_char_into_line(struct LineState* ls, char c){
 
 GET_INPUT_API
 void
-add_line_to_history(struct LineHistory* history, LongString ls){
-    if(!ls.length)
+add_line_to_history_len(struct LineHistory* history, const char* text, size_t length){
+    if(!length)
         return; // no empties
     if(history->count){
         LongString* last = &history->history[history->count-1];
-        if(ls.length == last->length && memcmp(ls.text, last->text, ls.length) == 0)
+        if(length == last->length && memcmp(text, last->text, length) == 0)
             return; // Don't allow duplicates
     }
-    char* copy = memdup(ls.text, ls.length+1);
+    char* copy = malloc(length+1);
+    memcpy(copy, text, length);
+    copy[length] = 0;
     if(history->count == LINE_HISTORY_MAX){
         free_const_charp(history->history[0].text);
         memmove(history->history, history->history+1, (LINE_HISTORY_MAX-1)*sizeof(history->history[0]));
         history->history[LINE_HISTORY_MAX-1] = (LongString){
-            .length = ls.length,
+            .length = length,
             .text = copy,
             };
         }
     else {
-        history->history[history->count++] = (LongString){.length=ls.length, .text=copy};
+        history->history[history->count++] = (LongString){.length=length, .text=copy};
         }
+    }
+GET_INPUT_API
+void
+add_line_to_history(struct LineHistory* history, StringView sv){
+    add_line_to_history_len(history, sv.text, sv.length);
     }
 
 

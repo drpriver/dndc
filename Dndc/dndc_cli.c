@@ -302,7 +302,7 @@ main(int argc, char**argv){
             default:
                 break;
             }
-        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
+        enum ArgParseError e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         if(e){
             print_argparse_error(&argparser, e);
             fprintf(stderr, "Use --help to see usage.\n");
@@ -321,10 +321,10 @@ main(int argc, char**argv){
                 char buff[4096];
                 struct LineHistory history = {};
                 for(;;){
-                    ssize_t len = get_input_line(&history, LS("> "), buff, sizeof(buff));
+                    ssize_t len = get_input_line(&history, SV("> "), buff, sizeof(buff));
                     if(len < 0)
                         break;
-                    add_line_to_history(&history, (LongString){.length=len, .text=buff});
+                    add_line_to_history_len(&history, buff, len);
                     msb_write_str(&sb, buff, len);
                     msb_write_char(&sb, '\n');
                     }
