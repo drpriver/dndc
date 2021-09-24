@@ -134,6 +134,7 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
                 node_set_err(ctx, n, LS("NAV or HR has children"));
                 Raise(PARSE_ERROR);
                 }
+            return result;
         case NODE_IMPORT:
         case NODE_CONTAINER:{
             NODE_CHILDREN_FOR_EACH(child, n){
