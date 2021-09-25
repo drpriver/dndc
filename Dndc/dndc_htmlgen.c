@@ -9,6 +9,16 @@
 #include "measure_time.h"
 #include "msb_format.h"
 
+#ifdef __x86_64__
+#include <immintrin.h>
+#endif
+
+#ifdef __ARM_NEON
+#include <arm_neon.h>
+#endif
+
+
+
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
@@ -366,10 +376,9 @@ write_tag_escaped_str(MStringBuilder* sb, NullUnspec(const char*)text, size_t le
         }
     }
 
-
 static inline
 Errorable_f(void)
-write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const Node* node){
+write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const Node* node){
     Errorable(void) result = {};
     for(size_t i = 0; i < length; i++){
         char c = text[i];
@@ -539,6 +548,96 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
             }
         }
     return result;
+    }
+
+static inline
+Errorable_f(void)
+write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const Node* node){
+    msb_ensure_additional(sb, length);
+#if 1 && defined(__x86_64)
+    size_t cursor = sb->cursor;
+    char* sbdata = sb->data + cursor;
+    __m128i lsquare = _mm_set1_epi8('[');
+    __m128i rsquare = _mm_set1_epi8(']');
+    __m128i langle  = _mm_set1_epi8('<');
+    __m128i rangle  = _mm_set1_epi8('>');
+    __m128i amp     = _mm_set1_epi8('&');
+    __m128i control = _mm_set1_epi8(32);
+    while(length >= 16){
+        // This code is straightforward. Check each 16byte chunk for the
+        // presence of one of the special characters.  Also check for control
+        // characters (ascii < 32), as those are not valid in html, with the
+        // exception of newline.
+        //
+        // For the common case of no special character this is much faster
+        // than the byte at a time processing we'd otherwise have to do.
+        __m128i data         = _mm_loadu_si128((__m128i*)text);
+        __m128i test_lsquare = _mm_cmpeq_epi8(data, lsquare);
+        __m128i test_rsquare = _mm_cmpeq_epi8(data, rsquare); // Technically not a special character?
+        __m128i test_langle  = _mm_cmpeq_epi8(data, langle);
+        __m128i test_rangle  = _mm_cmpeq_epi8(data, rangle);
+        __m128i test_amp     = _mm_cmpeq_epi8(data, amp);
+        __m128i test_control = _mm_cmplt_epi8(data, control);
+        // Combine the results together so we can do a single check
+        __m128i Ored  = _mm_or_si128(test_lsquare, test_rsquare);
+        __m128i Ored2 = _mm_or_si128(test_langle, test_rangle);
+        __m128i Ored3 = _mm_or_si128(test_amp, test_control);
+        __m128i Ored4 = _mm_or_si128(Ored, Ored2);
+        __m128i Ored5 = _mm_or_si128(Ored3, Ored4);
+        int had_it = _mm_movemask_epi8(Ored5);
+        if(had_it)
+            break;
+        // Safe to store as we did the ensure additional above and we only
+        // write 1 byte of output per byte of input in this loop.
+        _mm_storeu_si128((__m128i_u*)sbdata, data);
+        cursor += 16;
+        sbdata += 16;
+        length -= 16;
+        text += 16;
+        }
+    sb->cursor = cursor;
+#endif
+#if 1 && defined(__ARM_NEON)
+    // NOTE: this code is untested on actual arm chip.
+    // It compiles and the logic is the same, but I didn't have
+    // access to this arch when I wrote it.
+    size_t cursor = sb->cursor;
+    unsigned char* sbdata = (unsigned char*)sb->data + cursor;
+    uint8x16_t lsquare = vdupq_n_u8('[');
+    uint8x16_t rsquare = vdupq_n_u8(']');
+    uint8x16_t langle  = vdupq_n_u8('<');
+    uint8x16_t rangle  = vdupq_n_u8('>');
+    uint8x16_t amp     = vdupq_n_u8('&');
+    uint8x16_t control = vdupq_n_u8(32);
+    while(length >= 16){
+        uint8x16_t data         = vld1q_u8((const unsigned char*)text);
+        uint8x16_t test_lsquare = vceqq_u8(data, lsquare);
+        uint8x16_t test_rsquare = vceqq_u8(data, rsquare); // Technically not a special character?
+        uint8x16_t test_langle  = vceqq_u8(data, langle);
+        uint8x16_t test_rangle  = vceqq_u8(data, rangle);
+        uint8x16_t test_amp     = vceqq_u8(data, amp);
+        uint8x16_t test_control = vcleq_u8(data, control);
+        // Combine the results together so we can do a single check
+        uint8x16_t Ored  = vorrq_u8(test_lsquare, test_rsquare);
+        uint8x16_t Ored2 = vorrq_u8(test_langle, test_rangle);
+        uint8x16_t Ored3 = vorrq_u8(test_amp, test_control);
+        uint8x16_t Ored4 = vorrq_u8(Ored, Ored2);
+        uint8x16_t Ored5 = vorrq_u8(Ored3, Ored4);
+        uint64x2_t had_it = vreinterpretq_u64_u8(Ored5);
+        // int had_it = _mm_movemask_epi8(Ored5);
+        if(vgetq_lane_u64(had_it, 0) | vgetq_lane_u64(had_it, 1))
+            break;
+        // Safe to store as we did the ensure additional above and we only
+        // write 1 byte of output per byte of input in this loop.
+        vst1q_u8(sbdata, data);
+        cursor += 16;
+        sbdata += 16;
+        length -= 16;
+        text += 16;
+        }
+    sb->cursor = cursor;
+#endif
+    return write_link_escaped_str_slow(ctx, sb, text, length, node);
     }
 
 static inline
