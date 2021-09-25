@@ -50,7 +50,7 @@ convert:
 
 run-tests: clean-tests tests
 
-all: tests dndc dndcbench EXAMPLE.html pydndc
+all: tests dndc EXAMPLE.html pydndc
 
 install: $(DNDC)
 	$(INSTALL) -C $< $(INSTALLDIR)/dndc$(EXE)

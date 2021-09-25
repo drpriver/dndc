@@ -15,11 +15,6 @@ $(OBJDIR)/dndc.o: Dndc/dndc.c $(DEPDIR)/dndc_o.dep opt.mak | $(DIRECTORIES)
 	$(CC) $(FLAGS) $(OPT_FLAGS) $(PYCFLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc_o.dep $< -c -o $@
 
 
-BENCHMARKITERS ?= 10000
-$(BINDIR)/dndcbench$(EXE): Dndc/dndc_cli.c $(DEPDIR)/dndcbench.dep Dndc/dndc.mak $(OBJDIR)/frozenstdlib.o $(BINDIR)/libquickjs$(SO)
-	$(CC) $(FLAGS) $(PLATFORM_FLAGS) -O1 -g $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/dndcbench.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(LINK_FLAGS) $(PYLDFLAGS) -DBENCHMARKING -DBENCHMARKITERS=$(BENCHMARKITERS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
-dndcbench: $(BINDIR)/dndcbench$(EXE)
-
 $(BINDIR)/dndcfuzz$(EXE): Dndc/dndcfuzz.c $(DEPDIR)/dndcfuzz.dep $(OBJDIR)/frozenstdlib.o $(OBJDIR)/libquickjs.o
 	$(CC) $(FLAGS) $(PLATFORM_FLAGS) -O1 -g $(PYCFLAGS) $(DEPFLAGS) $(DEPDIR)/dndcfuzz.dep $< $(OBJDIR)/frozenstdlib.o -o $@ $(OBJDIR)/libquickjs.o $(LINK_FLAGS) $(PYLDFLAGS) -fsanitize=fuzzer,address,undefined
 dndcfuzz: $(BINDIR)/dndcfuzz$(EXE)

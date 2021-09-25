@@ -126,17 +126,6 @@ executable(
   install: true,
   link_with: quickjs_static,
   )
-executable(
-  'dndcbench',
-  'Dndc/dndc_cli.c',
-  'PythonEmbed/frozenstdlib.c',
-  frozen_modules,
-  include_directories: includes,
-  dependencies:[pydep, thread_dep],
-  c_args: ['-DBENCHMARKING', '-DBENCHMARKITERS=1000', '-g'],
-  install: false,
-  link_with: quickjs_static,
-  )
 dndc_lib = both_libraries(
   'dndc',
   'Dndc/dndc.c',

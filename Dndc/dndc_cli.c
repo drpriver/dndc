@@ -58,6 +58,7 @@ main(int argc, char**argv){
     bool print_syntax = false;
     bool print_depends = false;
     bool cleanup = false;
+    int bench_iters = 0;
     {
         ArgToParse pos_args[] = {
             [0] = {
@@ -239,6 +240,13 @@ main(int argc, char**argv){
                         "initial input file). Python blocks can bypass this.",
                 .hidden = true,
             },
+            {
+                .name = SV("--bench-iters"),
+                .max_num = 1,
+                .dest = ARGDEST(&bench_iters),
+                .help = "Execute in a repeated loop this many times.",
+                .hidden = true,
+            },
             };
         enum {HELP, VERSION, HIDDEN_HELP};
         ArgToParse early_args[] = {
@@ -366,10 +374,12 @@ main(int argc, char**argv){
     if(!(flags & DNDC_NO_THREADS))
         worker = (WorkerThread*)dndc_worker_thread_create();
 
-    #ifdef BENCHMARKING
-    flags &= ~DNDC_NO_CLEANUP;
-    LongString output = {};
-    auto e = run_the_dndc(flags,
+    if(bench_iters){
+        LongString output = {};
+        flags &= ~DNDC_NO_CLEANUP;
+        for(int i = 0; i < bench_iters; i++){
+            Errorable(void) e = run_the_dndc(
+                flags,
                 base_dir,
                 source_path,
                 output_path,
@@ -379,55 +389,42 @@ main(int argc, char**argv){
                 dependency_func, &dependency_user_data,
                 dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
                 worker);
-
-    assert(!e.errored);
-    dndc_free_string(output);
-    flags |= DNDC_PYTHON_IS_INIT;
-    for(int i = 0; i < BENCHMARKITERS; i++){
-        e = run_the_dndc(flags,
-                base_dir,
-                source_path,
-                output_path,
-                &output,
-                NULL, NULL,
-                dndc_stderr_error_func, NULL,
-                dependency_func, &dependency_user_data,
-                dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
-                worker);
-        assert(!e.errored);
-        }
-    dndc_free_string(output);
-    end_interpreter();
-    return 0;
-    #else
-    LongString output;
-    auto e = run_the_dndc(flags,
-                 base_dir,
-                 source_path,
-                 output_path,
-                 &output,
-                 NULL, NULL,
-                 dndc_stderr_error_func, NULL,
-                 dependency_func, &dependency_user_data,
-                 dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
-                 worker
-                 );
-    if(e.errored) return e.errored;
-    if(flags & DNDC_DONT_WRITE)
-        return 0;
-    if(output_path.length){
-        auto write_err = write_file(output_path.text, output.text, output.length);
-        if(write_err){
-            // TODO: retrieve platform specific error message.
-            fprintf(stderr, "Failed to write to output path: %s\n", output_path.text);
-            return write_err;
+            assert(!e.errored);
+            dndc_free_string(output);
             }
+        end_interpreter();
+        return 0;
         }
     else {
-        puts(output.text);
+        LongString output;
+        Errorable(void) e = run_the_dndc(
+            flags,
+             base_dir,
+             source_path,
+             output_path,
+             &output,
+             NULL, NULL,
+             dndc_stderr_error_func, NULL,
+             dependency_func, &dependency_user_data,
+             dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
+             worker
+             );
+        if(e.errored) return e.errored;
+        if(flags & DNDC_DONT_WRITE)
+            return 0;
+        if(output_path.length){
+            auto write_err = write_file(output_path.text, output.text, output.length);
+            if(write_err){
+                // TODO: retrieve platform specific error message.
+                fprintf(stderr, "Failed to write to output path: %s\n", output_path.text);
+                return write_err;
+                }
+            }
+        else {
+            puts(output.text);
+            }
+        return 0;
         }
-    return 0;
-    #endif
     }
 
 
