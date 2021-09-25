@@ -417,7 +417,7 @@ run_the_dndc(uint64_t flags,
     // Parse the initial document.
     {
         auto before_parse = get_t();
-        auto e = dndc_parse(&ctx, ctx.root_handle, path, source.text);
+        auto e = dndc_parse(&ctx, ctx.root_handle, path, source.text, source.length);
         auto after_parse = get_t();
         report_time(&ctx, SV("Initial parsing took: "), after_parse-before_parse);
         if(e.errored){
@@ -510,7 +510,7 @@ run_the_dndc(uint64_t flags,
                     goto cleanup;
                     }
                 LongString imp_text = imp_e.result;
-                auto parse_e = dndc_parse(&ctx, child_handle, filename, imp_text.text);
+                auto parse_e = dndc_parse(&ctx, child_handle, filename, imp_text.text, imp_text.length);
                 if(parse_e.errored){
                     report_set_error(&ctx);
                     result.errored = parse_e.errored;

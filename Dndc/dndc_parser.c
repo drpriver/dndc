@@ -115,7 +115,8 @@ init_string_node(DndcContext* ctx, NodeHandle handle, StringView sv){
 
 static
 Errorable_f(void)
-dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const char* text){
+dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const char* text, size_t length){
+    (void)length;
     Errorable(void) result = {};
     ctx->cursor = text;
     ctx->linestart = NULL;

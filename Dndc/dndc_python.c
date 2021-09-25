@@ -215,7 +215,7 @@ py_parse_and_append_children(DndcContext* ctx, NodeHandle handle, PyObject* args
     auto source_text = pystring_to_longstring(text, ctx->string_allocator);
     auto old_filename = ctx->filename;
 
-    auto parse_e = dndc_parse(ctx, handle, SV("(generated string from script)"), source_text.text);
+    auto parse_e = dndc_parse(ctx, handle, SV("(generated string from script)"), source_text.text, source_text.length);
     if(parse_e.errored){
         PyErr_SetString(PyExc_ValueError, "Error while parsing");
         return NULL;

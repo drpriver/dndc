@@ -642,7 +642,7 @@ JSMETHOD(js_dndc_node_parse){
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
     LongString text = jsstring_to_longstring(jsctx, str, ctx->string_allocator);
     auto old_filename = ctx->filename;
-    auto parse_e = dndc_parse(ctx, handle, SV("(generated string from script)"), text.text);
+    auto parse_e = dndc_parse(ctx, handle, SV("(generated string from script)"), text.text, text.length);
     if(parse_e.errored){
         return JS_ThrowInternalError(jsctx, "Error while parsing");
         }

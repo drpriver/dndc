@@ -349,7 +349,7 @@ ctx_note_dependency(DndcContext* ctx, StringView path);
 //
 static
 Errorable_f(void)
-dndc_parse(DndcContext*, NodeHandle root, StringView filename, const char* text);
+dndc_parse(DndcContext*, NodeHandle root, StringView filename, const char* text, size_t length);
 
 //
 // Writes the document tree (starting from the context's root node)
