@@ -1496,7 +1496,7 @@ main(int argc, const char *_Null_unspecified *_Nonnull argv) {
     SYNTAX_COLORS[DNDC_SYNTAX_CLASS]              = [NSColor systemGrayColor];
     // SYNTAX_COLORS[DNDC_SYNTAX_BULLET]          =
     // SYNTAX_COLORS[DNDC_SYNTAX_COMMENT]         =
-    SYNTAX_COLORS[DNDC_SYNTAX_RAW_STRING]         = [NSColor greenColor]; // currently unused
+    SYNTAX_COLORS[DNDC_SYNTAX_RAW_STRING]         = [NSColor systemPinkColor]; // currently unused
     return NSApplicationMain(argc, argv);
 }
 

@@ -1115,6 +1115,10 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                             }
                         }
                     }
+                if(memmem(stripped.text, stripped.length, "@inline", sizeof("@inline")-1)){
+                    which = RAW;
+                    raw_indentation = stripped.text - begin;
+                    }
                 const char* postnodename = nodenameend;
                 for(;postnodename != endline;){
                     switch(*postnodename){
@@ -1243,6 +1247,10 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                             break;
                             }
                         }
+                    }
+                if(memmem(stripped.text, stripped.length*2, u"@inline", sizeof(u"@inline")-2)){
+                    which = RAW;
+                    raw_indentation = stripped.text - begin;
                     }
                 const uint16_t* postnodename = nodenameend;
                 for(;postnodename != endline;){
