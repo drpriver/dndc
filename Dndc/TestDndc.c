@@ -15,6 +15,7 @@ static TestFunc TestFormatKV;
 static TestFunc TestCrashesFixed;
 static TestFunc TestExamplesWork;
 static TestFunc TestUntrusted;
+static TestFunc TestSpecialChars;
 
 int main(int argc, char** argv){
     dndc_init_python();
@@ -29,6 +30,7 @@ int main(int argc, char** argv){
     RegisterTest(TestCrashesFixed);
     RegisterTest(TestExamplesWork);
     RegisterTest(TestUntrusted);
+    RegisterTest(TestSpecialChars);
     int ret = test_main(argc, argv);
     end_interpreter();
     return ret;
@@ -477,6 +479,56 @@ TestFunction(TestUntrusted){
         auto e = run_the_dndc(flags, base_dirs[i], examples[i], LS("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
         TestExpectFalse(output.text);
         TestExpectFailure(e);
+        }
+    TESTEND();
+    }
+
+static inline
+StringView
+sv_slice(StringView src, size_t begin, size_t length){
+    assert(begin < src.length);
+    assert(length <= src.length -begin);
+    return (StringView){
+        .text = src.text+begin,
+        .length = length,
+        };
+    }
+TestFunction(TestSpecialChars){
+    TESTBEGIN();
+    struct test_case {
+        LongString source;
+        StringView result;
+    };
+    uint64_t flags = 0
+        | DNDC_ALLOW_BAD_LINKS
+        | DNDC_SUPPRESS_WARNINGS;
+    struct test_case testcases[] = {
+        {LS("---"), SV("&mdash;")},
+        {LS("--"), SV("&ndash;")},
+        {LS("--- ---"), SV("&mdash; &mdash;")},
+        // The ones with all the numbers are long enough to trigger simd code
+        {LS("1234567890123456 --- 1234567890123456"), SV("1234567890123456 &mdash; 1234567890123456")},
+        {LS("1234567890123456 -- 1234567890123456"), SV("1234567890123456 &ndash; 1234567890123456")},
+        {LS("1234567890123456 <p>hi!</p> 1234567890123456"), SV("1234567890123456 &lt;p&gt;hi!&lt;/p&gt; 1234567890123456")},
+        {LS("<p>hi!</p> 1234567890123456"), SV("&lt;p&gt;hi!&lt;/p&gt; 1234567890123456")},
+        {LS("<p>hi!</p>"), SV("&lt;p&gt;hi!&lt;/p&gt;")},
+        {LS("1234567890123456 <i>hi!</i> 1234567890123456"), SV("1234567890123456 <i>hi!</i> 1234567890123456")},
+        {LS("<i>hi!</i>"), SV("<i>hi!</i>")},
+        {LS("1234567890123456 <b>hi!</b> 1234567890123456"), SV("1234567890123456 <b>hi!</b> 1234567890123456")},
+        {LS("1234567890123456 <br>hi! 1234567890123456"), SV("1234567890123456 <br>hi! 1234567890123456")},
+        {LS("1234567890123456 <s>hi!</s> 1234567890123456"), SV("1234567890123456 <s>hi!</s> 1234567890123456")},
+        {LS("1234567890123456 [hi!] 1234567890123456"), SV("1234567890123456 <a href=\"hi\">hi!</a> 1234567890123456")},
+        {LS("1234567890123456 \r 1234567890123456"), SV("1234567890123456   1234567890123456")},
+        {LS("hi \r\n"), SV("hi")},
+        };
+    for(size_t i = 0; i < arrlen(testcases); i++){
+        LongString output = {};
+        auto e = run_the_dndc(flags, LS(""), testcases[i].source, LS("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
+        TestAssertSuccess(e);
+        if(!TestExpectEquals2(SV_equals, sv_slice(LS_to_SV(output), 198, testcases[i].result.length), testcases[i].result)){
+            TestPrintValue("output", output);
+            }
+        dndc_free_string(output);
         }
     TESTEND();
     }

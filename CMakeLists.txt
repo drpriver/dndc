@@ -9,7 +9,7 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 find_package(Python3 3.8 COMPONENTS Development)
 find_package(Threads REQUIRED)
 
-include_directories(Utils Dndc PythonEmbed Allocators PythonEmbed/frozen Vendored/quickjs)
+include_directories(Utils Dndc PythonEmbed Allocators PythonEmbed/frozen Vendored/quickjs ${CMAKE_SOURCE_DIR})
 
 if(WIN32)
 include_directories(Platform/Windows)

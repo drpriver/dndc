@@ -761,6 +761,7 @@ run_the_dndc(uint64_t flags,
         auto before_cleanup = get_t();
         if(ctx.flags & DNDC_PRINT_STATS){
             auto before = get_t();
+#if 0
             RecordingAllocator* recorder = allocator._data;
             report_size(&ctx, SV("N allocations: "), recorder->count);
             size_t total = 0;

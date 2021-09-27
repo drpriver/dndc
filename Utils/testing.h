@@ -207,33 +207,39 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
 //
 // Expects lhs == rhs, using the == operator
 //
-#define TestExpectEquals(lhs, rhs) do{\
+#define TestExpectEquals(lhs, rhs) ({\
         __auto_type _lhs = lhs; \
         __auto_type _rhs = rhs; \
         TEST_stats.executed++;\
+        int equal__ = 1; \
         if (!(_lhs == _rhs)) {\
+            equal__ = 0; \
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s == %s", #lhs, #rhs); \
             TestPrintValue(#lhs, _lhs);\
             TestPrintValue(#rhs, _rhs);\
             }\
-        }while(0)
+        equal__; \
+        })
 //
 // Expects lhs == rhs, using the passed in binary function instead of == operator
 //
-#define TestExpectEquals2(func, lhs, rhs) do{\
+#define TestExpectEquals2(func, lhs, rhs) ({\
         __auto_type _lhs = lhs; \
         __auto_type _rhs = rhs; \
         TEST_stats.executed++;\
+        int equal__ = 1; \
         if (!(func(_lhs, _rhs))) {\
+            equal__ = 0; \
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("!%s(%s, %s)", #func, #lhs, #rhs); \
             TestPrintValue(#lhs, _lhs);\
             TestPrintValue(#rhs, _rhs);\
             }\
-        }while(0)
+        equal__;\
+        })
 
 //
 // Expects lhs != rhs, using the != operator

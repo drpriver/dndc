@@ -163,25 +163,25 @@ THREADFUNC(worker_thread_main){
         w->job_data = NULL;
         if(job_data)
             job(job_data);
-#ifdef __APPLE__
-        dispatch_semaphore_signal(w->sem);
-#else
-        sem_post(&w->sem);
-#endif
+    #ifdef __APPLE__
+            dispatch_semaphore_signal(w->sem);
+    #else
+            sem_post(&w->sem);
+    #endif
         }
     pthread_mutex_unlock(&w->mutex);
     pthread_mutex_destroy(&w->mutex);
     pthread_cond_destroy(&w->worker_cond);
-#ifdef __APPLE__
-#if !__has_feature(objc_arc)
-    dispatch_release(w->sem);
-#else
-    // effectively releases it.
-    w->sem = NULL;
-#endif
-#else
-    sem_destroy(&w->sem);
-#endif
+    #ifdef __APPLE__
+        #if !__has_feature(objc_arc)
+            dispatch_release(w->sem);
+        #else
+            // effectively releases it.
+            w->sem = NULL;
+        #endif
+    #else
+        sem_destroy(&w->sem);
+    #endif
     free(w);
     return 0;
     }
@@ -193,11 +193,11 @@ worker_create(thread_func* job){
     w->job = job;
     pthread_cond_init(&w->worker_cond, NULL);
     pthread_mutex_init(&w->mutex, NULL);
-#ifdef __APPLE__
-    w->sem = dispatch_semaphore_create(0);
-#else
-    sem_init(&w->sem, 0, 0);
-#endif
+    #ifdef __APPLE__
+        w->sem = dispatch_semaphore_create(0);
+    #else
+        sem_init(&w->sem, 0, 0);
+    #endif
     create_thread(&w->thrd, worker_thread_main, w);
     return w;
     }

@@ -56,11 +56,11 @@ enum {ARENA_PAGE_SIZE=4096};
 // Arenas are in 64 page chunks. This might be excessive, idk.
 enum {ARENA_SIZE=ARENA_PAGE_SIZE*64};
 
-// The actual amount of data available is smaller due to the arena's haader.
+// The actual amount of data available is smaller due to the arena's header.
 enum {ARENA_BUFFER_SIZE = ARENA_SIZE-sizeof(void*)-sizeof(size_t)-sizeof(size_t)};
 
 //
-// An arena that is linearly allocated from. Maintains a both the current
+// An arena that is linearly allocated from. Maintains both the current
 // allocation point and the previous one so that fast realloc can be
 // implemented if reallocing the last allocation.
 //

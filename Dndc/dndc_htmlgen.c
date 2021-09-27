@@ -554,11 +554,11 @@ static inline
 Errorable_f(void)
 write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const Node* node){
     msb_ensure_additional(sb, length);
-#if 1 && defined(__x86_64)
+#if 1 && defined(__x86_64__)
     size_t cursor = sb->cursor;
     char* sbdata = sb->data + cursor;
     __m128i lsquare = _mm_set1_epi8('[');
-    __m128i rsquare = _mm_set1_epi8(']');
+    __m128i hyphen  = _mm_set1_epi8('-');
     __m128i langle  = _mm_set1_epi8('<');
     __m128i rangle  = _mm_set1_epi8('>');
     __m128i amp     = _mm_set1_epi8('&');
@@ -571,15 +571,15 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
         //
         // For the common case of no special character this is much faster
         // than the byte at a time processing we'd otherwise have to do.
-        __m128i data         = _mm_loadu_si128((__m128i*)text);
+        __m128i data         = _mm_loadu_si128((const __m128i*)text);
         __m128i test_lsquare = _mm_cmpeq_epi8(data, lsquare);
-        __m128i test_rsquare = _mm_cmpeq_epi8(data, rsquare); // Technically not a special character?
+        __m128i test_hyphen  = _mm_cmpeq_epi8(data, hyphen);
         __m128i test_langle  = _mm_cmpeq_epi8(data, langle);
         __m128i test_rangle  = _mm_cmpeq_epi8(data, rangle);
         __m128i test_amp     = _mm_cmpeq_epi8(data, amp);
         __m128i test_control = _mm_cmplt_epi8(data, control);
         // Combine the results together so we can do a single check
-        __m128i Ored  = _mm_or_si128(test_lsquare, test_rsquare);
+        __m128i Ored  = _mm_or_si128(test_lsquare, test_hyphen);
         __m128i Ored2 = _mm_or_si128(test_langle, test_rangle);
         __m128i Ored3 = _mm_or_si128(test_amp, test_control);
         __m128i Ored4 = _mm_or_si128(Ored, Ored2);
@@ -604,7 +604,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
     size_t cursor = sb->cursor;
     unsigned char* sbdata = (unsigned char*)sb->data + cursor;
     uint8x16_t lsquare = vdupq_n_u8('[');
-    uint8x16_t rsquare = vdupq_n_u8(']');
+    uint8x16_t hyphen = vdupq_n_u8('-');
     uint8x16_t langle  = vdupq_n_u8('<');
     uint8x16_t rangle  = vdupq_n_u8('>');
     uint8x16_t amp     = vdupq_n_u8('&');
@@ -612,23 +612,24 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
     while(length >= 16){
         uint8x16_t data         = vld1q_u8((const unsigned char*)text);
         uint8x16_t test_lsquare = vceqq_u8(data, lsquare);
-        uint8x16_t test_rsquare = vceqq_u8(data, rsquare); // Technically not a special character?
+        uint8x16_t test_hyphen = vceqq_u8(data, hyphen);
         uint8x16_t test_langle  = vceqq_u8(data, langle);
         uint8x16_t test_rangle  = vceqq_u8(data, rangle);
         uint8x16_t test_amp     = vceqq_u8(data, amp);
         uint8x16_t test_control = vcleq_u8(data, control);
-        // Combine the results together so we can do a single check
-        uint8x16_t Ored  = vorrq_u8(test_lsquare, test_rsquare);
+        // Combine the results together so we can do a single
+        // check
+        uint8x16_t Ored  = vorrq_u8(test_lsquare, test_hyphen);
         uint8x16_t Ored2 = vorrq_u8(test_langle, test_rangle);
         uint8x16_t Ored3 = vorrq_u8(test_amp, test_control);
         uint8x16_t Ored4 = vorrq_u8(Ored, Ored2);
         uint8x16_t Ored5 = vorrq_u8(Ored3, Ored4);
         uint64x2_t had_it = vreinterpretq_u64_u8(Ored5);
-        // int had_it = _mm_movemask_epi8(Ored5);
         if(vgetq_lane_u64(had_it, 0) | vgetq_lane_u64(had_it, 1))
             break;
-        // Safe to store as we did the ensure additional above and we only
-        // write 1 byte of output per byte of input in this loop.
+        // Safe to store as we did the ensure additional above and
+        // we only write 1 byte of output per byte of input in
+        // this loop.
         vst1q_u8(sbdata, data);
         cursor += 16;
         sbdata += 16;

@@ -266,7 +266,7 @@ main(int argc, char**argv){
                 .help = "Print out help for the hidden arguments and exit.",
             },
         };
-        const char* version = "dndc version " DNDC_VERSION ". Compiled " __TIMESTAMP__;
+        const char* version = "dndc version " DNDC_VERSION ". Compiled " __DATE__ " " __TIME__;
         ArgParser argparser = {
             .name = argv[0],
             .description = "A .dnd to .html parser and compiler.",
@@ -393,6 +393,8 @@ main(int argc, char**argv){
             dndc_free_string(output);
             }
         end_interpreter();
+        if(worker)
+            dndc_worker_thread_destroy((DndcWorkerThread*)worker);
         return 0;
         }
     else {

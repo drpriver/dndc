@@ -4,6 +4,10 @@
 #include "dndc_types.h"
 #include "str_util.h"
 
+#ifdef __x86_64__
+#include <immintrin.h>
+#endif
+
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
@@ -41,27 +45,106 @@ analyze_line(DndcContext* ctx){
     const char* endline = NULL;
     const char* cursor = ctx->cursor;
     int nspace = 0;
-    for(;;cursor++){
+    size_t length = ctx->end - ctx->cursor;
+#if 1 && defined(__x86_64__)
+    __m128i spaces  = _mm_set1_epi8(' ');
+    __m128i cr      = _mm_set1_epi8('\r');
+    __m128i tabs    = _mm_set1_epi8('\t');
+    while(length >= 16){
+        __m128i data         = _mm_loadu_si128((const __m128i*)cursor);
+        __m128i test_space = _mm_cmpeq_epi8(data, spaces);
+        __m128i test_cr    = _mm_cmpeq_epi8(data, cr);
+        __m128i test_tabs  = _mm_cmpeq_epi8(data, tabs);
+        __m128i spacecr    = _mm_or_si128(test_space, test_cr);
+        __m128i whitespace = _mm_or_si128(spacecr, test_tabs);
+        unsigned mask = _mm_movemask_epi8(whitespace);
+        int n = __builtin_ctz(~mask);
+        nspace += n;
+        if(n != 16){
+            cursor += n;
+            length -= n;
+            goto Lafterwhitespace;
+            }
+        cursor += 16;
+        length -= 16;
+        }
+#endif
+    for(;;cursor++, length--){
         char ch = *cursor;
         switch(ch){
             case ' ': case '\r': case '\t':
                 nspace++;
                 continue;
             default:
-                break;
+                goto Lafterwhitespace;
             }
-        break;
         }
+    Lafterwhitespace:;
+#if 1 && defined(__x86_64__)
+    __m128i colons  = _mm_set1_epi8(':');
+    __m128i newline = _mm_set1_epi8('\n');
+    __m128i zed     = _mm_set1_epi8(0);
+    while(length >= 17){
+        __m128i data0      = _mm_loadu_si128((const __m128i*)(cursor+0));
+        __m128i data1      = _mm_loadu_si128((const __m128i*)(cursor+1));
+        __m128i testcolon0 = _mm_cmpeq_epi16(data0, colons);
+        __m128i testcolon1 = _mm_cmpeq_epi16(data1, colons);
+        __m128i testnl     = _mm_cmpeq_epi8(data0, newline);
+        __m128i testzed    = _mm_cmpeq_epi8(data0, zed);
+        __m128i testend    = _mm_or_si128(testnl, testzed);
+        unsigned colon0    = _mm_movemask_epi8(testcolon0);
+        unsigned colon1    = _mm_movemask_epi8(testcolon1);
+        unsigned end       = _mm_movemask_epi8(testend);
+        if(end){
+            unsigned endoff = __builtin_ctz(end);
+            unsigned colonoff = -1;
+            if(colon0){
+                unsigned off = __builtin_ctz(colon0);
+                if(off < endoff && off < colonoff)
+                    colonoff = off;
+                }
+            if(colon1){
+                unsigned off = __builtin_ctz(colon1)+1;
+                if(off < endoff && off < colonoff)
+                    colonoff = off;
+                }
+            if(colonoff != (unsigned)-1){
+                doublecolon = cursor + colonoff;
+                }
+            endline = cursor + endoff;
+            goto Lfinish;
+            }
+        if(colon0 || colon1){
+            unsigned colonoff = -1;
+            if(colon0){
+                unsigned off = __builtin_ctz(colon0);
+                colonoff = off;
+                }
+            if(colon1){
+                unsigned off = __builtin_ctz(colon1)+1;
+                if(off < colonoff)
+                    colonoff = off;
+                }
+            if(colonoff != (unsigned)-1){
+                doublecolon = cursor + colonoff;
+                cursor += 16;
+                length -= 16;
+                goto Lendonly;
+                }
+            }
+        cursor += 16;
+        length -= 16;
+        }
+#endif
     for(;;cursor++){
         switch(*cursor){
             case '\n': case '\0':
                 endline = cursor;
-                break;
+                goto Lfinish;
             case ':':
-                if(!doublecolon){
-                    if(cursor[1] == ':'){
-                        doublecolon = cursor;
-                        }
+                if(cursor[1] == ':'){
+                    doublecolon = cursor;
+                    goto Lendonly;
                     }
                 continue;
             default:
@@ -69,6 +152,34 @@ analyze_line(DndcContext* ctx){
             }
         break;
         }
+    Lendonly:;
+#if 1 && defined(__x86_64__)
+    while(length >= 16){
+        __m128i data    = _mm_loadu_si128((const __m128i*)(cursor));
+        __m128i testnl  = _mm_cmpeq_epi8(data, newline);
+        __m128i testzed = _mm_cmpeq_epi8(data, zed);
+        __m128i testend = _mm_or_si128(testnl, testzed);
+        unsigned end = _mm_movemask_epi8(testend);
+        if(end){
+            unsigned endoff = __builtin_ctz(end);
+            endline = cursor + endoff;
+            goto Lfinish;
+            }
+        cursor += 16;
+        length -= 16;
+        }
+#endif
+    for(;;cursor++){
+        switch(*cursor){
+            case '\n': case '\0':
+                endline = cursor;
+                goto Lfinish;
+            default:
+                continue;
+            }
+        }
+
+    Lfinish:;
     ctx->doublecolon = doublecolon;
     ctx->line_end = endline;
     ctx->linestart = ctx->cursor;
@@ -116,9 +227,9 @@ init_string_node(DndcContext* ctx, NodeHandle handle, StringView sv){
 static
 Errorable_f(void)
 dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const char* text, size_t length){
-    (void)length;
     Errorable(void) result = {};
     ctx->cursor = text;
+    ctx->end = text + length;
     ctx->linestart = NULL;
     ctx->doublecolon = NULL;
     ctx->line_end = NULL;

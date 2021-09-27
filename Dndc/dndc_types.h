@@ -249,6 +249,7 @@ typedef struct DndcContext {
     // current parsing location
     struct {
         const char*_Nonnull cursor;
+        const char*_Nonnull end;
         const char*_Null_unspecified linestart;
         const char*_Nullable doublecolon;
         const char*_Null_unspecified line_end;

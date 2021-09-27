@@ -124,7 +124,7 @@ executable(
   include_directories: includes,
   dependencies:[pydep, thread_dep],
   install: true,
-  link_with: quickjs_static,
+  link_with: quickjs_dylib,
   )
 dndc_lib = both_libraries(
   'dndc',
@@ -167,21 +167,15 @@ endif
 
 # tests
 testkw = {'include_directories': includes}
-t = executable('TestArgumentParsing', 'Utils/TestArgumentParsing.c', kwargs:testkw, c_args:ignore_bogus_deprecations)
-test('argumentparsing', t)
-t = executable('TestBase64', 'Utils/TestBase64.c', kwargs:testkw, c_args:ignore_bogus_deprecations)
-test('base64', t)
-t = executable('TestByteBuilder', 'Utils/TestByteBuilder.c', kwargs:testkw, c_args:ignore_bogus_deprecations)
-test('bytebuilder', t)
-t = executable('TestMStringBuilder', 'Utils/TestMStringBuilder.c', kwargs:testkw, c_args:ignore_bogus_deprecations)
-test('mstringbuilder', t)
-t = executable('TestPathUtil', 'Utils/TestPathUtil.c', kwargs:testkw, c_args:ignore_bogus_deprecations)
-test('pathutil', t)
-t = executable('TestStrUtils', 'Utils/TestStrUtils.c', kwargs:testkw, c_args:ignore_bogus_deprecations)
-test('strutil', t)
-t = executable('TestRarray', 'Utils/TestRarray.c', kwargs:testkw, c_args:ignore_bogus_deprecations)
-test('rarray', t)
-t = executable('TestDndc',
+test('argumentparsing', executable('TestArgumentParsing', 'Utils/TestArgumentParsing.c', kwargs:testkw, c_args:ignore_bogus_deprecations))
+test('base64', executable('TestBase64', 'Utils/TestBase64.c', kwargs:testkw, c_args:ignore_bogus_deprecations))
+test('bytebuilder', executable('TestByteBuilder', 'Utils/TestByteBuilder.c', kwargs:testkw, c_args:ignore_bogus_deprecations))
+test('mstringbuilder', executable('TestMStringBuilder', 'Utils/TestMStringBuilder.c', kwargs:testkw, c_args:ignore_bogus_deprecations))
+test('pathutil', executable('TestPathUtil', 'Utils/TestPathUtil.c', kwargs:testkw, c_args:ignore_bogus_deprecations))
+test('strutil', executable('TestStrUtils', 'Utils/TestStrUtils.c', kwargs:testkw, c_args:ignore_bogus_deprecations))
+test('rarray', executable('TestRarray', 'Utils/TestRarray.c', kwargs:testkw, c_args:ignore_bogus_deprecations))
+test('dndc',
+  executable('TestDndc',
   'Dndc/TestDndc.c',
   'PythonEmbed/frozenstdlib.c',
   frozen_modules,
@@ -189,8 +183,8 @@ t = executable('TestDndc',
   dependencies:[pydep, thread_dep],
   c_args: ['-DQJS_SHARED_LIBRARY']+ignore_bogus_deprecations,
   link_with: quickjs_dylib,
-  )
-test('dndc', t, args:['-C', meson.source_root()])
+  ),
+  args:['-C', meson.source_root()])
 
 qt5 = import('qt5')
 qt5_dep = dependency('qt5', modules: ['Core', 'Gui', 'Widgets', 'WebEngineWidgets'], required:false)

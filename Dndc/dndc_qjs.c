@@ -909,15 +909,7 @@ js_dndc_node_get_children(QJSContext* jsctx, QJSValueConst thisValue){
             return call;
             }
         }
-    QJSValue froze = js_freeze_object(jsctx, array);
-    if(JS_IsException(froze)){
-        JS_FreeValue(jsctx, array);
-        return froze;
-        }
-    else {
-        JS_FreeValue(jsctx, froze);
-        return array;
-        }
+    return array;
     }
 
 JSGETTER(js_dndc_node_get_header){
