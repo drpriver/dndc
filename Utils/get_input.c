@@ -11,8 +11,6 @@
 #include <Windows.h>
 #include <conio.h>
 #include <io.h>
-typedef long long ssize_t;
-#include <shlobj_core.h>
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
@@ -27,7 +25,6 @@ typedef long long ssize_t;
 #endif
 
 #include "get_input.h"
-// #include "common_macros.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -39,6 +36,7 @@ typedef long long ssize_t;
 #define _Nonnull
 #endif
 #endif
+
 
 #if 0
 FILE* loop_fp;
@@ -87,7 +85,7 @@ static void change_history(struct LineHistory*, struct LineState*, int magnitude
 static void redisplay(struct LineState*);
 static void delete_right(struct LineState*);
 static void insert_char_into_line(struct LineState*, char);
-static inline void free_const_charp(const char* p);
+static inline void free_const_char_pointer(const char* p);
 
 static inline
 ssize_t
@@ -627,7 +625,7 @@ add_line_to_history_len(struct LineHistory* history, const char* text, size_t le
     memcpy(copy, text, length);
     copy[length] = 0;
     if(history->count == LINE_HISTORY_MAX){
-        free_const_charp(history->history[0].text);
+        free_const_char_pointer(history->history[0].text);
         memmove(history->history, history->history+1, (LINE_HISTORY_MAX-1)*sizeof(history->history[0]));
         history->history[LINE_HISTORY_MAX-1] = (LongString){
             .length = length,
@@ -724,35 +722,6 @@ get_cols(void){
 failed:
     return 80;
     }
-GET_INPUT_API
-int
-get_history_filename(char (*buff)[1024], const char* filename){
-#ifdef _WIN32
-    BOOL success = SHGetSpecialFolderPathA(
-            (HWND){0},
-            *buff,
-            CSIDL_MYDOCUMENTS,
-            1
-            );
-    if(!success){
-        return 1;
-        }
-    size_t length = strlen(*buff);
-    size_t fnlength = strlen(filename);
-    if(length + fnlength + 1 +1 > 1024)
-        return 1;
-    (*buff)[length] = '\\';
-    memcpy((*buff)+length+1, filename, fnlength);
-    (*buff)[length+fnlength+1] = 0;
-    return 0;
-#else
-    const char* home = getenv("HOME");
-    if(!home)
-        return 1;
-    snprintf(*buff, sizeof(*buff), "%s/%s", home, filename);
-    return 0;
-#endif
-    }
 
 GET_INPUT_API
 int
@@ -771,7 +740,7 @@ dump_history(struct LineHistory* history, const char* filename){
 
 static inline
 void
-free_const_charp(const char* p){
+free_const_char_pointer(const char* p){
     #ifdef __clang__
     #pragma clang diagnostic push
     #pragma clang diagnostic ignored "-Wcast-qual"
@@ -797,7 +766,7 @@ load_history(struct LineHistory* history, const char *filename){
         }
     char buff[1024];
     for(int i = 0; i < history->count; i++){
-        free_const_charp(history->history[i].text);
+        free_const_char_pointer(history->history[i].text);
         }
     history->count = 0;
     while(fgets(buff, sizeof(buff), fp)){
@@ -817,7 +786,7 @@ GET_INPUT_API
 void
 destroy_history(struct LineHistory* history){
     for(int i = 0; i < history->count; i++){
-        free_const_charp(history->history[i].text);
+        free_const_char_pointer(history->history[i].text);
         }
     }
 

@@ -45,11 +45,6 @@ GET_INPUT_API
 int
 load_history(struct LineHistory*, const char* filename);
 
-// get the history filename (puts it in home, lmao)
-GET_INPUT_API
-int
-get_history_filename(char (*buff)[1024], const char* filename);
-
 GET_INPUT_API
 void
 destroy_history(struct LineHistory*);
