@@ -80,7 +80,7 @@ force_inline
 StringView
 jsstring_make_stringview_js_allocated(QJSContext* jsctx, QJSValueConst v);
 
-static
+static inline
 QJSValue
 js_freeze_object(QJSContext* jsctx, QJSValueConst obj);
 
@@ -607,7 +607,7 @@ js_console_log(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
 }
 
 
-static
+static inline
 QJSValue
 js_freeze_object(QJSContext* jsctx, QJSValueConst obj){
     QJSValue global_obj = JS_GetGlobalObject(jsctx); // new ref
