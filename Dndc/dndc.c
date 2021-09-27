@@ -328,9 +328,8 @@ run_the_dndc(uint64_t flags,
         path = SV("(string input)");
     ArenaAllocator arena_allocator = {};
     const Allocator string_allocator = {.type=ALLOCATOR_ARENA, ._data=&arena_allocator};
-    const Allocator allocator = (flags & DNDC_NO_CLEANUP)?
-        get_mallocator()
-        : new_recorded_mallocator();
+    ArenaAllocator main_arena = {};
+    const Allocator allocator = {.type=ALLOCATOR_ARENA, ._data=&main_arena};
     // The linear allocator is very useful for temporary allocations, like
     // when we need to turn a string into its kebabed form and then look it up
     // in the link map. We do this a lot and throw away the temporary string
@@ -773,6 +772,18 @@ run_the_dndc(uint64_t flags,
                 }
             report_size(&ctx, SV("N existing allocations: "), alloced);
             report_size(&ctx, SV("Allocations outstanding total (bytes): "), total);
+#else
+            Arena* arena = main_arena.arena;
+            while(arena){
+                report_size(&ctx, SV("Arena used: "), arena->used);
+                arena = arena->prev;
+                }
+            BigAllocation* ba = main_arena.big_allocations;
+            while(ba){
+                report_size(&ctx, SV("Big allocation: "), ba->size);
+                ba = ba->next;
+                }
+#endif
             auto after = get_t();
             report_time(&ctx, SV("Reporting sizes: "), after-before);
             }
@@ -785,7 +796,7 @@ run_the_dndc(uint64_t flags,
         {
             auto before = get_t();
             Allocator_free_all(allocator);
-            shallow_free_recorded_mallocator(allocator);
+            // shallow_free_recorded_mallocator(allocator);
             auto after = get_t();
             report_time(&ctx, SV("Cleaning allocator: "), after-before);
         }
