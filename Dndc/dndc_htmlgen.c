@@ -36,11 +36,10 @@
 NODETYPES(X)
 #undef X
 
-typedef Errorable_f(void)(*_Nonnull renderfunc)(DndcContext*, MStringBuilder*, Node*, int);
+typedef Errorable_f(void)(renderfunc)(DndcContext*, MStringBuilder*, Node*, int);
 
 static
-const
-renderfunc RENDERFUNCS[] = {
+renderfunc*_Nonnull const RENDERFUNCS[] = {
     #define X(a,b) [NODE_##a] = &RENDERFUNCNAME(a),
     NODETYPES(X)
     #undef X
