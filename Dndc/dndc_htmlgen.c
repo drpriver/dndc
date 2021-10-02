@@ -378,6 +378,7 @@ write_tag_escaped_str(MStringBuilder* sb, NullUnspec(const char*)text, size_t le
 
 static inline
 Errorable_f(void)
+__attribute__((__noinline__))
 write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const Node* node){
     Errorable(void) result = {};
     for(size_t i = 0; i < length; i++){
@@ -550,6 +551,19 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
     return result;
     }
 
+#if 0
+void
+print_u8x16(const char* prefix, uint8x16_t v){
+    unsigned char buff[16];
+    memcpy(buff, &v, 16);
+    fprintf(stdout, "%s) ", prefix);
+    for(int i = 0; i < 16; i++){
+        fprintf(stdout, "[%d: %3u] ", i, buff[i]);
+        }
+    fprintf(stdout, "\n");
+    }
+#endif
+
 static inline
 Errorable_f(void)
 write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const Node* node){
@@ -612,11 +626,11 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
     while(length >= 16){
         uint8x16_t data         = vld1q_u8((const unsigned char*)text);
         uint8x16_t test_lsquare = vceqq_u8(data, lsquare);
-        uint8x16_t test_hyphen = vceqq_u8(data, hyphen);
+        uint8x16_t test_hyphen  = vceqq_u8(data, hyphen);
         uint8x16_t test_langle  = vceqq_u8(data, langle);
         uint8x16_t test_rangle  = vceqq_u8(data, rangle);
         uint8x16_t test_amp     = vceqq_u8(data, amp);
-        uint8x16_t test_control = vcleq_u8(data, control);
+        uint8x16_t test_control = vcltq_u8(data, control);
         // Combine the results together so we can do a single
         // check
         uint8x16_t Ored  = vorrq_u8(test_lsquare, test_hyphen);
@@ -625,8 +639,21 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
         uint8x16_t Ored4 = vorrq_u8(Ored, Ored2);
         uint8x16_t Ored5 = vorrq_u8(Ored3, Ored4);
         uint64x2_t had_it = vreinterpretq_u64_u8(Ored5);
-        if(vgetq_lane_u64(had_it, 0) | vgetq_lane_u64(had_it, 1))
+
+        if(vgetq_lane_u64(had_it, 0) | vgetq_lane_u64(had_it, 1)){
+#if 0
+            fprintf(stdout, "'%.*s'\n", 16, text);
+            print_u8x16("data", data);
+            print_u8x16("   [", test_lsquare);
+            print_u8x16("   -", test_hyphen);
+            print_u8x16("   <", test_langle);
+            print_u8x16("   >", test_rangle);
+            print_u8x16("   &", test_amp);
+            print_u8x16("ctrl", test_control);
+            print_u8x16("comb", Ored5);
+#endif
             break;
+            }
         // Safe to store as we did the ensure additional above and
         // we only write 1 byte of output per byte of input in
         // this loop.

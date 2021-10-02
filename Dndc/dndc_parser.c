@@ -8,6 +8,10 @@
 #include <immintrin.h>
 #endif
 
+#ifdef __ARM_NEON
+#include <arm_neon.h>
+#endif
+
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
@@ -36,6 +40,22 @@ PARSEFUNC(parse_list_node);
 PARSEFUNC(parse_list_item);
 PARSEFUNC(parse_md_node);
 
+// Copied from https://stackoverflow.com/a/68694558
+// Is there a better way to do this?
+static inline
+uint32_t 
+_mm_movemask_aarch64(uint8x16_t input){
+    _Alignas(16) const uint8_t ucShift[] = {-7,-6,-5,-4,-3,-2,-1,0,-7,-6,-5,-4,-3,-2,-1,0};
+    uint8x16_t vshift = vld1q_u8(ucShift);
+    uint8x16_t vmask = vandq_u8(input, vdupq_n_u8(0x80));
+
+    vmask = vshlq_u8(vmask, vshift);
+    uint32_t out = vaddv_u8(vget_low_u8(vmask));
+    out += vaddv_u8(vget_high_u8(vmask)) << 8;
+
+    return out;
+}
+
 static inline
 void
 analyze_line(DndcContext* ctx){
@@ -58,6 +78,30 @@ analyze_line(DndcContext* ctx){
         __m128i spacecr    = _mm_or_si128(test_space, test_cr);
         __m128i whitespace = _mm_or_si128(spacecr, test_tabs);
         unsigned mask = _mm_movemask_epi8(whitespace);
+        int n = __builtin_ctz(~mask);
+        nspace += n;
+        if(n != 16){
+            cursor += n;
+            length -= n;
+            goto Lafterwhitespace;
+            }
+        cursor += 16;
+        length -= 16;
+        }
+#endif
+#if 1 && defined(__ARM_NEON)
+    uint8x16_t spaces = vdupq_n_u8(' ');
+    uint8x16_t cr     = vdupq_n_u8('\r');
+    uint8x16_t tabs   = vdupq_n_u8('\t');
+    while(length >= 16){
+        uint8x16_t data       = vld1q_u8((const unsigned char*)cursor);
+        uint8x16_t test_space = vceqq_u8(data, spaces);
+        uint8x16_t test_cr    = vceqq_u8(data, cr);
+        uint8x16_t test_tabs  = vceqq_u8(data, tabs);
+        uint8x16_t spacecr    = vorrq_u8(test_space, test_cr);
+        uint8x16_t whitespace = vorrq_u8(spacecr, test_tabs);
+        uint64x2_t had_it     = vreinterpretq_u64_u8(whitespace);
+        unsigned mask = _mm_movemask_aarch64(whitespace);
         int n = __builtin_ctz(~mask);
         nspace += n;
         if(n != 16){
@@ -134,6 +178,15 @@ analyze_line(DndcContext* ctx){
             }
         cursor += 16;
         length -= 16;
+        }
+#endif
+#if 1 && defined(__ARM_NEON)
+    uint8x16_t colons   = vdupq_n_u8(':');
+    uint8x16_t newlines = vdupq_n_u8('\n');
+    uint8x16_t zed      = vdupq_n_u8(0);
+    while(length >= 17){
+        uint8x16_t data0 = vld1q_u8((const unsigned char*)cursor);
+        uint8x16_t data1 = vld1q_u8((const unsigned char*)cursor+1);
         }
 #endif
     for(;;cursor++){
