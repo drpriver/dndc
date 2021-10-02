@@ -189,8 +189,8 @@ analyze_line(DndcContext* ctx){
     while(length >= 17){
         uint8x16_t data0 = vld1q_u8((const unsigned char*)cursor);
         uint8x16_t data1 = vld1q_u8((const unsigned char*)cursor+1);
-        uint8x16_t testcolon0 = vreinterpretq_u8_u16(vceqq_u16(vreinterpretq_u16_u8(data0), vreintrepretq_uq8_u8(colons)));
-        uint8x16_t testcolon1 = vreinterpretq_u8_u16(vceqq_u16(vreinterpretq_u16_u8(data1), vreintrepretq_uq8_u8(colons)));
+        uint8x16_t testcolon0 = vreinterpretq_u8_u16(vceqq_u16(vreinterpretq_u16_u8(data0), vreinterpretq_u16_u8(colons)));
+        uint8x16_t testcolon1 = vreinterpretq_u8_u16(vceqq_u16(vreinterpretq_u16_u8(data1), vreinterpretq_u16_u8(colons)));
         uint8x16_t testnl = vceqq_u8(data0, newline);
         uint8x16_t testzed = vceqq_u8(data0, zed);
         uint8x16_t testend = vorrq_u8(testnl, testzed);
