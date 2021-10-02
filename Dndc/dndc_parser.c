@@ -40,6 +40,7 @@ PARSEFUNC(parse_list_node);
 PARSEFUNC(parse_list_item);
 PARSEFUNC(parse_md_node);
 
+#if defined(__ARM_NEON)
 // Copied from https://stackoverflow.com/a/68694558
 // Is there a better way to do this?
 static inline
@@ -55,6 +56,7 @@ _mm_movemask_aarch64(uint8x16_t input){
 
     return out;
 }
+#endif
 
 static inline
 void
@@ -181,12 +183,59 @@ analyze_line(DndcContext* ctx){
         }
 #endif
 #if 1 && defined(__ARM_NEON)
-    uint8x16_t colons   = vdupq_n_u8(':');
-    uint8x16_t newlines = vdupq_n_u8('\n');
-    uint8x16_t zed      = vdupq_n_u8(0);
+    uint8x16_t colons  = vdupq_n_u8(':');
+    uint8x16_t newline = vdupq_n_u8('\n');
+    uint8x16_t zed     = vdupq_n_u8(0);
     while(length >= 17){
         uint8x16_t data0 = vld1q_u8((const unsigned char*)cursor);
         uint8x16_t data1 = vld1q_u8((const unsigned char*)cursor+1);
+        uint8x16_t testcolon0 = vreinterpretq_u8_u16(vceqq_u16(vreinterpretq_u16_u8(data0), vreintrepretq_uq8_u8(colons)));
+        uint8x16_t testcolon1 = vreinterpretq_u8_u16(vceqq_u16(vreinterpretq_u16_u8(data1), vreintrepretq_uq8_u8(colons)));
+        uint8x16_t testnl = vceqq_u8(data0, newline);
+        uint8x16_t testzed = vceqq_u8(data0, zed);
+        uint8x16_t testend = vorrq_u8(testnl, testzed);
+        unsigned colon0 = _mm_movemask_aarch64(testcolon0);
+        unsigned colon1 = _mm_movemask_aarch64(testcolon1);
+        unsigned end    = _mm_movemask_aarch64(testend);
+        if(end){
+            unsigned endoff = __builtin_ctz(end);
+            unsigned colonoff = -1;
+            if(colon0){
+                unsigned off = __builtin_ctz(colon0);
+                if(off < endoff && off < colonoff)
+                    colonoff = off;
+                }
+            if(colon1){
+                unsigned off = __builtin_ctz(colon1)+1;
+                if(off < endoff && off < colonoff)
+                    colonoff = off;
+                }
+            if(colonoff != (unsigned)-1){
+                doublecolon = cursor + colonoff;
+                }
+            endline = cursor + endoff;
+            goto Lfinish;
+            }
+        if(colon0 || colon1){
+            unsigned colonoff = -1;
+            if(colon0){
+                unsigned off = __builtin_ctz(colon0);
+                colonoff = off;
+                }
+            if(colon1){
+                unsigned off = __builtin_ctz(colon1)+1;
+                if(off < colonoff)
+                    colonoff = off;
+                }
+            if(colonoff != (unsigned)-1){
+                doublecolon = cursor + colonoff;
+                cursor += 16;
+                length -= 16;
+                goto Lendonly;
+                }
+            }
+        cursor += 16;
+        length -= 16;
         }
 #endif
     for(;;cursor++){
@@ -213,6 +262,22 @@ analyze_line(DndcContext* ctx){
         __m128i testzed = _mm_cmpeq_epi8(data, zed);
         __m128i testend = _mm_or_si128(testnl, testzed);
         unsigned end = _mm_movemask_epi8(testend);
+        if(end){
+            unsigned endoff = __builtin_ctz(end);
+            endline = cursor + endoff;
+            goto Lfinish;
+            }
+        cursor += 16;
+        length -= 16;
+        }
+#endif
+#if 1 && defined(__ARM_NEON)
+    while(length >= 16){
+        uint8x16_t data    = vld1q_u8((const unsigned char*)cursor);
+        uint8x16_t testnl  = vceqq_u8(data, newline);
+        uint8x16_t testzed = vceqq_u8(data, zed);
+        uint8x16_t testend = vorrq_u8(testnl, testzed);
+        unsigned end       = _mm_movemask_aarch64(testend);
         if(end){
             unsigned endoff = __builtin_ctz(end);
             endline = cursor + endoff;
