@@ -60,6 +60,12 @@ extern "C" {
 // empty string (""). Thus, the length field should always be checked to see if
 // it is nonzero.
 //
+
+//
+// For ease of integration, you can define this stucture yourself (as a
+// typedef of an existing length + pointer structure.) The definition
+// should match this one exactly.
+#ifndef DNDC_LONGSTRING_DEFINED
 typedef struct DndcLongString {
     size_t length; // excludes the terminating NUL
     DNDC_NULLDEP(const char*) text; // utf-8 encoded text
@@ -78,6 +84,7 @@ typedef struct DndcStringViewUtf16 {
     // utf-16 encoded code points, native endianness
     DNDC_NULLDEP(const unsigned short*) text;
 } DndcStringViewUtf16;
+#endif
 
 //
 // The type of the error message.
