@@ -43,15 +43,19 @@ PARSEFUNC(parse_md_node);
 #if defined(__ARM_NEON)
 // Copied from https://stackoverflow.com/a/68694558
 // Is there a better way to do this?
+// It's pretty simple
 static inline
 uint32_t 
 _mm_movemask_aarch64(uint8x16_t input){
     _Alignas(16) const uint8_t ucShift[] = {-7,-6,-5,-4,-3,-2,-1,0,-7,-6,-5,-4,-3,-2,-1,0};
     uint8x16_t vshift = vld1q_u8(ucShift);
+    // Mask to only the msb of each lane.
     uint8x16_t vmask = vandq_u8(input, vdupq_n_u8(0x80));
 
+    // Shift the mask into place.
     vmask = vshlq_u8(vmask, vshift);
     uint32_t out = vaddv_u8(vget_low_u8(vmask));
+    // combine
     out += vaddv_u8(vget_high_u8(vmask)) << 8;
 
     return out;
