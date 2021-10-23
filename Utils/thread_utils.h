@@ -310,13 +310,14 @@ join_thread(ThreadHandle handle){
     }
 typedef struct WorkerThread {
     int unused;
-    }WorkerThread;
+}WorkerThread;
+static WorkerThread dummy_worker_thread;
 static THREADFUNC(worker_thread_main);
 // Create a new worker, with the given job func.
 static WorkerThread* worker_create(thread_func* job){
     unimplemented();
     (void)job;
-    return NULL;
+    return &dummy_worker_thread;
     }
 // Shutdown the worker and free the resources associated with it.
 static void worker_destroy(WorkerThread* w){

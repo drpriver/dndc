@@ -829,7 +829,7 @@ static
 QJSRuntime*
 new_qjs_rt(ArenaAllocator*aa){
     (void)aa;
-    return NULL;
+    return (void*_Nonnull)NULL;
     }
 
 static
