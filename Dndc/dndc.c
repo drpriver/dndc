@@ -34,6 +34,29 @@
 #pragma clang assume_nonnull begin
 #endif
 
+#if defined(_WIN32) || defined(WASM)
+// provide our own version
+static
+void*_Nullable
+memmem(const void* hay_, size_t haysz, const void* needle_, size_t needlesz){
+    if(!hay_ || !haysz || !needle_ || !needlesz) return NULL;
+    const char* hay = hay_;
+    const char* needle = needle_;
+    char first = *needle;
+    const char* hayend = hay+haysz;
+    for(;;){
+        const char* c = memchr(hay, first, hayend-hay);
+        if(!first) return NULL;
+        if(hayend-c < needlesz) return NULL;
+        if(memcmp(c, needle, needleszz) == 0)
+            return c;
+        hay = c+1;
+        }
+    }
+#else
+void*_Nullable memmem(const void*, size_t, const void*, size_t);
+#endif
+
 // Unsure of where to put this. So, just putting it here for now.
 typedef struct BinaryJob{
     Marray(StringView) sourcepaths;
