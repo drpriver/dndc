@@ -47,6 +47,7 @@
       td { padding: 4px 12px; }
       img { width: 100%;}
       body { max-width: 60em; margin: auto; padding: 0px 48px; }
+      /*endcss*/
 
     </textarea>
     <div id="checkboxes">
