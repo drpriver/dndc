@@ -618,7 +618,7 @@ static
 void
 dndc_print_out_syntax(StringView source_text){
     const char* where = source_text.text;
-    dndc_analyze_syntax(LS_to_SV(source_text), dndc_syntax_func, &where);
+    dndc_analyze_syntax(source_text, dndc_syntax_func, &where);
     if(where != source_text.text+source_text.length){
         fwrite(where, 1, (source_text.text+source_text.length) - where, stdout);
         }

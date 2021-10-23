@@ -379,7 +379,6 @@ run_the_dndc(uint64_t flags,
             if(ctx.base_directory.length){
                 MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", path, "'");
                 }
-            report_system_error(&ctx, msb_borrow(&err_builder));
             else{
                 MSB_FORMAT(&err_builder, "Unable to open '", path, "'");
                 }
