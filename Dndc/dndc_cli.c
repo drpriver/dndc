@@ -13,7 +13,7 @@
 
 static
 void
-dndc_print_out_syntax(LongString source_path);
+dndc_print_out_syntax(StringView source);
 
 static
 int
@@ -358,7 +358,16 @@ main(int argc, char**argv){
             }
     }
     if(print_syntax){
-        dndc_print_out_syntax(source_path);
+        if(flags & DNDC_SOURCE_IS_PATH_NOT_DATA){
+            auto allocator = get_mallocator();
+            auto load_err = read_file(source_path.text, allocator);
+            if(load_err.errored){
+                fprintf(stderr, "Unable to read: '%s'\n", source_path.text);
+                return 1;
+                }
+            source_path = load_err.result;
+            }
+        dndc_print_out_syntax(LS_to_SV(source_path));
         return 0;
     }
 
@@ -607,30 +616,7 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, const char* 
 
 static
 void
-dndc_print_out_syntax(LongString source_path){
-    LongString source_text;
-    Allocator allocator = get_mallocator();
-    if(!source_path.length){
-        MStringBuilder sb = {.allocator=allocator};
-        for(;;){
-            enum {N = 4096};
-            msb_ensure_additional(&sb, N);
-            char* buff = sb.data + sb.cursor;
-            auto numread = fread(buff, 1, N, stdin);
-            sb.cursor += numread;
-            if(numread != N)
-                break;
-            }
-        source_text = msb_detach(&sb);
-        }
-    else {
-        auto load_err = read_file( source_path.text, allocator);
-        if(load_err.errored){
-            fprintf(stderr, "Unable to read: '%s'\n", source_path.text);
-            return;
-            }
-        source_text = load_err.result;
-        }
+dndc_print_out_syntax(StringView source_text){
     const char* where = source_text.text;
     dndc_analyze_syntax(LS_to_SV(source_text), dndc_syntax_func, &where);
     if(where != source_text.text+source_text.length){

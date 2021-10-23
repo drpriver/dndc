@@ -304,12 +304,15 @@ run_the_dndc(uint64_t flags,
         Nullable(void*)ast_func_user_data,
         Nullable(WorkerThread*)worker
         ){
-    if(flags & DNDC_REFORMAT_ONLY)
+    if(flags & DNDC_REFORMAT_ONLY){
         flags |= DNDC_NO_PYTHON;
+        flags |= DNDC_NO_COMPILETIME_JS;
+        }
     if(flags & DNDC_OUTPUT_EXPANDED_DND)
         flags |= DNDC_DONT_INLINE_IMAGES;
     if(flags & DNDC_INPUT_IS_UNTRUSTED){
         flags |= DNDC_NO_PYTHON;
+        flags |= DNDC_NO_COMPILETIME_JS;
         flags |= DNDC_NO_THREADS;
         flags |= DNDC_DONT_INLINE_IMAGES;
         flags |= DNDC_DONT_READ;
@@ -372,18 +375,16 @@ run_the_dndc(uint64_t flags,
         auto source_err = ctx_load_source_file(&ctx, path);
         ctx.flags = old_flags;
         if(source_err.errored){
+            MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
             if(ctx.base_directory.length){
-                MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
                 MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", path, "'");
-                report_system_error(&ctx, msb_borrow(&err_builder));
-                msb_destroy(&err_builder);
                 }
+            report_system_error(&ctx, msb_borrow(&err_builder));
             else{
-                MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
                 MSB_FORMAT(&err_builder, "Unable to open '", path, "'");
-                report_system_error(&ctx, msb_borrow(&err_builder));
-                msb_destroy(&err_builder);
                 }
+            report_system_error(&ctx, msb_borrow(&err_builder));
+            msb_destroy(&err_builder);
             result.errored = source_err.errored;
             goto cleanup;
             }
