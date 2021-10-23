@@ -250,11 +250,11 @@ typedef struct ArgParseDestination {
         // to a structure that defines how to convert a string to the
         // value, how to print, etc.
         // See the struct definition for more information.
-        const ArgParseUserDefinedType* user_pointer;
+        const ArgParseUserDefinedType*_Nullable user_pointer;
         // This should be set if type == ARG_ENUM. It's a pointer to a
         // structure that defines the value enum values, its size, etc.
         // See the struct definition for more information.
-        const ArgParseEnumType* enum_pointer;
+        const ArgParseEnumType*_Nullable enum_pointer;
         // For the ARG_BITFLAG type, this will be '|='ed into the destination.
         uint64_t bitflag;
     };
@@ -708,7 +708,7 @@ next_tokenize_help(const char* help){
             case ' ': case '\n': case '\r': case '\t': case '\f': case '\0':{
                 return (struct HelpTokenized){
                     .token.text = begin,
-                    .token.length = help - begin,
+                    .token.length = (size_t)(help - begin),
                     .rest = help,
                     };
                 }break;
@@ -774,12 +774,12 @@ print_wrapped_help(const char*_Nullable help, int columns){
     putchar('\n');
     }
 
-static inline int set_flag(ArgToParse* arg);
+static inline enum ArgParseError set_flag(ArgToParse* arg);
 // Parse a single argument from a string.
 // Used internally. I guess you could use it if you really wanted to, but you
 // don't need this type generic version?
 static inline
-int
+enum ArgParseError
 parse_arg(ArgToParse* arg, StringView s){
     // Append_procs should signal their own error.
     if(arg->num_parsed >= arg->max_num)
@@ -870,7 +870,7 @@ parse_arg(ArgToParse* arg, StringView s){
                 }
             else {
                 char* dest = arg->dest.pointer;
-                dest += arg->dest.user_pointer->type_size * arg->num_parsed;
+                dest += arg->dest.user_pointer->type_size * (size_t)arg->num_parsed;
                 int e = arg->dest.user_pointer->converter(arg->dest.user_pointer->user_data, s.text, s.length, dest);
                 if(e) return ARGPARSE_CONVERSION_ERROR;
                 }
@@ -938,7 +938,7 @@ parse_arg(ArgToParse* arg, StringView s){
 
 // Set a flag. I really don't see why you would use this outside of this.
 static inline
-int
+enum ArgParseError
 set_flag(ArgToParse* arg){
     if(arg->dest.type == ARG_BITFLAG){
         uint64_t* dest = arg->dest.pointer;
@@ -965,9 +965,9 @@ check_for_early_out_args(ArgParser* parser, const Args* args){
         for(size_t j = 0; j < parser->early_out.count; j++){
             ArgToParse* early = &parser->early_out.args[j];
             if(SV_equals(argstring, early->name))
-                return j;
+                return (intptr_t)j;
             if(early->altname1.length && SV_equals(argstring, early->altname1))
-                return j;
+                return (intptr_t)j;
             }
         }
     return -1;
@@ -1035,7 +1035,7 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
                         kwarg = new_kwarg;
                         kwarg->visited = true;
                         if(kwarg->dest.type == ARG_FLAG || kwarg->dest.type == ARG_BITFLAG){
-                            int error = set_flag(kwarg);
+                            enum ArgParseError error = set_flag(kwarg);
                             if(error) {
                                 parser->failed.arg_to_parse = kwarg;
                                 parser->failed.arg = *arg;
@@ -1049,7 +1049,7 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
                 }
             }
         if(kwarg){
-            int err = parse_arg(kwarg, s);
+            enum ArgParseError err = parse_arg(kwarg, s);
             if(err){
                 parser->failed.arg = *arg;
                 parser->failed.arg_to_parse = kwarg;
@@ -1060,7 +1060,7 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
             }
         else if(pos_arg && pos_arg != past_the_end){
             pos_arg->visited = true;
-            int err = parse_arg(pos_arg, s);
+            enum ArgParseError err = parse_arg(pos_arg, s);
             if(err){
                 parser->failed.arg = *arg;
                 parser->failed.arg_to_parse = pos_arg;

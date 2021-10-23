@@ -18,16 +18,12 @@
 #include <assert.h>
 #include <stdbool.h>
 
-
+#ifndef force_inline
 #if defined(__GNUC__) || defined(__clang__)
 #define force_inline __attribute__((always_inline))
-#define never_inline __attribute__((noinline))
-#elif defined(_MSC_VER)
-#define force_inline __forceinline
-#define never_inline /*TODO*/
 #else
 #define force_inline
-#define never_inline
+#endif
 #endif
 
 #ifndef __cplusplus
@@ -78,17 +74,16 @@
 // Gets the length of an array, while avoiding the problem of pointers.
 // The problem of pointers is when you have `int* x` and write sizeof(x)/sizeof(x[0])
 // which is not at all what you want, yet still compiles!
+#ifndef arrlen
 #define arrlen(arr) (sizeof(arr) / sizeof((arr)[0]) + __must_be_array(arr))
+#endif
 
-#define ARRAY_FOR_EACH(it, arr) \
-    for(typeof((arr)[0])*it = arr;\
-        it != arr + arrlen(arr);\
-        ++it)
-
+#ifndef unreachable
 #ifdef DEBUG
 #define unreachable() do{assert(0);__builtin_unreachable();} while(0)
 #else
 #define unreachable() __builtin_unreachable()
+#endif
 #endif
 
 // This is for TODO error handling. Don't use bare assert for that as asserts
@@ -243,10 +238,12 @@
 // printf-like attributes
 //
 
+#ifndef printf_func
 #if defined(__GNUC__) || defined(__clang__)
 #define printf_func(fmt_idx, vararg_idx) __attribute__((__format__ (__printf__, fmt_idx, vararg_idx)))
 #else
 #define printf_func(...)
+#endif
 #endif
 
 // Realloc's signature is silly which makes it hard to

@@ -3,8 +3,21 @@
 #include <stdint.h>
 #include "dndc.h"
 #include "long_string.h"
+#include "common_macros.h"
 #include "dndc_node_types.h"
 // Type definitions for dndc, shared across components.
+
+#ifndef __clang__
+#ifndef _Nonnull
+#define _Nonnull
+#endif
+#ifndef _Nullable
+#define _Nullable
+#endif
+#ifndef _Null_unspecified
+#define _Null_unspecified
+#endif
+#endif
 
 //
 // Janky pseudo-template shenanigans
@@ -114,18 +127,34 @@ typedef struct Node {
     Rarray(Attribute)*_Nullable attributes;  // 8 bytes
     Rarray(StringView)*_Nullable classes;    // 8 bytes
     // Source filename (used for reporting errors)
-    StringView filename;           // 16 bytes
+    unsigned filename_idx; // 4 bytes
     // Location of first character of where this node originated from.
     // These are 0-based. Functions that report errors add 1 to this number
     // for the general human-readable version.
     int row, col;                  // 4 + 4 bytes.
+    // 4 bytes of padding in this struct
     // no padding in this struct
 } Node;
 
+#if UINTPTR_MAX != 0xFFFFFFFF
+_Static_assert(sizeof(Node) == 10*sizeof(size_t), "");
+// Damn these are fat.
+// As a huge number of nodes are string nodes, we need a different scheme
+// for storing children attributes and classes.
+_Static_assert(sizeof(Node) == 80, "");
+#endif
+
+#define MARRAY_T Node
+#include "Marray.h"
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 static inline
 force_inline
-Nonnull(NodeHandle*)
-node_children(Nonnull(Node*)node){
+NodeHandle*
+node_children(Node* node){
     if(node->children.count > 4)
         return node->children.data;
     return node->inline_children;
@@ -133,14 +162,14 @@ node_children(Nonnull(Node*)node){
 static inline
 force_inline
 size_t
-node_children_count(Nonnull(Node*)node){
+node_children_count(Node* node){
     return node->children.count;
 }
 
 static inline
 force_inline
 void
-node_remove_child(Nonnull(Node*)node, size_t i, const Allocator a){
+node_remove_child(Node* node, size_t i, const Allocator a){
     assert(i < node->children.count);
     if(node->children.count > 4){
         Marray_remove__NodeHandle(&node->children, i);
@@ -159,19 +188,9 @@ node_remove_child(Nonnull(Node*)node, size_t i, const Allocator a){
         }
     }
 
-#define NODE_CHILDREN_FOR_EACH(iter, n) for(NodeHandle *iter = node_children(n), *iter##end__=node_children(n)+n->children.count;iter != iter##end__;++iter)
 
+#define NODE_CHILDREN_FOR_EACH(iter, n) for(NodeHandle *iter = node_children(n), *iter##end__=node_children(n)+node_children_count(n);iter != iter##end__;++iter)
 
-#if UINTPTR_MAX != 0xFFFFFFFF
-_Static_assert(sizeof(Node) == 11*sizeof(size_t), "");
-// Damn these are fat.
-// As a huge number of nodes are string nodes, we need a different scheme
-// for storing children attributes and classes.
-_Static_assert(sizeof(Node) == 88, "");
-#endif
-
-#define MARRAY_T Node
-#include "Marray.h"
 
 struct DndcFileCache {
     Allocator allocator;
@@ -181,7 +200,7 @@ typedef struct DndcFileCache FileCache;
 
 static inline
 void
-FileCache_clear(Nonnull(FileCache*)cache){
+FileCache_clear(FileCache* cache){
     Allocator al = cache->allocator;
     MARRAY_FOR_EACH(src, cache->files){
         Allocator_free(al, src->sourcepath.text, src->sourcepath.length+1);
@@ -192,10 +211,10 @@ FileCache_clear(Nonnull(FileCache*)cache){
 
 static inline
 int
-FileCache_maybe_remove(Nonnull(FileCache*)cache, StringView path){
+FileCache_maybe_remove(FileCache* cache, StringView path){
     Allocator al = cache->allocator;
     for(size_t i = 0; i < cache->files.count; i++){
-        auto src = cache->files.data[i];
+        LoadedSource src = cache->files.data[i];
         if(LS_SV_equals(src.sourcepath, path)){
             Marray_remove(LoadedSource)(&cache->files, i);
             Allocator_free(al, src.sourcepath.text, src.sourcepath.length+1);
@@ -208,7 +227,7 @@ FileCache_maybe_remove(Nonnull(FileCache*)cache, StringView path){
 
 static inline
 bool
-FileCache_has_file(Nonnull(FileCache*)cache, StringView path){
+FileCache_has_file(FileCache* cache, StringView path){
     MARRAY_FOR_EACH(src, cache->files){
         if(LS_SV_equals(src->sourcepath, path)){
             return true;
@@ -236,6 +255,7 @@ typedef struct DndcContext {
         int nspaces;
         int lineno;
     };
+    Marray(StringView) filenames;
     // current file we are parsing. When not parsing, it is the entry point.
     StringView filename;
     // Base directory. All filepaths are relative to this directory.
@@ -288,8 +308,8 @@ typedef struct DndcContext {
     // See DndcFlags.
     uint64_t flags;
     // See dndc.h
-    Nullable(DndcErrorFunc*) error_func;
-    Nullable(void*) error_user_data;
+    DndcErrorFunc*_Nullable error_func;
+    void*_Nullable error_user_data;
     struct {
         StringView filename;
         int line; // 0-based
@@ -299,5 +319,8 @@ typedef struct DndcContext {
 } DndcContext;
 
 typedef union DndcDependsArg DependsArg;
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
 #endif

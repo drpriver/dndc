@@ -8,6 +8,8 @@
 #include "file_util.h"
 #include "mallocator.h"
 #include "log_print.h"
+
+#define auto __auto_type
 /* To avoid a circular dependency on frozen.o, we create our own structure
    of frozen modules instead, left deliberately blank so as to avoid
    unintentional import of a stale version of _frozen_importlib. */
@@ -44,7 +46,7 @@ main(int argc, char *argv[])
     name = argv[1];
     inpath = argv[2];
     outpath = argv[3];
-    auto insource = read_file(get_mallocator(), inpath);
+    auto insource = read_file(inpath, get_mallocator());
     if(insource.errored){
         fprintf(stderr, "cannot open '%s' for reading\n", inpath);
         goto error;

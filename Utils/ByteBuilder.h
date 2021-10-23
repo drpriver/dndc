@@ -1,18 +1,49 @@
 #ifndef BYTEBUILDER_H
 #define BYTEBUILDER_H
-#include "common_macros.h"
+// size_t, NULL
+#include <stddef.h>
+// integer types
+#include <stdint.h>
+// memcpy
+#include <string.h>
 #include "ByteBuffer.h"
-#include "allocator.h"
-#include "mallocator.h"
+#include "Allocators/allocator.h"
+#include "Allocators/mallocator.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
+#else
+#ifndef _Null_unspecified
+#define _Null_unspecified
+#endif
+#endif
+
+#ifndef force_inline
+#if defined(__GNUC__) || defined(__clang__)
+#define force_inline __attribute__((always_inline))
+#else
+#define force_inline
+#endif
+#endif
+
+#if !defined(likely) && !defined(unlikely)
+#if defined(__GNUC__) || defined(__clang__)
+#define likely(x)      __builtin_expect(!!(x), 1)
+#define unlikely(x)    __builtin_expect(!!(x), 0)
+#else
+#define likely(x) (x)
+#define unlikely(x) (x)
+#endif
+#endif
+
+#ifndef unhandled_error_condition
+#define unhandled_error_condition(cond) assert(!(cond))
 #endif
 
 typedef struct ByteBuilder {
     size_t cursor;
     size_t capacity;
-    NullUnspec(unsigned char*) data;
+    unsigned char*_Null_unspecified data;
     Allocator allocator;
 } ByteBuilder;
 
@@ -46,6 +77,7 @@ _check_bb_size(ByteBuilder* bb, size_t len){
         }
     _resize_bb(bb, new_size);
     }
+
 static inline
 void
 bb_reserve(ByteBuilder* bb, size_t n){
@@ -75,6 +107,7 @@ bb_write_qword(ByteBuilder* restrict bb, uint64_t qword){
     memcpy(bb->data+bb->cursor, &qword, 8);
     bb->cursor += 8;
     }
+
 static inline
 void
 force_inline
@@ -120,7 +153,7 @@ bb_borrow(ByteBuilder* bb){
 static inline
 ByteBuffer
 bb_detach(ByteBuilder* bb){
-    auto result = (ByteBuffer){
+    ByteBuffer result = {
         .buff = bb->data,
         .n_bytes = bb->cursor,
         };

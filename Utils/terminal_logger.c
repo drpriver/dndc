@@ -4,22 +4,34 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include "log_print.h"
-#include "common_macros.h"
 #include "term_util.h"
 
 // This file is the implementation of the logfunc needed by log_print.h
 //
 #ifdef __clang__
 #pragma clang assume_nonnull begin
+#else
+#ifndef _Nonnull
+#define _Nonnull
+#endif
 #endif
 
-static const char*_Nonnull const log_strings[] = {
+#ifndef printf_func
+#if defined(__GNUC__) || defined(__clang__)
+#define printf_func(fmt_idx, vararg_idx) __attribute__((__format__ (__printf__, fmt_idx, vararg_idx)))
+#else
+#define printf_func(...)
+#endif
+#endif
+
+enum {N_LOG_STRINGS=5};
+static const char*_Nonnull const log_strings[N_LOG_STRINGS] = {
     "[HERE ]",
     "[ERROR]",
     "[WARN ]",
     "[INFO ]",
     "[DEBUG]",
-    };
+};
 
 static
 void
@@ -27,7 +39,7 @@ vlogfunc(int log_level, const char* file, const char* func, int line, const char
     if(log_level > LOG_LEVEL)
         return;
     const char* log_text;
-    if(log_level > arrlen(log_strings))
+    if(log_level > N_LOG_STRINGS || log_level < 0)
         log_text = "[ ??? ]";
     else
         log_text = log_strings[log_level];

@@ -90,6 +90,34 @@ node_get_id(const Node* node){
         }
     return id;
     }
+
+static inline
+NodeHandle
+node_clone(DndcContext* ctx, NodeHandle handle){
+    NodeHandle result = alloc_handle(ctx);
+    Node* dstnode = get_node(ctx, result);
+    Node* srcnode = get_node(ctx, handle);
+    dstnode->type = srcnode->type;
+    dstnode->parent = INVALID_NODE_HANDLE;
+    dstnode->header = srcnode->header;
+    if(node_children_count(srcnode) <= 4){
+        dstnode->children = srcnode->children;
+        }
+    else {
+        Marray_extend(NodeHandle)(&dstnode->children, ctx->allocator, node_children(srcnode), node_children_count(srcnode));
+        }
+    RARRAY_FOR_EACH(at, srcnode->attributes){
+        dstnode->attributes = Rarray_push(Attribute)(dstnode->attributes, ctx->allocator, *at);
+        }
+    RARRAY_FOR_EACH(cls, srcnode->classes){
+        dstnode->classes = Rarray_push(StringView)(dstnode->classes, ctx->allocator, *cls);
+        }
+    dstnode->filename_idx = srcnode->filename_idx;
+    dstnode->row = srcnode->row;
+    dstnode->col = srcnode->col;
+    return result;
+    }
+
 static
 void
 parse_set_err(DndcContext* ctx, NullUnspec(const char*) errchar, LongString msg){
@@ -119,7 +147,7 @@ static
 void
 node_set_err_q(DndcContext* ctx, const Node* node, StringView msg, StringView quoted){
     MStringBuilder msb = {.allocator=ctx->string_allocator};
-    ctx->error.filename = node->filename;
+    ctx->error.filename = ctx->filenames.data[node->filename_idx];
     ctx->error.line = node->row;
     ctx->error.col = node->col;
     msb_write_str(&msb, msg.text, msg.length);
@@ -132,7 +160,7 @@ node_set_err_q(DndcContext* ctx, const Node* node, StringView msg, StringView qu
 static
 void
 node_set_err(DndcContext* ctx, const Node* node, LongString ls){
-    ctx->error.filename = node->filename;
+    ctx->error.filename = ctx->filenames.data[node->filename_idx];
     ctx->error.line = node->row;
     ctx->error.col = node->col;
     ctx->error.message = ls;
@@ -141,7 +169,7 @@ node_set_err(DndcContext* ctx, const Node* node, LongString ls){
 static
 void
 node_set_err_offset(DndcContext* ctx, const Node* node, int offset, LongString message){
-    ctx->error.filename = node->filename;
+    ctx->error.filename = ctx->filenames.data[node->filename_idx];
     ctx->error.line = node->row;
     ctx->error.col = node->col+offset;
     ctx->error.message = message;
@@ -154,7 +182,7 @@ node_print_err(DndcContext* ctx, const Node* node, StringView msg){
         return;
     if(not ctx->error_func)
         return;
-    auto filename = node->filename;
+    auto filename = ctx->filenames.data[node->filename_idx];
     auto lineno = node->row;
     int col = node->col;
     ctx->error_func(ctx->error_user_data, DNDC_ERROR_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
@@ -169,7 +197,7 @@ node_print_warning(DndcContext* ctx, const Node* node, StringView msg){
         return;
     if(not ctx->error_func)
         return;
-    auto filename = node->filename;
+    auto filename = ctx->filenames.data[node->filename_idx];
     auto lineno = node->row;
     int col = node->col;
     ctx->error_func(ctx->error_user_data, DNDC_WARNING_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
@@ -183,7 +211,7 @@ node_print_warning2(DndcContext* ctx, const Node* node, StringView a, StringView
         return;
     if(not ctx->error_func)
         return;
-    auto filename = node->filename;
+    auto filename = ctx->filenames.data[node->filename_idx];
     auto lineno = node->row;
     int col = node->col;
     MStringBuilder msb = {.allocator = ctx->temp_allocator};
@@ -307,7 +335,7 @@ ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
     msb_destroy(&temp_builder);
 
     auto before = get_t();
-    auto load_err = read_file(ctx->textcache.allocator, path);
+    auto load_err = read_file(path, ctx->textcache.allocator);
     auto after = get_t();
     if(!load_err.errored){
         report_time(ctx, SV("Loading a file took "), after-before);
@@ -319,7 +347,7 @@ ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
     else {
         Allocator_free(ctx->textcache.allocator, path, sourcepath.length+1);
         }
-    return load_err;
+    return (Errorable(LongString)){.errored=load_err.errored, .result=load_err.result};
     }
 
 static
@@ -527,6 +555,27 @@ append_child(DndcContext* ctx, NodeHandle parent_handle, NodeHandle child_handle
     Marray_push(NodeHandle)(&parent->children, ctx->allocator, child_handle);
     }
 
+static inline
+void
+node_insert_child(DndcContext* ctx, NodeHandle parent, size_t i, NodeHandle child){
+    Node* node = get_node(ctx, parent);
+    if(i >= node_children_count(node)){
+        append_child(ctx, parent, child);
+        return;
+        }
+    // This is a sloppy way of doing things, but appending
+    // a child means we already have the right amount of
+    // space.
+    // It's sloppy as we could end up memmoving twice in a row.
+    append_child(ctx, parent, child);
+    NodeHandle* data = node_children(node);
+    size_t count = node_children_count(node);
+    size_t nmove = count - i - 1;
+    if(nmove)
+        memmove(data+i+1, data+i, nmove*sizeof(*data));
+    data[i] = child;
+    }
+
 static Errorable_f(void) check_node_depth(DndcContext* ctx, NodeHandle handle, int depth);
 
 static
@@ -576,6 +625,7 @@ gather_anchor(DndcContext* ctx, NodeHandle handle){
         case NODE_LIST:
         case NODE_KEYVALUE:
         case NODE_IMGLINKS:
+        case NODE_DETAILS:
         case NODE_MD:
         case NODE_QUOTE:
         case NODE_CONTAINER:{
@@ -628,7 +678,7 @@ convert_node_to_container_containing_clone_of_former_self(DndcContext* ctx, Node
     auto new_handle = alloc_handle(ctx);
     auto new_node = get_node(ctx, new_handle);
     auto old_node = get_node(ctx, handle);
-    assert(!old_node->children.count);
+    assert(!node_children_count(old_node));
     memcpy(new_node, old_node, sizeof(*new_node));
     new_node->parent = handle;
     old_node->children.count = 1;

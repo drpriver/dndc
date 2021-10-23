@@ -1,4 +1,4 @@
-project('Dndc', 'c', 'cpp', version: '0.7.1')
+project('Dndc', 'c', 'cpp', version: '0.7.2')
 # FIXME: meson is producing x64 binaries on my m1 mac. Idk why.
 COMPAT_VERSION = '0.7.1'
 thread_dep = dependency('threads')

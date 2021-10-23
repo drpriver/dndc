@@ -1,8 +1,8 @@
-#include "testing.h"
 #include "str_util.h"
+#include "testing.h"
 TestFunction(TestStrip){
     TESTBEGIN();
-    struct {
+    struct TestCase{
         StringView prestrip;
         StringView poststrip;
     } testvalues[] = {
@@ -15,9 +15,9 @@ TestFunction(TestStrip){
         {SV("yo   \t\t"), SV("yo")},
         };
     for(int i = 0; i < arrlen(testvalues); i++){
-        auto testval = &testvalues[i];
-        auto pre = testval->prestrip;
-        auto stripped = stripped_view(pre.text, pre.length);
+        struct TestCase* testval = &testvalues[i];
+        StringView pre = testval->prestrip;
+        StringView stripped = stripped_view(pre.text, pre.length);
         TestExpectEquals2(SV_equals,stripped, testval->poststrip);
         }
     TESTEND();

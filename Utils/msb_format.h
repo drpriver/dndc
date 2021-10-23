@@ -6,12 +6,20 @@
 #include <string.h>
 #include <stddef.h>
 #include "MStringBuilder.h"
-#include "common_macros.h"
 #include "long_string.h"
+
+#ifndef force_inline
+#if defined(__GNUC__) || defined(__clang__)
+#define force_inline __attribute__((always_inline))
+#else
+#define force_inline
+#endif
+#endif
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
+
 enum FormatType {
     FORMATTYPE_STRING = 0,
     FORMATTYPE_INT32 = 1,
@@ -191,6 +199,15 @@ uint32_to_str_buffer(char*  buff, uint32_t value){
 //
 // The math is:
 //   ptrdiff_t length = (buff+20) - p for this, as UINT64_MAX is 20 characters.
+
+//
+// buff: A pointer to a buffer that is at least 20 bytes long.
+// value: the value to be turned into a string.
+//
+// Returns: A pointer into the buffer that is the first character of the string.
+// Note that this is not necessarily the first character of the buffer.
+// You can get the length of the written string via pointer arithmetic:
+//
 static inline
 char*
 uint64_to_str_buffer(char*  buff, uint64_t value){
@@ -273,7 +290,7 @@ msb_write_int_space_padded(MStringBuilder* sb, int32_t value, int width){
         size = (buff+10) - p;
         }
     size_t needed_size = size + is_negative;
-    auto cursor = sb->cursor;
+    size_t cursor = sb->cursor;
     char* data;
     if(needed_size >= width){
         _check_msb_remaining_size(sb, needed_size);
@@ -282,7 +299,7 @@ msb_write_int_space_padded(MStringBuilder* sb, int32_t value, int width){
     else {
         _check_msb_remaining_size(sb, width);
         data = sb->data;
-        auto pad = width - needed_size;
+        intptr_t pad = width - needed_size;
         memset(data+cursor, ' ', pad);
         cursor += pad;
         }

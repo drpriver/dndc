@@ -3,17 +3,32 @@
 
 #if defined(__linux__) || defined(__APPLE__)
 #include <pthread.h>
+#if defined(__linux__)
+#include <semaphore.h>
+#elif defined(__APPLE__)
+#include <dispatch/dispatch.h>
+#endif
 #elif defined(_WIN32)
 #include "windowsheader.h"
 #endif
 
-#include "common_macros.h"
-
 #ifdef __clang__
 #pragma clang assume_nonnull begin
+#else
+#ifndef _Nullable
+#define _Nullable
 #endif
-PushDiagnostic();
-SuppressUnusedFunction();
+#endif
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+
+#endif
 
 //
 // Implements a very basic portability layer to spawn a worker thread with an
@@ -55,7 +70,7 @@ SuppressUnusedFunction();
 //
 
 //
-// #define THREADFUNC(name) ret_type_differs (name)(Nullable(void*)thread_arg)
+// #define THREADFUNC(name) ret_type_differs (name)(void*_Nullable thread_arg)
 
 //
 // This structure is the handle to the thread. You will pass an unitialized one
@@ -67,7 +82,7 @@ typedef struct ThreadHandle ThreadHandle;
 #ifdef _WIN32
 typedef unsigned long ThreadReturnValue;
 #else
-typedef Nullable(void*) ThreadReturnValue;
+typedef void*_Nullable ThreadReturnValue;
 #endif
 
 
@@ -88,14 +103,14 @@ typedef Nullable(void*) ThreadReturnValue;
 //          return 0;
 //      }
 //
-#define THREADFUNC(name) ThreadReturnValue (name)(Nullable(void*)thread_arg)
+#define THREADFUNC(name) ThreadReturnValue (name)(void*_Nullable thread_arg)
 typedef THREADFUNC(thread_func);
 
 //
 // Creates and launches that thread, with the given thread func and argument.
 // Initializes the given handle with the info that identifies that thread.
 // thread_arg should be what the thread_func expects.
-static void create_thread(ThreadHandle* handle, thread_func* func, Nullable(void*)thread_arg);
+static void create_thread(ThreadHandle* handle, thread_func* func, void*_Nullable thread_arg);
 //
 // Waits for the corresponding thread to finish.
 // This is a synchronization event between the joiner and the joinee.
@@ -123,6 +138,11 @@ typedef struct WorkerThread {
     ThreadHandle thrd;
     pthread_cond_t worker_cond;
     pthread_mutex_t mutex;
+#ifdef __APPLE__
+    dispatch_semaphore_t sem;
+#else
+    sem_t sem;
+#endif
     thread_func* job;
     void*_Nullable job_data;
     bool shutdown;
@@ -143,10 +163,25 @@ THREADFUNC(worker_thread_main){
         w->job_data = NULL;
         if(job_data)
             job(job_data);
+#ifdef __APPLE__
+        dispatch_semaphore_signal(w->sem);
+#else
+        sem_post(&w->sem);
+#endif
         }
     pthread_mutex_unlock(&w->mutex);
     pthread_mutex_destroy(&w->mutex);
     pthread_cond_destroy(&w->worker_cond);
+#ifdef __APPLE__
+#if !__has_feature(objc_arc)
+    dispatch_release(w->sem);
+#else
+    // effectively releases it.
+    w->sem = NULL;
+#endif
+#else
+    sem_destroy(&w->sem);
+#endif
     free(w);
     return 0;
     }
@@ -158,6 +193,11 @@ worker_create(thread_func* job){
     w->job = job;
     pthread_cond_init(&w->worker_cond, NULL);
     pthread_mutex_init(&w->mutex, NULL);
+#ifdef __APPLE__
+    w->sem = dispatch_semaphore_create(0);
+#else
+    sem_init(&w->sem, 0, 0);
+#endif
     create_thread(&w->thrd, worker_thread_main, w);
     return w;
     }
@@ -183,8 +223,11 @@ worker_submit(WorkerThread* w, void* job_data){
 static
 void
 worker_wait(WorkerThread* w){
-    pthread_mutex_lock(&w->mutex);
-    pthread_mutex_unlock(&w->mutex);
+#ifdef __APPLE__
+    dispatch_semaphore_wait(w->sem, DISPATCH_TIME_FOREVER);
+#else
+    sem_wait(&w->sem);
+#endif
     }
 
 static
@@ -211,6 +254,7 @@ typedef struct WorkerThread {
     ThreadHandle thrd;
     CONDITION_VARIABLE worker_cond;
     CRITICAL_SECTION mutex;
+    HANDLE sem;
     thread_func* job;
     void*_Nullable job_data;
     bool shutdown;
@@ -230,9 +274,11 @@ THREADFUNC(worker_thread_main){
         w->job_data = NULL;
         if(job_data)
             job(job_data);
+        ReleaseSemaphore(w->sem, 1, NULL);
         }
     LeaveCriticalSection(&w->mutex);
     DeleteCriticalSection(&w->mutex);
+    CloseHandle(w->sem);
     // no need to destroy win32 condition variable
     free(w);
     return 0;
@@ -246,6 +292,7 @@ worker_create(thread_func* job){
     InitializeCriticalSection(&w->mutex);
     InitializeConditionVariable(&w->worker_cond);
     create_thread(&w->thrd, worker_thread_main, w);
+    w->sem = CreateSemaphoreW(NULL, 0, LONG_MAX, NULL);
     return w;
     }
 
@@ -270,13 +317,12 @@ worker_submit(WorkerThread* w, void* job_data){
 static
 void
 worker_wait(WorkerThread* w){
-    EnterCriticalSection(&w->mutex);
-    LeaveCriticalSection(&w->mutex);
+    WaitForSingleObject(w->sem, INFINITE);
     }
 
 static
 void
-create_thread(ThreadHandle* handle, thread_func* func, Nullable(void*)thread_arg){
+create_thread(ThreadHandle* handle, thread_func* func, void*_Nullable thread_arg){
     handle->thread = CreateThread(NULL, 0, func, thread_arg, 0, NULL);
     unhandled_error_condition(handle->thread == NULL);
     }
@@ -341,6 +387,13 @@ static void worker_wait(WorkerThread* w){
 #ifdef __clang__
 #pragma clang assume_nonnull end
 #endif
-PopDiagnostic();
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+
+#endif
 
 #endif

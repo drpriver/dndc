@@ -8,6 +8,8 @@
 #include "term_util.h"
 #include "file_util.h"
 #include "MStringBuilder.h"
+#define GET_INPUT_API static inline
+#include "get_input.h"
 
 static
 void
@@ -62,7 +64,8 @@ main(int argc, char**argv){
                 .name = SV("source"),
                 .max_num = 1,
                 .dest = ARGDEST(&source_path),
-                .help = "Source file (.dnd file) to read from.",
+                .help = "Source file (.dnd file) to read from.\n"
+                        "If not given, will read from stdin.",
                 },
             };
         ArgToParse kw_args[] = {
@@ -71,7 +74,8 @@ main(int argc, char**argv){
                 .altname1 = SV("--output"),
                 .max_num = 1,
                 .dest = ARGDEST(&output_path),
-                .help = "output path (.html file) to write to.",
+                .help = "Output path (.html file) to write to.\n"
+                        "If not given, will write to stdout.",
             },
             {
                 .name = SV("-d"),
@@ -183,6 +187,7 @@ main(int argc, char**argv){
                 .help = "Don't isolate python, import site, etc.\n"
                         "Greatly slows startup, but allows importing user "
                         "installed packages.",
+                .hidden = true,
             },
             {
                 .name = SV("--format"),
@@ -191,6 +196,15 @@ main(int argc, char**argv){
                 .help = "Instead of rendering to html, render to .dnd with "
                         "trailing spaces removed, text wrapped to 80 columns "
                         "(if semantically equivalent), etc." ,
+            },
+            {
+                .name = SV("--expand"),
+                .altname1 = SV("--expand-only"),
+                .max_num = 1,
+                .dest = ArgBitFlagDest(&flags, DNDC_OUTPUT_EXPANDED_DND),
+                .help = "After resolving imports and executing user scripts, "
+                        "output as a single file .dnd file instead of html.",
+                .hidden = true,
             },
             {
                 .name = SV("--dont-inline-images"),
@@ -215,7 +229,7 @@ main(int argc, char**argv){
                 .dest = ArgBitFlagDest(&flags, DNDC_STRIP_WHITESPACE),
                 .help = "Strip trailing and leading whitespace from all output "
                         "lines.",
-                .hidden = false,
+                .hidden = true,
             },
             {
                 .name = SV("--dont-read"),
@@ -263,9 +277,6 @@ main(int argc, char**argv){
                     columns = 80;
                 print_argparse_help(&argparser, columns);
                 putchar('\n');
-                print_wrapped("If a source argument is not given, dndc will "
-                              "read from stdin. If an output argument is not "
-                              "given, dndc will write to stdout.", columns);
                 return 0;
                 }
             case VERSION:
@@ -291,26 +302,47 @@ main(int argc, char**argv){
             default:
                 break;
             }
-        auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
+        enum ArgParseError e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         if(e){
             print_argparse_error(&argparser, e);
             fprintf(stderr, "Use --help to see usage.\n");
             return e;
+            }
+        if((flags & DNDC_OUTPUT_EXPANDED_DND) && (flags & DNDC_REFORMAT_ONLY)){
+            fprintf(stderr, "Do not specify both --expand and --format. Only one is allowed\n");
+            return 1;
             }
         if(!cleanup)
             flags |= DNDC_NO_CLEANUP;
         if(!source_path.text){
             // read from stdin
             MStringBuilder sb = {.allocator=get_mallocator()};
-            for(;;){
-                enum {N = 4096};
-                msb_ensure_additional(&sb, N);
-                char* buff = sb.data + sb.cursor;
-                auto numread = fread(buff, 1, N, stdin);
-                sb.cursor += numread;
-                if(numread != N)
-                    break;
+            if(isatty(fileno(stdin))){
+                char buff[4096];
+                struct LineHistory history = {};
+                for(;;){
+                    ssize_t len = get_input_line(&history, SV("> "), buff, sizeof(buff));
+                    if(len < 0)
+                        break;
+                    add_line_to_history_len(&history, buff, len);
+                    msb_write_str(&sb, buff, len);
+                    msb_write_char(&sb, '\n');
+                    }
+                puts("^D");
                 }
+            else {
+                for(;;){
+                    enum {N = 4096};
+                    msb_ensure_additional(&sb, N);
+                    char* buff = sb.data + sb.cursor;
+                    auto numread = fread(buff, 1, N, stdin);
+                    sb.cursor += numread;
+                    if(numread != N)
+                        break;
+                    }
+                }
+            if(!sb.cursor)
+                msb_write_char(&sb, ' ');
             source_path = msb_detach(&sb);
             }
         else {
@@ -385,10 +417,10 @@ main(int argc, char**argv){
         return 0;
     if(output_path.length){
         auto write_err = write_file(output_path.text, output.text, output.length);
-        if(write_err.errored){
+        if(write_err){
             // TODO: retrieve platform specific error message.
             fprintf(stderr, "Failed to write to output path: %s\n", output_path.text);
-            return write_err.errored;
+            return write_err;
             }
         }
     else {
@@ -435,9 +467,9 @@ dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths){
     auto deptext = msb_borrow(&msb);
     auto write_err = write_file(ud->depfile.text, deptext.text, deptext.length);
     msb_destroy(&msb);
-    if(write_err.errored){
+    if(write_err){
         perror("Error on write");
-        return write_err.errored;
+        return write_err;
         }
     return 0;
     }
@@ -493,6 +525,7 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
         case NODE_NAV:
         case NODE_KEYVALUE:
         case NODE_IMGLINKS:
+        case NODE_DETAILS:
         case NODE_MD:
         case NODE_CONTAINER:
         case NODE_INVALID:
@@ -592,7 +625,7 @@ dndc_print_out_syntax(LongString source_path){
         source_text = msb_detach(&sb);
         }
     else {
-        auto load_err = read_file(allocator, source_path.text);
+        auto load_err = read_file( source_path.text, allocator);
         if(load_err.errored){
             fprintf(stderr, "Unable to read: '%s'\n", source_path.text);
             return;
@@ -607,3 +640,4 @@ dndc_print_out_syntax(LongString source_path){
     }
 
 #include "dndc.c"
+#include "get_input.c"

@@ -32,14 +32,12 @@
 // for, well, assert
 #include <assert.h>
 // Allocator
-#include "allocator.h"
-// For diagnostic suppression
-#include "common_macros.h"
+#include "Allocators/allocator.h"
 
 // Not really sure about this function tbh.
 static inline
 size_t
-resize_to_some_weird_number(size_t x){
+marray_resize_to_some_weird_number(size_t x){
 /**
  * If given a power of two number, gives that number roughly * 1.5
  * Any other number will give the next largest power of 2.
@@ -56,13 +54,13 @@ resize_to_some_weird_number(size_t x){
         return 16;
     // grow by factor of approx sqrt(2)
     // I have no idea if this is ideal, but it has a nice elegance to it
-    auto cnt = __builtin_popcountll(x);
+    int cnt = __builtin_popcountll(x);
     size_t result;
     if(cnt == 1){
         result =  x | (x >> 1);
         }
     else {
-        auto clz = __builtin_clzll(x);
+        int clz = __builtin_clzll(x);
         result = 1ull << (64 - clz);
         }
     return result;
@@ -76,13 +74,13 @@ resize_to_some_weird_number(size_t x){
         return 16;
     // grow by factor of approx sqrt(2)
     // I have no idea if this is ideal, but it has a nice elegance to it
-    auto cnt = __builtin_popcount(x);
+    int cnt = __builtin_popcount(x);
     size_t result;
     if(cnt == 1){
         result =  x | (x >> 1);
         }
     else {
-        auto clz = __builtin_clz(x);
+        int clz = __builtin_clz(x);
         result = 1u << (32 - clz);
         }
     return result;
@@ -142,6 +140,10 @@ for(typeof((marray).data[0]) \
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
+#else
+#ifndef _Null_unspecified
+#define _Null_unspecified
+#endif
 #endif
 
 #if defined(MARRAY_IMPL_ONLY) && defined(MARRAY_DECL_ONLY)
@@ -167,7 +169,7 @@ typedef struct Marray(MARRAY_T) {
     size_t capacity;
     // This will be NULL if capacity is 0, otherwise it is a valid pointer.
     // Labeling that as nullable is too annoying though.
-    NullUnspec(MARRAY_T*) data;
+    MARRAY_T*_Null_unspecified data;
 } Marray(MARRAY_T);
 
 //
@@ -251,8 +253,16 @@ Marray_alloc_index(MARRAY_T)(MARRAY*, Allocator);
 #endif
 
 #ifndef MARRAY_DECL_ONLY
-PushDiagnostic()
-SuppressUnusedFunction()
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+
+#endif
 
 MARRAY_LINKAGE
 void
@@ -264,9 +274,9 @@ Marray_ensure_additional(MARRAY_T)(MARRAY* marray, Allocator a, size_t n_additio
     if(required_capacity < 8)
         new_capacity = 8;
     else {
-        new_capacity = resize_to_some_weird_number(marray->capacity);
+        new_capacity = marray_resize_to_some_weird_number(marray->capacity);
         while(new_capacity < required_capacity) {
-            new_capacity = resize_to_some_weird_number(new_capacity);
+            new_capacity = marray_resize_to_some_weird_number(new_capacity);
             }
         }
     size_t old_size = marray->capacity*sizeof(MARRAY_T);
@@ -356,7 +366,14 @@ Marray_cleanup(MARRAY_T)(MARRAY* marray, Allocator a){
     marray->capacity = 0;
     }
 
-PopDiagnostic()
+#ifdef __clang__
+#pragma clang diagnostic pop
+
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+
+#endif
+
 #endif
 
 #ifdef MARRAY_IMPL_ONLY

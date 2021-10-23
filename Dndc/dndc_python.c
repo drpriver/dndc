@@ -615,13 +615,13 @@ DndNode_repr(DndNode* self){
     MStringBuilder msb = {.allocator=self->ctx->temp_allocator};
     size_t class_count = node->classes?node->classes->count:0;
     if(not class_count)
-        MSB_FORMAT(&msb, "Node(", NODENAMES[node->type], ", '", node->header, "', [", (int)node->children.count, " children])");
+        MSB_FORMAT(&msb, "Node(", NODENAMES[node->type], ", '", node->header, "', [", (int)node_children_count(node), " children])");
     else {
         MSB_FORMAT(&msb, "Node(", NODENAMES[node->type].text);
         RARRAY_FOR_EACH(class, node->classes){
             MSB_FORMAT(&msb, ".", *class);
             }
-        MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node->children.count, " children])");
+        MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node_children_count(node), " children])");
     }
     auto text = msb_borrow(&msb);
     auto result = PyUnicode_FromStringAndSize(text.text, text.length);
@@ -808,7 +808,8 @@ py_make_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObj
     if(frame){
         node->row = PyFrame_GetLineNumber(frame) - 1;
         auto code = frame->f_code;
-        node->filename = pystring_to_stringview(code->co_filename, ctx->string_allocator);
+        Marray_push(StringView)(&ctx->filenames, ctx->allocator, pystring_to_stringview(code->co_filename, ctx->string_allocator));
+        node->filename_idx = ctx->filenames.count-1;
         }
     }
     if(text){
@@ -943,7 +944,7 @@ py_detach_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyO
         }
     auto parent = get_node(ctx, node->parent);
     node->parent = INVALID_NODE_HANDLE;
-    for(size_t i = 0; i < parent->children.count; i++){
+    for(size_t i = 0; i < node_children_count(parent); i++){
         if(NodeHandle_eq(handle, node_children(parent)[i])){
             node_remove_child(parent, i, ctx->allocator);
             goto after;
@@ -953,6 +954,21 @@ py_detach_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyO
     return NULL;
     after:;
     Py_RETURN_NONE;
+    }
+static
+Nullable(PyObject*)
+py_clone_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
+    const char* const keywords[] = { NULL, };
+    PushDiagnostic();
+    SuppressCastQual();
+    // This call is guaranteed to not modify keywords, but it's declared as char**
+    // as const in C is kind of broken.
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, ":clone", (char**)keywords)){
+        return NULL;
+        }
+    PopDiagnostic();
+    NodeHandle clone = node_clone(ctx, handle);
+    return make_py_node(ctx, clone);
     }
 
 static
@@ -1028,7 +1044,7 @@ py_replace_child_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nulla
         return NULL;
         }
     auto parent_node = get_node(ctx, handle);
-    auto count = parent_node->children.count;
+    auto count = node_children_count(parent_node);
     auto data = node_children(parent_node);
     for(size_t i = 0; i < count; i++){
         auto c = data[i];
@@ -1041,6 +1057,38 @@ py_replace_child_node(DndcContext* ctx, NodeHandle handle, PyObject* args, Nulla
         }
     PyErr_SetString(PyExc_AssertionError, "Internal logic error when replacing nodes");
     return NULL;
+    }
+
+static
+Nullable(PyObject*)
+py_insert_child(DndcContext* ctx, NodeHandle handle, PyObject* args, Nullable(PyObject*)kwargs){
+    const char* const keywords[] = { "index", "newchild", NULL, };
+    int index;
+    DndNode* newchild;
+    PushDiagnostic();
+    SuppressCastQual();
+    // This call is guaranteed to not modify keywords, but it's declared as char**
+    // as const in C is kind of broken.
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "iO!:replace_child", (char**)keywords, &index, &DndNodeType, &newchild)){
+        return NULL;
+        }
+    PopDiagnostic();
+    if(index < 0){
+        PyErr_SetString(PyExc_ValueError, "Negative indexes are not supported");
+        return NULL;
+        }
+    NodeHandle new_handle = newchild->handle;
+    auto newchild_node = get_node(ctx, new_handle);
+    if(!NodeHandle_eq(newchild_node->parent, INVALID_NODE_HANDLE)){
+        PyErr_SetString(PyExc_ValueError, "Node needs to be an orphan to be added as a child of another node.");
+        return NULL;
+        }
+    if(NodeHandle_eq(handle, new_handle)){
+        PyErr_SetString(PyExc_ValueError, "Node can't be a child of itself");
+        return NULL;
+        }
+    node_insert_child(ctx, handle, index, new_handle);
+    Py_RETURN_NONE;
     }
 
 static
@@ -1200,12 +1248,13 @@ execute_python_string(DndcContext* ctx, const char* text, NodeHandle handle, Nod
 
     auto node = get_node(ctx, handle);
     char buff[1024];
-    if(node->filename.length < 1024){
-        memcpy(buff, node->filename.text, node->filename.length);
-        buff[node->filename.length] = 0;
+    auto node_filename = ctx->filenames.data[node->filename_idx];
+    if(node_filename.length < 1024){
+        memcpy(buff, node_filename.text, node_filename.length);
+        buff[node_filename.length] = 0;
         }
     else {
-        memcpy(buff, node->filename.text, 1023);
+        memcpy(buff, node_filename.text, 1023);
         buff[1023] = 0;
         }
     PyObject* code = Py_CompileStringExFlags(text, buff, Py_file_input, &flags, 0);
@@ -1312,6 +1361,9 @@ DndNode_getattr_ls(DndNode* obj, LongString name){
             if(CHECK("parse", 5)){
                 return make_node_bound_method(ctx, obj->handle, &py_parse_and_append_children);
             }
+            if(CHECK("clone", 5)){
+                return make_node_bound_method(ctx, obj->handle, &py_clone_node);
+                }
         }break;
         case 6:{
             if(CHECK("header", 6)){
@@ -1334,10 +1386,10 @@ DndNode_getattr_ls(DndNode* obj, LongString name){
         case 8:{
             if(CHECK("children", 8)){
                 auto node = get_node(ctx, obj->handle);
-                auto result = PyTuple_New(node->children.count);
+                auto result = PyTuple_New(node_children_count(node));
                 if(!result)
                     return result;
-                for(size_t i = 0; i < node->children.count; i++){
+                for(size_t i = 0; i < node_children_count(node); i++){
                     auto child = node_children(node)[i];
                     auto pynode = make_py_node(ctx, child);
                     auto fail = PyTuple_SetItem(result, i, pynode);
@@ -1360,6 +1412,11 @@ DndNode_getattr_ls(DndNode* obj, LongString name){
                 return make_attributes_map(ctx, obj->handle);
                 }
         }break;
+        case 12:{
+            if(CHECK("insert_child", 12)){
+                return make_node_bound_method(ctx, obj->handle, &py_insert_child);
+                }
+            }break;
         case 13:{
             if(CHECK("replace_child", 13)){
                 return make_node_bound_method(ctx, obj->handle, &py_replace_child_node);
@@ -1464,6 +1521,7 @@ DndNode_setattr_ls(DndNode* obj, LongString name, Nullable(PyObject*) value){
                         case NODE_KEYVALUEPAIR:
                         case NODE_IMGLINKS:
                         case NODE_COMMENT:
+                        case NODE_DETAILS:
                         case NODE_MD:
                         case NODE_CONTAINER:
                         case NODE_INVALID:

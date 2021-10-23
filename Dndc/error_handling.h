@@ -31,9 +31,6 @@
     apply(DECODING_ERROR, 7)\
     /*Math Errors*/ \
     apply(OVERFLOWED_VALUE, 8) \
-    /*File IO Errors*/ \
-    apply(FILE_ERROR, 9) \
-    apply(FILE_NOT_OPENED, 10) \
     /*Some low level routine failed*/ \
     apply(OS_ERROR, 11) \
     /*idk man*/ \
@@ -71,21 +68,6 @@ struct Errorable_impl(void) {
     uint8_t errored;
 };
 
-Errorable_declare(int);
-Errorable_declare(char);
-Errorable_declare(short);
-Errorable_declare(long);
-Errorable_declare(size_t);
-Errorable_declare(uint8_t);
-Errorable_declare(uint16_t);
-Errorable_declare(uint32_t);
-Errorable_declare(uint64_t);
-Errorable_declare(int8_t);
-Errorable_declare(int16_t);
-Errorable_declare(int32_t);
-Errorable_declare(int64_t);
-Errorable_declare(float);
-Errorable_declare(double);
 //
 // Assumes there is an Errorable named result in the local scope.
 // Sets the errored field to the given value and then returns result.

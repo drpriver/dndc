@@ -1,5 +1,9 @@
 #ifndef TESTING_H
 #define TESTING_H
+#include <assert.h>
+#include <string.h>
+#include <stdio.h>
+#include <errno.h>
 #ifdef _WIN32
 // for chdir
 #include <direct.h>
@@ -7,23 +11,75 @@
 #else
 #include <unistd.h>
 #endif
-#include <string.h>
-#include <stdio.h>
-#include <errno.h>
-#include "common_macros.h"
-#include "log_print.h"
 #include "long_string.h"
+
+#ifndef arrlen
+#define arrlen(arr) (sizeof(arr)/sizeof(arr[0]))
+#endif
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
+#else
+#define _Nonnull
+#define _Nullable
 #endif
 
 
-// TODO:
-// Some of these testing macros use HEREPrint, which is nice as it tells you
-// what the actual values are, but that will fail for types it can't handle.
-// I can' currently think of a way to handle this without reimplementing
-// HEREPrint. But maybe I want to do that anyway for modularity reasons.
+// BUG:
+// We use __auto_type in the testing macros, so this will only compile
+// with gcc and clang.
+
+// Internal use color definitions. They will be set to escape codes if
+// stderr is detected to be interactive.
+static const char* _test_color_gray  = "";
+static const char* _test_color_reset = "";
+#if 0
+// Currently these are unused.
+static const char* _test_color_blue  = ""
+static const char* _test_color_green = ""
+static const char* _test_color_red   = ""
+#endif
+
+#ifndef TestPrintValue
+
+#define TestPrintFuncs(apply) \
+    apply(bool, _Bool, "%s", x?"true":"false")\
+    apply(char, char, "%c", x)\
+    apply(uchar, unsigned char, "%u", x) \
+    apply(schar, signed char, "%d", x) \
+    apply(float, float, "%f", (double)x) \
+    apply(double, double, "%f", x) \
+    apply(short, short, "%d", x) \
+    apply(ushort, unsigned short, "%u", x) \
+    apply(int, int, "%d", x)\
+    apply(uint, unsigned int, "%u", x) \
+    apply(long, long, "%ld", x) \
+    apply(ulong, unsigned long, "%lu", x) \
+    apply(llong, long long, "%lld", x) \
+    apply(ullong, unsigned long long, "%llu", x) \
+    apply(cstr, char*, "\"%s\"", x) \
+    apply(ccstr, const char*, "\"%s\"", x) \
+    apply(pvoid, void*, "%p", x) \
+    apply(pcvoid, const void*, "%p", x) \
+    apply(LongString, LongString, "\"%s\"", x.text) \
+    apply(StringView, StringView, "\"%.*s\"", (int)x.length, x.text)
+#define TestPrintFunc(suffix, type, unused, ...) type: TestPrintImpl_##suffix,
+
+#define TestPrintValue(str, val) \
+    _Generic(val, \
+    TestPrintFuncs(TestPrintFunc) \
+    struct{int foo;}: 0)(__FILE__, __func__, __LINE__, str, val)
+    
+#define TestPrintImpl_(suffix, type, fmt, ...) \
+    static inline __attribute__((always_inline)) void \
+    TestPrintImpl_##suffix(const char* file, const char* func, int line, const char* str, type x){ \
+        fprintf(stderr, "%s%s:%s:%d%s %s = " fmt "\n",\
+                _test_color_gray, file, func, line, _test_color_reset, str, __VA_ARGS__); \
+        }
+TestPrintFuncs(TestPrintImpl_)
+
+#endif
+
 
 
 //
@@ -75,7 +131,7 @@ enum TestCaseFlags {
 // Internal use.
 typedef struct TestCase {
     LongString test_name;
-    Nonnull(TestFunc*) test_func;
+    TestFunc* test_func;
     enum TestCaseFlags flags;
 } TestCase;
 
@@ -107,7 +163,7 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags);
 static LongString test_names[1000];
 static TestCase test_funcs[1000];
 // How many were registered. Internal use.
-static int test_funcs_count;
+static size_t test_funcs_count;
 
 static inline
 void
@@ -122,16 +178,6 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
     }
 
 
-// Internal use color definitions. They will be set to escape codes if
-// stderr is detected to be interactive.
-Nonnull(const char*) _test_color_gray  = "";
-Nonnull(const char*) _test_color_reset = "";
-#if 0
-// Currently these are unused.
-Nonnull(const char*) _test_color_blue  = ""
-Nonnull(const char*) _test_color_green = ""
-Nonnull(const char*) _test_color_red   = ""
-#endif
 //
 // Internal use macro to report test results within a failed condition.
 // You can use it if you want in your test functions if you need more reporting.
@@ -156,54 +202,54 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++;\
             TestReport("Test condition failed");\
             TestReport("%s", #cond);\
-        }\
-    }while(0)
+            }\
+        }while(0)
 //
 // Expects lhs == rhs, using the == operator
 //
 #define TestExpectEquals(lhs, rhs) do{\
-        auto _lhs = lhs; \
-        auto _rhs = rhs; \
+        __auto_type _lhs = lhs; \
+        __auto_type _rhs = rhs; \
         TEST_stats.executed++;\
         if (!(_lhs == _rhs)) {\
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s == %s", #lhs, #rhs); \
-            HEREPrint(_lhs);\
-            HEREPrint(_rhs);\
-        }\
-    }while(0)
+            TestPrintValue(#lhs, _lhs);\
+            TestPrintValue(#rhs, _rhs);\
+            }\
+        }while(0)
 //
 // Expects lhs == rhs, using the passed in binary function instead of == operator
 //
 #define TestExpectEquals2(func, lhs, rhs) do{\
-        auto _lhs = lhs; \
-        auto _rhs = rhs; \
+        __auto_type _lhs = lhs; \
+        __auto_type _rhs = rhs; \
         TEST_stats.executed++;\
         if (!(func(_lhs, _rhs))) {\
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("!%s(%s, %s)", #func, #lhs, #rhs); \
-            HEREPrint(_lhs);\
-            HEREPrint(_rhs);\
-        }\
-    }while(0)
+            TestPrintValue(#lhs, _lhs);\
+            TestPrintValue(#rhs, _rhs);\
+            }\
+        }while(0)
 
 //
 // Expects lhs != rhs, using the != operator
 //
 #define TestExpectNotEquals(lhs, rhs) do{\
-        auto _lhs = lhs; \
-        auto _rhs = rhs; \
+        __auto_type _lhs = lhs; \
+        __auto_type _rhs = rhs; \
         TEST_stats.executed++;\
         if (!(_lhs != _rhs)) {\
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s != %s", #lhs, #rhs); \
-            HEREPrint(_lhs);\
-            HEREPrint(_rhs);\
-        }\
-    }while(0)
+            TestPrintValue(#lhs, _lhs);\
+            TestPrintValue(#rhs, _rhs);\
+            }\
+        }while(0)
 
 //
 // Expects the condition is truthy (for the usual C definition of truth).
@@ -216,8 +262,8 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s", #cond);\
-        }\
-    }while(0)
+            }\
+        }while(0)
 
 //
 // Expects the condition is falsey (for the usual C definition of truth).
@@ -227,9 +273,9 @@ Nonnull(const char*) _test_color_red   = ""
         if ((cond)){ \
             TEST_stats.failures++; \
             TestReport("Test condition failed (expected falsey)");\
-            HEREPrint(cond);\
-        }\
-    }while(0)
+            TestPrintValue(#cond, cond);\
+            }\
+        }while(0)
 
 //
 // For an Errorable, expects .errored is NO_ERROR
@@ -240,8 +286,8 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s = %d", #cond, (cond).errored);\
-        }\
-    }while(0)
+            }\
+        }while(0)
 
 //
 // For an Errorable, expects .errored is not NO_ERROR
@@ -252,8 +298,8 @@ Nonnull(const char*) _test_color_red   = ""
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s = %d", #cond, (cond).errored);\
-        }\
-    }while(0)
+            }\
+        }while(0)
 
 //
 // Unlike the TestExpect* family of macros, TestAssert* macros immediately end
@@ -275,15 +321,15 @@ Nonnull(const char*) _test_color_red   = ""
             TestReport("%s prematurely ended", __func__);\
             TestReport("%s", #cond); \
             return TEST_stats;\
-        }\
-    }while(0)
+            }\
+        }while(0)
 
 //
 // Asserts lhs is equal to rhs, using ==
 //
 #define TestAssertEquals(lhs, rhs) do{\
-        auto _lhs = lhs; \
-        auto _rhs = rhs; \
+        __auto_type _lhs = lhs; \
+        __auto_type _rhs = rhs; \
         TEST_stats.executed++;\
         if (! (_lhs==_rhs)){ \
             TEST_stats.failures++; \
@@ -291,11 +337,11 @@ Nonnull(const char*) _test_color_red   = ""
             TestReport("Test condition failed");\
             TestReport("%s prematurely ended", __func__);\
             TestReport("%s == %s", #lhs, #rhs); \
-            HEREPrint(_lhs);\
-            HEREPrint(_rhs); \
+            TestPrintValue(#lhs, _lhs);\
+            TestPrintValue(#rhs, _rhs); \
             return TEST_stats;\
-        }\
-    }while(0)
+            }\
+        }while(0)
 
 //
 // For an Errorable, asserts .errored is NO_ERROR
@@ -309,8 +355,8 @@ Nonnull(const char*) _test_color_red   = ""
             TestReport("%s prematurely ended", __func__);\
             TestReport("%s = %d", #cond, (cond).errored); \
             return TEST_stats;\
-        }\
-    }while(0)
+            }\
+        }while(0)
 
 //
 // For an Errorable, asserts .errored is not NO_ERROR
@@ -324,8 +370,8 @@ Nonnull(const char*) _test_color_red   = ""
             TestReport("%s prematurely ended", __func__);\
             TestReport("%s = %d", #cond, (cond).errored); \
             return TEST_stats;\
-        }\
-    }while(0)
+            }\
+        }while(0)
 
 //
 // Immediately ends the test function, counting as an early termination of
@@ -336,7 +382,7 @@ Nonnull(const char*) _test_color_red   = ""
         TestReport("Reason: %s", reason); \
         TEST_stats.assert_failures++;\
         return TEST_stats;\
-    }while(0)
+        }while(0)
 
 //
 // The actual test runner.
@@ -349,13 +395,13 @@ Nonnull(const char*) _test_color_red   = ""
 // As a special case, 0 means to run all the tests.
 static
 struct TestStats
-run_the_tests(Nullable(size_t*) which_tests, size_t test_count){
+run_the_tests(size_t*_Nullable which_tests, int test_count){
     struct TestStats result = {};
     if(test_count){
-        for(size_t i = 0; i < test_count; i++){
-            auto func = test_funcs[which_tests[i]].test_func;
+        for(int i = 0; i < test_count; i++){
+            TestFunc* func = test_funcs[which_tests[i]].test_func;
             assert(func);
-            auto func_result = func();
+            struct TestStats func_result = func();
             result.funcs_executed++;
             result.failures += func_result.failures;
             result.executed += func_result.executed;
@@ -363,12 +409,12 @@ run_the_tests(Nullable(size_t*) which_tests, size_t test_count){
             }
         }
     else {
-        for (int i = 0; i < test_funcs_count; i++){
+        for (size_t i = 0; i < test_funcs_count; i++){
             if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED)
                 continue;
-            auto func = test_funcs[i].test_func;
+            TestFunc* func = test_funcs[i].test_func;
             assert(func);
-            auto func_result = func();
+            struct TestStats func_result = func();
             result.funcs_executed++;
             result.failures += func_result.failures;
             result.executed += func_result.executed;
@@ -389,13 +435,16 @@ run_the_tests(Nullable(size_t*) which_tests, size_t test_count){
 #ifndef SUPPRESS_TEST_MAIN
 #include "argument_parsing.h"
 #include "term_util.h"
-int test_main(int argc, char*_Nonnull *_Nonnull argv){
+static
+int 
+test_main(int argc, char*_Nonnull *_Nonnull argv){
     if(argc < 1){
         fprintf(stderr, "Somehow this program was called without an argv.\n");
         return 1;
         }
     const char* filename = argv[0];
     bool no_colors = false;
+    bool force_colors = false;
     LongString directory = {};
     size_t tests_to_run[arrlen(test_funcs)] = {};
     struct ArgParseEnumType targets = {
@@ -417,6 +466,12 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
             .max_num = 1,
             .dest = ARGDEST(&no_colors),
             .help = "Dont use ANSI escape codes to print colors in reporting.",
+        },
+        {
+            .name = SV("--force-colors"),
+            .max_num = 1,
+            .dest = ARGDEST(&force_colors),
+            .help = "Always use ANSI escape codes to print colors in reporting, even if output is not a tty.",
         },
         {
             .name = SV("-t"),
@@ -451,14 +506,14 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
     Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
     switch(check_for_early_out_args(&argparser, &args)){
         case HELP:{
-            auto columns = get_terminal_size().columns;
+            int columns = get_terminal_size().columns;
             if(columns > 80)
                 columns = 80;
             print_argparse_help(&argparser, columns);
             return 1;
             }
         case LIST:
-            for(int i = 0; i < test_funcs_count; i++){
+            for(size_t i = 0; i < test_funcs_count; i++){
                 fprintf(stdout, "%s\t", test_funcs[i].test_name.text);
                 if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED){
                     fprintf(stdout, "Will-Skip");
@@ -469,11 +524,11 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
         default:
             break;
         }
-    auto e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
+    enum ArgParseError e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
     if(e){
         print_argparse_error(&argparser, e);
         fprintf(stderr, "Use --help to see usage.\n");
-        return e;
+        return (int)e;
         }
     if(directory.length){
         int changed = chdir(directory.text);
@@ -485,7 +540,7 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
         }
 
     filename = strrchr(filename, '/')? strrchr(filename, '/')+1 : filename;
-    bool use_colors = not no_colors && isatty(fileno(stderr));
+    bool use_colors = force_colors || (!no_colors && isatty(fileno(stderr)));
     const char* gray  = use_colors? "\033[97m"    : "";
     const char* blue  = use_colors? "\033[94m"    : "";
     const char* green = use_colors? "\033[92m"    : "";
@@ -499,8 +554,8 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
     _test_color_red = red;
 #endif
 
-    assert(SV_equals(kw_args[2].name, SV("-t")));
-    auto result = run_the_tests(tests_to_run, kw_args[2].num_parsed);
+    assert(SV_equals(kw_args[3].name, SV("-t")));
+    struct TestStats result = run_the_tests(tests_to_run, kw_args[3].num_parsed);
 
     const char* text = result.funcs_executed == 1?
         "test function executed"
@@ -535,8 +590,6 @@ int test_main(int argc, char*_Nonnull *_Nonnull argv){
     return result.failures + result.assert_failures == 0? 0 : 1;
     }
 
-#include "terminal_logger.c"
 #endif
-
 
 #endif

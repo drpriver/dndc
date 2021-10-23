@@ -4,13 +4,21 @@
 #include <string.h>
 #include <assert.h>
 #include "long_string.h"
-#include "allocator.h"
+#include "Allocators/allocator.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #else
 #ifndef _Null_unspecified
 #define _Null_unspecified
+#endif
+#endif
+
+#ifndef force_inline
+#if defined(__GNUC__) || defined(__clang__)
+#define force_inline __attribute__((always_inline))
+#else
+#define force_inline
 #endif
 #endif
 
@@ -125,10 +133,12 @@ force_inline
 void
 _check_msb_remaining_size(MStringBuilder* msb, size_t len){
     if(msb->cursor + len > msb->capacity){
-        size_t new_size = (msb->capacity*3)/2;
-        if(new_size < 32) new_size = 32;
+        size_t new_size = msb->capacity?(msb->capacity*3)/2:16;
         while(new_size < msb->cursor+len){
             new_size *= 2;
+            }
+        if(new_size & 15){
+            new_size += (16- (new_size&15));
             }
         _resize_msb(msb, new_size);
         }

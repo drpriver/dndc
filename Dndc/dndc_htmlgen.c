@@ -181,8 +181,8 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
                 }
             if(node_has_attribute(node, SV("noinline"))){
                 msb_erase(msb, sizeof("<script>\n")-1);
-                if(node->children.count != 1){
-                    if(node->children.count)
+                if(node_children_count(node) != 1){
+                    if(node_children_count(node))
                         node_print_warning(ctx, node, SV("Lines afer the first of a noninline js block are ignored"));
                     else {
                         node_print_warning(ctx, node, SV("Empty noinline js block"));
@@ -220,6 +220,13 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
     msb_write_literal(msb, "</head>\n");
     msb_write_literal(msb, "<body>\n");
     auto root_node = get_node(ctx, ctx->root_handle);
+    if(root_node->type == NODE_MD && node_children_count(root_node) == 1){
+        if(!root_node->attributes && !root_node->classes){
+            auto child = get_node(ctx, node_children(root_node)[0]);
+            if(child->type == NODE_DIV || child->type == NODE_MD)
+                root_node = child;
+            }
+        }
     auto e = render_node(ctx, msb, root_node, 1);
     if(e.errored) return e;
     msb_write_literal(msb,
@@ -257,6 +264,7 @@ build_nav_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
         case NODE_LIST:
         case NODE_KEYVALUE:
         case NODE_IMGLINKS:
+        case NODE_DETAILS:
         case NODE_MD:
         case NODE_QUOTE:
         case NODE_CONTAINER:{
@@ -421,13 +429,44 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
                     }
                 msb_write_char(sb, c);
                 }break;
-            case '&':{
+            case '&':{ // allow &lt;, &gt;
+                if(length - i >= 4){
+                    if(memcmp(text+i, "&lt;", 4) == 0){
+                        msb_write_literal(sb, "&lt;");
+                        i += 3;
+                        continue;
+                        }
+                    if(memcmp(text+i, "&gt;", 4) == 0){
+                        msb_write_literal(sb, "&gt;");
+                        i += 3;
+                        continue;
+                        }
+                    }
                 msb_write_literal(sb, "&amp;");
                 }break;
             case '<':{
-                // we allow inline <b>, <s>, <i>, </b>, </s>, </i>
-                if(i < length - 1){
+                // we allow inline <b>, <s>, <i>, </b>, </s>, </i>, <br>, <code>, </code>
+                // This is a big mess and should be done in an easier to do way.
+                if(length - i >= 2){
                     char peek1 = text[i+1];
+                    if(peek1 == 'c'){ // could be <code> tag
+                        if(length - i >= sizeof("<code>")-2){
+                            if(memcmp(text+i, "<code>", sizeof("<code>")-1) == 0){
+                                msb_write_literal(sb, "<code>");
+                                i += 5;
+                                continue;
+                                }
+                            }
+                        }
+                    if(peek1 == '/'){
+                        if(length - i >= sizeof("</code>")-2){
+                            if(memcmp(text+i, "</code>", sizeof("</code>")-1) == 0){
+                                msb_write_literal(sb, "</code>");
+                                i += sizeof("</code>")-2;
+                                continue;
+                                }
+                            }
+                        }
                     switch(peek1){
                         case 'b':
                         case 's':
@@ -438,8 +477,15 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
                             msb_write_literal(sb, "&lt;");
                             continue;
                         }
-                    if(i < length - 2){
+                    if(length - i >= 3){
                         char peek2 = text[i+2];
+                        if(peek1 == 'b' && peek2 == 'r'){
+                            if(length - i >= 4 && text[i+3] == '>'){
+                                msb_write_literal(sb, "<br>");
+                                i += 3;
+                                continue;
+                                }
+                            }
                         if(peek1 != '/'){
                             if(peek2 == '>'){
                                 msb_write_char(sb, c);
@@ -460,7 +506,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
                                 msb_write_literal(sb, "&lt;");
                                 continue;
                             }
-                        if(i < length - 3){
+                        if(length -i >= 4){
                             char peek3 = text[i+3];
                             if(peek3 == '>'){
                                 msb_write_char(sb, c);
@@ -535,7 +581,7 @@ RENDERFUNC(STRING){
     (void)header_depth;
     if(unlikely(node->classes))
         node_print_warning(ctx, node, SV("Ignoring classes on string node"));
-    if(unlikely(node->children.count))
+    if(unlikely(node_children_count(node)))
         node_print_warning(ctx, node, SV("Ignoring children of string node"));
     auto e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
     if(e.errored) return e;
@@ -590,7 +636,7 @@ RENDERFUNC(NAV){
     if(node->header.length){
         node_print_warning(ctx, node, SV("Headers on navs unsupported"));
         }
-    if(node->children.count){
+    if(node_children_count(node)){
         node_print_warning(ctx, node, SV("Children on navs unsupported"));
         }
     msb_write_str(sb, ctx->renderednav.text, ctx->renderednav.length);
@@ -618,7 +664,7 @@ RENDERFUNC(TITLE){
     auto e = write_header(ctx, sb, node, header_depth);
     if(e.errored) return e;
     msb_write_char(sb, '\n');
-    if(node->children.count){
+    if(node_children_count(node)){
         node_print_warning(ctx, node, SV("Ignoring children of title"));
         }
     if(node->classes){
@@ -630,7 +676,7 @@ RENDERFUNC(HEADING){
     auto e = write_header(ctx, sb, node, header_depth+1);
     if(e.errored) return e;
     msb_write_char(sb, '\n');
-    if(node->children.count){
+    if(node_children_count(node)){
         node_print_warning(ctx, node, SV("Ignoring children of heading"));
         }
     if(node->classes){
@@ -643,7 +689,7 @@ RENDERFUNC(HR){
     if(node->header.length){
         node_print_warning(ctx, node, SV("Ignoring header of hr"));
         }
-    if(node->children.count){
+    if(node_children_count(node)){
         node_print_warning(ctx, node, SV("Ignoring children of hr"));
         }
     msb_write_char(sb, '\n');
@@ -660,7 +706,7 @@ RENDERFUNC(TABLE){
         if(e.errored) return e;
         }
     msb_write_literal(sb, "<table>\n<thead>\n");
-    auto count = node->children.count;
+    auto count = node_children_count(node);
     auto children = node_children(node);
     if(count){
         auto child = get_node(ctx, children[0]);
@@ -763,7 +809,7 @@ RENDERFUNC(IMAGE){
         if(e.errored) return e;
         msb_write_char(sb, '\n');
         }
-    auto count = node->children.count;
+    auto count = node_children_count(node);
     if(!count){
         node_set_err(ctx, node, LS("Image node missing any children (first should be a string that is path to the image"));
         Raise(PARSE_ERROR);
@@ -982,7 +1028,7 @@ RENDERFUNC(LIST_ITEM){
         node_print_warning(ctx, node, SV("ignoring header on list item"));
     if(unlikely(node->classes))
         node_print_warning(ctx, node, SV("Ignoring classes on list item"));
-    auto count = node->children.count;
+    auto count = node_children_count(node);
     auto children = node_children(node);
     for(size_t i = 0; i < count; i++){
         if(i != 0)
@@ -1034,7 +1080,7 @@ RENDERFUNC(IMGLINKS){
         auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         }
-    if(node->children.count < 4){
+    if(node_children_count(node) < 4){
         node_set_err(ctx, node, LS("Too few children of an imglinks node (expected path to the image, width, height, viewBox in that order)"));
         Raise(PARSE_ERROR);
         }
@@ -1217,7 +1263,7 @@ RENDERFUNC(IMGLINKS){
         report_time(ctx, SV("Copying the base64 data of an imglinks took "), after-before);
         msb_write_literal(sb, "');\">\n");
         }
-    for(size_t i = 4; i < node->children.count; i++){
+    for(size_t i = 4; i < node_children_count(node); i++){
         auto child = get_node(ctx, children[i]);
         if(child->type != NODE_STRING){
             if(child->type == NODE_PYTHON || child->type == NODE_JS || child->type == NODE_COMMENT)
@@ -1298,7 +1344,6 @@ RENDERFUNC(MD){
         }
     msb_write_literal(sb, "</div>\n");
     return (Errorable(void)){};
-    return (Errorable(void)){};
     }
 RENDERFUNC(CONTAINER){
     if(node->header.length){
@@ -1318,6 +1363,30 @@ RENDERFUNC(INVALID){
     (void)node;
     (void)header_depth;
     return (Errorable(void)){.errored=GENERIC_ERROR};
+    }
+RENDERFUNC(DETAILS){
+    msb_write_literal(sb, "<details");
+    write_classes(sb, node);
+    auto id = node_get_id(node);
+    if(id){
+        msb_write_literal(sb, " id=\"");
+        msb_write_kebab(sb, id->text, id->length);
+        msb_write_literal(sb, "\"");
+        }
+    msb_write_literal(sb, ">\n");
+    msb_write_literal(sb, "<summary style=\"cursor:pointer\">\n");
+    if(node->header.length){
+        msb_write_str(sb, node->header.text, node->header.length);
+        }
+    msb_write_literal(sb, "</summary>\n");
+    msb_write_literal(sb, "<div>\n");
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
+        auto e = render_node(ctx, sb, child, header_depth);
+        if(e.errored) return e;
+        }
+    msb_write_literal(sb, "</div>\n</details>\n");
+    return (Errorable(void)){};
     }
 #undef RENDERFUNC
 #undef RENDERFUNCNAME

@@ -86,7 +86,7 @@ msb_write_kebab(MStringBuilder* msb, const char* text, size_t length){
 static inline
 void
 msb_write_title(MStringBuilder* restrict msb, const char* restrict str, size_t len){
-    if(not len)
+    if(!len)
         return;
     _check_msb_remaining_size(msb, len);
     bool wants_cap = true;
@@ -119,8 +119,8 @@ static inline
 void
 msb_write_json_escaped_str(MStringBuilder* restrict sb, const char* restrict str, size_t length){
     _check_msb_remaining_size(sb, length*2);
-    auto data = sb->data;
-    auto cursor = sb->cursor;
+    char* data = sb->data;
+    size_t cursor = sb->cursor;
     for(size_t i = 0; i < length; i++){
         switch(str[i]){
             case '"':
@@ -163,8 +163,8 @@ static inline
 void
 msb_write_str_with_backslashes_as_forward_slashes(MStringBuilder* sb, const char* restrict str, size_t length){
     _check_msb_remaining_size(sb, length);
-    auto data = sb->data;
-    auto cursor = sb->cursor;
+    char* data = sb->data;
+    size_t cursor = sb->cursor;
     for(size_t i = 0; i < length; i++){
         char c = str[i];
         if(c == '\\'){
@@ -184,14 +184,14 @@ static inline
 void
 msb_write_stripped_lines(MStringBuilder* sb, const char* restrict str, size_t length){
     _check_msb_remaining_size(sb, length);
-    auto data = sb->data;
-    auto cursor = sb->cursor;
+    char* data = sb->data;
+    size_t cursor = sb->cursor;
     const char* remainder = str;
     const char* end = str + length;
     for(;remainder != end;){
         const char* endline = memchr(remainder, '\n', end - remainder);
         if(endline){
-            auto stripped = stripped_view(remainder, endline-remainder);
+            StringView stripped = stripped_view(remainder, endline-remainder);
             if(stripped.length){
                 memcpy(data+cursor, stripped.text, stripped.length);
                 cursor += stripped.length;
@@ -200,7 +200,7 @@ msb_write_stripped_lines(MStringBuilder* sb, const char* restrict str, size_t le
             data[cursor++] = '\n';
             }
         else {
-            auto stripped = stripped_view(remainder, end - remainder);
+            StringView stripped = stripped_view(remainder, end - remainder);
             if(stripped.length){
                 memcpy(data+cursor, stripped.text, stripped.length);
                 cursor += stripped.length;

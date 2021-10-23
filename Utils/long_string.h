@@ -85,7 +85,7 @@ LS_equals(const LongString a, const LongString b){
         return true;
     // assert(a.text);
     // assert(b.text);
-    return a.text && b.text && !strcmp(a.text, b.text);
+    return a.text && b.text && !memcmp(a.text, b.text, a.length);
     }
 
 #ifdef LS

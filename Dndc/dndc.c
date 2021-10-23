@@ -112,7 +112,8 @@ execute_user_scripts(DndcContext* ctx){
                     result.errored = e.errored;
                     goto cleanup;
                     }
-                firstchild_node->filename = firstchild_node->header;
+                Marray_push(StringView)(&ctx->filenames, ctx->allocator, firstchild_node->header);
+                firstchild_node->filename_idx = ctx->filenames.count-1;
                 firstchild_node->col = 0;
                 firstchild_node->row = 1;
                 firstchild_node->header = LS_to_SV(e.result);
@@ -177,7 +178,7 @@ execute_user_scripts(DndcContext* ctx){
         if(!NodeHandle_eq(node->parent, INVALID_NODE_HANDLE)){
             Node* parent = get_node(ctx, node->parent);
             node->parent = INVALID_NODE_HANDLE;
-            for(size_t j = 0; j < parent->children.count; j++){
+            for(size_t j = 0; j < node_children_count(parent); j++){
                 if(NodeHandle_eq(handle, node_children(parent)[j])){
                     node_remove_child(parent, j, ctx->allocator);
                     goto after;
@@ -218,7 +219,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
             auto nodes = img_nodes[n];
             MARRAY_FOR_EACH(it, *nodes){
                 auto node = get_node(ctx, *it);
-                if(!node->children.count)
+                if(!node_children_count(node))
                     continue;
                 auto child = get_node(ctx, node_children(node)[0]);
                 if(!child->header.length)
@@ -254,8 +255,9 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
             binary_worker(&job);
             }
         else{
-            if(worker)
+            if(worker){
                 worker_submit((WorkerThread*)worker, &job);
+                }
             else{
                 create_thread(&thread_worker, &binary_worker, &job);
                 }
@@ -267,8 +269,9 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
 
     if(thread_created){
         auto before = get_t();
-        if(worker)
+        if(worker){
             worker_wait((WorkerThread*)worker);
+            }
         else
             join_thread(thread_worker);
         auto after = get_t();
@@ -303,12 +306,19 @@ run_the_dndc(uint64_t flags,
         ){
     if(flags & DNDC_REFORMAT_ONLY)
         flags |= DNDC_NO_PYTHON;
+    if(flags & DNDC_OUTPUT_EXPANDED_DND)
+        flags |= DNDC_DONT_INLINE_IMAGES;
     if(flags & DNDC_INPUT_IS_UNTRUSTED){
         flags |= DNDC_NO_PYTHON;
         flags |= DNDC_NO_THREADS;
         flags |= DNDC_DONT_INLINE_IMAGES;
         flags |= DNDC_DONT_READ;
         }
+#ifdef WASM
+    const bool wasm = true;
+#else
+    const bool wasm = false;
+#endif
     auto t0 = get_t();
     Errorable(void) result = {};
     StringView path;
@@ -356,7 +366,7 @@ run_the_dndc(uint64_t flags,
     MStringBuilder msb = {.allocator=ctx.allocator};
     ctx_add_builtins(&ctx);
     LongString source;
-    if(flags & DNDC_SOURCE_IS_PATH_NOT_DATA){
+    if(!wasm && (flags & DNDC_SOURCE_IS_PATH_NOT_DATA)){
         // Temporarily clear the DONT_READ flag.
         auto old_flags = ctx.flags;
         ctx.flags &= ~DNDC_DONT_READ;
@@ -399,7 +409,8 @@ run_the_dndc(uint64_t flags,
         auto root = get_node(&ctx, root_handle);
         root->col = 0;
         root->row = 0;
-        root->filename = path;
+        Marray_push(StringView)(&ctx.filenames, ctx.allocator, path);
+        root->filename_idx = ctx.filenames.count-1;
         root->type = NODE_MD;
         root->parent = root_handle;
     }
@@ -415,7 +426,7 @@ run_the_dndc(uint64_t flags,
             goto cleanup;
             }
     }
-    if(flags & DNDC_REFORMAT_ONLY){
+    if(!wasm && (flags & DNDC_REFORMAT_ONLY)){
         MStringBuilder outsb = {.allocator = get_mallocator()};
         auto before = get_t();
         auto format_error = format_tree(&ctx, &outsb);
@@ -437,7 +448,7 @@ run_the_dndc(uint64_t flags,
             }
         goto success;
         }
-    if(unlikely(flags & DNDC_INPUT_IS_UNTRUSTED)){
+    if(wasm || unlikely(flags & DNDC_INPUT_IS_UNTRUSTED)){
         if(ctx.imports.count){
             auto handle = ctx.imports.data[0];
             auto node = get_node(&ctx, handle);
@@ -472,7 +483,7 @@ run_the_dndc(uint64_t flags,
                 goto cleanup;
                 }
             // NOTE: re-get the node every loop as the pointer is invalidated.
-            for(size_t j = 0; j < node->children.count; j++, node=get_node(&ctx, handle)){
+            for(size_t j = 0; j < node_children_count(node); j++, node=get_node(&ctx, handle)){
                 auto child_handle = node_children(node)[j];
                 auto child = get_node(&ctx, child_handle);
                 if(child->type != NODE_STRING){
@@ -520,7 +531,7 @@ run_the_dndc(uint64_t flags,
     // but they usually don't, so doing these in parallel is a win as
     // Python startup (and execution) is very slow. JS startup is quicker, but not
     // free.
-    {
+    if(!wasm){
         // This is shoved in its own function as we need to guarantee
         // the worker has joined before continuing beyond this point.
         // Putting it in its own function with single-point-of-exit style
@@ -532,12 +543,14 @@ run_the_dndc(uint64_t flags,
             }
     }
     // Do some reporting as we don't add any nodes after this.
-    report_size(&ctx, SV("ctx.nodes.count = "), ctx.nodes.count);
-    report_size(&ctx, SV("ctx.user_script_nodes.count = "), ctx.user_script_nodes.count);
-    report_size(&ctx, SV("ctx.imports.count = "), ctx.imports.count);
-    report_size(&ctx, SV("ctx.script_nodes.count = "), ctx.script_nodes.count);
-    report_size(&ctx, SV("ctx.dependencies_nodes.count = "), ctx.dependencies_nodes.count);
-    report_size(&ctx, SV("ctx.link_nodes.count = "), ctx.link_nodes.count);
+    if(!wasm){
+        report_size(&ctx, SV("ctx.nodes.count = "), ctx.nodes.count);
+        report_size(&ctx, SV("ctx.user_script_nodes.count = "), ctx.user_script_nodes.count);
+        report_size(&ctx, SV("ctx.imports.count = "), ctx.imports.count);
+        report_size(&ctx, SV("ctx.script_nodes.count = "), ctx.script_nodes.count);
+        report_size(&ctx, SV("ctx.dependencies_nodes.count = "), ctx.dependencies_nodes.count);
+        report_size(&ctx, SV("ctx.link_nodes.count = "), ctx.link_nodes.count);
+        }
     // Python blocks can detach the root node and then forget to attach a new
     // one.
     if(NodeHandle_eq(ctx.root_handle, INVALID_NODE_HANDLE)){
@@ -546,7 +559,7 @@ run_the_dndc(uint64_t flags,
         goto cleanup;
         }
     // Check that the tree is not too deep!
-    {
+    if(!wasm){
         auto before = get_t();
         auto e = check_depth(&ctx);
         if(e.errored){
@@ -586,7 +599,7 @@ run_the_dndc(uint64_t flags,
         bool autoindexed = false;
         MARRAY_FOR_EACH(link_handle, ctx.link_nodes){
             auto link_node = get_node(&ctx, *link_handle);
-            if(!autoindexed && node_has_attribute(link_node, SV("autoindex"))){
+            if(!wasm && !autoindexed && node_has_attribute(link_node, SV("autoindex"))){
                 autoindexed = true;
                 auto e = ctx_add_auto_index_links(&ctx);
                 if(e.errored){
@@ -620,7 +633,7 @@ run_the_dndc(uint64_t flags,
     }
 
     // Render data nodes into the data blob.
-    {
+    if(!wasm){
         auto before_data = get_t();
         MStringBuilder sb = {.allocator=ctx.allocator};
         MARRAY_FOR_EACH(handle, ctx.data_nodes){
@@ -667,15 +680,36 @@ run_the_dndc(uint64_t flags,
         report_time(&ctx, SV("Data blob rendering took: "), after_data-before_data);
         report_size(&ctx, SV("ctx.rendered_data.count = "), ctx.rendered_data.count);
     }
-    if(ast_func){
+    if(!wasm && ast_func){
         int err = ast_func(ast_func_user_data, &ctx);
         if(err){
             report_system_error(&ctx, SV("Error during user defined ast func"));
             goto cleanup;
             }
         }
+    if(!wasm && (flags & DNDC_OUTPUT_EXPANDED_DND)){
+        MStringBuilder output_sb = {.allocator = get_mallocator()};
+        auto before_render = get_t();
+        auto e = expand_to_dnd(&ctx, &output_sb);
+        if(e.errored){
+            report_set_error(&ctx);
+            msb_destroy(&output_sb);
+            result.errored = e.errored;
+            goto cleanup;
+            }
+        auto after_render = get_t();
+        report_time(&ctx, SV("Expanding to .dnd took: "), after_render - before_render);
+        if(flags & DNDC_DONT_WRITE){
+            msb_destroy(&output_sb);
+            goto success;
+            }
+        else {
+            assert(outstring);
+            *outstring = msb_detach(&output_sb);
+            }
+    }
     // Render the actual document into a string as html.
-    {
+    else {
         MStringBuilder output_sb = {.allocator = get_mallocator()};
         auto before_render = get_t();
         auto e = render_tree(&ctx, &output_sb);
@@ -699,7 +733,7 @@ run_the_dndc(uint64_t flags,
             }
     }
     // Write the make-style dependency file to the Dependency directory.
-    if(dependency_func){
+    if(!wasm && dependency_func){
         MARRAY_FOR_EACH(handle, ctx.dependencies_nodes){
             auto node = get_node(&ctx, *handle);
             NODE_CHILDREN_FOR_EACH(it, node){
@@ -723,7 +757,7 @@ run_the_dndc(uint64_t flags,
     msb_destroy(&msb);
     report_size(&ctx, SV("source.length = "), source.length);
     report_size(&ctx, SV("la_.high_water = "), la_.high_water);
-    if(!(flags & DNDC_NO_CLEANUP)){
+    if(!wasm && !(flags & DNDC_NO_CLEANUP)){
         auto before_cleanup = get_t();
         if(ctx.flags & DNDC_PRINT_STATS){
             auto before = get_t();
@@ -766,15 +800,15 @@ run_the_dndc(uint64_t flags,
         auto after = get_t();
         report_time(&ctx, SV("Cleaning up memory took: "), after-before_cleanup);
         }
-    if(external_b64cache){
+    if(!wasm && external_b64cache){
         memcpy(external_b64cache, &ctx.b64cache, sizeof(ctx.b64cache));
         }
-    if(external_textcache){
+    if(!wasm && external_textcache){
         memcpy(external_textcache, &ctx.textcache, sizeof(ctx.textcache));
         }
     auto t1 = get_t();
     report_time(&ctx, SV("Execution took: "), t1-t0);
-    if(!(flags & DNDC_NO_CLEANUP))
+    if(!wasm && !(flags & DNDC_NO_CLEANUP))
         destroy_linear_storage(&la_);
     return result;
     }
@@ -783,6 +817,7 @@ run_the_dndc(uint64_t flags,
 #pragma clang assume_nonnull end
 #endif
 
+#include "dndc_expand.c"
 #include "dndc_htmlgen.c"
 #include "dndc_parser.c"
 #include "dndc_context.c"

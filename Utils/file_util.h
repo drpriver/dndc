@@ -5,20 +5,67 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-#include "common_macros.h"
-#include "errorable_long_string.h"
 #include "long_string.h"
 #include "ByteBuffer.h"
-#include "allocator.h"
+#include "Allocators/allocator.h"
+
+// If this is defined, use libc's FILE* to do everything instead
+// of native apis like read or ReadFile.
+
+// #define USE_C_STDIO
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
 
-// If this is defined, use libc's FILE* to do everything instead of
-// native apis like read or ReadFile.
+#ifndef force_inline
+#if defined(__GNUC__) || defined(__clang__)
+#define force_inline __attribute__((always_inline))
+#else
+#define force_inline
+#endif
+#endif
 
-// #define USE_C_STDIO
+#ifndef warn_unused
+
+#if defined(__GNUC__) || defined(__clang__)
+#define warn_unused __attribute__((warn_unused_result))
+#elif defined(_MSC_VER)
+#define warn_unused _Check_return
+#else
+#define warn_unused
+#endif
+
+#endif
+
+
+enum {
+    // Catch-all file error, use os-specific means to retrieve
+    // specific error.
+    FILE_ERROR = 1,
+    // Failure happened when trying to open the file. Use
+    // os-specific means to retrieive specific error.
+    FILE_NOT_OPENED = 3,
+    // Allocator failed, operations up to that point succeeded.
+    // No further information is available.
+    FILE_RESULT_ALLOC_FAILURE = 2,
+};
+
+typedef struct TextFileResult {
+    LongString result;
+    int errored;
+} TextFileResult;
+
+typedef struct BinaryFileResult {
+    ByteBuffer result;
+    int errored;
+} BinaryFileResult;
+
+typedef struct FileSizeResult {
+    size_t result;
+    int errored;
+} FileSizeResult;
+
 
 // Read an entire file into a string. Reads it in binary mode, so all
 // bytes are preserved, but we do nul-terminate.
@@ -27,56 +74,67 @@
 // on Posix platforms, you will encounter files with CRLF, or mixed!
 // Most algorithms want to ignore trailing spaces anyway, so this isn't
 // that big an imposition.
-static inline Errorable_f(LongString) read_file(const Allocator a, const char* filepath);
+static inline
+warn_unused
+TextFileResult
+read_file(const char* filepath, Allocator a);
 // Read an entire file into a byte buffer. Not guranteed nul-terminated.
-static inline Errorable_f(ByteBuffer) read_bin_file(const Allocator a, const char* filepath);
+static inline
+warn_unused
+BinaryFileResult
+read_bin_file(const char* filepath, Allocator a);
+
 // Write an entire file. Agnostic as to text and binary, opens the file in binary
 // mode. Writes whatever you give it as is, so we don't convert unix newlines to CRLF
 // or anything like that.
-static inline Errorable_f(void) write_file(const char* filename, const void* data, size_t data_length);
+static inline
+warn_unused
+int
+write_file(const char* filename, const void* data, size_t data_length);
 
 #ifdef USE_C_STDIO
 static inline
 force_inline
-Errorable_f(size_t)
+warn_unused
+FileSizeResult
 file_size_from_fp(FILE* fp){
-    Errorable(size_t) result = {};
-    #if 1
-        auto fd = fileno(fp);
-        struct stat s;
-        auto err = fstat(fd, &s);
-        if(err == -1){
-            Raise(FILE_ERROR);
-            }
-        result.result = s.st_size;
-    #else
-        // technically the portable way to do this.
-        fseek(fp, 0, SEEK_END);
-        result.result = s.st_size;
-        fseek(fp, 0, SEEK_SET);
-    #endif
+    FileSizeResult result = {};
+    // sadly, the only way in standard c to do this.
+    if(fseek(fp, 0, SEEK_END))
+        goto errored;
+    result.result = ftell(fp);
+    if(result.result < 0)
+        goto errored;
+    if(fseek(fp, 0, SEEK_SET))
+        goto errored;
+    return result;
+
+    errored:
+    result.errored = FILE_ERROR;
     return result;
     }
 
 static inline
-Errorable_f(LongString)
-read_file(const Allocator a, const char* filepath){
-    Errorable(LongString) result = {};
-    auto fp = fopen(filepath, "rb");
+warn_unused
+TextFileResult
+read_file(const char* filepath, Allocator a){
+    TextFileResult result = {};
+    FILE* fp = fopen(filepath, "rb");
     if(not fp)
         Raise(FILE_NOT_OPENED);
-    auto size_e = file_size_from_fp(fp);
+    FileSizeResult size_e = file_size_from_fp(fp);
     if(size_e.errored){
         fclose(fp);
-        Raise(FILE_ERROR);
+        result.errored = size_e.errored;
+        return result;
         }
-    auto nbytes = size_e.result;
+    size_t nbytes = size_e.result;
     char* text = Allocator_alloc(a, nbytes+1);
     if(!text){
-        result.errored = ALLOC_FAILURE;
+        result.errored = FILE_RESULT_ALLOC_FAILURE;
         goto finally;
         }
-    auto fread_result = fread(text, 1, nbytes, fp);
+    size_t fread_result = fread(text, 1, nbytes, fp);
     if(fread_result != nbytes){
         result.errored = FILE_ERROR;
         Allocator_free(a, text, nbytes+1);
@@ -91,25 +149,26 @@ finally:
     }
 
 static inline
-Errorable_f(ByteBuffer)
-read_bin_file(const Allocator a, const char* filepath){
-    Errorable(ByteBuffer) result = {};
-    auto fp = fopen(filepath, "rb");
+warn_unused
+BinaryFileResult
+read_bin_file(const char* filepath, Allocator a){
+    BinaryFileResult result = {};
+    FILE* fp = fopen(filepath, "rb");
     if(not fp)
         Raise(FILE_NOT_OPENED);
-    auto size_e = file_size_from_fp(fp);
+    FileSizeResult size_e = file_size_from_fp(fp);
     if(size_e.errored){
-        result.errored = FILE_ERROR;
+        result.errored = size_e.errored;
         goto finally;
         }
-    auto nbytes = size_e.result;
+    size_t nbytes = size_e.result;
     void* data = Allocator_alloc(a, nbytes);
     if(!data){
-        result.errored = ALLOC_FAILURE;
+        result.errored = FILE_RESULT_ALLOC_FAILURE;
         goto finally;
         }
     assert(data);
-    auto fread_result = fread(data, 1, nbytes, fp);
+    size_t fread_result = fread(data, 1, nbytes, fp);
     if(fread_result != nbytes){
         Allocator_free(a, data, nbytes);
         result.errored = FILE_ERROR;
@@ -124,20 +183,20 @@ finally:
     }
 
 static inline
-Errorable_f(void)
+warn_unused
+int
 write_file(const char* filename, const void* data, size_t data_length){
-    Errorable(void) result = {};
-    auto fp = fopen(filename, "wb");
-    if(!fp) Raise(FILE_NOT_OPENED);
+    FILE* fp = fopen(filename, "wb");
+    if(!fp) return FILE_NOT_OPENED;
 
     size_t nwrit = fwrite(data, 1, data_length, fp);
     if(nwrit != data_length){
         fclose(fp);
-        Raise(FILE_ERROR);
+        return FILE_ERROR;
         }
     fflush(fp);
     fclose(fp);
-    return result;
+    return 0;
     }
 
 #elif defined(__linux__) || defined(__APPLE__)
@@ -151,37 +210,42 @@ write_file(const char* filename, const void* data, size_t data_length){
 #endif
 static inline
 force_inline
-Errorable_f(size_t)
+warn_unused
+FileSizeResult
 file_size_from_fd(int fd){
-    Errorable(size_t) result = {};
+    FileSizeResult result = {};
     struct stat s;
-    auto err = fstat(fd, &s);
+    int err = fstat(fd, &s);
     if(err == -1){
-        Raise(FILE_ERROR);
+        result.errored = FILE_ERROR;
+        return result;
         }
     result.result = s.st_size;
     return result;
     }
 
 static inline
-Errorable_f(LongString)
-read_file(const Allocator a, const char* filepath){
-    Errorable(LongString) result = {};
+warn_unused
+TextFileResult
+read_file(const char* filepath, Allocator a){
+    TextFileResult result = {};
     int fd = open(filepath, O_RDONLY);
-    if(fd < 0)
-        Raise(FILE_NOT_OPENED);
-    auto size_e = file_size_from_fd(fd);
+    if(fd < 0){
+        result.errored = FILE_NOT_OPENED;
+        return result;
+        }
+    FileSizeResult size_e = file_size_from_fd(fd);
     if(size_e.errored){
-        result.errored = FILE_ERROR;
+        result.errored = size_e.errored;
         goto finally;
         }
-    auto nbytes = size_e.result;
+    size_t nbytes = size_e.result;
     char* text = Allocator_alloc(a, nbytes+1);
     if(!text){
-        result.errored = ALLOC_FAILURE;
+        result.errored = FILE_RESULT_ALLOC_FAILURE;
         goto finally;
         }
-    auto read_result = read(fd, text, nbytes);
+    ssize_t read_result = read(fd, text, nbytes);
     if(read_result != nbytes){
         Allocator_free(a, text, nbytes+1);
         result.errored = FILE_ERROR;
@@ -198,25 +262,28 @@ finally:
 
 
 static inline
-Errorable_f(ByteBuffer)
-read_bin_file(const Allocator a, const char* filepath){
-    Errorable(ByteBuffer) result = {};
+warn_unused
+BinaryFileResult
+read_bin_file(const char* filepath, Allocator a){
+    BinaryFileResult result = {};
     int fd = open(filepath, O_RDONLY);
-    if(fd < 0)
-        Raise(FILE_NOT_OPENED);
-    auto size_e = file_size_from_fd(fd);
+    if(fd < 0){
+        result.errored = FILE_NOT_OPENED;
+        return result;
+        }
+    FileSizeResult size_e = file_size_from_fd(fd);
     if(size_e.errored){
-        result.errored = FILE_ERROR;
+        result.errored = size_e.errored;
         goto finally;
         }
-    auto nbytes = size_e.result;
+    size_t nbytes = size_e.result;
     void* data = Allocator_alloc(a, nbytes);
     if(!data){
-        result.errored = ALLOC_FAILURE;
+        result.errored = FILE_RESULT_ALLOC_FAILURE;
         goto finally;
         }
     assert(data);
-    auto read_result = read(fd, data, nbytes);
+    ssize_t read_result = read(fd, data, nbytes);
     if(read_result != nbytes){
         Allocator_free(a, data, nbytes);
         result.errored = FILE_ERROR;
@@ -231,25 +298,22 @@ finally:
     }
 
 static inline
-Errorable_f(void)
+warn_unused
+int
 write_file(const char* filename, const void* data, size_t data_length){
-    Errorable(void) result = {};
     int fd = open(
             filename,
             O_WRONLY | O_NOFOLLOW | O_CREAT | O_TRUNC,
             S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if(fd < 0)
-        Raise(FILE_NOT_OPENED);
+        return FILE_NOT_OPENED;
     ssize_t nwrit = write(fd, data, data_length);
     if(nwrit != data_length){
         close(fd);
-        Raise(FILE_ERROR);
+        return FILE_ERROR;
         }
-    // I don't think we need to fsync.
-    // But I am unsure, so just to be safe.
-    // fsync(fd);
     close(fd);
-    return result;
+    return 0;
     }
 
 #elif defined(_WIN32)
@@ -260,14 +324,17 @@ write_file(const char* filename, const void* data, size_t data_length){
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
+
+// NOTE: In windows implementation we cast result of alloc
+//       for C++ compat.
+
 static inline
-Errorable_f(LongString)
-read_file(const Allocator a, const char* filepath){
-    Errorable(LongString) result = {};
-    PushDiagnostic();
-    SuppressDiscardQualifiers();
-    auto handle = CreateFile(
-            filepath,
+warn_unused
+TextFileResult
+read_file(const char* filepath, Allocator a){
+    TextFileResult result = {};
+    HANDLE handle = CreateFileA(
+            (char*)filepath,
             GENERIC_READ,
             FILE_SHARE_READ,
             NULL,
@@ -275,9 +342,9 @@ read_file(const Allocator a, const char* filepath){
             FILE_ATTRIBUTE_NORMAL,
             NULL
             );
-    PopDiagnostic();
     if(handle == INVALID_HANDLE_VALUE){
-        Raise(FILE_NOT_OPENED);
+        result.result = FILE_NOT_OPENED;
+        return result;
         }
     LARGE_INTEGER size;
     BOOL size_success = GetFileSizeEx(handle, &size);
@@ -285,9 +352,9 @@ read_file(const Allocator a, const char* filepath){
         goto finally;
         }
     size_t nbytes = size.QuadPart;
-    char* text = Allocator_alloc(a, nbytes+1);
+    char* text = (char*)Allocator_alloc(a, nbytes+1);
     if(!text){
-        result.errored = ALLOC_FAILURE;
+        result.errored = FILE_RESULT_ALLOC_FAILURE;
         goto finally;
         }
     DWORD nread;
@@ -307,13 +374,15 @@ finally:
     }
 
 static inline
-Errorable_f(ByteBuffer)
-read_bin_file(const Allocator a, const char* filepath){
-    Errorable(ByteBuffer) result = {};
-    PushDiagnostic();
-    SuppressDiscardQualifiers();
-    auto handle = CreateFile(
-            filepath,
+warn_unused
+TextFileResult
+read_file_w(const wchar_t* filepath, Allocator a){
+    TextFileResult result = {};
+    // TODO: first param is declared without const.
+    // Do I need to pass a local buffer or is it just
+    // old-fashioned?
+    HANDLE handle = CreateFileW(
+            (wchar_t*)filepath,
             GENERIC_READ,
             FILE_SHARE_READ,
             NULL,
@@ -321,9 +390,54 @@ read_bin_file(const Allocator a, const char* filepath){
             FILE_ATTRIBUTE_NORMAL,
             NULL
             );
-    PopDiagnostic();
     if(handle == INVALID_HANDLE_VALUE){
-        Raise(FILE_NOT_OPENED);
+        result.result = FILE_NOT_OPENED;
+        return result;
+        }
+    LARGE_INTEGER size;
+    BOOL size_success = GetFileSizeEx(handle, &size);
+    if(!size_success){
+        goto finally;
+        }
+    size_t nbytes = size.QuadPart;
+    char* text = (char*)Allocator_alloc(a, nbytes+1);
+    if(!text){
+        result.errored = FILE_RESULT_ALLOC_FAILURE;
+        goto finally;
+        }
+    DWORD nread;
+    BOOL read_success = ReadFile(handle, text, nbytes, &nread, NULL);
+    if(!read_success){
+        Allocator_free(a, text, nbytes+1);
+        result.errored = FILE_ERROR;
+        goto finally;
+        }
+    assert(nread == nbytes);
+    text[nbytes] = '\0';
+    result.result.text = text;
+    result.result.length = nbytes;
+finally:
+    CloseHandle(handle);
+    return result;
+    }
+
+static inline
+warn_unused
+BinaryFileResult
+read_bin_file(const char* filepath, Allocator a){
+    BinaryFileResult result = {};
+    HANDLE handle = CreateFileA(
+            (char*)filepath,
+            GENERIC_READ,
+            FILE_SHARE_READ,
+            NULL,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL
+            );
+    if(handle == INVALID_HANDLE_VALUE){
+        result.errored = FILE_NOT_OPENED;
+        return result;
         }
     LARGE_INTEGER size;
     BOOL size_success = GetFileSizeEx(handle, &size);
@@ -333,7 +447,7 @@ read_bin_file(const Allocator a, const char* filepath){
     size_t nbytes = size.QuadPart;
     void* data = Allocator_alloc(a, nbytes);
     if(!data){
-        result.errored = ALLOC_FAILURE;
+        result.errored = FILE_RESULT_ALLOC_FAILURE;
         goto finally;
         }
     DWORD nread;
@@ -350,14 +464,57 @@ finally:
     CloseHandle(handle);
     return result;
     }
+
 static inline
-Errorable_f(void)
+warn_unused
+BinaryFileResult
+read_bin_file_w(const wchar_t* filepath, Allocator a){
+    BinaryFileResult result = {};
+    HANDLE handle = CreateFileW(
+            (wchar_t*)filepath,
+            GENERIC_READ,
+            FILE_SHARE_READ,
+            NULL,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL
+            );
+    if(handle == INVALID_HANDLE_VALUE){
+        result.errored = FILE_NOT_OPENED;
+        return result;
+        }
+    LARGE_INTEGER size;
+    BOOL size_success = GetFileSizeEx(handle, &size);
+    if(!size_success){
+        goto finally;
+        }
+    size_t nbytes = size.QuadPart;
+    void* data = Allocator_alloc(a, nbytes);
+    if(!data){
+        result.errored = FILE_RESULT_ALLOC_FAILURE;
+        goto finally;
+        }
+    DWORD nread;
+    BOOL read_success = ReadFile(handle, data, nbytes, &nread, NULL);
+    if(!read_success){
+        Allocator_free(a, data, nbytes);
+        result.errored = FILE_ERROR;
+        goto finally;
+        }
+    assert(nread == nbytes);
+    result.result.buff = data;
+    result.result.n_bytes = nbytes;
+finally:
+    CloseHandle(handle);
+    return result;
+    }
+
+static inline
+warn_unused
+int
 write_file(const char* filename, const void* data, size_t data_length){
-    Errorable(void) result = {};
-    PushDiagnostic();
-    SuppressDiscardQualifiers();
-    auto handle = CreateFile(
-            filename,
+    HANDLE handle = CreateFileA(
+            (char*)filename,
             GENERIC_WRITE,
             0,
             NULL,
@@ -366,7 +523,7 @@ write_file(const char* filename, const void* data, size_t data_length){
             NULL
             );
     if(handle == INVALID_HANDLE_VALUE){
-        Raise(FILE_NOT_OPENED);
+        return FILE_NOT_OPENED;
         }
     DWORD bytes_written;
     BOOL write_success = WriteFile(
@@ -375,7 +532,6 @@ write_file(const char* filename, const void* data, size_t data_length){
             data_length,
             &bytes_written,
             NULL);
-    PopDiagnostic();
     if(!write_success){
         result.errored = FILE_ERROR;
         goto finally;
@@ -383,35 +539,71 @@ write_file(const char* filename, const void* data, size_t data_length){
     assert(bytes_written == data_length);
 finally:
     CloseHandle(handle);
-    return result;
+    return 0;
+    }
+
+static inline
+warn_unused
+int
+write_file_w(const wchar_t* filename, const void* data, size_t data_length){
+    HANDLE handle = CreateFileW(
+            (wchar_t*)filename,
+            GENERIC_WRITE,
+            0,
+            NULL,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL
+            );
+    if(handle == INVALID_HANDLE_VALUE){
+        return FILE_NOT_OPENED;
+        }
+    DWORD bytes_written;
+    BOOL write_success = WriteFile(
+            handle,
+            data,
+            data_length,
+            &bytes_written,
+            NULL);
+    if(!write_success){
+        result.errored = FILE_ERROR;
+        goto finally;
+        }
+    assert(bytes_written == data_length);
+finally:
+    CloseHandle(handle);
+    return 0;
     }
 
 #elif defined(WASM)
 static inline
-Errorable_f(LongString)
-read_file(const Allocator a, const char* filepath){
+warn_unused
+TextFileResult
+read_file(const char* filepath, Allocator a){
     (void)a;
     (void)filepath;
-    Errorable(LongString) result = {.errored=OS_ERROR};
+    TextFileResult result = {.errored=FILE_ERROR};
     return result;
     }
 
 static inline
-Errorable_f(ByteBuffer)
-read_bin_file(const Allocator a, const char* filepath){
+warn_unused
+BinaryFileResult
+read_bin_file(const char* filepath, Allocator a){
     (void)a;
     (void)filepath;
-    Errorable(ByteBuffer) result = {.errored=OS_ERROR};
+    BinaryFileResult result = {.errored=FILE_ERROR};
     return result;
     }
+
 static inline
-Errorable_f(void)
+warn_unused
+int
 write_file(const char* filename, const void* data, size_t data_length){
     (void)filename;
     (void)data;
     (void)data_length;
-    Errorable(void) result = {.errored=OS_ERROR};
-    return result;
+    return 1;
     }
 #endif
 
