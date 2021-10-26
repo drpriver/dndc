@@ -9,7 +9,7 @@ have_deps = install_deps.ensure_deps(False)
 import sys
 if not have_deps:
     sys.exit(1)
-from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox
+from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox, QToolButton
 from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
 from PySide2.QtWebEngineCore import QWebEngineUrlScheme, QWebEngineUrlSchemeHandler, QWebEngineUrlRequestJob
 from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices, QCloseEvent
@@ -615,6 +615,22 @@ class SplitterHandler(QObject):
         return False
 
 class Page(QSplitter):
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        # idk if this is the right spot for this.
+        if not (event.modifiers() & Qt.ControlModifier):
+            return super().keyPressEvent(event)
+        try:
+            v = int(chr(event.key()))
+        except:
+            pass
+        else:
+            if v == 0:
+                v = 10
+            v -= 1
+            if v < TABWIDGET.count():
+                TABWIDGET.setCurrentIndex(v)
+                return
+        return super().keyPressEvent(event)
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.inflight = False

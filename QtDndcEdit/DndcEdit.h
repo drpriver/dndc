@@ -172,6 +172,7 @@ public:
     void export_as_html(void);
     void display_dndc_error(int error_type, const QString& filename, int row, int col, const QString& message);
     void add_dependencies(size_t count, DndcStringView* paths);
+    void keyPressEvent(QKeyEvent* event) override;
 
 };
 

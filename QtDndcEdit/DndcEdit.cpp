@@ -880,6 +880,27 @@ Page::~Page(){
     // qDebug("Page dtor");
 }
 void
+Page::keyPressEvent(QKeyEvent* event){
+    // Idk if this is where I should be intercepting these.
+    if(!(event->modifiers() & Qt::ControlModifier)){
+        QSplitter::keyPressEvent(event);
+        return;
+    }
+    auto key = event->key();
+    if(key <= '9' && key >= '0'){
+        auto v = key - '0';
+        if(v == 0)
+            v = 10;
+        v--;
+        if(TABS->count() > v){
+            TABS->setCurrentIndex(v);
+            return;
+        }
+    }
+    QSplitter::keyPressEvent(event);
+    return;
+}
+void
 Page::contents_changed(void){
     if(auto_apply)
         update_html();
