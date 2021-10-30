@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
 import datetime
 import sys
 import os
 import pydndc
 import logging
+from typing import List
 from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox, QToolButton, QPushButton, QLineEdit, QVBoxLayout, QGridLayout, QSpacerItem, QSizePolicy
 from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices, QCloseEvent
 from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher, QFile, QThread, QTimer
@@ -205,14 +207,40 @@ class SingleJobPage(QWidget):
         self.error_display = QPlainTextEdit(self)
         self.layout.addWidget(self.error_display, 4, 1)
         self.layout.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding), 5, 1)
+    def get_state(self) -> dict:
+        result =  dict(
+                file_text = self.file_ed.text(),
+                dir_text = self.dir_ed.text(),
+                out_text = self.out_ed.text(),
+                )
+        return result
+
+    def load_state(self, state:dict) -> None:
+        self.file_ed.setText(state.get('file_text', ''))
+        self.dir_ed.setText(state.get('dir_text', ''))
+        self.out_ed.setText(state.get('out_text', ''))
+    def state_keys(self) -> List[str]:
+        return ['file_text', 'dir_text', 'out_text']
 
 class FolderJobPage(QWidget):
     def __init__(self) -> None:
         super().__init__()
+    def get_state(self) -> dict:
+        return {}
+    def load_state(self, state:dict) -> None:
+        return
+    def state_keys(self) -> List[str]:
+        return []
 
 class ProjectJobPage(QWidget):
     def __init__(self) -> None:
         super().__init__()
+    def get_state(self) -> dict:
+        return {}
+    def load_state(self, state:dict) -> None:
+        return
+    def state_keys(self) -> List[str]:
+        return []
 
 class MyMainWindow(QMainWindow):
     def __init__(self)->None:
@@ -226,17 +254,35 @@ class MyMainWindow(QMainWindow):
         self.tabwidget.addTab(self.folder_job, 'Compile Folder')
         self.tabwidget.addTab(self.project_job, 'Compile JSON Project')
         self.settings = QSettings('DavidTechnology', APPNAME)
+    def get_prefixed_widgets(self) -> list:
+        return [
+                ('singlefile',self.single_job),
+                ('folderjob', self.folder_job),
+                ('projectjob', self.project_job),
+                ]
 
     def restore_everything(self)->None:
-        global EDITOR_ON_LEFT
         geometry = self.settings.value('window_geometry')
         if geometry is not None:
             self.restoreGeometry(geometry) # type: ignore
         else:
             self.resize(600, 400)
+        for prefix, widget in self.get_prefixed_widgets():
+            state_dict = {}
+            for k in widget.state_keys():
+                key = f'{prefix}.{k}'
+                v = self.settings.value(key)
+                if v is not None:
+                    state_dict[k] = v
+            widget.load_state(state_dict)
 
     def closeEvent(self, e:QCloseEvent) -> None:
         self.settings.setValue('window_geometry', self.saveGeometry())
+        for prefix, widget in self.get_prefixed_widgets():
+            state = widget.get_state()
+            for k, v in state.items():
+                key = f'{prefix}.{k}'
+                self.settings.setValue(key, v)
         e.accept()
 
 WINDOW = MyMainWindow()

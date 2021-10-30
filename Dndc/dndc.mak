@@ -41,7 +41,7 @@ PyGdndc/pydndc$(PYEXTENSION): $(BINDIR)/pydndc$(PYEXTENSION)
 	$(CP) $< $@
 
 
-RELEASEFILES = $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pygdndc.pyw PyGdndc/changelog.dnd PyGdndc/install_deps.py PyGdndc/README.txt EXAMPLE.dnd PyGdndc/Manual.dnd
+RELEASEFILES = $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pygdndc.pyw PyGdndc/dndbatch.pyw PyGdndc/changelog.dnd PyGdndc/install_deps.py PyGdndc/README.txt EXAMPLE.dnd PyGdndc/Manual.dnd
 .PHONY: release
 release: $(RELEASEFILES)
 	$(RM) -f Release/Dndc Release/Dndc.$(DNDCVERSION).zip

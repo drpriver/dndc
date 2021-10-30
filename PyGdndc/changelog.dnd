@@ -1,3 +1,11 @@
+Version 0.7.3::md
+  * A utility for converting dnd files to html without using the editor has
+    been included in the distribution. It's called "dndbatch" and should be
+    pretty self-explanatory.
+  * Parsing has been improved and is now much faster (although it was never
+    that slow to begin with).
+  * You can now use ctrl+1, ctrl+2, etc. to swap to the first, second, etc.
+    tab.
 Version 0.7.2::md
   * Bug fixes
   * A useless wrapper div will now be elided if the document's
