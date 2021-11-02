@@ -976,6 +976,28 @@ parse_arg(ArgToParse* arg, StringView s){
         case ARG_ENUM:{
             if(!s.length) return ARGPARSE_CONVERSION_ERROR;
             const ArgParseEnumType* enu = arg->dest.enum_pointer;
+            // allow specifying enums by numeric value.
+            struct Uint64Result uint_res = parse_unsigned_human(s.text, s.length);
+            if(!uint_res.errored){
+                if(uint_res.result >= enu->enum_count)
+                    return ARGPARSE_CONVERSION_ERROR;
+                switch(enu->enum_size){
+                    case 1:{
+                        APPEND_ARG(uint8_t, uint_res.result);
+                    }return 0;
+                    case 2:{
+                        APPEND_ARG(uint16_t, uint_res.result);
+                    }return 0;
+                    case 4:{
+                        APPEND_ARG(uint32_t, uint_res.result);
+                    }return 0;
+                    case 8:{
+                        APPEND_ARG(uint64_t, uint_res.result);
+                    }return 0;
+                    default:
+                        return ARGPARSE_INTERNAL_ERROR;
+                }
+            }
             // We just do a linear search over the strings.  In theory this is
             // very bad, but in practice a typical parse line will need to
             // match against a given enum once so any fancy algorithm would
@@ -1004,29 +1026,7 @@ parse_arg(ArgToParse* arg, StringView s){
                     }
                 }
             }
-            // allow specifying enums by numeric value.
-            struct Uint64Result uint_res = parse_unsigned_human(s.text, s.length);
-            if(uint_res.errored){
-                return ARGPARSE_CONVERSION_ERROR;
-            }
-            if(uint_res.result >= enu->enum_count)
-                return ARGPARSE_CONVERSION_ERROR;
-            switch(enu->enum_size){
-                case 1:{
-                    APPEND_ARG(uint8_t, uint_res.result);
-                }return 0;
-                case 2:{
-                    APPEND_ARG(uint16_t, uint_res.result);
-                }return 0;
-                case 4:{
-                    APPEND_ARG(uint32_t, uint_res.result);
-                }return 0;
-                case 8:{
-                    APPEND_ARG(uint64_t, uint_res.result);
-                }return 0;
-                default:
-                    return ARGPARSE_INTERNAL_ERROR;
-            }
+            return ARGPARSE_CONVERSION_ERROR;
         }break;
     }
     return 0;
