@@ -6,6 +6,7 @@ Version 0.7.3::md
     that slow to begin with).
   * You can now use ctrl+1, ctrl+2, etc. to swap to the first, second, etc.
     tab.
+  * Nav blocks now support classes and an id.
 Version 0.7.2::md
   * Bug fixes
   * A useless wrapper div will now be elided if the document's

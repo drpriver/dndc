@@ -252,9 +252,7 @@ static
 void
 build_nav_block(DndcContext* ctx){
     MStringBuilder sb = {.allocator=ctx->string_allocator};
-    msb_write_literal(&sb, "<nav>\n<ul>\n");
     build_nav_block_node(ctx, ctx->root_handle, &sb, 1);
-    msb_write_literal(&sb, "</ul>\n</nav>");
     ctx->renderednav = msb_detach(&sb);
     }
 
@@ -765,7 +763,15 @@ RENDERFUNC(NAV){
     if(node_children_count(node)){
         node_print_warning(ctx, node, SV("Children on navs unsupported"));
         }
+    auto id = node_get_id(node);
+    msb_write_literal(sb, "<nav");
+    if(id){
+        MSB_FORMAT(sb, " id=\"", *id, "\"");
+    }
+    write_classes(sb, node);
+    msb_write_literal(sb, ">\n<ul>\n");
     msb_write_str(sb, ctx->renderednav.text, ctx->renderednav.length);
+    msb_write_literal(sb, "</ul>\n</nav>");
     return (Errorable(void)){};
     }
 RENDERFUNC(PARA){

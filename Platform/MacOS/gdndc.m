@@ -617,7 +617,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     msb_write_char(&sb, '\n');
     double scale = size.width > size.height? 800.0/size.width : 800.0/size.height;
     INDENT(); MSB_FORMAT(&sb, "width = ", (int)(size.width*scale), "\n");
-    INDENT(); MSB_FORMAT(&sb, "height = \n", (int)(size.height*scale), "\n");
+    INDENT(); MSB_FORMAT(&sb, "height = ", (int)(size.height*scale), "\n");
     INDENT(); MSB_FORMAT(&sb, "viewBox = 0 0 ", (int)size.width, " ", (int)size.height, "\n");
     StringView script[] = {
         SV("::python\n"),
@@ -1036,7 +1036,7 @@ BOOL show_stats;
     switch(item.tag){
         case GDND_INSERT_IMGLINKS:
         case GDND_INSERT_IMG:
-            panel.allowedFileTypes = @[@"png"];
+            panel.allowedFileTypes = @[@"png", @"jpg"];
             break;
         case GDND_INSERT_CSS:
             panel.allowedFileTypes = @[@"css"];
