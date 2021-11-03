@@ -54003,6 +54003,8 @@ typedef struct JSAtomicsWaiter {
 } JSAtomicsWaiter;
 
 #ifdef _WIN32
+// BUG(dpriver): this is never initialized, but my code should never be
+// using atomics anyway.
 static CRITICAL_SECTION js_atomics_mutex;
 #else
 static pthread_mutex_t js_atomics_mutex = PTHREAD_MUTEX_INITIALIZER;
