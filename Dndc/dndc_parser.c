@@ -119,7 +119,7 @@ analyze_line(DndcContext* ctx){
         length -= 16;
         }
 #endif
-    for(;;cursor++, length--){
+    for(;;cursor++){
         char ch = *cursor;
         switch(ch){
             case ' ': case '\r': case '\t':
@@ -130,6 +130,7 @@ analyze_line(DndcContext* ctx){
             }
         }
     Lafterwhitespace:;
+    length = ctx->end - cursor;
 #if 1 && defined(__x86_64__)
     __m128i colons  = _mm_set1_epi8(':');
     __m128i newline = _mm_set1_epi8('\n');
@@ -259,6 +260,7 @@ analyze_line(DndcContext* ctx){
         break;
         }
     Lendonly:;
+    length = ctx->end - cursor;
 #if 1 && defined(__x86_64__)
     while(length >= 16){
         __m128i data    = _mm_loadu_si128((const __m128i*)(cursor));

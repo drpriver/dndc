@@ -410,7 +410,17 @@ run_the_dndc(uint64_t flags,
             result.errored = source_err.errored;
             goto cleanup;
             }
-        source = source_err.result;
+            #if 0
+                // Forces the allocation to be the right size and via malloc.
+                // Useful for asan.
+                char* text = malloc(source_err.result.length+1);
+                memcpy(text, source_err.result.text, source_err.result.length);
+                text[source_err.result.length] = 0;
+                source.length = source_err.result.length;
+                source.text = text;
+            #else
+                source = source_err.result;
+            #endif
         }
     else {
         source = source_or_path;

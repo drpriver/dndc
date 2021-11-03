@@ -17,7 +17,7 @@ LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
     // the fuzzer to accidentally do an os.system of anything.
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
-        | DNDC_DONT_WRITE
+        // | DNDC_DONT_WRITE
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_NO_PYTHON
         | DNDC_NO_THREADS
@@ -27,14 +27,20 @@ LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
 #endif
         ;
     LongString source = {.text=str, .length=size};
-    auto e = run_the_dndc(flags, LS(""),
-            source, NULL,
+    LongString out;
+    auto e = run_the_dndc(flags,
+            LS(""),
+            source,
+            LS("lmao.html"),
+            &out, // out
             NULL, NULL, // caches
             NULL, NULL, // errors
             NULL, NULL, // dependency
-            NULL, NULL // astfunc
+            NULL, NULL, // astfunc
+            NULL // worker
             );
-    (void)e;
+    if(!e.errored)
+        dndc_free_string(out);
     free(str);
     return 0;
     }

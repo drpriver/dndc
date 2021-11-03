@@ -253,7 +253,8 @@ void
 build_nav_block(DndcContext* ctx){
     MStringBuilder sb = {.allocator=ctx->string_allocator};
     build_nav_block_node(ctx, ctx->root_handle, &sb, 1);
-    ctx->renderednav = msb_detach(&sb);
+    if(sb.cursor)
+        ctx->renderednav = msb_detach(&sb);
     }
 
 static
