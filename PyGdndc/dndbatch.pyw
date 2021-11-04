@@ -4,6 +4,7 @@ import sys
 import os
 import pydndc
 import logging
+import glob
 from typing import List
 from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox, QToolButton, QPushButton, QLineEdit, QVBoxLayout, QGridLayout, QSpacerItem, QSizePolicy
 from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices, QCloseEvent
@@ -379,14 +380,147 @@ class MultiJobPage(QWidget):
     def state_keys(self) -> List[str]:
         return ['file_text', 'dir_text', 'out_text']
 class FolderJobPage(QWidget):
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
+        self.layout = QGridLayout(self)
+
+        self.layout.setSpacing(4)
+        self.layout.setMargin(4)
+
+        self.folder_lab = QLabel("Dnd Folder:")
+        self.folder_ed = QLineEdit()
+        self.folder_ed.setClearButtonEnabled(True)
+        reldir = ''
+        self.folder_button = QPushButton("Choose")
+        def pick_folder() -> None:
+            options = QFileDialog.Options()
+            if sys.platform == 'darwin':
+                options |= QFileDialog.DontUseNativeDialog
+            dirname = QFileDialog.getExistingDirectory(None, 'Choose Folder of Dnd Files', '', options=options)  # type: ignore
+            if not dirname:
+                return
+            self.folder_ed.setText(dirname)
+
+        self.folder_button.clicked.connect(pick_folder)
+
+        self.layout.addWidget(self.folder_lab, 0, 0, Qt.AlignTop)
+        self.layout.addWidget(self.folder_ed, 0, 1, Qt.AlignTop)
+        self.layout.addWidget(self.folder_button, 0, 2, Qt.AlignTop)
+
+        self.out_lab = QLabel("Output Folder:")
+        self.out_ed = QLineEdit()
+        self.out_ed.setClearButtonEnabled(True)
+        self.out_button = QPushButton("Choose")
+        def pick_output() -> None:
+            options = QFileDialog.Options()
+            if sys.platform == 'darwin':
+                options |= QFileDialog.DontUseNativeDialog
+            dirname = QFileDialog.getExistingDirectory(None, 'Choose Folder of Dnd Files', '', options=options)  # type: ignore
+            if not dirname:
+                return
+            self.out_ed.setText(dirname)
+
+        self.out_button.clicked.connect(pick_output)
+            
+
+        self.layout.addWidget(self.out_lab, 1, 0, Qt.AlignTop)
+        self.layout.addWidget(self.out_ed, 1, 1, Qt.AlignTop)
+        self.layout.addWidget(self.out_button, 1, 2, Qt.AlignTop)
+        def compile_one(infile:str, basedir:str, outfile:str) -> None:
+            try:
+                text = open(infile, 'r', encoding='utf-8').read()
+            except Exception as e:
+                self.error_display.appendPlainText(str(e))
+            def error_reporter(error_type:int, filename:str, row:int, col:int, message:str):
+                error_types = (
+                    'Error',
+                    'Warning',
+                    'System Error',
+                    'Info',
+                    'Debug',
+                    )
+                if error_type < 0 or error_type >= len(error_types):
+                    LOGGER.error('unrecognized error type: %d', error_type)
+                    return
+                et = error_types[error_type]
+                if et == 'Info':
+                    self.error_display.appendPlainText(f'{infile}: {et}: {message}')
+                else:
+                    self.error_display.appendPlainText(f'{infile}: {et}:{row+1}:{col+1}: {message}')
+            try:
+                html, _ = pydndc.htmlgen(text, base_dir=basedir, error_reporter=error_reporter)
+            except Exception as e:
+                self.error_display.appendPlainText(f'{infile}: {e}')
+                return
+            try:
+                out = open(outfile, 'w', encoding='utf-8')
+            except Exception as e:
+                self.error_display.appendPlainText(f'{infile}: {e}')
+                return
+            try:
+                out.write(html)
+                out.flush()
+                out.close()
+            except Exception as e:
+                self.error_display.appendPlainText(f'{infile}: {e}')
+                return
+            self.error_display.appendPlainText(f'{os.path.basename(infile)}: Success!')
+
+        def compile() -> None:
+            self.error_display.clear()
+            try:
+                infolder = self.folder_ed.text().strip()
+                outfolder = self.out_ed.text().strip()
+                pattern = os.path.join(infolder, '*.dnd')
+                files = glob.glob(pattern)
+                for f in files:
+                    outfile = os.path.join(outfolder, os.path.basename(f))
+                    outfile = outfile[:-3] + 'html'
+                    compile_one(f, infolder, outfile)
+            finally:
+                self.error_display.repaint()
+
+        self.do_it_button = QPushButton("Compile")
+        self.do_it_button.clicked.connect(compile)
+        self.open_button = QPushButton("Open Output")
+        def open_output():
+            try:
+                path = self.out_ed.text().strip()
+                if not path:
+                    self.error_display.setPlainText('Must choose an output path.')
+                    return
+                if not os.path.isdir(path):
+                    self.error_display.setPlainText(f'"{path}" does not exist.')
+                    return
+                success = QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+                if not success:
+                    self.error_display.setPlainText(f'Unable to open "{path}".')
+            finally:
+                self.error_display.repaint()
+        self.open_button.clicked.connect(open_output)
+        self.bottom_buttons = QWidget()
+        self.bot_layout = QHBoxLayout()
+        self.bot_layout.setSpacing(0)
+        self.bot_layout.setMargin(0)
+        self.bot_layout.addWidget(self.do_it_button)
+        self.bot_layout.addWidget(self.open_button)
+        self.bottom_buttons.setLayout(self.bot_layout)
+        self.layout.addWidget(self.bottom_buttons, 2, 1)
+        self.error_display = QPlainTextEdit(self)
+        self.layout.addWidget(self.error_display, 3, 1)
+        self.layout.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding), 5, 1)
     def get_state(self) -> dict:
-        return {}
+        result =  dict(
+                folder_text = self.folder_ed.text(),
+                out_text = self.out_ed.text(),
+                )
+        return result
+
     def load_state(self, state:dict) -> None:
-        return
+        self.folder_ed.setText(state.get('folder_text', ''))
+        self.out_ed.setText(state.get('out_text', ''))
     def state_keys(self) -> List[str]:
-        return []
+        return ['folder_text', 'out_text']
 
 class ProjectJobPage(QWidget):
     def __init__(self) -> None:
@@ -434,6 +568,9 @@ class MyMainWindow(QMainWindow):
                 if v is not None:
                     state_dict[k] = v
             widget.load_state(state_dict)
+        whichtab = self.settings.value('whichtab')
+        if whichtab:
+            self.tabwidget.setCurrentIndex(int(whichtab))
 
     def closeEvent(self, e:QCloseEvent) -> None:
         self.settings.setValue('window_geometry', self.saveGeometry())
@@ -442,6 +579,7 @@ class MyMainWindow(QMainWindow):
             for k, v in state.items():
                 key = f'{prefix}.{k}'
                 self.settings.setValue(key, v)
+        self.settings.setValue('whichtab', self.tabwidget.currentIndex())
         e.accept()
 
 WINDOW = MyMainWindow()
