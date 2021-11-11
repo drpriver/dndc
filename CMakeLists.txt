@@ -16,6 +16,7 @@ include_directories(Platform/Windows)
 add_compile_options("-D_CRT_NONSTDC_NO_DEPRECATE" "-D_CRT_SECURE_NO_WARNINGS")
 elseif(APPLE)
 elseif(UNIX)
+set(LIBM_LIBRARIES m)
 endif()
 
 add_executable(dndc
@@ -56,9 +57,9 @@ set_target_properties(quickjs-dylib
     )
 target_compile_definitions(quickjs-lib PRIVATE CONFIG_VERSION="2021-03-27")
 
-target_link_libraries(dndc ${Python3_LIBRARIES} quickjs-dylib Threads::Threads)
+target_link_libraries(dndc ${Python3_LIBRARIES} quickjs-lib Threads::Threads ${LIBM_LIBRARIES})
 target_include_directories(dndc PRIVATE ${Python3_INCLUDE_DIRS})
-target_compile_definitions(dndc PRIVATE QJS_SHARED_LIBRARY)
+# target_compile_definitions(dndc PRIVATE QJS_SHARED_LIBRARY)
 
 # Cmake sucks and doesn't allow a library and
 # executable with the same name, even though the output files are different!

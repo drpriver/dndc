@@ -124,7 +124,7 @@ executable(
   include_directories: includes,
   dependencies:[pydep, thread_dep],
   install: true,
-  link_with: quickjs_dylib,
+  link_with: quickjs_static,
   )
 dndc_lib = both_libraries(
   'dndc',
