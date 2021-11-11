@@ -323,6 +323,8 @@ write_file(const char* filename, const void* data, size_t data_length){
 #include "windowsheader.h"
 #ifdef __clang__
 #pragma clang assume_nonnull begin
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
 #endif
 
 // NOTE: In windows implementation we cast result of alloc
@@ -343,7 +345,7 @@ read_file(const char* filepath, Allocator a){
             NULL
             );
     if(handle == INVALID_HANDLE_VALUE){
-        result.result = FILE_NOT_OPENED;
+        result.errored = FILE_NOT_OPENED;
         return result;
         }
     LARGE_INTEGER size;
@@ -391,7 +393,7 @@ read_file_w(const wchar_t* filepath, Allocator a){
             NULL
             );
     if(handle == INVALID_HANDLE_VALUE){
-        result.result = FILE_NOT_OPENED;
+        result.errored = FILE_NOT_OPENED;
         return result;
         }
     LARGE_INTEGER size;
@@ -513,6 +515,7 @@ static inline
 warn_unused
 int
 write_file(const char* filename, const void* data, size_t data_length){
+    int result = 0;
     HANDLE handle = CreateFileA(
             (char*)filename,
             GENERIC_WRITE,
@@ -533,19 +536,20 @@ write_file(const char* filename, const void* data, size_t data_length){
             &bytes_written,
             NULL);
     if(!write_success){
-        result.errored = FILE_ERROR;
+        result = FILE_ERROR;
         goto finally;
         }
     assert(bytes_written == data_length);
 finally:
     CloseHandle(handle);
-    return 0;
+    return result;
     }
 
 static inline
 warn_unused
 int
 write_file_w(const wchar_t* filename, const void* data, size_t data_length){
+    int result = 0;
     HANDLE handle = CreateFileW(
             (wchar_t*)filename,
             GENERIC_WRITE,
@@ -566,14 +570,18 @@ write_file_w(const wchar_t* filename, const void* data, size_t data_length){
             &bytes_written,
             NULL);
     if(!write_success){
-        result.errored = FILE_ERROR;
+        result = FILE_ERROR;
         goto finally;
         }
     assert(bytes_written == data_length);
 finally:
     CloseHandle(handle);
-    return 0;
+    return result;
     }
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 #elif defined(WASM)
 static inline
