@@ -1,22 +1,20 @@
 ::css
   dungeon.css
-::python
-  # I think this is wrong actually.
-  root = ctx.root
-  make_node = ctx.make_node
-  left_node = next((n for n in root.children if 'left' in n.classes), None)
-  if left_node is not None:
-    left_node.detach()
-  container = make_node(NodeType.DIV, classes=['center'])
-  new_root = make_node(NodeType.DIV, classes=['grid_container'])
-  new_root.add_child(container)
-  root.detach()
-  if left_node is not None:
-    new_root.add_child(left_node)
-  container.add_child(root)
-  ctx.set_root(new_root)
-  #endpython
+::js
+  let root = ctx.root;
+  let lefts = ctx.select_nodes({classes:['left']});
+  let left = lefts.length? lefts[0] : null;
+  if(left) left.detach();
+  let container = ctx.make_node(NodeType.DIV, {classes:['center']});
+  let new_root = ctx.make_node(NodeType.DIV, {classes:['grid_container']});
+  new_root.add_child(container);
+  root.detach();
+  if(left) new_root.add_child(left);
+  container.add_child(root);
+  ctx.root = new_root;
+
 ::div .left
+
   Explanation of imglinks::comment
     The first line is the path to the image.
     The second line is the width, in px, that the image should be displayed at.
@@ -26,7 +24,7 @@
     width and height are the actual width and height of the image, not the scaled
     ones. If you do an "Insert -> Image Links", it will calculate these numbers
     for you.
-  
+
     The following lines are then in the form of
       textonmap = page#anchor @ x, y
     Where textonmap is the string to be displayed, page is the page to go to
@@ -34,7 +32,7 @@
     anchor is the id of a node on the page (inspect the page for ids or
     do it programmatically) and (x,y) are the coordinates to be displayed at.
     Note that the string is centered on the x,y coordinate.
-    
+
     Having the nodes and where they are positioned be separated is annoying,
     so below is an example of how to get all the nodes that have the .room class
     and the @coord attribute and then programatically adding them to the imglinks

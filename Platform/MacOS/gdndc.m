@@ -620,15 +620,15 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     INDENT(); MSB_FORMAT(&sb, "height = ", (int)(size.height*scale), "\n");
     INDENT(); MSB_FORMAT(&sb, "viewBox = 0 0 ", (int)size.width, " ", (int)size.height, "\n");
     StringView script[] = {
-        SV("::python\n"),
-        SV("  # this is an example of how to script the imglinks\n"),
-        SV("  imglinks = node.parent\n"),
-        SV("  coord_nodes = ctx.select_nodes(attributes=['coord'])\n"),
-        SV("  for c in coord_nodes:\n"),
-        SV("    lead = c.header  # change this probably\n"),
-        SV("    position = c.attributes['coord']\n"),
-        SV("    imglinks.add_child(f'{lead} = {ctx.outfile}#{c.id} @{position}')\n"),
-        SV("  #endpython\n"),
+        SV("::js\n"),
+        SV("  // this is an example of how to script the imglinks\n"),
+        SV("  let imglinks = node.parent;\n"),
+        SV("  let coord_nodes = ctx.select_nodes({attributes:['coord']})\n"),
+        SV("  for(let c of coord_nodes){\n"),
+        SV("    let lead = c.header; \n"),
+        SV("    let position = c.attributes.get('coord');\n"),
+        SV("    imglinks.add_child(`${lead} = ${ctx.outfile}#${c.id} @${position}`);\n"),
+        SV("  }\n"),
     };
     for(int i = 0; i < arrlen(script); i++){
         INDENT();
