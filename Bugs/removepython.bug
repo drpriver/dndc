@@ -1,0 +1,1 @@
+Python is super annoying to distribute, so we should just get out of that game and remove the python blocks. Python is not a good embedded scripting language anyway as it is more suited for scripting an OS than your app.
