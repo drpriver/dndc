@@ -161,18 +161,19 @@ Getting Help::md
     padding-bottom: 50em;
   }
 
-::python
-  # This block makes it so the above document is nested within a grid container,
-  # with a nav on the left.
-  # This allows us to have it nested for display purposes,
-  # while writing it in a linear manner.
-  root = ctx.root
-  root.detach()
-  container = ctx.make_node(NodeType.DIV, classes=('center',))
-  container.add_child(root)
-  new_root = ctx.make_node(NodeType.DIV, classes=('grid_container',))
-  new_root.add_child(container)
-  left = ctx.make_node(NodeType.DIV, classes=('left',))
+::js
+  // This block makes it so the above document is nested within a grid container,
+  // with a nav on the left.
+  // This allows us to have it nested for display purposes,
+  // while writing it in a linear manner.
+  let root = ctx.root;
+  root.detach();
+  let container = ctx.make_node(NodeType.DIV, {classes:['center']});
+  container.add_child(root);
+  let new_root = ctx.make_node(NodeType.DIV, {classes:['grid_container']});
+  new_root.add_child(container);
+  let left = ctx.make_node(NodeType.DIV, {classes:['left']});
   new_root.add_child(left)
   left.add_child(ctx.make_node(NodeType.NAV))
-  ctx.set_root(new_root)
+  ctx.root = new_root;
+  //endjs

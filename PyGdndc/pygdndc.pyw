@@ -530,14 +530,15 @@ class DndEditor(QPlainTextEdit):
             f'  width = {int(w*scale)}',
             f'  height = {int(h*scale)}',
             f'  viewBox = 0 0 {w} {h}',
-            r"  ::python",
-            r"    # this is an example of how to script the imglinks",
-            r"    imglinks = node.parent",
-            r"    coord_nodes = ctx.select_nodes(attributes=['coord'])",
-            r"    for c in coord_nodes:",
-            r"      lead = c.header  # change this probably",
-            r"      position = c.attributes['coord']",
-            r"      imglinks.add_child(f'{lead} = {ctx.outfile}#{c.id} @{position}')",
+            r"  ::js",
+            r"    // this is an example of how to script the imglinks",
+            r"    let imglinks = node.parent;",
+            r"    let coord_nodes = ctx.select_nodes({attributes:['coord']});",
+            r"    for(let c of coord_nodes){",
+            r"      let lead = c.header;",
+            r"      let position = c.attributes.get('coord');",
+            r"      imglinks.add_child(`${lead} = ${ctx.outfile}#${c.id} @${position}`);",
+            r"    }"
             )))
     def alter_indent(self, indent:bool) -> None:
         if self.isReadOnly():

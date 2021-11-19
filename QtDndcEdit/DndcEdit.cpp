@@ -613,14 +613,15 @@ DndEditor::insert_image_links(const QString& fullname, const QString& fname){
             "  width = %2\n"
             "  height = %3\n"
             "  viewBox = 0 0 %4 %5\n"
-            "  ::python\n"
-            "    # this is an example of how to script the imglinks\n"
-            "    imglinks = node.parent\n"
-            "    coord_nodes = ctx.select_nodes(attributes=['coord'])\n"
-            "    for c in coord_nodes:\n"
-            "      lead = c.header  # change this probably\n"
-            "      position = c.attributes['coord']\n"
-            "      imglinks.add_child(f'{lead} = {ctx.outfile}#{c.id} @{position}')\n"
+            "  ::js\n"
+            "    // this is an example of how to script the imglinks\n"
+            "    let imglinks = node.parent;\n"
+            "    let coord_nodes = ctx.select_nodes({attributes:['coord']});\n"
+            "    for(let c of coord_nodes){\n"
+            "      let lead = c.header;\n"
+            "      let position = c.attributes.get('coord');\n"
+            "      imglinks.add_child(`${lead} = ${ctx.outfile}#${c.id} @${position}`);\n"
+            "    }\n"
           )
         .arg(fname)
         .arg((int)(w*scale))

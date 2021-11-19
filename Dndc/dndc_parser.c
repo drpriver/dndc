@@ -670,7 +670,7 @@ PARSEFUNC(parse_list_node){
             break;
         if(ctx->doublecolon){
             // This looks weird, but we allow double colon nodes in the table
-            // so that things like ::links and ::python nodes work properly.
+            // so that things like ::links and ::js nodes work properly.
             // Those will be removed at render time, so it's not invalid to
             // parse them.
             auto e = parse_double_colon(ctx, parent_handle);
@@ -812,7 +812,7 @@ PARSEFUNC(parse_table_node){
             break;
         if(ctx->doublecolon){
             // This looks weird, but we allow double colon nodes in the table
-            // so that things like ::links and ::python nodes work properly.
+            // so that things like ::links and ::js nodes work properly.
             // Those will be removed at render time, so it's not invalid to
             // parse them.
             auto e = parse_double_colon(ctx, parent_handle);
