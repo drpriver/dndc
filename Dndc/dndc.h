@@ -257,48 +257,6 @@ DNDC_API
 void
 dndc_free_string(DndcLongString);
 
-//
-// dndc_init_python
-// ----------------
-//
-// Initializes the python interpreter and imports the dndc types. If you do
-// not call this before calling `dndc_compile_dnd_file`, that function will
-// initialize a python interpreter and import the dndc types itself.
-// Initializing python is slow, so being able to initialize it separately from
-// compiling a dnd file gives you more control.
-//
-// If called at all, it should be called before `dndc_compile_dnd_file`.
-// If you already have an initialized python interpreter, call
-// `dndc_init_python_types` instead.
-//
-// Returns
-// -------
-// Returns 0 on success, a non-zero error code otherwise.
-//
-DNDC_API
-int
-dndc_init_python(void);
-
-//
-// dndc_init_python_types
-// ----------------------
-//
-// Initializes and imports the dndc types for when the python interpreter has
-// already been started.
-//
-// A Python interpreter should have been initialized by you beforehand. This
-// should be called before `dndc_compile_dnd_file` if you already have a python
-// interpreter. If you do not already have a python interpreter, call
-// `dndc_init_python` instead.
-//
-// Returns
-// -------
-// Returns 0 on success, a non-zero error code otherwise.
-//
-DNDC_API
-int
-dndc_init_python_types(void);
-
 enum DndcSyntax {
     // DNDC_SYNTAX_NONE,
     DNDC_SYNTAX_DOUBLE_COLON = 1,

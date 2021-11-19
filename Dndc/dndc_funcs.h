@@ -428,34 +428,6 @@ NodeHandle
 alloc_handle(DndcContext*);
 
 //
-// Execute a string representing python code. The string should be nul
-// terminated. The NodeHandle will be present in the locals of the executed
-// python code as "node".
-//
-static
-Errorable_f(void)
-execute_python_string(DndcContext*, Nonnull(const char*), NodeHandle, NodeHandle);
-//
-// Initialize the python interpreter and the dndc python data types. Takes a
-// flags argument, which is the same flags passed to run_the_dndc. This handles
-// the PYTHON_IS_INIT flag.
-//
-static
-Errorable_f(void)
-internal_init_dndc_python_interpreter(uint64_t flags);
-
-#ifndef PYTHONMODULE
-//
-// Shutdown the python interpreter, mostly freeing any resources it allocated.
-// This is mostly for detecting memory leaks. There's some reference leaks
-// somewhere it seems.
-//
-static
-void
-end_interpreter(void);
-#endif
-
-//
 // Add a node to be a child of another node. The child will have its parent
 // node set to this parent node and the child will be appended to the parent's
 // children array.

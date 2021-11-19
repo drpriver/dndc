@@ -1467,8 +1467,6 @@ asm(".global __app_icon\n"
 
 int
 main(int argc, const char *_Null_unspecified *_Nonnull argv) {
-    if(dndc_init_python() != 0)
-        return 1;
     auto font = [NSFont fontWithName:@"SF Mono" size:11];
     if(!font)
         font = [NSFont fontWithName:@"Courier" size:11];

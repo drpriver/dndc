@@ -4,6 +4,7 @@
 #define DNDC_API static inline
 #define PYTHONMODULE
 #include "dndc.c"
+#include "pyhead.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -11,6 +12,64 @@
 PushDiagnostic();
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
+
+PushDiagnostic();
+SuppressUnusedFunction();
+static inline
+LongString
+pystring_to_longstring(PyObject* pyobj, const Allocator a){
+    const char* text;
+    Py_ssize_t length;
+    text = PyUnicode_AsUTF8AndSize(pyobj, &length);
+    unhandled_error_condition(!text);
+    if(!length){
+        return (LongString){};
+        }
+    char* copy = Allocator_dupe(a, text, length+1);
+    return (LongString){
+        .text = copy,
+        .length = length,
+        };
+    }
+PopDiagnostic();
+
+static inline
+StringView
+pystring_to_stringview(PyObject* pyobj, const Allocator a){
+    const char* text;
+    Py_ssize_t length;
+    text = PyUnicode_AsUTF8AndSize(pyobj, &length);
+    unhandled_error_condition(!text);
+    if(!length){
+        return (StringView){};
+        }
+    char* copy = Allocator_dupe(a, text, length);
+    return (StringView){
+        .text = copy,
+        .length = length,
+        };
+    }
+static inline
+StringView
+pystring_borrow_stringview(PyObject* pyobj){
+    const char* text;
+    Py_ssize_t length;
+    text = PyUnicode_AsUTF8AndSize(pyobj, &length);
+    unhandled_error_condition(!text);
+    return (StringView){.text=text, .length=length};
+    }
+PushDiagnostic();
+SuppressUnusedFunction();
+static inline
+LongString
+pystring_borrow_longstring(PyObject* pyobj){
+    const char* text;
+    Py_ssize_t length;
+    text = PyUnicode_AsUTF8AndSize(pyobj, &length);
+    unhandled_error_condition(!text);
+    return (LongString){.text=text, .length=length};
+    }
+PopDiagnostic();
 
 typedef struct DndcPyFileCache {
     PyObject_HEAD
@@ -347,9 +406,6 @@ PyModuleDef pydndc = {
 
 PyMODINIT_FUNC _Nullable
 PyInit_pydndc(void){
-    auto e = internal_dndc_python_init_types();
-    if(e.errored)
-        return NULL;
     PyObject* mod = PyModule_Create(&pydndc);
     if(not mod)
         return NULL;

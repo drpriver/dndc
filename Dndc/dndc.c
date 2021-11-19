@@ -91,15 +91,10 @@ execute_user_scripts(DndcContext* ctx){
     Errorable(void) result = {};
     auto flags = ctx->flags;
     ArenaAllocator aa = {};
-    // The rt and python are lazily initialized as they are pretty expensive
+    // The rt is lazily initialized as they are pretty expensive
     // if not actually used.
     QJSRuntime* rt = NULL;
     QJSContext* jsctx = NULL;
-#ifdef PYTHONMODULE
-    bool python_is_initialized = true;
-#else
-    bool python_is_initialized = !!(flags & DNDC_PYTHON_IS_INIT);
-#endif
     auto before = get_t();
     // Count must be re-read each time through the loop as more scripts
     // can be added by scripts.
@@ -156,24 +151,6 @@ execute_user_scripts(DndcContext* ctx){
             str = msb_detach(&msb);
         }
         if(type == NODE_PYTHON){
-            if(!python_is_initialized){
-                auto before_init = get_t();
-                auto e = internal_init_dndc_python_interpreter(flags);
-                if(e.errored){
-                    report_system_error(ctx, SV("Failed to initialize python"));
-                    result.errored = e.errored;
-                    goto cleanup;
-                }
-                python_is_initialized = true;
-                auto after_init = get_t();
-                report_time(ctx, SV("Python init took: "), after_init-before_init);
-            }
-            auto py_err = execute_python_string(ctx, str.text, handle, firstchild);
-            if(py_err.errored){
-                report_set_error(ctx);
-                result.errored = py_err.errored;
-                goto cleanup;
-            }
         }
         else {
             assert(type == NODE_JS);
@@ -298,7 +275,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
         else
             join_thread(thread_worker);
         auto after = get_t();
-        // This is usually very fast as the worker thread finished before python.
+        // This is usually very fast as the worker thread finished before scripts.
         report_time(ctx, SV("Joining took: "), after-before);
     }
     if(binary_work_to_be_done){
@@ -679,16 +656,10 @@ run_the_dndc(uint64_t flags,
                     node_print_warning(&ctx, child, SV("Missing header from data child?"));
                 }
                 // FIXME:
-                // A maliciously crafted python block could bypass our depth check
+                // A maliciously crafted js block could bypass our depth check
                 // up above by detaching the data node and making one too deep,
                 // thus making us vulnerable to stack exhaustion during this
                 // recursive call.
-                //
-                // However, our code execution is totally unsandboxed right now and
-                // a malicious python block can just do anything. Crashing this
-                // main program is the least of your worries when it can just do an
-                // os.system('rm -rf /'). We bother guarding at all as you could
-                // run this in no-python mode.
                 {
                     msb_reset(&sb);
                     auto e = render_node(&ctx, &sb, child, 1);
@@ -870,7 +841,6 @@ run_the_dndc(uint64_t flags,
 
 #ifndef WASM
 
-#include "dndc_python.c"
 #include "dndc_qjs.c"
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -881,22 +851,6 @@ run_the_dndc(uint64_t flags,
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
-
-static
-Errorable_f(void)
-internal_init_dndc_python_interpreter(uint64_t flags){
-    Errorable(void) result = {};
-    if(flags & DNDC_PYTHON_IS_INIT)
-        return result;
-    result.errored = OS_ERROR;
-    return result;
-}
-static
-Errorable_f(void)
-execute_python_string(DndcContext* ctx, const char* str, NodeHandle node, NodeHandle child){
-    (void)ctx, (void)str, (void)node, (void)child;
-    return (Errorable(void)){.errored=OS_ERROR};
-}
 
 static
 Errorable_f(void)
@@ -942,20 +896,6 @@ dndc_format(LongString source_text, LongString* output, Nullable(DndcErrorFunc*)
         ;
     auto e = run_the_dndc(flags, LS(""), source_text, LS(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL);
     return e.errored;
-}
-
-DNDC_API
-int
-dndc_init_python(void){
-    auto err = internal_init_dndc_python_interpreter(0);
-    return err.errored;
-}
-
-DNDC_API
-int
-dndc_init_python_types(void){
-    auto err = internal_dndc_python_init_types();
-    return err.errored;
 }
 
 DNDC_API

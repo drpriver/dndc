@@ -18,7 +18,6 @@ static TestFunc TestUntrusted;
 static TestFunc TestSpecialChars;
 
 int main(int argc, char** argv){
-    dndc_init_python();
     RegisterTest(TestDndc1);
     RegisterTest(TestDndc2);
     RegisterTest(TestDndc3);
@@ -32,7 +31,6 @@ int main(int argc, char** argv){
     RegisterTest(TestUntrusted);
     RegisterTest(TestSpecialChars);
     int ret = test_main(argc, argv);
-    end_interpreter();
     return ret;
 }
 
@@ -42,8 +40,8 @@ TestFunction(TestDndc1){
         "::md\n"
         "   * Hello World\n"
         "   * This is amazing!\n"
-        "::python\n"
-        "  ctx.root.add_child('hello')\n"
+        "::js\n"
+        "  ctx.root.add_child('hello');\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_PYTHON_IS_INIT
@@ -64,7 +62,7 @@ TestFunction(TestDndc2){
         "::md\n"
         "   * Hello World\n"
         "   * This is amazing!\n"
-        "::python\n"
+        "::js\n"
         "  ctx.root.add_child('hello')\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE
@@ -85,7 +83,7 @@ TestFunction(TestDndc3){
         "::asjdiasjdmd\n"
         "   * Hello World\n"
         "   * This is amazing!\n"
-        "::python\n"
+        "::js\n"
         "  ctx.root.add_child('hello')\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE
@@ -107,7 +105,7 @@ TestFunction(TestDndcOutParam){
         "::md\n"
         "   * Hello World\n"
         "   * This is amazing!\n"
-        "::python\n"
+        "::js\n"
         "  ctx.root.add_child('hello')\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE

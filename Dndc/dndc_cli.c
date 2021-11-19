@@ -95,13 +95,6 @@ main(int argc, char**argv){
                         "If not given, everything is relative to cwd.",
             },
             {
-                .name = SV("--no-python"),
-                .max_num = 1,
-                .dest = ArgBitFlagDest(&flags, DNDC_NO_PYTHON),
-                .help = "Don't execute python nodes.",
-                .hidden = true,
-            },
-            {
                 .name = SV("--no-js"),
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_NO_COMPILETIME_JS),
@@ -179,15 +172,6 @@ main(int argc, char**argv){
                 .dest = ARGDEST(&cleanup),
                 .help = "Cleanup all resources (memory allocations, etc.).\n"
                         "Development debugging tool, useless in regular cli use.",
-                .hidden = true,
-            },
-            {
-                .name = SV("--use-site"),
-                .max_num = 1,
-                .dest = ArgBitFlagDest(&flags, DNDC_PYTHON_UNISOLATED),
-                .help = "Don't isolate python, import site, etc.\n"
-                        "Greatly slows startup, but allows importing user "
-                        "installed packages.",
                 .hidden = true,
             },
             {
@@ -401,7 +385,6 @@ main(int argc, char**argv){
             assert(!e.errored);
             dndc_free_string(output);
         }
-        end_interpreter();
         if(worker)
             dndc_worker_thread_destroy((DndcWorkerThread*)worker);
         return 0;
