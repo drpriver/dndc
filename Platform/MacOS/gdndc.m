@@ -408,11 +408,13 @@ gdndc_ast_func(void*_Nullable data, DndcContext* ctx){
         return 0;
     if(!NodeHandle_eq(ctx->titlenode, INVALID_NODE_HANDLE)){
         Node* node = get_node(ctx, ctx->titlenode);
-        MStringBuilder sb = {.allocator = get_mallocator()};
-        msb_write_str(&sb, node->header.text, node->header.length);
-        NSString* str = msb_detach_as_ns_string(&sb);
-        DndViewController* vc = (__bridge DndViewController*)data;
-        vc->doc_title = str;
+        if(node->header.length){
+            MStringBuilder sb = {.allocator = get_mallocator()};
+            msb_write_str(&sb, node->header.text, node->header.length);
+            NSString* str = msb_detach_as_ns_string(&sb);
+            DndViewController* vc = (__bridge DndViewController*)data;
+            vc->doc_title = str;
+        }
     }
     return 0;
 }
