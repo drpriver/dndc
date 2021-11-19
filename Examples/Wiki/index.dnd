@@ -1,0 +1,40 @@
+::import
+  wiki.dnd
+Your Wiki::title
+Pages::md
+  ::js
+    let Pages = node.parent;
+    // const files = FileSystem.list_dnd_files(); // relative paths
+    const files = ['index.dnd', 'lorem.dnd', 'flat.dnd'];
+    let bullets = '';
+    for(let f of files){
+      f = f.replace('.dnd', '');
+      bullets += `* [${f}]` + '\n';
+    }
+    Pages.parse(bullets);
+    //endjs
+
+Demo::md
+  This is a demo of how you would make a personal wiki. The dnd format provides
+  simple building blocks that can be used to build up useful tools.
+
+  You can link to other pages simply as the auto-index will add them as link
+  targets. For example, to see a page full of lorem ipsum, go to [lorem]! [Home]
+  will always point to the index page.
+
+  ::img .cell
+    imgs/cells.png
+    ::css @inline
+      .cell img {
+        max-width: 15em;
+        max-height: 15em;
+      }
+  Images can also be included. For example, here is a very nice image. It is very
+  nice! As you can see, it floats to the right, which is a useful property for an
+  image. This is an easy way of creating a web of knowledge for yourself. So, go
+  ahead make a few pages of your own!
+
+  Note::md
+    At the top of each wiki page you need the import for wiki.dnd. See the top of this very page for an example of what is needed.
+
+If you need a flatter style of writing, see [flat].

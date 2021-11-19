@@ -1,0 +1,56 @@
+::comment
+  This file contains helper code, styles, etc. for implementing the wiki
+  pages.
+::links @autoindex
+::js
+  let root = ctx.root;
+  root.detach();
+  root.classes.append('right');
+  let new_root = ctx.make_node(NodeType.DIV);
+  new_root.add_child(root);
+  let left = ctx.make_node(NodeType.MD, {classes:['left']});
+  left.parse('[Home]');
+  let nav = ctx.make_node(NodeType.NAV);
+  left.add_child(nav);
+  new_root.add_child(left);
+  ctx.root = new_root;
+  ctx.add_link('home', 'index.html');
+  //endjs
+
+::css @inline
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  }
+  .left {
+    max-width: 30%;
+    margin: 0;
+    margin-left: 12px;s
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: auto;
+  }
+  .right {
+    position: fixed;
+    height: 100%;
+    overflow-y: auto;
+    width: 70%;
+    left: 30%;
+    top: 0;
+    max-width: 35em;
+  }
+  p {
+    max-width: 30em;
+  }
+  img {
+    float: right;
+  }
+  nav {
+    font-size: 12px;
+  }
+  /*endcss*/

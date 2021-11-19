@@ -28,6 +28,7 @@
   characters = Rules/characters.html
   religion = Rules/religion.html
   calendar = Calendar/calendar.html
+  wiki = Wiki/index.html
 ::comment
   Try clicking on one of these links in the display on the right. It should
   open the .dnd file.
@@ -37,6 +38,7 @@
   - [Characters]
   - [Religion]
 * Calendar example: [Calendar]
+* Wiki example: [Wiki]
 
 ::css @inline
   html, body {
