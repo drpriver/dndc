@@ -1271,7 +1271,6 @@ BOOL show_stats;
     }
     // auto t0 = get_t();
     uint64_t flags = 0;
-    flags |= DNDC_PYTHON_IS_INIT;
     // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
     if(show_stats)

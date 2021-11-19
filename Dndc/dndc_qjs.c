@@ -841,8 +841,6 @@ js_dndc_node_set_type(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst 
             break;
         case NODE_JS:
             return JS_ThrowTypeError(jsctx, "Setting a node to JS is not supported");
-        case NODE_PYTHON:
-            return JS_ThrowTypeError(jsctx, "Setting a node to PYTHON not supported.");
         case NODE_IMPORT:
             return JS_ThrowTypeError(jsctx, "Setting a node to IMPORT not supported.");
         case NODE_TEXT:
@@ -1213,7 +1211,6 @@ JSMETHOD(js_dndc_context_make_node){
             node_store = &ctx->script_nodes;
             break;
         case NODE_JS:
-        case NODE_PYTHON:
             node_store = &ctx->user_script_nodes;
             break;
         case NODE_DATA:

@@ -18,24 +18,23 @@
     apply(IMPORT,         12)\
     apply(IMAGE,          13)\
     apply(BULLETS,        14)\
-    apply(PYTHON,         15)\
-    apply(RAW,            16)\
-    apply(PRE,            17)\
-    apply(LIST,           18)\
-    apply(LIST_ITEM,      19)\
-    apply(KEYVALUE,       20)\
-    apply(KEYVALUEPAIR,   21)\
-    apply(IMGLINKS,       22)\
-    apply(NAV,            23)\
-    apply(DATA,           24)\
-    apply(COMMENT,        25)\
-    apply(TEXT,           26)\
-    apply(CONTAINER,      27)\
-    apply(QUOTE,          28)\
-    apply(HR,             29)\
-    apply(JS,             30)\
-    apply(DETAILS,        31)\
-    apply(INVALID,        32)\
+    apply(RAW,            15)\
+    apply(PRE,            16)\
+    apply(LIST,           17)\
+    apply(LIST_ITEM,      18)\
+    apply(KEYVALUE,       19)\
+    apply(KEYVALUEPAIR,   20)\
+    apply(IMGLINKS,       21)\
+    apply(NAV,            22)\
+    apply(DATA,           23)\
+    apply(COMMENT,        24)\
+    apply(TEXT,           25)\
+    apply(CONTAINER,      26)\
+    apply(QUOTE,          27)\
+    apply(HR,             28)\
+    apply(JS,             29)\
+    apply(DETAILS,        30)\
+    apply(INVALID,        31)\
 
 typedef enum NodeType {
     #define X(a, b) NODE_##a = b,
@@ -63,7 +62,6 @@ struct {
     {SV("div"),          NODE_DIV},
     {SV("text"),         NODE_TEXT},
     {SV("import"),       NODE_IMPORT},
-    {SV("python"),       NODE_PYTHON},
     {SV("js"),           NODE_JS},
     {SV("title"),        NODE_TITLE},
     {SV("h"),            NODE_HEADING},
@@ -88,7 +86,6 @@ struct {
 
 static const
 StringView RAW_NODES[] = {
-    SV("python"),
     SV("raw"),
     SV("comment"),
     SV("pre"),
@@ -96,7 +93,6 @@ StringView RAW_NODES[] = {
 };
 static const
 StringViewUtf16 RAW_NODES_UTF16[] = {
-    SV16("python"),
     SV16("raw"),
     SV16("comment"),
     SV16("pre"),
@@ -110,7 +106,6 @@ NODETYPE_TO_NODE_ALIASES[NODE_INVALID+1] = {
      [NODE_DIV]          = SV("div"),
      [NODE_TEXT]         = SV("text"),
      [NODE_IMPORT]       = SV("import"),
-     [NODE_PYTHON]       = SV("python"),
      [NODE_TITLE]        = SV("title"),
      [NODE_HEADING]      = SV("h"),
      [NODE_TABLE]        = SV("table"),

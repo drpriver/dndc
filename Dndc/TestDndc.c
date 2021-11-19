@@ -44,7 +44,6 @@ TestFunction(TestDndc1){
         "  ctx.root.add_child('hello');\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_PYTHON_IS_INIT
         | DNDC_DONT_WRITE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
@@ -66,7 +65,6 @@ TestFunction(TestDndc2){
         "  ctx.root.add_child('hello')\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_PYTHON_IS_INIT
         | DNDC_DONT_WRITE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
@@ -87,7 +85,6 @@ TestFunction(TestDndc3){
         "  ctx.root.add_child('hello')\n"
         );
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_PYTHON_IS_INIT
         | DNDC_DONT_WRITE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS

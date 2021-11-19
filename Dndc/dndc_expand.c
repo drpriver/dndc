@@ -100,7 +100,6 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
         case NODE_KEYVALUEPAIR:
         case NODE_LIST_ITEM:
         case NODE_LIST:
-        case NODE_PYTHON:
         case NODE_JS:
         case NODE_BULLETS:
         // case NODE_IMPORT:
@@ -237,7 +236,6 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
         case NODE_LIST:
         case NODE_BULLETS:
         case NODE_JS:
-        case NODE_PYTHON:
         case NODE_IMPORT:
         case NODE_TABLE_ROW:
         case NODE_HEADING:

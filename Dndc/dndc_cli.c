@@ -497,7 +497,6 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
             break;
         case NODE_RAW:
         case NODE_PRE:
-        case NODE_PYTHON:
         case NODE_JS:
         case NODE_BULLETS:
         case NODE_STYLESHEETS:

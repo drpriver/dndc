@@ -448,9 +448,6 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
             if(memcmp(NODEALIASES[i].name.text, postcolon.text, boundary)==0){
                 auto type = NODEALIASES[i].type;
                 switch(type){
-                    case NODE_PYTHON:
-                        Marray_push(NodeHandle)(&ctx->user_script_nodes, ctx->allocator, node_handle);
-                        break;
                     case NODE_JS:
                         Marray_push(NodeHandle)(&ctx->user_script_nodes, ctx->allocator, node_handle);
                         break;
@@ -585,7 +582,6 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
     switch(parent_type){
         case NODE_PRE:
         case NODE_RAW:
-        case NODE_PYTHON:
         case NODE_JS:
         case NODE_COMMENT:
             return parse_raw_node(ctx, parent_handle, indentation);

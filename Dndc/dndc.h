@@ -627,17 +627,10 @@ DNDC_ALLOW_BAD_LINKS = 0x100,
 // Don't execute js blocks.
 DNDC_NO_COMPILETIME_JS = 0x200,
 
-// Don't execute python blocks.
-DNDC_NO_PYTHON = 0x400,
-
-// The python interpreter and dndc_python types have already been
-// initialized.
-DNDC_PYTHON_IS_INIT = 0x800,
-
-// Don't bother isolating python from site
-// Greatly slows startup, but allows importing user-installed
-// libraries.
-DNDC_PYTHON_UNISOLATED = 0x1000,
+// These flags are unused (used to be for controlling python).
+DNDC_UNUSED1 = 0x400,
+DNDC_UNUSED2 = 0x800,
+DNDC_UNUSED3 = 0x1000,
 
 // Don't spawn any worker threads. No parallelism.
 DNDC_NO_THREADS = 0x2000,

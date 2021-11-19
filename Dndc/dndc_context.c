@@ -648,7 +648,6 @@ gather_anchor(DndcContext* ctx, NodeHandle handle){
         case NODE_DEPENDENCIES:
         case NODE_LINKS:
         case NODE_SCRIPTS:
-        case NODE_PYTHON:
         case NODE_JS:
         case NODE_STRING:
         case NODE_NAV:

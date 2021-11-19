@@ -106,9 +106,7 @@ execute_user_scripts(DndcContext* ctx){
         {
             Node* node = get_node(ctx, handle);
             type = node->type;
-            if(type != NODE_JS && type != NODE_PYTHON)
-                continue;
-            if(type == NODE_PYTHON && (flags & DNDC_NO_PYTHON))
+            if(type != NODE_JS)
                 continue;
             if(type == NODE_JS && (flags & DNDC_NO_COMPILETIME_JS))
                 continue;
@@ -150,9 +148,7 @@ execute_user_scripts(DndcContext* ctx){
                 continue;
             str = msb_detach(&msb);
         }
-        if(type == NODE_PYTHON){
-        }
-        else {
+        {
             assert(type == NODE_JS);
             if(!rt){
                 auto before_init = get_t();
@@ -305,13 +301,11 @@ run_the_dndc(uint64_t flags,
         Nullable(WorkerThread*)worker
         ){
     if(flags & DNDC_REFORMAT_ONLY){
-        flags |= DNDC_NO_PYTHON;
         flags |= DNDC_NO_COMPILETIME_JS;
     }
     if(flags & DNDC_OUTPUT_EXPANDED_DND)
         flags |= DNDC_DONT_INLINE_IMAGES;
     if(flags & DNDC_INPUT_IS_UNTRUSTED){
-        flags |= DNDC_NO_PYTHON;
         flags |= DNDC_NO_COMPILETIME_JS;
         flags |= DNDC_NO_THREADS;
         flags |= DNDC_DONT_INLINE_IMAGES;
@@ -889,7 +883,6 @@ DNDC_API
 int
 dndc_format(LongString source_text, LongString* output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
     uint64_t flags = 0
-        | DNDC_PYTHON_IS_INIT
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_REFORMAT_ONLY
@@ -1362,15 +1355,12 @@ dndc_compile_dnd_file(
             | DNDC_ALLOW_BAD_LINKS
             | DNDC_SUPPRESS_WARNINGS
             | DNDC_PRINT_STATS
-            | DNDC_NO_PYTHON
             | DNDC_NO_COMPILETIME_JS
-            | DNDC_PYTHON_IS_INIT
             | DNDC_NO_THREADS
             | DNDC_DONT_WRITE
             | DNDC_NO_CLEANUP
             | DNDC_SOURCE_IS_PATH_NOT_DATA
             | DNDC_DONT_PRINT_ERRORS
-            | DNDC_PYTHON_UNISOLATED
             | DNDC_REFORMAT_ONLY
             | DNDC_DONT_INLINE_IMAGES
             | DNDC_USE_DND_URL_SCHEME

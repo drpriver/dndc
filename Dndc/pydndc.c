@@ -31,7 +31,6 @@ pystring_to_longstring(PyObject* pyobj, const Allocator a){
         .length = length,
         };
     }
-PopDiagnostic();
 
 static inline
 StringView
@@ -49,6 +48,7 @@ pystring_to_stringview(PyObject* pyobj, const Allocator a){
         .length = length,
         };
     }
+
 static inline
 StringView
 pystring_borrow_stringview(PyObject* pyobj){
@@ -58,8 +58,7 @@ pystring_borrow_stringview(PyObject* pyobj){
     unhandled_error_condition(!text);
     return (StringView){.text=text, .length=length};
     }
-PushDiagnostic();
-SuppressUnusedFunction();
+
 static inline
 LongString
 pystring_borrow_longstring(PyObject* pyobj){
@@ -69,7 +68,7 @@ pystring_borrow_longstring(PyObject* pyobj){
     unhandled_error_condition(!text);
     return (LongString){.text=text, .length=length};
     }
-PopDiagnostic();
+PopDiagnostic(); // unused function
 
 typedef struct DndcPyFileCache {
     PyObject_HEAD
@@ -474,7 +473,6 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
         }
     LongString source = pystring_borrow_longstring(text);
     uint64_t flags = 0;
-    flags |= DNDC_PYTHON_IS_INIT;
     // flags |= DNDC_DONT_PRINT_ERRORS;
     // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
@@ -565,7 +563,6 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         }
     LongString source = pystring_borrow_longstring(text);
     LongString base_str = base_dir? pystring_borrow_longstring(base_dir): LS("");
-    flags |= DNDC_PYTHON_IS_INIT;
     // flags |= DNDC_DONT_PRINT_ERRORS;
     // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
