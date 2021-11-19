@@ -4,15 +4,14 @@
   around.
 ::css
   common.css
-::python
-  root = ctx.root
-  root.detach()
-  container = ctx.make_node(NodeType.DIV, classes=('center',))
-  container.add_child(root)
-  new_root = ctx.make_node(NodeType.DIV, classes=('grid_container',))
-  new_root.add_child(container)
-  left = ctx.make_node(NodeType.DIV, classes=('left',))
-  new_root.add_child(left)
-  left.add_child(ctx.make_node(NodeType.NAV))
-  ctx.set_root(new_root)
-  #endpython
+::js
+  let root = ctx.root;
+  root.detach();
+  let container = ctx.make_node(NodeType.DIV, {classes:['center']});
+  container.add_child(root);
+  let new_root = ctx.make_node(NodeType.DIV, {classes:['grid_container']});
+  new_root.add_child(container);
+  let left = ctx.make_node(NodeType.DIV, {classes:['left']});
+  new_root.add_child(left);
+  left.add_child(ctx.make_node(NodeType.NAV));
+  ctx.root = new_root;

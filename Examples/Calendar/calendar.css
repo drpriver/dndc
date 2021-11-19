@@ -52,6 +52,7 @@ div.calday {
   padding: 0 0.3em;
   min-height: 6em;
   width: auto;
+  font-size: 12px;
 }
 div.calday h4 {
   border: 0;
@@ -59,12 +60,13 @@ div.calday h4 {
   margin-bottom: 0.1em;
   color: black;
 }
-div.calday div{
-  font-size: 60%;
+div.calday h5 {
+  border: 0;
+  margin-top: 0.2em;
+  margin-bottom: 0.1em;
 }
-
-div.calday div p:nth-child(1) {
-  margin-top: 0;
+div.calday > div {
+  text-align: left;
 }
 
 div.caldayname {

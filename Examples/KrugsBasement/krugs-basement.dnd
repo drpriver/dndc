@@ -14,20 +14,20 @@
   ctx.root = new_root;
 
 ::div .left
-
   Explanation of imglinks::comment
     The first line is the path to the image.
     The second line is the width, in px, that the image should be displayed at.
     The third line is the height, like width.
     The viewBox is the section of the image that should actually be displayed,
-    in pixels of the original image. In general, you want '0 0 width height' where
-    width and height are the actual width and height of the image, not the scaled
-    ones. If you do an "Insert -> Image Links", it will calculate these numbers
-    for you.
+    in pixels of the original image. In general, you want '0 0 width height' 
+    where width and height are the actual width and height of the image, not 
+    the scaled ones. If you do an "Insert -> Image Links", it will calculate
+    these numbers for you.
 
     The following lines are then in the form of
       textonmap = page#anchor @ x, y
-    Where textonmap is the string to be displayed, page is the page to go to
+      
+    Where `textonmap` is the string to be displayed, page is the page to go to
     (it can be left out, but if you put it means you can link to other pages),
     anchor is the id of a node on the page (inspect the page for ids or
     do it programmatically) and (x,y) are the coordinates to be displayed at.
@@ -42,15 +42,15 @@
     width = 600
     height = 450
     viewBox = 0 0 800 600
-    ::python
-      imglinks = node.parent
-      outfile = ctx.outfile
-      coords = ctx.select_nodes(attributes=['coord'], classes=['room'])
-      for node in coords:
-        lead = node.header[:node.header.index('.')]
-        position = node.attributes['coord']
-        imglinks.add_child(f'{lead} = {outfile}#{node.id} @{position}')
-      #endpython
+    ::js
+      let imglinks = node.parent;
+      let outfile = ctx.outfile
+      let coords = ctx.select_nodes({attributes:['coord'], classes:['room']})
+      for(let node of coords){
+        let lead = node.header.slice(0, node.header.indexOf('.'));
+        let position = node.attributes.get('coord');
+        imglinks.add_child(`${lead} = ${outfile}#${node.id} @${position}`);
+      }
   Wandering Monsters::table
     d6 | Monster
     1  | d12 skeletons + 1d6 zombies
@@ -81,7 +81,7 @@ rituals/puzzles.
     6  | Forked Tongue: tongue splits in twain, gain ability to talk to snakess
     7  | Cowardice: Whenever a monster is encountered, roll a wisdom save vs DC
          12. On a failure, they are frightened of the monster. Treat a group as a
-         single monster. This effect last for until your long rest. Even on a
+         single monster. This effect last until your long rest. Even on a
          successful save you are more cautious than normal.
     8  | Bravery: Whenever a monster is encountered, roll a wisdom save vs DC 12.
          On a failure, they are emboldened (advantage to attacks, will not run
@@ -119,21 +119,24 @@ rituals/puzzles.
   animal. DC 10 cha save or be transmuted, rolled each round and changing form
   each round.
 
-  ::table
-    1 | Squirrel
-    2 | Bear
-    3 | Wolf
-    4 | Rabbit
-    5 | Housecat
-    6 | Lion
-    7 | Dolphin
-    8 | Capybara
+  Animal Gas::table
+    d8 | Animal
+    1  | Squirrel
+    2  | Bear
+    3  | Wolf
+    4  | Rabbit
+    5  | Housecat
+    6  | Lion
+    7  | Dolphin
+    8  | Capybara
   While an animal, AC is 13. Use your HP and saves.
 
-  * Bear: Bite + 2 claws, 1d6+2 each
-  * Lion: Bite + 2 claws, 1d6+2 each
-  * Wolf: bite, 1d6 +2 + trip
-  * All others, 1d6 damage if justifying attack.
+  ::kv
+    Bear:       Bite + 2 claws, 1d6+2 each
+    Lion:       Bite + 2 claws, 1d6+2 each
+    Wolf:       bite, 1d6 +2 + trip
+    All others: 1d6 damage if justifying attack.
+  ::hr
   Additionally, two ogre zombies are in here, around the crook.
 
   There is a pile of refuse where the ogre zombies were, pulverized victims: 125
@@ -197,10 +200,11 @@ rituals/puzzles.
   The door is unlocked/disarmed by the Basalt Skull.
 
   The High Priest::kv .monster
-    HP: 40
-    AC: 15
-    At will: shield, counterspell, ghoul touch -- 3d10 necrotic, can't be healed
-    DC: 14
+    HP:              40
+    AC:              15
+    At will:         shield, counterspell, ghoul touch -- 3d10 necrotic, can't be
+                     healed
+    DC:              14
     Circle of death: (con save vs 8d6 necrotic)
   Assisted by swarms of crawling claws. A hideous wave of human hands starts
   pouring out of the pots. In the swarm: make a strength save at beginning of
@@ -265,11 +269,12 @@ rituals/puzzles.
     They will swarm if the lid is not closed. They deal 2d8 automatic damage
     every turn to those they are swarming on. Fire or other means can destroy
     them.
+
 16. Stone Eye of Terror::md .room @coord(405,557)
   An illusion of a stone eye of terror floats over a stone sarcophagus. It
-  appears to be asleep - it's eyes are closed
+  appears to be asleep - its eyes are closed
 
-  Within the stone Sarcophagus is the illusion of a "dracolich" that will rise
+  Within the stone Sarcophagus is the illusion of a "dracolich" that will rise,
   "miss" the closest player and attempt to drive them off.
 
   Inside the sarcophagus is a pristine set of robes, stitched with silver, in the
@@ -311,3 +316,4 @@ rituals/puzzles.
   Huge, Bleeding Skeleton
 
   Hole in floor leads to room 6 on 2nd level.
+

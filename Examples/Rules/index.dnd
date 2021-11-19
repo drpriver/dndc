@@ -1,0 +1,10 @@
+Index::title
+::import
+  rules.dnd
+
+Links::h
+* [Characters]
+* [Religion]
+* [Mechanics]
+
+::links @autoindex

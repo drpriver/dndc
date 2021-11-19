@@ -42,10 +42,10 @@
     width: 70%;
     left: 30%;
     top: 0;
-    max-width: 35em;
+    max-width: 40em;
   }
   p {
-    max-width: 30em;
+    max-width: 35em;
   }
   img {
     float: right;

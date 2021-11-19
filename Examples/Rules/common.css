@@ -19,6 +19,9 @@ body {
 p {
     text-align: justify;
 }
+li > p {
+    text-align: left;
+}
 
 
 h1,h2,h3,h4,h5,h6 {
@@ -89,9 +92,6 @@ nav {
     font-size: .7em;
     height:100%;
     overflow:auto;
-}
-.center li {
-    text-align: justify;
 }
 
 .left a {

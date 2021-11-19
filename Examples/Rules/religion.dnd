@@ -165,16 +165,14 @@ Deities::md
     Whether they still exist or were destroyed long ago is unknown. Whether
     Nergal still exists is unknown.
 
-  ::python
-    kebab = ctx.kebab
-    root = ctx.root
-    links = []
-    parent = node.parent
-    for child in parent.children:
-      if child.type != NodeType.MD:
-        continue
-      header = child.header
-      i = header.index('(')
-      links.append(f'  {kebab(header[:i])} = #{child.id}')
-    root.parse('::links\n' + '\n'.join(links))
-    #endpython
+  ::js
+    // Create short form of links.
+    let links = [];
+    for(let child of node.parent.children){
+      if(child.type != NodeType.MD)
+        continue;
+      let i = child.header.indexOf('(');
+      links.push(`  ${ctx.kebab(child.header.slice(0, i))} = #${child.id}`);
+    }
+    ctx.root.parse('::links\n' + links.join('\n'));
+    //endjs

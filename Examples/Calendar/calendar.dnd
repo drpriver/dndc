@@ -12,46 +12,51 @@ Adventuring Season::md
   open up, new monsters move in, etc.).
 
 Game Calendar::div.calendar
-  ::python
-    from collections import defaultdict
-    make_node = ctx.make_node
-    MONTHS = [
+  ::js
+    let MONTHS = [
       'January', 'February', 'March', 'April',
       'May', 'June', 'July', 'August',
       'September', 'October', 'November', 'December',
       ]
-    container = node.parent.parent
-    daynodes = defaultdict(dict)
-    for m in container.children:
-      if 'day' in m.attributes:
-        header = m.header
-        try:
-          month, day = header.split()
-        except:
-          m.err(f"Expected header in the form of 'MONTH DAY', not '{header}'")
-        if month not in MONTHS:
-          m.err(f'Unrecognized month: {month}')
-        try:
-          day = int(day)
-        except ValueError:
-          m.err(f'Illegal day: {day}')
+    const container = node.parent.parent
+    const daynodes = new Map();
+    for(let m of container.children){
+      if(m.attributes.has('day')){
+        let [month, day] = m.header.split(/\s+/);
+        if(!month || !month.length || !day || !day.length)
+          m.err(`Expected header in the form of 'MONTH DAY', not '${m.header}'`)
+        if(MONTHS.indexOf(month) == -1)
+          m.err(`Unrecognized month: ${month}`)
+        day = +day;
+        if(!day)
+          m.err(`Illegal day: ${day}`);
         m.detach()
-        if month in daynodes:
-          if day in daynodes[month]:
+        if(daynodes.has(month)){
+          if(daynodes.get(month).has(day)){
             m.err('Duplicate day')
-        daynodes[month][day] = m
+          }
+        }
+        else {
+          daynodes.set(month, new Map());
+        }
+        daynodes.get(month).set(day, m);
+      }
+    }
 
-    # This was gotten by doing cal -m 5 810
-    # Idk if it is even correct, but whatever.
-    n = None
-    may = [
+    // This was gotten by doing cal -m 5 810
+    // Idk if it is even correct, but whatever.
+    // We use hardcoded months like this so that you can use fantasy
+    // calendars instead of real calendars.
+    // Missing days need to be padded with nulls.
+    let n = null;
+    const may = [
          n,  n,  n,  1,  2,  3,  4,
          5,  6,  7,  8,  9, 10, 11,
         12, 13, 14, 15, 16, 17, 18,
         19, 20, 21, 22, 23, 24, 25,
         26, 27, 28, 29, 30, 31,  n,
     ]
-    june = [
+    const june = [
        n,  n,  n,  n,  n,  n,  1,
        2,  3,  4,  5,  6,  7,  8,
        9, 10, 11, 12, 13, 14, 15,
@@ -59,50 +64,60 @@ Game Calendar::div.calendar
       23, 24, 25, 26, 27, 28, 29,
       30,  n,  n,  n,  n,  n,  n,
     ]
-    july = [
+    const july = [
        n,  1,  2,  3,  4,  5,  6,
        7,  8,  9, 10, 11, 12, 13,
       14, 15, 16, 17, 18, 19, 20,
       21, 22, 23, 24, 25, 26, 27,
       28, 29, 30, 31,  n,  n,  n,
     ]
-    august = [
+    const august = [
        n,  n,  n,  n,  1,  2,  3,
        4,  5,  6,  7,  8,  9, 10,
       11, 12, 13, 14, 15, 16, 17,
       18, 19, 20, 21, 22, 23, 24,
       25, 26, 27, 28, 29, 30, 31,
     ]
-    september = [
+    const september = [
        1,  2,  3,  4,  5,  6,  7,
        8,  9, 10, 11, 12, 13, 14,
       15, 16, 17, 18, 19, 20, 21,
       22, 23, 24, 25, 26, 27, 28,
       29, 30,  n,  n,  n,  n,  n,
     ]
-    days = ('Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday')
-    monthnames = ['May', 'June', 'July', 'August', 'September']
-    monthdayses = [may, june, july, august, september]
-    for month, monthdays in zip(monthnames, monthdayses):
-      outer = make_node(NodeType.DIV, f'{month} 810')
-      node.parent.add_child(outer)
-      cal = make_node(NodeType.DIV, '', classes=['cal'])
-      outer.add_child(cal)
-      for day in days:
-        daynode = make_node(NodeType.DIV, day, classes=['caldayname'], attributes=['noid'])
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const monthnames = ['May', 'June', 'July', 'August', 'September'];
+    const monthdayses = [may, june, july, august, september];
+    for(let i = 0; i < monthnames.length; i++){
+      let month = monthnames[i];
+      let monthdays = monthdayses[i];
+      let outer = ctx.make_node(NodeType.DIV, {header:`${month} 810`});
+      node.parent.add_child(outer);
+      let cal = ctx.make_node(NodeType.DIV,  {classes:['cal']});
+      outer.add_child(cal);
+      for(let day of days){
+        let daynode = ctx.make_node(NodeType.DIV, {header:day, classes:['caldayname'], attributes:['noid']});
+        cal.add_child(daynode);
+      }
+      for(let day of monthdays){
+        if(!day){
+          cal.add_child(ctx.make_node(NodeType.DIV, {classes:['calday', 'nonday']}));
+          continue;
+        }
+        let daynode = ctx.make_node(NodeType.DIV, {header:day, classes:['calday'], attributes:['noid']});
         cal.add_child(daynode)
-      for day in monthdays:
-        if day:
-          daynode = make_node(NodeType.DIV, str(day), classes=['calday'], attributes=['noid'])
-          cal.add_child(daynode)
-          body = daynodes[month].get(day)
-          if body is not None:
-            body.header = ''
-            # don't want it to be double wrapped
-            body.type = NodeType.CONTAINER
-            daynode.add_child(body)
-        else:
-          cal.add_child(make_node(NodeType.DIV, '', classes=['calday', 'nonday']))
+        let m = daynodes.get(month);
+        if(m){
+          let body = m.get(day);
+          if(body){
+            body.header ='';
+            body.type = NodeType.CONTAINER;
+            daynode.add_child(body);
+          }
+        }
+      }
+    }
+    //endjs
 May 5::md @day
   * Start of Play.
   * Recruit Kravg the Dwarf and Gytik the torch bearer
@@ -310,3 +325,10 @@ July 4::md @day
   * Rest full day
 July 10::md @day
   * Last day of Hurbash Contract
+August 12::md @day
+  * You can put anything you want in a calendar cell, but beware, it might look like crap
+  Lmao::table
+    d3 | Times
+    1 | Bad times
+    2 | Good times
+    3 | Sometimes
