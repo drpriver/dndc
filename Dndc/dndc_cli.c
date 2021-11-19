@@ -68,7 +68,7 @@ main(int argc, char**argv){
                 .help = "Source file (.dnd file) to read from.\n"
                         "If not given, will read from stdin.",
                 },
-            };
+        };
         ArgToParse kw_args[] = {
             {
                 .name = SV("-o"),
@@ -247,7 +247,7 @@ main(int argc, char**argv){
                 .help = "Execute in a repeated loop this many times.",
                 .hidden = true,
             },
-            };
+        };
         enum {HELP, VERSION, HIDDEN_HELP};
         ArgToParse early_args[] = {
             [HELP] = {
@@ -276,7 +276,7 @@ main(int argc, char**argv){
             .keyword.count = arrlen(kw_args),
             .early_out.args = early_args,
             .early_out.count = arrlen(early_args),
-            };
+        };
         Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
         switch(check_for_early_out_args(&argparser, &args)){
             case HELP:{
@@ -286,7 +286,7 @@ main(int argc, char**argv){
                 print_argparse_help(&argparser, columns);
                 putchar('\n');
                 return 0;
-                }
+            }
             case VERSION:
                 puts(version);
                 return 0;
@@ -301,25 +301,25 @@ main(int argc, char**argv){
                     auto arg = &kw_args[i];
                     if(!arg->hidden){
                         continue;
-                        }
+                    }
                     putchar('\n');
                     print_arg_help(arg, columns);
-                    }
-                return 0;
                 }
+                return 0;
+            }
             default:
                 break;
-            }
+        }
         enum ArgParseError e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
         if(e){
             print_argparse_error(&argparser, e);
             fprintf(stderr, "Use --help to see usage.\n");
             return e;
-            }
+        }
         if((flags & DNDC_OUTPUT_EXPANDED_DND) && (flags & DNDC_REFORMAT_ONLY)){
             fprintf(stderr, "Do not specify both --expand and --format. Only one is allowed\n");
             return 1;
-            }
+        }
         if(!cleanup)
             flags |= DNDC_NO_CLEANUP;
         if(!source_path.text){
@@ -335,9 +335,9 @@ main(int argc, char**argv){
                     add_line_to_history_len(&history, buff, len);
                     msb_write_str(&sb, buff, len);
                     msb_write_char(&sb, '\n');
-                    }
-                puts("^D");
                 }
+                puts("^D");
+            }
             else {
                 for(;;){
                     enum {N = 4096};
@@ -347,15 +347,15 @@ main(int argc, char**argv){
                     sb.cursor += numread;
                     if(numread != N)
                         break;
-                    }
                 }
+            }
             if(!sb.cursor)
                 msb_write_char(&sb, ' ');
             source_path = msb_detach(&sb);
-            }
+        }
         else {
             flags |= DNDC_SOURCE_IS_PATH_NOT_DATA;
-            }
+        }
     }
     if(print_syntax){
         if(flags & DNDC_SOURCE_IS_PATH_NOT_DATA){
@@ -364,20 +364,20 @@ main(int argc, char**argv){
             if(load_err.errored){
                 fprintf(stderr, "Unable to read: '%s'\n", source_path.text);
                 return 1;
-                }
-            source_path = load_err.result;
             }
+            source_path = load_err.result;
+        }
         dndc_print_out_syntax(LS_to_SV(source_path));
         return 0;
     }
 
     if(print_depends){
         dependency_func = depends_print_callback;
-        }
+    }
     else if(dependency_path.length){
         dependency_func = dndc_write_depends_file;
         dependency_user_data.depfile = dependency_path;
-        }
+    }
     dependency_user_data.outfile = output_path;
     WorkerThread* worker = NULL;
     if(!(flags & DNDC_NO_THREADS))
@@ -400,12 +400,12 @@ main(int argc, char**argv){
                 worker);
             assert(!e.errored);
             dndc_free_string(output);
-            }
+        }
         end_interpreter();
         if(worker)
             dndc_worker_thread_destroy((DndcWorkerThread*)worker);
         return 0;
-        }
+    }
     else {
         LongString output;
         Errorable(void) e = run_the_dndc(
@@ -429,14 +429,14 @@ main(int argc, char**argv){
                 // TODO: retrieve platform specific error message.
                 fprintf(stderr, "Failed to write to output path: %s\n", output_path.text);
                 return write_err;
-                }
             }
+        }
         else {
             puts(output.text);
-            }
-        return 0;
         }
+        return 0;
     }
+}
 
 
 static
@@ -446,9 +446,9 @@ depends_print_callback(void*_Nullable unused, size_t npaths, StringView* paths){
     for(size_t i = 0; i < npaths; i++){
         StringView path = paths[i];
         printf("%.*s\n", (int)path.length, path.text);
-        }
-    return 0;
     }
+    return 0;
+}
 
 static
 int
@@ -464,23 +464,23 @@ dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths){
         auto dep = &paths[i];
         msb_write_char(&msb, ' ');
         msb_write_str(&msb, dep->text, dep->length);
-        }
+    }
     msb_write_char(&msb, '\n');
     // generate empty rules so deleted files don't fail the build
     for(size_t i = 0; i < npaths; i++){
         auto dep = &paths[i];
         msb_write_str(&msb, dep->text, dep->length);
         msb_write_literal(&msb, ":\n");
-        }
+    }
     auto deptext = msb_borrow(&msb);
     auto write_err = write_file(ud->depfile.text, deptext.text, deptext.length);
     msb_destroy(&msb);
     if(write_err){
         perror("Error on write");
         return write_err;
-        }
-    return 0;
     }
+    return 0;
+}
 
 static
 int
@@ -488,15 +488,15 @@ dndc_main_ast_func(void*_Nullable user_data, DndcContext*_Nonnull ctx){
     uint64_t flags = (uintptr_t)user_data;
     if(flags & DNDC_MAIN_PRINT_TREE){
         print_node_and_children(ctx, ctx->root_handle, 0);
-        }
+    }
     if(flags & DNDC_MAIN_PRINT_LINKS){
         for(size_t i = 0; i < ctx->links.count; i++){
             auto li = &ctx->links.data[i];
             fprintf(stderr, "[%zu] key: '%.*s', value: '%.*s'\n", i, (int)li->key.length, li->key.text, (int)li->value.length, li->value.text);
-            }
         }
-    return 0;
     }
+    return 0;
+}
 
 static inline
 void
@@ -504,7 +504,7 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
     auto node = get_node(ctx, handle);
     for(int i = 0 ; i < depth*2; i++){
         putchar(' ');
-        }
+    }
     printf("[%-8s]", NODENAMES[node->type].text);
     switch((NodeType)node->type){
         case NODE_PARA:
@@ -543,24 +543,24 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
             printf(" '%.*s' ", (int)node->header.length, node->header.text);
             RARRAY_FOR_EACH(c, node->classes){
                 printf(".%.*s ", (int)c->length, c->text);
-                }
+            }
             RARRAY_FOR_EACH(a, node->attributes){
                 printf("@%.*s", (int)a->key.length, a->key.text);
                 if(a->value.length)
                     printf("(%.*s) ", (int)a->value.length, a->value.text);
                 else
                     putchar(' ');
-                }
-            }break;
+            }
+        }break;
         case NODE_STRING:{
             printf(" '%.*s'", (int)node->header.length, node->header.text);
-            }break;
-        }
+        }break;
+    }
     putchar('\n');
     NODE_CHILDREN_FOR_EACH(it, node){
         print_node_and_children(ctx, *it, depth+1);
-        }
     }
+}
 
 static
 void
@@ -570,7 +570,7 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, const char* 
     const char** where = data;
     if(begin != *where){
         fwrite(*where, 1, begin - *where, stdout);
-        }
+    }
     const char* gray    = "\033[97m";
     const char* blue    = "\033[94m";
     const char* green   = "\033[92m";
@@ -608,11 +608,11 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, const char* 
         case DNDC_SYNTAX_RAW_STRING:
             fputs(green, stdout);
             break;
-        }
+    }
     fwrite(begin, 1, length, stdout);
     *where = begin + length;
     fputs(reset, stdout);
-    }
+}
 
 static
 void
@@ -621,8 +621,8 @@ dndc_print_out_syntax(StringView source_text){
     dndc_analyze_syntax(source_text, dndc_syntax_func, &where);
     if(where != source_text.text+source_text.length){
         fwrite(where, 1, (source_text.text+source_text.length) - where, stdout);
-        }
     }
+}
 
 #include "dndc.c"
 #include "get_input.c"

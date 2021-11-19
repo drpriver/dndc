@@ -32,7 +32,7 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
     if(size_e.errored){
         result.errored = FILE_ERROR;
         goto finally;
-        }
+    }
     auto nbytes = size_e.result;
     bb_reserve(bb, nbytes);
     void* data = bb->data + bb->cursor;
@@ -40,13 +40,13 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
     if(fread_result != nbytes){
         result.errored = FILE_ERROR;
         goto finally;
-        }
+    }
     assert(fread_result == nbytes);
     bb->cursor += nbytes;
 finally:
     fclose(fp);
     return result;
-    }
+}
 
 #elif defined(__linux__) || defined(__APPLE__)
 static inline
@@ -60,7 +60,7 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
     if(size_e.errored){
         result.errored = FILE_ERROR;
         goto finally;
-        }
+    }
     auto nbytes = size_e.result;
     bb_reserve(bb, nbytes);
     void* data = bb->data + bb->cursor;
@@ -68,13 +68,13 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
     if(read_result != nbytes){
         result.errored = FILE_ERROR;
         goto finally;
-        }
+    }
     assert(read_result == nbytes);
     bb->cursor += nbytes;
 finally:
     close(fd);
     return result;
-    }
+}
 
 #elif defined(_WIN32)
 static inline
@@ -95,12 +95,12 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
     PopDiagnostic();
     if(handle == INVALID_HANDLE_VALUE){
         Raise(FILE_NOT_OPENED);
-        }
+    }
     LARGE_INTEGER size;
     BOOL size_success = GetFileSizeEx(handle, &size);
     if(!size_success){
         goto finally;
-        }
+    }
     size_t nbytes = size.QuadPart;
     bb_reserve(bb, nbytes);
     void* data = bb->data + bb->cursor;
@@ -109,13 +109,13 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
     if(!read_success){
         result.errored = FILE_ERROR;
         goto finally;
-        }
+    }
     assert(nread == nbytes);
     bb->cursor += nbytes;
 finally:
     CloseHandle(handle);
     return result;
-    }
+}
 #elif defined(WASM)
 static inline
 Errorable_f(void)
@@ -123,7 +123,7 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
     (void)bb, (void)filename;
     Errorable(void) result = {.errored=OS_ERROR};
     return result;
-    }
+}
 #endif
 
 //
@@ -149,7 +149,7 @@ read_and_base64_bin_file(ByteBuilder* bb, const Allocator a, const char* filepat
     result.result = msb_detach(&sb);
     bb_reset(bb);
     return result;
-    }
+}
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

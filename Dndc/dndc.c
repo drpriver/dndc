@@ -51,8 +51,8 @@ memmem(const void* hay_, size_t haysz, const void* needle_, size_t needlesz){
         if(memcmp(c, needle, needlesz) == 0)
             return c;
         hay = c+1;
-        }
     }
+}
 #else
 void*_Nullable memmem(const void*, size_t, const void*, size_t);
 #endif
@@ -77,13 +77,13 @@ THREADFUNC(binary_worker){
         // to load it.
         (void)e;
         bb_reset(&bb);
-        }
+    }
     bb_destroy(&bb);
     memcpy(jobp->b64cache, &cache, sizeof(cache));
     // auto after = get_t();
     // fprintf(stderr, "binary worker: %.3fms\n", (after-before)/1000.);
     return 0;
-    }
+}
 
 static
 Errorable_f(void)
@@ -126,7 +126,7 @@ execute_user_scripts(DndcContext* ctx){
                     node_print_err(ctx, node, SV("Only 1 child of imported node allowed"));
                     result.errored = PARSE_ERROR;
                     goto cleanup;
-                    }
+                }
                 // NodeHandle childhandle
                 Node* firstchild_node = get_node(ctx, firstchild);
                 auto e = ctx_load_source_file(ctx, firstchild_node->header);
@@ -134,23 +134,23 @@ execute_user_scripts(DndcContext* ctx){
                     node_print_err(ctx, firstchild_node, SV("Unable to load file"));
                     result.errored = e.errored;
                     goto cleanup;
-                    }
+                }
                 Marray_push(StringView)(&ctx->filenames, ctx->allocator, firstchild_node->header);
                 firstchild_node->filename_idx = ctx->filenames.count-1;
                 firstchild_node->col = 0;
                 firstchild_node->row = 1;
                 firstchild_node->header = LS_to_SV(e.result);
-                }
+            }
             MStringBuilder msb = (MStringBuilder){.allocator=ctx->string_allocator};
             if(type == NODE_JS){
                 msb_write_literal(&msb, "\"use strict\";\n");
                 msb_write_nchar(&msb, '\n', node->row);
-                }
+            }
             NODE_CHILDREN_FOR_EACH(it, node){
                 auto child_node = get_node(ctx, *it);
                 msb_write_str(&msb, child_node->header.text, child_node->header.length);
                 msb_write_char(&msb, '\n');
-                }
+            }
             if(!msb.cursor) // empty script block.
                 continue;
             str = msb_detach(&msb);
@@ -163,18 +163,18 @@ execute_user_scripts(DndcContext* ctx){
                     report_system_error(ctx, SV("Failed to initialize python"));
                     result.errored = e.errored;
                     goto cleanup;
-                    }
+                }
                 python_is_initialized = true;
                 auto after_init = get_t();
                 report_time(ctx, SV("Python init took: "), after_init-before_init);
-                }
+            }
             auto py_err = execute_python_string(ctx, str.text, handle, firstchild);
             if(py_err.errored){
                 report_set_error(ctx);
                 result.errored = py_err.errored;
                 goto cleanup;
-                }
             }
+        }
         else {
             assert(type == NODE_JS);
             if(!rt){
@@ -186,17 +186,17 @@ execute_user_scripts(DndcContext* ctx){
                     report_system_error(ctx, SV("Failed to initialize javascript context"));
                     result.errored = GENERIC_ERROR;
                     goto cleanup;
-                    }
+                }
                 auto after_init = get_t();
                 report_time(ctx, SV("qjs init took: "), after_init-before_init);
-                }
+            }
             auto js_err = execute_qjs_string(jsctx, ctx, str.text, str.length, handle, firstchild);
             if(js_err.errored){
                 report_set_error(ctx);
                 result.errored = js_err.errored;
                 goto cleanup;
-                }
             }
+        }
         Node* node = get_node(ctx, handle);
         if(!NodeHandle_eq(node->parent, INVALID_NODE_HANDLE)){
             Node* parent = get_node(ctx, node->parent);
@@ -205,20 +205,20 @@ execute_user_scripts(DndcContext* ctx){
                 if(NodeHandle_eq(handle, node_children(parent)[j])){
                     node_remove_child(parent, j, ctx->allocator);
                     goto after;
-                    }
                 }
+            }
             // don't both warning here, but leave the scaffolding in case I want to.
             after:;
-            }
         }
+    }
     auto after_scripts = get_t();
     report_time(ctx, SV("user scripts took: "), after_scripts-before);
     cleanup:
     if(rt){
         free_qjs_rt(rt, &aa);
-        }
-    return result;
     }
+    return result;
+}
 
 // NOTE: we can have larger scope than this if we want.
 // Slicing the work here this way is not inherent.
@@ -232,12 +232,12 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
     // Setup the worker thread.
     BinaryJob job = {
         .b64cache = &ctx->b64cache,
-        };
+    };
     if(not (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME | DNDC_DONT_READ))){
         Marray(NodeHandle)* img_nodes[] = {
             &ctx->img_nodes,
             &ctx->imglinks_nodes,
-            };
+        };
         for(size_t n = 0; n < arrlen(img_nodes); n++){
             auto nodes = img_nodes[n];
             MARRAY_FOR_EACH(it, *nodes){
@@ -251,8 +251,8 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
                     if(not FileCache_has_file(job.b64cache, child->header)){
                         auto sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
                         *sv = child->header;
-                        }
                     }
+                }
                 else {
                     MStringBuilder path_builder = {.allocator=ctx->string_allocator};
                     msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
@@ -261,14 +261,14 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
                     if(not FileCache_has_file(job.b64cache, path)){
                         auto sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
                         *sv = LS_to_SV(msb_detach(&path_builder));
-                        }
+                    }
                     else {
                         msb_destroy(&path_builder);
-                        }
                     }
                 }
             }
         }
+    }
     ThreadHandle thread_worker = {};
     bool binary_work_to_be_done = !!job.sourcepaths.count;
     bool thread_created = false;
@@ -276,17 +276,17 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
         if(flags & DNDC_NO_THREADS){
             // Do it ourselves in this thread.
             binary_worker(&job);
-            }
+        }
         else{
             if(worker){
                 worker_submit((WorkerThread*)worker, &job);
-                }
+            }
             else{
                 create_thread(&thread_worker, &binary_worker, &job);
-                }
-            thread_created = true;
             }
+            thread_created = true;
         }
+    }
 
     result = execute_user_scripts(ctx);
 
@@ -294,21 +294,21 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
         auto before = get_t();
         if(worker){
             worker_wait((WorkerThread*)worker);
-            }
+        }
         else
             join_thread(thread_worker);
         auto after = get_t();
         // This is usually very fast as the worker thread finished before python.
         report_time(ctx, SV("Joining took: "), after-before);
-        }
+    }
     if(binary_work_to_be_done){
         Marray_cleanup(StringView)(&job.sourcepaths, ctx->allocator);
-        }
+    }
     else {
         report_info(ctx, SV("No binary work was to be done."));
-        }
-    return result;
     }
+    return result;
+}
 
 static
 Errorable_f(void)
@@ -330,7 +330,7 @@ run_the_dndc(uint64_t flags,
     if(flags & DNDC_REFORMAT_ONLY){
         flags |= DNDC_NO_PYTHON;
         flags |= DNDC_NO_COMPILETIME_JS;
-        }
+    }
     if(flags & DNDC_OUTPUT_EXPANDED_DND)
         flags |= DNDC_DONT_INLINE_IMAGES;
     if(flags & DNDC_INPUT_IS_UNTRUSTED){
@@ -339,7 +339,7 @@ run_the_dndc(uint64_t flags,
         flags |= DNDC_NO_THREADS;
         flags |= DNDC_DONT_INLINE_IMAGES;
         flags |= DNDC_DONT_READ;
-        }
+    }
 #ifdef WASM
     const bool wasm = true;
 #else
@@ -379,7 +379,7 @@ run_the_dndc(uint64_t flags,
                 .allocator = (flags & DNDC_NO_CLEANUP)?
                     get_mallocator()
                     : new_recorded_mallocator()
-                },
+            },
         // The text cache only runs on this thread so we can just use the
         // general allocator.
         .textcache = external_textcache?
@@ -387,7 +387,7 @@ run_the_dndc(uint64_t flags,
             : (FileCache){.allocator=allocator},
         .error_func = error_func,
         .error_user_data = error_user_data,
-        };
+    };
     MStringBuilder msb = {.allocator=ctx.allocator};
     ctx_add_builtins(&ctx);
     LongString source;
@@ -401,36 +401,36 @@ run_the_dndc(uint64_t flags,
             MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
             if(ctx.base_directory.length){
                 MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", path, "'");
-                }
+            }
             else{
                 MSB_FORMAT(&err_builder, "Unable to open '", path, "'");
-                }
+            }
             report_system_error(&ctx, msb_borrow(&err_builder));
             msb_destroy(&err_builder);
             result.errored = source_err.errored;
             goto cleanup;
-            }
-            #if 0
-                // Forces the allocation to be the right size and via malloc.
-                // Useful for asan.
-                char* text = malloc(source_err.result.length+1);
-                memcpy(text, source_err.result.text, source_err.result.length);
-                text[source_err.result.length] = 0;
-                source.length = source_err.result.length;
-                source.text = text;
-            #else
-                source = source_err.result;
-            #endif
         }
+        #if 0
+        // Forces the allocation to be the right size and via malloc.
+        // Useful for asan.
+        char* text = malloc(source_err.result.length+1);
+        memcpy(text, source_err.result.text, source_err.result.length);
+        text[source_err.result.length] = 0;
+        source.length = source_err.result.length;
+        source.text = text;
+        #else
+        source = source_err.result;
+        #endif
+    }
     else {
         source = source_or_path;
         if(!source.text){
             report_system_error(&ctx, SV("String with no data given as input"));
             result.errored = UNEXPECTED_END;
             goto cleanup;
-            }
-        ctx_store_builtin_file(&ctx, LS("(string input)"), source);
         }
+        ctx_store_builtin_file(&ctx, LS("(string input)"), source);
+    }
     // Quick and dirty estimate of how many nodes we will need.
     Marray_ensure_total(Node)(&ctx.nodes, ctx.allocator, source.length/10+1);
 
@@ -456,7 +456,7 @@ run_the_dndc(uint64_t flags,
             report_set_error(&ctx);
             result.errored = e.errored;
             goto cleanup;
-            }
+        }
     }
     if(!wasm && (flags & DNDC_REFORMAT_ONLY)){
         MStringBuilder outsb = {.allocator = get_mallocator()};
@@ -466,20 +466,20 @@ run_the_dndc(uint64_t flags,
             msb_destroy(&outsb);
             result.errored = format_error.errored;
             goto cleanup;
-            }
+        }
         auto after = get_t();
         report_time(&ctx, SV("Formatting took: "), after-before);
         report_size(&ctx, SV("Total output size (bytes): "), outsb.cursor);
 
         if(flags & DNDC_DONT_WRITE){
             msb_destroy(&outsb);
-            }
+        }
         else {
             assert(outstring);
             *outstring = msb_detach(&outsb);
-            }
-        goto success;
         }
+        goto success;
+    }
     if(wasm || unlikely(flags & DNDC_INPUT_IS_UNTRUSTED)){
         if(ctx.imports.count){
             auto handle = ctx.imports.data[0];
@@ -487,22 +487,22 @@ run_the_dndc(uint64_t flags,
             node_print_err(&ctx, node, SV("Imports are illegal for untrusted input."));
             result.errored = PARSE_ERROR;
             goto cleanup;
-            }
+        }
         if(ctx.user_script_nodes.count){
             auto handle = ctx.user_script_nodes.data[0];
             auto node = get_node(&ctx, handle);
             node_print_err(&ctx, node, SV("Python blocks and JS blocks are illegal for untrusted input."));
             result.errored = PARSE_ERROR;
             goto cleanup;
-            }
+        }
         if(ctx.script_nodes.count){
             auto handle = ctx.script_nodes.data[0];
             auto node = get_node(&ctx, handle);
             node_print_err(&ctx, node, SV("Script blocks are illegal for untrusted input."));
             result.errored = PARSE_ERROR;
             goto cleanup;
-            }
         }
+    }
     else {
         // Handle imports. Imports can import more imports, so don't use a FOR_EACH.
         auto before_imports = get_t();
@@ -513,7 +513,7 @@ run_the_dndc(uint64_t flags,
                 node_print_err(&ctx, node, SV("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)"));
                 result.errored = PARSE_ERROR;
                 goto cleanup;
-                }
+            }
             // NOTE: re-get the node every loop as the pointer is invalidated.
             for(size_t j = 0; j < node_children_count(node); j++, node=get_node(&ctx, handle)){
                 auto child_handle = node_children(node)[j];
@@ -522,7 +522,7 @@ run_the_dndc(uint64_t flags,
                     node_print_err(&ctx, child, SV("import child is not a string"));
                     result.errored = PARSE_ERROR;
                     goto cleanup;
-                    }
+                }
                 StringView filename = child->header;
                 // set to MD so we can parse as md
                 child->type = NODE_MD;
@@ -532,27 +532,27 @@ run_the_dndc(uint64_t flags,
                     MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
                     if(ctx.base_directory.length){
                         MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", filename, "'");
-                        }
+                    }
                     else{
                         MSB_FORMAT(&err_builder, "Unable to open '", filename, "'");
-                        }
+                    }
                     node_print_err(&ctx, child, msb_borrow(&err_builder));
                     msb_destroy(&err_builder);
                     result.errored = imp_e.errored;
                     goto cleanup;
-                    }
+                }
                 LongString imp_text = imp_e.result;
                 auto parse_e = dndc_parse(&ctx, child_handle, filename, imp_text.text, imp_text.length);
                 if(parse_e.errored){
                     report_set_error(&ctx);
                     result.errored = parse_e.errored;
                     goto cleanup;
-                    }
+                }
                 child = get_node(&ctx, child_handle);
                 // change to container
                 child->type = NODE_CONTAINER;
-                }
             }
+        }
         auto after_imports = get_t();
         report_time(&ctx, SV("Resolving imports took: "), after_imports-before_imports);
     }
@@ -572,7 +572,7 @@ run_the_dndc(uint64_t flags,
         if(e.errored){
             result.errored = e.errored;
             goto cleanup;
-            }
+        }
     }
     // Do some reporting as we don't add any nodes after this.
     if(!wasm){
@@ -582,14 +582,14 @@ run_the_dndc(uint64_t flags,
         report_size(&ctx, SV("ctx.script_nodes.count = "), ctx.script_nodes.count);
         report_size(&ctx, SV("ctx.dependencies_nodes.count = "), ctx.dependencies_nodes.count);
         report_size(&ctx, SV("ctx.link_nodes.count = "), ctx.link_nodes.count);
-        }
+    }
     // Python blocks can detach the root node and then forget to attach a new
     // one.
     if(NodeHandle_eq(ctx.root_handle, INVALID_NODE_HANDLE)){
         report_system_error(&ctx, SV("ctx has no root Node."));
         result.errored = PARSE_ERROR;
         goto cleanup;
-        }
+    }
     // Check that the tree is not too deep!
     if(!wasm){
         auto before = get_t();
@@ -598,7 +598,7 @@ run_the_dndc(uint64_t flags,
             report_set_error(&ctx);
             result.errored = e.errored;
             goto cleanup;
-            }
+        }
         auto after = get_t();
         report_time(&ctx, SV("Checking depth took "), after-before);
     }
@@ -614,7 +614,7 @@ run_the_dndc(uint64_t flags,
             report_set_error(&ctx);
             result.errored = PARSE_ERROR;
             goto cleanup;
-            }
+        }
     }
 
     // Render the nav block if we have one.
@@ -637,8 +637,8 @@ run_the_dndc(uint64_t flags,
                 if(e.errored){
                     result.errored = e.errored;
                     goto cleanup;
-                    }
                 }
+            }
             NODE_CHILDREN_FOR_EACH(it, link_node){
                 auto link_str_node = get_node(&ctx, *it);
                 if(link_str_node->type != NODE_STRING)
@@ -647,9 +647,9 @@ run_the_dndc(uint64_t flags,
                 if(e.errored){
                     result.errored = e.errored;
                     goto cleanup;
-                    }
                 }
             }
+        }
         // Sort so we can do a binary search.
         if(ctx.links.count){
             auto before_sort = get_t();
@@ -660,7 +660,7 @@ run_the_dndc(uint64_t flags,
             #endif
             auto after_sort = get_t();
             report_time(&ctx, SV("Sorting links took: "), (after_sort-before_sort));
-            }
+        }
         report_size(&ctx, SV("ctx.links.count = "), ctx.links.count);
     }
 
@@ -677,7 +677,7 @@ run_the_dndc(uint64_t flags,
                 auto child = get_node(&ctx, *it);
                 if(!child->header.length){
                     node_print_warning(&ctx, child, SV("Missing header from data child?"));
-                    }
+                }
                 // FIXME:
                 // A maliciously crafted python block could bypass our depth check
                 // up above by detaching the data node and making one too deep,
@@ -690,24 +690,24 @@ run_the_dndc(uint64_t flags,
                 // os.system('rm -rf /'). We bother guarding at all as you could
                 // run this in no-python mode.
                 {
-                msb_reset(&sb);
-                auto e = render_node(&ctx, &sb, child, 1);
-                if(e.errored){
-                    report_set_error(&ctx);
-                    result.errored = e.errored;
-                    goto cleanup;
+                    msb_reset(&sb);
+                    auto e = render_node(&ctx, &sb, child, 1);
+                    if(e.errored){
+                        report_set_error(&ctx);
+                        result.errored = e.errored;
+                        goto cleanup;
                     }
                 }
                 if(!sb.cursor){
                     node_print_warning(&ctx, child, SV("Rendered a data node with no data. Not outputting it."));
                     continue;
-                    }
+                }
                 auto text = msb_detach(&sb);
                 auto di = Marray_alloc(DataItem)(&ctx.rendered_data, ctx.allocator);
                 di->key = child->header;
                 di->value = text;
-                }
             }
+        }
         auto after_data = get_t();
         report_time(&ctx, SV("Data blob rendering took: "), after_data-before_data);
         report_size(&ctx, SV("ctx.rendered_data.count = "), ctx.rendered_data.count);
@@ -717,8 +717,8 @@ run_the_dndc(uint64_t flags,
         if(err){
             report_system_error(&ctx, SV("Error during user defined ast func"));
             goto cleanup;
-            }
         }
+    }
     if(!wasm && (flags & DNDC_OUTPUT_EXPANDED_DND)){
         MStringBuilder output_sb = {.allocator = get_mallocator()};
         auto before_render = get_t();
@@ -728,17 +728,17 @@ run_the_dndc(uint64_t flags,
             msb_destroy(&output_sb);
             result.errored = e.errored;
             goto cleanup;
-            }
+        }
         auto after_render = get_t();
         report_time(&ctx, SV("Expanding to .dnd took: "), after_render - before_render);
         if(flags & DNDC_DONT_WRITE){
             msb_destroy(&output_sb);
             goto success;
-            }
+        }
         else {
             assert(outstring);
             *outstring = msb_detach(&output_sb);
-            }
+        }
     }
     // Render the actual document into a string as html.
     else {
@@ -751,18 +751,18 @@ run_the_dndc(uint64_t flags,
             msb_destroy(&output_sb);
             result.errored = e.errored;
             goto cleanup;
-            }
+        }
         auto after_render = get_t();
         report_time(&ctx, SV("Rendering took: "), after_render-before_render);
 
         if(flags & DNDC_DONT_WRITE){
             msb_destroy(&output_sb);
             goto success;
-            }
+        }
         else {
             assert(outstring);
             *outstring = msb_detach(&output_sb);
-            }
+        }
     }
     // Write the make-style dependency file to the Dependency directory.
     if(!wasm && dependency_func){
@@ -774,16 +774,16 @@ run_the_dndc(uint64_t flags,
                     // just warn, don't want to fail the build
                     node_print_warning2(&ctx, child, SV("Non-string node found as a child node: "), LS_to_SV(NODENAMES[child->type]));
                     continue;
-                    }
-                Marray_push(StringView)(&ctx.dependencies, ctx.allocator, child->header);
                 }
+                Marray_push(StringView)(&ctx.dependencies, ctx.allocator, child->header);
             }
+        }
         int err = dependency_func(dependency_user_data, ctx.dependencies.count, ctx.dependencies.data);
         if(err){
             result.errored = err;
             goto cleanup;
-            }
         }
+    }
     success:;
     cleanup:;
     msb_destroy(&msb);
@@ -793,7 +793,7 @@ run_the_dndc(uint64_t flags,
         auto before_cleanup = get_t();
         if(ctx.flags & DNDC_PRINT_STATS){
             auto before = get_t();
-#if 0
+            #if 0
             RecordingAllocator* recorder = allocator._data;
             report_size(&ctx, SV("N allocations: "), recorder->count);
             size_t total = 0;
@@ -802,24 +802,24 @@ run_the_dndc(uint64_t flags,
                 size_t size = recorder->allocation_sizes[i];
                 total += size;
                 alloced += size > 0;
-                }
+            }
             report_size(&ctx, SV("N existing allocations: "), alloced);
             report_size(&ctx, SV("Allocations outstanding total (bytes): "), total);
-#else
+            #else
             Arena* arena = main_arena.arena;
             while(arena){
                 report_size(&ctx, SV("Arena used: "), arena->used);
                 arena = arena->prev;
-                }
+            }
             BigAllocation* ba = main_arena.big_allocations;
             while(ba){
                 report_size(&ctx, SV("Big allocation: "), ba->size);
                 ba = ba->next;
-                }
-#endif
+            }
+            #endif
             auto after = get_t();
             report_time(&ctx, SV("Reporting sizes: "), after-before);
-            }
+        }
         {
             auto before = get_t();
             Allocator_free_all(string_allocator);
@@ -844,19 +844,19 @@ run_the_dndc(uint64_t flags,
         }
         auto after = get_t();
         report_time(&ctx, SV("Cleaning up memory took: "), after-before_cleanup);
-        }
+    }
     if(!wasm && external_b64cache){
         memcpy(external_b64cache, &ctx.b64cache, sizeof(ctx.b64cache));
-        }
+    }
     if(!wasm && external_textcache){
         memcpy(external_textcache, &ctx.textcache, sizeof(ctx.textcache));
-        }
+    }
     auto t1 = get_t();
     report_time(&ctx, SV("Execution took: "), t1-t0);
     if(!wasm && !(flags & DNDC_NO_CLEANUP))
         destroy_linear_storage(&la_);
     return result;
-    }
+}
 
 #ifdef __clang__
 #pragma clang assume_nonnull end
@@ -896,34 +896,34 @@ Errorable_f(void)
 execute_python_string(DndcContext* ctx, const char* str, NodeHandle node, NodeHandle child){
     (void)ctx, (void)str, (void)node, (void)child;
     return (Errorable(void)){.errored=OS_ERROR};
-    }
+}
 
 static
 Errorable_f(void)
 execute_qjs_string(QJSContext*jsctx, DndcContext*ctx, const char* str, size_t length, NodeHandle handle, NodeHandle firstline){
     (void)jsctx, (void)ctx, (void)str, (void)length, (void)handle, (void)firstline;
     return (Errorable(void)){.errored=OS_ERROR};
-    }
+}
 
 static
 QJSRuntime*
 new_qjs_rt(ArenaAllocator*aa){
     (void)aa;
     return (void*_Nonnull)NULL;
-    }
+}
 
 static
 QJSContext*_Nullable
 new_qjs_ctx(QJSRuntime*rt, DndcContext*ctx){
     (void)rt, (void)ctx;
     return NULL;
-    }
+}
 
 static
 void
 free_qjs_rt(QJSRuntime*rt, ArenaAllocator*aa){
     (void)rt, (void)aa;
-    }
+}
 
 #endif
 
@@ -942,20 +942,21 @@ dndc_format(LongString source_text, LongString* output, Nullable(DndcErrorFunc*)
         ;
     auto e = run_the_dndc(flags, LS(""), source_text, LS(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL);
     return e.errored;
-    }
+}
+
 DNDC_API
 int
 dndc_init_python(void){
     auto err = internal_init_dndc_python_interpreter(0);
     return err.errored;
-    }
+}
 
 DNDC_API
 int
 dndc_init_python_types(void){
     auto err = internal_dndc_python_init_types();
     return err.errored;
-    }
+}
 
 DNDC_API
 void
@@ -979,40 +980,40 @@ dndc_stderr_error_func(Nullable(void*)unused, int type, const char* filename, in
             if(filename_len){
                 if(col >= 0){
                     fprintf(stderr, "[DEBUG] %.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
-                    }
+                }
                 else {
                     fprintf(stderr, "[DEBUG] %.*s:%d: %s\n", filename_len, filename, line+1, message);
-                    }
                 }
+            }
             else
                 fprintf(stderr, "[DEBUG] %s\n", message);
             return;
         case DNDC_ERROR_MESSAGE:
             if(col >= 0){
                 fprintf(stderr, "[ERROR] %.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
-                }
+            }
             else {
                 fprintf(stderr, "[ERROR] %.*s:%d: %s\n", filename_len, filename, line+1, message);
-                }
+            }
             return;
         case DNDC_WARNING_MESSAGE:
             if(col >= 0){
                 fprintf(stderr, "[WARN] %.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
-                }
+            }
             else {
                 fprintf(stderr, "[WARN] %.*s:%d: %s\n", filename_len, filename, line+1, message);
-                }
+            }
             return;
-        }
+    }
     // default
     if(col >= 0){
         fprintf(stderr, "%.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
-        }
+    }
     else {
         fprintf(stderr, "%.*s:%d: %s\n", filename_len, filename, line+1, message);
-        }
-    return;
     }
+    return;
+}
 #endif
 #endif
 
@@ -1032,8 +1033,8 @@ find_double_colon(const char* haystack, size_t length){
         if(first[1] == ':')
             return first;
         haystack = first+2;
-        }
     }
+}
 
 static inline
 force_inline
@@ -1089,8 +1090,8 @@ find_double_colon_utf16(const uint16_t* haystack, size_t ncode_units){
         if(first[1] == u':')
             return first;
         haystack = first+2;
-        }
     }
+}
 
 DNDC_API
 int
@@ -1103,7 +1104,7 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
     enum WhichNode {
         RAW,
         GENERIC,
-        };
+    };
     enum WhichNode which = GENERIC;
     for(;begin != end;line++){
         const char* endline = memchr(begin, '\n', end-begin);
@@ -1115,16 +1116,16 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
             which = GENERIC;
         if(which == RAW){
             syntax_func(syntax_data, DNDC_SYNTAX_RAW_STRING, line, indent, stripped.text, stripped.length);
-            }
+        }
         else {
             const char* doublecolon = find_double_colon(stripped.text, stripped.length);
             if(not doublecolon){
-                }
+            }
             else {
                 StringView header = lstripped_view(stripped.text, doublecolon - stripped.text);
                 if(header.length){
                     syntax_func(syntax_data, DNDC_SYNTAX_HEADER, line, header.text - begin, header.text, header.length);
-                    }
+                }
                 syntax_func(syntax_data, DNDC_SYNTAX_DOUBLE_COLON, line, doublecolon-begin, doublecolon, 2);
                 StringView aftercolon = lstripped_view(doublecolon+2, endline-(doublecolon+2));
                 const char* nodenameend = aftercolon.text;
@@ -1134,9 +1135,9 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                             continue;
                         default:
                             break;
-                        }
-                    break;
                     }
+                    break;
+                }
                 if(nodenameend != aftercolon.text){
                     StringView nodename = {.text=aftercolon.text, .length=nodenameend-aftercolon.text};
                     syntax_func(syntax_data, DNDC_SYNTAX_NODE_TYPE, line, nodename.text-begin, nodename.text, nodename.length);
@@ -1145,13 +1146,13 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                             which = RAW;
                             raw_indentation = stripped.text - begin;
                             break;
-                            }
                         }
                     }
+                }
                 if(memmem(stripped.text, stripped.length, "@inline", sizeof("@inline")-1)){
                     which = RAW;
                     raw_indentation = stripped.text - begin;
-                    }
+                }
                 const char* postnodename = nodenameend;
                 for(;postnodename != endline;){
                     switch(*postnodename){
@@ -1168,9 +1169,9 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                                         continue;
                                     default:
                                         break;
-                                    }
-                                break;
                                 }
+                                break;
+                            }
                             syntax_func(syntax_data, DNDC_SYNTAX_ATTRIBUTE, line, attrfirst-begin, attrfirst, postnodename-attrfirst);
                             if(postnodename != endline and *postnodename == '('){
                                 int parens = 1;
@@ -1183,12 +1184,12 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                                         parens--;
                                     if(!parens)
                                         break;
-                                    }
+                                }
                                 syntax_func(syntax_data, DNDC_SYNTAX_ATTRIBUTE_ARGUMENT, line, argfirst-begin, argfirst, postnodename-argfirst);
                                 if(postnodename != endline)
                                     postnodename++;
-                                }
-                            }break;
+                            }
+                        }break;
                         case '.':{
                             const char* classfirst = postnodename;
                             postnodename++;
@@ -1202,22 +1203,22 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                                         continue;
                                     default:
                                         break;
-                                    }
-                                break;
                                 }
+                                break;
+                            }
                             syntax_func(syntax_data, DNDC_SYNTAX_CLASS, line, classfirst-begin, classfirst, postnodename-classfirst);
-                            }break;
+                        }break;
                         default:
                             postnodename++;
                             continue;
-                        }
                     }
                 }
             }
+        }
         if(endline == end)
             break;
         begin = endline+1;
-        }
+    }
     return 0;
 }
 
@@ -1236,7 +1237,7 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
     enum WhichNode {
         RAW,
         GENERIC,
-        };
+    };
     enum WhichNode which = GENERIC;
     for(;begin != end;line++){
         const uint16_t* endline = mem_utf16(begin, u'\n', end-begin);
@@ -1248,16 +1249,16 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
             which = GENERIC;
         if(which == RAW){
             syntax_func(syntax_data, DNDC_SYNTAX_RAW_STRING, line, indent, stripped.text, stripped.length);
-            }
+        }
         else {
             const uint16_t* doublecolon = find_double_colon_utf16(stripped.text, stripped.length);
             if(not doublecolon){
-                }
+            }
             else {
                 StringViewUtf16 header = lstripped_view_utf16(stripped.text, doublecolon - stripped.text);
                 if(header.length){
                     syntax_func(syntax_data, DNDC_SYNTAX_HEADER, line, header.text - begin, header.text, header.length);
-                    }
+                }
                 syntax_func(syntax_data, DNDC_SYNTAX_DOUBLE_COLON, line, doublecolon-begin, doublecolon, 2);
                 StringViewUtf16 aftercolon = lstripped_view_utf16(doublecolon+2, endline-(doublecolon+2));
                 const uint16_t* nodenameend = aftercolon.text;
@@ -1267,9 +1268,9 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                             continue;
                         default:
                             break;
-                        }
-                    break;
                     }
+                    break;
+                }
                 if(nodenameend != aftercolon.text){
                     StringViewUtf16 nodename = {.text=aftercolon.text, .length=nodenameend-aftercolon.text};
                     syntax_func(syntax_data, DNDC_SYNTAX_NODE_TYPE, line, nodename.text-begin, nodename.text, nodename.length);
@@ -1278,13 +1279,13 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                             which = RAW;
                             raw_indentation = stripped.text - begin;
                             break;
-                            }
                         }
                     }
+                }
                 if(memmem(stripped.text, stripped.length*2, u"@inline", sizeof(u"@inline")-2)){
                     which = RAW;
                     raw_indentation = stripped.text - begin;
-                    }
+                }
                 const uint16_t* postnodename = nodenameend;
                 for(;postnodename != endline;){
                     switch(*postnodename){
@@ -1301,9 +1302,9 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                                         continue;
                                     default:
                                         break;
-                                    }
-                                break;
                                 }
+                                break;
+                            }
                             syntax_func(syntax_data, DNDC_SYNTAX_ATTRIBUTE, line, attrfirst-begin, attrfirst, postnodename-attrfirst);
                             if(postnodename != endline and *postnodename == u'('){
                                 int parens = 1;
@@ -1316,12 +1317,12 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                                         parens--;
                                     if(!parens)
                                         break;
-                                    }
+                                }
                                 syntax_func(syntax_data, DNDC_SYNTAX_ATTRIBUTE_ARGUMENT, line, argfirst-begin, argfirst, postnodename-argfirst);
                                 if(postnodename != endline)
                                     postnodename++;
-                                }
-                            }break;
+                            }
+                        }break;
                         case u'.':{
                             const uint16_t* classfirst = postnodename;
                             postnodename++;
@@ -1335,22 +1336,22 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                                         continue;
                                     default:
                                         break;
-                                    }
-                                break;
                                 }
+                                break;
+                            }
                             syntax_func(syntax_data, DNDC_SYNTAX_CLASS, line, classfirst-begin, classfirst, postnodename-classfirst);
-                            }break;
+                        }break;
                         default:
                             postnodename++;
                             continue;
-                        }
                     }
                 }
             }
+        }
         if(endline == end)
             break;
         begin = endline+1;
-        }
+    }
     return 0;
 }
 
@@ -1361,7 +1362,7 @@ dndc_create_filecache(void){
     Allocator al = get_mallocator();
     *result = (struct DndcFileCache){.allocator = al};
     return result;
-    }
+}
 DNDC_API
 void
 dndc_filecache_destroy(struct DndcFileCache* cache){
@@ -1373,31 +1374,31 @@ DNDC_API
 int
 dndc_filecache_remove(struct DndcFileCache* cache, StringView path){
     return FileCache_maybe_remove(cache, path);
-    }
+}
 
 DNDC_API
 void
 dndc_filecache_clear(struct DndcFileCache* cache){
     FileCache_clear(cache);
-    }
+}
 
 DNDC_API
 int
 dndc_filecache_has_path(struct DndcFileCache* cache, StringView path){
     return FileCache_has_file(cache, path);
-    }
+}
 
 DNDC_API
 DndcWorkerThread*
 dndc_worker_thread_create(void){
     return (DndcWorkerThread*)worker_create(binary_worker);
-    }
+}
 
 DNDC_API
 void
 dndc_worker_thread_destroy(DndcWorkerThread* w){
     worker_destroy((WorkerThread*)w);
-    }
+}
 
 DNDC_API
 int
@@ -1444,7 +1445,7 @@ dndc_compile_dnd_file(
         return GENERIC_ERROR;
     auto err = run_the_dndc(flags, base_directory, source_or_path, outpath, outstring, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread);
     return err.errored;
-    }
+}
 
 #ifdef __clang__
 #pragma clang assume_nonnull end
