@@ -130,11 +130,11 @@ Convenience::md
 
   Additionally we support tables. For example:
 
-  ::python
-    # I got lazy and didn't want to write it twice, so I just did this as
-    # a script.
+  ::js
+    // I got lazy and didn't want to write it twice, so I just did this as
+    // a script.
 
-    text='''
+    let text=`
     ::comment
       This is a comment by the way! It is not in the rendered html.
 
@@ -159,7 +159,7 @@ Convenience::md
       IMPORT       | import       | ---           | ---
       IMAGE        | img          | <div><img>    | Yes
       BULLETS      | bullets      | <div><ul>     | Yes
-      PYTHON       | python       | ---           | No
+      JAVASCRIPT   | js           | ---           | No
       RAW          | raw          |               | No
       PRE          | pre          | <div><pre>    | Yes
       LIST         | list         | <div><ol>     | Yes
@@ -189,16 +189,16 @@ Convenience::md
         It can be used as a poison node when debugging.
       * text, bullets, and list are generally not used in favor of md blocks.
         They are useful for script-generated nodes though.
-    '''
-    prenode = ctx.make_node(NodeType.PRE, classes=['embedded'])
-    for line in text.strip().split('\n'):
-      prenode.add_child(line.rstrip())
+    `
+    let prenode = ctx.make_node(NodeType.PRE, {classes:['embedded']});
+    for(let line of text.trim().split('\n'))
+      prenode.add_child(line.trimRight());
     node.parent.add_child(prenode)
-    # parse is convenient, it appends the nodes by
-    # parsing the string as if it were a document.
+    // parse is convenient, it appends the nodes by
+    //parsing the string as if it were a document.
     node.parent.parse('::md\n  And here is that table')
     node.parent.parse(text)
-    #endpython
+    //endjs
 
 
 Styling and Scripting::md
@@ -217,7 +217,7 @@ Self-Contained::md
       cssfile1.css
       another/css/file.css
       and/another.css
-    ::js
+    ::script
       somejsfile.js
       another/jsfile.js
     ::css @inline
@@ -228,7 +228,7 @@ Self-Contained::md
     ::comment
       You haven't seen this before. The '@' symbol to the right of the double
       colon indicates an attribute. Attributes can be simple identifiers. They
-      are generally used to tag nodes with extra metadata for your python blocks.
+      are generally used to tag nodes with extra metadata for your js blocks.
       Some identifiers are special to the system. For example, this @inline
       attribute tells the system to not interpret the contents as filepaths, but
       instead as raw strings to be included in the <style> tags.
@@ -270,9 +270,9 @@ Self-Contained::md
     and string values.
 
     ::pre .embedded
-      ::python
+      ::js
         ctx.set_data('foo', 'bar')
-        #endpython
+        //endjs
 
     You can't currently introspect the data blob from python as the blocks aren't
     rendered until all user scripts are finished executing.
@@ -311,11 +311,11 @@ Attributes and Classes::md
   A block can have any number of attributes. Attributes are identifiers and can
   have arguments in parens. The contents of the parens are stored as a string.
 
-  Python blocks can retrieve the attributes of a node via the .attributes field,
-  with the regular square-bracket setting and getting and using del. It presents
-  a dict-like interface to the attributes. You can also 'add' an attribute which
-  will give it an empty string as its value. Many things only check for the
-  presence of the key and ignore the value.
+  Javascript blocks can retrieve the attributes of a node via the .attributes
+  field, with the regular square-bracket setting and getting and using del. It
+  presents a dict-like interface to the attributes. You can also 'add' an
+  attribute which will give it an empty string as its value. Many things only
+  check for the presence of the key and ignore the value.
 
   Special Attributes::md
     The following attributes are special to the system:
@@ -327,93 +327,92 @@ Attributes and Classes::md
       @hide     | Don't output the block in the rendered output.
       @inline   | Use contents, don't interpret as filepaths.
       @noinline | Produce a link (href) instead of embedding.
-      @comment  | Treat the block as a comment instead of its declared type.
-    All other attributes are used for user python blocks. I can't guarantee that
-    they won't break when I add a new attribute though! We'll stabilize when the
-    version is 1.0.
+      @comment  | Treat the block as a comment instead of its declared
+                  type.
+      @import   | Treat the lines inside the block as paths to be
+                  imported and import them as children of this node.
+    All other attributes are used for user javascript blocks. I can't guarantee
+    that they won't break when I add a new attribute though! We'll stabilize
+    when the version is 1.0.
 
 But Wait, There's More::md
   The structured document format is convenient to write in, but sometimes you
-  need to manipulate the document programmatically. Python blocks are your
+  need to manipulate the document programmatically. Javascript blocks are your
   friend.
 
   example:
 
   ::pre .embedded
-  ::python
-    """
-    python blocks have 3 special variables in them.
-      node: this node (the python block)
+  ::js
+    `
+    js blocks have 3 special variables in them.
+      node: this node (the js block)
       ctx: this variable represents the state of compiling.
-            It offers methods such as `make_node` to create new nodes
+            It offers methods such as \`make_node\` to create new nodes
             that can be inserted into the document.
-      NodeType: This is actually a do-nothing class, that is used to
+      NodeType: This is actually a do-nothing object, that is used to
                 namespace the types of the nodes. This is useful because
                 you need to choose a type if you make a new node.
-                You can also check the `type` attribute on nodes.
-    """
-    parent = node.parent
-    for child in parent.children:
-      if child.type == NodeType.PARA:
-        for line in child.children:
-          if 'example' in line.header:
-            line.header = 'For Example:'
-      if child.type == NodeType.PRE:
-        child.add_child('::python')
-        for line in node.children:
-          child.add_child('  '+line.header)
+                You can also check the \`type\` attribute on nodes.
+    `
+    for(let child of node.parent.children){
+      if(child.type == NodeType.PARA){
+        for(let line of child.children){
+          if(line.header.includes('example'))
+            line.header = 'For Example:';
+        }
+      }
+      if(child.type == NodeType.PRE){
+        child.add_child('::js');
+        for(let line of node.children){
+          child.add_child('  '+line.header);
+        }
         break
-    # If you're paying attention, you'll realize this python block added itself
-    # to the document.
-    # the endpython comment is not necessary. I only include it so that
-    # vim knows when the python block ends for syntax highlighting purposes.
-    #endpython
+      }
+    }
+    // If you're paying attention, you'll realize this js block added itself
+    // to the document.
+    // the endjs comment is not necessary. I only include it so that
+    // vim knows when the js block ends for syntax highlighting purposes.
+    //endjs
 
-  Python blocks are somewhat isolated. They have an empty sys.path and will not
-  import the "site" module, but sys.path is still mutable and you can import
-  things if you really want. Some things won't work as I didn't port all of the
-  standard library.
+  Javascript blocks are isolated.
 
-  Tangent: the regular python interpreter does crazy stuff like import io.py
-  during bootstrapping itself. It reads the actual io.py file off the disk from
-  the standard library installation. I figured out which python modules it needs
-  to init itself and embedded them as bytecode in this binary. The fruit of this
-  is that the python initialization only takes 6-7ms instead of the 30-40ms it
-  normally takes.
-
-  You can set code breakpoints and print things in python blocks, which is useful
-  for exploring the document and debugging things. I used it several times while
-  writing this!
+  You can print things in javascript blocks, using <code>console.log</code>. I
+  used it several times while writing this!
 
   ::pre .embedded
-    ::python
-      """
+    ::js
+      `
       This block will print out every node in the document.
       The system can do this as well more efficiently, but this is just
       showing off that io works as expected.
-      """
-      def walk(n, depth=0):
-        if depth > 10:
-          breakpoint()
-        print('__'*depth, n, sep='')
-        for child in n.children:
-          walk(child, depth+1)
-      walk(ctx.root)
-      #endpython
+      `
+      function walk(n, depth){
+        if(depth > 10){
+          return;
+        }
+        console.log('--'.repeat(depth), n);
+        for(let child of n.children){
+          walk(child, depth+1);
+        }
+      }
+      walk(ctx.root, 0);
+      //endjs
 
-  Here is a fun demo. We will now embed the entire document via python. This is
-  all done at compile time. You can even see the python block that was used to
-  embed the text.
+  Here is a fun demo. We will now embed the entire document via javascript. This
+  is all done at compile time. You can even see the javascript block that was
+  used to embed the text.
 
-  ::python
-    prenode = ctx.make_node(NodeType.PRE, classes=['embedded'], attributes=['import'], header='This Document')
-    # `add_child` can accept two kinds of arguments: nodes and strings
-    # strings are converted to STRING nodes.
-    prenode.add_child(ctx.sourcepath)
-    ctx.root.add_child(prenode)
-    # the endpython comment is not necessary. I only include it so that
-    # vim knows when the python block ends for syntax highlighting purposes.
-    #endpython
+  ::js
+    let prenode = ctx.make_node(NodeType.PRE, {classes:['embedded'], attributes:['import'], header:'This Document'});
+    // `add_child` can accept two kinds of arguments: nodes and strings
+    // strings are converted to STRING nodes.
+    prenode.add_child(ctx.sourcepath);
+    ctx.root.add_child(prenode);
+    // the endjs comment is not necessary. I only include it so that
+    // vim knows when the js block ends for syntax highlighting purposes.
+    //endjs
 
 
 ::comment
@@ -500,17 +499,17 @@ But Wait, There's More::md
   /*endcss*/
 
 
-::python
-  # this shows more raw manipulation of the tree.
-  # we actually temporarily detach the root node from the context
-  root = ctx.root
-  root.type = NodeType.DIV
-  root.classes.append('container')
-  new_root = ctx.make_node(NodeType.DIV, classes=['root'])
-  root.detach()
-  new_root.add_child(root)
-  # NAV blocks are kind of special. As one of the last things, the system
-  # will walk the document tree and create a toc of all the h2 and h3s.
-  new_root.add_child(ctx.make_node(NodeType.NAV))
-  ctx.set_root(new_root)
-  #endpython
+::js
+  // this shows more raw manipulation of the tree.
+  // we actually temporarily detach the root node from the context
+  let root = ctx.root;
+  root.type = NodeType.DIV;
+  root.classes.append('container');
+  let new_root = ctx.make_node(NodeType.DIV, {classes:['root']});
+  root.detach();
+  new_root.add_child(root);
+  // NAV blocks are kind of special. As one of the last things, the system
+  // will walk the document tree and create a toc of all the h2 and h3s.
+  new_root.add_child(ctx.make_node(NodeType.NAV));
+  ctx.root = new_root;
+  //endjs
