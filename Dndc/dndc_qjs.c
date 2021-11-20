@@ -3,6 +3,8 @@
 #include "dndc.h"
 #include "dndc_funcs.h"
 #include "dndc_types.h"
+#include "ByteBuilder.h"
+#include "bb_extensions.h"
 PushDiagnostic();
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wunused-parameter"
@@ -87,6 +89,15 @@ js_freeze_object(QJSContext* jsctx, QJSValueConst obj);
 JSMETHOD(js_console_log);
 
 //
+// File System functions
+//
+JSMETHOD(js_load_file_as_base64);
+JSMETHOD(js_load_file);
+// JSMETHOD(js_path_exists);
+// JSMETHOD(js_file_exists);
+// JSMETHOD(js_dir_exists);
+
+//
 // DndcContext
 //
 
@@ -117,7 +128,6 @@ JSMETHOD(js_dndc_context_make_node);
 JSMETHOD(js_dndc_context_add_dependency);
 JSMETHOD(js_dndc_context_kebab);
 JSMETHOD(js_dndc_context_set_data);
-JSMETHOD(js_dndc_context_read_file);
 JSMETHOD(js_dndc_context_select_nodes);
 JSMETHOD(js_dndc_context_to_string);
 JSMETHOD(js_dndc_context_add_link);
@@ -137,7 +147,6 @@ JSCFunctionListEntry JS_DNDC_CONTEXT_FUNCS[] = {
     JS_CFUNC_DEF("add_dependency", 1, js_dndc_context_add_dependency),
     JS_CFUNC_DEF("kebab", 1, js_dndc_context_kebab),
     JS_CFUNC_DEF("set_data", 2, js_dndc_context_set_data),
-    JS_CFUNC_DEF("read_file", 2, js_dndc_context_read_file),
     JS_CFUNC_DEF("select_nodes", 1, js_dndc_context_select_nodes),
     JS_CFUNC_DEF("toString", 0, js_dndc_context_to_string),
     JS_CFUNC_DEF("add_link", 2, js_dndc_context_add_link),
@@ -333,7 +342,7 @@ free_qjs_rt(QJSRuntime* rt, ArenaAllocator* arena){
 
 static
 QJSContext*_Nullable
-new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx){
+new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags){
     QJSContext* jsctx = NULL;
     jsctx = JS_NewContext(rt);
     if(!jsctx)
@@ -369,6 +378,7 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx){
     // That's a lot of context!
     JS_SetContextOpaque(jsctx, ctx);
 
+    // Globals, console
     {
         QJSValue global_obj, console, dctx, node_types;
         global_obj = JS_GetGlobalObject(jsctx); // new ref
@@ -379,9 +389,19 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx){
             }
         JS_SetPropertyStr(jsctx, global_obj, "NodeType", node_types); // steals ref
 
+        // console
         console = JS_NewObject(jsctx); // new ref
         JS_SetPropertyStr(jsctx, console, "log", JS_NewCFunction(jsctx, js_console_log, "log", 1)); // create and steal ref all in one go.
         JS_SetPropertyStr(jsctx, global_obj, "console", console); // steals ref
+
+        // filesystem
+        if(flags & DNDC_JS_ENABLE_FILESYSTEM){
+            QJSValue filesystem = JS_NewObject(jsctx); // new ref
+            JS_SetPropertyStr(jsctx, filesystem, "load_file_as_base64", JS_NewCFunction(jsctx, js_load_file_as_base64, "load_file_as_base64", 1)); // create and steal in one go.
+            JS_SetPropertyStr(jsctx, filesystem, "load_file", JS_NewCFunction(jsctx, js_load_file, "load_file", 1)); // create and steal in one go.
+            JS_SetPropertyStr(jsctx, global_obj, "FileSystem", filesystem); // Steals ref
+        }
+
         JS_SetPropertyStr(jsctx, global_obj, "ctx", dctx); // steals ref
         JS_FreeValue(jsctx, global_obj); // decref
     }
@@ -619,6 +639,57 @@ js_freeze_object(QJSContext* jsctx, QJSValueConst obj){
     JS_FreeValue(jsctx, freeze);
     return called;
     }
+
+//
+// FileSystem stuff
+//
+static
+QJSValue
+js_load_file_as_base64(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst *argv){
+    (void)thisValue;
+    if(argc != 1){
+        return JS_ThrowTypeError(jsctx, "%s: Must be given a single path argument", __func__);
+    }
+    QJSValueConst str = argv[0];
+    if(!JS_IsString(str)){
+        return JS_ThrowTypeError(jsctx, "%s: must be given a single string argument", __func__);
+    }
+    // sloppy as fuck, whatever.
+    ByteBuilder bb = {.allocator = get_mallocator()};
+
+    auto sv = jsstring_make_stringview_js_allocated(jsctx, str);
+    auto alloc = get_mallocator();
+    auto e = read_and_base64_bin_file(&bb, alloc, sv.text);
+    bb_destroy(&bb);
+    if(e.errored){
+        return JS_ThrowTypeError(jsctx, "%s: Error when loading file: '%s'", __func__, sv.text);
+    }
+    auto result = JS_NewString(jsctx, e.result.text);
+    Allocator_free(alloc, e.result.text, e.result.length+1);
+    return result;
+}
+static
+QJSValue
+js_load_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst *argv){
+    (void)thisValue;
+    if(argc != 1){
+        return JS_ThrowTypeError(jsctx, "Must be given a single path argument");
+    }
+    QJSValueConst str = argv[0];
+    if(!JS_IsString(str)){
+        return JS_ThrowTypeError(jsctx, "load_file must be given a single string argument");
+    }
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    auto sv = jsstring_make_stringview_js_allocated(jsctx, str);
+    auto e = ctx_load_source_file(ctx, sv);
+    if(e.errored){
+        return JS_ThrowTypeError(jsctx, "load_file: Error when loading file");
+    }
+    auto result = JS_NewString(jsctx, e.result.text);
+    return result;
+}
+
 
 
 //
@@ -1286,25 +1357,6 @@ JSMETHOD(js_dndc_context_set_data){
     new_data->key = key;
     new_data->value = value;
     return JS_UNDEFINED;
-    }
-
-JSMETHOD(js_dndc_context_read_file){
-    DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
-    if(!ctx)
-        return JS_EXCEPTION;
-    if(argc != 1)
-        return JS_ThrowTypeError(jsctx, "Need 1 string argument to read_file");
-    StringView path = jsstring_to_stringview(jsctx, argv[0], ctx->temp_allocator);
-    if(!path.text)
-        return JS_EXCEPTION;
-    auto e = ctx_load_source_file(ctx, path);
-    Allocator_free(ctx->temp_allocator, path.text, path.length);
-    if(e.errored){
-        QJSValue error = JS_ThrowTypeError(jsctx, "bad path");
-        return error;
-        }
-    auto text = e.result;
-    return JS_NewStringLen(jsctx, text.text, text.length);
     }
 
 JSMETHOD(js_dndc_context_select_nodes){

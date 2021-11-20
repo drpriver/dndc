@@ -95,6 +95,14 @@ main(int argc, char**argv){
                         "If not given, everything is relative to cwd.",
             },
             {
+                .name = SV("--fs"),
+                .altname1 = SV("--allow-js-access-filesystem"),
+                .max_num = 1,
+                .dest = ArgBitFlagDest(&flags, DNDC_ALLOW_JS_FILESYSTEM_ACCESS),
+                .help = "Allow javascript to access the filesystem",
+                .hidden = false,
+            },
+            {
                 .name = SV("--no-js"),
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_NO_COMPILETIME_JS),

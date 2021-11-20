@@ -627,10 +627,12 @@ DNDC_ALLOW_BAD_LINKS = 0x100,
 // Don't execute js blocks.
 DNDC_NO_COMPILETIME_JS = 0x200,
 
+// Allow javascript to access the filesystem
+DNDC_ALLOW_JS_FILESYSTEM_ACCESS = 0x400,
+
 // These flags are unused (used to be for controlling python).
-DNDC_UNUSED1 = 0x400,
-DNDC_UNUSED2 = 0x800,
-DNDC_UNUSED3 = 0x1000,
+DNDC_UNUSED1 = 0x800,
+DNDC_UNUSED2 = 0x1000,
 
 // Don't spawn any worker threads. No parallelism.
 DNDC_NO_THREADS = 0x2000,

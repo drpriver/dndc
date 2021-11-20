@@ -61,13 +61,12 @@
     <div id="log"></div>
 ::script @inline
   //endjs
-::python
-  ctx.add_dependency('Objs/dndc.wasm')
-  import base64
-  inline = ctx.select_nodes(NodeType.SCRIPTS, attributes=['inline'])[0]
-  b64 = base64.b64encode(open('Objs/dndc.wasm', 'rb').read()).decode('utf-8')
-  inline.add_child(f'const prog64 = "{b64}";')
-  #endpython
+::js
+  ctx.add_dependency('Objs/dndc.wasm');
+  let inline = ctx.select_nodes({type:NodeType.SCRIPTS, attributes:['inline']})[0];
+  let b64 = FileSystem.load_file_as_base64('Objs/dndc.wasm');
+  inline.add_child(`const prog64 = "${b64}";`);
+  //endjs
 
 ::css @inline
   * {

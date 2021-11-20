@@ -65,6 +65,7 @@ typedef struct BinaryJob{
 
 static
 THREADFUNC(binary_worker){
+    // Prepopulate the binary cache.
     BinaryJob* jobp = thread_arg;
     FileCache cache = *jobp->b64cache;
     size_t count = jobp->sourcepaths.count;
@@ -154,7 +155,10 @@ execute_user_scripts(DndcContext* ctx){
                 auto before_init = get_t();
                 rt = new_qjs_rt(&aa);
                 assert(!jsctx);
-                jsctx = new_qjs_ctx(rt, ctx);
+                DndcJsFlags jsflags = 0;
+                if(flags & DNDC_ALLOW_JS_FILESYSTEM_ACCESS)
+                    jsflags |= DNDC_JS_ENABLE_FILESYSTEM;
+                jsctx = new_qjs_ctx(rt, ctx, jsflags);
                 if(!jsctx){
                     report_system_error(ctx, SV("Failed to initialize javascript context"));
                     result.errored = GENERIC_ERROR;
@@ -207,6 +211,8 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
         .b64cache = &ctx->b64cache,
     };
     if(not (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME | DNDC_DONT_READ))){
+        // Populate a list of filepaths to load up in order
+        // to pre-populate the cahce.
         Marray(NodeHandle)* img_nodes[] = {
             &ctx->img_nodes,
             &ctx->imglinks_nodes,
@@ -220,6 +226,8 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
                 auto child = get_node(ctx, node_children(node)[0]);
                 if(!child->header.length)
                     continue;
+                // Already absolute or we're relative to cwd, so
+                // keep it as is.
                 if(path_is_abspath(child->header) or !ctx->base_directory.length){
                     if(not FileCache_has_file(job.b64cache, child->header)){
                         auto sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
@@ -227,6 +235,9 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
                     }
                 }
                 else {
+                    // Otherwise we build the path relative to the given
+                    // include directory.
+                    // Get's cleaned up with the string allocator.
                     MStringBuilder path_builder = {.allocator=ctx->string_allocator};
                     msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
                     msb_append_path(&path_builder, child->header.text, child->header.length);
