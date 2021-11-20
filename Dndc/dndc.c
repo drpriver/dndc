@@ -156,7 +156,7 @@ execute_user_scripts(DndcContext* ctx){
                 rt = new_qjs_rt(&aa);
                 assert(!jsctx);
                 DndcJsFlags jsflags = 0;
-                if(flags & DNDC_ALLOW_JS_FILESYSTEM_ACCESS)
+                if(!(flags & DNDC_DONT_READ))
                     jsflags |= DNDC_JS_ENABLE_FILESYSTEM;
                 jsctx = new_qjs_ctx(rt, ctx, jsflags);
                 if(!jsctx){

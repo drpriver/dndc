@@ -3,13 +3,23 @@
 Your Wiki::title
 Pages::md
   ::js
+    // js doesn't have a titlecase function builtin, so roll our own
+    function to_title(s){
+      const parts = s.split(/\s+/);
+      let result = "";
+      for (let i = 0; i < parts.length; i++){
+        let p = parts[i];
+        let lower = p.toLowerCase();
+        result += p[0].toUpperCase() + lower.slice(1, lower.length);
+      }
+      return result;
+    }
     let Pages = node.parent;
-    // const files = FileSystem.list_dnd_files(); // relative paths
-    const files = ['index.dnd', 'lorem.dnd', 'flat.dnd'];
+    const files = FileSystem.list_dnd_files(); // relative paths
     let bullets = '';
     for(let f of files){
       f = f.replace('.dnd', '');
-      bullets += `* [${f}]` + '\n';
+      bullets += `* [${to_title(f)}]` + '\n';
     }
     Pages.parse(bullets);
     //endjs

@@ -603,6 +603,59 @@ set_js_traceback(DndcContext* ctx, QJSContext* jsctx){
     }
 
 static
+void
+js_console_inner(QJSContext* jsctx, QJSValueConst v, MStringBuilder* sb){
+    if(JS_IsArray(jsctx, v)){
+        msb_write_char(sb, '[');
+        QJSValue length_ = JS_GetPropertyStr(jsctx, v, "length");
+        int32_t length;
+        if(JS_ToInt32(jsctx, &length, length_)){
+            msb_write_literal(sb, "(Error getting array length)");
+            }
+        else {
+            for(int32_t i = 0; i < length; i++){
+                if(i != 0) msb_write_literal(sb, ", ");
+                js_console_inner(jsctx, JS_GetPropertyUint32(jsctx, v, i), sb);
+            }
+        }
+        msb_write_char(sb, ']');
+        return;
+    }
+    switch(JS_VALUE_GET_TAG(v)){
+        case JS_TAG_STRING:{
+            msb_write_char(sb, '"');
+
+            size_t len;
+            const char *str = JS_ToCStringLen(jsctx, &len, v);
+            if(!str) msb_write_literal(sb, "(Error converting string to string)");
+            else msb_write_str(sb, str, len);
+            msb_write_char(sb, '"');
+        }break;
+        case JS_TAG_INT:{
+            int i;
+            if(JS_ToInt32(jsctx, &i, v)){
+                msb_write_literal(sb, "(Error converting to integer)");
+            }
+            else {
+                MSB_FORMAT(sb, i);
+            }
+        }break;
+        case JS_TAG_OBJECT: {
+            size_t len;
+            const char *str = JS_ToCStringLen(jsctx, &len, v);
+            if(!str) msb_write_literal(sb, "(Error converting object to string)");
+            else msb_write_str(sb, str, len);
+        }break;
+        default:{
+            size_t len;
+            const char *str = JS_ToCStringLen(jsctx, &len, v);
+            if(!str) msb_write_literal(sb, "(Error converting to string)");
+            else msb_write_str(sb, str, len);
+        }break;
+    }
+}
+
+static
 QJSValue
 js_console_log(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst *argv)
 {
@@ -619,11 +672,7 @@ js_console_log(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
 
     for(int i = 0; i < argc; i++){
         if(i != 0) msb_write_char(&msb, ' ');
-        size_t len;
-        const char *str = JS_ToCStringLen(jsctx, &len, argv[i]);
-        if(!str) return JS_EXCEPTION;
-        msb_write_str(&msb, str, len);
-        JS_FreeCString(jsctx, str);
+        js_console_inner(jsctx, argv[i], &msb);
     }
     auto msg = msb_borrow(&msb);
     ctx->error_func(ctx->error_user_data, DNDC_DEBUG_MESSAGE, filename?:"js", filename?strlen(filename):2, line_num-1, -1, msg.text, msg.length);
@@ -667,6 +716,7 @@ js_load_file_as_base64(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJS
     auto sv = jsstring_make_stringview_js_allocated(jsctx, str);
     auto alloc = get_mallocator();
     auto e = read_and_base64_bin_file(&bb, alloc, sv.text);
+    JS_FreeCString(jsctx, sv.text);
     bb_destroy(&bb);
     if(e.errored){
         return JS_ThrowTypeError(jsctx, "%s: Error when loading file: '%s'", __func__, sv.text);
@@ -690,6 +740,7 @@ js_load_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst
     assert(ctx);
     auto sv = jsstring_make_stringview_js_allocated(jsctx, str);
     auto e = ctx_load_source_file(ctx, sv);
+    JS_FreeCString(jsctx, sv.text);
     if(e.errored){
         return JS_ThrowTypeError(jsctx, "load_file: Error when loading file");
     }
@@ -719,6 +770,7 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
         else {
             msb_write_str(&sb, dir.text, dir.length);
         }
+        JS_FreeCString(jsctx, dir.text);
     }
     else {
         if(base.length){
@@ -750,7 +802,7 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
         if(ent->fts_info & (FTS_F | FTS_NSOK)){
             StringView name = {.text = ent->fts_name, .length=ent->fts_namelen};
             if(endswith(name, SV(".dnd"))){
-                auto item = JS_NewString(jsctx, *ent->fts_path == '.'? ent->fts_path + 2:ent->fts_path);
+                auto item = JS_NewString(jsctx, ent->fts_path + dir.length+1);
                 JS_ArrayPush(jsctx, result, 1, &item);
                 JS_FreeValue(jsctx, item);
             }
