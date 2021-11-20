@@ -5,6 +5,11 @@
 #include "dndc_types.h"
 #include "ByteBuilder.h"
 #include "bb_extensions.h"
+#include "str_util.h"
+#if defined(__APPLE__) || defined(__linux__)
+#include <fts.h>
+#elif defined(_WIN32)
+#endif
 PushDiagnostic();
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wunused-parameter"
@@ -93,6 +98,7 @@ JSMETHOD(js_console_log);
 //
 JSMETHOD(js_load_file_as_base64);
 JSMETHOD(js_load_file);
+JSMETHOD(js_list_dnd_files);
 // JSMETHOD(js_path_exists);
 // JSMETHOD(js_file_exists);
 // JSMETHOD(js_dir_exists);
@@ -399,6 +405,7 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags){
             QJSValue filesystem = JS_NewObject(jsctx); // new ref
             JS_SetPropertyStr(jsctx, filesystem, "load_file_as_base64", JS_NewCFunction(jsctx, js_load_file_as_base64, "load_file_as_base64", 1)); // create and steal in one go.
             JS_SetPropertyStr(jsctx, filesystem, "load_file", JS_NewCFunction(jsctx, js_load_file, "load_file", 1)); // create and steal in one go.
+            JS_SetPropertyStr(jsctx, filesystem, "list_dnd_files", JS_NewCFunction(jsctx, js_list_dnd_files, "list_dnd_files", 1)); // create and steal in one go.
             JS_SetPropertyStr(jsctx, global_obj, "FileSystem", filesystem); // Steals ref
         }
 
@@ -688,6 +695,76 @@ js_load_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst
     }
     auto result = JS_NewString(jsctx, e.result.text);
     return result;
+}
+
+static
+QJSValue
+js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst *argv){
+    (void)thisValue;
+    if(argc > 1){
+        return JS_ThrowTypeError(jsctx, "Must be given 0 or no arguments");
+    }
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    MStringBuilder sb = {.allocator = ctx->temp_allocator};
+    auto base = ctx->base_directory;
+    if(argc == 1){
+        auto dir = jsstring_make_stringview_js_allocated(jsctx, argv[0]);
+        if(base.length && !path_is_abspath(dir)){
+            msb_write_str(&sb, base.text, base.length);
+            if(dir.length){
+                msb_append_path(&sb, dir.text, dir.length);
+            }
+        }
+        else {
+            msb_write_str(&sb, dir.text, dir.length);
+        }
+    }
+    else {
+        if(base.length){
+            msb_write_str(&sb, base.text, base.length);
+        }
+        else {
+            msb_write_str(&sb, ".", 1);
+        }
+    }
+    if(!sb.cursor){
+        return JS_ThrowTypeError(jsctx, "Invalid directory argument");
+    }
+    msb_nul_terminate(&sb);
+    auto dir = msb_borrow(&sb);
+#if defined(__APPLE__) || defined(__linux__)
+    const char* dirs[] = {dir.text, NULL};
+    PushDiagnostic();
+    SuppressCastQual();
+    FTS* handle = fts_open((char**)dirs, FTS_LOGICAL | FTS_NOCHDIR | FTS_NOSTAT, NULL);
+    if(!handle){
+        msb_destroy(&sb);
+        return JS_ThrowTypeError(jsctx, "Unable to open for recursion");
+    }
+    PopDiagnostic();
+    QJSValue result = JS_NewArray(jsctx);
+    for(;;){
+        FTSENT* ent = fts_read(handle);
+        if(!ent) break;
+        if(ent->fts_info & (FTS_F | FTS_NSOK)){
+            StringView name = {.text = ent->fts_name, .length=ent->fts_namelen};
+            if(endswith(name, SV(".dnd"))){
+                auto item = JS_NewString(jsctx, *ent->fts_path == '.'? ent->fts_path + 2:ent->fts_path);
+                JS_ArrayPush(jsctx, result, 1, &item);
+                JS_FreeValue(jsctx, item);
+            }
+        }
+    }
+    fts_close(handle);
+    msb_destroy(&sb);
+    return result;
+#elif defined(_WIN32)
+    return JS_ThrowTypeError(jsctx, "Unimplemented platform for recursive directory reading: WINDOWS");
+#else
+    return JS_ThrowTypeError(jsctx, "Unsupported platform for recursive directory reading");
+#endif
+
 }
 
 

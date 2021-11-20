@@ -167,6 +167,14 @@ string_split(const char* a, size_t length, char splitter){
         };
     }
 
+static inline
+_Bool
+endswith(StringView haystack, StringView needle){
+    if(haystack.length < needle.length) return 0;
+    if(!needle.length) return 1;
+    return memcmp(haystack.text+haystack.length-needle.length, needle.text, needle.length) == 0;
+}
+
 #ifdef __clang__
 #pragma clang assume_nonnull end
 #endif
