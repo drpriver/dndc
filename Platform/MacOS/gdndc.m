@@ -813,6 +813,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
                 }];
             return;
         }
+        LOGIT(url);
         decisionHandler(WKNavigationActionPolicyCancel);
         return;
 }
@@ -860,33 +861,40 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     }
     // This is faster, but I can't figure out how to clear the image from the cache.
 #if 0
-    else if([method isEqualToString:@"GET"] and [[url scheme] isEqualToString:DND_SCHEME]){
-        auto path = [url path];
-        auto data = [NSData dataWithContentsOfFile: path];
+    if([method isEqualToString:@"GET"] and [[url scheme] isEqualToString:DND_SCHEME]){
+        LOGIT([@"file://" stringByAppendingString:[url path]]);
+        auto urlstr = [url path];
+        urlstr = [urlstr stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLPathAllowedCharacterSet]];
+        urlstr = [@"file://" stringByAppendingString:urlstr];
+        url = [[NSURL alloc] initWithString: urlstr];
+        // auto path = [url path];
+        LOGIT(url);
+        auto data = [NSData dataWithContentsOfURL: url];
         if(!data){
+            LOGIT(@"no data?");
             // TODO: better error.
             [urlSchemeTask didFailWithError:[NSError errorWithDomain:@"denied" code:1 userInfo:nil]];
         }
         auto response = [[NSURLResponse alloc]
-            initWithURL:(NSURL*)[NSURL URLWithString:DND_THIS_URL]
+            initWithURL: request.mainDocumentURL
             MIMEType:@"image/png" // This is wrong, but webkit doesn't mind.
             expectedContentLength: [data length]
             textEncodingName:nil];
         [urlSchemeTask didReceiveResponse:response];
         [urlSchemeTask didReceiveData:data];
         [urlSchemeTask didFinish];
-        int fd = open([path UTF8String], O_EVTONLY);
-        if(fd > 0){
-            dispatch_source_t source = dispatch_source_create(DISPATCH_SOURCE_TYPE_VNODE, fd, DISPATCH_VNODE_WRITE | DISPATCH_VNODE_DELETE | DISPATCH_VNODE_RENAME | DISPATCH_VNODE_EXTEND | DISPATCH_VNODE_ATTRIB, dispatch_get_main_queue());
-            dispatch_source_set_event_handler(source, ^{
+        // int fd = open([path UTF8String], O_EVTONLY);
+        // if(fd > 0){
+            // dispatch_source_t source = dispatch_source_create(DISPATCH_SOURCE_TYPE_VNODE, fd, DISPATCH_VNODE_WRITE | DISPATCH_VNODE_DELETE | DISPATCH_VNODE_RENAME | DISPATCH_VNODE_EXTEND | DISPATCH_VNODE_ATTRIB, dispatch_get_main_queue());
+            // dispatch_source_set_event_handler(source, ^{
                     // TODO: figure out how to invalidate the webview cache.
-                    dispatch_cancel(source);
-                });
-            dispatch_source_set_cancel_handler(source, ^{
-                    close(fd);
-                    });
-            dispatch_resume(source);
-        }
+                    // dispatch_cancel(source);
+                // });
+            // dispatch_source_set_cancel_handler(source, ^{
+                    // close(fd);
+                    // });
+            // dispatch_resume(source);
+        // }
 
     }
 #endif
@@ -1206,7 +1214,35 @@ BOOL show_stats;
     // Inject javascript that will restore the scroll position in the window.
     string = [string stringByAppendingString:
         @"\n"
-        "::script @inline\n"
+        "::script @inline\n  "
+        // Internal anchors are broken in webkit. Inject this function
+        // to recreate the wanted behavior.
+        JSRAW(document.addEventListener("DOMContentLoaded", function(){
+            const anchors = document.getElementsByTagName('a');
+            function add_interceptor(a){
+                a.onclick = function(e){
+                    let href = a.href;
+                    if(href.baseVal) href = href.baseVal;
+                    let split = href.split('#');
+                    if(split.length > 1){
+                        let target = split[1];
+                        let t = document.getElementById(target);
+                        if(t){
+                            t.scrollIntoView();
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return false;
+                        }
+                    }
+                    a.setAttribute('target', '_blank');
+                };
+            }
+            for(let a of anchors){
+                add_interceptor(a);
+                }
+            });
+        )
+        "\n"
     ];
     string = [string stringByAppendingString:
         @"  "
@@ -1293,10 +1329,11 @@ BOOL show_stats;
     LongString html = {};
     NSString* dir = [[self->file_url URLByDeletingLastPathComponent] path];
     NSString* final = [[self->file_url path] lastPathComponent];
+    // NSString* final = [self->file_url path];
     LongString outputpath;
     outputpath.text = [final UTF8String];
     outputpath.length = strlen(outputpath.text);
-    outputpath = LS("this.html");
+    // outputpath = LS("this.html");
     LongString base_dir;
     if(dir){
         const char* dir_text = [dir UTF8String];

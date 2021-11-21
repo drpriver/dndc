@@ -955,7 +955,7 @@ RENDERFUNC(IMAGE){
             Raise(PARSE_ERROR);
             }
         auto header = imgpath_node->header;
-        msb_write_literal(sb, "<img src=\"dnd:");
+        msb_write_literal(sb, "<img src=\"dnd://");
         if((not path_is_abspath(header)) and ctx->base_directory.length){
             msb_write_str_with_backslashes_as_forward_slashes(sb, ctx->base_directory.text, ctx->base_directory.length);
             msb_write_char(sb, '/');
@@ -1350,7 +1350,7 @@ RENDERFUNC(IMGLINKS){
     MSB_FORMAT(sb, "<svg width=\"", width, "\" height=\"", height, "\" viewBox=\"", viewbox[0], " ", viewbox[1], " ", viewbox[2], " ", viewbox[3], "\" style=\"background-size: 100% 100%; ");
 
     if(ctx->flags & DNDC_USE_DND_URL_SCHEME){
-        msb_write_literal(sb, "background-image: url('dnd:");
+        msb_write_literal(sb, "background-image: url('dnd://");
         auto imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));

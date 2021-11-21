@@ -527,6 +527,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     PyObject* base_dir = NULL;
     PyObject* error_reporter = NULL;
     PyObject* file_cache = NULL;
+    PyObject* output_name = NULL;
     unsigned long long flags = 0;
     _Static_assert(sizeof(flags) == sizeof(uint64_t), "");
     enum {WHITELIST = 0
@@ -537,10 +538,10 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_STRIP_WHITESPACE
         | DNDC_DONT_READ
         };
-    const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", NULL};
+    const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", "output_name", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOK:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter, &file_cache, &flags)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOKO!:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter, &file_cache, &flags, &PyUnicode_Type, &output_name)){
         return NULL;
         }
     PopDiagnostic();
@@ -578,7 +579,8 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         textcache = &cache->text_cache;
         b64cache = &cache->b64_cache;
         }
-    auto e = run_the_dndc(flags, base_str, source, LS("this.html"), &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, NULL, NULL);
+    LongString outname = output_name?pystring_borrow_longstring(output_name) : LS("this.html");
+    auto e = run_the_dndc(flags, base_str, source, outname, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, NULL, NULL);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;

@@ -12,7 +12,6 @@
   if(left) new_root.add_child(left);
   container.add_child(root);
   ctx.root = new_root;
-
 ::div .left
   Explanation of imglinks::comment
     The first line is the path to the image.

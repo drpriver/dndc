@@ -83,6 +83,7 @@ class SCHEME_Handler(QWebEngineUrlSchemeHandler):
         url = request.requestUrl()
         imgpath = url.path()
         if not os.path.isfile(imgpath):
+            LOGGER.debug('imgpath does not exist: %s', imgpath)
             request.fail(QWebEngineUrlRequestJob.Error.UrlNotFound)
             return
         parts = imgpath.split('.')
@@ -594,10 +595,18 @@ class DndWebPage(QWebEnginePage):
                 QDesktopServices.openUrl(url)
                 return False
             if path.endswith('.html'):
-                path = path.lstrip('/').replace('/', os.path.sep)
-                filepath = os.path.join(self.basedir, path[:-len('.html')]+'.dnd')
+                # path = path.lstrip('/').replace('/', os.path.sep)
+                # filepath = os.path.join(self.basedir, path[:-len('.html')]+'.dnd')
+                filepath = os.path.normpath(path[:-len('.html')] + '.dnd')
                 if os.path.isfile(filepath):
                     add_tab(filepath)
+                else:
+                    LOGGER.debug('Checking to create: %s, url: %s', filepath, url)
+                    answer = QMessageBox.question(None, "Create file?", f'{filepath} does not exist. Create and open the file?', defaultButton=QMessageBox.StandardButton.Yes)
+                    if answer == QMessageBox.StandardButton.Yes:
+                        LOGGER.debug('creating: %s', filepath)
+                        open(filepath, 'w').close()
+                        add_tab(filepath)
                 return False
             return False
         return False
@@ -771,6 +780,7 @@ class Page(QSplitter):
         # print(f'{t1=}')
         self.clear_errors()
         before_paths = set(FILE_CACHE.paths())
+        outname = os.path.basename(self.filename)
         try:
             flags = pydndc.USE_DND_URL_SCHEME
             if PRINT_STATS:
@@ -781,6 +791,7 @@ class Page(QSplitter):
                 error_reporter=self.display_dndc_error,
                 file_cache=FILE_CACHE,
                 flags=flags,
+                output_name=outname,
                 )
         except ValueError:
             # On error, the file cache can have loaded things, but we don't get those
@@ -794,7 +805,8 @@ class Page(QSplitter):
             # print(f'addPaths: {(after-before)*1000:.3f}ms')
             return
         # t1 = time.time()
-        self.webpage.setHtml(html, baseUrl=QUrl(f'https://{APPHOST}/this.html'))
+        u = QUrl(f'https://{APPHOST}/{self.filename}')
+        self.webpage.setHtml(html, baseUrl=u)
         # t2 = time.time()
         self.dependencies = set(depends)
         if depends:
@@ -963,6 +975,9 @@ def make_page_widget(filename:str, allow_fail:bool) -> Optional[QWidget]:
     return result
 
 def condense(filename:str, is_windows=IS_WINDOWS) -> str:
+    while filename.startswith('//'):
+        filename = filename[1:]
+    filename = os.path.normpath(filename)
     BUDGET = 32
     sep = '\\' if is_windows else '/'
     user = os.path.expanduser('~')
@@ -1006,6 +1021,9 @@ def condense(filename:str, is_windows=IS_WINDOWS) -> str:
 def add_tab(filename:str, focus=True, allow_fail:bool=False) -> None:
     if sys.platform == 'win32':
         filename = filename.replace('/', '\\')
+    while filename.startswith('//'):
+        filename = filename[1:]
+    filename = os.path.normpath(filename)
     LOGGER.debug("adding_tab: '%s'", filename)
     if filename in all_windows:
         if focus:
