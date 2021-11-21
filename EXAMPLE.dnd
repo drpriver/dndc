@@ -405,7 +405,8 @@ But Wait, There's More::md
   used to embed the text.
 
   ::js
-    let prenode = ctx.make_node(NodeType.PRE, {classes:['embedded'], attributes:['import'], header:'This Document'});
+    let prenode = ctx.make_node(NodeType.PRE,
+        {classes:['embedded'], attributes:['import'], header:'This Document'});
     // `add_child` can accept two kinds of arguments: nodes and strings
     // strings are converted to STRING nodes.
     prenode.add_child(ctx.sourcepath);

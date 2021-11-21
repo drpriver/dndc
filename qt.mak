@@ -47,7 +47,7 @@ $(GENDIR): ; @$(MKDIR) -p $@
 
 $(GENDIR)/moc_%.cpp: QtDndcEdit/%.h | $(GENDIR)
 	$(QTMOC) $< -o $@
-DNDCOBJS=$(OBJDIR)/dndc.o $(OBJDIR)/libquickjs.o $(OBJDIR)/frozenstdlib.o
+DNDCOBJS=$(OBJDIR)/dndc.o $(OBJDIR)/libquickjs.o
 
 
 $(BINDIR)/DndcEdit: QtDndcEdit/DndcEdit.cpp $(GENDIR)/moc_DndcEdit.cpp $(DNDCOBJS) $(DEPDIR)/DndcEdit.dep | $(GENDIR) $(BINDIR) $(DEPDIR) $(OBJDIR)

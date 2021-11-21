@@ -763,10 +763,22 @@ DndWebPage::acceptNavigationRequest(const QUrl& url, QWebEnginePage::NavigationT
             return false;
             }
         if(path.endsWith(QS(".html"))){
-            auto filepath = QDir::cleanPath(basedir + '/' +  path.left(path.length()-5)+QS(".dnd"));
+            auto filepath = QDir::cleanPath(path.left(path.length()-5)+QS(".dnd"));
             auto info = QFileInfo(filepath);
             if(info.exists())
                 add_tab(filepath);
+            else {
+                auto answer = QMessageBox::question(NULL, QS("Create file?"), filepath + QS(" does not exist. Create and open the file?"), QMessageBox::StandardButton::Yes|QMessageBox::StandardButton::No, QMessageBox::StandardButton::Yes);
+                if(answer == QMessageBox::StandardButton::Yes){
+                    QFile file(filepath);
+                    if(!file.open(QFile::WriteOnly)){
+                        return false;
+                    }
+                    file.close();
+                    add_tab(filepath);
+                    return false;
+                }
+            }
             return false;
             }
         return false;
@@ -1021,7 +1033,9 @@ Page::set_scroll_pos(QString&& x){
     DndcLongString textls = {(size_t)textbytes.size(), textbytes.data()};
     auto dirbytes = dirname.toUtf8();
     DndcLongString basedir = {(size_t)dirbytes.size(), dirbytes.data()};
-    DndcLongString outpath = {sizeof("this.html")-1, "this.html"};
+    auto fnbytes = filename.toUtf8();
+    DndcLongString outpath = {(size_t)fnbytes.size(), fnbytes.data()};
+    // DndcLongString outpath = {sizeof("this.html")-1, "this.html"};
     DndcLongString outstring;
     DndcErrorFunc* errfunc = [](
             void* user_data,
@@ -1054,7 +1068,8 @@ Page::set_scroll_pos(QString&& x){
     if(err) {
         return;
         }
-    webpage->setHtml(QString::fromUtf8(outstring.text, outstring.length), QUrl(APPURL));
+    auto url = QUrl(QS("https://") + APPHOST + QS("/") + filename);
+    webpage->setHtml(QString::fromUtf8(outstring.text, outstring.length), url);
     dndc_free_string(outstring);
     }
 void
@@ -1325,7 +1340,6 @@ main(int argc, char** argv)
     QApplication a(argc, argv);
     a.setApplicationDisplayName(QS("DndcEdit"));
     a.setApplicationName(QS("DndcEdit"));
-    dndc_init_python();
     create_scheme();
     create_caches();
     WHITESPACE_RE = new QRegularExpression(QS("^\\s+"));
