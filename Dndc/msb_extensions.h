@@ -63,7 +63,7 @@ msb_write_kebab(MStringBuilder* msb, const char* text, size_t length){
                 data[cursor] = '-';
                 data[cursor+1] = ENDSENTINEL;
                 continue;
-            case ' ': case '\t': case '-':{
+            case ' ': case '\t': case '-': case '/':{
                 int is_dash = data[cursor] == '-';
                 cursor += is_dash;
                 }continue;
