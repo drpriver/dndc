@@ -15,8 +15,6 @@
 #include "msb_format.h"
 #include "str_util.h"
 #include "path_util.h"
-#define HAVE_MARRY_LONGSTRING
-#include "directory_util.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -716,53 +714,6 @@ ctx_add_builtins(DndcContext* ctx){
     )));
 #undef JSRAW
     }
-//
-// Define this macro to suppress this implementation.
-// A gui program probably wants to cache the results
-// and ask the OS for when the directory changes instead
-// of rescanning the directory on every key stroke.
-//
-// TODO: maybe we should have the `directory_gather_files_ending_with` be a
-// function pointer you can pass into to run_the_dndc?
-// I think you'd want a FileSystemHandler abstraction so that it can also
-// provide files on demand, etc. We could put push caching onto the caller instead
-// as well, while providing a default implementation like we do with the
-// `dndc_stderr_error_func`.
-//
-// Yeah, that feels like the right way to go.
-//
-#ifndef SUPPRESS_CTX_ADD_AUTO_INDEX_LINKS
-static inline
-Errorable_f(void)
-ctx_add_auto_index_links(DndcContext* ctx){
-    auto before = get_t();
-    Marray(LongString) filenames = {};
-    LongString base = ctx->base_directory.length?ctx->base_directory:LS(".");
-    auto e = directory_gather_files_ending_with(base, SV(".dnd"), &filenames, ctx->temp_allocator, ctx->string_allocator);
-    if(e.errored){
-        MStringBuilder tmp = {.allocator = ctx->temp_allocator};
-        const char* direrr = get_directory_error();
-        MSB_FORMAT(&tmp, "Error when auto indexing directory '", base, "': ", direrr);
-        free_directory_error(direrr);
-        auto msg = msb_borrow(&tmp);
-        report_system_error(ctx, msg);
-        msb_destroy(&tmp);
-        return e;
-        }
-    MARRAY_FOR_EACH(filename, filenames){
-        MStringBuilder msb = {.allocator = ctx->string_allocator};
-        msb_write_kebab(&msb, filename->text, filename->length-(sizeof(".dnd")-1));
-        msb_write_literal(&msb, ".html");
-        LongString kebab = msb_detach(&msb);
-        StringView key = {.text = kebab.text, .length = kebab.length-(sizeof(".html")-1)};
-        StringView value = LS_to_SV(kebab);
-        add_link_from_pair(ctx, key, value);
-        }
-    auto after = get_t();
-    report_time(ctx, SV("auto index links took: "), after-before);
-    return (Errorable(void)){};
-    }
-#endif
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

@@ -610,17 +610,8 @@ run_the_dndc(uint64_t flags,
 
     // Add in the links from explicit link blocks.
     {
-        bool autoindexed = false;
         MARRAY_FOR_EACH(link_handle, ctx.link_nodes){
             auto link_node = get_node(&ctx, *link_handle);
-            if(!wasm && !autoindexed && node_has_attribute(link_node, SV("autoindex"))){
-                autoindexed = true;
-                auto e = ctx_add_auto_index_links(&ctx);
-                if(e.errored){
-                    result.errored = e.errored;
-                    goto cleanup;
-                }
-            }
             NODE_CHILDREN_FOR_EACH(it, link_node){
                 auto link_str_node = get_node(&ctx, *it);
                 if(link_str_node->type != NODE_STRING)
