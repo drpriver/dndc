@@ -14,7 +14,16 @@
   left.add_child(nav);
   new_root.add_child(left);
   ctx.root = new_root;
-  ctx.add_link('home', 'index.html');
+  //endjs
+::js
+  let index = 'index.dnd';
+  for(let i = 0; i < 3; i++){
+    if(FileSystem.exists(index)){
+      ctx.add_link('home', index.replace('.dnd', '.html'));
+      break;
+    }
+    index = '../' + index;
+  }
   //endjs
 
 ::css @inline

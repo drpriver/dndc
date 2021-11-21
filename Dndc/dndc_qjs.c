@@ -6,6 +6,7 @@
 #include "ByteBuilder.h"
 #include "bb_extensions.h"
 #include "str_util.h"
+#include <sys/stat.h>
 #if defined(__APPLE__) || defined(__linux__)
 #include <fts.h>
 #elif defined(_WIN32)
@@ -99,7 +100,7 @@ JSMETHOD(js_console_log);
 JSMETHOD(js_load_file_as_base64);
 JSMETHOD(js_load_file);
 JSMETHOD(js_list_dnd_files);
-// JSMETHOD(js_path_exists);
+JSMETHOD(js_path_exists);
 // JSMETHOD(js_file_exists);
 // JSMETHOD(js_dir_exists);
 
@@ -406,6 +407,7 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags){
             JS_SetPropertyStr(jsctx, filesystem, "load_file_as_base64", JS_NewCFunction(jsctx, js_load_file_as_base64, "load_file_as_base64", 1)); // create and steal in one go.
             JS_SetPropertyStr(jsctx, filesystem, "load_file", JS_NewCFunction(jsctx, js_load_file, "load_file", 1)); // create and steal in one go.
             JS_SetPropertyStr(jsctx, filesystem, "list_dnd_files", JS_NewCFunction(jsctx, js_list_dnd_files, "list_dnd_files", 1)); // create and steal in one go.
+            JS_SetPropertyStr(jsctx, filesystem, "exists", JS_NewCFunction(jsctx, js_path_exists, "exists", 1)); // create and steal in one go.
             JS_SetPropertyStr(jsctx, global_obj, "FileSystem", filesystem); // Steals ref
         }
 
@@ -790,11 +792,11 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
     PushDiagnostic();
     SuppressCastQual();
     FTS* handle = fts_open((char**)dirs, FTS_LOGICAL | FTS_NOCHDIR | FTS_NOSTAT, NULL);
+    PopDiagnostic();
     if(!handle){
         msb_destroy(&sb);
         return JS_ThrowTypeError(jsctx, "Unable to open for recursion");
     }
-    PopDiagnostic();
     QJSValue result = JS_NewArray(jsctx);
     for(;;){
         FTSENT* ent = fts_read(handle);
@@ -820,6 +822,38 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
 }
 
 
+static
+QJSValue
+js_path_exists(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst *argv){
+    (void)thisValue;
+    if(argc != 1)
+        return JS_ThrowTypeError(jsctx, "Need an argument!");
+
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    MStringBuilder sb = {.allocator = ctx->temp_allocator};
+    auto base = ctx->base_directory;
+    auto dir = jsstring_make_stringview_js_allocated(jsctx, argv[0]);
+    if(base.length && !path_is_abspath(dir)){
+        msb_write_str(&sb, base.text, base.length);
+        if(dir.length){
+            msb_append_path(&sb, dir.text, dir.length);
+        }
+    }
+    else {
+        msb_write_str(&sb, dir.text, dir.length);
+    }
+    JS_FreeCString(jsctx, dir.text);
+    msb_nul_terminate(&sb);
+    auto path = msb_borrow(&sb);
+    struct stat s;
+    bool exists = stat(path.text, &s) == 0;
+    msb_destroy(&sb);
+    if(exists)
+        return JS_TRUE;
+    else
+        return JS_FALSE;
+}
 
 //
 // DndcNode methods
