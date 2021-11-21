@@ -9,7 +9,7 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 find_package(Python3 3.8 COMPONENTS Development)
 find_package(Threads REQUIRED)
 
-include_directories(Utils Dndc PythonEmbed Allocators PythonEmbed/frozen Vendored/quickjs ${CMAKE_SOURCE_DIR})
+include_directories(Utils Dndc Allocators Vendored/quickjs ${CMAKE_SOURCE_DIR})
 
 if(WIN32)
 include_directories(Platform/Windows)
@@ -21,7 +21,6 @@ endif()
 
 add_executable(dndc
     Dndc/dndc_cli.c
-    PythonEmbed/frozenstdlib.c
     )
 
 add_library(quickjs-dylib
@@ -57,26 +56,17 @@ set_target_properties(quickjs-dylib
     )
 target_compile_definitions(quickjs-lib PRIVATE CONFIG_VERSION="2021-03-27")
 
-target_link_libraries(dndc ${Python3_LIBRARIES} quickjs-lib Threads::Threads ${LIBM_LIBRARIES})
-target_include_directories(dndc PRIVATE ${Python3_INCLUDE_DIRS})
+target_link_libraries(dndc quickjs-lib Threads::Threads ${LIBM_LIBRARIES})
 # target_compile_definitions(dndc PRIVATE QJS_SHARED_LIBRARY)
 
-# Cmake sucks and doesn't allow a library and
-# executable with the same name, even though the output files are different!
-# Well, it turns out that is because on windows, both dlls and static libraries
-# output a .lib file, which is nutso banannas.
 add_library(dndc-lib
     STATIC
     Dndc/dndc.c
-    PythonEmbed/frozenstdlib.c
     )
 add_library(dndc-dylib
     SHARED
     Dndc/dndc.c
-    PythonEmbed/frozenstdlib.c
     )
-target_link_libraries(dndc-lib ${Python3_LIBRARIES})
-target_include_directories(dndc-lib PRIVATE ${Python3_INCLUDE_DIRS})
 if(WIN32)
 set_target_properties(dndc-lib
     PROPERTIES OUTPUT_NAME dndc-static
@@ -88,8 +78,7 @@ set_target_properties(dndc-lib
     VERSION ${PROJECT_VERSION}
     )
 endif()
-target_link_libraries(dndc-dylib ${Python3_LIBRARIES} quickjs-lib)
-target_include_directories(dndc-dylib PRIVATE ${Python3_INCLUDE_DIRS})
+target_link_libraries(dndc-dylib quickjs-lib)
 # change the SOVERSION thing when I decide to release 1.0
 set_target_properties(dndc-dylib
     PROPERTIES OUTPUT_NAME dndc
@@ -112,7 +101,6 @@ if(APPLE)
     add_executable(gdndc
         MACOSX_BUNDLE
         Platform/MacOS/gdndc.m
-        PythonEmbed/frozenstdlib.c
         )
     set_target_properties(gdndc PROPERTIES
         MACOSX_BUNDLE YES
@@ -121,14 +109,13 @@ if(APPLE)
     target_compile_definitions(gdndc PRIVATE APP_ICON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/Platform/MacOS/app_icon.png")
 
     target_link_libraries(gdndc
-        ${Python3_LIBRARIES}
         quickjs-dylib
         "-framework Cocoa"
         "-framework WebKit"
         )
     target_compile_options(gdndc PUBLIC "-fobjc-arc")
     target_compile_definitions(gdndc PRIVATE QJS_SHARED_LIBRARY)
-    target_include_directories(gdndc PRIVATE ${Python3_INCLUDE_DIRS} Dndc)
+    target_include_directories(gdndc PRIVATE Dndc)
 endif()
 
 if(WIN32)
@@ -143,6 +130,7 @@ if(WIN32)
     #    quickjs-dylib
     #    )
     #target_include_directories(gdndc PRIVATE ${Python3_INCLUDE_DIRS} Dndc)
+# for rng
 target_compile_options(quickjs-lib PUBLIC "-mrdseed")
 target_compile_options(quickjs-dylib PUBLIC "-mrdseed")
 endif()
@@ -164,15 +152,13 @@ add_test(strutil TestStrUtils)
 add_executable(TestRarray Utils/TestRarray.c)
 add_test(rarray TestRarray)
 
-add_executable(TestDndc Dndc/TestDndc.c PythonEmbed/frozenstdlib.c)
+add_executable(TestDndc Dndc/TestDndc.c)
 target_compile_definitions(TestDndc PRIVATE QJS_SHARED_LIBRARY)
 add_test(dndc TestDndc -C ${CMAKE_SOURCE_DIR})
 target_link_libraries(TestDndc
-    ${Python3_LIBRARIES}
     quickjs-dylib
     Threads::Threads
     )
-target_include_directories(TestDndc PRIVATE ${Python3_INCLUDE_DIRS})
 
 # installs
 install(TARGETS dndc DESTINATION bin)
@@ -214,7 +200,7 @@ if(Qt${QT_VERSION_MAJOR}_FOUND)
 
     if(APPLE)
         set_target_properties(DndcEdit PROPERTIES
-            MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
+            MACOSX_BUNDLE_GUI_IDENTIFIER david.com
             MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
             MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
         )

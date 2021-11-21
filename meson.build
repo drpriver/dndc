@@ -4,7 +4,6 @@ COMPAT_VERSION = '0.7.1'
 thread_dep = dependency('threads')
 pymod = import('python')
 pyinstall = pymod.find_installation()
-pydep = pyinstall.dependency(embed: true)
 if host_machine.system() == 'windows'
   ignore_bogus_deprecations = ['-D_CRT_NONSTDC_NO_WARNINGS', '-D_CRT_SECURE_NO_WARNINGS']
 else
@@ -12,81 +11,12 @@ else
 endif
 
 if host_machine.system() == 'windows'
-includes = include_directories('Allocators', 'Utils', 'PythonEmbed', 'Dndc', 'Platform/Windows', 'Vendored/quickjs')
+includes = include_directories('Allocators', 'Utils', 'Dndc', 'Platform/Windows', 'Vendored/quickjs')
 else
-includes = include_directories('Allocators', 'Utils', 'PythonEmbed', 'Dndc', 'Vendored/quickjs')
+includes = include_directories('Allocators', 'Utils', 'Dndc', 'Vendored/quickjs')
 endif
 
 install_headers('Dndc/dndc.h', subdir:'Dndc')
-
-freeze_exec = executable(
-  'freeze_py_module',
-  'PythonEmbed/freeze_py_module.c',
-  include_directories: includes,
-  dependencies:pydep,
-  c_args: ignore_bogus_deprecations,
-  )
-freezer = generator(
-  freeze_exec,
-  output: '@BASENAME@.py.h',
-  arguments: ['@BASENAME@', '@INPUT@', '@OUTPUT@']
-  )
-
-frozen_modules = freezer.process(
-  'PythonEmbed/vendored/abc.py',
-  'PythonEmbed/vendored/importlib_bootstrap.py',
-  'PythonEmbed/vendored/importlib_bootstrap_external.py',
-  'PythonEmbed/vendored/zipimport.py',
-  'PythonEmbed/vendored/io.py',
-  'PythonEmbed/vendored/codecs.py',
-  'PythonEmbed/vendored/encodings.py',
-  'PythonEmbed/vendored/encodings.latin_1.py',
-  'PythonEmbed/vendored/encodings.utf_8.py',
-  'PythonEmbed/vendored/stat.py',
-  'PythonEmbed/vendored/_collections_abc.py',
-  'PythonEmbed/vendored/genericpath.py',
-  'PythonEmbed/vendored/posixpath.py',
-  'PythonEmbed/vendored/ntpath.py',
-  'PythonEmbed/vendored/os.py',
-  'PythonEmbed/vendored/operator.py',
-  'PythonEmbed/vendored/keyword.py',
-  'PythonEmbed/vendored/heapq.py',
-  'PythonEmbed/vendored/reprlib.py',
-  'PythonEmbed/vendored/collections.py',
-  'PythonEmbed/vendored/collections.abc.py',
-  'PythonEmbed/vendored/types.py',
-  'PythonEmbed/vendored/functools.py',
-  'PythonEmbed/vendored/weakref.py',
-  'PythonEmbed/vendored/copy.py',
-  'PythonEmbed/vendored/copyreg.py',
-  'PythonEmbed/vendored/typing.py',
-  'PythonEmbed/vendored/contextlib.py',
-  'PythonEmbed/vendored/enum.py',
-  'PythonEmbed/vendored/sre_constants.py',
-  'PythonEmbed/vendored/sre_compile.py',
-  'PythonEmbed/vendored/sre_parse.py',
-  'PythonEmbed/vendored/re.py',
-  'PythonEmbed/vendored/string.py',
-  'PythonEmbed/vendored/cmd.py',
-  'PythonEmbed/vendored/fnmatch.py',
-  'PythonEmbed/vendored/token.py',
-  'PythonEmbed/vendored/tokenize.py',
-  'PythonEmbed/vendored/linecache.py',
-  'PythonEmbed/vendored/dis.py',
-  'PythonEmbed/vendored/opcode.py',
-  'PythonEmbed/vendored/importlib.machinery.py',
-  'PythonEmbed/vendored/inspect.py',
-  'PythonEmbed/vendored/bdb.py',
-  'PythonEmbed/vendored/code.py',
-  'PythonEmbed/vendored/codeop.py',
-  'PythonEmbed/vendored/traceback.py',
-  'PythonEmbed/vendored/__future__.py',
-  'PythonEmbed/vendored/glob.py',
-  'PythonEmbed/vendored/pprint.py',
-  'PythonEmbed/vendored/signal.py',
-  'PythonEmbed/vendored/shlex.py',
-  'PythonEmbed/vendored/pdb.py',
-)
 
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m', required : false)
@@ -119,20 +49,16 @@ quickjs_dylib = shared_library(
 executable(
   'dndc',
   'Dndc/dndc_cli.c',
-  'PythonEmbed/frozenstdlib.c',
-  frozen_modules,
   include_directories: includes,
-  dependencies:[pydep, thread_dep],
+  dependencies:[thread_dep],
   install: true,
   link_with: quickjs_static,
   )
 dndc_lib = both_libraries(
   'dndc',
   'Dndc/dndc.c',
-  'PythonEmbed/frozenstdlib.c',
-  frozen_modules,
   include_directories: includes,
-  dependencies:[pydep, thread_dep],
+  dependencies:[thread_dep],
   install: true,
   version: meson.project_version(),
   soversion: meson.project_version(),
@@ -154,9 +80,7 @@ if host_machine.system() == 'darwin'
   executable(
     'gdndc',
     'Platform/MacOS/gdndc.m',
-    'PythonEmbed/frozenstdlib.c',
-    frozen_modules,
-    dependencies:[pydep, dependency('appleframeworks', modules: ['Cocoa', 'WebKit'])],
+    dependencies:[dependency('appleframeworks', modules: ['Cocoa', 'WebKit'])],
     include_directories: includes,
     objc_args: ['-fobjc-arc'],
     link_args: '-Wl,-sectcreate,__TEXT,__info_plist,'+meson.source_root() + '/Platform/MacOS/Info.plist',
@@ -177,10 +101,8 @@ test('rarray', executable('TestRarray', 'Utils/TestRarray.c', kwargs:testkw, c_a
 test('dndc',
   executable('TestDndc',
   'Dndc/TestDndc.c',
-  'PythonEmbed/frozenstdlib.c',
-  frozen_modules,
   include_directories:includes,
-  dependencies:[pydep, thread_dep],
+  dependencies:[thread_dep],
   c_args: ['-DQJS_SHARED_LIBRARY']+ignore_bogus_deprecations,
   link_with: quickjs_dylib,
   ),
