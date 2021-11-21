@@ -95,8 +95,7 @@ enum DndcErrorMessageType {
     // A warning that valid output can still be produced for.
     DNDC_WARNING_MESSAGE = 1,
     // The error did not originate from any specific node. Rather,
-    // it ocurred for another reason (for example, python may have
-    // failed to initialize).
+    // it ocurred for another reason.
     // filename will be "", line, col, etc will be 0, etc.
     DNDC_NODELESS_MESSAGE = 2,
     // The message is just a report of some statistic. It does not originate
@@ -180,7 +179,7 @@ DNDC_API void dndc_stderr_error_func(DNDC_NULLABLE(void*) error_user_data,
 //    A pointer to an array of string views of the paths to the files that the
 //    file depends on. Note these are string views and so not guaranteed to be
 //    nul-terminated. Files that were loaded in the usual way will have the
-//    base dir prepended, but python blocks can introduce arbitrary strings as
+//    base dir prepended, but javascript blocks can introduce arbitrary strings as
 //    dependencies, which may or may not be absolute paths, or valid paths at
 //    all.
 //
@@ -197,18 +196,16 @@ typedef int DndcDependencyFunc(DNDC_NULLABLE(void*) dependency_user_data,
 // dndc_format
 // -----------
 //
-// You do *not* need to call dndc_init_python before calling this function.
-//
 // Turns the given .dnd string into another .dnd string, but formatted such
 // that lines do not exceed 80 characters if it is possible to semantically do
 // so, lines are right-stripped, redundant blank lines are merged, etc.
 // The resulting string is stored in output.
 //
-// This function does not execute any python blocks and does not read any
+// This function does not execute any javascript blocks and does not read any
 // files.
 //
 // The output is allocated by malloc. You take ownership of the result.
-// On Windows and if loaded from a dll, you should use dndc_free_string.
+// If on Windows and if loaded from a dll, you should use dndc_free_string.
 //
 // Arguments
 // ---------
@@ -356,7 +353,7 @@ typedef void DndcSyntaxFuncUtf16(DNDC_NULLABLE(void*) user_data, int type,
 // and such will not be called on (as implicitly everything is a string node
 // unless otherwise).
 //
-// This function does not execute any python blocks and does not read any
+// This function does not execute any javascript blocks and does not read any
 // files.
 //
 // Note: this function is looser with parsing than the other dndc funcs. In the
@@ -487,7 +484,7 @@ dndc_worker_thread_destroy(DndcWorkerThread*);
 // arguments change meaning based on the flags that will be described below.
 //
 // In its default mode, this function will load the given source file, parse
-// it, resolve imports, execute python blocks, spawn a thread to base64
+// it, resolve imports, execute javascript blocks, spawn a thread to base64
 // referenced images, load referenced files such as js files and css files,
 // and render the result into an html file at the given location.
 //
@@ -515,7 +512,7 @@ dndc_worker_thread_destroy(DndcWorkerThread*);
 //
 // outpath:
 //    Several features depend on knowing what the ultimate name of the file will be.
-//    APIs such as ctx.outpath etc. in js or python blocks for example.
+//    APIs such as ctx.outpath etc. in js blocks for example.
 //    Note that we do not actually write to this path.
 //
 //    This path is *NOT* adjusted by the base_directory argument.
@@ -602,7 +599,7 @@ DNDC_DONT_WRITE = 0x2,
 DNDC_DONT_READ = 0x4,
 
 // Input is untrusted and thus should not be allowed to read files, execute
-// python blocks or embed javascript in the output. As raw nodes are
+// javascript blocks or embed javascript in the output. As raw nodes are
 // inserted literally, raw nodes are ignored.
 DNDC_INPUT_IS_UNTRUSTED  = 0x8,
 
@@ -626,7 +623,8 @@ DNDC_ALLOW_BAD_LINKS = 0x100,
 // Don't execute js blocks.
 DNDC_NO_COMPILETIME_JS = 0x200,
 
-// These flags are unused (used to be for controlling python).
+// These flags are unused (used to be for controlling python, but no longer).
+// They will be used in the future.
 DNDC_UNUSED1 = 0x400,
 DNDC_UNUSED2 = 0x800,
 DNDC_UNUSED3 = 0x1000,
