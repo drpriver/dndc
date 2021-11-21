@@ -286,6 +286,7 @@ typedef enum GdndInsertTag{
 -(LongString)get_text;
 -(void)recalc_html:(LongString)text;
 -(void)flop_editor:(id _Nullable)sender;
+-(NSURL*) this_dnd_url;
 @end
 
 //
@@ -753,24 +754,57 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 }
 
 @end
-#define DND_THIS_URL @"dnd://gdndc/this.html"
+#define DND_HOST @"gdndc"
+#define DND_SCHEME @"dnd"
+#define DND_SCHEME_HOST @"dnd://gdndc"
 @implementation WebNavDel: NSObject
 -(void)webView:(WKWebView *)webView
     decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction
     decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler{
-        auto path = navigationAction.request.URL.relativePath;
-        if([path isEqual:@"/this.html"]){
+        auto url = navigationAction.request.URL;
+        if([url isEqual:[self.controller this_dnd_url]]){
             decisionHandler(WKNavigationActionPolicyAllow);
             return;
         }
-        if([path characterAtIndex:0] == '/'){
-            auto real_url = [self.controller->file_url.URLByDeletingLastPathComponent URLByAppendingPathComponent:[path substringFromIndex:1]];
-            real_url = [[real_url URLByDeletingPathExtension] URLByAppendingPathExtension:@"dnd"];
+        if([[url host] isEqual:DND_HOST]){
+            auto real_url = [NSURL fileURLWithPath:[[[url URLByDeletingPathExtension] URLByAppendingPathExtension:@"dnd"] path]];
             [[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:real_url display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
                 (void)documentWasAlreadyOpen;
                 (void)document;
-                if(error){
-                    NSLog(@"%@", error);
+                if(error && error.code == NSFileReadNoSuchFileError){
+                    [NSTimer scheduledTimerWithTimeInterval:0.000 repeats:NO block:^(NSTimer* timer){
+                        (void)timer;
+                        NSAlert *alert = [[NSAlert alloc] init];
+                        [alert setMessageText:@"File does not exist."];
+                        [alert setInformativeText:[[real_url path] stringByAppendingString:@" does not exist. Create it?"]];
+                        [alert addButtonWithTitle:@"Ok"];
+                        [alert addButtonWithTitle:@"Cancel"];
+                        auto response = [alert runModal];
+                        if(response != NSAlertFirstButtonReturn)
+                            return;
+                        auto cstring = [[real_url path] UTF8String];
+                        if(!cstring) return;
+                        int fd = open(cstring, O_RDWR|O_CREAT|O_EXCL, 0644);
+                        if(fd < 0) return;
+                        if(close(fd) < 0){
+                            perror("close");
+                            return;
+                        }
+                        [[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:real_url display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
+                            (void)documentWasAlreadyOpen;
+                            (void)document;
+                            if(error){
+                                LOGIT(real_url);
+                                LOGIT(error);
+                            }
+                        }];
+                    }];
+                    decisionHandler(WKNavigationActionPolicyAllow);
+                    return;
+                }
+                else if(error){
+                    LOGIT(real_url);
+                    LOGIT(error);
                     decisionHandler(WKNavigationActionPolicyAllow);
                     }
                 else {
@@ -789,26 +823,29 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     auto request = [urlSchemeTask request];
     NSURL* url = request.URL;
     auto method = [request HTTPMethod];
+    // Handle the click helper for adding rooms by clicking
+    // on map.
     if([method isEqualToString:@"POST"] and [url isEqual:[NSURL URLWithString:@"dnd:///roomclick"]]){
         auto response = [[NSURLResponse alloc]
-            initWithURL:(NSURL*)[NSURL URLWithString:DND_THIS_URL]
+            initWithURL:request.mainDocumentURL
             MIMEType:@"text/plain"
             expectedContentLength:0
             textEncodingName:nil];
         [urlSchemeTask didReceiveResponse:response];
         NSString* body = [[NSString alloc] initWithData:(NSData*)[request HTTPBody] encoding:NSUTF8StringEncoding];
         [urlSchemeTask didFinish];
+        // append the body of the request to the document (click)
         [self.controller->text insertText:body replacementRange:NSMakeRange([[self.controller->text textStorage] length], 0)];
         return;
     }
     if([method isEqualToString:@"GET"]){
-        if([[url scheme] isEqualToString:@"dnd"] and [[url path] isEqualToString:@"/scrollresto"]){
+        if([[url scheme] isEqualToString:DND_SCHEME] and [[url path] isEqualToString:@"/scrollresto"]){
         auto response = [[NSHTTPURLResponse alloc]
-            initWithURL:(NSURL*)[NSURL URLWithString:@"dnd://gdndc"]
+            initWithURL:(NSURL*)[NSURL URLWithString:DND_SCHEME_HOST]
              statusCode:200
             HTTPVersion:@"HTTP/1.1"
            headerFields:@{
-           @"Access-Control-Allow-Origin":@"dnd://gdndc",
+           @"Access-Control-Allow-Origin":DND_SCHEME_HOST,
            @"Cache-Control":@"no-cache",
            }
         ];
@@ -823,7 +860,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     }
     // This is faster, but I can't figure out how to clear the image from the cache.
 #if 0
-    else if([method isEqualToString:@"GET"] and [[url scheme] isEqualToString:@"dnd"]){
+    else if([method isEqualToString:@"GET"] and [[url scheme] isEqualToString:DND_SCHEME]){
         auto path = [url path];
         auto data = [NSData dataWithContentsOfFile: path];
         if(!data){
@@ -987,7 +1024,7 @@ BOOL show_stats;
     handler = [[DndUrlHandler alloc] init];
     handler.controller = self;
     [config.preferences setValue:@YES forKey:@"developerExtrasEnabled"];
-    [config setURLSchemeHandler:handler forURLScheme:@"dnd"];
+    [config setURLSchemeHandler:handler forURLScheme:DND_SCHEME];
     webview = [[WKWebView alloc] initWithFrame:webrect configuration:config];
     webview.allowsMagnification = YES;
     webnavdel = [[WebNavDel alloc] init];
@@ -1292,10 +1329,17 @@ BOOL show_stats;
     SuppressCastQual();
     NSData* htmldata = [NSData dataWithBytesNoCopy:(void*)html.text length:html.length+1 freeWhenDone:YES];
     PopDiagnostic();
-    NSURL* url = [NSURL URLWithString:DND_THIS_URL];
+    NSURL* url = [self this_dnd_url];
     [webview loadData:htmldata MIMEType:@"text/html" characterEncodingName:@"UTF-8" baseURL:url];
     // auto t2 = get_t();
     // HERE("load the page: %.3fms", (t2-t1)/1000.);
+}
+
+-(NSURL*) this_dnd_url {
+    auto stringurl = [DND_SCHEME_HOST stringByAppendingString:[[self->file_url path] stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLPathAllowedCharacterSet]]];
+    auto url = [NSURL URLWithString:stringurl];
+    return url;
+    // return [NSURL URLWithString:DND_THIS_URL];
 }
 
 -(void)loadView {
@@ -1416,10 +1460,12 @@ completionHandler:(void (^)(NSString *result))completionHandler{
     dndc_filecache_clear(TEXTCACHE);
 }
 
+#if 0
 -(void)change_font{
     auto mgr = [NSFontManager sharedFontManager];
     LOGIT([mgr selectedFont]);
 }
+#endif
 -(void)applicationDidFinishLaunching:(NSNotification *)notification{
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     [NSApp activateIgnoringOtherApps:YES];
