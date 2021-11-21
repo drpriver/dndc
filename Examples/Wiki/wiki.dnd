@@ -1,7 +1,18 @@
 ::comment
   This file contains helper code, styles, etc. for implementing the wiki
   pages.
-::links @autoindex
+::js
+  let files = FileSystem.list_dnd_files();
+  for(let f of files){
+    ctx.add_link(f.replace('.dnd', ''), f.replace('.dnd', '.html'));
+  }
+  if(!files.includes('wiki.dnd')){
+    files = FileSystem.list_dnd_files('..');
+    for(let f of files){
+      ctx.add_link(f.replace('.dnd', ''), '../'+f.replace('.dnd', '.html'));
+    }
+  }
+  //endjs
 ::js
   let root = ctx.root;
   root.detach();

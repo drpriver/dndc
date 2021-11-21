@@ -18,8 +18,8 @@ Pages::md
     const files = FileSystem.list_dnd_files(); // relative paths
     let bullets = '';
     for(let f of files){
-      f = f.replace('.dnd', '');
-      bullets += `* [${to_title(f)}]` + '\n';
+      let g = f.replace('.dnd', '');
+      bullets += `* [${to_title(g)}]` + '\n';
     }
     Pages.parse(bullets);
     //endjs
@@ -39,6 +39,7 @@ Demo::md
         max-width: 15em;
         max-height: 15em;
       }
+      /*endcss*/
   Images can also be included. For example, here is a very nice image. It is very
   nice! As you can see, it floats to the right, which is a useful property for an
   image. This is an easy way of creating a web of knowledge for yourself. So, go
