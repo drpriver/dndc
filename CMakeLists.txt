@@ -123,13 +123,12 @@ if(WIN32)
     #add_executable(gdndc
     #    Platform/Windows/gdndc.cpp
     #    Dndc/dndc.c
-    #    PythonEmbed/frozenstdlib.c
     #    )
     #target_link_libraries(gdndc
     #    ${Python3_LIBRARIES}
     #    quickjs-dylib
     #    )
-    #target_include_directories(gdndc PRIVATE ${Python3_INCLUDE_DIRS} Dndc)
+    #target_include_directories(gdndc PRIVATE Dndc)
 # for rng
 target_compile_options(quickjs-lib PUBLIC "-mrdseed")
 target_compile_options(quickjs-dylib PUBLIC "-mrdseed")
