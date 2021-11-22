@@ -375,7 +375,6 @@ write_tag_escaped_str(MStringBuilder* sb, NullUnspec(const char*)text, size_t le
 
 static inline
 Errorable_f(void)
-__attribute__((__noinline__))
 write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const Node* node){
     Errorable(void) result = {};
     for(size_t i = 0; i < length; i++){

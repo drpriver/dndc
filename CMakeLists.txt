@@ -57,6 +57,7 @@ set_target_properties(quickjs-dylib
 target_compile_definitions(quickjs-lib PRIVATE CONFIG_VERSION="2021-03-27")
 
 target_link_libraries(dndc quickjs-lib Threads::Threads ${LIBM_LIBRARIES})
+target_link_libraries(quickjs-dylib Threads::Threads ${LIBM_LIBRARIES})
 # target_compile_definitions(dndc PRIVATE QJS_SHARED_LIBRARY)
 
 add_library(dndc-lib
