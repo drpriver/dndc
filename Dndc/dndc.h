@@ -595,7 +595,8 @@ DNDC_SOURCE_IS_PATH_NOT_DATA = 0x1,
 DNDC_DONT_WRITE = 0x2,
 
 // Don't read any files not already in the file cache (with the exception
-// of the initial input file).
+// of the initial input file). Additionally, prevent access to the filesystem
+// (like checking if a file exists).
 DNDC_DONT_READ = 0x4,
 
 // Input is untrusted and thus should not be allowed to read files, execute
@@ -643,7 +644,7 @@ DNDC_STRIP_WHITESPACE = 0x8000,
 DNDC_DONT_INLINE_IMAGES = 0x10000,
 
 // For imgs, don't base64 them and don't use regular links.
-// Instead, use a dnd:absolute/path/to/img url instead.
+// Instead, use a dnd:///absolute/path/to/img url instead.
 // Applications can then implement custom url handlers for this url scheme.
 DNDC_USE_DND_URL_SCHEME = 0x20000,
 

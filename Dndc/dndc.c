@@ -155,9 +155,7 @@ execute_user_scripts(DndcContext* ctx){
                 auto before_init = get_t();
                 rt = new_qjs_rt(&aa);
                 assert(!jsctx);
-                DndcJsFlags jsflags = 0;
-                if(!(flags & DNDC_DONT_READ))
-                    jsflags |= DNDC_JS_ENABLE_FILESYSTEM;
+                DndcJsFlags jsflags = DNDC_JS_FLAGS_NONE;
                 jsctx = new_qjs_ctx(rt, ctx, jsflags);
                 if(!jsctx){
                     report_system_error(ctx, SV("Failed to initialize javascript context"));

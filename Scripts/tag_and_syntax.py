@@ -173,11 +173,14 @@ def fix_args(args:List[str], source_file:str) -> List[str]:
 
 def do_tags(arguments:List[str], identer:Identer, source_file:str) -> None:
     clang_args=['-isystem'+CLANG_DEFAULT_INCLUDES]+arguments
-    tu = cindex.TranslationUnit.from_source(
+    try:
+        tu = cindex.TranslationUnit.from_source(
             os.path.abspath(source_file),
             args=clang_args,
             options=cindex.TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD,
             )
+    except Exception as e:
+        raise Exception(str(e) + f'source_file: {source_file}')
     errors = [d for d in tu.diagnostics if d.severity in (Diagnostic.Error, Diagnostic.Fatal)]
     if errors:
         raise Exception("File '{}' failed clang's parsing and type-checking:\n {}\n\nargs was {}".format(tu.spelling, '\n'.join(['{}:{}:{}: {}'.format(d.location.file, d.location.line, d.location.column, d.spelling) for d in errors]), clang_args))

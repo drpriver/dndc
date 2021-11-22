@@ -398,7 +398,7 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags){
         JS_SetPropertyStr(jsctx, global_obj, "console", console); // steals ref
 
         // filesystem
-        if(flags & DNDC_JS_ENABLE_FILESYSTEM){
+        {
             QJSValue filesystem = JS_NewObject(jsctx); // new ref
             JS_SetPropertyStr(jsctx, filesystem, "load_file_as_base64", JS_NewCFunction(jsctx, js_load_file_as_base64, "load_file_as_base64", 1)); // create and steal in one go.
             JS_SetPropertyStr(jsctx, filesystem, "load_file", JS_NewCFunction(jsctx, js_load_file, "load_file", 1)); // create and steal in one go.
