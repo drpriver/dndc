@@ -88,10 +88,6 @@ force_inline
 StringView
 jsstring_make_stringview_js_allocated(QJSContext* jsctx, QJSValueConst v);
 
-static inline
-QJSValue
-js_freeze_object(QJSContext* jsctx, QJSValueConst obj);
-
 JSMETHOD(js_console_log);
 
 //
@@ -683,20 +679,6 @@ js_console_log(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
         JS_FreeCString(jsctx, filename);
     return JS_UNDEFINED;
 }
-
-
-static inline
-QJSValue
-js_freeze_object(QJSContext* jsctx, QJSValueConst obj){
-    QJSValue global_obj = JS_GetGlobalObject(jsctx); // new ref
-    QJSValue Object = JS_GetPropertyStr(jsctx, global_obj, "Object");
-    QJSValue freeze = JS_GetPropertyStr(jsctx, Object, "freeze");
-    QJSValue called = JS_Call(jsctx, freeze, Object, 1, &obj);
-    JS_FreeValue(jsctx, global_obj);
-    JS_FreeValue(jsctx, Object);
-    JS_FreeValue(jsctx, freeze);
-    return called;
-    }
 
 //
 // FileSystem stuff

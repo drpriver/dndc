@@ -1,3 +1,11 @@
+Version 0.8.0::md
+  * Removed python blocks.
+  * Added FileSystem API to javascript.
+    - <code>FileSystem.exists</code> to check if a file exists
+    - <code>FileSystem.list_dnd_files(directory)</code> to list all dnd files in that folder and
+      all subfolders.
+    - <code>FileSystem.load_file(filepath)</code> to load a file as a string.
+    - <code>FileSystem.load_file_as_base64(filepath)</code> to load a file as base64.
 Version 0.7.3::md
   * A utility for converting dnd files to html without using the editor has
     been included in the distribution. It's called "dndbatch" and should be

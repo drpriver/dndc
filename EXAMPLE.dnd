@@ -266,7 +266,7 @@ Self-Contained::md
     Data blocks are rendered into html, but do not appear at the document at that
     location - their contents only appear in the data blob.
 
-    You can add keys to the data blob in python blocks. You must use string keys
+    You can add keys to the data blob in javascript blocks. You must use string keys
     and string values.
 
     ::pre .embedded
@@ -274,10 +274,10 @@ Self-Contained::md
         ctx.set_data('foo', 'bar')
         //endjs
 
-    You can't currently introspect the data blob from python as the blocks aren't
+    You can't currently introspect the data blob from javascript as the blocks aren't
     rendered until all user scripts are finished executing.
 
-    If you need more than strings, use a python block to create a SCRIPTS node,
+    If you need more than strings, use a javascript block to create a SCRIPTS node,
     set the 'inline' attribute and then just insert whatever you want using js
     syntax.
 

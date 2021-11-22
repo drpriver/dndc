@@ -102,7 +102,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
         bool written = false;
         MARRAY_FOR_EACH(ss, ctx->stylesheets_nodes){
             auto node = get_node(ctx, *ss);
-            // python nodes can change node types after they are registered
+            // javascript nodes can change node types after they are registered
             if(unlikely(node->type != NODE_STYLESHEETS))
                 continue;
             if(node_has_attribute(node, SV("noinline"))){
@@ -170,7 +170,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
         MARRAY_FOR_EACH(s, ctx->script_nodes){
             msb_write_literal(msb, "<script>\n");
             auto node = get_node(ctx, *s);
-            // python nodes can change node types after they are registered
+            // javascript nodes can change node types after they are registered
             if(unlikely(node->type != NODE_SCRIPTS))
                 continue;
             if(node_has_attribute(node, SV("inline"))){

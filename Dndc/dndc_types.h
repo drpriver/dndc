@@ -35,7 +35,7 @@
 
 // A cached loaded source file.
 // This is used both for actual sourcefiles loaded from physical storage
-// and for manufactured strings from python.
+// and for manufactured strings from javascript.
 typedef struct LoadedSource {
     LongString sourcepath; // doesn't have to be a filename
     LongString sourcetext; // the actual source text
@@ -296,9 +296,6 @@ typedef struct DndcContext {
     // for lookup.
     Marray(LinkItem) links;
     // Mapping of key to string (will be outputted as "data_blob").
-    // Not sure if we actually need this as the python scripting
-    // is pretty powerful.
-    // This made more sense when we didn't have internal scripting.
     Marray(DataItem) rendered_data;
     // If a nav block exists, this string holds the html fragment
     // that is the nav.

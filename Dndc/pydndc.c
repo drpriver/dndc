@@ -291,8 +291,7 @@ PyMethodDef pydndc_methods[] = {
         "                        multiline strings are not disrupted by this!\n"
         "\n"
         "    DONT_READ:          Don't read any files not already in the file\n"
-        "                        cache. Python blocks can bypass this by\n"
-        "                        calling open directly.\n"
+        "                        cache.\n"
         "\n"
         "Returns:\n"
         "--------\n"
@@ -303,7 +302,7 @@ PyMethodDef pydndc_methods[] = {
         "-------\n"
         "Throws ValueError if there is a syntax error in the given string.\n"
         "Can also throw due to missing files.\n"
-        "Can also throw due to errors in embedded python blocks.\n"
+        "Can also throw due to errors in embedded javascript blocks.\n"
         "\n"
         "\n"
         "If the error_reporter is given, it will be called with the following\n"
@@ -417,25 +416,26 @@ PyInit_pydndc(void){
         Py_DECREF(mod);
         return NULL;
     }
-    PyModule_AddStringConstant(mod, "__version__", DNDC_VERSION);
-    PyModule_AddIntConstant(mod, "DOUBLE_COLON", DNDC_SYNTAX_DOUBLE_COLON);
-    PyModule_AddIntConstant(mod, "HEADER", DNDC_SYNTAX_HEADER);
-    PyModule_AddIntConstant(mod, "NODE_TYPE", DNDC_SYNTAX_NODE_TYPE);
-    PyModule_AddIntConstant(mod, "ATTRIBUTE", DNDC_SYNTAX_ATTRIBUTE);
-    PyModule_AddIntConstant(mod, "ATTRIBUTE_ARGUMENT", DNDC_SYNTAX_ATTRIBUTE_ARGUMENT);
-    PyModule_AddIntConstant(mod, "CLASS", DNDC_SYNTAX_CLASS);
-    PyModule_AddIntConstant(mod, "RAW_STRING", DNDC_SYNTAX_RAW_STRING);
-    PyModule_AddIntConstant(mod, "DONT_INLINE_IMAGES", DNDC_DONT_INLINE_IMAGES);
-    PyModule_AddIntConstant(mod, "NO_THREADS", DNDC_NO_THREADS);
-    PyModule_AddIntConstant(mod, "USE_DND_URL_SCHEME", DNDC_USE_DND_URL_SCHEME);
-    PyModule_AddIntConstant(mod, "STRIP_WHITESPACE", DNDC_STRIP_WHITESPACE);
-    PyModule_AddIntConstant(mod, "DONT_READ", DNDC_DONT_READ);
-    PyModule_AddIntConstant(mod, "PRINT_STATS", DNDC_PRINT_STATS);
-    PyModule_AddIntConstant(mod, "ERROR_MESSAGE", DNDC_ERROR_MESSAGE);
-    PyModule_AddIntConstant(mod, "WARNING_MESSAGE", DNDC_WARNING_MESSAGE);
-    PyModule_AddIntConstant(mod, "NODELESS_MESSAGE", DNDC_NODELESS_MESSAGE);
-    PyModule_AddIntConstant(mod, "STATISTIC_MESSAGE", DNDC_STATISTIC_MESSAGE);
-    PyModule_AddIntConstant(mod, "DEBUG_MESSAGE", DNDC_DEBUG_MESSAGE);
+    PyModule_AddStringConstant(mod, "__version__",      DNDC_VERSION);
+    PyModule_AddIntConstant(mod, "DOUBLE_COLON",        DNDC_SYNTAX_DOUBLE_COLON);
+    PyModule_AddIntConstant(mod, "HEADER",              DNDC_SYNTAX_HEADER);
+    PyModule_AddIntConstant(mod, "NODE_TYPE",           DNDC_SYNTAX_NODE_TYPE);
+    PyModule_AddIntConstant(mod, "ATTRIBUTE",           DNDC_SYNTAX_ATTRIBUTE);
+    PyModule_AddIntConstant(mod, "ATTRIBUTE_ARGUMENT",  DNDC_SYNTAX_ATTRIBUTE_ARGUMENT);
+    PyModule_AddIntConstant(mod, "CLASS",               DNDC_SYNTAX_CLASS);
+    PyModule_AddIntConstant(mod, "RAW_STRING",          DNDC_SYNTAX_RAW_STRING);
+    PyModule_AddIntConstant(mod, "DONT_INLINE_IMAGES",  DNDC_DONT_INLINE_IMAGES);
+    PyModule_AddIntConstant(mod, "NO_THREADS",          DNDC_NO_THREADS);
+    PyModule_AddIntConstant(mod, "USE_DND_URL_SCHEME",  DNDC_USE_DND_URL_SCHEME);
+    PyModule_AddIntConstant(mod, "STRIP_WHITESPACE",    DNDC_STRIP_WHITESPACE);
+    PyModule_AddIntConstant(mod, "DONT_READ",           DNDC_DONT_READ);
+    PyModule_AddIntConstant(mod, "PRINT_STATS",         DNDC_PRINT_STATS);
+    PyModule_AddIntConstant(mod, "ERROR_MESSAGE",       DNDC_ERROR_MESSAGE);
+    PyModule_AddIntConstant(mod, "WARNING_MESSAGE",     DNDC_WARNING_MESSAGE);
+    PyModule_AddIntConstant(mod, "NODELESS_MESSAGE",    DNDC_NODELESS_MESSAGE);
+    PyModule_AddIntConstant(mod, "STATISTIC_MESSAGE",   DNDC_STATISTIC_MESSAGE);
+    PyModule_AddIntConstant(mod, "DEBUG_MESSAGE",       DNDC_DEBUG_MESSAGE);
+    PyModule_AddIntConstant(mod, "INPUT_IS_UNTRUSTED",  DNDC_INPUT_IS_UNTRUSTED);
     return mod;
 }
 
@@ -537,6 +537,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_PRINT_STATS
         | DNDC_STRIP_WHITESPACE
         | DNDC_DONT_READ
+        | DNDC_INPUT_IS_UNTRUSTED
         };
     const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", "output_name", NULL};
     PushDiagnostic();

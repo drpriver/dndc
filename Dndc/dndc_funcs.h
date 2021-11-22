@@ -17,6 +17,11 @@
 // This documents the internal API. For the external API, see dndc.h
 //
 
+
+typedef struct WorkerThread WorkerThread;
+
+typedef int (DndcPostParseAstFunc)(Nullable(void*)user_data, Nonnull(DndcContext*));
+
 //
 // The money function.  Basically executes the whole thing from end to end.
 // Parses the data referenced by source and converts it into html, formatted,
@@ -41,7 +46,7 @@
 //
 // outpath:
 //    Several features depend on knowing what the ultimate name of the file will be.
-//    APIs such as ctx.outpath etc. in js or python blocks for example.
+//    APIs such as ctx.outpath etc. in js blocks for example.
 //    Note that we do not actually write to this path.
 //
 //    This path is *NOT* adjusted by the base_directory argument.
@@ -98,16 +103,13 @@
 // On failure, an error will be indicated.
 //
 
-typedef struct WorkerThread WorkerThread;
-
-typedef int (DndcPostParseAstFunc)(Nullable(void*)user_data, Nonnull(DndcContext*));
 static
 Errorable_f(void)
 run_the_dndc(uint64_t flags,
         LongString base_directory,
         LongString source_or_path,
         LongString outpath,
-        Nonnull(LongString*) outstring,
+        LongString* outstring,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,
         Nullable(DndcErrorFunc*)error_func,

@@ -9,10 +9,10 @@
 // NOTE: Formatting can only be applied to freshly parsed syntax
 //       trees. The code makes assertions about what kinds of nodes
 //       can be children of other nodes, which won't necessarily hold
-//       true if python blocks start inserting nodes willy-nilly.
+//       true if javascript blocks start inserting nodes willy-nilly.
 //
 //       It would be nice to be able to apply this to post-import and
-//       post-python blocks to see what something expands to.
+//       post-javascript blocks to see what something expands to.
 
 #ifdef _WIN32
 // Move to header?

@@ -97,7 +97,7 @@ murmur3_32(Nonnull(const uint8_t*) key, size_t len, uint32_t seed)
 static
 void
 cache_watch_file(void* cache_, StringView path){
-    // path is not necessarily valid - python blocks can add dependencies.
+    // path is not necessarily valid - javascript blocks can add dependencies.
     FileWatchCache* cache = cache_;
     if(!path.length || !path.text){
         NSLog(@"Not watching invalid path");
