@@ -146,7 +146,6 @@ static HWND mainwindow;
 static
 DWORD
 thread_worker(void*){
-    dndc_init_python();
     B64WORKER = dndc_worker_thread_create();
     for(;;){
         const char* text = NULL;

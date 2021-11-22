@@ -42,7 +42,6 @@ make_html(PString* source){
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_NO_CLEANUP
-        | DNDC_NO_PYTHON
         | DNDC_NO_THREADS
         | DNDC_DONT_INLINE_IMAGES
         | DNDC_INPUT_IS_UNTRUSTED
@@ -72,7 +71,6 @@ format_dnd(PString* source){
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_NO_CLEANUP
-        | DNDC_NO_PYTHON
         | DNDC_NO_THREADS
         | DNDC_DONT_INLINE_IMAGES
         | DNDC_INPUT_IS_UNTRUSTED

@@ -78,7 +78,6 @@ export const NodeType = {
     IMPORT      :number;
     IMAGE       :number;
     BULLETS     :number;
-    PYTHON      :number;
     RAW         :number;
     PRE         :number;
     LIST        :number;

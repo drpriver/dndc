@@ -16,7 +16,7 @@ QTFRAMEWORKS=-framework QtCore \
 	     -framework QtWebEnginecore \
 	     -framework QtWebEngineWidgets
 QTLINK=$(QTFRAMEWORKS) -rpath $(QTFRAMEWORKDIR)
-DNDCLINK=-F/Library/Frameworks -framework Python
+DNDCLINK=
 ifeq ($(QTFRAMEWORKDIR),)
 $(error QTFRAMEWORKDIR not defined)
 endif
@@ -28,7 +28,7 @@ QTLINK=$(QTLIBDIR)/Qt$(QTVERSION)Core.dll \
 	$(QTLIBDIR)/Qt$(QTVERSION)Widgets.dll \
 	$(QTLIBDIR)/Qt$(QTVERSION)WebEngineCore.dll \
 	$(QTLIBDIR)/Qt$(QTVERSION)WebEngineWidgets.dll
-DNDCLINK=$(PYLDFLAGS)
+DNDCLINK=
 else ifeq ($(UNAME),Linux)
 QTINCLUDE=-isystem$(QTINCLUDEDIR)
 QTLINK=$(QTLIBDIR)/libQt$(QTVERSION)Core.so \
@@ -37,7 +37,7 @@ QTLINK=$(QTLIBDIR)/libQt$(QTVERSION)Core.so \
 	$(QTLIBDIR)/libQt$(QTVERSION)WebEngineCore.so \
 	$(QTLIBDIR)/libQt$(QTVERSION)WebEngineWidgets.so \
 	-lpthread
-DNDCLINK=$(PYLDFLAGS)
+DNDCLINK=
 else
 $(error Unsupported platform for qt gui)
 endif

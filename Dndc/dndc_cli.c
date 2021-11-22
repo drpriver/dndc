@@ -221,7 +221,7 @@ main(int argc, char**argv){
                 .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_DONT_READ),
                 .help = "Don't read any files (other than builtins and the "
-                        "initial input file). Python blocks can bypass this.",
+                        "initial input file).",
                 .hidden = true,
             },
             {

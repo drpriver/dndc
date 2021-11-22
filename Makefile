@@ -34,7 +34,6 @@ clean-depends:
 	@$(RM) -f $(DEPDIR)/*
 
 deep-clean: clean clean-tests clean-depends
-	@$(RM) -rf PythonEmbed/frozen
 	@$(RM) -r $(DIRECTORIES)
 
 directories: $(DIRECTORIES)

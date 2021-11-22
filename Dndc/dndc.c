@@ -473,7 +473,7 @@ run_the_dndc(uint64_t flags,
         if(ctx.user_script_nodes.count){
             auto handle = ctx.user_script_nodes.data[0];
             auto node = get_node(&ctx, handle);
-            node_print_err(&ctx, node, SV("Python blocks and JS blocks are illegal for untrusted input."));
+            node_print_err(&ctx, node, SV("JS blocks are illegal for untrusted input."));
             result.errored = PARSE_ERROR;
             goto cleanup;
         }
@@ -540,11 +540,9 @@ run_the_dndc(uint64_t flags,
     }
 
     // Speculatively load imgs and imglinks and preprocess them.
-    // Do this at the same time as we execute the Python and js nodes.
-    // Python/js blocks can add imgs or change the paths of the img nodes,
-    // but they usually don't, so doing these in parallel is a win as
-    // Python startup (and execution) is very slow. JS startup is quicker, but not
-    // free.
+    // Do this at the same time as we execute the js nodes.
+    // Js blocks can add imgs or change the paths of the img nodes,
+    // but they usually don't, so doing these in parallel is a win as script execution is very slow.
     if(!wasm){
         // This is shoved in its own function as we need to guarantee
         // the worker has joined before continuing beyond this point.
@@ -565,7 +563,7 @@ run_the_dndc(uint64_t flags,
         report_size(&ctx, SV("ctx.dependencies_nodes.count = "), ctx.dependencies_nodes.count);
         report_size(&ctx, SV("ctx.link_nodes.count = "), ctx.link_nodes.count);
     }
-    // Python blocks can detach the root node and then forget to attach a new
+    // Javascript blocks can detach the root node and then forget to attach a new
     // one.
     if(NodeHandle_eq(ctx.root_handle, INVALID_NODE_HANDLE)){
         report_system_error(&ctx, SV("ctx has no root Node."));

@@ -11,7 +11,6 @@ Objs
 compile_commands.json
 *.trace
 Depends
-PythonEmbed/frozen
 *.html
 FuzzCorpus
 opt.mak
