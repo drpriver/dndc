@@ -595,9 +595,11 @@ class DndWebPage(QWebEnginePage):
                 QDesktopServices.openUrl(url)
                 return False
             if path.endswith('.html'):
-                # path = path.lstrip('/').replace('/', os.path.sep)
-                # filepath = os.path.join(self.basedir, path[:-len('.html')]+'.dnd')
                 filepath = os.path.normpath(path[:-len('.html')] + '.dnd')
+                # this is kind of a hack, but I don't want to learn how to encode windows style
+                # drive letters into a URL properly and this basically works.
+                if IS_WINDOWS and filepath[2] == ':':
+                    filepath = filepath[1:]
                 if os.path.isfile(filepath):
                     add_tab(filepath)
                 else:
@@ -805,7 +807,9 @@ class Page(QSplitter):
             # print(f'addPaths: {(after-before)*1000:.3f}ms')
             return
         # t1 = time.time()
-        u = QUrl(f'https://{APPHOST}/{self.filename}')
+        BACKSLASH = '\\'
+        u = QUrl(f'https://{APPHOST}/{self.filename.replace(BACKSLASH, "/")}')
+        # LOGGER.debug("u: %s", u)
         self.webpage.setHtml(html, baseUrl=u)
         # t2 = time.time()
         self.dependencies = set(depends)

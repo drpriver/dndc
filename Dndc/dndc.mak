@@ -7,8 +7,8 @@ else
 RPATH:=
 endif
 
-$(BINDIR)/dndc$(EXE): Dndc/dndc_cli.c $(DEPDIR)/dndc.dep  opt.mak $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc.dep $< -o $@ $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(OBJDIR)/libquickjs.o $(RPATH)
+$(BINDIR)/dndc$(EXE): Dndc/dndc_cli.c $(DEPDIR)/dndc.dep  opt.mak $(OBJDIR)/libquickjs.o | $(DIRECTORIES)
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc.dep $< -o $@ $(LINK_FLAGS) $(OBJDIR)/libquickjs.o $(RPATH)
 dndc: $(BINDIR)/dndc$(EXE)
 
 $(OBJDIR)/dndc.o: Dndc/dndc.c $(DEPDIR)/dndc_o.dep opt.mak | $(DIRECTORIES)

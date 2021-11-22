@@ -763,6 +763,9 @@ DndWebPage::acceptNavigationRequest(const QUrl& url, QWebEnginePage::NavigationT
             return false;
             }
         if(path.endsWith(QS(".html"))){
+            #if defined(_WIN32)
+            path = path.right(path.length()-1);
+            #endif
             auto filepath = QDir::cleanPath(path.left(path.length()-5)+QS(".dnd"));
             auto info = QFileInfo(filepath);
             if(info.exists())

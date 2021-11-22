@@ -1,10 +1,13 @@
 #ifndef DNDC_QJS_C
 #define DNDC_QJS_C
+#include "msb_extensions.h"
+#include "MStringBuilder.h"
 #include "dndc.h"
 #include "dndc_funcs.h"
 #include "dndc_types.h"
 #include "ByteBuilder.h"
 #include "bb_extensions.h"
+#include "msb_format.h"
 #include "str_util.h"
 #include <sys/stat.h>
 #if defined(__APPLE__) || defined(__linux__)
@@ -741,6 +744,12 @@ js_load_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst
     return result;
 }
 
+#if defined(_WIN32)
+// Posix-likes provide an API that will do this for us.
+// On Windows we are forced to roll our own.
+static QJSValue js_list_dnd_files_inner(QJSContext* jsctx, DndcContext* ctx, QJSValue array, StringView directory, size_t base_length, int depth);
+#endif
+
 static
 QJSValue
 js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst *argv){
@@ -758,19 +767,19 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
     if(argc == 1){
         auto dir = jsstring_make_stringview_js_allocated(jsctx, argv[0]);
         if(base.length && !path_is_abspath(dir)){
-            msb_write_str(&sb, base.text, base.length);
+            msb_write_str_with_backslashes_as_forward_slashes(&sb, base.text, base.length);
             if(dir.length){
                 msb_append_path(&sb, dir.text, dir.length);
             }
         }
         else {
-            msb_write_str(&sb, dir.text, dir.length);
+            msb_write_str_with_backslashes_as_forward_slashes(&sb, dir.text, dir.length);
         }
         JS_FreeCString(jsctx, dir.text);
     }
     else {
         if(base.length){
-            msb_write_str(&sb, base.text, base.length);
+            msb_write_str_with_backslashes_as_forward_slashes(&sb, base.text, base.length);
         }
         else {
             msb_write_str(&sb, ".", 1);
@@ -799,7 +808,8 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
             StringView name = {.text = ent->fts_name, .length=ent->fts_namelen};
             if(endswith(name, SV(".dnd"))){
                 auto item = JS_NewString(jsctx, ent->fts_path + dir.length+1);
-                JS_ArrayPush(jsctx, result, 1, &item);
+                auto v = JS_ArrayPush(jsctx, result, 1, &item);
+                JS_FreeValue(jsctx, v);
                 JS_FreeValue(jsctx, item);
             }
         }
@@ -808,12 +818,82 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
     msb_destroy(&sb);
     return result;
 #elif defined(_WIN32)
-    return JS_ThrowTypeError(jsctx, "Unimplemented platform for recursive directory reading: WINDOWS");
+    QJSValue result = JS_NewArray(jsctx);
+    result = js_list_dnd_files_inner(jsctx, ctx, result, dir, dir.length, 0);
+    msb_destroy(&sb);
+    return result;
 #else
     return JS_ThrowTypeError(jsctx, "Unsupported platform for recursive directory reading");
 #endif
 
 }
+
+#if defined(_WIN32)
+static 
+QJSValue 
+js_list_dnd_files_inner(QJSContext* jsctx, DndcContext* ctx, QJSValue array, StringView directory, size_t base_length, int depth){
+    if(depth > 8){
+        JS_FreeValue(jsctx, array);
+        return JS_ThrowTypeError(jsctx, "Max Recursion depth exceeded: %d. Path was: '%s'", depth, directory.text);
+        }
+    // fprintf(stderr, "Entering with: '%s'\n", directory.text);
+    MStringBuilder tempbuilder = {.allocator = ctx->temp_allocator};
+    MSB_FORMAT(&tempbuilder, directory, "/*.dnd");
+    msb_nul_terminate(&tempbuilder);
+    auto dndwildcard = msb_borrow(&tempbuilder);
+    WIN32_FIND_DATAA findd;
+    HANDLE handle = FindFirstFileExA(dndwildcard.text, FindExInfoBasic, &findd, FindExSearchNameMatch, NULL, FIND_FIRST_EX_LARGE_FETCH);
+    msb_erase(&tempbuilder, sizeof("/*.dnd")-1);
+    if(handle == INVALID_HANDLE_VALUE){
+    }
+    else{
+        do {
+            auto cursor = tempbuilder.cursor;
+            MSB_FORMAT(&tempbuilder, SV("/"), findd.cFileName);
+            auto text = msb_borrow(&tempbuilder);
+            QJSValue s = JS_NewStringLen(jsctx, text.text+base_length+1, text.length-(base_length+1));
+            auto v = JS_ArrayPush(jsctx, array, 1, &s);
+            JS_FreeValue(jsctx, s);
+            JS_FreeValue(jsctx, v);
+            tempbuilder.cursor = cursor;
+        }while(FindNextFileA(handle, &findd));
+        FindClose(handle);
+    }
+    msb_write_literal(&tempbuilder, "/*");
+    msb_nul_terminate(&tempbuilder);
+    auto thisdir = msb_borrow(&tempbuilder);
+    handle = FindFirstFileExA(thisdir.text, FindExInfoBasic, &findd, FindExSearchNameMatch, NULL, FIND_FIRST_EX_LARGE_FETCH);
+    if(handle == INVALID_HANDLE_VALUE){
+        // fprintf(stderr, "Invalid handle: '%s'\n", thisdir.text);
+        goto end;
+    }
+    msb_erase(&tempbuilder, sizeof("/*")-1);
+    do {
+        if(findd.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN){
+            continue;
+        }
+        if(!(findd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)){
+            continue;
+        }
+        StringView fn = {.text = findd.cFileName, .length = strlen(findd.cFileName)};
+        if(fn.text[0] == '.'){
+            continue;
+        }
+        MSB_FORMAT(&tempbuilder, "/", fn);
+        msb_nul_terminate(&tempbuilder);
+        auto nextdir = msb_borrow(&tempbuilder);
+        auto e = js_list_dnd_files_inner(jsctx, ctx, array, nextdir, base_length, depth+1);
+        msb_erase(&tempbuilder, 1+fn.length);
+        if(JS_IsException(e)) {
+            array = e;
+            goto end;
+        }
+    }while(FindNextFileA(handle, &findd));
+    end:
+    msb_destroy(&tempbuilder);
+    return array;
+}
+#endif
 
 
 static
@@ -1776,7 +1856,8 @@ JSGETTER(js_dndc_context_get_all_nodes){
     QJSValue result = JS_NewArray(jsctx);
     for(size_t i = 0; i < ctx->nodes.count; i++){
         QJSValue n = js_make_dndc_node(jsctx, (NodeHandle){._value=i});
-        JS_ArrayPush(jsctx, result, 1, &n);
+        auto v = JS_ArrayPush(jsctx, result, 1, &n);
+        JS_FreeValue(jsctx, v);
         JS_FreeValue(jsctx, n);
         }
     return result;
@@ -1910,7 +1991,8 @@ JSMETHOD(js_dndc_attributes_entries){
         assert(!JS_IsException(call));
         JS_FreeValue(jsctx, js_kv[0]);
         JS_FreeValue(jsctx, js_kv[1]);
-        JS_ArrayPush(jsctx, result, 1, &pair);
+        auto v = JS_ArrayPush(jsctx, result, 1, &pair);
+        JS_FreeValue(jsctx, v);
         JS_FreeValue(jsctx, pair);
         }
     QJSValue values = JS_GetPropertyStr(jsctx, result, "values");

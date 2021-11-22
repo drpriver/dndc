@@ -5,10 +5,10 @@ $(error QTMOC command not defined)
 endif
 
 # Idk if these need to be set.
-QTFLAGS=-fPIC
 
 ifeq ($(UNAME),Darwin)
 # MacOS
+QTFLAGS=-fPIC
 QTINCLUDE=-F$(QTFRAMEWORKDIR)
 QTFRAMEWORKS=-framework QtCore \
 	     -framework QtGui  \
@@ -17,19 +17,23 @@ QTFRAMEWORKS=-framework QtCore \
 	     -framework QtWebEngineWidgets
 QTLINK=$(QTFRAMEWORKS) -rpath $(QTFRAMEWORKDIR)
 DNDCLINK=
+DNDCINCLUDE=
 ifeq ($(QTFRAMEWORKDIR),)
 $(error QTFRAMEWORKDIR not defined)
 endif
 else ifeq ($(UNAME),Windows)
 # untested
+QTFLAGS=
 QTINCLUDE=-isystem$(QTINCLUDEDIR)
-QTLINK=$(QTLIBDIR)/Qt$(QTVERSION)Core.dll \
-	$(QTLIBDIR)/Qt$(QTVERSION)Gui.dll \
-	$(QTLIBDIR)/Qt$(QTVERSION)Widgets.dll \
-	$(QTLIBDIR)/Qt$(QTVERSION)WebEngineCore.dll \
-	$(QTLIBDIR)/Qt$(QTVERSION)WebEngineWidgets.dll
+QTLINK=$(QTLIBDIR)\Qt$(QTVERSION)Core.lib \
+	$(QTLIBDIR)\Qt$(QTVERSION)Gui.lib \
+	$(QTLIBDIR)\Qt$(QTVERSION)Widgets.lib \
+	$(QTLIBDIR)\Qt$(QTVERSION)WebEngineCore.lib \
+	$(QTLIBDIR)\Qt$(QTVERSION)WebEngineWidgets.lib
+DNDCINCLUDE=-isystem.
 DNDCLINK=
 else ifeq ($(UNAME),Linux)
+QTFLAGS=-fPIC
 QTINCLUDE=-isystem$(QTINCLUDEDIR)
 QTLINK=$(QTLIBDIR)/libQt$(QTVERSION)Core.so \
 	$(QTLIBDIR)/libQt$(QTVERSION)Gui.so \
@@ -38,6 +42,7 @@ QTLINK=$(QTLIBDIR)/libQt$(QTVERSION)Core.so \
 	$(QTLIBDIR)/libQt$(QTVERSION)WebEngineWidgets.so \
 	-lpthread
 DNDCLINK=
+DNDCINCLUDE=
 else
 $(error Unsupported platform for qt gui)
 endif
@@ -50,11 +55,12 @@ $(GENDIR)/moc_%.cpp: QtDndcEdit/%.h | $(GENDIR)
 DNDCOBJS=$(OBJDIR)/dndc.o $(OBJDIR)/libquickjs.o
 
 
-$(BINDIR)/DndcEdit: QtDndcEdit/DndcEdit.cpp $(GENDIR)/moc_DndcEdit.cpp $(DNDCOBJS) $(DEPDIR)/DndcEdit.dep | $(GENDIR) $(BINDIR) $(DEPDIR) $(OBJDIR)
+$(BINDIR)/DndcEdit$(EXE): QtDndcEdit/DndcEdit.cpp $(GENDIR)/moc_DndcEdit.cpp $(DNDCOBJS) $(DEPDIR)/DndcEdit.dep | $(GENDIR) $(BINDIR) $(DEPDIR) $(OBJDIR)
 	$(CXX) \
 		-O3 \
 		$(QTFLAGS) \
 		$(QTINCLUDE) \
+		$(DNDCINCLUDE) \
 		$< $(GENDIR)/moc_DndcEdit.cpp \
 		$(DNDCOBJS) \
 		$(DEPFLAGS) $(DEPDIR)/DndcEdit.dep \
