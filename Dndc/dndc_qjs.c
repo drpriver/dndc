@@ -694,6 +694,11 @@ js_load_file_as_base64(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJS
     if(!JS_IsString(str)){
         return JS_ThrowTypeError(jsctx, "%s: must be given a single string argument", __func__);
     }
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    if(ctx->flags & DNDC_DONT_READ){
+        return JS_ThrowTypeError(jsctx, "File loading is disabled");
+    }
     // sloppy as fuck, whatever.
     ByteBuilder bb = {.allocator = get_mallocator()};
 
@@ -709,6 +714,7 @@ js_load_file_as_base64(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJS
     Allocator_free(alloc, e.result.text, e.result.length+1);
     return result;
 }
+
 static
 QJSValue
 js_load_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst *argv){
@@ -722,6 +728,9 @@ js_load_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst
     }
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
+    if(ctx->flags & DNDC_DONT_READ){
+        return JS_ThrowTypeError(jsctx, "File loading is disabled");
+    }
     auto sv = jsstring_make_stringview_js_allocated(jsctx, str);
     auto e = ctx_load_source_file(ctx, sv);
     JS_FreeCString(jsctx, sv.text);
@@ -741,6 +750,9 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
     }
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
+    if(ctx->flags & DNDC_DONT_READ){
+        return JS_ThrowTypeError(jsctx, "File system access is disabled.");
+    }
     MStringBuilder sb = {.allocator = ctx->temp_allocator};
     auto base = ctx->base_directory;
     if(argc == 1){
@@ -813,6 +825,9 @@ js_path_exists(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
 
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
+    if(ctx->flags & DNDC_DONT_READ){
+        return JS_ThrowTypeError(jsctx, "File system access is disabled.");
+    }
     MStringBuilder sb = {.allocator = ctx->temp_allocator};
     auto base = ctx->base_directory;
     auto dir = jsstring_make_stringview_js_allocated(jsctx, argv[0]);
