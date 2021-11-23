@@ -1,0 +1,56 @@
+JS Api Documentation::title
+::raw @doc
+::js
+  function process_line(line){
+    let types = /\b([A-Z][A-Z_]+|string|Array|number|Node|boolean|const|CtxType|Attributes|Classes|FileSystemT)\b/g;
+    let nodetypes = /\b[A-Z][A-Z_]+\b/;
+    let result = "";
+    let prev = 0;
+    let splits = line.split(types);
+    for(let s of splits){
+      if(s.match(nodetypes))
+        result += `<span class="nodetype">${s}</span>`;
+      else if(s.match(types))
+        result += `<span class="type">${s}</span>`;
+      else
+        result += s;
+    }
+    return result;
+  }
+  let doc = ctx.select_nodes({attributes:['doc']})[0];
+  let text = FileSystem.load_file('dndc_qjs.d.ts');
+  let lines = text.split('\n');
+  doc.add_child(ctx.make_string('<pre>'));
+  for(let line of lines){
+    let trimmed = line.trim();
+    if(trimmed.length >= 2 && trimmed[0] == '/' && trimmed[1] == '/'){
+      doc.add_child(ctx.make_string(`<span class="comment">${line}</span>`));
+    }
+    else{
+      doc.add_child(ctx.make_string(process_line(line)));
+    }
+  }
+  doc.add_child(ctx.make_string('</pre>'));
+  //endjs
+::css @inline
+  html {
+    margin: auto;
+    background-color: #272822;
+    color: #D2D39A;
+  }
+  * {
+    max-width: 40em;
+  }
+  body > div {
+    margin: auto;
+  }
+  .comment {
+    color: #5AC1E5;
+  }
+  .type {
+    color: #87FFAF;
+  }
+  .nodetype {
+    color: #FFC137;
+  }
+  /*endcss*/

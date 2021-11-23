@@ -26,6 +26,8 @@ build2
 *.zip
 Release
 PyGdndc/pydndc.pyi
+PyGdndc/jsdoc.dnd
+PyGdndc/dndc_qjs.d.ts
 .obj
 *.dll
 *.dylib
