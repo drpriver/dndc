@@ -17,7 +17,7 @@ QTFRAMEWORKS=-framework QtCore \
 	     -framework QtWebEngineWidgets
 QTLINK=$(QTFRAMEWORKS) -rpath $(QTFRAMEWORKDIR)
 DNDCLINK=
-DNDCINCLUDE=
+DNDCINCLUDE=-isystem.
 ifeq ($(QTFRAMEWORKDIR),)
 $(error QTFRAMEWORKDIR not defined)
 endif
@@ -42,7 +42,7 @@ QTLINK=$(QTLIBDIR)/libQt$(QTVERSION)Core.so \
 	$(QTLIBDIR)/libQt$(QTVERSION)WebEngineWidgets.so \
 	-lpthread
 DNDCLINK=
-DNDCINCLUDE=
+DNDCINCLUDE=-isystem.
 else
 $(error Unsupported platform for qt gui)
 endif
