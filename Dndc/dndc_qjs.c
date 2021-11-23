@@ -1414,7 +1414,7 @@ JSMETHOD(js_dndc_context_make_string){
         return JS_EXCEPTION;
     if(argc != 1)
         return JS_ThrowTypeError(jsctx, "Need 1 string arg to make_string");
-    QJSValueConst arg = argv[1];
+    QJSValueConst arg = argv[0];
     if(!JS_IsString(arg))
         return JS_ThrowTypeError(jsctx, "Need 1 string arg to make_string");
     StringView sv = jsstring_to_stringview(jsctx, arg, ctx->string_allocator);
