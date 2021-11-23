@@ -47,7 +47,16 @@ type CtxType = {
 
     //
     // Creates a string node with the given string as content.
-    make_string(_:string): Node;
+    //
+    // Args:
+    // -----
+    //   s: The string contents of the node to be.
+    //
+    // Returns:
+    // --------
+    // The new STRING node.
+    //
+    make_string(s:string): Node;
 
     //
     // Creates a new node with no parents or children. Specify the
@@ -55,37 +64,82 @@ type CtxType = {
     // Options is, well, optional and allows you to specify those
     // things without needing to assign them in separate
     // statements.
-    make_node(type:number, options:{
-                                header:string?,
-                                classes:Array<string>?,
-                                attributes:Array<string>?,
-                                }): Node;
+    //
+    // Args:
+    // -----
+    //   type: The type of the new node, from NodeType.
+    //   options: Optional set of attributes for the new node.
+    //      header:     If given, the header of the new node.
+    //      classes:    If given, the classes of the new node.
+    //      attributes: If given, the attributes of the new node.
+    //                  Each attribute will have an empty string
+    //                  as its key.
+    //
+    make_node(type:number, options:{ header:string?, classes:Array<string>?, attributes:Array<string>?}): Node;
 
     //
-    // Make the given path as a dependency of this document. This
+    // Mark the given path as a dependency of this document. This
     // is used if the dependencies of the document are outputed,
     // for example for integration with make to rebuild documents
     // when file are edited.  Normally you don't need to call this
     // as loading files will implicitly mark that file as a
     // dependency, but it is possible to indirectly depend on
     // files.
-    add_dependency(_:string);
+    //
+    // Args:
+    // -----
+    //   path: The path to add as a dependency of this document.
+    //
+    add_dependency(path:string);
 
     //
     // A utility function that turns a string into the version of
-    // the string that can be used as an ID.
-    kebab(_:string): string;
+    // the string that can be used as an ID. It will turn a string
+    // looking like "This is a string" into "this-is-a-string".
+    //
+    // Args:
+    // -----
+    //   s: The string to kebab
+    //
+    // Returns:
+    // --------
+    // The kebabed version of s.
+    //
+    kebab(s:string): string;
 
     //
     // Sets a key, value in the generated data blob (which will be
     // available as `data_blob` in the global scope for scripts in
     // the final document.
+    //
+    // Args:
+    // -----
+    //   key:   The key to retrieve this data from the datablob
+    //   value: the value to store in the data blob under this
+    //          key.
+    //
     set_data(key:string, value:string);
 
     //
     // Queries for nodes matching the given criteria. The result
     // will be an AND of all of the criteria.  Giving no arguments
     // selects all nodes in the document.
+    //
+    // Args:
+    // -----
+    //   type:       The type of the selected nodes. Use a constant
+    //               from NodeType. Leave this out to not restrict by
+    //               nodetype.
+    //   classes:    Array of class names. All nodes returned will
+    //               have all of these classes.
+    //   attributes: Array of attribute keys. All nodes returned
+    //                 will have all of these attributes
+    //
+    // Returns:
+    // --------
+    // The array of nodes matching all of the given criteria.
+    // This can be the empty array.
+    //
     select_nodes(args:{type:number?, classes:Array<string>?,
                        attributes:Array<string>?}): Array<Node>;
 
@@ -96,6 +150,15 @@ type CtxType = {
     //
     // Adds the key, value pair to the link table for resolving
     // what square bracket links link to.
+    //
+    // Args:
+    // -----
+    //   key:   The text that will be inside [] style links.
+    //          Note that this gets "kebabed", so that case folding
+    //          and differences in punctuation maap to the same
+    //          thing.
+    //   value: The url that is the target of the link.
+    //
     add_link(key:string, value: string);
 }
 
@@ -108,6 +171,16 @@ type FileSystemT = {
 
     //
     // Loads the file located at the given path as a string.
+    //
+    // Args:
+    // -----
+    //   path: Path to the file to load. If this is a relative
+    //         path, it will be relative to ctx.base, which is
+    //         usually the folder that the main dnd file is in.
+    // Returns:
+    // --------
+    // The text of the indicated file.
+    //
     load_file(path:string): string;
 
     //
@@ -115,6 +188,16 @@ type FileSystemT = {
     // contained bytes.  This is useful for embedding binary data
     // in the document (like wasm) that is then converting back to
     // binary when the document loads.
+    //
+    // Args:
+    // -----
+    //   path: Path to the file to load. If this is a relative
+    //         path, it will be relative to ctx.base, which is
+    //         usually the folder that the main dnd file is in.
+    // Returns:
+    // --------
+    // The contents of the given file, encoded in base64.
+    //
     load_file_as_base64(path:string): string;
 
     //
@@ -122,11 +205,30 @@ type FileSystemT = {
     // Recursive means it will find them in subfolders as well. If
     // not given an argument, does the current directory.
     // Otherwise, scans the given directory.
+    //
+    // Args:
+    // -----
+    //   path: (optional). If given, which directory to start the
+    //         recursive search for dnd files.
+    // Returns:
+    // --------
+    // An array of paths to dnd files. these paths will be
+    // relative to ctx.base if possible.
     list_dnd_files(path:string?): Array<string>;
 
     //
     // Checks if there is a file or folder at the given path,
     // returning true if it does exist.
+    //
+    // Args:
+    // -----
+    //   path: Path to check for existence. If this is a relative
+    //         path, it is relative to ctx.base.
+    //
+    // Returns:
+    // --------
+    // Whether the path exists or not.
+    //
     exists(path:string): boolean;
 };
 
@@ -177,20 +279,39 @@ type Node = {
     //
     // Parse the string as a .dnd file and append the top level
     // nodes as children of this node.
-    parse(_:string);
+    //
+    // Args:
+    // -----
+    //   dnd: A string that represents dnd source contents.
+    //
+    parse(dnd:string);
 
     //
     // Remove this node from its parent and sets its parent to
     // null.  Call this before adding this node as a child of
     // another node or making it the root of the document.
+    //
     detach();
 
     //
     // Append the given node to the end of the children.
-    add_child(_:Node);
+    //
+    // Args:
+    // -----
+    //   node: The node to add as a child of this node. It will
+    //         appear in subsequent accesses to .children.
+    //
+    add_child(node:Node);
 
     //
     // Replace the given child.
+    //
+    // Args:
+    // -----
+    //   old: The node to replace that is currently a child of
+    //        this node.
+    //   new: The node to replce that old node with.
+    //
     replace_child(old:Node, new:Node);
 
     //
@@ -198,6 +319,11 @@ type Node = {
     // at that index and later down by 1. If where is greater than
     // or equal to the number of child nodes, than this just acts
     // like `add_child`.
+    //
+    // Args:
+    // -----
+    //   where: What index to insert the node into.
+    //   node:  The node to insert.
     insert_child(where:numer, node:Node);
 
     //
@@ -216,11 +342,18 @@ type Node = {
     // expecting certain text context for example). Do note that
     // you can also just `throw new Error('whatever')` if you want
     // the error to originate from this part of the script.
-    err(_:string);
+    //
+    // Args:
+    // -----
+    //   msg: The error message to include in the thrown
+    //   exception.
+    //
+    err(msg:string);
 
     //
     // Checks if a class is present or not in the classes.
-    has_class(_:string): boolean;
+    //
+    has_class(cls:string): boolean;
 
     //
     // Dupe this node as an orphan. Attributes, classes and
@@ -229,6 +362,10 @@ type Node = {
     // their parent nodes set to the clone. This is weird, but is
     // useful for having a part of the document tree in the
     // document twice.
+    //
+    // NOTE: This function may change. In particular, the above
+    // behavior with the children might change.
+    //
     clone(): Node;
 }
 //
@@ -242,10 +379,22 @@ type Attributes = {
     // returning undefined if not present. Also note that
     // attributes don't need to have a value - this will be
     // returned as an empty string.
+    //
+    // Args:
+    // -----
+    //   key: The attribute.
+    //
+    // Returns:
+    // --------
+    // Undefined if attribute is missing, empty string if it is
+    // set to nothing, otherwise the value associated with the
+    // attribute.
+    //
     get(key:string):string?;
 
     //
     // Returns whether the attribute is present.
+    //
     has(key:string):boolean;
 
     //
@@ -273,7 +422,7 @@ type Classes = {
 
     //
     // Add the class to this group.
-    append(_:string);
+    append(cls:string);
 
     //
     // So you can iterate over it.
