@@ -349,6 +349,7 @@ free_qjs_rt(QJSRuntime* rt, ArenaAllocator* arena){
 static
 QJSContext*_Nullable
 new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags){
+    (void)flags;
     QJSContext* jsctx = NULL;
     jsctx = JS_NewContext(rt);
     if(!jsctx)

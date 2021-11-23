@@ -54,6 +54,7 @@ TestFunction(TestAllocExample){
     TestAssertEquals(myarray->count, 2);
     TestAssertEquals(myarray->data[0], 3);
     TestAssertEquals(myarray->data[1], 4);
+    Allocator_free_all(al);
     shallow_free_recorded_mallocator(al);
     TESTEND();
     }
@@ -72,6 +73,7 @@ TestFunction(TestRemoveExample){
     TestAssertEquals(myarray->count, 2);
     TestAssertEquals(myarray->data[0], 1);
     TestAssertEquals(myarray->data[1], 3);
+    Allocator_free_all(al);
     shallow_free_recorded_mallocator(al);
     TESTEND();
     }
