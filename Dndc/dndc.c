@@ -1024,6 +1024,15 @@ find_double_colon_utf16(const uint16_t* haystack, size_t ncode_units){
     }
 }
 
+
+struct JsStyleState {
+    int js_parse_which;
+    bool can_regex;
+};
+static
+void
+dndc_analyze_syntax_js(struct JsStyleState* state, StringView line, DndcSyntaxFunc* syntax_func, Nullable(void*)syntax_data, int lineno, int indentation);
+
 DNDC_API
 int
 dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullable(void*)syntax_data){
@@ -1033,19 +1042,24 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
     const char* begin = source_text.text;
     const char* const end = begin + source_text.length;
     enum WhichNode {
-        RAW,
-        GENERIC,
+        GENERIC = 0,
+        JAVASCRIPT = 1,
+        RAW = 2,
     };
+    struct JsStyleState jsstyle = {0};
     enum WhichNode which = GENERIC;
     for(;begin != end;line++){
         const char* endline = memchr(begin, '\n', end-begin);
-        if(not endline)
+        if(!endline)
             endline = end;
         StringView stripped = lstripped_view(begin, endline-begin);
         ptrdiff_t indent = stripped.text - begin;
         if(stripped.length and indent <= raw_indentation)
             which = GENERIC;
-        if(which == RAW){
+        if(which == JAVASCRIPT){
+            dndc_analyze_syntax_js(&jsstyle, stripped, syntax_func, syntax_data, line, indent);
+        }
+        else if(which == RAW){
             syntax_func(syntax_data, DNDC_SYNTAX_RAW_STRING, line, indent, stripped.text, stripped.length);
         }
         else {
@@ -1069,19 +1083,29 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                     }
                     break;
                 }
+                StringView nodename = SV("");
                 if(nodenameend != aftercolon.text){
-                    StringView nodename = {.text=aftercolon.text, .length=nodenameend-aftercolon.text};
+                    nodename = (StringView){.text=aftercolon.text, .length=nodenameend-aftercolon.text};
                     syntax_func(syntax_data, DNDC_SYNTAX_NODE_TYPE, line, nodename.text-begin, nodename.text, nodename.length);
                     for(size_t i = 0; i < arrlen(RAW_NODES); i++){
                         if(SV_equals(nodename, RAW_NODES[i])){
-                            which = RAW;
+                            if(i == RAW_NODE_JS_INDEX){
+                                jsstyle = (struct JsStyleState){0};
+                                which = JAVASCRIPT;
+                            }
+                            else {
+                                which = RAW;
+                            }
                             raw_indentation = stripped.text - begin;
                             break;
                         }
                     }
                 }
                 if(memmem(stripped.text, stripped.length, "@inline", sizeof("@inline")-1)){
-                    which = RAW;
+                    if(SV_equals(nodename, SV("script")))
+                        which = JAVASCRIPT;
+                    else
+                        which = RAW;
                     raw_indentation = stripped.text - begin;
                 }
                 const char* postnodename = nodenameend;
@@ -1153,6 +1177,566 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
     return 0;
 }
 
+static inline
+_Bool
+js_syntax_is_word(char c){
+    switch(c){
+        case 'a' ... 'z':
+        case 'A' ... 'Z':
+        case '0' ... '9':
+        case '_':
+        case '$':
+            return true;
+        default:
+            return false;
+    }
+}
+
+static inline
+_Bool
+js_syntax_is_keyword(StringView str){
+    // keywords that are ignored:
+    //   - delete
+    //   - debugger
+    //   - enum (javascript reserves, but doesn't have)
+    #define words "|" \
+        "break|case|catch|continue|default|do|" \
+        "else|finally|for|function|if|in|instanceof|new|" \
+        "return|switch|throw|try|typeof|while|with|" \
+        "class|import|export|extends|" \
+        "implements|interface|package|private|protected|" \
+        "public|static|yield|" \
+        "eval|" \
+        "await|"
+    const char* match = memmem(words, sizeof(words)-1, str.text, str.length);
+    if(!match) return 0;
+    return match[str.length] == '|' && match[-1] == '|';
+    #undef words
+}
+static inline
+_Bool
+js_syntax_is_var(StringView str){
+    #define words "|let|var|const|"
+    const char* match = memmem(words, sizeof(words)-1, str.text, str.length);
+    if(!match) return 0;
+    return match[str.length] == '|' && match[-1] == '|';
+    #undef words
+}
+static inline
+_Bool
+js_syntax_is_keyword_literal(StringView str){
+    #define words "|this|super|undefined|null|true|false|Infinity|NaN|arguments|"
+    const char* match = memmem(words, sizeof(words)-1, str.text, str.length);
+    if(!match) return 0;
+    return match[str.length] == '|' && match[-1] == '|';
+    #undef words
+}
+static inline
+_Bool
+js_syntax_is_builtin(StringView str){
+    #define words "|FileSystem|JSON|console|NodeType|ctx|node|"
+    const char* match = memmem(words, sizeof(words)-1, str.text, str.length);
+    if(!match) return 0;
+    return match[str.length] == '|' && match[-1] == '|';
+    #undef words
+}
+static inline
+_Bool
+js_syntax_is_node_type(StringView str){
+    #define words "|MD|DIV|STRING|PARA|TITLE|HEADING|TABLE|TABLE_ROW|STYLESHEETS|DEPENDENCIES|LINKS|SCRIPTS|IMPORT|IMAGE|BULLETS|RAW|PRE|LIST|LIST_ITEM|KEYVALUE|KEYVALUEPAIR|IMGLINKS|NAV|DATA|COMMENT|TEXT|CONTAINER|QUOTE|HR|JS|DETAILS|"
+    const char* match = memmem(words, sizeof(words)-1, str.text, str.length);
+    if(!match) return 0;
+    return match[str.length] == '|' && match[-1] == '|';
+    #undef words
+}
+
+static
+void
+dndc_analyze_syntax_js(struct JsStyleState* state, StringView line, DndcSyntaxFunc* syntax_func, Nullable(void*)syntax_data, int lineno, int indentation){
+    size_t n = line.length;
+    const char* str = line.text;
+    size_t i = 0;
+    size_t start = i;
+    char c;
+    enum JsParseWhich {
+        JS_PARSE_GENERIC = 0,
+        JS_PARSE_BLOCK_COMMENT,
+        JS_PARSE_MULTILINE_STRING,
+    };
+    switch(state->js_parse_which){
+        case JS_PARSE_GENERIC:
+            goto generic;
+        // block comments can span multiple lines, so we need to be
+        // able to resume to them.
+        case JS_PARSE_BLOCK_COMMENT:
+            goto blockcomment;
+        // Same with multiline strings
+        case JS_PARSE_MULTILINE_STRING:
+            goto multilinestring;
+        default:
+            unreachable();
+    }
+    generic:
+    state->js_parse_which = JS_PARSE_GENERIC;
+    for(; i < n;){
+        start = i;
+        c = str[i++];
+        switch(c){
+            case ' ':
+            case '\t':
+            case '\r':
+                continue;
+            case '+':
+            case '-':
+                if(i < n && str[i] == c){
+                    // -- or ++ token
+                    i++; 
+                    continue;
+                }
+                state->can_regex = 1;
+                continue;
+            case '/':
+                if(i < n && str[i] == '*'){
+                    // record that we should continue here if the line
+                    // ends.
+                    state->js_parse_which = JS_PARSE_BLOCK_COMMENT;
+                    blockcomment:
+                    // parse block comment.
+                    for(i++; i < n; i++){
+                        if(str[i] == '*' && str[i+1] == '/'){
+                            i += 2;
+                            syntax_func(syntax_data, DNDC_SYNTAX_JS_COMMENT, lineno, indentation+start, str+start, i - start);
+                            goto generic;
+                        }
+                    }
+                    // Unterminated comment.
+                    syntax_func(syntax_data, DNDC_SYNTAX_JS_COMMENT, lineno, indentation+start, str+start, i - start);
+                    // We will resume to parsing block comments.
+                    return;
+                }
+                if(i < n && str[i] == '/'){
+                    // line comment
+                    syntax_func(syntax_data, DNDC_SYNTAX_JS_COMMENT, lineno, indentation+start, str+start, n-start);
+                    // We will resume to generic.
+                    return;
+                }
+                if(state->can_regex){
+                    state->can_regex = 0;
+                    // parse regex
+                    while(i < n){
+                        c = str[i++];
+                        if(c == '\\'){
+                            if(i < n)
+                                i++;
+                            continue;
+                        }
+                        if(c == '/'){
+                            while(i < n && js_syntax_is_word(str[i]))
+                                i++;
+                            break;
+                        }
+                    }
+                    // Either we terminated or we have an unterminated regex
+                    syntax_func(syntax_data, DNDC_SYNTAX_JS_REGEX, lineno, indentation+start, str+start, i - start);
+                    continue;
+                }
+                state->can_regex = 1;
+                continue;
+            case '\'':
+            case '\"':
+                state->can_regex = 0;
+                // parse string
+                {
+                    char delim = c;
+                    while(i < n){
+                        c = str[i++];
+                        if(c == '\\'){
+                            if(i >= n)
+                                break;
+                            // skip next character
+                            i++;
+                        }
+                        else if(c == delim){
+                            break;
+                        }
+                    }
+                    syntax_func(syntax_data, DNDC_SYNTAX_JS_STRING, lineno, indentation+start, str+start, i - start);
+                }
+                break;
+            case '`':
+                state->can_regex = 0;
+                state->js_parse_which = JS_PARSE_MULTILINE_STRING;
+                // parse multiline string
+                {
+                    multilinestring:
+                    while(i < n){
+                        c = str[i++];
+                        if(c == '\\'){
+                            if(i >= n)
+                                break;
+                            // skip next character
+                            i++;
+                        }
+                        else if(c == '`'){
+                            syntax_func(syntax_data, DNDC_SYNTAX_JS_STRING, lineno, indentation+start, str+start, i - start);
+                            goto generic;
+                        }
+                    }
+                    // Didn't find delimiter, multiline string, resume
+                    // here.
+                    syntax_func(syntax_data, DNDC_SYNTAX_JS_STRING, lineno, indentation+start, str+start, i - start);
+                    return;
+                }
+                break;
+            case '(':
+                state->can_regex = 1;
+                break;
+            case '[':
+                state->can_regex = 1;
+                break;
+            case '{':
+                syntax_func(syntax_data, DNDC_SYNTAX_JS_BRACE, lineno, indentation+start, str+start, 1);
+                state->can_regex = 1;
+                break;
+            case ')':
+                state->can_regex = 0;
+                break;
+            case ']':
+                state->can_regex = 0;
+                break;
+            case '}':
+                syntax_func(syntax_data, DNDC_SYNTAX_JS_BRACE, lineno, indentation+start, str+start, 1);
+                state->can_regex = 0;
+                break;
+            case '0' ... '9':
+                state->can_regex = 0;
+                // parse number
+                while(i < n && (js_syntax_is_word(str[i]) || (str[i] == '.' && (i == n - 1 || str[i+1] != '.'))))
+                    i++;
+                syntax_func(syntax_data, DNDC_SYNTAX_JS_NUMBER, lineno, indentation+start, str+start, i - start);
+                break;
+            case 'a' ... 'z':
+            case 'A' ... 'Z':
+            case '$': case '_':
+                state->can_regex = 1;
+                // parse identifier
+                {
+                    while(i < n && js_syntax_is_word(str[i]))
+                        i++;
+                    StringView substr = {.text=str+start, .length = i - start};
+                    // figure out which identifier it is
+                    enum DndcSyntax style = DNDC_SYNTAX_JS_IDENTIFIER;
+                    if(js_syntax_is_keyword(substr)){
+                        style = DNDC_SYNTAX_JS_KEYWORD;
+                    }
+                    else if(js_syntax_is_var(substr)){
+                        style = DNDC_SYNTAX_JS_VAR;
+                    }
+                    else if(js_syntax_is_keyword_literal(substr)){
+                        style = DNDC_SYNTAX_JS_KEYWORD_VALUE;
+                        state->can_regex = 0;
+                    }
+                    else if(js_syntax_is_builtin(substr)){
+                        style = DNDC_SYNTAX_JS_BUILTIN;
+                    }
+                    else if(js_syntax_is_node_type(substr)){
+                        style = DNDC_SYNTAX_JS_NODETYPE;
+                    }
+                    else {
+                        state->can_regex = 0;
+                    }
+                    syntax_func(syntax_data, style, lineno, indentation+start, str+start, i - start);
+                }
+                break;
+            default:
+                state->can_regex = 1;
+                continue;
+        }
+    }
+    return;
+
+}
+
+static inline
+_Bool
+js_syntax_is_word_utf16(uint16_t c){
+    switch(c){
+        case u'a' ... u'z':
+        case u'A' ... u'Z':
+        case u'0' ... u'9':
+        case u'_':
+        case u'$':
+            return true;
+        default:
+            return false;
+    }
+}
+
+static inline
+_Bool
+js_syntax_is_keyword_utf16(StringViewUtf16 str){
+    // keywords that are ignored:
+    //   - delete
+    //   - debugger
+    //   - enum (javascript reserves, but doesn't have)
+    #define words u"|" \
+        "break|case|catch|continue|default|do|" \
+        "else|finally|for|function|if|in|instanceof|new|" \
+        "return|switch|throw|try|typeof|while|with|" \
+        "class|import|export|extends|" \
+        "implements|interface|package|private|protected|" \
+        "public|static|yield|" \
+        "eval|" \
+        "await|"
+    const uint16_t* match = memmem(words, sizeof(words)-2, str.text, str.length*2);
+    if(!match) return 0;
+    return match[str.length] == u'|' && match[-1] == u'|';
+    #undef words
+}
+static inline
+_Bool
+js_syntax_is_var_utf16(StringViewUtf16 str){
+    #define words u"|let|var|const|"
+    const uint16_t* match = memmem(words, sizeof(words)-2, str.text, str.length*2);
+    if(!match) return 0;
+    return match[str.length] == u'|' && match[-1] == u'|';
+    #undef words
+}
+static inline
+_Bool
+js_syntax_is_keyword_literal_utf16(StringViewUtf16 str){
+    #define words u"|this|super|undefined|null|true|false|Infinity|NaN|arguments|"
+    const uint16_t* match = memmem(words, sizeof(words)-2, str.text, str.length*2);
+    if(!match) return 0;
+    return match[str.length] == u'|' && match[-1] == u'|';
+    #undef words
+}
+static inline
+_Bool
+js_syntax_is_builtin_utf16(StringViewUtf16 str){
+    #define words u"|FileSystem|JSON|console|NodeType|ctx|node|"
+    const uint16_t* match = memmem(words, sizeof(words)-2, str.text, str.length*2);
+    if(!match) return 0;
+    return match[str.length] == u'|' && match[-1] == u'|';
+    #undef words
+}
+static inline
+_Bool
+js_syntax_is_node_type_utf16(StringViewUtf16 str){
+    #define words u"|MD|DIV|STRING|PARA|TITLE|HEADING|TABLE|TABLE_ROW|STYLESHEETS|DEPENDENCIES|LINKS|SCRIPTS|IMPORT|IMAGE|BULLETS|RAW|PRE|LIST|LIST_ITEM|KEYVALUE|KEYVALUEPAIR|IMGLINKS|NAV|DATA|COMMENT|TEXT|CONTAINER|QUOTE|HR|JS|DETAILS|"
+    const uint16_t* match = memmem(words, sizeof(words)-2, str.text, str.length*2);
+    if(!match) return 0;
+    return match[str.length] == u'|' && match[-1] == u'|';
+    #undef words
+}
+
+static
+void
+dndc_analyze_syntax_js_utf16(struct JsStyleState* state, StringViewUtf16 line, DndcSyntaxFuncUtf16* syntax_func, Nullable(void*)syntax_data, int lineno, int indentation){
+    size_t n = line.length;
+    const uint16_t* str = line.text;
+    size_t i = 0;
+    size_t start = i;
+    uint16_t c;
+    enum JsParseWhich {
+        JS_PARSE_GENERIC = 0,
+        JS_PARSE_BLOCK_COMMENT,
+        JS_PARSE_MULTILINE_STRING,
+    };
+    switch(state->js_parse_which){
+        case JS_PARSE_GENERIC:
+            goto generic;
+        // block comments can span multiple lines, so we need to be
+        // able to resume to them.
+        case JS_PARSE_BLOCK_COMMENT:
+            goto blockcomment;
+        // Same with multiline strings
+        case JS_PARSE_MULTILINE_STRING:
+            goto multilinestring;
+        default:
+            unreachable();
+    }
+    generic:
+    state->js_parse_which = JS_PARSE_GENERIC;
+    for(; i < n;){
+        start = i;
+        c = str[i++];
+        switch(c){
+            case u' ':
+            case u'\t':
+            case u'\r':
+                continue;
+            case u'+':
+            case u'-':
+                if(i < n && str[i] == c){
+                    // -- or ++ token
+                    i++; 
+                    continue;
+                }
+                state->can_regex = 1;
+                continue;
+            case u'/':
+                if(i < n && str[i] == u'*'){
+                    // record that we should continue here if the line
+                    // ends.
+                    state->js_parse_which = JS_PARSE_BLOCK_COMMENT;
+                    blockcomment:
+                    // parse block comment.
+                    for(i++; i < n; i++){
+                        if(str[i] == u'*' && str[i+1] == u'/'){
+                            i += 2;
+                            syntax_func(syntax_data, DNDC_SYNTAX_JS_COMMENT, lineno, indentation+start, str+start, i - start);
+                            goto generic;
+                        }
+                    }
+                    // Unterminated comment.
+                    syntax_func(syntax_data, DNDC_SYNTAX_JS_COMMENT, lineno, indentation+start, str+start, i - start);
+                    // We will resume to parsing block comments.
+                    return;
+                }
+                if(i < n && str[i] == u'/'){
+                    // line comment
+                    syntax_func(syntax_data, DNDC_SYNTAX_JS_COMMENT, lineno, indentation+start, str+start, n-start);
+                    // We will resume to generic.
+                    return;
+                }
+                if(state->can_regex){
+                    state->can_regex = 0;
+                    // parse regex
+                    while(i < n){
+                        c = str[i++];
+                        if(c == u'\\'){
+                            if(i < n)
+                                i++;
+                            continue;
+                        }
+                        if(c == u'/'){
+                            while(i < n && js_syntax_is_word(str[i]))
+                                i++;
+                            break;
+                        }
+                    }
+                    // Either we terminated or we have an unterminated regex
+                    syntax_func(syntax_data, DNDC_SYNTAX_JS_REGEX, lineno, indentation+start, str+start, i - start);
+                    continue;
+                }
+                state->can_regex = 1;
+                continue;
+            case u'\'':
+            case u'\"':
+                state->can_regex = 0;
+                // parse string
+                {
+                    uint16_t delim = c;
+                    while(i < n){
+                        c = str[i++];
+                        if(c == u'\\'){
+                            if(i >= n)
+                                break;
+                            // skip next character
+                            i++;
+                        }
+                        else if(c == delim){
+                            break;
+                        }
+                    }
+                    syntax_func(syntax_data, DNDC_SYNTAX_JS_STRING, lineno, indentation+start, str+start, i - start);
+                }
+                break;
+            case u'`':
+                state->can_regex = 0;
+                state->js_parse_which = JS_PARSE_MULTILINE_STRING;
+                // parse multiline string
+                {
+                    multilinestring:
+                    while(i < n){
+                        c = str[i++];
+                        if(c == u'\\'){
+                            if(i >= n)
+                                break;
+                            // skip next character
+                            i++;
+                        }
+                        else if(c == u'`'){
+                            syntax_func(syntax_data, DNDC_SYNTAX_JS_STRING, lineno, indentation+start, str+start, i - start);
+                            goto generic;
+                        }
+                    }
+                    // Didn't find delimiter, multiline string, resume
+                    // here.
+                    syntax_func(syntax_data, DNDC_SYNTAX_JS_STRING, lineno, indentation+start, str+start, i - start);
+                    return;
+                }
+                break;
+            case u'(':
+                state->can_regex = 1;
+                break;
+            case u'[':
+                state->can_regex = 1;
+                break;
+            case u'{':
+                syntax_func(syntax_data, DNDC_SYNTAX_JS_BRACE, lineno, indentation+start, str+start, 1);
+                state->can_regex = 1;
+                break;
+            case u')':
+                state->can_regex = 0;
+                break;
+            case u']':
+                state->can_regex = 0;
+                break;
+            case u'}':
+                syntax_func(syntax_data, DNDC_SYNTAX_JS_BRACE, lineno, indentation+start, str+start, 1);
+                state->can_regex = 0;
+                break;
+            case u'0' ... u'9':
+                state->can_regex = 0;
+                // parse number
+                while(i < n && (js_syntax_is_word_utf16(str[i]) || (str[i] == u'.' && (i == n - 1 || str[i+1] != u'.'))))
+                    i++;
+                syntax_func(syntax_data, DNDC_SYNTAX_JS_NUMBER, lineno, indentation+start, str+start, i - start);
+                break;
+            case u'a' ... u'z':
+            case u'A' ... u'Z':
+            case u'$': case u'_':
+                state->can_regex = 1;
+                // parse identifier
+                {
+                    while(i < n && js_syntax_is_word_utf16(str[i]))
+                        i++;
+                    StringViewUtf16 substr = {.text=str+start, .length = i - start};
+                    // figure out which identifier it is
+                    enum DndcSyntax style = DNDC_SYNTAX_JS_IDENTIFIER;
+                    if(js_syntax_is_keyword_utf16(substr)){
+                        style = DNDC_SYNTAX_JS_KEYWORD;
+                    }
+                    else if(js_syntax_is_var_utf16(substr)){
+                        style = DNDC_SYNTAX_JS_VAR;
+                    }
+                    else if(js_syntax_is_keyword_literal_utf16(substr)){
+                        style = DNDC_SYNTAX_JS_KEYWORD_VALUE;
+                        state->can_regex = 0;
+                    }
+                    else if(js_syntax_is_builtin_utf16(substr)){
+                        style = DNDC_SYNTAX_JS_BUILTIN;
+                    }
+                    else if(js_syntax_is_node_type_utf16(substr)){
+                        style = DNDC_SYNTAX_JS_NODETYPE;
+                    }
+                    else {
+                        state->can_regex = 0;
+                    }
+                    syntax_func(syntax_data, style, lineno, indentation+start, str+start, i - start);
+                }
+                break;
+            default:
+                state->can_regex = 1;
+                continue;
+        }
+    }
+    return;
+
+}
+
 //
 // copy-paste and slight alterations from dndc_analyze_syntax
 // Will need to keep these in sync. This is where static if would come in handy.
@@ -1166,19 +1750,24 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
     const uint16_t* begin = source_text.text;
     const uint16_t* const end = begin + source_text.length;
     enum WhichNode {
-        RAW,
-        GENERIC,
+        GENERIC = 0,
+        JAVASCRIPT = 1,
+        RAW = 2,
     };
+    struct JsStyleState jsstyle = {0};
     enum WhichNode which = GENERIC;
     for(;begin != end;line++){
         const uint16_t* endline = mem_utf16(begin, u'\n', end-begin);
-        if(not endline)
+        if(!endline)
             endline = end;
         StringViewUtf16 stripped = lstripped_view_utf16(begin, endline-begin);
         ptrdiff_t indent = stripped.text - begin;
         if(stripped.length and indent <= raw_indentation)
             which = GENERIC;
-        if(which == RAW){
+        if(which == JAVASCRIPT){
+            dndc_analyze_syntax_js_utf16(&jsstyle, stripped, syntax_func, syntax_data, line, indent);
+        }
+        else if(which == RAW){
             syntax_func(syntax_data, DNDC_SYNTAX_RAW_STRING, line, indent, stripped.text, stripped.length);
         }
         else {
@@ -1202,19 +1791,29 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                     }
                     break;
                 }
+                StringViewUtf16 nodename = SV16("");
                 if(nodenameend != aftercolon.text){
-                    StringViewUtf16 nodename = {.text=aftercolon.text, .length=nodenameend-aftercolon.text};
+                    nodename = (StringViewUtf16){.text=aftercolon.text, .length=nodenameend-aftercolon.text};
                     syntax_func(syntax_data, DNDC_SYNTAX_NODE_TYPE, line, nodename.text-begin, nodename.text, nodename.length);
                     for(size_t i = 0; i < arrlen(RAW_NODES); i++){
                         if(SV_utf16_equals(nodename, RAW_NODES_UTF16[i])){
-                            which = RAW;
+                            if(i == RAW_NODE_JS_INDEX){
+                                jsstyle = (struct JsStyleState){0};
+                                which = JAVASCRIPT;
+                            }
+                            else {
+                                which = RAW;
+                            }
                             raw_indentation = stripped.text - begin;
                             break;
                         }
                     }
                 }
                 if(memmem(stripped.text, stripped.length*2, u"@inline", sizeof(u"@inline")-2)){
-                    which = RAW;
+                    if(SV_utf16_equals(nodename, SV16("script")))
+                        which = JAVASCRIPT;
+                    else
+                        which = RAW;
                     raw_indentation = stripped.text - begin;
                 }
                 const uint16_t* postnodename = nodenameend;

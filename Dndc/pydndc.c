@@ -416,14 +416,26 @@ PyInit_pydndc(void){
         Py_DECREF(mod);
         return NULL;
     }
-    PyModule_AddStringConstant(mod, "__version__",      DNDC_VERSION);
-    PyModule_AddIntConstant(mod, "DOUBLE_COLON",        DNDC_SYNTAX_DOUBLE_COLON);
-    PyModule_AddIntConstant(mod, "HEADER",              DNDC_SYNTAX_HEADER);
-    PyModule_AddIntConstant(mod, "NODE_TYPE",           DNDC_SYNTAX_NODE_TYPE);
-    PyModule_AddIntConstant(mod, "ATTRIBUTE",           DNDC_SYNTAX_ATTRIBUTE);
-    PyModule_AddIntConstant(mod, "ATTRIBUTE_ARGUMENT",  DNDC_SYNTAX_ATTRIBUTE_ARGUMENT);
-    PyModule_AddIntConstant(mod, "CLASS",               DNDC_SYNTAX_CLASS);
-    PyModule_AddIntConstant(mod, "RAW_STRING",          DNDC_SYNTAX_RAW_STRING);
+    PyModule_AddStringConstant(mod, "__version__",     DNDC_VERSION);
+    PyModule_AddIntConstant(mod, "DOUBLE_COLON",       DNDC_SYNTAX_DOUBLE_COLON);
+    PyModule_AddIntConstant(mod, "HEADER",             DNDC_SYNTAX_HEADER);
+    PyModule_AddIntConstant(mod, "NODE_TYPE",          DNDC_SYNTAX_NODE_TYPE);
+    PyModule_AddIntConstant(mod, "ATTRIBUTE",          DNDC_SYNTAX_ATTRIBUTE);
+    PyModule_AddIntConstant(mod, "ATTRIBUTE_ARGUMENT", DNDC_SYNTAX_ATTRIBUTE_ARGUMENT);
+    PyModule_AddIntConstant(mod, "CLASS",              DNDC_SYNTAX_CLASS);
+    PyModule_AddIntConstant(mod, "RAW_STRING",         DNDC_SYNTAX_RAW_STRING);
+    PyModule_AddIntConstant(mod, "JS_COMMENT",         DNDC_SYNTAX_JS_COMMENT);
+    PyModule_AddIntConstant(mod, "JS_STRING",          DNDC_SYNTAX_JS_STRING);
+    PyModule_AddIntConstant(mod, "JS_REGEX",           DNDC_SYNTAX_JS_REGEX);
+    PyModule_AddIntConstant(mod, "JS_NUMBER",          DNDC_SYNTAX_JS_NUMBER);
+    PyModule_AddIntConstant(mod, "JS_KEYWORD",         DNDC_SYNTAX_JS_KEYWORD);
+    PyModule_AddIntConstant(mod, "JS_KEYWORD_VALUE",   DNDC_SYNTAX_JS_KEYWORD_VALUE);
+    PyModule_AddIntConstant(mod, "JS_VAR",             DNDC_SYNTAX_JS_VAR);
+    PyModule_AddIntConstant(mod, "JS_IDENTIFIER",      DNDC_SYNTAX_JS_IDENTIFIER);
+    PyModule_AddIntConstant(mod, "JS_BUILTIN",         DNDC_SYNTAX_JS_BUILTIN);
+    PyModule_AddIntConstant(mod, "JS_NODETYPE",        DNDC_SYNTAX_JS_NODETYPE);
+    PyModule_AddIntConstant(mod, "JS_BRACE",           DNDC_SYNTAX_JS_BRACE);
+
     PyModule_AddIntConstant(mod, "DONT_INLINE_IMAGES",  DNDC_DONT_INLINE_IMAGES);
     PyModule_AddIntConstant(mod, "NO_THREADS",          DNDC_NO_THREADS);
     PyModule_AddIntConstant(mod, "USE_DND_URL_SCHEME",  DNDC_USE_DND_URL_SCHEME);

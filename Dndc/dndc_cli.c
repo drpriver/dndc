@@ -551,17 +551,21 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, const char* 
     (void)col;
     const char** where = data;
     if(begin != *where){
+        assert(*where < begin);
         fwrite(*where, 1, begin - *where, stdout);
     }
     const char* gray    = "\033[97m";
     const char* blue    = "\033[94m";
     const char* green   = "\033[92m";
     const char* red     = "\033[91m";
-    // const char* yellow  = "\033[93m";
+    const char* yellow  = "\033[93m";
     const char* magenta = "\033[95m";
     const char* cyan    = "\033[96m";
     const char* white   = "\033[37m";
-    const char* reset   = "\033[39;49m";
+    const char* reset   = "\033[0;23;39;49m";
+    const char* bold    = "\033[1m";
+    const char* italic  = "\033[3m";
+    const char* brightgreen = "\033[38;5;121m";
     switch((enum DndcSyntax)type){
         // case DNDC_SYNTAX_NONE:
             // break;
@@ -582,6 +586,39 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, const char* 
             break;
         case DNDC_SYNTAX_CLASS:
             fputs(cyan, stdout);
+            break;
+        case DNDC_SYNTAX_JS_COMMENT:
+            fputs(gray, stdout);
+            break;
+        case DNDC_SYNTAX_JS_STRING:
+            fputs(italic, stdout);
+            break;
+        case DNDC_SYNTAX_JS_REGEX:
+            fputs(red, stdout);
+            fputs(italic, stdout);
+            break;
+        case DNDC_SYNTAX_JS_KEYWORD_VALUE:
+        case DNDC_SYNTAX_JS_NUMBER:
+            fputs(green, stdout);
+            break;
+        case DNDC_SYNTAX_JS_KEYWORD:
+            fputs(cyan, stdout);
+            break;
+        case DNDC_SYNTAX_JS_IDENTIFIER:
+            // fputs(magenta, stdout);
+            break;
+        case DNDC_SYNTAX_JS_BUILTIN:
+            fputs(bold, stdout);
+            // fputs(blue, stdout);
+            break;
+        case DNDC_SYNTAX_JS_NODETYPE:
+            fputs(bold, stdout);
+            break;
+        case DNDC_SYNTAX_JS_BRACE:
+            fputs(blue, stdout);
+            break;
+        case DNDC_SYNTAX_JS_VAR:
+            fputs(brightgreen, stdout);
             break;
         // case DNDC_SYNTAX_BULLET:
             // break;

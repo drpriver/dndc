@@ -367,7 +367,7 @@ But Wait, There's More::md
         for(let line of node.children){
           child.add_child('  '+line.header);
         }
-        break
+        break;
       }
     }
     // If you're paying attention, you'll realize this js block added itself

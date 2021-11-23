@@ -14,7 +14,7 @@
   }
   //endjs
 ::js
-  let root = ctx.root;
+  let root = ctx.root; // lmao
   root.detach();
   root.classes.append('right');
   let new_root = ctx.make_node(NodeType.DIV);

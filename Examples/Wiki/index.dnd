@@ -22,7 +22,7 @@ Pages::md
       bullets += `* [${to_title(g)}]` + '\n';
     }
     Pages.parse(bullets);
-    //endjs
+   //endjs
 
 Demo::md
   This is a demo of how you would make a personal wiki. The dnd format provides

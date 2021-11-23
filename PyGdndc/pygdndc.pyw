@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-PYGDNDC_VERSION = '0.8.0'
+PYGDNDC_VERSION = '0.8.1'
 __version__ = PYGDNDC_VERSION
 import os
 # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
@@ -249,6 +249,17 @@ class DndSyntaxHighlighter(QSyntaxHighlighter):
             pydndc.HEADER: 'blue',
             pydndc.NODE_TYPE: 'lightslategray',
             # pydndc.RAW_STRING: '#000', # I should really break this up into more types
+            pydndc.JS_COMMENT: 'gray',
+            pydndc.JS_STRING: '#74AB04',
+            pydndc.JS_REGEX: 'darkred',
+            pydndc.JS_NUMBER: '#74AB04',
+            pydndc.JS_KEYWORD: '#0D85CC',
+            pydndc.JS_KEYWORD_VALUE: '#74AB04',
+            pydndc.JS_VAR: '#0D85CC',
+            # pydndc.JS_IDENTIFIER: ''
+            pydndc.JS_BUILTIN: '#AE6000',
+            pydndc.JS_NODETYPE: '#AE6000',
+            # pydndc.JS_BRACE: 'darkteal',
         }
     def update_regions(self, regions) -> None:
         self.highlight_regions = regions

@@ -10,6 +10,8 @@
 #import "mallocator.h"
 #import "msb_format.h"
 #import "dndc_funcs.h"
+// #import "log_print.h"
+// #import "terminal_logger.c"
 #define LOGIT(...) NSLog(@ "%d: " #__VA_ARGS__ "= %@", __LINE__, __VA_ARGS__)
 // Convenience macro for writing inline javascript without a million quotes.
 // Note that you need to semi-colon terminate all of your lines.
@@ -307,6 +309,11 @@ DndViewController* view_controller;
 // Setup menus without needing a nib (xib? whatever).
 //
 static void do_menus(void);
+
+//
+// Set up the appropriate syntax coloring.
+//
+static void do_syntax_colors(void);
 //
 // This is for detecting indent for smart indent
 static NSString * const kIndentPatternString = @"^(\\t|\\s)+";
@@ -1472,6 +1479,7 @@ completionHandler:(void (^)(NSString *result))completionHandler{
     DndFontDelegate* fontdel;
 }
 -(void)applicationWillFinishLaunching:(NSNotification *)notification{
+    do_syntax_colors();
     do_menus();
 }
 - (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)sender{
@@ -1570,16 +1578,35 @@ main(int argc, const char *_Null_unspecified *_Nonnull argv) {
     appimage = [[NSImage alloc] initWithData:imagedata];
     PopDiagnostic();
     app.applicationIconImage = appimage;
+    return NSApplicationMain(argc, argv);
+}
+
+static
+void
+do_syntax_colors(void){
     SYNTAX_COLORS[DNDC_SYNTAX_DOUBLE_COLON]       = [NSColor lightGrayColor];
     SYNTAX_COLORS[DNDC_SYNTAX_HEADER]             = [NSColor systemBlueColor];
     SYNTAX_COLORS[DNDC_SYNTAX_NODE_TYPE]          = [NSColor darkGrayColor];
     SYNTAX_COLORS[DNDC_SYNTAX_ATTRIBUTE]          = [NSColor systemBrownColor];
     SYNTAX_COLORS[DNDC_SYNTAX_ATTRIBUTE_ARGUMENT] = [NSColor systemBrownColor];
     SYNTAX_COLORS[DNDC_SYNTAX_CLASS]              = [NSColor systemGrayColor];
-    // SYNTAX_COLORS[DNDC_SYNTAX_BULLET]          =
-    // SYNTAX_COLORS[DNDC_SYNTAX_COMMENT]         =
     SYNTAX_COLORS[DNDC_SYNTAX_RAW_STRING]         = [NSColor systemPinkColor]; // currently unused
-    return NSApplicationMain(argc, argv);
+
+    auto blendedteal = [[NSColor systemTealColor] blendedColorWithFraction:0.5 ofColor:[NSColor blackColor]];
+    auto blendedgreen = [[NSColor systemGreenColor] blendedColorWithFraction:0.5 ofColor:[NSColor blackColor]];
+    auto blendedorange = [[NSColor systemOrangeColor] blendedColorWithFraction:0.5 ofColor:[NSColor blackColor]];
+    // javascript colors
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_COMMENT]       = [NSColor systemGrayColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_STRING]        = blendedgreen;//[NSColor systemGreenColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_REGEX]         = [NSColor systemRedColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_NUMBER]        = blendedgreen;//[NSColor systemGreenColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_KEYWORD]       = blendedteal;//[NSColor systemTealColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_KEYWORD_VALUE] = blendedgreen;//[NSColor systemGreenColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_VAR]           = blendedteal;//[NSColor systemTealColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_IDENTIFIER]    = [NSColor textColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_BUILTIN]       = blendedorange;
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_NODETYPE]      = [NSColor systemOrangeColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_BRACE]         = [NSColor headerTextColor];
 }
 
 static

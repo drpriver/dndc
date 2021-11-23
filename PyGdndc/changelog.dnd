@@ -1,3 +1,5 @@
+Version 0.8.1::md
+  * Added syntax highlighter for javascript.
 Version 0.8.0::md
   * Removed python blocks.
   * Added FileSystem API to javascript.

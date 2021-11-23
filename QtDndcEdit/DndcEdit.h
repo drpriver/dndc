@@ -31,7 +31,7 @@ class DndSyntaxHighlighter: public QSyntaxHighlighter
 {
     Q_OBJECT
     QHash<int, QList<HighlightRegion>> highlight_regions;
-    QString light_color_names[8] = {
+    QString light_color_names[DNDC_SYNTAX_MAX] = {
         [0] = "#111",
         [DNDC_SYNTAX_DOUBLE_COLON] =  "darkgray",
         [DNDC_SYNTAX_HEADER] = "blue",
@@ -40,6 +40,38 @@ class DndSyntaxHighlighter: public QSyntaxHighlighter
         [DNDC_SYNTAX_ATTRIBUTE_ARGUMENT] = "darkkhaki",
         [DNDC_SYNTAX_CLASS] = "burlywood",
         [DNDC_SYNTAX_RAW_STRING] = "#111",
+        [DNDC_SYNTAX_JS_COMMENT] = "gray",
+        [DNDC_SYNTAX_JS_STRING] = "darkgreen",
+        [DNDC_SYNTAX_JS_REGEX] = "darkred",
+        [DNDC_SYNTAX_JS_NUMBER] = "darkgreen",
+        [DNDC_SYNTAX_JS_KEYWORD] = "blue",
+        [DNDC_SYNTAX_JS_KEYWORD_VALUE] = "darkgreen",
+        [DNDC_SYNTAX_JS_VAR] = "blue",
+        [DNDC_SYNTAX_JS_IDENTIFIER] = "#111",
+        [DNDC_SYNTAX_JS_BUILTIN] = "purple",
+        [DNDC_SYNTAX_JS_NODETYPE] = "purple",
+        [DNDC_SYNTAX_JS_BRACE] = "#111",
+    };
+    QString dark_color_names[DNDC_SYNTAX_MAX] = {
+        [0] = "#D2D39A",
+        [DNDC_SYNTAX_DOUBLE_COLON] =  "darkgray",
+        [DNDC_SYNTAX_HEADER] = "#5AC1E5",
+        [DNDC_SYNTAX_NODE_TYPE] = "lightslategray",
+        [DNDC_SYNTAX_ATTRIBUTE] = "lightsteelblue",
+        [DNDC_SYNTAX_ATTRIBUTE_ARGUMENT] = "darkkhaki",
+        [DNDC_SYNTAX_CLASS] = "burlywood",
+        [DNDC_SYNTAX_RAW_STRING] = "#D2D39A",
+        [DNDC_SYNTAX_JS_COMMENT] = "gray",
+        [DNDC_SYNTAX_JS_STRING] = "#74AB04",
+        [DNDC_SYNTAX_JS_REGEX] = "darkred",
+        [DNDC_SYNTAX_JS_NUMBER] = "#74AB04",
+        [DNDC_SYNTAX_JS_KEYWORD] = "#5AC1E5",
+        [DNDC_SYNTAX_JS_KEYWORD_VALUE] = "#74AB04",
+        [DNDC_SYNTAX_JS_VAR] = "#87FFAF",
+        [DNDC_SYNTAX_JS_IDENTIFIER] = "#D2D39A",
+        [DNDC_SYNTAX_JS_BUILTIN] = "#87ffaf",
+        [DNDC_SYNTAX_JS_NODETYPE] = "#87ffaf",
+        [DNDC_SYNTAX_JS_BRACE] = "#D2D39A",
     };
 
 public:
@@ -53,9 +85,9 @@ public:
                 return;
             auto fmt = QTextCharFormat();
             auto color = QColor();
-            auto& color_names = light_color_names;
+            auto* color_names = 1?&dark_color_names:&light_color_names;
             for(const auto& region: highlight_regions[line]){
-                color.setNamedColor(color_names[region.type]);
+                color.setNamedColor((*color_names)[region.type]);
                 fmt.setForeground(color);
                 setFormat(region.col, region.length, fmt);
                 }
