@@ -69,14 +69,14 @@ msb_write_kebab(MStringBuilder* msb, const char* text, size_t length){
                 }continue;
             default:
                 continue;
-            }
         }
+    }
     cursor -= (data[cursor] == ENDSENTINEL);
 #undef BEGINSENTINEL
 #undef ENDSENTINEL
     msb->cursor = cursor;
     return;
-    }
+}
 
 //
 // Writes the string into the builder, but title-cases the string.
@@ -97,7 +97,7 @@ msb_write_title(MStringBuilder* restrict msb, const char* restrict str, size_t l
                 if(wants_cap){
                     c &= ~0x20;
                     wants_cap = false;
-                    }
+                }
                 break;
             case 'A' ... 'Z':
                 wants_cap = false;
@@ -105,10 +105,10 @@ msb_write_title(MStringBuilder* restrict msb, const char* restrict str, size_t l
             default:
                 wants_cap = true;
                 break;
-            }
-        msb->data[msb->cursor++] = c;
         }
+        msb->data[msb->cursor++] = c;
     }
+}
 
 //
 // Writes the given string into the builder, escaping those characters required
@@ -154,10 +154,10 @@ msb_write_json_escaped_str(MStringBuilder* restrict sb, const char* restrict str
             default:
                 data[cursor++] = str[i];
                 break;
-            }
         }
-    sb->cursor = cursor;
     }
+    sb->cursor = cursor;
+}
 
 static inline
 void
@@ -167,13 +167,12 @@ msb_write_str_with_backslashes_as_forward_slashes(MStringBuilder* sb, const char
     size_t cursor = sb->cursor;
     for(size_t i = 0; i < length; i++){
         char c = str[i];
-        if(c == '\\'){
+        if(c == '\\')
             c = '/';
-            }
         data[cursor++] = c;
-        }
-    sb->cursor = cursor;
     }
+    sb->cursor = cursor;
+}
 
 //
 // Writes the string into the buffer, but strips trailing and leading
@@ -195,22 +194,22 @@ msb_write_stripped_lines(MStringBuilder* sb, const char* restrict str, size_t le
             if(stripped.length){
                 memcpy(data+cursor, stripped.text, stripped.length);
                 cursor += stripped.length;
-                }
+            }
             remainder = endline + 1;
             data[cursor++] = '\n';
-            }
+        }
         else {
             StringView stripped = stripped_view(remainder, end - remainder);
             if(stripped.length){
                 memcpy(data+cursor, stripped.text, stripped.length);
                 cursor += stripped.length;
-                }
+            }
             data[cursor++] = '\n';
             break;
-            }
         }
-    sb->cursor = cursor;
     }
+    sb->cursor = cursor;
+}
 
 //
 // Appends a path separator to the builder and then writes the given string.
@@ -225,7 +224,7 @@ msb_append_path(MStringBuilder* sb, const char* restrict path, size_t length){
         sb->data[sb->cursor++] = '/';
     memcpy(sb->data + sb->cursor, path, length);
     sb->cursor += length;
-    }
+}
 
 #ifdef __clang__
 #pragma clang assume_nonnull end
