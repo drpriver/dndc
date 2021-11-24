@@ -2,6 +2,8 @@ Version 0.8.1::md
   * Changed semantics of script and css nodes - they
     are now the equivelant of @inline by default. Tag
     them with @import to have them loaded from a file.
+  * There is also one fewer wrapper node for imports in
+    general.
   * Added syntax highlighter for javascript in the editor.
   * Added documentation about the scripting API.
 Version 0.8.0::md
