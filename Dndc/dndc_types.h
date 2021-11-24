@@ -101,7 +101,7 @@ force_inline
 bool
 NodeHandle_eq(NodeHandle a, NodeHandle b){
     return a._value == b._value;
-    }
+}
 
 #define MARRAY_T NodeHandle
 #include "Marray.h"
@@ -177,15 +177,15 @@ node_remove_child(Node* node, size_t i, const Allocator a){
             memcpy(children, node->children.data, sizeof(children));
             Allocator_free(a, node->children.data, node->children.capacity*sizeof(NodeHandle));
             memcpy(node->inline_children, children, sizeof(children));
-            }
         }
+    }
     else {
         node->children.count--;
         if(i == node->children.count)
             return;
         node->inline_children[i]= node->inline_children[node->children.count];
-        }
     }
+}
 
 
 #define NODE_CHILDREN_FOR_EACH(iter, n) for(NodeHandle *iter = node_children(n), *iter##end__=node_children(n)+node_children_count(n);iter != iter##end__;++iter)
@@ -204,9 +204,9 @@ FileCache_clear(FileCache* cache){
     MARRAY_FOR_EACH(src, cache->files){
         Allocator_free(al, src->sourcepath.text, src->sourcepath.length+1);
         Allocator_free(al, src->sourcetext.text, src->sourcetext.length+1);
-        }
-    Marray_cleanup(LoadedSource)(&cache->files, al);
     }
+    Marray_cleanup(LoadedSource)(&cache->files, al);
+}
 
 static inline
 int
@@ -219,21 +219,20 @@ FileCache_maybe_remove(FileCache* cache, StringView path){
             Allocator_free(al, src.sourcepath.text, src.sourcepath.length+1);
             Allocator_free(al, src.sourcetext.text, src.sourcetext.length+1);
             return 1;
-            }
         }
-    return 0;
     }
+    return 0;
+}
 
 static inline
 bool
 FileCache_has_file(FileCache* cache, StringView path){
     MARRAY_FOR_EACH(src, cache->files){
-        if(LS_SV_equals(src->sourcepath, path)){
+        if(LS_SV_equals(src->sourcepath, path))
             return true;
-            }
-        }
-    return false;
     }
+    return false;
+}
 
 typedef struct DndcContext {
     // The actual storage for all the nodes.
