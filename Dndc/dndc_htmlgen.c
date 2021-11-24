@@ -75,7 +75,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
         "<head>\n"
         "<meta charset=\"UTF-8\">\n"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=yes\">\n"
-        );
+    );
     if(ctx->rendered_data.count){
         msb_write_literal(msb, "<script>\nconst data_blob = {");
         MARRAY_FOR_EACH(data, ctx->rendered_data){
@@ -84,19 +84,19 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             msb_write_literal(msb, "\": \"");
             msb_write_json_escaped_str(msb, data->value.text, data->value.length);
             msb_write_literal(msb, "\",\n");
-            }
-        msb_write_literal(msb, "};\n</script>\n");
         }
+        msb_write_literal(msb, "};\n</script>\n");
+    }
     if(!NodeHandle_eq(ctx->titlenode, INVALID_NODE_HANDLE)){
         auto n = get_node(ctx, ctx->titlenode);
         MSB_FORMAT(msb, "<title>", n->header, "</title>\n");
-        }
+    }
     else {
         auto filename = path_basename(path_strip_extension(LS_to_SV(ctx->outputfile)));
         msb_write_literal(msb, "<title>");
         msb_write_title(msb, filename.text, filename.length);
         msb_write_literal(msb, "</title>\n");
-        }
+    }
     if(ctx->stylesheets_nodes.count){
         msb_write_literal(msb, "<style>\n");
         bool written = false;
@@ -108,35 +108,35 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             if(node_has_attribute(node, SV("noinline"))){
                 if(not written){
                     msb_erase(msb, sizeof("<style>\n")-1);
-                    }
+                }
                 else {
                     msb_write_literal(msb, "</style>\n");
-                    }
+                }
                 written = false;
                 NODE_CHILDREN_FOR_EACH(it, node){
                     auto child = get_node(ctx, *it);
                     if(unlikely(child->type != NODE_STRING)){
                         node_print_warning(ctx, child, SV("Non-string child of a style sheet is being ignored."));
                         continue;
-                        }
-                    MSB_FORMAT(msb, "<link rel=\"stylesheet\" href=\"", child->header, "\">\n");
                     }
-                continue;
+                    MSB_FORMAT(msb, "<link rel=\"stylesheet\" href=\"", child->header, "\">\n");
                 }
+                continue;
+            }
             written = true;
             NODE_CHILDREN_FOR_EACH(it, node){
                 auto child = get_node(ctx, *it);
                 if(unlikely(child->type != NODE_STRING)){
                     node_print_warning(ctx, child, SV("Non-string child of a style sheet is being ignored."));
                     continue;
-                    }
+                }
                 msb_write_str(msb, child->header.text, child->header.length);
                 msb_write_char(msb, '\n');
-                }
             }
+        }
         if(written)
             msb_write_literal(msb, "</style>\n");
-        }
+    }
     if(ctx->script_nodes.count){
         MARRAY_FOR_EACH(s, ctx->script_nodes){
             auto node = get_node(ctx, *s);
@@ -152,27 +152,27 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
                     else {
                         node_print_warning(ctx, node, SV("Empty noinline js block"));
                         continue;
-                        }
                     }
+                }
                 auto child  = get_node(ctx, node_children(node)[0]);
                 MSB_FORMAT(msb, "<script src=\"", child->header, "\"></script>\n");
                 continue;
-                }
+            }
             NODE_CHILDREN_FOR_EACH(it, node){
                 auto child = get_node(ctx, *it);
                 if(unlikely(child->type != NODE_STRING)){
                     node_print_warning(ctx, child, SV("script with a non-string child is being ignored"));
                     continue;
-                    }
+                }
                 auto header = child->header;
                 if(header.length)
                     msb_write_str(msb, header.text, header.length);
                 msb_write_char(msb, '\n');
-                }
+            }
             msb_write_literal(msb, "</script>\n");
             continue;
-            }
         }
+    }
     msb_write_literal(msb, "</head>\n");
     msb_write_literal(msb, "<body>\n");
     auto root_node = get_node(ctx, ctx->root_handle);
@@ -181,16 +181,16 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             auto child = get_node(ctx, node_children(root_node)[0]);
             if(child->type == NODE_DIV || child->type == NODE_MD)
                 root_node = child;
-            }
         }
+    }
     auto e = render_node(ctx, msb, root_node, 1);
     if(e.errored) return e;
     msb_write_literal(msb,
         "</body>\n"
         "</html>\n"
-        );
+    );
     return result;
-    }
+}
 
 static void build_nav_block_node(DndcContext* , NodeHandle, MStringBuilder*, int);
 static void build_nav_block_children(DndcContext* , NodeHandle, MStringBuilder*, int);
@@ -202,7 +202,7 @@ build_nav_block(DndcContext* ctx){
     build_nav_block_node(ctx, ctx->root_handle, &sb, 1);
     if(sb.cursor)
         ctx->renderednav = msb_detach(&sb);
-    }
+}
 
 static
 void
@@ -234,22 +234,22 @@ build_nav_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
                     build_nav_block_children(ctx, handle, sb, depth+1);
                     if(cursor != sb->cursor){
                         msb_write_literal(sb, "</ul>\n");
-                        }
+                    }
                     else{
                         msb_erase(sb, sizeof("\n<ul>\n")-1);
-                        }
+                    }
                     msb_write_literal(sb,"</li>\n");
                     break;
-                    }
                 }
             }
-            // fall-through
+        }
+        // fall-through
         case NODE_DATA: // this is a little sketchy
         case NODE_IMPORT:
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:{
             build_nav_block_children(ctx, handle, sb, depth);
-            }break;
+        }break;
         case NODE_TITLE: // skip title as everything would be a child of it
         case NODE_TABLE_ROW:
         case NODE_STYLESHEETS:
@@ -272,11 +272,11 @@ build_nav_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
                     msb_write_kebab(sb, id->text, id->length);
                     MSB_FORMAT(sb, "\">", node->header, "</a>");
                     msb_write_literal(sb, "</li>\n");
-                    }
-                }break;
+                }
             }break;
-        }
+        }break;
     }
+}
 
 static
 void
@@ -286,8 +286,8 @@ build_nav_block_children(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb
     auto node = get_node(ctx, handle);
     NODE_CHILDREN_FOR_EACH(it, node){
         build_nav_block_node(ctx, *it, sb, depth);
-        }
     }
+}
 
 static inline
 void
@@ -316,9 +316,9 @@ write_tag_escaped_str(MStringBuilder* sb, NullUnspec(const char*)text, size_t le
             default:
                 msb_write_char(sb, c);
                 break;
-            }
         }
     }
+}
 
 static inline
 Errorable_f(void)
@@ -333,7 +333,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                 if(unlikely(!closing_brace)){
                     node_set_err_offset(ctx, node, i, LS("Unterminated '['"));
                     Raise(PARSE_ERROR);
-                    }
+                }
                 size_t link_length = closing_brace - (text+i);
                 {
                     MStringBuilder temp = {.allocator=ctx->temp_allocator};
@@ -344,17 +344,17 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                         if(ctx->flags & DNDC_ALLOW_BAD_LINKS){
                             node_print_warning2(ctx, node, SV("Unable to resolve link: "), temp_str);
                             msb_write_str(sb, temp_str.text, temp_str.length);
-                            }
+                        }
                         else {
                             node_set_err_q(ctx, node, SV("Unable to resolve link: "), temp_str);
                             msb_destroy(&temp);
                             Raise(PARSE_ERROR);
-                            }
                         }
+                    }
                     else {
                         StringView* val = value;
                         msb_write_str(sb, val->text, val->length);
-                        }
+                    }
                     msb_destroy(&temp);
                 }
                 msb_write_literal(sb, "\">");
@@ -362,7 +362,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                 msb_write_literal(sb, "</a>");
                 i += link_length;
                 continue;
-                }break;
+            }break;
             case '-':{
                 if(i < length - 1){
                     char peek1 = text[i+1];
@@ -373,30 +373,30 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                                 msb_write_literal(sb, "&mdash;");
                                 i += 2;
                                 continue;
-                                }
                             }
-                            msb_write_literal(sb, "&ndash;");
-                            i += 1;
-                            continue;
                         }
+                        msb_write_literal(sb, "&ndash;");
+                        i += 1;
+                        continue;
                     }
+                }
                 msb_write_char(sb, c);
-                }break;
+            }break;
             case '&':{ // allow &lt;, &gt;
                 if(length - i >= 4){
                     if(memcmp(text+i, "&lt;", 4) == 0){
                         msb_write_literal(sb, "&lt;");
                         i += 3;
                         continue;
-                        }
+                    }
                     if(memcmp(text+i, "&gt;", 4) == 0){
                         msb_write_literal(sb, "&gt;");
                         i += 3;
                         continue;
-                        }
                     }
+                }
                 msb_write_literal(sb, "&amp;");
-                }break;
+            }break;
             case '<':{
                 // we allow inline <b>, <s>, <i>, </b>, </s>, </i>, <br>, <code>, </code>
                 // This is a big mess and should be done in an easier to do way.
@@ -408,18 +408,18 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                                 msb_write_literal(sb, "<code>");
                                 i += 5;
                                 continue;
-                                }
                             }
                         }
+                    }
                     if(peek1 == '/'){
                         if(length - i >= sizeof("</code>")-2){
                             if(memcmp(text+i, "</code>", sizeof("</code>")-1) == 0){
                                 msb_write_literal(sb, "</code>");
                                 i += sizeof("</code>")-2;
                                 continue;
-                                }
                             }
                         }
+                    }
                     switch(peek1){
                         case 'b':
                         case 's':
@@ -429,7 +429,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                         default:
                             msb_write_literal(sb, "&lt;");
                             continue;
-                        }
+                    }
                     if(length - i >= 3){
                         char peek2 = text[i+2];
                         if(peek1 == 'b' && peek2 == 'r'){
@@ -437,8 +437,8 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                                 msb_write_literal(sb, "<br>");
                                 i += 3;
                                 continue;
-                                }
                             }
+                        }
                         if(peek1 != '/'){
                             if(peek2 == '>'){
                                 msb_write_char(sb, c);
@@ -446,10 +446,10 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                                 msb_write_char(sb, peek2);
                                 i += 2;
                                 continue;
-                                }
+                            }
                             msb_write_literal(sb, "&lt;");
                             continue;
-                            }
+                        }
                         switch(peek2){
                             case 'b':
                             case 's':
@@ -458,7 +458,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                             default:
                                 msb_write_literal(sb, "&lt;");
                                 continue;
-                            }
+                        }
                         if(length -i >= 4){
                             char peek3 = text[i+3];
                             if(peek3 == '>'){
@@ -468,33 +468,34 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                                 msb_write_char(sb, peek3);
                                 i += 3;
                                 continue;
-                                }
                             }
                         }
                     }
+                }
                 msb_write_literal(sb, "&lt;");
-                }break;
+            }break;
             case '>':{
                 msb_write_literal(sb, "&gt;");
-                }break;
+            }break;
             case '\r':
             case '\f':{
                 msb_write_char(sb, ' ');
-                }break;
+            }break;
             // Don't print control characters.
             case  0 ... 8:
             case 10 ... 11:
             case 14 ... 31:{
-                }break;
+            }break;
             default:{
                 msb_write_char(sb, c);
-                }break;
-            }
+            }break;
         }
-    return result;
     }
+    return result;
+}
 
 #if 0
+// For printf debugging
 void
 print_u8x16(const char* prefix, uint8x16_t v){
     unsigned char buff[16];
@@ -502,9 +503,9 @@ print_u8x16(const char* prefix, uint8x16_t v){
     fprintf(stdout, "%s) ", prefix);
     for(int i = 0; i < 16; i++){
         fprintf(stdout, "[%d: %3u] ", i, buff[i]);
-        }
-    fprintf(stdout, "\n");
     }
+    fprintf(stdout, "\n");
+ }
 #endif
 
 static inline
@@ -551,7 +552,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
         sbdata += 16;
         length -= 16;
         text += 16;
-        }
+    }
     sb->cursor = cursor;
 #endif
 #if 1 && defined(__ARM_NEON)
@@ -596,7 +597,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
             print_u8x16("comb", Ored5);
 #endif
             break;
-            }
+        }
         // Safe to store as we did the ensure additional above and
         // we only write 1 byte of output per byte of input in
         // this loop.
@@ -605,11 +606,11 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
         sbdata += 16;
         length -= 16;
         text += 16;
-        }
+    }
     sb->cursor = cursor;
 #endif
     return write_link_escaped_str_slow(ctx, sb, text, length, node);
-    }
+}
 
 static inline
 Errorable_f(void)
@@ -617,17 +618,17 @@ write_header(DndcContext* ctx, MStringBuilder* sb, const Node* node, int header_
     auto id = node_get_id(node);
     if(!id){
         MSB_FORMAT(sb, "<h", header_level, ">");
-        }
+    }
     else{
         MSB_FORMAT(sb, "<h", header_level, " id=\"");
         msb_write_kebab(sb, id->text, id->length);
         msb_write_literal(sb, "\">");
-        }
+    }
     auto e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
     if(e.errored) return e;
     MSB_FORMAT(sb, "</h", header_level, ">");
     return (Errorable(void)){};
-    }
+}
 
 static inline
 void
@@ -639,13 +640,13 @@ write_classes(MStringBuilder* sb, const Node* node){
     for(size_t i = 0; i < count; i++){
         if(i != 0){
             msb_write_char(sb, ' ');
-            }
+        }
         auto c = &classes[i];
         msb_write_str(sb, c->text, c->length);
-        }
+    }
     msb_write_char(sb, '"');
     return;
-    }
+}
 
 RENDERFUNC(STRING){
     (void)header_depth;
@@ -657,7 +658,7 @@ RENDERFUNC(STRING){
     if(e.errored) return e;
     msb_write_char(sb, '\n');
     return (Errorable(void)){};
-    }
+}
 
 RENDERFUNC(TEXT){
     msb_write_literal(sb, "<div");
@@ -668,15 +669,15 @@ RENDERFUNC(TEXT){
         auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         msb_write_char(sb, '\n');
-        }
+    }
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "</div>\n");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(DIV){
     msb_write_literal(sb, "<div");
     write_classes(sb, node);
@@ -684,31 +685,31 @@ RENDERFUNC(DIV){
         auto id = node_get_id(node);
         if(id){
             MSB_FORMAT(sb, " id=\"", *id, "\"");
-            }
         }
+    }
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
         auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         msb_write_char(sb, '\n');
-        }
+    }
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "</div>\n");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(NAV){
     (void)header_depth;
     if(node->header.length){
         node_print_warning(ctx, node, SV("Headers on navs unsupported"));
-        }
+    }
     if(node_children_count(node)){
         node_print_warning(ctx, node, SV("Children on navs unsupported"));
-        }
+    }
     auto id = node_get_id(node);
     msb_write_literal(sb, "<nav");
     if(id){
@@ -719,61 +720,61 @@ RENDERFUNC(NAV){
     msb_write_str(sb, ctx->renderednav.text, ctx->renderednav.length);
     msb_write_literal(sb, "</ul>\n</nav>");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(PARA){
     if(node->classes){
         // maybe we should allow classes though?
         node_print_warning(ctx, node, SV("Ignoring classes on paragraph node"));
-        }
+    }
     if(node->header.length){
         node_print_warning(ctx, node, SV("Ignoring header on paragraph node"));
-        }
+    }
     msb_write_literal(sb, "<p>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child_handle = *it;
         auto child = get_node(ctx, child_handle);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "</p>\n");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(TITLE){
     auto e = write_header(ctx, sb, node, header_depth);
     if(e.errored) return e;
     msb_write_char(sb, '\n');
     if(node_children_count(node)){
         node_print_warning(ctx, node, SV("Ignoring children of title"));
-        }
+    }
     if(node->classes){
         node_print_warning(ctx, node, SV("UNIMPLEMENTED: classes on the title"));
-        }
-    return (Errorable(void)){};
     }
+    return (Errorable(void)){};
+}
 RENDERFUNC(HEADING){
     auto e = write_header(ctx, sb, node, header_depth+1);
     if(e.errored) return e;
     msb_write_char(sb, '\n');
     if(node_children_count(node)){
         node_print_warning(ctx, node, SV("Ignoring children of heading"));
-        }
+    }
     if(node->classes){
         node_print_warning(ctx, node, SV("UNIMPLEMENTED: classes on the heading"));
-        }
-    return (Errorable(void)){};
     }
+    return (Errorable(void)){};
+}
 RENDERFUNC(HR){
     (void)header_depth;
     if(node->header.length){
         node_print_warning(ctx, node, SV("Ignoring header of hr"));
-        }
+    }
     if(node_children_count(node)){
         node_print_warning(ctx, node, SV("Ignoring children of hr"));
-        }
+    }
     msb_write_char(sb, '\n');
     msb_write_literal(sb, "<hr>\n");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(TABLE){
     msb_write_literal(sb, "<div");
     write_classes(sb, node);
@@ -782,7 +783,7 @@ RENDERFUNC(TABLE){
         header_depth++;
         auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "<table>\n<thead>\n");
     auto count = node_children_count(node);
     auto children = node_children(node);
@@ -791,7 +792,7 @@ RENDERFUNC(TABLE){
         if(child->type != NODE_TABLE_ROW){
             node_set_err(ctx, child, LS("children of a table ought to be table rows..."));
             return (Errorable(void)){.errored=GENERIC_ERROR};
-            }
+        }
         // inline rendering table row here so we can do heads
         msb_write_literal(sb, "<tr>\n");
         NODE_CHILDREN_FOR_EACH(it, child){
@@ -800,18 +801,18 @@ RENDERFUNC(TABLE){
             auto e = render_node(ctx, sb, child_child, header_depth);
             if(e.errored) return e;
             msb_write_literal(sb, "</th>\n");
-            }
-        msb_write_literal(sb, "</tr>\n");
         }
+        msb_write_literal(sb, "</tr>\n");
+    }
     msb_write_literal(sb, "</thead>\n<tbody>\n");
     for(size_t i = 1; i < count; i++){
         auto child = get_node(ctx, children[i]);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "</tbody></table>\n</div>\n");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(TABLE_ROW){
     msb_write_literal(sb, "<tr>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
@@ -820,10 +821,10 @@ RENDERFUNC(TABLE_ROW){
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         msb_write_literal(sb, "</td>\n");
-        }
+    }
     msb_write_literal(sb, "</tr>\n");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(STYLESHEETS){
     // intentionally do not render stylesheets
     (void)ctx;
@@ -831,7 +832,7 @@ RENDERFUNC(STYLESHEETS){
     (void)node;
     (void)header_depth;
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(DEPENDENCIES){
     // intentionally do not render dependencies
     (void)ctx;
@@ -839,7 +840,7 @@ RENDERFUNC(DEPENDENCIES){
     (void)node;
     (void)header_depth;
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(LINKS){
     // intentionally do not render links
     (void)ctx;
@@ -847,7 +848,7 @@ RENDERFUNC(LINKS){
     (void)node;
     (void)header_depth;
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(SCRIPTS){
     // intentionally do not render scripts
     (void)ctx;
@@ -855,21 +856,21 @@ RENDERFUNC(SCRIPTS){
     (void)node;
     (void)header_depth;
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(IMPORT){
     // An imports members are replaced with containers that were the things
     // they imported.
     // Don't render the import itself though.
     if(node->header.length){
         node_print_warning(ctx, node, SV("Ignoring import header"));
-        }
+    }
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        }
-    return (Errorable(void)){};
     }
+    return (Errorable(void)){};
+}
 RENDERFUNC(IMAGE){
     Errorable(void) result = {};
     msb_write_literal(sb, "<div");
@@ -879,19 +880,19 @@ RENDERFUNC(IMAGE){
         msb_write_literal(sb, " id=\"");
         msb_write_kebab(sb, id->text, id->length);
         msb_write_literal(sb, "\" ");
-        }
+    }
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
         auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         msb_write_char(sb, '\n');
-        }
+    }
     auto count = node_children_count(node);
     if(!count){
         node_set_err(ctx, node, LS("Image node missing any children (first should be a string that is path to the image"));
         Raise(PARSE_ERROR);
-        }
+    }
     auto children = node_children(node);
     // CLEANUP: lots of copy and paste here.
     if(ctx->flags & DNDC_USE_DND_URL_SCHEME){
@@ -899,42 +900,42 @@ RENDERFUNC(IMAGE){
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image."));
             Raise(PARSE_ERROR);
-            }
+        }
         auto header = imgpath_node->header;
         msb_write_literal(sb, "<img src=\"dnd://");
         if((not path_is_abspath(header)) and ctx->base_directory.length){
             msb_write_str_with_backslashes_as_forward_slashes(sb, ctx->base_directory.text, ctx->base_directory.length);
             msb_write_char(sb, '/');
             msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
-            }
+        }
         else {
             msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
-            }
-        msb_write_literal(sb, "\">");
         }
+        msb_write_literal(sb, "\">");
+    }
     else if(ctx->flags & DNDC_DONT_INLINE_IMAGES){
         auto imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image."));
             Raise(PARSE_ERROR);
-            }
+        }
         auto header = imgpath_node->header;
         msb_write_literal(sb, "<img src=\"");
         msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
         msb_write_literal(sb, "\">");
-        }
+    }
     else{
         auto imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image."));
             Raise(PARSE_ERROR);
-            }
+        }
         auto header = imgpath_node->header;
         auto processed_e = ctx_load_processed_binary_file(ctx, header);
         if(processed_e.errored){
             node_set_err_q(ctx, imgpath_node, SV("Unable to read "), header);
             Raise(processed_e.errored);
-            }
+        }
         else {
             msb_write_literal(sb, "<img src=\"data:image/png;base64,");
             auto before = get_t();
@@ -942,17 +943,17 @@ RENDERFUNC(IMAGE){
             msb_write_str(sb, b64.text, b64.length);
             auto after = get_t();
             report_time(ctx, SV("Copying the base64 data of an img took "), after-before);
-            }
+        }
         msb_write_literal(sb, "\">");
     }
     for(size_t i = 1; i < count; i++){
         auto child = get_node(ctx, children[i]);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "</div>\n");
     return result;
-    }
+}
 RENDERFUNC(QUOTE){
     msb_write_literal(sb, "<div");
     write_classes(sb, node);
@@ -961,16 +962,16 @@ RENDERFUNC(QUOTE){
         header_depth++;
         auto e = write_header(ctx, sb,  node, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "<blockquote>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "</blockquote>\n</div>\n");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(JS){
     // intentionally not outputting this
     (void)ctx;
@@ -978,7 +979,7 @@ RENDERFUNC(JS){
     (void)node;
     (void)header_depth;
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(RAW){
     // Don't let people smuggle <script> tags in!
     // Changes the semantics a bit, but oh well.
@@ -989,9 +990,9 @@ RENDERFUNC(RAW){
                 node_print_warning(ctx, child, SV("Raw node with a non-string child"));
             write_tag_escaped_str(sb, child->header.text, child->header.length);
             msb_write_char(sb, '\n');
-            }
-        return (Errorable(void)){};
         }
+        return (Errorable(void)){};
+    }
     // ignoring the header for now. Idk what the semantics are supposed to be.
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
@@ -999,10 +1000,10 @@ RENDERFUNC(RAW){
             node_print_warning(ctx, child, SV("Raw node with a non-string child"));
         msb_write_str(sb, child->header.text, child->header.length);
         msb_write_char(sb, '\n');
-        }
+    }
     (void)header_depth;
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(PRE){
     msb_write_literal(sb, "<div");
     write_classes(sb, node);
@@ -1011,7 +1012,7 @@ RENDERFUNC(PRE){
         header_depth++;
         auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "<pre>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
@@ -1019,10 +1020,10 @@ RENDERFUNC(PRE){
             node_print_warning(ctx, child, SV("pre node with a non-string child"));
         write_tag_escaped_str(sb, child->header.text, child->header.length);
         msb_write_char(sb, '\n');
-        }
+    }
     msb_write_literal(sb, "</pre>\n</div>\n");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(BULLETS){
     if(unlikely(node->header.length))
         node_print_warning(ctx, node, SV("ignoring header on bullet list"));
@@ -1033,10 +1034,10 @@ RENDERFUNC(BULLETS){
         auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "</ul>\n");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(LIST){
     if(unlikely(node->header.length))
         node_print_warning(ctx, node, SV("ignoring header on list"));
@@ -1047,10 +1048,10 @@ RENDERFUNC(LIST){
         auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "</ol>\n");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(LIST_ITEM){
     msb_write_literal(sb, "<li>\n");
     if(unlikely(node->header.length))
@@ -1065,10 +1066,10 @@ RENDERFUNC(LIST_ITEM){
         auto child = get_node(ctx, children[i]);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "</li>\n");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(KEYVALUE){
     msb_write_literal(sb, "<div");
     write_classes(sb, node);
@@ -1077,16 +1078,16 @@ RENDERFUNC(KEYVALUE){
         header_depth++;
         auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "<table><tbody>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "</tbody></table>\n</div>\n");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(KEYVALUEPAIR){
     msb_write_literal(sb, "<tr>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
@@ -1095,10 +1096,10 @@ RENDERFUNC(KEYVALUEPAIR){
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
         msb_write_literal(sb, "</td>\n");
-        }
+    }
     msb_write_literal(sb, "</tr>\n");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(IMGLINKS){
     Errorable(void) result = {};
     msb_write_literal(sb, "<div");
@@ -1108,11 +1109,11 @@ RENDERFUNC(IMGLINKS){
         header_depth++;
         auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
-        }
+    }
     if(node_children_count(node) < 4){
         node_set_err(ctx, node, LS("Too few children of an imglinks node (expected path to the image, width, height, viewBox in that order)"));
         Raise(PARSE_ERROR);
-        }
+    }
 
     // FIXME: It's kind of janky that I parse at htmlgen time.
     LongString imgdatab64 = {};
@@ -1122,13 +1123,13 @@ RENDERFUNC(IMGLINKS){
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
             Raise(PARSE_ERROR);
-            }
+        }
         auto header = imgpath_node->header;
         auto processed_e = ctx_load_processed_binary_file(ctx, header);
         if(processed_e.errored){
             node_set_err_q(ctx, imgpath_node, SV("Unable to read "), header);
             Raise(processed_e.errored);
-            }
+        }
         imgdatab64 = processed_e.result;
     }
     int width;
@@ -1137,22 +1138,22 @@ RENDERFUNC(IMGLINKS){
         if(width_node->type != NODE_STRING){
             node_set_err(ctx, width_node, LS("Second should be a string and be 'width = WIDTH'"));
             Raise(PARSE_ERROR);
-            }
+        }
         auto header = width_node->header;
         auto pair = stripped_split(header.text, header.length, '=');
         if(pair.head.length == header.length){
             node_set_err(ctx, width_node, LS("Missing a '='"));
             Raise(PARSE_ERROR);
-            }
+        }
         if(!SV_equals(pair.head, SV("width"))){
             node_set_err_q(ctx, width_node, SV("Expected 'width', got "), pair.head);
             Raise(PARSE_ERROR);
-            }
+        }
         auto e = parse_int(pair.tail.text, pair.tail.length);
         if(e.errored){
             node_set_err_q(ctx, width_node, SV("Unable to parse an int from "), pair.tail);
             Raise(PARSE_ERROR);
-            }
+        }
         width = e.result;
     }
     int height;
@@ -1161,22 +1162,22 @@ RENDERFUNC(IMGLINKS){
         if(height_node->type != NODE_STRING){
             node_set_err(ctx, height_node, LS("Third should be a string and be 'height = HEIGHT'"));
             Raise(PARSE_ERROR);
-            }
+        }
         auto header = height_node->header;
         auto pair = stripped_split(header.text, header.length, '=');
         if(pair.head.length == header.length){
             node_set_err(ctx, height_node, LS("Missing a '='"));
             Raise(PARSE_ERROR);
-            }
+        }
         if(!SV_equals(pair.head, SV("height"))){
             node_set_err_q(ctx, height_node, SV("Expected 'height', got "), pair.head);
             Raise(PARSE_ERROR);
-            }
+        }
         auto e = parse_int(pair.tail.text, pair.tail.length);
         if(e.errored){
             node_set_err_q(ctx, height_node, SV("Unable to parse an int from "), pair.tail);
             Raise(PARSE_ERROR);
-            }
+        }
         height = e.result;
     }
     int viewbox[4];
@@ -1185,18 +1186,18 @@ RENDERFUNC(IMGLINKS){
         if(viewBox_node->type != NODE_STRING){
             node_set_err(ctx, viewBox_node, LS("Fourth should be a string and be 'viewBox = x0 y0 x1 y1'"));
             Raise(PARSE_ERROR);
-            }
+        }
         auto header = viewBox_node->header;
         const char* equals = memchr(header.text, '=', header.length);
         if(!equals){
             node_set_err(ctx, viewBox_node, LS("Missing a '='"));
             Raise(PARSE_ERROR);
-            }
+        }
         StringView lead = stripped_view(header.text, equals - header.text);
         if(!SV_equals(lead, SV("viewBox"))){
             node_set_err_q(ctx, viewBox_node, SV("Expected 'viewBox', got "), lead);
             Raise(PARSE_ERROR);
-            }
+        }
         const char* cursor = equals+1;
         int which = 0;
         const char* end = header.text + header.length;
@@ -1204,7 +1205,7 @@ RENDERFUNC(IMGLINKS){
             if(cursor == end){
                 node_set_err(ctx, viewBox_node, LS("Unexpected end of line before we finished parsing the ints"));
                 Raise(PARSE_ERROR);
-                }
+            }
             switch(*cursor){
                 case ' ': case '\t': case '\r': case '\n':
                     cursor++;
@@ -1214,7 +1215,7 @@ RENDERFUNC(IMGLINKS){
                 default:
                     node_set_err(ctx, viewBox_node, LS("Found non-numeric when trying to parse the viewBox"));
                     Raise(PARSE_ERROR);
-                }
+            }
             const char* after_number = cursor+1;
             for(;;){
                 if(after_number == end)
@@ -1225,20 +1226,20 @@ RENDERFUNC(IMGLINKS){
                         continue;
                     default:
                         break;
-                    }
-                break;
                 }
+                break;
+            }
             auto num_length = after_number - cursor;
             auto e = parse_int(cursor, num_length);
             if(e.errored){
                 node_set_err_q(ctx, viewBox_node, SV("Failed to parse an int from "), (StringView){.length=num_length, .text=cursor});
                 Raise(PARSE_ERROR);
-                }
+            }
             viewbox[which++] = e.result;
             cursor = after_number;
             if(which == 4)
                 break;
-            }
+        }
         // at this point we should have 4 ints and only trailing whitespace
         assert(which == 4);
         while(cursor != end){
@@ -1249,8 +1250,8 @@ RENDERFUNC(IMGLINKS){
                 default:
                     node_set_err_q(ctx, viewBox_node, SV("Found trailing text after successfully parsing 4 ints: "), (StringView){.text=cursor, .length = end-cursor});
                     Raise(PARSE_ERROR);
-                }
             }
+        }
     }
     MSB_FORMAT(sb, "<svg width=\"", width, "\" height=\"", height, "\" viewBox=\"", viewbox[0], " ", viewbox[1], " ", viewbox[2], " ", viewbox[3], "\" style=\"background-size: 100% 100%; ");
 
@@ -1260,29 +1261,29 @@ RENDERFUNC(IMGLINKS){
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
             Raise(PARSE_ERROR);
-            }
+        }
         auto header = imgpath_node->header;
         if((not path_is_abspath(header)) and ctx->base_directory.length){
             msb_write_str_with_backslashes_as_forward_slashes(sb, ctx->base_directory.text, ctx->base_directory.length);
             msb_write_char(sb, '/');
             msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
-            }
+        }
         else {
             msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
-            }
-        msb_write_literal(sb, "');\">\n");
         }
+        msb_write_literal(sb, "');\">\n");
+    }
     else if(ctx->flags & DNDC_DONT_INLINE_IMAGES){
         msb_write_literal(sb, "background-image: url('");
         auto imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
             Raise(PARSE_ERROR);
-            }
+        }
         auto header = imgpath_node->header;
         msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
         msb_write_literal(sb, "');\">\n");
-        }
+    }
     else {
         msb_write_literal(sb, "background-image: url('data:image/png;base64,");
         auto before = get_t();
@@ -1291,7 +1292,7 @@ RENDERFUNC(IMGLINKS){
         auto after = get_t();
         report_time(ctx, SV("Copying the base64 data of an imglinks took "), after-before);
         msb_write_literal(sb, "');\">\n");
-        }
+    }
     for(size_t i = 4; i < node_children_count(node); i++){
         auto child = get_node(ctx, children[i]);
         if(child->type != NODE_STRING){
@@ -1299,24 +1300,24 @@ RENDERFUNC(IMGLINKS){
                 continue;
             node_print_warning2(ctx, child, SV("Non-string node child of imglinks node: "), LS_to_SV(NODENAMES[child->type]));
             continue;
-            }
+        }
         auto header = child->header;
         auto end = header.text + header.length;
         const char* equals = memchr(header.text, '=', header.length);
         if(!equals){
             node_set_err(ctx, child, LS("No '=' found in an imglinks line"));
             Raise(PARSE_ERROR);
-            }
+        }
         const char* at = memchr(equals, '@', end - equals);
         if(!at){
             node_set_err(ctx, child, LS("No '@' found in an imglinks line"));
             Raise(PARSE_ERROR);
-            }
+        }
         const char* comma = memchr(at, ',', end - at);
         if(!comma){
             node_set_err(ctx, child, LS("No ',' found in an imglinks line separating the coordinates"));
             Raise(PARSE_ERROR);
-            }
+        }
         auto first = stripped_view(header.text, equals - header.text);
         auto second = stripped_view(equals+1, at - (equals + 1));
         auto third = stripped_view(at+1, comma - (at+1));
@@ -1325,21 +1326,21 @@ RENDERFUNC(IMGLINKS){
         if(x_err.errored){
             node_set_err_q(ctx, child, SV("Unable to parse an int from "), third);
             Raise(x_err.errored);
-            }
+        }
         auto x = x_err.result;
         auto y_err = parse_int(fourth.text, fourth.length);
         if(y_err.errored){
             node_set_err_q(ctx, child, SV("Unable to parse an int from "), fourth);
             Raise(y_err.errored);
-            }
+        }
         auto y = y_err.result;
         MSB_FORMAT(sb, "<a href=\"", second, "\"><text style=\"text-anchor:middle;\" transform=\"translate(",x,",",y,")\">\n",
                 first, "\n</text></a>\n");
-        }
+    }
     msb_write_literal(sb, "</svg>\n");
     msb_write_literal(sb, "</div>\n");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(DATA){
     // intentionally not rendering this
     (void)ctx;
@@ -1347,7 +1348,7 @@ RENDERFUNC(DATA){
     (void)node;
     (void)header_depth;
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(COMMENT){
     // intentionally not rendering a comment
     (void)ctx;
@@ -1355,7 +1356,7 @@ RENDERFUNC(COMMENT){
     (void)node;
     (void)header_depth;
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(MD){
     msb_write_literal(sb, "<div");
     write_classes(sb, node);
@@ -1365,26 +1366,26 @@ RENDERFUNC(MD){
         auto e = write_header(ctx, sb, node, header_depth);
         if(e.errored) return e;
         msb_write_char(sb, '\n');
-        }
+    }
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "</div>\n");
     return (Errorable(void)){};
-    }
+}
 RENDERFUNC(CONTAINER){
     if(node->header.length){
         node_print_warning(ctx, node, SV("Ignoring container header."));
-        }
+    }
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        }
-    return (Errorable(void)){};
     }
+    return (Errorable(void)){};
+}
 RENDERFUNC(INVALID){
     node_set_err(ctx, node, LS("Invalid node when rendering."));
     (void)ctx;
@@ -1392,7 +1393,7 @@ RENDERFUNC(INVALID){
     (void)node;
     (void)header_depth;
     return (Errorable(void)){.errored=GENERIC_ERROR};
-    }
+}
 RENDERFUNC(DETAILS){
     msb_write_literal(sb, "<details");
     write_classes(sb, node);
@@ -1401,22 +1402,22 @@ RENDERFUNC(DETAILS){
         msb_write_literal(sb, " id=\"");
         msb_write_kebab(sb, id->text, id->length);
         msb_write_literal(sb, "\"");
-        }
+    }
     msb_write_literal(sb, ">\n");
     msb_write_literal(sb, "<summary style=\"cursor:pointer\">\n");
     if(node->header.length){
         msb_write_str(sb, node->header.text, node->header.length);
-        }
+    }
     msb_write_literal(sb, "</summary>\n");
     msb_write_literal(sb, "<div>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
-        }
+    }
     msb_write_literal(sb, "</div>\n</details>\n");
     return (Errorable(void)){};
-    }
+}
 #undef RENDERFUNC
 #undef RENDERFUNCNAME
 
