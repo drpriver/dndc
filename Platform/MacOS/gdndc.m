@@ -166,7 +166,7 @@ cache_watch_file(void* cache_, StringView path){
         auto bitem = &cache->items[item_index];
         dndc_filecache_remove(TEXTCACHE, LS_to_SV(bitem->fullpath));
         dndc_filecache_remove(BASE64CACHE, LS_to_SV(bitem->fullpath));
-        NSLog(@"'%s' changed", bitem->fullpath.text);
+        // NSLog(@"'%s' changed", bitem->fullpath.text);
 #if 0
         uint64_t mask = dispatch_source_get_data(source);
         if(mask & DISPATCH_VNODE_DELETE){

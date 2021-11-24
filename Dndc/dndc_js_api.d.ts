@@ -1,4 +1,6 @@
 //
+// JS API
+// ------
 // This is the documentation of the js API for scripting the
 // document.  It is presented in typescript syntax.  In addition
 // to these, many of the usual Javascript functions and objects
@@ -6,68 +8,89 @@
 //
 
 //
+// CtxType
+// -------
 // The type of the document context object, `ctx`.
 type CtxType = {
     //
+    // root
+    // ----
     // The root of the document. You can assign nodes to this
     // field.
     root: Node?;
 
     //
-    // Paths:
-    //
-
-    //
+    // outfile
+    // -------
     // Basename of the output file. If the output path is
     // /foo/bar/baz.html, this will be baz.html.
-    outfile: string;
+    readonly outfile: string;
 
     //
+    // outdir
+    // ------
     // Directory of the output file. If the output path is
     // /foo/bar/baz.html, this will be /foor/bar
-    outdir: string;
+    readonly outdir: string;
 
     //
+    // outpath
+    // -------
     // The path to the output file.
-    outpath: string;
+    readonly outpath: string;
 
     //
+    // sourcepath
+    // ----------
     // Path to the input file.
-    sourcepath: string;
+    readonly sourcepath: string;
 
     //
+    // base
+    // ----
     // Relative paths are relative to this directory.
-    base: string;
+    readonly base: string;
 
     //
-    // An array containing all of the nodes in the doucment at the
+    // all_nodes
+    // ---------
+    // An array containing all of the nodes in the document at the
     // time this field is accessed. Mutating this array does not
     // change what nodes are in the document.
     all_nodes: Array<Node>;
 
     //
+    // make_string
+    // -----------
     // Creates a string node with the given string as content.
     //
-    // Args:
-    // -----
+    // Arguments:
+    // ----------
     //   s: The string contents of the node to be.
     //
     // Returns:
     // --------
     // The new STRING node.
     //
+    // Example:
+    // --------
+    //   let hello = ctx.make_string('Hello world!');
+    //   ctx.root.add_child(hello);
+    // --------
     make_string(s:string): Node;
 
     //
+    // make_node
+    // ---------
     // Creates a new node with no parents or children. Specify the
     // type as one of the predefined constants in `NodeType`.
     // Options is, well, optional and allows you to specify those
     // things without needing to assign them in separate
     // statements.
     //
-    // Args:
-    // -----
-    //   type: The type of the new node, from NodeType.
+    // Arguments:
+    // ----------
+    //   type:    The type of the new node, from NodeType.
     //   options: Optional set of attributes for the new node.
     //      header:     If given, the header of the new node.
     //      classes:    If given, the classes of the new node.
@@ -75,9 +98,21 @@ type CtxType = {
     //                  Each attribute will have an empty string
     //                  as its key.
     //
-    make_node(type:number, options:{ header:string?, classes:Array<string>?, attributes:Array<string>?}): Node;
+    // Example:
+    // --------
+    //   let container = ctx.make_node(NodeType.DIV,
+    //       {classes:['container'],
+    //        header:'Table of Contents'});
+    //   let nav = ctx.make_node(NodeType.NAV);
+    //   container.add_child(nav);
+    //   ctx.root.add_child(container);
+    // --------
+    make_node(type:number, options:{header:string?, classes:Array<string>?,
+              attributes:Array<string>?}): Node;
 
     //
+    // add_dependency
+    // --------------
     // Mark the given path as a dependency of this document. This
     // is used if the dependencies of the document are outputed,
     // for example for integration with make to rebuild documents
@@ -86,94 +121,144 @@ type CtxType = {
     // dependency, but it is possible to indirectly depend on
     // files.
     //
-    // Args:
-    // -----
+    // Arguments:
+    // ----------
     //   path: The path to add as a dependency of this document.
     //
+    // Example:
+    // --------
+    //   ctx.add_dependency('Build/frazzle.html');
+    // --------
     add_dependency(path:string);
 
     //
+    // kebab
+    // -----
     // A utility function that turns a string into the version of
     // the string that can be used as an ID. It will turn a string
     // looking like "This is a string" into "this-is-a-string".
+    // You don't generally need this as, but if you want to store
+    // ids for later use in the data blob you might need to.  If
+    // you access the '.id' field of a node, it will already be
+    // kebabed, but you might be indirectly referring to ids by
+    // strings.
     //
-    // Args:
-    // -----
+    // This can also be useful just to see how ids will be
+    // transformed.
+    //
+    // Arguments:
+    // ----------
     //   s: The string to kebab
     //
     // Returns:
     // --------
     // The kebabed version of s.
     //
+    // Example:
+    // --------
+    //   let kebabed = ctx.kebab('This is some text!');
+    //   console.log(kebabed); // "this-is-some-text"
+    // --------
     kebab(s:string): string;
 
     //
+    // set_data
+    // --------
     // Sets a key, value in the generated data blob (which will be
     // available as `data_blob` in the global scope for scripts in
     // the final document.
     //
-    // Args:
-    // -----
+    // Arguments:
+    // ----------
     //   key:   The key to retrieve this data from the datablob
     //   value: the value to store in the data blob under this
     //          key.
-    //
+    // Example:
+    // --------
+    //   let weapons = [
+    //    {name: 'Longsword', damage: '1d8'},
+    //    {name: 'Shortsword', damage: '1d6'},
+    //   ];
+    //   ctx.set_data('weapons', JSON.stringify(weapons));
+    // --------
     set_data(key:string, value:string);
 
     //
+    // select_nodes
+    // ------------
     // Queries for nodes matching the given criteria. The result
     // will be an AND of all of the criteria.  Giving no arguments
     // selects all nodes in the document.
     //
-    // Args:
-    // -----
+    // Arguments:
+    // ----------
     //   type:       The type of the selected nodes. Use a constant
     //               from NodeType. Leave this out to not restrict by
     //               nodetype.
     //   classes:    Array of class names. All nodes returned will
     //               have all of these classes.
     //   attributes: Array of attribute keys. All nodes returned
-    //                 will have all of these attributes
+    //               will have all of these attributes.
     //
     // Returns:
     // --------
     // The array of nodes matching all of the given criteria.
     // This can be the empty array.
     //
+    // Example:
+    // -------
+    //   let rooms = ctx.select_nodes({classes:['room']});
+    //   for(let room of rooms)
+    //     room.classes.append('dungeon');
+    // -------
     select_nodes(args:{type:number?, classes:Array<string>?,
                        attributes:Array<string>?}): Array<Node>;
 
     //
-    // So you can console.log this object.
-    toString(): string;
-
-    //
+    // add_link
+    // --------
     // Adds the key, value pair to the link table for resolving
     // what square bracket links link to.
     //
-    // Args:
-    // -----
+    // Arguments:
+    // ----------
     //   key:   The text that will be inside [] style links.
     //          Note that this gets "kebabed", so that case folding
-    //          and differences in punctuation maap to the same
+    //          and differences in punctuation map to the same
     //          thing.
     //   value: The url that is the target of the link.
     //
+    // Example:
+    // --------
+    //   let rooms = ctx.select_nodes({classes:['room']});
+    //   // Room header is of format "1. Some name"
+    //   for(let room of rooms){
+    //     let [number, name] = room.header.split('.');
+    //     ctx.add_link(`room ${number}`, room.id);
+    //     ctx.add_link(name, room.id);
+    //   }
+    //   // Now you can link to rooms by number or by name.
+    // --------
     add_link(key:string, value: string);
+
+    toString(): string;
 }
 
 // The actual ctx that you refer to in your scripts.
 export const ctx: CtxType;
 
 type FileSystemT = {
+    // Note:
     // All of these file system functions are relative to the
     // `base` of the ctx.
 
     //
+    // load_file
+    // ---------
     // Loads the file located at the given path as a string.
     //
-    // Args:
-    // -----
+    // Arguments:
+    // ----------
     //   path: Path to the file to load. If this is a relative
     //         path, it will be relative to ctx.base, which is
     //         usually the folder that the main dnd file is in.
@@ -181,16 +266,26 @@ type FileSystemT = {
     // --------
     // The text of the indicated file.
     //
+    // Example:
+    // --------
+    //   let text = FileSystem.load_file('some random file');
+    //   // do some preprocessing with the text or whatever
+    //   let raw = ctx.make_node(NodeType.RAW);
+    //   raw.add_child(text);
+    //   ctx.root.add_child(raw);
+    // --------
     load_file(path:string): string;
 
     //
+    // load_file_as_base64
+    // -------------------
     // Loads the file located at the given path, base64ing the
     // contained bytes.  This is useful for embedding binary data
     // in the document (like wasm) that is then converting back to
     // binary when the document loads.
     //
-    // Args:
-    // -----
+    // Arguments:
+    // ----------
     //   path: Path to the file to load. If this is a relative
     //         path, it will be relative to ctx.base, which is
     //         usually the folder that the main dnd file is in.
@@ -198,30 +293,52 @@ type FileSystemT = {
     // --------
     // The contents of the given file, encoded in base64.
     //
+    // Example:
+    // --------
+    //   let wasm = FileSystem.load_file_as_base64('example.wasm');
+    //   let script = ctx.make_node(NodeType.SCRIPTS, {attributes:['inline']});
+    //   script.add_child('let wasmb64 = "${wasm}";');
+    //   ctx.root.add_child(script);
+    // --------
     load_file_as_base64(path:string): string;
 
     //
+    // list_dnd_files
+    // --------------
     // Recursively lists all dnd files (files ending with .dnd).
     // Recursive means it will find them in subfolders as well. If
     // not given an argument, does the current directory.
     // Otherwise, scans the given directory.
     //
-    // Args:
-    // -----
+    // Arguments:
+    // ----------
     //   path: (optional). If given, which directory to start the
     //         recursive search for dnd files.
     // Returns:
     // --------
     // An array of paths to dnd files. these paths will be
     // relative to ctx.base if possible.
+    //
+    // Example:
+    // --------
+    //   let dnd_files = FileSystem.list_dnd_files();
+    //   let text = '';
+    //   for(let dnd of dnd_files){
+    //     ctx.add_link(dnd.replace('.dnd', ''), dnd.replace('.dnd', '.html'));
+    //     text += `* [${dnd.replace('.dnd', '')}]\n`;
+    //   }
+    //   ctx.root.parse(text);
+    // --------
     list_dnd_files(path:string?): Array<string>;
 
     //
+    // exists
+    // ------
     // Checks if there is a file or folder at the given path,
     // returning true if it does exist.
     //
-    // Args:
-    // -----
+    // Arguments:
+    // ----------
     //   path: Path to check for existence. If this is a relative
     //         path, it is relative to ctx.base.
     //
@@ -229,31 +346,48 @@ type FileSystemT = {
     // --------
     // Whether the path exists or not.
     //
+    // Example:
+    // --------
+    //   if(FileSystem.exists('foo.dnd')){
+    //     ctx.add_link('foo', 'foo.html');
+    //     ctx.root.parse('Go to [foo].');
+    //   }
+    // --------
     exists(path:string): boolean;
 };
 
 //
+// FileSystem
+// ----------
 // The actual FileSystem that you refer to in your scripts
 export const FileSystem: FileSystemT;
 
 
 //
+// Node
+// ----
 // This is the type of the nodes, which can be accessed via the
 // context and also by the `node` variable that is implicitly
 // placed into each js block.
 type Node = {
     //
+    // parent
+    // ------
     // The node that is the parent of this node (above it in the
     // document).  This will be null if this node is the root or
     // if this node is an orphan (new node or detached node).
     parent: Node?;
 
     //
+    // type
+    // ----
     // The type of the node. See the NodeType object for what the
     // types are.
     type: number;
 
     //
+    // children
+    // --------
     // Array of children of this node. Note that mutating this
     // array does not stick. It is regenerated each time this
     // field is accessed. Use the `add_child`, `replace_child`,
@@ -261,101 +395,183 @@ type Node = {
     // actually change the children.
     children: Array<Node>;
 
-    //
-    // So you can console.log this
-    toString(): string;
 
     //
+    // header
+    // ------
     // The header of the node is either the string content for a
     // STRING node, or it will be the heading of that node.
     header: string;
 
     //
+    // id
+    // --
     // The id of the node, generated from the header or explicitly
     // set.  You can explicitly set this field. The id will always
     // be "kebabed".
     id: string;
 
     //
+    // parse
+    // -----
     // Parse the string as a .dnd file and append the top level
     // nodes as children of this node.
     //
-    // Args:
-    // -----
+    // Arguments:
+    // ----------
     //   dnd: A string that represents dnd source contents.
     //
+    // Example:
+    // --------
+    //   let names = ['Jon', 'Joe', 'Homer'];
+    //   let text = '';
+    //   for(let name of names)
+    //     text += `* ${name}\n`;
+    //   ctx.root.parse(text);
+    // --------
     parse(dnd:string);
 
     //
+    // detach
+    // ------
     // Remove this node from its parent and sets its parent to
     // null.  Call this before adding this node as a child of
     // another node or making it the root of the document.
     //
+    // Example:
+    // --------
+    //   let root = ctx.root;
+    //   root.detach();
+    //   let new_root = ctx.make_node(NodeType.DIV);
+    //   new_root.add_child(ctx.make_node(NodeType.NAV));
+    //   new_root.add_child(root);
+    //   ctx.root = new_root;
+    // --------
     detach();
 
     //
+    // add_child
+    // ---------
     // Append the given node to the end of the children.
+    // As a convenient special case, strings can be appended. This
+    // translates to creating a STRING node and then immediately
+    // adding it to this node
     //
-    // Args:
-    // -----
+    // Arguments:
+    // ----------
     //   node: The node to add as a child of this node. It will
     //         appear in subsequent accesses to .children.
     //
-    add_child(node:Node);
+    // Example:
+    // --------
+    //   let wrapper = ctx.make_node(NodeType.DIV, {classes:['wrapper']});
+    //   let root = ctx.root;
+    //   root.detach();
+    //   wrapper.add_child('Hello World');
+    //   wrapper.add_child(root);
+    //   ctx.root = wrapper;
+    // --------
+    add_child(node:Node|string);
 
     //
+    // replace_child
+    // -------------
     // Replace the given child.
     //
-    // Args:
-    // -----
+    // Arguments:
+    // ----------
     //   old: The node to replace that is currently a child of
     //        this node.
     //   new: The node to replce that old node with.
     //
+    // Example:
+    // --------
+    //   let tables = ctx.select_nodes(NodeType.TABLE);
+    //   for(let table of tables){
+    //     let container = ctx.make_node(NodeType.DIV, {header:table.header});
+    //     table.header = '';
+    //     table.parent.replace_child(table, container);
+    //     container.add_child(table);
+    //   }
+    // --------
     replace_child(old:Node, new:Node);
 
     //
+    // insert_child
+    // ------------
     // Insert the node at the given index, sliding all the nodes
     // at that index and later down by 1. If where is greater than
     // or equal to the number of child nodes, than this just acts
     // like `add_child`.
     //
-    // Args:
-    // -----
+    // Arguments:
+    // ----------
     //   where: What index to insert the node into.
     //   node:  The node to insert.
+    //
+    // Example:
+    // --------
+    //   let h = ctx.make_node(NodeType.HEADING, {header:'An Example'});
+    //   ctx.root.insert_child(0, h);
+    // --------
     insert_child(where:numer, node:Node);
 
     //
+    // attributes
+    // ----------
     // The key/value mapping of the attributes of this node. See
     // the type description below (`Attributes`).
     attributes: Attributes;
 
     //
+    // classes
+    // -------
     // The classes of this node (css classes). See the type
     // description below (`Classes`).
     classes: Classes;
 
     //
+    // err
+    // ---
     // Throw an error originating from this node with the given
     // message. Use this if the node itself is erroneous (you were
     // expecting certain text context for example). Do note that
     // you can also just `throw new Error('whatever')` if you want
     // the error to originate from this part of the script.
     //
-    // Args:
-    // -----
+    // Arguments:
+    // ----------
     //   msg: The error message to include in the thrown
     //   exception.
     //
+    // Example:
+    // --------
+    //   if(!node.header.includes('Monday'))
+    //     node.err('Expected node to have Monday');
+    // --------
     err(msg:string);
 
     //
+    // has_class
+    // ---------
     // Checks if a class is present or not in the classes.
     //
+    // Note: this function might be moved to the Classes object in
+    // the future.
+    //
+    // Example:
+    // --------
+    //   let rooms = [];
+    //   for(let child of ctx.root.children){
+    //     if(child.has_class('room'))
+    //       rooms.push(child);
+    //   }
+    // --------
     has_class(cls:string): boolean;
 
     //
+    // clone
+    // -----
     // Dupe this node as an orphan. Attributes, classes and
     // headers are copied.  Somewhat strangely, this will keep the
     // child nodes, but as a shallow copy. They will not have
@@ -366,22 +582,40 @@ type Node = {
     // NOTE: This function may change. In particular, the above
     // behavior with the children might change.
     //
+    // Example:
+    // --------
+    //   let old_root = ctx.root;
+    //   old_root.detach();
+    //   let clone = old_root.clone();
+    //   let container = ctx.make_node(NodeType.DIV, classes:['container']);
+    //   old_root.classes.append('left');
+    //   container.add_child(old_root);
+    //   clone.classes.append('right');
+    //   container.add_child(clone);
+    //   ctx.root = container;
+    // --------
     clone(): Node;
+
+    toString(): string;
 }
 //
+// node
+// ----
 // In a js block, this variable represents the js block itself.
 // You can access the containing element via the .parent field.
 export const node: Node;
 
 type Attributes = {
     //
+    // get
+    // ---
     // Retrieve the value associated with the given attribute,
     // returning undefined if not present. Also note that
     // attributes don't need to have a value - this will be
     // returned as an empty string.
     //
-    // Args:
-    // -----
+    // Arguments:
+    // ----------
     //   key: The attribute.
     //
     // Returns:
@@ -390,50 +624,63 @@ type Attributes = {
     // set to nothing, otherwise the value associated with the
     // attribute.
     //
+    // Example:
+    // --------
+    //   let rooms = ctx.select_nodes(classes:['room']);
+    //   for(let room of rooms){
+    //     let coord = room.attributes.get('coord');
+    //     let[x, y] = coord.split(',');
+    //     x = parseInt(x);
+    //     y = parseInt(y);
+    //     ctx.set_data(room.id, JSON.stringify([x, y]));
+    //   }
+    // --------
     get(key:string):string?;
 
     //
+    // has
+    // ---
     // Returns whether the attribute is present.
     //
     has(key:string):boolean;
 
     //
+    // set
+    // ---
     // Sets the given attribute with the given value. If the value
     // is not given here, it is treated as an empty string.
+    //
+    // Example:
+    // --------
+    //   for(let n of ctx.select_nodes({classes:['room']})){
+    //     let h = ctx.make_node(NodeType.HEADING, {header:'Hello'});
+    //     h.attributes.set('noid');
+    //     n.insert_child(0, h);
+    //   }
+    // --------
     set(key:string, value:string?);
 
-    //
-    // So you can console.log
-    toString():string;
-
-    //
-    // So you can iterate over it.
     entries():Array<[string, string]>;
-
-    //
-    // So you can iterate over it.
+    toString():string;
     [Symbol.iterator]():Array<[string, string]>;
 }
 
 type Classes = {
-    //
-    // So you can console.log
-    toString(): string;
 
     //
+    // append
+    // ------
     // Add the class to this group.
     append(cls:string);
 
-    //
-    // So you can iterate over it.
     values(): Array<string>;
-
-    //
-    // So you can iterate over it.
+    toString(): string;
     [Symbol.iterator](): Array<string>;
 }
 
 //
+// NodeType
+// --------
 // These are the possible Node Types in the document.  It is
 // possible to create a tree that doesn't make sense (A TABLE_ROW
 // randomly as a child of STYLESHEETS). Don't do that. If you do,

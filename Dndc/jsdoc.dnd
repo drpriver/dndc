@@ -1,36 +1,308 @@
 JS Api Documentation::title
 ::raw @doc
 ::js
-  function process_line(line){
-    let types = /\b([A-Z][A-Z_]+|string|Array|number|Node|boolean|const|CtxType|Attributes|Classes|FileSystemT)\b/g;
-    let nodetypes = /\b[A-Z][A-Z_]+\b/;
-    let result = "";
-    let prev = 0;
-    let splits = line.split(types);
-    for(let s of splits){
-      if(s.match(nodetypes))
-        result += `<span class="nodetype">${s}</span>`;
-      else if(s.match(types))
-        result += `<span class="type">${s}</span>`;
-      else
-        result += s;
+  // This is kind of a beast, but here is an entire js syntax
+  // highlighter.
+  function colorize(line, state, outfunc, is_typescript, extra_types){
+    let str = line;
+    let i = 0; let c; let start = 0; let n = line.length;
+
+    const literals = " this super undefined null true false Infinity NaN arguments ";
+    let keywords = " " +
+            "break case catch continue debugger default delete do " +
+            "else finally for function if in instanceof new " +
+            "return switch this throw try typeof while with " +
+            "class enum import export extends super " +
+            "implements interface package private protected " +
+            "public static yield " +
+            "eval await ";
+    if(is_typescript){
+      keywords += "readonly type ";
     }
+    const lets = " var const let ";
+    const builtins = " ctx JSON FileSystem node NodeType "
+    let types = " Array string boolean number Map ";
+    if(is_typescript && extra_types)
+      types += extra_types;
+    function parse_block_comment(){
+      state.in_block = 1;
+      for(; i < n - 1; i++){
+        if(str[i] == '*' && str[i+1] == '/'){
+          i += 2;
+          state.in_block = 0;
+          break;
+        }
+      }
+      if(state.in_block) i++;
+      let substr = str.slice(start, i);
+      outfunc(substr, 'comment');
+    }
+    function parse_ident(){
+      state.can_regex = 1;
+      while(i < n && is_word(str[i]))
+        i++;
+        let substr = str.slice(start, i);
+        let w = ' ' + substr + ' ';
+        if(substr.match(/\b[A-Z_]+\b/)){
+          outfunc(substr, 'enum');
+          return;
+        }
+        if(i < n && str[i] == ':'){
+          outfunc(substr, 'field');
+          return;
+        }
+        if(literals.indexOf(w) >= 0){
+          outfunc(substr, 'literal');
+          state.can_regex = 0;
+          return;
+        }
+        if(is_typescript && types.indexOf(w) >= 0){
+          outfunc(substr, 'type');
+          return;
+        }
+        if(builtins.indexOf(w) >= 0){
+          outfunc(substr, 'builtin');
+          return;
+        }
+        if(keywords.indexOf(w) >= 0){
+          outfunc(substr, 'keyword');
+          return;
+        }
+        if(lets.indexOf(w) >= 0){
+          outfunc(substr, 'let');
+          return;
+        }
+        if(i < n && str[i] == '('){
+          outfunc(substr, 'function');
+          return;
+        }
+
+        outfunc(substr, 'ident');
+        state.can_regex = 0;
+    }
+    function is_digit(c){
+      return c >= '0' && c <= '9';
+    }
+    function is_alpha(c){
+      return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+    }
+    function is_word(c){
+      return is_alpha(c) || is_digit(c) || c == '_' || c == '$';
+    }
+    if(state.in_block)
+      parse_block_comment();
+    for(;i < n;){
+      start = i;
+      c = str[i++];
+      switch(c){
+        case ' ':
+        case '\t':
+        case '\r':
+        case '\n':
+          outfunc(c, 'generic');
+          continue;
+        case '+':
+        case '-':
+          if(i < n && str[i] == c){
+            i++;
+            outfunc(c+c, 'generic');
+            continue;
+          }
+          state.can_regex = 1;
+          outfunc(c, 'generic');
+          continue;
+        case '/':
+          if(i < n && str[i] == '*'){
+            // block comment
+            i++;
+            parse_block_comment();
+            break;
+          }
+          if(i < n && str[i] == '/'){
+            // line comment
+            let substr = str.slice(start, str.length);
+            outfunc(substr, 'comment');
+            return;
+          }
+          if(state.can_regex){
+            // parse regex;
+            // Well, don't actually parse it, lol
+            // Accepts all valid regexes and many invalid regexes
+            // too!
+            while(i < n){
+              c = str[i++];
+              if(c == '\n') continue; // an error
+              if(c == '\\'){
+                if(i < n)
+                  i++;
+                continue;
+              }
+              if(c == '/'){
+                while(i < n && is_word(str[i]))
+                  i++;
+                break;
+              }
+            }
+            let substr = str.slice(start, i);
+            outfunc(substr, 'regex');
+            state.can_regex = 0;
+            break;
+          }
+          state.can_regex = 1;
+          outfunc(c, 'generic');
+          continue;
+        case '\'':
+        case '\"':
+        case '`':
+          // parse_string
+          {
+            let delim = c;
+            while(i < n){
+              c = str[i++];
+              if(c == '\\'){
+                if(i >= n)
+                  break;
+                i++;
+              }
+              else if(c == delim){
+                break;
+              }
+            }
+            outfunc(str.slice(start, i), 'string');
+          }
+          state.can_regex = 0;
+          break;
+        case '(':
+        case '[':
+        case '{':
+          state.can_regex = 1;
+          outfunc(c, 'generic');
+          continue;
+        case ')':
+        case ']':
+        case '{':
+          state.can_regex = 0;
+          outfunc(c, 'generic');
+          continue;
+        default:
+          if(is_digit(c)){
+            // parse number
+            while(i < n && (is_word(str[i]) || (str[i] == '.' && i
+              == n -1 || str[i+1] != '.')))
+              i++;
+            let substr = str.slice(start, i);
+            outfunc(substr, 'literal');
+            state.can_regex = 0;
+            break;
+          }
+          if(is_word(c) || c == '$'){
+              parse_ident();
+             break;
+          }
+          state.can_regex = 1;
+          outfunc(c, 'generic');
+          continue;
+      }
+    }
+    if(i == n) return;
+
+  }
+
+  function highlight_js(line, state){
+    let result = "";
+    function outfunc(s, t){
+      switch(t){
+        case 'regex':
+          t = 'string';
+        case 'string':
+        case 'comment':
+        case 'literal':
+        case 'keyword':
+        case 'let':
+        case 'ident':
+        case 'builtin':
+        case 'enum':
+        case 'field':
+        // case 'function':
+          result += `<span class="${t}">${s}</span>`;
+          break;
+        default:
+          result += s;
+          break;
+      }
+    }
+    colorize(line, state, outfunc);
+    return `<span class="js">${result}</span>`;
+  }
+  function highlight_ts(line){
+    let result = "";
+    function outfunc(s, t){
+      switch(t){
+      case 'regex':
+        t = 'string';
+      case 'string':
+      case 'comment':
+      case 'string':
+      case 'comment':
+      case 'literal':
+      case 'keyword':
+      case 'let':
+      case 'ident':
+      case 'builtin':
+      case 'enum':
+      case 'type':
+      case 'function':
+      case 'field':
+        result += `<span class="${t}">${s}</span>`;
+        break;
+      default:
+        result += s;
+        break;
+      }
+    }
+    colorize(line, {}, outfunc, true, "CtxType Node NodeType FileSystemT Attributes Classes ");
     return result;
   }
+  function process_comment(line, state){
+    let idx = line.indexOf('//');
+    let front = line.slice(0, idx+2);
+    let remainder = line.slice(idx+2, line.length);
+    if(line.includes('--')){
+    }
+    else if(state.js_example){
+      remainder = highlight_js(remainder, state);
+    }
+    else if(line[line.length-1] == ':' || (remainder.trim().length && !state.seen_title)){
+      if(remainder.trim() == 'Example:'){
+        state.js_example = 1;
+      }
+      state.seen_title = 1;
+      remainder = `<span class="h"><b>${remainder}</b></span>`;
+    }
+    else if(remainder.match(/\w+:/)){
+      let pieces = remainder.split(/(\w+:)/);
+      remainder = pieces[0] + `<span class="param"><b>${pieces[1]}</b></span>` + pieces[2];
+    }
+    let result = front + remainder;
+    return `<span class="comment">${result}</span>`
+  }
   let doc = ctx.select_nodes({attributes:['doc']})[0];
-  let text = FileSystem.load_file('dndc_qjs.d.ts');
+  let text = FileSystem.load_file('dndc_js_api.d.ts');
   let lines = text.split('\n');
-  doc.add_child(ctx.make_string('<pre>'));
+  doc.add_child('<pre>');
+  let commentstate = null;
   for(let line of lines){
-    let trimmed = line.trim();
-    if(trimmed.length >= 2 && trimmed[0] == '/' && trimmed[1] == '/'){
-      doc.add_child(ctx.make_string(`<span class="comment">${line}</span>`));
+    if(line.includes('//')){
+      if(commentstate === null)
+        commentstate = {};
+      doc.add_child(process_comment(line, commentstate));
     }
     else{
-      doc.add_child(ctx.make_string(process_line(line)));
+      commentstate = null;
+      doc.add_child(highlight_ts(line));
     }
   }
-  doc.add_child(ctx.make_string('</pre>'));
+  doc.add_child('</pre>');
   //endjs
 ::css @inline
   html {
@@ -52,5 +324,41 @@ JS Api Documentation::title
   }
   .nodetype {
     color: #FFC137;
+  }
+  .h {
+    color: #eee;
+  }
+  .js, .generic {
+    color: #D2D39A;
+  }
+  .ident {
+    color: #D2D39A;
+  }
+  .string {
+    color: #FE4D4D;
+  }
+  .param {
+    color: #73AA04;
+  }
+  .literal {
+    color: #74AB04;
+  }
+  .function {
+    color: #5AC1E5;
+  }
+  .let {
+    color: #5AC1E5;
+  }
+  .keyword {
+    color: #5AC1E5;
+  }
+  .builtin {
+    color: #87FFAF;
+  }
+  .enum {
+    color: #FFC137;
+  }
+  .field {
+    color: lightgray;
   }
   /*endcss*/

@@ -14,7 +14,6 @@ A Better Way to Write::md
   ::pre .embedded
     Hello World!::text
       This is some wonderful text!
-
   In the above example, a block is introduced on the first line. The text to the
   left of the double colon is the "header" of the block. For documents, this is
   used as text for a heading. It is optional. The text to the right of the double
@@ -198,7 +197,6 @@ Convenience::md
     //parsing the string as if it were a document.
     node.parent.parse('::md\n  And here is that table')
     node.parent.parse(text)
-    //endjs
 
 
 Styling and Scripting::md
@@ -224,7 +222,6 @@ Self-Contained::md
       * {
         box-sizing: border-box;
       }
-     /*endcss*/
     ::comment
       You haven't seen this before. The '@' symbol to the right of the double
       colon indicates an attribute. Attributes can be simple identifiers. They
@@ -266,20 +263,19 @@ Self-Contained::md
     Data blocks are rendered into html, but do not appear at the document at that
     location - their contents only appear in the data blob.
 
-    You can add keys to the data blob in javascript blocks. You must use string keys
-    and string values.
+    You can add keys to the data blob in javascript blocks. You must use string
+    keys and string values.
 
     ::pre .embedded
       ::js
         ctx.set_data('foo', 'bar')
-        //endjs
 
-    You can't currently introspect the data blob from javascript as the blocks aren't
-    rendered until all user scripts are finished executing.
+    You can't currently introspect the data blob from javascript as the blocks
+    aren't rendered until all user scripts are finished executing.
 
-    If you need more than strings, use a javascript block to create a SCRIPTS node,
-    set the 'inline' attribute and then just insert whatever you want using js
-    syntax.
+    If you need more than strings, use a javascript block to create a SCRIPTS
+    node, set the 'inline' attribute and then just insert whatever you want using
+    js syntax.
 
 Attributes and Classes::md
   Blocks can have classes, which directly correspond to css classes in the output
@@ -312,28 +308,28 @@ Attributes and Classes::md
   have arguments in parens. The contents of the parens are stored as a string.
 
   Javascript blocks can retrieve the attributes of a node via the .attributes
-  field, with the regular square-bracket setting and getting and using del. It
-  presents a dict-like interface to the attributes. You can also 'add' an
-  attribute which will give it an empty string as its value. Many things only
-  check for the presence of the key and ignore the value.
+  field. It presents a map-like interface to the attributes. You can also set an
+  attribute without a value, which will give it an empty string as its value.
+  Many things only check for the presence of the key and ignore the value.
 
   Special Attributes::md
     The following attributes are special to the system:
 
     ::table
-      Attribute | Meaning
-      @noid     | Don't give the heading an id
-      @id(iden) | Instead of the automatic id, use iden as the id for the heading
-      @hide     | Don't output the block in the rendered output.
-      @inline   | Use contents, don't interpret as filepaths.
-      @noinline | Produce a link (href) instead of embedding.
-      @comment  | Treat the block as a comment instead of its declared
-                  type.
-      @import   | Treat the lines inside the block as paths to be
-                  imported and import them as children of this node.
+      Attribute              | Meaning
+      <code>@noid</code>     | Don't give the heading an id
+      <code>@id(iden)</code> | Instead of the automatic id, use <code>iden</code>
+                               as the id for the heading
+      <code>@hide</code>     | Don't output the block in the rendered output.
+      <code>@inline</code>   | Use contents, don't interpret as filepaths.
+      <code>@noinline</code> | Produce a link (href) instead of embedding.
+      <code>@comment</code>  | Treat the block as a comment instead of its
+                               declared type.
+      <code>@import</code>   | Treat the lines inside the block as paths to be
+                               imported and import them as children of this node.
     All other attributes are used for user javascript blocks. I can't guarantee
-    that they won't break when I add a new attribute though! We'll stabilize
-    when the version is 1.0.
+    that they won't break when I add a new attribute though! We'll stabilize when
+    the version is 1.0.
 
 But Wait, There's More::md
   The structured document format is convenient to write in, but sometimes you
@@ -372,9 +368,6 @@ But Wait, There's More::md
     }
     // If you're paying attention, you'll realize this js block added itself
     // to the document.
-    // the endjs comment is not necessary. I only include it so that
-    // vim knows when the js block ends for syntax highlighting purposes.
-    //endjs
 
   Javascript blocks are isolated.
 
@@ -398,7 +391,6 @@ But Wait, There's More::md
         }
       }
       walk(ctx.root, 0);
-      //endjs
 
   Here is a fun demo. We will now embed the entire document via javascript. This
   is all done at compile time. You can even see the javascript block that was
@@ -411,10 +403,6 @@ But Wait, There's More::md
     // strings are converted to STRING nodes.
     prenode.add_child(ctx.sourcepath);
     ctx.root.add_child(prenode);
-    // the endjs comment is not necessary. I only include it so that
-    // vim knows when the js block ends for syntax highlighting purposes.
-    //endjs
-
 
 ::comment
   Normally I would put the css in its own file, but this README
@@ -497,7 +485,6 @@ But Wait, There's More::md
   }
   @media (prefers-color-scheme: light) {
   }
-  /*endcss*/
 
 
 ::js
@@ -510,7 +497,6 @@ But Wait, There's More::md
   root.detach();
   new_root.add_child(root);
   // NAV blocks are kind of special. As one of the last things, the system
-  // will walk the document tree and create a toc of all the h2 and h3s.
+  // will walk the document tree and create a toc of all the h2s and h3s.
   new_root.add_child(ctx.make_node(NodeType.NAV));
   ctx.root = new_root;
-  //endjs

@@ -27,7 +27,7 @@ build2
 Release
 PyGdndc/pydndc.pyi
 PyGdndc/jsdoc.dnd
-PyGdndc/dndc_qjs.d.ts
+PyGdndc/dndc_js_api.d.ts
 .obj
 *.dll
 *.dylib

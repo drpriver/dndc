@@ -33,7 +33,7 @@ TestDndc: $(BINDIR)/TestDndc_debug$(EXE) $(BINDIR)/TestDndc_fast$(EXE)
 
 $(BINDIR)/pydndc$(PYEXTENSION): Dndc/pydndc.c $(OBJDIR)/libquickjs.o
 	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -O2 $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS) $(OBJDIR)/libquickjs.o
-pydndc: $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pydndc$(PYEXTENSION) PyGdndc/pydndc.pyi PyGdndc/jsdoc.dnd PyGdndc/dndc_qjs.d.ts
+pydndc: $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pydndc$(PYEXTENSION) PyGdndc/pydndc.pyi PyGdndc/jsdoc.dnd PyGdndc/dndc_js_api.d.ts
 
 PyGdndc/pydndc.pyi: Dndc/pydndc.pyi
 	$(CP) $< $@
@@ -41,11 +41,11 @@ PyGdndc/pydndc$(PYEXTENSION): $(BINDIR)/pydndc$(PYEXTENSION)
 	$(CP) $< $@
 PyGdndc/jsdoc.dnd: Dndc/jsdoc.dnd
 	$(CP) $< $@
-PyGdndc/dndc_qjs.d.ts: Dndc/dndc_qjs.d.ts
+PyGdndc/dndc_js_api.d.ts: Dndc/dndc_js_api.d.ts
 	$(CP) $< $@
 
 
-RELEASEFILES = $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pygdndc.pyw PyGdndc/dndbatch.pyw PyGdndc/changelog.dnd PyGdndc/install_deps.py PyGdndc/README.txt EXAMPLE.dnd PyGdndc/Manual.dnd Dndc/jsdoc.dnd Dndc/dndc_qjs.d.ts
+RELEASEFILES = $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pygdndc.pyw PyGdndc/dndbatch.pyw PyGdndc/changelog.dnd PyGdndc/install_deps.py PyGdndc/README.txt EXAMPLE.dnd PyGdndc/Manual.dnd Dndc/jsdoc.dnd Dndc/dndc_js_api.d.ts
 .PHONY: release
 release: $(RELEASEFILES)
 	$(RM) -f Release/Dndc Release/Dndc.$(DNDCVERSION).zip
