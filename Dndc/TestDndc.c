@@ -42,7 +42,7 @@ TestFunction(TestDndc1){
         "   * This is amazing!\n"
         "::js\n"
         "  ctx.root.add_child('hello');\n"
-        );
+    );
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_DONT_WRITE
         | DNDC_SUPPRESS_WARNINGS
@@ -53,7 +53,7 @@ TestFunction(TestDndc1){
     TestExpectFalse(output.text);
     TestExpectSuccess(e);
     TESTEND();
-    }
+}
 
 TestFunction(TestDndc2){
     TESTBEGIN();
@@ -63,7 +63,7 @@ TestFunction(TestDndc2){
         "   * This is amazing!\n"
         "::js\n"
         "  ctx.root.add_child('hello')\n"
-        );
+    );
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_DONT_WRITE
         | DNDC_SUPPRESS_WARNINGS
@@ -74,7 +74,7 @@ TestFunction(TestDndc2){
     TestExpectFalse(output.text);
     TestExpectSuccess(e);
     TESTEND();
-    }
+}
 TestFunction(TestDndc3){
     TESTBEGIN();
     LongString source = LS(
@@ -83,7 +83,7 @@ TestFunction(TestDndc3){
         "   * This is amazing!\n"
         "::js\n"
         "  ctx.root.add_child('hello')\n"
-        );
+    );
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_DONT_WRITE
         | DNDC_SUPPRESS_WARNINGS
@@ -94,7 +94,7 @@ TestFunction(TestDndc3){
     TestExpectFalse(output.text);
     TestExpectFailure(e);
     TESTEND();
-    }
+}
 TestFunction(TestDndcOutParam){
     TESTBEGIN();
     LongString source = LS(
@@ -104,7 +104,7 @@ TestFunction(TestDndcOutParam){
         "   * This is amazing!\n"
         "::js\n"
         "  ctx.root.add_child('hello')\n"
-        );
+    );
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
@@ -142,9 +142,9 @@ TestFunction(TestDndcOutParam){
         TestExpectEquals(expected.length, outdata.length);
         TestExpectEquals2(LS_equals, expected, outdata);
         const_free(outdata.text);
-        }
-    TESTEND();
     }
+    TESTEND();
+}
 TestFunction(TestDndcTableMultiline){
     TESTBEGIN();
     LongString source = LS(
@@ -158,7 +158,7 @@ TestFunction(TestDndcTableMultiline){
         "     another\n"
         "     multiline\n"
         "     table\n"
-        );
+    );
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
@@ -221,9 +221,9 @@ TestFunction(TestDndcTableMultiline){
         TestExpectEquals(expected.length, outdata.length);
         TestExpectEquals2(LS_equals, expected, outdata);
         const_free(outdata.text);
-        }
-    TESTEND();
     }
+    TESTEND();
+}
 TestFunction(TestFormatTable){
     TESTBEGIN();
     LongString source = LS(
@@ -238,7 +238,7 @@ TestFunction(TestFormatTable){
         "     multiline\n"
         "     table\n"
         "  4 | This is a really long text table. As you can see, it is much longer than it really needs to be. But whatever. Long things are long. Long live the long thing! So why not. Be long!\n"
-        );
+    );
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
@@ -262,7 +262,7 @@ TestFunction(TestFormatTable){
         TestExpectEquals(expected.length, outdata.length);
         TestExpectEquals2(LS_equals, expected, outdata);
         const_free(outdata.text);
-        }
+    }
     source = LS(
             "::table\n"
             "  a\n"
@@ -279,9 +279,9 @@ TestFunction(TestFormatTable){
         TestExpectEquals(expected.length, outdata.length);
         TestExpectEquals2(LS_equals, expected, outdata);
         const_free(outdata.text);
-        }
-    TESTEND();
     }
+    TESTEND();
+}
 TestFunction(TestFormatList){
     TESTBEGIN();
     LongString source = LS(
@@ -298,7 +298,7 @@ TestFunction(TestFormatList){
         "10. 5\n"
         "11. 5\n"
         "12. 5\n"
-        );
+    );
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
@@ -324,7 +324,7 @@ TestFunction(TestFormatList){
             "10. 5\n"
             "11. 5\n"
             "12. 5\n"
-            );
+        );
         TestExpectEquals(expected.length, outdata.length);
         TestExpectEquals2(LS_equals, expected, outdata);
         {
@@ -335,9 +335,9 @@ TestFunction(TestFormatList){
             TestExpectSuccess(e2);
         }
         const_free(outdata.text);
-        }
-    TESTEND();
     }
+    TESTEND();
+}
 TestFunction(TestFormatKV){
     TESTBEGIN();
     LongString source = LS(
@@ -349,7 +349,7 @@ TestFunction(TestFormatKV){
         "  Ref: +3\n"
         "  Fort: +4\n"
         "  Will: +5\n"
-        );
+    );
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
@@ -368,7 +368,7 @@ TestFunction(TestFormatKV){
             "  Ref:     +3\n"
             "  Fort:    +4\n"
             "  Will:    +5\n"
-            );
+        );
         TestExpectEquals(expected.length, outdata.length);
         TestExpectEquals2(LS_equals, expected, outdata);
         {
@@ -379,9 +379,9 @@ TestFunction(TestFormatKV){
             TestExpectSuccess(e2);
         }
         const_free(outdata.text);
-        }
-    TESTEND();
     }
+    TESTEND();
+}
 
 TestFunction(TestCrashesFixed){
     TESTBEGIN();
@@ -394,23 +394,23 @@ TestFunction(TestCrashesFixed){
     struct {
         LongString name;
         bool error; // if we expect an error
-        } cases[] = {
-            {.name=LS("case1.dnd"), .error=false},
-            {.name=LS("case2.dnd"), .error=true},
-            };
+    } cases[] = {
+        {.name=LS("case1.dnd"), .error=false},
+        {.name=LS("case2.dnd"), .error=true},
+    };
     for(size_t i = 0; i < arrlen(cases); i++){
         LongString output = {};
         auto e = run_the_dndc(flags, LS("TestCases"), cases[i].name, LS("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
         TestExpectFalse(output.text);
         if(cases[i].error){
             TestExpectFailure(e);
-            }
+        }
         else {
             TestExpectSuccess(e);
-            }
         }
-    TESTEND();
     }
+    TESTEND();
+}
 TestFunction(TestExamplesWork){
     TESTBEGIN();
     uint64_t flags = DNDC_FLAGS_NONE
@@ -433,7 +433,7 @@ TestFunction(TestExamplesWork){
         LS("lorem.dnd"),
         LS("wiki.dnd"),
         LS("index.dnd"),
-        };
+    };
     LongString base_dirs[] = {
         LS("Examples/Calendar"),
         LS("Examples/KrugsBasement"),
@@ -448,7 +448,7 @@ TestFunction(TestExamplesWork){
         LS("Examples/Wiki"),
         LS("Examples/Wiki"),
         LS("Examples"),
-        };
+    };
     _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString output = {};
@@ -458,9 +458,9 @@ TestFunction(TestExamplesWork){
             TestPrintValue("Example failed:", examples[i]);
             TestPrintValue("Base dir:", base_dirs[i]);
         }
-        }
-    TESTEND();
     }
+    TESTEND();
+}
 TestFunction(TestUntrusted){
     TESTBEGIN();
     uint64_t flags = DNDC_FLAGS_NONE
@@ -479,7 +479,7 @@ TestFunction(TestUntrusted){
         LS("untrusted-imports.dnd"),
         LS("untrusted-js.dnd"),
         LS("untrusted-css.dnd"),
-        };
+    };
     LongString base_dirs[] = {
         LS("Examples/Calendar"),
         LS("Examples/KrugsBasement"),
@@ -488,7 +488,7 @@ TestFunction(TestUntrusted){
         LS("TestCases"),
         LS("TestCases"),
         LS("TestCases"),
-        };
+    };
     _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString output = {};
@@ -498,9 +498,9 @@ TestFunction(TestUntrusted){
             TestPrintValue("source file", examples[i]);
         }
 
-        }
-    TESTEND();
     }
+    TESTEND();
+}
 
 static inline
 StringView
@@ -510,8 +510,8 @@ sv_slice(StringView src, size_t begin, size_t length){
     return (StringView){
         .text = src.text+begin,
         .length = length,
-        };
-    }
+    };
+}
 TestFunction(TestSpecialChars){
     TESTBEGIN();
     struct test_case {
@@ -539,15 +539,15 @@ TestFunction(TestSpecialChars){
         {LS("1234567890123456 [hi!] 1234567890123456"), SV("1234567890123456 <a href=\"hi\">hi!</a> 1234567890123456")},
         {LS("1234567890123456 \r 1234567890123456"), SV("1234567890123456   1234567890123456")},
         {LS("hi \r\n"), SV("hi")},
-        };
+    };
     for(size_t i = 0; i < arrlen(testcases); i++){
         LongString output = {};
         auto e = run_the_dndc(flags, LS(""), testcases[i].source, LS("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
         TestAssertSuccess(e);
         if(!TestExpectEquals2(SV_equals, sv_slice(LS_to_SV(output), 198, testcases[i].result.length), testcases[i].result)){
             TestPrintValue("output", output);
-            }
-        dndc_free_string(output);
         }
-    TESTEND();
+        dndc_free_string(output);
     }
+    TESTEND();
+}
