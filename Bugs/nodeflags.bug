@@ -1,0 +1,1 @@
+I still have some node_has_attribute calls in the parser, which is stupid (and also can lead to incorrect results). The parse_double colon should return a flags value instead instead of checking like that.
