@@ -116,6 +116,30 @@ def clang_default_include() -> str:
     _, out = sub.communicate(b'')
     reg = re.compile('.*/include$')
     includes = [line.strip() for line in out.decode('utf-8').split('\n') if reg.search(line)]
+    return ['-isystem' + i for i in includes]
+    sysname = os.uname().sysname
+    if sysname == 'Darwin':
+        MACOSX_platform = [p for p in includes if 'MacOSX.platform' in p]
+        if MACOSX_platform:
+            return MACOSX_platform[0]
+        # XXX: os specific index (maybe machine specific) index
+        return includes[2]
+    elif sysname == 'Linux':
+        # XXX: os specific index (maybe machine specific) index
+        return includes[2]
+    else:
+        raise NotImplementedError
+def clangxx_default_include() -> List[str]:
+    if os.name == 'nt':
+        # XXX: machine specific path - nonportable
+        return r'C:\Program Files\LLVM\lib\clang\11.0.0\include'
+    sub = subprocess.Popen(['clang++', '-v', '-x', 'c++', '-std=gnu++17', '-'],
+                           stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    _, out = sub.communicate(b'')
+    reg = re.compile(r'^.*/include(/[a-zA-Z\.\+0-9]+)*$')
+    # reg = re.compile(r'.*/include(/[a-z\.\+]*)*$')
+    includes = [line.strip() for line in out.decode('utf-8').split('\n') if reg.search(line)]
+    return ['-isystem' + i for i in includes]
     sysname = os.uname().sysname
     if sysname == 'Darwin':
         MACOSX_platform = [p for p in includes if 'MacOSX.platform' in p]
@@ -130,6 +154,7 @@ def clang_default_include() -> str:
         raise NotImplementedError
 
 CLANG_DEFAULT_INCLUDES = clang_default_include()
+CLANGXX_DEFAULT_INCLUDES = clangxx_default_include()
 CWD = os.getcwd()
 
 def normpath(p:str, paths={}) -> str: # default argument used as a cache.
@@ -167,12 +192,15 @@ def fix_args(args:List[str], source_file:str) -> List[str]:
             if head in set():
                 a = '{}="{}"'.format(head, tail)
         fixed.append(a)
-    fixed.remove('clang')
+    if 'clang' in fixed: 
+        fixed.remove('clang')
+    if 'clang++' in fixed:
+        fixed.remove('clang++')
     fixed.remove(source_file)
     return fixed
 
-def do_tags(arguments:List[str], identer:Identer, source_file:str) -> None:
-    clang_args=['-isystem'+CLANG_DEFAULT_INCLUDES]+arguments
+def do_tags(arguments:List[str], identer:Identer, source_file:str, compiler:str) -> None:
+    clang_args=(CLANG_DEFAULT_INCLUDES if compiler == 'clang' else CLANGXX_DEFAULT_INCLUDES)+arguments
     try:
         tu = cindex.TranslationUnit.from_source(
             os.path.abspath(source_file),
@@ -248,6 +276,9 @@ def should_exclude(name:str, excludes={}) -> bool: # default arg used as a cache
     result = excludes.get(name)
     if result is not None:
         return result
+    if 'Qt' in name:
+        excludes[name] = True
+        return True
 
     if 0 and 'System' in name:
         excludes[name] = True
@@ -388,8 +419,8 @@ def merge_identers(identers:List[Identer]) -> IdenterResult:
 
 def do_command(args) -> Identer:
     identer = Identer()
-    arguments, f = args
-    do_tags(arguments, identer, f)
+    arguments, f, compiler = args
+    do_tags(arguments, identer, f, compiler)
     identer.analyze()
     return identer
 
@@ -401,8 +432,12 @@ def run(pool_size:int, compile_commands_path:str='compile_commands.json') -> Non
         if 'Test' in command['file']:
             continue
         f = command['file']
+        # screw c++
+        if 'clang++' in command['arguments']:
+            continue
+        compiler =  'clang' if 'clang' in command['arguments'] else 'clang++'
         arguments = fix_args(command['arguments'], f)
-        pool_arguments.append((arguments, f))
+        pool_arguments.append((arguments, f, compiler))
 
     if pool_size > 0:
         with Pool(pool_size) as p:
