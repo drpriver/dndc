@@ -25,9 +25,10 @@ TestFunction(TestKebab){
         StringView str = msb_borrow(&sb);
         TestExpectEquals2(SV_equals, str, tc->after);
         msb_destroy(&sb);
-        }
-    TESTEND();
     }
+    TESTEND();
+}
+
 TestFunction(TestTitle){
     TESTBEGIN();
     struct test_case{
@@ -37,7 +38,7 @@ TestFunction(TestTitle){
         {SV(""), SV("")},
         {SV("this is some text."), SV("This Is Some Text.")},
         {SV("  hello world1!"), SV("  Hello World1!")},
-        };
+    };
     for(size_t i = 0; i < sizeof(testcases)/sizeof(testcases[0]);i++){
         struct test_case* tc = &testcases[i];
         MStringBuilder sb = {.allocator=get_mallocator()};
@@ -45,12 +46,13 @@ TestFunction(TestTitle){
         StringView str = msb_borrow(&sb);
         TestExpectEquals2(SV_equals, str, tc->after);
         msb_destroy(&sb);
-        }
-    TESTEND();
     }
+    TESTEND();
+}
+
 int main(int argc, char** argv){
     RegisterTest(TestKebab);
     RegisterTest(TestTitle);
     return test_main(argc, argv);
-    }
+}
 #include "Allocators/allocator.c"
