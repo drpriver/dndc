@@ -1687,7 +1687,10 @@ JSMETHOD(js_dndc_context_select_nodes){
         for(size_t i = 0; i < ctx->nodes.count; i++){
             if(ctx->nodes.data[i].type == NODE_INVALID)
                 continue;
-            JS_SetPropertyUint32(jsctx, result, i, js_make_dndc_node(jsctx, (NodeHandle){.index=i}));
+            auto nh = js_make_dndc_node(jsctx, (NodeHandle){.index = i});
+            auto v = JS_ArrayPush(jsctx, result, 1, &nh);
+            JS_FreeValue(jsctx, v);
+            JS_FreeValue(jsctx, nh);
             }
         }
     else {

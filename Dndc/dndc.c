@@ -541,34 +541,46 @@ run_the_dndc(uint64_t flags,
                 node->parent = INVALID_NODE_HANDLE;
                 node->children.count = 0;
             }
+            Marray(NodeHandle*) handles = NULL;
             switch(newnode->type){
                 case NODE_JS:
-                    Marray_push(NodeHandle)(&ctx.user_script_nodes, ctx.allocator, newhandle);
+                    handles = &ctx.user_script_nodes;
                     break;
                 case NODE_STYLESHEETS:
-                    Marray_push(NodeHandle)(&ctx.stylesheets_nodes, ctx.allocator, newhandle);
+                    handles = &ctx.stylesheets_nodes;
                     break;
                 // wtf is this node
                 case NODE_DEPENDENCIES:
-                    Marray_push(NodeHandle)(&ctx.dependencies_nodes, ctx.allocator, newhandle);
+                    handles = &ctx.dependencies_nodes;
                     break;
                 case NODE_DATA:
-                    Marray_push(NodeHandle)(&ctx.data_nodes, ctx.allocator, newhandle);
+                    handles = &ctx.data_nodes;
                     break;
                 case NODE_LINKS:
-                    Marray_push(NodeHandle)(&ctx.link_nodes, ctx.allocator, newhandle);
+                    handles = &ctx.link_nodes;
                     break;
                 case NODE_SCRIPTS:
-                    Marray_push(NodeHandle)(&ctx.script_nodes, ctx.allocator, newhandle);
+                    handles = &ctx.script_nodes;
                     break;
                 case NODE_IMAGE:
-                    Marray_push(NodeHandle)(&ctx.img_nodes, ctx.allocator, newhandle);
+                    handles = &ctx.img_nodes;
                     break;
                 case NODE_IMGLINKS:
-                    Marray_push(NodeHandle)(&ctx.imglinks_nodes, ctx.allocator, newhandle);
+                    handles = &ctx.imglinks_nodes;
                     break;
                 default:
                     break;
+            }
+            if(handles){
+                for(size_t j = 0; j < handles->count; j++){
+                    if(NodeHandle_eq(handles->data[j], handle)){
+                        handles->data[j] = newhandle;
+                        goto foundit;
+                    }
+                }
+                // I don't think this can happen.
+                Marray_push(NodeHandle)(handles, ctx.allocator, newhandle);
+                foundit:;
             }
         }
         auto after_imports = get_t();

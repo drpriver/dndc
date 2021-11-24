@@ -139,11 +139,11 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
         }
     if(ctx->script_nodes.count){
         MARRAY_FOR_EACH(s, ctx->script_nodes){
-            msb_write_literal(msb, "<script>\n");
             auto node = get_node(ctx, *s);
             // javascript nodes can change node types after they are registered
             if(unlikely(node->type != NODE_SCRIPTS))
                 continue;
+            msb_write_literal(msb, "<script>\n");
             if(node_has_attribute(node, SV("noinline"))){
                 msb_erase(msb, sizeof("<script>\n")-1);
                 if(node_children_count(node) != 1){
