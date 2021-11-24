@@ -84,12 +84,15 @@ struct {
     {SV("details"),      NODE_DETAILS},
 };
 
-enum {RAW_NODE_JS_INDEX =3 };
+enum {RAW_NODE_JS_INDEX = 5 };
+enum {RAW_NODE_SCRIPT_INDEX = 4 };
 static const
 StringView RAW_NODES[] = {
     SV("raw"),
     SV("comment"),
     SV("pre"),
+    SV("css"),
+    [RAW_NODE_SCRIPT_INDEX] = SV("script"),
     [RAW_NODE_JS_INDEX] = SV("js"),
 };
 static const
@@ -97,6 +100,8 @@ StringViewUtf16 RAW_NODES_UTF16[] = {
     SV16("raw"),
     SV16("comment"),
     SV16("pre"),
+    SV16("css"),
+    [RAW_NODE_SCRIPT_INDEX] = SV16("script"),
     [RAW_NODE_JS_INDEX] = SV16("js"),
 };
 

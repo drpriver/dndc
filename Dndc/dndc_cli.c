@@ -558,7 +558,7 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, const char* 
     const char* blue    = "\033[94m";
     const char* green   = "\033[92m";
     const char* red     = "\033[91m";
-    const char* yellow  = "\033[93m";
+    // const char* yellow  = "\033[93m";
     const char* magenta = "\033[95m";
     const char* cyan    = "\033[96m";
     const char* white   = "\033[37m";

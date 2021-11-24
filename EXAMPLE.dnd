@@ -211,26 +211,25 @@ Self-Contained::md
   Example:
 
   ::pre .embedded
-    ::css
+    ::css @import
       cssfile1.css
       another/css/file.css
       and/another.css
-    ::script
+    ::script @import
       somejsfile.js
       another/jsfile.js
-    ::css @inline
-      * {
-        box-sizing: border-box;
-      }
     ::comment
       You haven't seen this before. The '@' symbol to the right of the double
       colon indicates an attribute. Attributes can be simple identifiers. They
       are generally used to tag nodes with extra metadata for your js blocks.
-      Some identifiers are special to the system. For example, this @inline
-      attribute tells the system to not interpret the contents as filepaths, but
-      instead as raw strings to be included in the <style> tags.
+      Some identifiers are special to the system. For example, this @import
+      attribute tells the system to not interpret the contents as raw strings to be included in a <script> tag, but instead as file paths to load.
 
-      js blocks also support @inline with the same meaning, but for <script>.
+      css blocks also support @import with the same meaning, but for <script>.
+    ::css
+      * {
+        box-sizing: border-box;
+      }
   Images can also be included. They are base64-encoded and stored as a data
   string in the html page. Possibly we can add an attribute to disable this in
   the future.
@@ -321,7 +320,6 @@ Attributes and Classes::md
       <code>@id(iden)</code> | Instead of the automatic id, use <code>iden</code>
                                as the id for the heading
       <code>@hide</code>     | Don't output the block in the rendered output.
-      <code>@inline</code>   | Use contents, don't interpret as filepaths.
       <code>@noinline</code> | Produce a link (href) instead of embedding.
       <code>@comment</code>  | Treat the block as a comment instead of its
                                declared type.
@@ -407,7 +405,7 @@ But Wait, There's More::md
 ::comment
   Normally I would put the css in its own file, but this README
   itself needs to be self-contained.
-::css @inline
+::css
   .embedded {
     border: 1px solid black;
     max-width: 44em;

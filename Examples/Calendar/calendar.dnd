@@ -1,5 +1,5 @@
 Calendar::title @hide
-::css
+::css @import
   calendar.css
 Adventuring Season::md
   Due to rain, flooding and general bogginess, the barrowmoor is essentially

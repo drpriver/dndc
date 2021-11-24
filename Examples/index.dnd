@@ -40,7 +40,7 @@
 * Calendar example: [Calendar]
 * Wiki example: [Wiki]
 
-::css @inline
+::css
   html, body {
       font-family: "Tahoma";
   }

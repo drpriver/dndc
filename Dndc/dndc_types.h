@@ -133,7 +133,6 @@ typedef struct Node {
     // for the general human-readable version.
     int row, col;                  // 4 + 4 bytes.
     // 4 bytes of padding in this struct
-    // no padding in this struct
 } Node;
 
 #if UINTPTR_MAX != 0xFFFFFFFF

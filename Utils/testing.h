@@ -286,26 +286,32 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
 //
 // For an Errorable, expects .errored is NO_ERROR
 //
-#define TestExpectSuccess(cond) do{\
+#define TestExpectSuccess(cond) ({\
         TEST_stats.executed++;\
+        bool succeeded = true; \
         if ((cond).errored){ \
+            succeeded = false; \
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s = %d", #cond, (cond).errored);\
             }\
-        }while(0)
+        succeeded; \
+        })
 
 //
 // For an Errorable, expects .errored is not NO_ERROR
 //
-#define TestExpectFailure(cond) do{\
+#define TestExpectFailure(cond) ({\
         TEST_stats.executed++;\
+        bool did_fail = true; \
         if (!(cond).errored){ \
+            did_fail = false; \
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s = %d", #cond, (cond).errored);\
             }\
-        }while(0)
+        did_fail; \
+        })
 
 //
 // Unlike the TestExpect* family of macros, TestAssert* macros immediately end

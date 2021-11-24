@@ -1,5 +1,9 @@
 Version 0.8.1::md
+  * Changed semantics of script and css nodes - they
+    are now the equivelant of @inline by default. Tag
+    them with @import to have them loaded from a file.
   * Added syntax highlighter for javascript in the editor.
+  * Added documentation about the scripting API.
 Version 0.8.0::md
   * Removed python blocks.
   * Added FileSystem API to javascript.
@@ -205,7 +209,7 @@ Version 0.3.11::md
     - Logs are per day.
     - You can delete the old logs if they get too fat.
 
-::css @inline
+::css
   body > div {
     margin: auto;
     max-width: 50em;

@@ -1221,7 +1221,7 @@ BOOL show_stats;
     // Inject javascript that will restore the scroll position in the window.
     string = [string stringByAppendingString:
         @"\n"
-        "::script @inline\n  "
+        "::script\n  "
         // Internal anchors are broken in webkit. Inject this function
         // to recreate the wanted behavior.
         JSRAW(document.addEventListener("DOMContentLoaded", function(){
@@ -1285,7 +1285,7 @@ BOOL show_stats;
     if(coord_helper){
         string = [string stringByAppendingString:
             @"\n"
-            "::script @inline\n  "
+            "::script\n  "
             JSRAW(
             document.addEventListener("DOMContentLoaded", function(){
               const svgs = document.getElementsByTagName("svg");

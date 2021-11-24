@@ -53,7 +53,7 @@ expand_to_dnd(DndcContext*ctx, MStringBuilder* msb){
 
 static 
 void
-write_generic_header(Node* n, int indent, MStringBuilder*msb, bool add_inline){
+write_generic_header(Node* n, int indent, MStringBuilder*msb){
     msb_write_nchar(msb, ' ', indent);
     if(n->header.length)
         msb_write_str(msb, n->header.text, n->header.length);
@@ -64,9 +64,6 @@ write_generic_header(Node* n, int indent, MStringBuilder*msb, bool add_inline){
         if(at->value.length){
             MSB_FORMAT(msb, "(", at->value, ")");
             }
-        }
-    if(add_inline && !node_has_attribute(n, SV("inline"))){
-        msb_write_literal(msb, " @inline");
         }
     RARRAY_FOR_EACH(cls, n->classes){
         MSB_FORMAT(msb, " .", *cls);
@@ -87,11 +84,11 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
             return result;
         case NODE_STYLESHEETS:
         case NODE_SCRIPTS:
-            write_generic_header(n, indent, msb, true);
+            write_generic_header(n, indent, msb);
             return expand_node_body(ctx, n, indent+2, msb);
         case NODE_TITLE:
         case NODE_HEADING:
-            write_generic_header(n, indent, msb, true);
+            write_generic_header(n, indent, msb);
             if(node_children_count(n)){
                 node_set_err(ctx, n, LS("TITLE or HEADING has children"));
                 Raise(PARSE_ERROR);
@@ -121,14 +118,14 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
         case NODE_COMMENT:
         case NODE_TEXT:
         case NODE_QUOTE:
-            write_generic_header(n, indent, msb, false);
+            write_generic_header(n, indent, msb);
             return expand_node_body(ctx, n, indent+2, msb);
         case NODE_DATA:
             node_set_err(ctx, n, LS("DATA_NODE unhandled"));
             Raise(PARSE_ERROR);
         case NODE_HR:
         case NODE_NAV:
-            write_generic_header(n, indent, msb, false);
+            write_generic_header(n, indent, msb);
             if(node_children_count(n)){
                 node_set_err(ctx, n, LS("NAV or HR has children"));
                 Raise(PARSE_ERROR);
@@ -148,7 +145,7 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
         }
     unreachable();
     }
-
+#if 0
 static
 Errorable_f(void)
 load_and_indent_raw_files(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
@@ -187,6 +184,7 @@ load_and_indent_raw_files(DndcContext*ctx, Node* n, int indent, MStringBuilder*m
         }
     return result;
     }
+#endif
 
 static
 Errorable_f(void)
@@ -200,11 +198,6 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
         // Should I read the file for --expand?
         case NODE_STYLESHEETS:
         case NODE_SCRIPTS:
-            if(!node_has_attribute(n, SV("inline"))){
-                result = load_and_indent_raw_files(ctx, n, indent, msb);
-                return result;
-            }
-            // fall-through
         case NODE_QUOTE:
         case NODE_COMMENT:
         case NODE_IMGLINKS:

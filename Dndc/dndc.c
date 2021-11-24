@@ -114,27 +114,6 @@ execute_user_scripts(DndcContext* ctx){
             if(!node_children_count(node))
                 continue;
             firstchild = node_children(node)[0];
-            // HACK: turn the filename into the text of the script.
-            if(node_has_attribute(node, SV("import"))){
-                if(node_children_count(node) != 1){
-                    node_print_err(ctx, node, SV("Only 1 child of imported node allowed"));
-                    result.errored = PARSE_ERROR;
-                    goto cleanup;
-                }
-                // NodeHandle childhandle
-                Node* firstchild_node = get_node(ctx, firstchild);
-                auto e = ctx_load_source_file(ctx, firstchild_node->header);
-                if(e.errored){
-                    node_print_err(ctx, firstchild_node, SV("Unable to load file"));
-                    result.errored = e.errored;
-                    goto cleanup;
-                }
-                Marray_push(StringView)(&ctx->filenames, ctx->allocator, firstchild_node->header);
-                firstchild_node->filename_idx = ctx->filenames.count-1;
-                firstchild_node->col = 0;
-                firstchild_node->row = 1;
-                firstchild_node->header = LS_to_SV(e.result);
-            }
             MStringBuilder msb = (MStringBuilder){.allocator=ctx->string_allocator};
             if(type == NODE_JS){
                 msb_write_literal(&msb, "\"use strict\";\n");
@@ -487,8 +466,25 @@ run_the_dndc(uint64_t flags,
         // Handle imports. Imports can import more imports, so don't use a FOR_EACH.
         auto before_imports = get_t();
         for(size_t i = 0; i < ctx.imports.count; i++){
-            auto handle = ctx.imports.data[i];
-            auto node = get_node(&ctx, handle);
+            NodeHandle handle = ctx.imports.data[i];
+            // We parse into a different node and then swap the two.
+            NodeHandle newhandle = alloc_handle(&ctx);
+            Node* node = get_node(&ctx, handle);
+            bool was_import = false;
+            {
+                Node* newnode = get_node(&ctx, newhandle);
+                *newnode = *node;
+                newnode->children.count = 0;
+                if(newnode->type == NODE_IMPORT){
+                    newnode->type = NODE_MD;
+                    was_import = true;
+                }
+                newnode->attributes = NULL;
+                RARRAY_FOR_EACH(attr, node->attributes){
+                    if(!SV_equals(attr->key, SV("import")))
+                        node_set_attribute(newnode, ctx.allocator, attr->key, attr->value);
+                }
+            }
             if(ctx.imports.count > 1000){
                 node_print_err(&ctx, node, SV("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)"));
                 result.errored = PARSE_ERROR;
@@ -496,17 +492,14 @@ run_the_dndc(uint64_t flags,
             }
             // NOTE: re-get the node every loop as the pointer is invalidated.
             for(size_t j = 0; j < node_children_count(node); j++, node=get_node(&ctx, handle)){
-                auto child_handle = node_children(node)[j];
-                auto child = get_node(&ctx, child_handle);
+                NodeHandle child_handle = node_children(node)[j];
+                Node* child = get_node(&ctx, child_handle);
                 if(child->type != NODE_STRING){
                     node_print_err(&ctx, child, SV("import child is not a string"));
                     result.errored = PARSE_ERROR;
                     goto cleanup;
                 }
                 StringView filename = child->header;
-                // set to MD so we can parse as md
-                child->type = NODE_MD;
-                child->header = SV("");
                 auto imp_e = ctx_load_source_file(&ctx, filename);
                 if(imp_e.errored){
                     MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
@@ -522,15 +515,60 @@ run_the_dndc(uint64_t flags,
                     goto cleanup;
                 }
                 LongString imp_text = imp_e.result;
-                auto parse_e = dndc_parse(&ctx, child_handle, filename, imp_text.text, imp_text.length);
+                auto parse_e = dndc_parse(&ctx, newhandle, filename, imp_text.text, imp_text.length);
                 if(parse_e.errored){
                     report_set_error(&ctx);
                     result.errored = parse_e.errored;
                     goto cleanup;
                 }
-                child = get_node(&ctx, child_handle);
+            }
+            Node* newnode = get_node(&ctx, newhandle);
+            if(was_import){
                 // change to container
-                child->type = NODE_CONTAINER;
+                newnode->type = NODE_CONTAINER;
+            }
+            Node* parent = get_node(&ctx, newnode->parent);
+            auto parentchildren = node_children(parent);
+            for(size_t j = 0; j < node_children_count(parent); j++){
+                if(NodeHandle_eq(parentchildren[j], handle)){
+                    parentchildren[j] = newhandle;
+                    break;
+                }
+            }
+            {
+                node = get_node(&ctx, handle);
+                node->type = NODE_INVALID;
+                node->parent = INVALID_NODE_HANDLE;
+                node->children.count = 0;
+            }
+            switch(newnode->type){
+                case NODE_JS:
+                    Marray_push(NodeHandle)(&ctx.user_script_nodes, ctx.allocator, newhandle);
+                    break;
+                case NODE_STYLESHEETS:
+                    Marray_push(NodeHandle)(&ctx.stylesheets_nodes, ctx.allocator, newhandle);
+                    break;
+                // wtf is this node
+                case NODE_DEPENDENCIES:
+                    Marray_push(NodeHandle)(&ctx.dependencies_nodes, ctx.allocator, newhandle);
+                    break;
+                case NODE_DATA:
+                    Marray_push(NodeHandle)(&ctx.data_nodes, ctx.allocator, newhandle);
+                    break;
+                case NODE_LINKS:
+                    Marray_push(NodeHandle)(&ctx.link_nodes, ctx.allocator, newhandle);
+                    break;
+                case NODE_SCRIPTS:
+                    Marray_push(NodeHandle)(&ctx.script_nodes, ctx.allocator, newhandle);
+                    break;
+                case NODE_IMAGE:
+                    Marray_push(NodeHandle)(&ctx.img_nodes, ctx.allocator, newhandle);
+                    break;
+                case NODE_IMGLINKS:
+                    Marray_push(NodeHandle)(&ctx.imglinks_nodes, ctx.allocator, newhandle);
+                    break;
+                default:
+                    break;
             }
         }
         auto after_imports = get_t();
@@ -1089,7 +1127,7 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                     syntax_func(syntax_data, DNDC_SYNTAX_NODE_TYPE, line, nodename.text-begin, nodename.text, nodename.length);
                     for(size_t i = 0; i < arrlen(RAW_NODES); i++){
                         if(SV_equals(nodename, RAW_NODES[i])){
-                            if(i == RAW_NODE_JS_INDEX){
+                            if(i == RAW_NODE_JS_INDEX || i == RAW_NODE_SCRIPT_INDEX){
                                 jsstyle = (struct JsStyleState){0};
                                 which = JAVASCRIPT;
                             }
@@ -1101,12 +1139,8 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                         }
                     }
                 }
-                if(memmem(stripped.text, stripped.length, "@inline", sizeof("@inline")-1)){
-                    if(SV_equals(nodename, SV("script")))
-                        which = JAVASCRIPT;
-                    else
-                        which = RAW;
-                    raw_indentation = stripped.text - begin;
+                if(memmem(stripped.text, stripped.length, "@import", sizeof("@import")-1)){
+                        which = GENERIC;
                 }
                 const char* postnodename = nodenameend;
                 for(;postnodename != endline;){
@@ -1795,9 +1829,9 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                 if(nodenameend != aftercolon.text){
                     nodename = (StringViewUtf16){.text=aftercolon.text, .length=nodenameend-aftercolon.text};
                     syntax_func(syntax_data, DNDC_SYNTAX_NODE_TYPE, line, nodename.text-begin, nodename.text, nodename.length);
-                    for(size_t i = 0; i < arrlen(RAW_NODES); i++){
+                    for(size_t i = 0; i < arrlen(RAW_NODES_UTF16); i++){
                         if(SV_utf16_equals(nodename, RAW_NODES_UTF16[i])){
-                            if(i == RAW_NODE_JS_INDEX){
+                            if(i == RAW_NODE_JS_INDEX || i == RAW_NODE_SCRIPT_INDEX){
                                 jsstyle = (struct JsStyleState){0};
                                 which = JAVASCRIPT;
                             }
@@ -1809,12 +1843,8 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                         }
                     }
                 }
-                if(memmem(stripped.text, stripped.length*2, u"@inline", sizeof(u"@inline")-2)){
-                    if(SV_utf16_equals(nodename, SV16("script")))
-                        which = JAVASCRIPT;
-                    else
-                        which = RAW;
-                    raw_indentation = stripped.text - begin;
+                if(memmem(stripped.text, stripped.length*2, u"@import", sizeof(u"@import")-2)){
+                    which = GENERIC;
                 }
                 const uint16_t* postnodename = nodenameend;
                 for(;postnodename != endline;){

@@ -302,7 +302,7 @@ class LineNumberArea(QWidget):
         self.codeEditor.lineNumberAreaPaintEvent(event)
 
 COORD_HELPER_SCRIPT='''
-::script @inline
+::script
   document.addEventListener('DOMContentLoaded', function(){
     const svgs = document.getElementsByTagName('svg');
     for(let i = 0; i < svgs.length; i++){
@@ -331,7 +331,7 @@ COORD_HELPER_SCRIPT='''
   });
 '''
 SCROLL_RESTO_SCRIPT='''
-::script @inline
+::script
     document.addEventListener('DOMContentLoaded', function(){
         console.log(SCROLLRESTO);
         for(let [key, value] of Object.entries(SCROLLRESTO)){
@@ -775,7 +775,7 @@ class Page(QSplitter):
         if self.coord_helper and not self.textedit.isReadOnly():
             text += COORD_HELPER_SCRIPT
         if self.scroll_pos_string:
-            text += '\n::script @inline\n  const SCROLLRESTO = {}\n'.format(self.scroll_pos_string)
+            text += '\n::script\n  const SCROLLRESTO = {}\n'.format(self.scroll_pos_string)
             text += SCROLL_RESTO_SCRIPT
         return text
 

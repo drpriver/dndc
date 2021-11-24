@@ -422,21 +422,42 @@ TestFunction(TestExamplesWork){
     LongString examples[] = {
         LS("calendar.dnd"),
         LS("krugs-basement.dnd"),
-        LS("mechanics.dnd"),
         LS("characters.dnd"),
+        LS("index.dnd"),
+        LS("mechanics.dnd"),
+        LS("religion.dnd"),
+        LS("rules.dnd"),
+        LS("hello.dnd"),
+        LS("flat.dnd"),
+        LS("index.dnd"),
+        LS("lorem.dnd"),
+        LS("wiki.dnd"),
+        LS("index.dnd"),
         };
     LongString base_dirs[] = {
         LS("Examples/Calendar"),
         LS("Examples/KrugsBasement"),
         LS("Examples/Rules"),
         LS("Examples/Rules"),
+        LS("Examples/Rules"),
+        LS("Examples/Rules"),
+        LS("Examples/Rules"),
+        LS("Examples/Wiki/Inner"),
+        LS("Examples/Wiki"),
+        LS("Examples/Wiki"),
+        LS("Examples/Wiki"),
+        LS("Examples/Wiki"),
+        LS("Examples"),
         };
     _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString output = {};
         auto e = run_the_dndc(flags, base_dirs[i], examples[i], LS("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
         TestExpectFalse(output.text);
-        TestExpectSuccess(e);
+        if(!TestExpectSuccess(e)){
+            TestPrintValue("Example failed:", examples[i]);
+            TestPrintValue("Base dir:", base_dirs[i]);
+        }
         }
     TESTEND();
     }
@@ -473,7 +494,10 @@ TestFunction(TestUntrusted){
         LongString output = {};
         auto e = run_the_dndc(flags, base_dirs[i], examples[i], LS("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
         TestExpectFalse(output.text);
-        TestExpectFailure(e);
+        if(!TestExpectFailure(e)){
+            TestPrintValue("source file", examples[i]);
+        }
+
         }
     TESTEND();
     }

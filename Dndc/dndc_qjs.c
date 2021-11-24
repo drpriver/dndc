@@ -1685,6 +1685,8 @@ JSMETHOD(js_dndc_context_select_nodes){
     QJSValue result = JS_NewArray(jsctx);
     if(!classes_array.count && !attributes_array.count && type < 0){
         for(size_t i = 0; i < ctx->nodes.count; i++){
+            if(ctx->nodes.data[i].type == NODE_INVALID)
+                continue;
             JS_SetPropertyUint32(jsctx, result, i, js_make_dndc_node(jsctx, (NodeHandle){.index=i}));
             }
         }
@@ -1692,6 +1694,7 @@ JSMETHOD(js_dndc_context_select_nodes){
         size_t idx = 0;
         for(size_t i = 0; i < ctx->nodes.count; i++){
             Node* node = &ctx->nodes.data[i];
+            if(node->type == NODE_INVALID) continue;
             if(type >= 0){
                 if(node->type != type)
                     goto Continue;
@@ -1856,6 +1859,7 @@ JSGETTER(js_dndc_context_get_all_nodes){
         return JS_EXCEPTION;
     QJSValue result = JS_NewArray(jsctx);
     for(size_t i = 0; i < ctx->nodes.count; i++){
+        if(ctx->nodes.data[i].type == NODE_INVALID) continue;
         QJSValue n = js_make_dndc_node(jsctx, (NodeHandle){._value=i});
         auto v = JS_ArrayPush(jsctx, result, 1, &n);
         JS_FreeValue(jsctx, v);

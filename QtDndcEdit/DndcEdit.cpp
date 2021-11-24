@@ -61,7 +61,7 @@ DNDC_LOGIT(QtMsgType type, const QMessageLogContext& context, const QString& msg
 
 
 QString COORD_HELPER_SCRIPT = QS(
-    "::script @inline\n"
+    "::script\n"
     "  document.addEventListener('DOMContentLoaded', function(){\n"
     "    const svgs = document.getElementsByTagName('svg');\n"
     "    for(let i = 0; i < svgs.length; i++){\n"
@@ -91,7 +91,7 @@ QString COORD_HELPER_SCRIPT = QS(
     );
 
 QString SCROLL_RESTO_SCRIPT = QS(
-    "::script @inline\n"
+    "::script\n"
     "    document.addEventListener('DOMContentLoaded', function(){\n"
     "        console.log(SCROLLRESTO);\n"
     "        for(let [key, value] of Object.entries(SCROLLRESTO)){\n"
@@ -986,7 +986,7 @@ Page::get_text_for_preview(void){
     if(coord_helper && !textedit->isReadOnly())
         text += QS("\n")+COORD_HELPER_SCRIPT;
     if(scroll_pos_string.length()){
-        text += QS("\n::script @inline\n  const SCROLLRESTO = ") + scroll_pos_string + QS("\n");
+        text += QS("\n::script\n  const SCROLLRESTO = ") + scroll_pos_string + QS("\n");
         text += SCROLL_RESTO_SCRIPT;
         }
     return text + QS("\n");

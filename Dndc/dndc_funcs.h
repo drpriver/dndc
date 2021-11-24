@@ -275,6 +275,13 @@ Nullable(StringView*)
 node_get_attribute(const Node* node, StringView attr);
 
 //
+// Sets an attribute on the node.
+//
+static inline
+void
+node_set_attribute(Node* node, Allocator allocator, StringView attr, StringView value);
+
+//
 // Retrieves the id of the node. Handles the id being set via attribute. If
 // the node has empty header, returns NULL.
 //

@@ -1,4 +1,4 @@
-::css
+::css @import
   dungeon.css
 ::js
   let root = ctx.root;

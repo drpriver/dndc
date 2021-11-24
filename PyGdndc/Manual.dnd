@@ -111,7 +111,7 @@ Getting Help::md
   If something in the GUI misbehaves or seems to be working strangely, don't
   hestitate to contact David.
 
-::css @inline
+::css
   body > div {
     margin:auto;
     font-family: -apple-system, BlinkMacSystemFont,

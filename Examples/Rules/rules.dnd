@@ -2,7 +2,7 @@
   This file contains shared code and stylesheets that the other two documents
   reference. It's convenient to import this file rather than copy paste it
   around.
-::css
+::css @import
   common.css
 ::js
   let root = ctx.root;

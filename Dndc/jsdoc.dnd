@@ -304,7 +304,7 @@ JS Api Documentation::title
   }
   doc.add_child('</pre>');
   //endjs
-::css @inline
+::css
   html {
     margin: auto;
     background-color: #272822;

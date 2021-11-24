@@ -34,7 +34,7 @@ Demo::md
 
   ::img .cell
     imgs/cells.png
-    ::css @inline
+    ::css
       .cell img {
         max-width: 15em;
         max-height: 15em;

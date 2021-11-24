@@ -124,43 +124,14 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
                 continue;
                 }
             written = true;
-            if(node_has_attribute(node, SV("inline"))){
-                NODE_CHILDREN_FOR_EACH(it, node){
-                    auto child = get_node(ctx, *it);
-                    if(unlikely(child->type != NODE_STRING)){
-                        node_print_warning(ctx, child, SV("Non-string child of a style sheet is being ignored."));
-                        continue;
-                        }
-                    msb_write_str(msb, child->header.text, child->header.length);
-                    msb_write_char(msb, '\n');
+            NODE_CHILDREN_FOR_EACH(it, node){
+                auto child = get_node(ctx, *it);
+                if(unlikely(child->type != NODE_STRING)){
+                    node_print_warning(ctx, child, SV("Non-string child of a style sheet is being ignored."));
+                    continue;
                     }
-                }
-            else{
-                if(unlikely(ctx->flags & DNDC_INPUT_IS_UNTRUSTED)){
-                    node_set_err(ctx, node, LS("Untrusted input can't load external css files"));
-                    Raise(PARSE_ERROR);
-                    }
-                NODE_CHILDREN_FOR_EACH(it, node){
-                    auto child = get_node(ctx, *it);
-                    if(unlikely(child->type != NODE_STRING)){
-                        node_print_warning(ctx, child, SV("Non-string child of a style sheet."));
-                        continue;
-                        }
-                    if(!child->header.length)
-                        continue;
-                    auto style_e = ctx_load_source_file(ctx, child->header);
-                    if(style_e.errored){
-                        node_set_err_q(ctx, child, SV("Unable to load "), child->header);
-                        Raise(style_e.errored);
-                        }
-                    LongString style = style_e.result;
-                    if(ctx->flags & DNDC_STRIP_WHITESPACE){
-                        msb_write_stripped_lines(msb, style.text, style.length);
-                        }
-                    else {
-                        msb_write_str(msb, style.text, style.length);
-                        }
-                    }
+                msb_write_str(msb, child->header.text, child->header.length);
+                msb_write_char(msb, '\n');
                 }
             }
         if(written)
@@ -173,21 +144,6 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             // javascript nodes can change node types after they are registered
             if(unlikely(node->type != NODE_SCRIPTS))
                 continue;
-            if(node_has_attribute(node, SV("inline"))){
-                NODE_CHILDREN_FOR_EACH(it, node){
-                    auto child = get_node(ctx, *it);
-                    if(unlikely(child->type != NODE_STRING)){
-                        node_print_warning(ctx, child, SV("script with a non-string child is being ignored"));
-                        continue;
-                        }
-                    auto header = child->header;
-                    if(header.length)
-                        msb_write_str(msb, header.text, header.length);
-                    msb_write_char(msb, '\n');
-                    }
-                msb_write_literal(msb, "</script>\n");
-                continue;
-                }
             if(node_has_attribute(node, SV("noinline"))){
                 msb_erase(msb, sizeof("<script>\n")-1);
                 if(node_children_count(node) != 1){
@@ -208,22 +164,13 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
                     node_print_warning(ctx, child, SV("script with a non-string child is being ignored"));
                     continue;
                     }
-                if(!child->header.length)
-                    continue;
-                auto script_e = ctx_load_source_file(ctx, child->header);
-                if(script_e.errored){
-                    node_set_err_q(ctx, child, SV("Unable to load "), child->header);
-                    Raise(script_e.errored);
-                    }
-                LongString script = script_e.result;
-                if(ctx->flags & DNDC_STRIP_WHITESPACE){
-                    msb_write_stripped_lines(msb, script.text, script.length);
-                    }
-                else {
-                    msb_write_str(msb, script.text, script.length);
-                    }
+                auto header = child->header;
+                if(header.length)
+                    msb_write_str(msb, header.text, header.length);
+                msb_write_char(msb, '\n');
                 }
             msb_write_literal(msb, "</script>\n");
+            continue;
             }
         }
     msb_write_literal(msb, "</head>\n");
@@ -1045,22 +992,6 @@ RENDERFUNC(RAW){
             }
         return (Errorable(void)){};
         }
-    if(node_has_attribute(node, SV("import"))){
-        NODE_CHILDREN_FOR_EACH(it, node){
-            auto child = get_node(ctx, *it);
-            if(unlikely(child->type != NODE_STRING)){
-                node_print_warning(ctx, child, SV("Raw node with a non-string child"));
-                continue;
-                }
-            auto e = ctx_load_source_file(ctx, child->header);
-            if(e.errored){
-                node_set_err_q(ctx, child, SV("Unable to load file: "), child->header);
-                return (Errorable(void)){.errored=e.errored};
-                }
-            LongString contents = e.result;
-            msb_write_str(sb, contents.text, contents.length);
-            }
-        }
     // ignoring the header for now. Idk what the semantics are supposed to be.
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
@@ -1082,37 +1013,12 @@ RENDERFUNC(PRE){
         if(e.errored) return e;
         }
     msb_write_literal(sb, "<pre>\n");
-    if(node_has_attribute(node, SV("import"))){
-        NODE_CHILDREN_FOR_EACH(it, node){
-            auto child = get_node(ctx, *it);
-            if(unlikely(child->type != NODE_STRING)){
-                node_print_warning(ctx, child, SV("pre node with a non-string child"));
-                continue;
-                }
-            if(!child->header.length)
-                continue;
-            auto e = ctx_load_source_file(ctx, child->header);
-            if(e.errored){
-                node_set_err_q(ctx, child, SV("Unable to load file: "), child->header);
-                return (Errorable(void)){.errored=e.errored};
-                }
-            auto contents = e.result;
-            for(StringView remainder = LS_to_SV(contents); remainder.length;){
-                SplitPair pair = string_split(remainder.text, remainder.length, '\n');
-                write_tag_escaped_str(sb, pair.head.text, pair.head.length);
-                msb_write_char(sb, '\n');
-                remainder = pair.tail;
-                }
-            }
-        }
-    else {
-        NODE_CHILDREN_FOR_EACH(it, node){
-            auto child = get_node(ctx, *it);
-            if(unlikely(child->type != NODE_STRING))
-                node_print_warning(ctx, child, SV("pre node with a non-string child"));
-            write_tag_escaped_str(sb, child->header.text, child->header.length);
-            msb_write_char(sb, '\n');
-            }
+    NODE_CHILDREN_FOR_EACH(it, node){
+        auto child = get_node(ctx, *it);
+        if(unlikely(child->type != NODE_STRING))
+            node_print_warning(ctx, child, SV("pre node with a non-string child"));
+        write_tag_escaped_str(sb, child->header.text, child->header.length);
+        msb_write_char(sb, '\n');
         }
     msb_write_literal(sb, "</pre>\n</div>\n");
     return (Errorable(void)){};

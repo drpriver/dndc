@@ -1,8 +1,6 @@
 Hello::title
 ::import
   ../wiki.dnd
-::js
-  console.log(FileSystem.list_dnd_files('..'));
 Hello!
 [foo]
 ::links

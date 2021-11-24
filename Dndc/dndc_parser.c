@@ -361,7 +361,8 @@ dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const 
     ctx->lineno = 0;
     ctx->filename = filename;
     Marray_push(StringView)(&ctx->filenames, ctx->allocator, filename);
-    auto e = parse_node(ctx, root_handle, NODE_MD, -1);
+    NodeType type = get_node(ctx, root_handle)->type;
+    auto e = parse_node(ctx, root_handle, type, -1);
     if(e.errored) return e;
     return result;
     }
@@ -567,6 +568,9 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                 Raise(PARSE_ERROR);
             }
         }
+    if(node_has_attribute(node, SV("import"))){
+        Marray_push(NodeHandle)(&ctx->imports, ctx->allocator, node_handle);
+    }
     return result;
     }
 
@@ -579,6 +583,12 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
 
         return (Errorable(void)){.errored=PARSE_ERROR};
         }
+    // Gross: string comparisons. Maybe we should have a flags argument?
+    // Yeah, looking around I can definitely get some flags when doing the parse
+    // double colon thing so I don't have to do these string comparisons.
+    // That'll be the next yak.
+    if(unlikely(node_has_attribute(get_node(ctx, parent_handle), SV("import"))))
+        goto regular_string_parsing;
     switch(parent_type){
         case NODE_PRE:
         case NODE_RAW:
@@ -592,16 +602,13 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
         case NODE_DETAILS:
         case NODE_MD:
             return parse_md_node(ctx, parent_handle, indentation);
+        case NODE_SCRIPTS:
+            return parse_raw_node(ctx, parent_handle, indentation);
         case NODE_IMGLINKS:
         case NODE_DATA:
         case NODE_NAV:
         case NODE_DEPENDENCIES:
         case NODE_LINKS:
-        case NODE_SCRIPTS:
-            // kind of gross
-            if(node_has_attribute(get_node(ctx, parent_handle), SV("inline"))){
-                return parse_raw_node(ctx, parent_handle, indentation);
-                }
         case NODE_IMPORT:
         case NODE_IMAGE:
         case NODE_DIV:
@@ -612,10 +619,7 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
         case NODE_HR:
             break; // do regular string parsing
         case NODE_STYLESHEETS:
-            // kind of gross
-            if(node_has_attribute(get_node(ctx, parent_handle), SV("inline"))){
-                return parse_raw_node(ctx, parent_handle, indentation);
-                }
+            return parse_raw_node(ctx, parent_handle, indentation);
             break; // do regular string parsing
         case NODE_TEXT:
             return parse_text_node(ctx, parent_handle, indentation);
@@ -629,6 +633,7 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
         case NODE_LIST:
             unreachable();
         }
+    regular_string_parsing:;
     Errorable(void) result = {};
     for(;ctx->cursor[0];){
         analyze_line(ctx);
@@ -758,7 +763,7 @@ PARSEFUNC(parse_raw_node){
     // of subsequent lines (which are indented less than what would cause us to
     // break out of this node). So for those, we'll pretend like they are indented at
     // the same level as our leading indent, which means their indentation will be
-    // off in the output.
+    // off in the output. This is really unusual though.
     bool have_leading_indent = false;
     int leading_indent = 0;
     for(;ctx->cursor[0];){
