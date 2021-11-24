@@ -1,0 +1,4 @@
+The @import attribute is a bit weird as it happens during htmlgen, not during import time
+and it only imports things as raw text.
+
+I think I originally hacked it in so you could @import your own document?
