@@ -1115,7 +1115,10 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                     }
                 }
                 if(memmem(stripped.text, stripped.length, "@import", sizeof("@import")-1)){
-                        which = GENERIC;
+                    which = GENERIC;
+                }
+                if(memmem(stripped.text, stripped.length, "@comment", sizeof("@comment")-1)){
+                    which = RAW;
                 }
                 const char* postnodename = nodenameend;
                 for(;postnodename != endline;){
@@ -1820,6 +1823,9 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                 }
                 if(memmem(stripped.text, stripped.length*2, u"@import", sizeof(u"@import")-2)){
                     which = GENERIC;
+                }
+                if(memmem(stripped.text, stripped.length, u"@comment", sizeof(u"@comment")-2)){
+                    which = RAW;
                 }
                 const uint16_t* postnodename = nodenameend;
                 for(;postnodename != endline;){

@@ -51,6 +51,8 @@ Errorable_f(void)
 render_node(DndcContext* ctx, MStringBuilder* restrict sb, Node* node, int header_depth){
     bool hide = node_has_attribute(node, SV("hide"));
     if(hide) return (Errorable(void)){};
+    if(node_has_attribute(node, SV("comment")))
+        return (Errorable(void)){};
 #if 0
     switch(node->type){
 #define X(a, b) case NODE_##a: return RENDERFUNCNAME(a)(ctx, sb, node, header_depth);

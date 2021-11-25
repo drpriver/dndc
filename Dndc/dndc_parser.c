@@ -16,9 +16,21 @@
 #pragma clang assume_nonnull begin
 #endif
 
+typedef enum ParsedNodeFlags {
+    PARSEDNODE_NONE = 0,
+    PARSEDNODE_IS_IMPORT = 0x1,
+    PARSEDNODE_IS_COMMENT = 0x2,
+} ParsedNodeFlags;
+
+struct ErrorableParsedNodeFlags{
+    ParsedNodeFlags result;
+    int errored;
+};
+
 static
-Errorable_f(void)
+struct ErrorableParsedNodeFlags
 parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle);
+
 static
 void
 analyze_line(DndcContext*);
@@ -29,7 +41,7 @@ advance_row(DndcContext*);
 #define PARSEFUNC(name) static Errorable_f(void) name(DndcContext* ctx, NodeHandle parent_handle, int indentation)
 static
 Errorable_f(void)
-parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int indentation);
+parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int indentation, ParsedNodeFlags flags);
 PARSEFUNC(parse_text_node);
 PARSEFUNC(parse_table_node);
 PARSEFUNC(parse_keyvalue_node);
@@ -363,7 +375,7 @@ dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const 
     ctx->filename = filename;
     Marray_push(StringView)(&ctx->filenames, ctx->allocator, filename);
     NodeType type = get_node(ctx, root_handle)->type;
-    auto e = parse_node(ctx, root_handle, type, -1);
+    auto e = parse_node(ctx, root_handle, type, -1, 0);
     if(e.errored) return e;
     return result;
 }
@@ -378,9 +390,14 @@ parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
     StringView postcolon = stripped_view(starttext, length);
     auto new_node_handle = alloc_handle(ctx);
     init_node(ctx, new_node_handle, ctx->linestart+ctx->nspaces, NODE_INVALID);
+    ParsedNodeFlags flags;
     {
         auto e = parse_post_colon(ctx, postcolon, new_node_handle);
-        if(e.errored) return e;
+        if(e.errored){
+            result.errored = e.errored;
+            return result;
+        }
+        flags = e.result;
     }
     append_child(ctx, parent_handle, new_node_handle);
     NodeType type;
@@ -388,14 +405,15 @@ parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
         auto node = get_node(ctx, new_node_handle);
         const char* header = ctx->linestart + ctx->nspaces;
         node->header = stripped_view(header, ctx->doublecolon - header);
-        // This is wrong... uggh.
-        if(node_has_attribute(node, SV("comment")))
-            node->type = NODE_COMMENT;
+        // if(flags & PARSEDNODE_IS_COMMENT){
+            // This is wrong... uggh.
+            // node->type = NODE_COMMENT;
+        // }
         type = node->type;
     }
     auto new_indent = ctx->nspaces;
     advance_row(ctx);
-    auto e = parse_node(ctx, new_node_handle, type, new_indent);
+    auto e = parse_node(ctx, new_node_handle, type, new_indent, flags);
     if(e.errored) return e;
     return result;
 }
@@ -426,9 +444,9 @@ advance_sv(StringView* sv){
 }
 
 static
-Errorable_f(void)
+struct ErrorableParsedNodeFlags
 parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle){
-    Errorable(void) result = {};
+    struct ErrorableParsedNodeFlags result = {0};
     auto node = get_node(ctx, node_handle);
     size_t boundary = postcolon.length;
     for(size_t i = 0; i < postcolon.length;i++){
@@ -450,11 +468,16 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
             if(memcmp(NODEALIASES[i].name.text, postcolon.text, boundary)==0){
                 auto type = NODEALIASES[i].type;
                 switch(type){
+                    case NODE_COMMENT:
+                        result.result |= PARSEDNODE_IS_COMMENT;
+                        break;
                     case NODE_JS:
                         Marray_push(NodeHandle)(&ctx->user_script_nodes, ctx->allocator, node_handle);
                         break;
                     case NODE_IMPORT:
-                        Marray_push(NodeHandle)(&ctx->imports, ctx->allocator, node_handle);
+                        // This is pushed later.
+                        // Marray_push(NodeHandle)(&ctx->imports, ctx->allocator, node_handle);
+                        result.result |= PARSEDNODE_IS_IMPORT;
                         break;
                     case NODE_STYLESHEETS:
                         Marray_push(NodeHandle)(&ctx->stylesheets_nodes, ctx->allocator, node_handle);
@@ -535,6 +558,10 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                 auto attr = Rarray_alloc(Attribute)(&node->attributes, ctx->allocator);
                 attr->key.length = attribute_length;
                 attr->key.text = attribute_start;
+                if(SV_equals(attr->key, SV("import")))
+                    result.result |= PARSEDNODE_IS_IMPORT;
+                if(SV_equals(attr->key, SV("comment")))
+                    result.result |= PARSEDNODE_IS_COMMENT;
                 attr->value = SV("");
                 if(aftertype.length){
                     eat_leading_tabspaces(&aftertype);
@@ -569,7 +596,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                 Raise(PARSE_ERROR);
         }
     }
-    if(node_has_attribute(node, SV("import"))){
+    if(result.result & PARSEDNODE_IS_IMPORT){
         Marray_push(NodeHandle)(&ctx->imports, ctx->allocator, node_handle);
     }
     return result;
@@ -578,16 +605,14 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
 // generic parsing function
 static
 Errorable_f(void)
-parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int indentation){
+parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int indentation, ParsedNodeFlags flags){
     if(unlikely(indentation > 64)){
         node_set_err(ctx, get_node(ctx, parent_handle), LS("Too deep! Indentation greater than 64 is unsupported."));
         return (Errorable(void)){.errored=PARSE_ERROR};
     }
-    // Gross: string comparisons. Maybe we should have a flags argument?
-    // Yeah, looking around I can definitely get some flags when doing the parse
-    // double colon thing so I don't have to do these string comparisons.
-    // That'll be the next yak.
-    if(unlikely(node_has_attribute(get_node(ctx, parent_handle), SV("import"))))
+    if(flags & PARSEDNODE_IS_COMMENT)
+        return parse_raw_node(ctx, parent_handle, indentation);
+    if(flags & PARSEDNODE_IS_IMPORT)
         goto regular_string_parsing;
     switch(parent_type){
         case NODE_PRE:
