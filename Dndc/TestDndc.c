@@ -49,7 +49,7 @@ TestFunction(TestDndc1){
         | DNDC_DONT_PRINT_ERRORS
         ;
     LongString output = {};
-    auto e = run_the_dndc(flags, LS(""), source, LS(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, LS(""), source, LS(""), LS(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectFalse(output.text);
     TestExpectSuccess(e);
     TESTEND();
@@ -70,7 +70,7 @@ TestFunction(TestDndc2){
         | DNDC_DONT_PRINT_ERRORS
         ;
     LongString output = {};
-    auto e = run_the_dndc(flags, LS(""), source, LS(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, LS(""), source, LS(""), LS(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectFalse(output.text);
     TestExpectSuccess(e);
     TESTEND();
@@ -90,7 +90,7 @@ TestFunction(TestDndc3){
         | DNDC_DONT_PRINT_ERRORS
         ;
     LongString output = {};
-    auto e = run_the_dndc(flags, LS(""), source, LS(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, LS(""), source, LS(""), LS(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectFalse(output.text);
     TestExpectFailure(e);
     TESTEND();
@@ -110,7 +110,7 @@ TestFunction(TestDndcOutParam){
         | DNDC_DONT_PRINT_ERRORS
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, LS(""), source, LS("hello.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, LS(""), source, LS(""), LS("hello.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -164,7 +164,7 @@ TestFunction(TestDndcTableMultiline){
         | DNDC_DONT_PRINT_ERRORS
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, LS(""), source, LS("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, LS(""), source, LS(""), LS("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -245,7 +245,7 @@ TestFunction(TestFormatTable){
         | DNDC_REFORMAT_ONLY
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, LS(""), source, LS("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, LS(""), source, LS(""), LS("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -269,7 +269,7 @@ TestFunction(TestFormatTable){
             "  b\n"
             );
     outdata = (LongString){};
-    e = run_the_dndc(flags, LS(""), source, LS("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    e = run_the_dndc(flags, LS(""), source, LS(""), LS("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         auto expected = LS(
@@ -305,7 +305,7 @@ TestFunction(TestFormatList){
         | DNDC_REFORMAT_ONLY
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, LS(""), source, LS("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, LS(""), source, LS(""), LS("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -330,7 +330,7 @@ TestFunction(TestFormatList){
         {
             // check it parses after format
             LongString output = {};
-            auto e2 = run_the_dndc(flags|DNDC_DONT_WRITE, LS(""), outdata, LS("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+            auto e2 = run_the_dndc(flags|DNDC_DONT_WRITE, LS(""), LS(""), outdata, LS("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
             TestExpectFalse(output.text);
             TestExpectSuccess(e2);
         }
@@ -356,7 +356,7 @@ TestFunction(TestFormatKV){
         | DNDC_REFORMAT_ONLY
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, LS(""), source, LS("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, LS(""), source, LS(""), LS("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -374,7 +374,7 @@ TestFunction(TestFormatKV){
         {
             // check it parses after format
             LongString output = {};
-            auto e2 = run_the_dndc(flags|DNDC_DONT_WRITE, LS(""),  outdata, LS("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+            auto e2 = run_the_dndc(flags|DNDC_DONT_WRITE, LS(""),  outdata, LS(""), LS("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
             TestExpectFalse(output.text);
             TestExpectSuccess(e2);
         }
@@ -386,7 +386,6 @@ TestFunction(TestFormatKV){
 TestFunction(TestCrashesFixed){
     TESTBEGIN();
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_SOURCE_IS_PATH_NOT_DATA
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_DONT_WRITE
@@ -395,12 +394,15 @@ TestFunction(TestCrashesFixed){
         LongString name;
         bool error; // if we expect an error
     } cases[] = {
-        {.name=LS("case1.dnd"), .error=false},
-        {.name=LS("case2.dnd"), .error=true},
+        {.name=LS("TestCases/case1.dnd"), .error=false},
+        {.name=LS("TestCases/case2.dnd"), .error=true},
     };
     for(size_t i = 0; i < arrlen(cases); i++){
         LongString output = {};
-        auto e = run_the_dndc(flags, LS("TestCases"), cases[i].name, LS("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+        auto allocator = get_mallocator();
+        auto data = read_file(cases[i].name.text, allocator);
+        TestAssertSuccess(data);
+        auto e = run_the_dndc(flags, LS("TestCases"), data.result, cases[i].name, LS("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
         TestExpectFalse(output.text);
         if(cases[i].error){
             TestExpectFailure(e);
@@ -408,31 +410,31 @@ TestFunction(TestCrashesFixed){
         else {
             TestExpectSuccess(e);
         }
+        Allocator_free(allocator, data.result.text, data.result.length+1);
     }
     TESTEND();
 }
 TestFunction(TestExamplesWork){
     TESTBEGIN();
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_SOURCE_IS_PATH_NOT_DATA
         | DNDC_SUPPRESS_WARNINGS
         // | DNDC_DONT_PRINT_ERRORS
         | DNDC_DONT_WRITE
         ;
     LongString examples[] = {
-        LS("calendar.dnd"),
-        LS("krugs-basement.dnd"),
-        LS("characters.dnd"),
-        LS("index.dnd"),
-        LS("mechanics.dnd"),
-        LS("religion.dnd"),
-        LS("rules.dnd"),
-        LS("hello.dnd"),
-        LS("flat.dnd"),
-        LS("index.dnd"),
-        LS("lorem.dnd"),
-        LS("wiki.dnd"),
-        LS("index.dnd"),
+        LS("Examples/Calendar/calendar.dnd"),
+        LS("Examples/KrugsBasement/krugs-basement.dnd"),
+        LS("Examples/Rules/characters.dnd"),
+        LS("Examples/Rules/index.dnd"),
+        LS("Examples/Rules/mechanics.dnd"),
+        LS("Examples/Rules/religion.dnd"),
+        LS("Examples/Rules/rules.dnd"),
+        LS("Examples/Wiki/Inner/hello.dnd"),
+        LS("Examples/Wiki/flat.dnd"),
+        LS("Examples/Wiki/index.dnd"),
+        LS("Examples/Wiki/lorem.dnd"),
+        LS("Examples/Wiki/wiki.dnd"),
+        LS("Examples/index.dnd"),
     };
     LongString base_dirs[] = {
         LS("Examples/Calendar"),
@@ -452,33 +454,36 @@ TestFunction(TestExamplesWork){
     _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString output = {};
-        auto e = run_the_dndc(flags, base_dirs[i], examples[i], LS("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
+        auto allocator = get_mallocator();
+        auto data = read_file(examples[i].text, allocator);
+        TestAssertSuccess(data);
+        auto e = run_the_dndc(flags, base_dirs[i], data.result, examples[i], LS("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
         TestExpectFalse(output.text);
         if(!TestExpectSuccess(e)){
             TestPrintValue("Example failed:", examples[i]);
             TestPrintValue("Base dir:", base_dirs[i]);
         }
+        Allocator_free(allocator, data.result.text, data.result.length+1);
     }
     TESTEND();
 }
 TestFunction(TestUntrusted){
     TESTBEGIN();
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_SOURCE_IS_PATH_NOT_DATA
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_INPUT_IS_UNTRUSTED
         | DNDC_DONT_WRITE
         ;
     LongString examples[] = {
-        LS("calendar.dnd"),
-        LS("krugs-basement.dnd"),
-        LS("mechanics.dnd"),
-        LS("characters.dnd"),
+        LS("Examples/Calendar/calendar.dnd"),
+        LS("Examples/KrugsBasement/krugs-basement.dnd"),
+        LS("Examples/Rules/mechanics.dnd"),
+        LS("Examples/Rules/characters.dnd"),
         // These aren't great tests.
-        LS("untrusted-imports.dnd"),
-        LS("untrusted-js.dnd"),
-        LS("untrusted-css.dnd"),
+        LS("TestCases/untrusted-imports.dnd"),
+        LS("TestCases/untrusted-js.dnd"),
+        LS("TestCases/untrusted-css.dnd"),
     };
     LongString base_dirs[] = {
         LS("Examples/Calendar"),
@@ -492,11 +497,15 @@ TestFunction(TestUntrusted){
     _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString output = {};
-        auto e = run_the_dndc(flags, base_dirs[i], examples[i], LS("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
+        auto allocator = get_mallocator();
+        auto data = read_file(examples[i].text, allocator);
+        TestAssertSuccess(data);
+        auto e = run_the_dndc(flags, base_dirs[i], data.result, examples[i], LS("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
         TestExpectFalse(output.text);
         if(!TestExpectFailure(e)){
             TestPrintValue("source file", examples[i]);
         }
+        Allocator_free(allocator, data.result.text, data.result.length+1);
 
     }
     TESTEND();
@@ -542,7 +551,7 @@ TestFunction(TestSpecialChars){
     };
     for(size_t i = 0; i < arrlen(testcases); i++){
         LongString output = {};
-        auto e = run_the_dndc(flags, LS(""), testcases[i].source, LS("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
+        auto e = run_the_dndc(flags, LS(""), testcases[i].source, LS(""), LS("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
         TestAssertSuccess(e);
         if(!TestExpectEquals2(SV_equals, sv_slice(LS_to_SV(output), 198, testcases[i].result.length), testcases[i].result)){
             TestPrintValue("output", output);

@@ -47,7 +47,8 @@ enum DndcMainFlags {
 
 int
 main(int argc, char**argv){
-    LongString source_path = {};
+    LongString source_path = {0};
+    LongString source_text = {0};
     LongString output_path = LS("");
     DndcDependencyFunc* dependency_func = NULL;
     LongString dependency_path = LS("");
@@ -307,6 +308,7 @@ main(int argc, char**argv){
         if(!cleanup)
             flags |= DNDC_NO_CLEANUP;
         if(!source_path.text){
+            source_path = LS("(stdin)");
             // read from stdin
             MStringBuilder sb = {.allocator=get_mallocator()};
             if(isatty(fileno(stdin))){
@@ -335,23 +337,20 @@ main(int argc, char**argv){
             }
             if(!sb.cursor)
                 msb_write_char(&sb, ' ');
-            source_path = msb_detach(&sb);
+            source_text = msb_detach(&sb);
         }
         else {
-            flags |= DNDC_SOURCE_IS_PATH_NOT_DATA;
-        }
-    }
-    if(print_syntax){
-        if(flags & DNDC_SOURCE_IS_PATH_NOT_DATA){
             auto allocator = get_mallocator();
             auto load_err = read_file(source_path.text, allocator);
             if(load_err.errored){
                 fprintf(stderr, "Unable to read: '%s'\n", source_path.text);
                 return 1;
             }
-            source_path = load_err.result;
+            source_text = load_err.result;
         }
-        dndc_print_out_syntax(LS_to_SV(source_path));
+    }
+    if(print_syntax){
+        dndc_print_out_syntax(LS_to_SV(source_text));
         return 0;
     }
 
@@ -374,6 +373,7 @@ main(int argc, char**argv){
             Errorable(void) e = run_the_dndc(
                 flags,
                 base_dir,
+                source_text,
                 source_path,
                 output_path,
                 &output,
@@ -393,16 +393,17 @@ main(int argc, char**argv){
         LongString output;
         Errorable(void) e = run_the_dndc(
             flags,
-             base_dir,
-             source_path,
-             output_path,
-             &output,
-             NULL, NULL,
-             dndc_stderr_error_func, NULL,
-             dependency_func, &dependency_user_data,
-             dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
-             worker
-             );
+            base_dir,
+            source_text,
+            source_path,
+            output_path,
+            &output,
+            NULL, NULL,
+            dndc_stderr_error_func, NULL,
+            dependency_func, &dependency_user_data,
+            dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
+            worker
+            );
         if(e.errored) return e.errored;
         if(flags & DNDC_DONT_WRITE)
             return 0;

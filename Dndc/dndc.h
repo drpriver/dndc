@@ -514,13 +514,12 @@ dndc_worker_thread_destroy(DndcWorkerThread*);
 //    Specifically, this string plus a directory separator will be prepended to
 //    all paths for the purposes of opening those paths.
 //
-// source_or_path:
+// source_text:
 //    The string to be parsed and compiled.
 //
-//    Alternatively, if the flag DNDC_SOURCE_IS_PATH_NOT_DATA is set, this
-//    argument is treated as a filepath to the source data. If this string's
-//    length is zero, input will be read from stdin.
-//
+// source_path:
+//    The filepath that the source path was loaded from. This is mostly
+//    used for reporting errors.
 //
 // outpath:
 //    Several features depend on knowing what the ultimate name of the file will be.
@@ -579,7 +578,8 @@ int
 dndc_compile_dnd_file(
     unsigned long long flags,
     DndcLongString base_directory,
-    DndcLongString source_or_path,
+    DndcLongString source_text,
+    DndcLongString source_path,
     DndcLongString outpath,
     DndcLongString* outstring,
     DNDC_NULLABLE(DndcFileCache*) base64cache,
@@ -599,9 +599,8 @@ dndc_compile_dnd_file(
 enum DndcFlags {
 DNDC_FLAGS_NONE = 0x0,
 
-// The `source` argument is actually a filepath to the file containing the
-// data.
-DNDC_SOURCE_IS_PATH_NOT_DATA = 0x1,
+// This flag is currently unused
+DNDC_UNUSED_VALUE_0x1,
 
 // Don't write out the final result.
 DNDC_DONT_WRITE = 0x2,
@@ -638,9 +637,9 @@ DNDC_NO_COMPILETIME_JS = 0x200,
 
 // These flags are unused (used to be for controlling python, but no longer).
 // They will be used in the future.
-DNDC_UNUSED1 = 0x400,
-DNDC_UNUSED2 = 0x800,
-DNDC_UNUSED3 = 0x1000,
+DNDC_UNUSED_VALUE_0x400 = 0x400,
+DNDC_UNUSED_VALUE_0x800 = 0x800,
+DNDC_UNUSED_VALUE_0x1000 = 0x1000,
 
 // Don't spawn any worker threads. No parallelism.
 DNDC_NO_THREADS = 0x2000,

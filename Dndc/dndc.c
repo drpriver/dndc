@@ -275,7 +275,8 @@ static
 Errorable_f(void)
 run_the_dndc(uint64_t flags,
         LongString base_directory,
-        LongString source_or_path,
+        LongString source_text,
+        LongString source_path,
         LongString outpath,
         Nonnull(LongString*) outstring,
         Nullable(FileCache*)external_b64cache,
@@ -306,11 +307,8 @@ run_the_dndc(uint64_t flags,
 #endif
     auto t0 = get_t();
     Errorable(void) result = {};
-    StringView path;
-    if(flags & DNDC_SOURCE_IS_PATH_NOT_DATA)
-        path = LS_to_SV(source_or_path);
-    else
-        path = SV("(string input)");
+    if(!source_path.length)
+        source_path = LS("(string input)");
     ArenaAllocator arena_allocator = {};
     const Allocator string_allocator = {.type=ALLOCATOR_ARENA, ._data=&arena_allocator};
     ArenaAllocator main_arena = {};
@@ -349,49 +347,14 @@ run_the_dndc(uint64_t flags,
     };
     MStringBuilder msb = {.allocator=ctx.allocator};
     ctx_add_builtins(&ctx);
-    LongString source;
-    if(!wasm && (flags & DNDC_SOURCE_IS_PATH_NOT_DATA)){
-        // Temporarily clear the DONT_READ flag.
-        auto old_flags = ctx.flags;
-        ctx.flags &= ~DNDC_DONT_READ;
-        auto source_err = ctx_load_source_file(&ctx, path);
-        ctx.flags = old_flags;
-        if(source_err.errored){
-            MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
-            if(ctx.base_directory.length){
-                MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", path, "'");
-            }
-            else{
-                MSB_FORMAT(&err_builder, "Unable to open '", path, "'");
-            }
-            report_system_error(&ctx, msb_borrow(&err_builder));
-            msb_destroy(&err_builder);
-            result.errored = source_err.errored;
-            goto cleanup;
-        }
-        #if 0
-        // Forces the allocation to be the right size and via malloc.
-        // Useful for asan.
-        char* text = malloc(source_err.result.length+1);
-        memcpy(text, source_err.result.text, source_err.result.length);
-        text[source_err.result.length] = 0;
-        source.length = source_err.result.length;
-        source.text = text;
-        #else
-        source = source_err.result;
-        #endif
+    if(!source_text.text){
+        report_system_error(&ctx, SV("String with no data given as input"));
+        result.errored = UNEXPECTED_END;
+        goto cleanup;
     }
-    else {
-        source = source_or_path;
-        if(!source.text){
-            report_system_error(&ctx, SV("String with no data given as input"));
-            result.errored = UNEXPECTED_END;
-            goto cleanup;
-        }
-        ctx_store_builtin_file(&ctx, LS("(string input)"), source);
-    }
+    ctx_store_builtin_file(&ctx, source_path, source_text);
     // Quick and dirty estimate of how many nodes we will need.
-    Marray_ensure_total(Node)(&ctx.nodes, ctx.allocator, source.length/10+1);
+    Marray_ensure_total(Node)(&ctx.nodes, ctx.allocator, source_text.length/10+1);
 
     // Setup the root node.
     {
@@ -400,7 +363,7 @@ run_the_dndc(uint64_t flags,
         auto root = get_node(&ctx, root_handle);
         root->col = 0;
         root->row = 0;
-        Marray_push(StringView)(&ctx.filenames, ctx.allocator, path);
+        Marray_push(StringView)(&ctx.filenames, ctx.allocator, LS_to_SV(source_path));
         root->filename_idx = ctx.filenames.count-1;
         root->type = NODE_MD;
         root->parent = root_handle;
@@ -408,7 +371,7 @@ run_the_dndc(uint64_t flags,
     // Parse the initial document.
     {
         auto before_parse = get_t();
-        auto e = dndc_parse(&ctx, ctx.root_handle, path, source.text, source.length);
+        auto e = dndc_parse(&ctx, ctx.root_handle, LS_to_SV(source_path), source_text.text, source_text.length);
         auto after_parse = get_t();
         report_time(&ctx, SV("Initial parsing took: "), after_parse-before_parse);
         if(e.errored){
@@ -800,7 +763,7 @@ run_the_dndc(uint64_t flags,
     success:;
     cleanup:;
     msb_destroy(&msb);
-    report_size(&ctx, SV("source.length = "), source.length);
+    report_size(&ctx, SV("source_text.length = "), source_text.length);
     report_size(&ctx, SV("la_.high_water = "), la_.high_water);
     if(!wasm && !(flags & DNDC_NO_CLEANUP)){
         auto before_cleanup = get_t();
@@ -935,7 +898,7 @@ dndc_format(LongString source_text, LongString* output, Nullable(DndcErrorFunc*)
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_REFORMAT_ONLY
         ;
-    auto e = run_the_dndc(flags, LS(""), source_text, LS(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, LS(""), source_text, LS(""), LS(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL);
     return e.errored;
 }
 
@@ -1977,7 +1940,8 @@ int
 dndc_compile_dnd_file(
     unsigned long long flags,
     DndcLongString base_directory,
-    DndcLongString source_or_path,
+    DndcLongString source_text,
+    DndcLongString source_path,
     DndcLongString outpath,
     DndcLongString* outstring,
     DNDC_NULLABLE(DndcFileCache*) base64cache,
@@ -1998,7 +1962,6 @@ dndc_compile_dnd_file(
             | DNDC_NO_THREADS
             | DNDC_DONT_WRITE
             | DNDC_NO_CLEANUP
-            | DNDC_SOURCE_IS_PATH_NOT_DATA
             | DNDC_DONT_PRINT_ERRORS
             | DNDC_REFORMAT_ONLY
             | DNDC_DONT_INLINE_IMAGES
@@ -2012,7 +1975,7 @@ dndc_compile_dnd_file(
         return GENERIC_ERROR;
     if(!outstring)
         return GENERIC_ERROR;
-    auto err = run_the_dndc(flags, base_directory, source_or_path, outpath, outstring, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread);
+    auto err = run_the_dndc(flags, base_directory, source_text, source_path, outpath, outstring, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread);
     return err.errored;
 }
 

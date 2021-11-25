@@ -107,7 +107,7 @@ analyze_line(DndcContext* ctx){
         uint8x16_t test_tabs  = vceqq_u8(data, tabs);
         uint8x16_t spacecr    = vorrq_u8(test_space, test_cr);
         uint8x16_t whitespace = vorrq_u8(spacecr, test_tabs);
-        uint64x2_t had_it     = vreinterpretq_u64_u8(whitespace);
+        // uint64x2_t had_it     = vreinterpretq_u64_u8(whitespace);
         unsigned mask = _mm_movemask_aarch64(whitespace);
         int n = __builtin_ctz(~mask);
         nspace += n;

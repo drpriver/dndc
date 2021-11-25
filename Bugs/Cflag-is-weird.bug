@@ -1,2 +1,0 @@
-For syntax printing, you refer to the full filepath, but for actual execution you have to refer to it relative to the -C directory.
-What is going on there?

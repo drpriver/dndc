@@ -39,10 +39,12 @@ typedef int (DndcPostParseAstFunc)(Nullable(void*)user_data, Nonnull(DndcContext
 //    string, in which case paths are left as is. Absolute paths in the
 //    document are left unaltered.
 //
-// source:
-//    As controlled by the flags, this can be the data to parse, a path to a
-//    file to parse, or if .length is 0, stdin will be read instead. This path
-//    is adjusted by the base_directory argument.
+// source_text:
+//    The string to be parsed and compiled.
+//
+// source_path:
+//    The filepath that the source path was loaded from. This is mostly
+//    used for reporting errors.
 //
 // outpath:
 //    Several features depend on knowing what the ultimate name of the file will be.
@@ -107,7 +109,8 @@ static
 Errorable_f(void)
 run_the_dndc(uint64_t flags,
         LongString base_directory,
-        LongString source_or_path,
+        LongString source_text,
+        LongString source_path,
         LongString outpath,
         LongString* outstring,
         Nullable(FileCache*)external_b64cache,
@@ -119,7 +122,7 @@ run_the_dndc(uint64_t flags,
         Nullable(DndcPostParseAstFunc*)ast_func,
         Nullable(void*)ast_func_user_data,
         Nullable(WorkerThread*) worker_thread
-        );
+    );
 
 //
 // The following functions are for reporting errors and warnings. ONLY use
