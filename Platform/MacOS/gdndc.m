@@ -1090,6 +1090,11 @@ BOOL show_stats;
     switch(item.tag){
         case GDND_INSERT_IMGLINKS:
         case GDND_INSERT_IMG:
+            // The suggested fix is to use -allowedContentTypes, but
+            // that is only available since 11.0 and I want to run
+            // on 10.15.
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             panel.allowedFileTypes = @[@"png", @"jpg"];
             break;
         case GDND_INSERT_CSS:
@@ -1101,6 +1106,7 @@ BOOL show_stats;
         case GDND_INSERT_DND:
             panel.allowedFileTypes = @[@"dnd"];
             break;
+            #pragma clang diagnostic pop
     }
     [panel beginWithCompletionHandler:^(NSInteger result){
         if(result == NSModalResponseOK){

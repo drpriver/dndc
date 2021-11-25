@@ -24,13 +24,13 @@ pystring_to_longstring(PyObject* pyobj, const Allocator a){
     unhandled_error_condition(!text);
     if(!length){
         return (LongString){};
-        }
+    }
     char* copy = Allocator_dupe(a, text, length+1);
     return (LongString){
         .text = copy,
         .length = length,
-        };
-    }
+    };
+}
 
 static inline
 StringView
@@ -41,13 +41,13 @@ pystring_to_stringview(PyObject* pyobj, const Allocator a){
     unhandled_error_condition(!text);
     if(!length){
         return (StringView){};
-        }
+    }
     char* copy = Allocator_dupe(a, text, length);
     return (StringView){
         .text = copy,
         .length = length,
-        };
-    }
+    };
+}
 
 static inline
 StringView
@@ -57,7 +57,7 @@ pystring_borrow_stringview(PyObject* pyobj){
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
     unhandled_error_condition(!text);
     return (StringView){.text=text, .length=length};
-    }
+}
 
 static inline
 LongString
@@ -67,7 +67,7 @@ pystring_borrow_longstring(PyObject* pyobj){
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
     unhandled_error_condition(!text);
     return (LongString){.text=text, .length=length};
-    }
+}
 PopDiagnostic(); // unused function
 
 typedef struct DndcPyFileCache {
@@ -82,13 +82,13 @@ DndcPyFileCache_remove(PyObject* self, PyObject* str){
     if(!PyUnicode_Check(str)){
         PyErr_SetString(PyExc_TypeError, "Argument to remove must be a string");
         return NULL;
-        }
+    }
     auto path = pystring_borrow_stringview(str);
     auto cache = (DndcPyFileCache*)self;
     FileCache_maybe_remove(&cache->text_cache, path);
     FileCache_maybe_remove(&cache->b64_cache, path);
     Py_RETURN_NONE;
-    }
+}
 
 static
 Nullable(PyObject*)
@@ -97,7 +97,7 @@ DndcPyFileCache_clear(PyObject* self){
     FileCache_clear(&cache->text_cache);
     FileCache_clear(&cache->b64_cache);
     Py_RETURN_NONE;
-    }
+}
 
 static
 Nullable(PyObject*)
@@ -114,14 +114,14 @@ DndcPyFileCache_paths(PyObject* self){
         if(!s)
             goto error;
         PyList_SET_ITEM(result, index, s); // steals the reference
-        }
+    }
     for(size_t i = 0, count = cache->text_cache.files.count; i < count; i++, index++){
         auto path = &cache->text_cache.files.data[i].sourcepath;
         PyObject* s = PyUnicode_FromStringAndSize(path->text, path->length);
         if(!s)
             goto error;
         PyList_SET_ITEM(result, index, s); // steals the reference
-        }
+    }
     return result;
     error:
     Py_XDECREF(result);
@@ -147,7 +147,7 @@ DndcPyFileCache_dealloc(PyObject* self){
     auto cache = (DndcPyFileCache*)self;
     FileCache_clear(&cache->text_cache);
     FileCache_clear(&cache->b64_cache);
-    }
+}
 
 static
 PyMethodDef DndcPyFileCache_methods[] = {
@@ -417,6 +417,7 @@ PyInit_pydndc(void){
         return NULL;
     }
     PyModule_AddStringConstant(mod, "__version__",     DNDC_VERSION);
+    // syntax constants
     PyModule_AddIntConstant(mod, "DOUBLE_COLON",       DNDC_SYNTAX_DOUBLE_COLON);
     PyModule_AddIntConstant(mod, "HEADER",             DNDC_SYNTAX_HEADER);
     PyModule_AddIntConstant(mod, "NODE_TYPE",          DNDC_SYNTAX_NODE_TYPE);
@@ -436,12 +437,15 @@ PyInit_pydndc(void){
     PyModule_AddIntConstant(mod, "JS_NODETYPE",        DNDC_SYNTAX_JS_NODETYPE);
     PyModule_AddIntConstant(mod, "JS_BRACE",           DNDC_SYNTAX_JS_BRACE);
 
+    // flags
     PyModule_AddIntConstant(mod, "DONT_INLINE_IMAGES",  DNDC_DONT_INLINE_IMAGES);
     PyModule_AddIntConstant(mod, "NO_THREADS",          DNDC_NO_THREADS);
     PyModule_AddIntConstant(mod, "USE_DND_URL_SCHEME",  DNDC_USE_DND_URL_SCHEME);
     PyModule_AddIntConstant(mod, "STRIP_WHITESPACE",    DNDC_STRIP_WHITESPACE);
     PyModule_AddIntConstant(mod, "DONT_READ",           DNDC_DONT_READ);
     PyModule_AddIntConstant(mod, "PRINT_STATS",         DNDC_PRINT_STATS);
+
+    // error message types
     PyModule_AddIntConstant(mod, "ERROR_MESSAGE",       DNDC_ERROR_MESSAGE);
     PyModule_AddIntConstant(mod, "WARNING_MESSAGE",     DNDC_WARNING_MESSAGE);
     PyModule_AddIntConstant(mod, "NODELESS_MESSAGE",    DNDC_NODELESS_MESSAGE);
@@ -457,7 +461,7 @@ pydndc_collect_errors(Nullable(void*)user_data, int type, const char* filename, 
     PyObject* tup = Py_BuildValue("is#iis#", type, filename, (Py_ssize_t)filename_len, line, col, message, (Py_ssize_t)message_len);
     if(!tup){
         return;
-        }
+    }
     PyObject* list = user_data;
     auto fail = PyList_Append(list, tup);
     (void)fail;
@@ -475,14 +479,14 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
     SuppressCastQual();
     if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O:reformat", (char**)keywords, &PyUnicode_Type, &text, &error_reporter)){
         return NULL;
-        }
+    }
     PopDiagnostic();
     if(error_reporter and error_reporter == Py_None)
         error_reporter = NULL;
     if(error_reporter and !PyCallable_Check(error_reporter)){
         PyErr_SetString(PyExc_TypeError, "error_reporter must be a callable");
         return NULL;
-        }
+    }
     LongString source = pystring_borrow_longstring(text);
     uint64_t flags = 0;
     // flags |= DNDC_DONT_PRINT_ERRORS;
@@ -496,7 +500,7 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
     auto e = run_the_dndc(flags, LS(""), source, LS(""), &output, NULL, NULL, func, error_list, NULL, NULL, NULL, NULL, NULL);
     if(PyErr_Occurred()){
         goto finally;
-        }
+    }
     if(error_reporter){
         Py_ssize_t length = PyList_Size(error_list);
         for(Py_ssize_t i = 0; i < length; i++){
@@ -505,12 +509,12 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
             if(call_result == NULL)
                 goto finally;
             Py_XDECREF(call_result);
-            }
         }
+    }
     if(e.errored){
         PyErr_SetString(PyExc_ValueError, "Format error.");
         goto finally;
-        }
+    }
     result = PyUnicode_FromStringAndSize(output.text, output.length);
     finally:
     Py_XDECREF(error_list);
@@ -527,7 +531,7 @@ pydndc_add_dependencies(Nullable(void*)user_data, size_t npaths, StringView* pat
         PyObject* str = PyUnicode_FromStringAndSize(path.text, path.length);
         PyList_Append(list, str);
         Py_XDECREF(str);
-        }
+    }
     return 0;
 }
 
@@ -550,31 +554,31 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_STRIP_WHITESPACE
         | DNDC_DONT_READ
         | DNDC_INPUT_IS_UNTRUSTED
-        };
+    };
     const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", "output_name", NULL};
     PushDiagnostic();
     SuppressCastQual();
     if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOKO!:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter, &file_cache, &flags, &PyUnicode_Type, &output_name)){
         return NULL;
-        }
+    }
     PopDiagnostic();
     // Check for any flags that python callers shouldn't be able to set.
     if((flags & WHITELIST) != flags){
         PyErr_SetString(PyExc_ValueError, "flags argument contains illegal bits");
         return NULL;
-        }
+    }
     if(error_reporter and error_reporter == Py_None)
         error_reporter = NULL;
     if(error_reporter and !PyCallable_Check(error_reporter)){
         PyErr_SetString(PyExc_TypeError, "error_reporter must be a callable");
         return NULL;
-        }
+    }
     if(file_cache and file_cache == Py_None)
         file_cache = NULL;
     if(file_cache and !PyObject_IsInstance(file_cache, (PyObject*)&DndcPyFileCache_Type)){
         PyErr_SetString(PyExc_TypeError, "file_cache must be a FileCache");
         return NULL;
-        }
+    }
     LongString source = pystring_borrow_longstring(text);
     LongString base_str = base_dir? pystring_borrow_longstring(base_dir): LS("");
     // flags |= DNDC_DONT_PRINT_ERRORS;
@@ -591,13 +595,13 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         auto cache = (DndcPyFileCache*)file_cache;
         textcache = &cache->text_cache;
         b64cache = &cache->b64_cache;
-        }
+    }
     LongString outname = output_name?pystring_borrow_longstring(output_name) : LS("this.html");
     auto e = run_the_dndc(flags, base_str, source, outname, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, NULL, NULL);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
-        }
+    }
     if(error_reporter){
         Py_ssize_t length = PyList_Size(error_list);
         for(Py_ssize_t i = 0; i < length; i++){
@@ -606,12 +610,12 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
             if(call_result == NULL)
                 goto finally;
             Py_XDECREF(call_result);
-            }
         }
+    }
     if(e.errored){
         PyErr_SetString(PyExc_ValueError, "html error.");
         goto finally;
-        }
+    }
     result = Py_BuildValue("s#O", output.text, (Py_ssize_t)output.length, depends_list);
     finally:
     Py_XDECREF(depends_list);
@@ -641,7 +645,7 @@ pydndc_collect_syntax_tokens(Nullable(void*)user_data, int type, int line, int c
     if(PyDict_Contains(d, key)){
         list = PyDict_GetItem(d, key); // borrow
         assert(list);
-        }
+    }
     else {
         list = PyList_New(0);
         if(!list) goto Lfail;
@@ -649,7 +653,7 @@ pydndc_collect_syntax_tokens(Nullable(void*)user_data, int type, int line, int c
         // list is kept alive by the dict.
         Py_XDECREF(list);
         if(fail) goto Lfail;
-        }
+    }
     int fail = PyList_Append(list, value);
     (void)fail;
     Lfail:
@@ -667,29 +671,29 @@ pydndc_anaylze_syntax_for_highlight(PyObject* mod, PyObject* args, PyObject* kwa
     SuppressCastQual();
     if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!:analyze_syntax_for_highlight", (char**)keywords, &PyUnicode_Type, &text)){
         return NULL;
-        }
+    }
     PopDiagnostic();
     StringView source = pystring_borrow_stringview(text);
     struct CollectData cd = {
         .dict = PyDict_New(),
         .begin = source.text,
-        };
+    };
     if(!cd.dict)
         return NULL;
     auto error = dndc_analyze_syntax(source, pydndc_collect_syntax_tokens, &cd);
     if(PyErr_Occurred()){
         Py_XDECREF(cd.dict);
         return NULL;
-        }
+    }
     if(error){
         PyErr_SetString(PyExc_RuntimeError, "Unknown error while collecting tokens");
         Py_XDECREF(cd.dict);
         return NULL;
-        }
+    }
     if(PyErr_Occurred()){
         Py_XDECREF(cd.dict);
         return NULL;
-        }
+    }
     return cd.dict;
 }
 #ifdef __clang__

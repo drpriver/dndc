@@ -156,19 +156,21 @@ THREADFUNC(worker_thread_main){
     pthread_mutex_lock(&w->mutex);
     void* (*job)(void*) = w->job;
     for(;;){
-        pthread_cond_wait(&w->worker_cond, &w->mutex);
-        if(w->shutdown)
+        if(w->shutdown){
             break;
+        }
         void* job_data = w->job_data;
         w->job_data = NULL;
-        if(job_data)
+        if(job_data){
             job(job_data);
-    #ifdef __APPLE__
+            #ifdef __APPLE__
             dispatch_semaphore_signal(w->sem);
-    #else
+            #else
             sem_post(&w->sem);
-    #endif
+            #endif
         }
+        pthread_cond_wait(&w->worker_cond, &w->mutex);
+    }
     pthread_mutex_unlock(&w->mutex);
     pthread_mutex_destroy(&w->mutex);
     pthread_cond_destroy(&w->worker_cond);
@@ -180,11 +182,11 @@ THREADFUNC(worker_thread_main){
             w->sem = NULL;
         #endif
     #else
-        sem_destroy(&w->sem);
+    sem_destroy(&w->sem);
     #endif
     free(w);
     return 0;
-    }
+}
 
 static
 WorkerThread*
@@ -194,13 +196,13 @@ worker_create(thread_func* job){
     pthread_cond_init(&w->worker_cond, NULL);
     pthread_mutex_init(&w->mutex, NULL);
     #ifdef __APPLE__
-        w->sem = dispatch_semaphore_create(0);
+    w->sem = dispatch_semaphore_create(0);
     #else
-        sem_init(&w->sem, 0, 0);
+    sem_init(&w->sem, 0, 0);
     #endif
     create_thread(&w->thrd, worker_thread_main, w);
     return w;
-    }
+}
 
 static
 void
@@ -209,7 +211,7 @@ worker_destroy(WorkerThread* w){
     w->shutdown = true;
     pthread_mutex_unlock(&w->mutex);
     pthread_cond_signal(&w->worker_cond);
-    }
+}
 
 static
 void
@@ -217,32 +219,33 @@ worker_submit(WorkerThread* w, void* job_data){
     pthread_mutex_lock(&w->mutex);
     w->job_data = job_data;
     pthread_mutex_unlock(&w->mutex);
-    pthread_cond_signal(&w->worker_cond);
-    }
+    int err = pthread_cond_signal(&w->worker_cond);
+    assert(!err);
+}
 
 static
 void
 worker_wait(WorkerThread* w){
-#ifdef __APPLE__
+    #ifdef __APPLE__
     dispatch_semaphore_wait(w->sem, DISPATCH_TIME_FOREVER);
-#else
+    #else
     sem_wait(&w->sem);
-#endif
-    }
+    #endif
+}
 
 static
 void
 create_thread(ThreadHandle* handle, thread_func* func, Nullable(void*)thread_arg){
     int err = pthread_create(&handle->thread, NULL, func, thread_arg);
     unhandled_error_condition(err != 0);
-    }
+}
 
 static
 void
 join_thread(ThreadHandle handle){
     int err = pthread_join(handle.thread, NULL);
     unhandled_error_condition(err != 0);
-    }
+}
 
 #elif defined(_WIN32)
 
@@ -267,22 +270,23 @@ THREADFUNC(worker_thread_main){
     EnterCriticalSection(&w->mutex);
     unsigned long (*job)(void*) = w->job;
     for(;;){
-        SleepConditionVariableCS(&w->worker_cond, &w->mutex, INFINITE);
         if(w->shutdown)
             break;
         void* job_data = w->job_data;
         w->job_data = NULL;
-        if(job_data)
+        if(job_data){
             job(job_data);
-        ReleaseSemaphore(w->sem, 1, NULL);
+            ReleaseSemaphore(w->sem, 1, NULL);
         }
+        SleepConditionVariableCS(&w->worker_cond, &w->mutex, INFINITE);
+    }
     LeaveCriticalSection(&w->mutex);
     DeleteCriticalSection(&w->mutex);
     CloseHandle(w->sem);
     // no need to destroy win32 condition variable
     free(w);
     return 0;
-    }
+}
 
 static
 WorkerThread*
@@ -294,7 +298,7 @@ worker_create(thread_func* job){
     create_thread(&w->thrd, worker_thread_main, w);
     w->sem = CreateSemaphoreW(NULL, 0, LONG_MAX, NULL);
     return w;
-    }
+}
 
 static
 void
@@ -303,7 +307,7 @@ worker_destroy(WorkerThread* w){
     w->shutdown = true;
     LeaveCriticalSection(&w->mutex);
     WakeConditionVariable(&w->worker_cond);
-    }
+}
 
 static
 void
@@ -312,27 +316,27 @@ worker_submit(WorkerThread* w, void* job_data){
     w->job_data = job_data;
     LeaveCriticalSection(&w->mutex);
     WakeConditionVariable(&w->worker_cond);
-    }
+}
 
 static
 void
 worker_wait(WorkerThread* w){
     WaitForSingleObject(w->sem, INFINITE);
-    }
+}
 
 static
 void
 create_thread(ThreadHandle* handle, thread_func* func, void*_Nullable thread_arg){
     handle->thread = CreateThread(NULL, 0, func, thread_arg, 0, NULL);
     unhandled_error_condition(handle->thread == NULL);
-    }
+}
 
 static
 void
 join_thread(ThreadHandle handle){
     DWORD result = WaitForSingleObject(handle.thread, INFINITE);
     unhandled_error_condition(result != WAIT_OBJECT_0);
-    }
+}
 
 #elif defined(WASM)
 
@@ -346,17 +350,18 @@ create_thread(ThreadHandle* handle, thread_func* func, void*_Nullable thread_arg
     (void)handle;
     (void)func;
     unimplemented();
-    }
+}
 
 static
 void
 join_thread(ThreadHandle handle){
     (void)handle;
     unimplemented();
-    }
+}
 typedef struct WorkerThread {
     int unused;
 }WorkerThread;
+
 static WorkerThread dummy_worker_thread;
 static THREADFUNC(worker_thread_main);
 // Create a new worker, with the given job func.
@@ -364,21 +369,21 @@ static WorkerThread* worker_create(thread_func* job){
     unimplemented();
     (void)job;
     return &dummy_worker_thread;
-    }
+}
 // Shutdown the worker and free the resources associated with it.
 static void worker_destroy(WorkerThread* w){
     (void)w;
     unimplemented();
-    }
+}
 // Submit a job to the worker
 static void worker_submit(WorkerThread* w, void* job_data){
     (void)w, (void)job_data;
     unimplemented();
-    }
+}
 static void worker_wait(WorkerThread* w){
     (void)w;
     unimplemented();
-    }
+}
 
 #else
 #error "Unhandled threading platform."

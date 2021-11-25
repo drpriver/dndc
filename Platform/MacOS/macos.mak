@@ -35,7 +35,7 @@ $(OBJDIR)/libdndc.a: $(OBJDIR)/dndc.o
 $(BINDIR)/libdndc.dylib: $(OBJDIR)/dndc.o $(OBJDIR)/libquickjs.o
 	$(CC) $^ -o $@ -Wl,-dead_strip_dylibs -Wl,-headerpad_max_install_names -Wl,-undefined,error -shared -install_name @rpath/libdndc.$(DNDCVERSION).dylib -compatibility_version $(DNDC_COMPAT_VERSION) -current_version $(DNDCVERSION) -g -F/Library/Frameworks -framework Python
 
-PYEXTENSION=.cpython-38-darwin.so
-PYEXTFLAGS=-bundle -bundle_loader /usr/local/bin/python3 -arch x86_64
+PYEXTENSION=.cpython-310-darwin.so
+PYEXTFLAGS=-bundle -bundle_loader /Library/Frameworks/Python.framework/Versions/3.10/bin/python3 -arch arm64
 
 all: gdndc $(OBJDIR)/libdndc.a $(BINDIR)/libdndc.dylib
