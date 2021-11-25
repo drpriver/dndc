@@ -341,10 +341,13 @@ static NSImage* appimage;
     ofType:(NSString *)typeName
     error:(NSError * _Nullable *)outError{
     self = [super initForURL:urlOrNil withContentsOfURL:contentsURL ofType:typeName error:outError];
+    if(!self) return nil;
     view_controller->file_url = [self fileURL];
     [view_controller recalc_html:[view_controller get_text]];
     return self;
-    }
+}
+
+
 -(NSWindow*)make_window{
     auto screen = [NSScreen mainScreen];
     NSRect rect = screen? screen.visibleFrame : NSMakeRect(0, 0, 1400, 800);
@@ -1343,18 +1346,16 @@ BOOL show_stats;
     NSString* dir = [[self->file_url URLByDeletingLastPathComponent] path];
     NSString* final = [[self->file_url path] lastPathComponent];
     // NSString* final = [self->file_url path];
-    LongString outputpath;
-    outputpath.text = [final UTF8String];
-    outputpath.length = strlen(outputpath.text);
-    // outputpath = LS("this.html");
-    LongString base_dir;
+    LongString outputpath = LS("");
+    if(final){
+        outputpath.text = [final UTF8String];
+        outputpath.length = outputpath.text?strlen(outputpath.text):0;
+    }
+    LongString base_dir = LS("");
     if(dir){
         const char* dir_text = [dir UTF8String];
         base_dir.text = dir_text;
         base_dir.length = strlen(dir_text);
-    }
-    else {
-        base_dir = LS("");
     }
     // auto t0 = get_t();
     uint64_t flags = 0;
