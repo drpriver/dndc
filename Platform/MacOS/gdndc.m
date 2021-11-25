@@ -155,7 +155,7 @@ cache_watch_file(void* cache_, StringView path){
     item->fullpath.length = path.length;
     item->fd = open(item->fullpath.text, O_EVTONLY);
     if(item->fd < 0){
-        NSLog(@"open call for '%s' failed: %s", item->fullpath.text, strerror(errno));
+        // NSLog(@"open call for '%s' failed: %s", item->fullpath.text, strerror(errno));
         item->tomb = true;
         const_free(item->fullpath.text);
         return;
@@ -383,6 +383,7 @@ static NSImage* appimage;
 - (BOOL)readFromData:(NSData *)data ofType:(NSString *)typeName error:(NSError **)outError {
     NSString* str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     if(str){
+        // Why am I setting the file url here?
         view_controller->file_url = [self fileURL];
         view_controller->text.string = str;
     }
@@ -1387,6 +1388,9 @@ BOOL show_stats;
 }
 
 -(NSURL*) this_dnd_url {
+    if(!self->file_url){
+        return [NSURL URLWithString: DND_SCHEME_HOST "/nil.dnd"];
+    }
     auto stringurl = [DND_SCHEME_HOST stringByAppendingString:[[self->file_url path] stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLPathAllowedCharacterSet]]];
     auto url = [NSURL URLWithString:stringurl];
     return url;

@@ -110,12 +110,13 @@ if(APPLE)
     target_compile_definitions(gdndc PRIVATE APP_ICON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/Platform/MacOS/app_icon.png")
 
     target_link_libraries(gdndc
-        quickjs-dylib
+        # quickjs-dylib
+        quickjs-lib
         "-framework Cocoa"
         "-framework WebKit"
     )
+	#target_compile_definitions(gdndc PRIVATE QJS_SHARED_LIBRARY)
     target_compile_options(gdndc PUBLIC "-fobjc-arc")
-    target_compile_definitions(gdndc PRIVATE QJS_SHARED_LIBRARY)
     target_include_directories(gdndc PRIVATE Dndc)
 endif()
 
