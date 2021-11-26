@@ -791,6 +791,10 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
     msb_nul_terminate(&sb);
     auto dir = msb_borrow(&sb);
 #if defined(__APPLE__) || defined(__linux__)
+    // On apple we could try using [NSFileManager
+    //      enumeratorAtURL:includingPropertiesForKeys:options:errorHandler:]
+    // instead, but whatever, this also works on linux. Main drawback is we
+    // would have to compile as objective C.
     const char* dirs[] = {dir.text, NULL};
     PushDiagnostic();
     SuppressCastQual();
