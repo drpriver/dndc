@@ -501,7 +501,6 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
         case NODE_JS:
         case NODE_BULLETS:
         case NODE_STYLESHEETS:
-        case NODE_DEPENDENCIES:
         case NODE_LINKS:
         case NODE_SCRIPTS:
         case NODE_IMPORT:

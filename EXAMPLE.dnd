@@ -152,7 +152,6 @@ Convenience::md
       TABLE        | table        | <div><table>  | Yes
       TABLE_ROW    | ---          | <tr>          | ---
       STYLESHEETS  | css          | ---           | ---
-      DEPENDENCIES | dependencies | ---           | ---
       LINKS        | links        | ---           | ---
       SCRIPTS      | js           | ---           | ---
       IMPORT       | import       | ---           | ---

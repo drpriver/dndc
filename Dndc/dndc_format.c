@@ -142,7 +142,6 @@ format_node(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
         case NODE_RAW:
         case NODE_PRE:
         case NODE_JS:
-        case NODE_DEPENDENCIES:
         case NODE_LINKS:
         case NODE_SCRIPTS:
         case NODE_STYLESHEETS:

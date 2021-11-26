@@ -267,7 +267,6 @@ typedef struct DndcContext {
         Marray(NodeHandle) user_script_nodes;
         Marray(NodeHandle) imports;
         Marray(NodeHandle) stylesheets_nodes;
-        Marray(NodeHandle) dependencies_nodes;
         Marray(NodeHandle) link_nodes;
         Marray(NodeHandle) script_nodes;
         Marray(NodeHandle) data_nodes;

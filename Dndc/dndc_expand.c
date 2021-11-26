@@ -108,7 +108,6 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
         case NODE_MD:
         case NODE_DIV:
         case NODE_TABLE:
-        case NODE_DEPENDENCIES:
         case NODE_LINKS:
         case NODE_IMAGE:
         case NODE_RAW:
@@ -205,7 +204,6 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
         case NODE_RAW:
         case NODE_IMAGE:
         case NODE_LINKS:
-        case NODE_DEPENDENCIES:
         case NODE_DIV:
             NODE_CHILDREN_FOR_EACH(ch, n){
                 Node* child = get_node(ctx, *ch);

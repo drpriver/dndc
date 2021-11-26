@@ -644,7 +644,6 @@ gather_anchor(DndcContext* ctx, NodeHandle handle){
         }break;
         case NODE_TABLE_ROW:
         case NODE_STYLESHEETS:
-        case NODE_DEPENDENCIES:
         case NODE_LINKS:
         case NODE_SCRIPTS:
         case NODE_JS:

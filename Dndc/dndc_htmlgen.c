@@ -255,7 +255,6 @@ build_nav_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
         case NODE_TITLE: // skip title as everything would be a child of it
         case NODE_TABLE_ROW:
         case NODE_STYLESHEETS:
-        case NODE_DEPENDENCIES:
         case NODE_LINKS:
         case NODE_SCRIPTS:
         case NODE_JS:

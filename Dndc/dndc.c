@@ -512,10 +512,6 @@ run_the_dndc(uint64_t flags,
                 case NODE_STYLESHEETS:
                     handles = &ctx.stylesheets_nodes;
                     break;
-                // wtf is this node
-                case NODE_DEPENDENCIES:
-                    handles = &ctx.dependencies_nodes;
-                    break;
                 case NODE_DATA:
                     handles = &ctx.data_nodes;
                     break;
@@ -571,7 +567,6 @@ run_the_dndc(uint64_t flags,
         report_size(&ctx, SV("ctx.user_script_nodes.count = "), ctx.user_script_nodes.count);
         report_size(&ctx, SV("ctx.imports.count = "), ctx.imports.count);
         report_size(&ctx, SV("ctx.script_nodes.count = "), ctx.script_nodes.count);
-        report_size(&ctx, SV("ctx.dependencies_nodes.count = "), ctx.dependencies_nodes.count);
         report_size(&ctx, SV("ctx.link_nodes.count = "), ctx.link_nodes.count);
     }
     // Javascript blocks can detach the root node and then forget to attach a new
@@ -742,18 +737,6 @@ run_the_dndc(uint64_t flags,
     }
     // Write the make-style dependency file to the Dependency directory.
     if(!wasm && dependency_func){
-        MARRAY_FOR_EACH(handle, ctx.dependencies_nodes){
-            auto node = get_node(&ctx, *handle);
-            NODE_CHILDREN_FOR_EACH(it, node){
-                auto child = get_node(&ctx, *it);
-                if(child->type != NODE_STRING){
-                    // just warn, don't want to fail the build
-                    node_print_warning2(&ctx, child, SV("Non-string node found as a child node: "), LS_to_SV(NODENAMES[child->type]));
-                    continue;
-                }
-                Marray_push(StringView)(&ctx.dependencies, ctx.allocator, child->header);
-            }
-        }
         int err = dependency_func(dependency_user_data, ctx.dependencies.count, ctx.dependencies.data);
         if(err){
             result.errored = err;

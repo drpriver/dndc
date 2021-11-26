@@ -482,9 +482,6 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                     case NODE_STYLESHEETS:
                         Marray_push(NodeHandle)(&ctx->stylesheets_nodes, ctx->allocator, node_handle);
                         break;
-                    case NODE_DEPENDENCIES:
-                        Marray_push(NodeHandle)(&ctx->dependencies_nodes, ctx->allocator, node_handle);
-                        break;
                     case NODE_LINKS:
                         Marray_push(NodeHandle)(&ctx->link_nodes, ctx->allocator, node_handle);
                         break;
@@ -632,7 +629,6 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
         case NODE_IMGLINKS:
         case NODE_DATA:
         case NODE_NAV:
-        case NODE_DEPENDENCIES:
         case NODE_LINKS:
         case NODE_IMPORT:
         case NODE_IMAGE:

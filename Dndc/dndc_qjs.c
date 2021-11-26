@@ -1145,9 +1145,6 @@ js_dndc_node_set_type(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst 
         case NODE_STYLESHEETS:
             Marray_push(NodeHandle)(&ctx->stylesheets_nodes, ctx->allocator, handle);
             break;
-        case NODE_DEPENDENCIES:
-            Marray_push(NodeHandle)(&ctx->dependencies_nodes, ctx->allocator, handle);
-            break;
         case NODE_LINKS:
             Marray_push(NodeHandle)(&ctx->link_nodes, ctx->allocator, handle);
             break;
@@ -1516,9 +1513,6 @@ JSMETHOD(js_dndc_context_make_node){
         case NODE_IMPORT:
             failure = JS_ThrowTypeError(jsctx, "Creating import nodes from qjs is not supported");
             goto fail;
-        case NODE_DEPENDENCIES:
-            node_store = &ctx->dependencies_nodes;
-            break;
         case NODE_STYLESHEETS:
             node_store = &ctx->stylesheets_nodes;
             break;

@@ -12,29 +12,28 @@
     apply(TABLE,           6)\
     apply(TABLE_ROW,       7)\
     apply(STYLESHEETS,     8)\
-    apply(DEPENDENCIES,    9)\
-    apply(LINKS,          10)\
-    apply(SCRIPTS,        11)\
-    apply(IMPORT,         12)\
-    apply(IMAGE,          13)\
-    apply(BULLETS,        14)\
-    apply(RAW,            15)\
-    apply(PRE,            16)\
-    apply(LIST,           17)\
-    apply(LIST_ITEM,      18)\
-    apply(KEYVALUE,       19)\
-    apply(KEYVALUEPAIR,   20)\
-    apply(IMGLINKS,       21)\
-    apply(NAV,            22)\
-    apply(DATA,           23)\
-    apply(COMMENT,        24)\
-    apply(TEXT,           25)\
-    apply(CONTAINER,      26)\
-    apply(QUOTE,          27)\
-    apply(HR,             28)\
-    apply(JS,             29)\
-    apply(DETAILS,        30)\
-    apply(INVALID,        31)\
+    apply(LINKS,           9)\
+    apply(SCRIPTS,        10)\
+    apply(IMPORT,         11)\
+    apply(IMAGE,          12)\
+    apply(BULLETS,        13)\
+    apply(RAW,            14)\
+    apply(PRE,            15)\
+    apply(LIST,           16)\
+    apply(LIST_ITEM,      17)\
+    apply(KEYVALUE,       18)\
+    apply(KEYVALUEPAIR,   19)\
+    apply(IMGLINKS,       20)\
+    apply(NAV,            21)\
+    apply(DATA,           22)\
+    apply(COMMENT,        23)\
+    apply(TEXT,           24)\
+    apply(CONTAINER,      25)\
+    apply(QUOTE,          26)\
+    apply(HR,             27)\
+    apply(JS,             28)\
+    apply(DETAILS,        29)\
+    apply(INVALID,        30)\
 
 typedef enum NodeType {
     #define X(a, b) NODE_##a = b,
@@ -67,7 +66,6 @@ struct {
     {SV("h"),            NODE_HEADING},
     {SV("table"),        NODE_TABLE},
     {SV("css"),          NODE_STYLESHEETS},
-    {SV("dependencies"), NODE_DEPENDENCIES},
     {SV("links"),        NODE_LINKS},
     {SV("script"),       NODE_SCRIPTS},
     {SV("image"),        NODE_IMAGE},
@@ -116,7 +114,6 @@ NODETYPE_TO_NODE_ALIASES[NODE_INVALID+1] = {
      [NODE_HEADING]      = SV("h"),
      [NODE_TABLE]        = SV("table"),
      [NODE_STYLESHEETS]  = SV("css"),
-     [NODE_DEPENDENCIES] = SV("dependencies"),
      [NODE_LINKS]        = SV("links"),
      [NODE_SCRIPTS]      = SV("script"),
      [NODE_IMAGE]        = SV("img"),
