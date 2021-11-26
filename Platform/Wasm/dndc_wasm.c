@@ -48,7 +48,10 @@ make_html(PString* source){
         ;
     auto e = run_the_dndc(
             flags,
-            base, text, LS("demo.html"), // base_directory, source, outpath
+            base,
+            text,
+            LS("(string input"),
+            LS("demo.html"), // base_directory, source, outpath
             &output,               // outstring
             NULL, NULL,            // caches
             dndc_error_func, NULL, // error func
@@ -77,7 +80,7 @@ format_dnd(PString* source){
         | DNDC_REFORMAT_ONLY
         ;
     auto e = run_the_dndc(
-            flags, base, text, LS(""), &output,
+            flags, base, text, LS(""), LS(""), &output,
             NULL, NULL,            // caches
             dndc_error_func, NULL, // error func
             NULL, NULL,            // dependency funcs

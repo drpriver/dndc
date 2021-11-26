@@ -754,12 +754,12 @@ static
 QJSValue
 js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst *argv){
     (void)thisValue;
-    if(argc > 1){
+    if(unlikely(argc > 1)){
         return JS_ThrowTypeError(jsctx, "Must be given 0 or no arguments");
     }
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
-    if(ctx->flags & DNDC_DONT_READ){
+    if(unlikely(ctx->flags & DNDC_DONT_READ)){
         return JS_ThrowTypeError(jsctx, "File system access is disabled.");
     }
     MStringBuilder sb = {.allocator = ctx->temp_allocator};
@@ -785,7 +785,7 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
             msb_write_str(&sb, ".", 1);
         }
     }
-    if(!sb.cursor){
+    if(unlikely(!sb.cursor)){
         return JS_ThrowTypeError(jsctx, "Invalid directory argument");
     }
     msb_nul_terminate(&sb);
@@ -800,7 +800,7 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
     SuppressCastQual();
     FTS* handle = fts_open((char**)dirs, FTS_LOGICAL | FTS_NOCHDIR | FTS_NOSTAT, NULL);
     PopDiagnostic();
-    if(!handle){
+    if(unlikely(!handle)){
         msb_destroy(&sb);
         return JS_ThrowTypeError(jsctx, "Unable to open for recursion");
     }
