@@ -1,7 +1,12 @@
+Version 0.9.1::md
+  * Improved performance of <code>FileSystem.list_dnd_files()</code> by
+    skipping directories starting with '<code>.</code>'. If you are using git
+    for version controlling your dnd files, this skips a lot of useless
+    directories.
 Version 0.9.0::md
   * Changed semantics of script and css nodes - they
-    are now the equivelant of @inline by default. Tag
-    them with @import to have them loaded from a file.
+    are now the equivelant of <code>@inline</code> by default. Tag
+    them with <code>@import</code> to have them loaded from a file.
   * There is also one fewer wrapper node for imports in
     general.
 Version 0.8.1::md
@@ -221,4 +226,6 @@ Version 0.3.11::md
                  Oxygen-Sans, Ubuntu,
                  Cantarell, "Helvetica Neue", sans-serif;
   }
-  /*endcss*/
+  code {
+    background-color: #ddd;
+  }

@@ -804,6 +804,10 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
     for(;;){
         FTSENT* ent = fts_read(handle);
         if(!ent) break;
+        if(ent->fts_namelen > 1 && ent->fts_name[0] == '.'){
+            fts_set(handle, ent, FTS_SKIP);
+            continue;
+        }
         if(ent->fts_info & (FTS_F | FTS_NSOK)){
             StringView name = {.text = ent->fts_name, .length=ent->fts_namelen};
             if(endswith(name, SV(".dnd"))){
