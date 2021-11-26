@@ -2,7 +2,7 @@
   ::raw
     <iframe></iframe>
   ::raw
-    <textarea class="right">
+    <textarea class="right" spellcheck="false" autocomplete="off">
     ::nav
     Dnd Document!::title
     This is the document format I have been developing. Check it out, we've got:
