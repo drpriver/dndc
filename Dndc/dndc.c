@@ -380,7 +380,7 @@ run_the_dndc(uint64_t flags,
             goto cleanup;
         }
     }
-    if(!wasm && (flags & DNDC_REFORMAT_ONLY)){
+    if(unlikely(flags & DNDC_REFORMAT_ONLY)){
         MStringBuilder outsb = {.allocator = get_mallocator()};
         auto before = get_t();
         auto format_error = format_tree(&ctx, &outsb);

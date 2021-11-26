@@ -59,11 +59,11 @@
       <button id="export-button">Export as HTML</button>
     </div>
     <div id="log"></div>
-::script
+::script .wasm
   //endjs
 ::js
   ctx.add_dependency('Objs/dndc.wasm');
-  let inline = ctx.select_nodes({type:NodeType.SCRIPTS, attributes:['inline']})[0];
+  let inline = ctx.select_nodes({type:NodeType.SCRIPTS, classes:['wasm']})[0];
   let b64 = FileSystem.load_file_as_base64('Objs/dndc.wasm');
   inline.add_child(`const prog64 = "${b64}";`);
   //endjs
