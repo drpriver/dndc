@@ -7,6 +7,7 @@
 #include "argument_parsing.h"
 #include "term_util.h"
 #include "file_util.h"
+#include "path_util.h"
 #include "MStringBuilder.h"
 #define GET_INPUT_API static inline
 #include "get_input.h"
@@ -53,7 +54,7 @@ main(int argc, char**argv){
     DndcDependencyFunc* dependency_func = NULL;
     LongString dependency_path = LS("");
     struct DependencyUserData dependency_user_data = {};
-    StringView base_dir = SV("");
+    StringView base_dir = {0};
     uint64_t ast_func_flags = DNDC_MAIN_NONE;
     uint64_t flags = DNDC_FLAGS_NONE ;
     bool print_syntax = false;
@@ -93,7 +94,11 @@ main(int argc, char**argv){
                 .dest = ARGDEST(&base_dir),
                 .help = "Paths in source files will be relative "
                         "to the given directory.\n"
-                        "If not given, everything is relative to cwd.",
+                        "If not given, but source_path is given, "
+                        "then everything is relative to the directory "
+                        "that the source path is in. If that is also "
+                        "not given, then everything is relative to the "
+                        "current working directory.",
             },
             {
                 .name = SV("--no-js"),
@@ -307,6 +312,12 @@ main(int argc, char**argv){
         }
         if(!cleanup)
             flags |= DNDC_NO_CLEANUP;
+        if(!base_dir.text){
+            if(source_path.text)
+                base_dir = path_dirname(LS_to_SV(source_path));
+            else
+                base_dir = SV("");
+        }
         if(!source_path.text){
             source_path = LS("(stdin)");
             // read from stdin

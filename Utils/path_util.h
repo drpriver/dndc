@@ -36,7 +36,7 @@ is_sep(char c){
         return c == '/' || c == '\\';
     else
         return c == '/';
-    }
+}
 
 // Helper to find the next slash in a string, but also finding backslashes
 // on Windows.
@@ -48,7 +48,7 @@ memsep(const char* str, size_t length){
     if(BACKSLASH_IS_A_PATH_SEP && !slash)
         slash = memchr(str, '\\', length);
     return slash;
-    }
+}
 
 //
 // Returns if the path is an absolute path (aka starts from /).
@@ -66,10 +66,10 @@ path_is_abspath(StringView path){
     if(path.length > 2){
         if(path.text[1] == ':')
             return true;
-        }
+    }
     return false;
 #endif
-    }
+}
 
 //
 // Returns the filename component of a path. If the path ends
@@ -90,9 +90,9 @@ path_basename(StringView path){
         if(!slash)
             break;
         basename = slash+1;
-        }
-    return (StringView){.text=basename, .length = end - basename};
     }
+    return (StringView){.text=basename, .length = end - basename};
+}
 
 //
 // Returns the directory portion of the filename.
@@ -113,13 +113,13 @@ path_dirname(StringView path){
         if(!slash)
             break;
         basename = slash+1;
-        }
+    }
     StringView result = {.text=path.text, .length = basename - path.text};
     while(result.length > 1 && is_sep(result.text[result.length-1])){
         result.length--;
-        }
-    return result;
     }
+    return result;
+}
 
 //
 // Removes the extension part of a string.
@@ -134,14 +134,13 @@ path_strip_extension(StringView path){
         return path;
     size_t offset = path.length;
     while(offset--){
-        if(path.text[offset] == '.'){
+        if(path.text[offset] == '.')
             return (StringView){.text=path.text, .length = offset};
-            }
         if(is_sep(path.text[offset]))
             return path;
-        }
-    return path;
     }
+    return path;
+}
 
 #ifdef __clang__
 #pragma clang assume_nonnull end
