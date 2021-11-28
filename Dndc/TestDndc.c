@@ -36,7 +36,7 @@ int main(int argc, char** argv){
 
 TestFunction(TestDndc1){
     TESTBEGIN();
-    LongString source = LS(
+    StringView source = SV(
         "::md\n"
         "   * Hello World\n"
         "   * This is amazing!\n"
@@ -49,7 +49,7 @@ TestFunction(TestDndc1){
         | DNDC_DONT_PRINT_ERRORS
         ;
     LongString output = {};
-    auto e = run_the_dndc(flags, SV(""), source, LS(""), LS(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectFalse(output.text);
     TestExpectSuccess(e);
     TESTEND();
@@ -57,7 +57,7 @@ TestFunction(TestDndc1){
 
 TestFunction(TestDndc2){
     TESTBEGIN();
-    LongString source = LS(
+    StringView source = SV(
         "::md\n"
         "   * Hello World\n"
         "   * This is amazing!\n"
@@ -70,14 +70,14 @@ TestFunction(TestDndc2){
         | DNDC_DONT_PRINT_ERRORS
         ;
     LongString output = {};
-    auto e = run_the_dndc(flags, SV(""), source, LS(""), LS(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectFalse(output.text);
     TestExpectSuccess(e);
     TESTEND();
 }
 TestFunction(TestDndc3){
     TESTBEGIN();
-    LongString source = LS(
+    StringView source = SV(
         "::asjdiasjdmd\n"
         "   * Hello World\n"
         "   * This is amazing!\n"
@@ -90,14 +90,14 @@ TestFunction(TestDndc3){
         | DNDC_DONT_PRINT_ERRORS
         ;
     LongString output = {};
-    auto e = run_the_dndc(flags, SV(""), source, LS(""), LS(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectFalse(output.text);
     TestExpectFailure(e);
     TESTEND();
 }
 TestFunction(TestDndcOutParam){
     TESTBEGIN();
-    LongString source = LS(
+    StringView source = SV(
         "Hello::title\n"
         "::md\n"
         "   * Hello World\n"
@@ -110,7 +110,7 @@ TestFunction(TestDndcOutParam){
         | DNDC_DONT_PRINT_ERRORS
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, SV(""), source, LS(""), LS("hello.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("hello.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -147,7 +147,7 @@ TestFunction(TestDndcOutParam){
 }
 TestFunction(TestDndcTableMultiline){
     TESTBEGIN();
-    LongString source = LS(
+    StringView source = SV(
         "::table\n"
         "  d8|thing\n"
         "  1|this is a multiline\n"
@@ -164,7 +164,7 @@ TestFunction(TestDndcTableMultiline){
         | DNDC_DONT_PRINT_ERRORS
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, SV(""), source, LS(""), LS("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -226,7 +226,7 @@ TestFunction(TestDndcTableMultiline){
 }
 TestFunction(TestFormatTable){
     TESTBEGIN();
-    LongString source = LS(
+    StringView source = SV(
         "::table\n"
         "  d8|thing\n"
         "  1|this is a multiline\n"
@@ -245,7 +245,7 @@ TestFunction(TestFormatTable){
         | DNDC_REFORMAT_ONLY
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, SV(""), source, LS(""), LS("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -263,13 +263,13 @@ TestFunction(TestFormatTable){
         TestExpectEquals2(LS_equals, expected, outdata);
         const_free(outdata.text);
     }
-    source = LS(
+    source = SV(
             "::table\n"
             "  a\n"
             "  b\n"
             );
     outdata = (LongString){};
-    e = run_the_dndc(flags, SV(""), source, LS(""), LS("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    e = run_the_dndc(flags, SV(""), source, SV(""), SV("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         auto expected = LS(
@@ -284,7 +284,7 @@ TestFunction(TestFormatTable){
 }
 TestFunction(TestFormatList){
     TESTBEGIN();
-    LongString source = LS(
+    StringView source = SV(
         "Hello\n"
         "1. 1\n"
         "2. 2\n"
@@ -305,7 +305,7 @@ TestFunction(TestFormatList){
         | DNDC_REFORMAT_ONLY
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, SV(""), source, LS(""), LS("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -330,7 +330,7 @@ TestFunction(TestFormatList){
         {
             // check it parses after format
             LongString output = {};
-            auto e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""), LS(""), outdata, LS("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+            auto e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""), LS_to_SV(outdata),  SV(""), SV("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
             TestExpectFalse(output.text);
             TestExpectSuccess(e2);
         }
@@ -340,7 +340,7 @@ TestFunction(TestFormatList){
 }
 TestFunction(TestFormatKV){
     TESTBEGIN();
-    LongString source = LS(
+    StringView source = SV(
         "::kv\n"
         "  AC: 13\n"
         "  Attacks: +3 claws (2)\n"
@@ -356,7 +356,7 @@ TestFunction(TestFormatKV){
         | DNDC_REFORMAT_ONLY
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, SV(""), source, LS(""), LS("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -374,7 +374,7 @@ TestFunction(TestFormatKV){
         {
             // check it parses after format
             LongString output = {};
-            auto e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""),  outdata, LS(""), LS("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+            auto e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""),  LS_to_SV(outdata), SV(""), SV("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
             TestExpectFalse(output.text);
             TestExpectSuccess(e2);
         }
@@ -402,7 +402,7 @@ TestFunction(TestCrashesFixed){
         auto allocator = get_mallocator();
         auto data = read_file(cases[i].name.text, allocator);
         TestAssertSuccess(data);
-        auto e = run_the_dndc(flags, SV("TestCases"), data.result, cases[i].name, LS("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+        auto e = run_the_dndc(flags, SV("TestCases"), LS_to_SV(data.result), LS_to_SV(cases[i].name), SV("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
         TestExpectFalse(output.text);
         if(cases[i].error){
             TestExpectFailure(e);
@@ -457,7 +457,7 @@ TestFunction(TestExamplesWork){
         auto allocator = get_mallocator();
         auto data = read_file(examples[i].text, allocator);
         TestAssertSuccess(data);
-        auto e = run_the_dndc(flags, base_dirs[i], data.result, examples[i], LS("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
+        auto e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
         TestExpectFalse(output.text);
         if(!TestExpectSuccess(e)){
             TestPrintValue("Example failed:", examples[i]);
@@ -500,7 +500,7 @@ TestFunction(TestUntrusted){
         auto allocator = get_mallocator();
         auto data = read_file(examples[i].text, allocator);
         TestAssertSuccess(data);
-        auto e = run_the_dndc(flags, base_dirs[i], data.result, examples[i], LS("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
+        auto e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
         TestExpectFalse(output.text);
         if(!TestExpectFailure(e)){
             TestPrintValue("source file", examples[i]);
@@ -524,34 +524,34 @@ sv_slice(StringView src, size_t begin, size_t length){
 TestFunction(TestSpecialChars){
     TESTBEGIN();
     struct test_case {
-        LongString source;
+        StringView source;
         StringView result;
     };
     uint64_t flags = 0
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_SUPPRESS_WARNINGS;
     struct test_case testcases[] = {
-        {LS("---"), SV("&mdash;")},
-        {LS("--"), SV("&ndash;")},
-        {LS("--- ---"), SV("&mdash; &mdash;")},
-        // The ones with all the numbers are long enough to trigger simd code
-        {LS("1234567890123456 --- 1234567890123456"), SV("1234567890123456 &mdash; 1234567890123456")},
-        {LS("1234567890123456 -- 1234567890123456"), SV("1234567890123456 &ndash; 1234567890123456")},
-        {LS("1234567890123456 <p>hi!</p> 1234567890123456"), SV("1234567890123456 &lt;p&gt;hi!&lt;/p&gt; 1234567890123456")},
-        {LS("<p>hi!</p> 1234567890123456"), SV("&lt;p&gt;hi!&lt;/p&gt; 1234567890123456")},
-        {LS("<p>hi!</p>"), SV("&lt;p&gt;hi!&lt;/p&gt;")},
-        {LS("1234567890123456 <i>hi!</i> 1234567890123456"), SV("1234567890123456 <i>hi!</i> 1234567890123456")},
-        {LS("<i>hi!</i>"), SV("<i>hi!</i>")},
-        {LS("1234567890123456 <b>hi!</b> 1234567890123456"), SV("1234567890123456 <b>hi!</b> 1234567890123456")},
-        {LS("1234567890123456 <br>hi! 1234567890123456"), SV("1234567890123456 <br>hi! 1234567890123456")},
-        {LS("1234567890123456 <s>hi!</s> 1234567890123456"), SV("1234567890123456 <s>hi!</s> 1234567890123456")},
-        {LS("1234567890123456 [hi!] 1234567890123456"), SV("1234567890123456 <a href=\"hi\">hi!</a> 1234567890123456")},
-        {LS("1234567890123456 \r 1234567890123456"), SV("1234567890123456   1234567890123456")},
-        {LS("hi \r\n"), SV("hi")},
+        {SV("---"), SV("&mdash;")},
+        {SV("--"), SV("&ndash;")},
+        {SV("--- ---"), SV("&mdash; &mdash;")},
+        // e ones with all the numbers are long enough to trigger simd code
+        {SV("1234567890123456 --- 1234567890123456"), SV("1234567890123456 &mdash; 1234567890123456")},
+        {SV("1234567890123456 -- 1234567890123456"), SV("1234567890123456 &ndash; 1234567890123456")},
+        {SV("1234567890123456 <p>hi!</p> 1234567890123456"), SV("1234567890123456 &lt;p&gt;hi!&lt;/p&gt; 1234567890123456")},
+        {SV("<p>hi!</p> 1234567890123456"), SV("&lt;p&gt;hi!&lt;/p&gt; 1234567890123456")},
+        {SV("<p>hi!</p>"), SV("&lt;p&gt;hi!&lt;/p&gt;")},
+        {SV("1234567890123456 <i>hi!</i> 1234567890123456"), SV("1234567890123456 <i>hi!</i> 1234567890123456")},
+        {SV("<i>hi!</i>"), SV("<i>hi!</i>")},
+        {SV("1234567890123456 <b>hi!</b> 1234567890123456"), SV("1234567890123456 <b>hi!</b> 1234567890123456")},
+        {SV("1234567890123456 <br>hi! 1234567890123456"), SV("1234567890123456 <br>hi! 1234567890123456")},
+        {SV("1234567890123456 <s>hi!</s> 1234567890123456"), SV("1234567890123456 <s>hi!</s> 1234567890123456")},
+        {SV("1234567890123456 [hi!] 1234567890123456"), SV("1234567890123456 <a href=\"hi\">hi!</a> 1234567890123456")},
+        {SV("1234567890123456 \r 1234567890123456"), SV("1234567890123456   1234567890123456")},
+        {SV("hi \r\n"), SV("hi")},
     };
     for(size_t i = 0; i < arrlen(testcases); i++){
         LongString output = {};
-        auto e = run_the_dndc(flags, SV(""), testcases[i].source, LS(""), LS("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
+        auto e = run_the_dndc(flags, SV(""), testcases[i].source, SV(""), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
         TestAssertSuccess(e);
         if(!TestExpectEquals2(SV_equals, sv_slice(LS_to_SV(output), 198, testcases[i].result.length), testcases[i].result)){
             TestPrintValue("output", output);

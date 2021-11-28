@@ -74,6 +74,8 @@ typedef struct FileSizeResult {
 // on Posix platforms, you will encounter files with CRLF, or mixed!
 // Most algorithms want to ignore trailing spaces anyway, so this isn't
 // that big an imposition.
+//
+// For convenience, the result is nul-terminated.
 static inline
 warn_unused
 TextFileResult

@@ -48,9 +48,9 @@ enum DndcMainFlags {
 
 int
 main(int argc, char**argv){
-    LongString source_path = {0};
-    LongString source_text = {0};
-    LongString output_path = LS("");
+    StringView source_path = {0};
+    StringView source_text = {0};
+    StringView output_path = SV("");
     DndcDependencyFunc* dependency_func = NULL;
     LongString dependency_path = LS("");
     struct DependencyUserData dependency_user_data = {};
@@ -314,12 +314,12 @@ main(int argc, char**argv){
             flags |= DNDC_NO_CLEANUP;
         if(!base_dir.text){
             if(source_path.text)
-                base_dir = path_dirname(LS_to_SV(source_path));
+                base_dir = path_dirname(source_path);
             else
                 base_dir = SV("");
         }
         if(!source_path.text){
-            source_path = LS("(stdin)");
+            source_path = SV("(stdin)");
             // read from stdin
             MStringBuilder sb = {.allocator=get_mallocator()};
             if(isatty(fileno(stdin))){
@@ -348,7 +348,7 @@ main(int argc, char**argv){
             }
             if(!sb.cursor)
                 msb_write_char(&sb, ' ');
-            source_text = msb_detach(&sb);
+            source_text = msb_detach_sv(&sb);
         }
         else {
             auto allocator = get_mallocator();
@@ -357,11 +357,11 @@ main(int argc, char**argv){
                 fprintf(stderr, "Unable to read: '%s'\n", source_path.text);
                 return 1;
             }
-            source_text = load_err.result;
+            source_text = LS_to_SV(load_err.result);
         }
     }
     if(print_syntax){
-        dndc_print_out_syntax(LS_to_SV(source_text));
+        dndc_print_out_syntax(source_text);
         return 0;
     }
 
@@ -372,7 +372,8 @@ main(int argc, char**argv){
         dependency_func = dndc_write_depends_file;
         dependency_user_data.depfile = dependency_path;
     }
-    dependency_user_data.outfile = output_path;
+    // We know output_path is nul-terminated as it came from argv or from a string literal
+    dependency_user_data.outfile = (LongString){.text=output_path.text, .length=output_path.length};
     WorkerThread* worker = NULL;
     if(!(flags & DNDC_NO_THREADS))
         worker = (WorkerThread*)dndc_worker_thread_create();
@@ -467,7 +468,7 @@ dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths){
         msb_write_str(&msb, dep->text, dep->length);
         msb_write_literal(&msb, ":\n");
     }
-    auto deptext = msb_borrow(&msb);
+    StringView deptext = msb_borrow_sv(&msb);
     auto write_err = write_file(ud->depfile.text, deptext.text, deptext.length);
     msb_destroy(&msb);
     if(write_err){

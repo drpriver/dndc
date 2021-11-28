@@ -12,6 +12,7 @@
 #include "dndc_types.h"
 #include "dndc_funcs.h"
 #include "dndc_qjs.h"
+#include "dndc_file_cache.h"
 
 #include "path_util.h"
 #include "MStringBuilder.h"
@@ -73,7 +74,7 @@ THREADFUNC(binary_worker){
     ByteBuilder bb = {.allocator=cache.allocator};
     for(size_t i = 0; i < count; i++){
         auto sv = data[i];
-        auto e = load_processed_binary_file(&cache, sv, &bb);
+        auto e = FileCache_read_and_b64_file(&cache, sv, false, &bb);
         // We'll let the renderer report the error when it tries
         // to load it.
         (void)e;
@@ -102,8 +103,9 @@ execute_user_scripts(DndcContext* ctx){
     for(size_t i = 0; i < ctx->user_script_nodes.count; i++){
         NodeHandle handle = ctx->user_script_nodes.data[i];
         NodeType type;
-        LongString str;
         NodeHandle firstchild;
+        MStringBuilder msb = (MStringBuilder){.allocator=ctx->string_allocator};
+        LongString str;
         {
             Node* node = get_node(ctx, handle);
             type = node->type;
@@ -114,7 +116,6 @@ execute_user_scripts(DndcContext* ctx){
             if(!node_children_count(node))
                 continue;
             firstchild = node_children(node)[0];
-            MStringBuilder msb = (MStringBuilder){.allocator=ctx->string_allocator};
             if(type == NODE_JS){
                 msb_write_literal(&msb, "\"use strict\";\n");
                 msb_write_nchar(&msb, '\n', node->row);
@@ -126,7 +127,7 @@ execute_user_scripts(DndcContext* ctx){
             }
             if(!msb.cursor) // empty script block.
                 continue;
-            str = msb_detach(&msb);
+            str = msb_borrow_ls(&msb);
         }
         {
             assert(type == NODE_JS);
@@ -145,6 +146,7 @@ execute_user_scripts(DndcContext* ctx){
                 report_time(ctx, SV("qjs init took: "), after_init-before_init);
             }
             auto js_err = execute_qjs_string(jsctx, ctx, str.text, str.length, handle, firstchild);
+            msb_destroy(&msb);
             if(js_err.errored){
                 report_set_error(ctx);
                 result.errored = js_err.errored;
@@ -218,10 +220,10 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
                     MStringBuilder path_builder = {.allocator=ctx->string_allocator};
                     msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
                     msb_append_path(&path_builder, child->header.text, child->header.length);
-                    auto path = msb_borrow(&path_builder);
+                    auto path = msb_borrow_sv(&path_builder);
                     if(not FileCache_has_file(job.b64cache, path)){
                         auto sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
-                        *sv = LS_to_SV(msb_detach(&path_builder));
+                        *sv = msb_detach_sv(&path_builder);
                     }
                     else {
                         msb_destroy(&path_builder);
@@ -275,9 +277,9 @@ static
 Errorable_f(void)
 run_the_dndc(uint64_t flags,
         StringView base_directory,
-        LongString source_text,
-        LongString source_path,
-        LongString outpath,
+        StringView source_text,
+        StringView source_path,
+        StringView outpath,
         Nonnull(LongString*) outstring,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,
@@ -308,7 +310,7 @@ run_the_dndc(uint64_t flags,
     auto t0 = get_t();
     Errorable(void) result = {};
     if(!source_path.length)
-        source_path = LS("(string input)");
+        source_path = SV("(string input)");
     ArenaAllocator arena_allocator = {};
     const Allocator string_allocator = {.type=ALLOCATOR_ARENA, ._data=&arena_allocator};
     ArenaAllocator main_arena = {};
@@ -363,7 +365,7 @@ run_the_dndc(uint64_t flags,
         auto root = get_node(&ctx, root_handle);
         root->col = 0;
         root->row = 0;
-        Marray_push(StringView)(&ctx.filenames, ctx.allocator, LS_to_SV(source_path));
+        Marray_push(StringView)(&ctx.filenames, ctx.allocator, source_path);
         root->filename_idx = ctx.filenames.count-1;
         root->type = NODE_MD;
         root->parent = root_handle;
@@ -371,7 +373,7 @@ run_the_dndc(uint64_t flags,
     // Parse the initial document.
     {
         auto before_parse = get_t();
-        auto e = dndc_parse(&ctx, ctx.root_handle, LS_to_SV(source_path), source_text.text, source_text.length);
+        auto e = dndc_parse(&ctx, ctx.root_handle, source_path, source_text.text, source_text.length);
         auto after_parse = get_t();
         report_time(&ctx, SV("Initial parsing took: "), after_parse-before_parse);
         if(e.errored){
@@ -398,7 +400,7 @@ run_the_dndc(uint64_t flags,
         }
         else {
             assert(outstring);
-            *outstring = msb_detach(&outsb);
+            *outstring = msb_detach_ls(&outsb);
         }
         goto success;
     }
@@ -406,21 +408,21 @@ run_the_dndc(uint64_t flags,
         if(ctx.imports.count){
             auto handle = ctx.imports.data[0];
             auto node = get_node(&ctx, handle);
-            node_print_err(&ctx, node, SV("Imports are illegal for untrusted input."));
+            node_print_err(&ctx, node, LS("Imports are illegal for untrusted input."));
             result.errored = PARSE_ERROR;
             goto cleanup;
         }
         if(ctx.user_script_nodes.count){
             auto handle = ctx.user_script_nodes.data[0];
             auto node = get_node(&ctx, handle);
-            node_print_err(&ctx, node, SV("JS blocks are illegal for untrusted input."));
+            node_print_err(&ctx, node, LS("JS blocks are illegal for untrusted input."));
             result.errored = PARSE_ERROR;
             goto cleanup;
         }
         if(ctx.script_nodes.count){
             auto handle = ctx.script_nodes.data[0];
             auto node = get_node(&ctx, handle);
-            node_print_err(&ctx, node, SV("Script blocks are illegal for untrusted input."));
+            node_print_err(&ctx, node, LS("Script blocks are illegal for untrusted input."));
             result.errored = PARSE_ERROR;
             goto cleanup;
         }
@@ -449,7 +451,7 @@ run_the_dndc(uint64_t flags,
                 }
             }
             if(ctx.imports.count > 1000){
-                node_print_err(&ctx, node, SV("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)"));
+                node_print_err(&ctx, node, LS("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)"));
                 result.errored = PARSE_ERROR;
                 goto cleanup;
             }
@@ -458,7 +460,7 @@ run_the_dndc(uint64_t flags,
                 NodeHandle child_handle = node_children(node)[j];
                 Node* child = get_node(&ctx, child_handle);
                 if(child->type != NODE_STRING){
-                    node_print_err(&ctx, child, SV("import child is not a string"));
+                    node_print_err(&ctx, child, LS("import child is not a string"));
                     result.errored = PARSE_ERROR;
                     goto cleanup;
                 }
@@ -472,12 +474,12 @@ run_the_dndc(uint64_t flags,
                     else{
                         MSB_FORMAT(&err_builder, "Unable to open '", filename, "'");
                     }
-                    node_print_err(&ctx, child, msb_borrow(&err_builder));
+                    node_print_err(&ctx, child, msb_borrow_ls(&err_builder));
                     msb_destroy(&err_builder);
                     result.errored = imp_e.errored;
                     goto cleanup;
                 }
-                LongString imp_text = imp_e.result;
+                StringView imp_text = imp_e.result;
                 auto parse_e = dndc_parse(&ctx, newhandle, filename, imp_text.text, imp_text.length);
                 if(parse_e.errored){
                     report_set_error(&ctx);
@@ -673,7 +675,7 @@ run_the_dndc(uint64_t flags,
                     node_print_warning(&ctx, child, SV("Rendered a data node with no data. Not outputting it."));
                     continue;
                 }
-                auto text = msb_detach(&sb);
+                LongString text = msb_detach_ls(&sb);
                 auto di = Marray_alloc(DataItem)(&ctx.rendered_data, ctx.allocator);
                 di->key = child->header;
                 di->value = text;
@@ -708,7 +710,7 @@ run_the_dndc(uint64_t flags,
         }
         else {
             assert(outstring);
-            *outstring = msb_detach(&output_sb);
+            *outstring = msb_detach_ls(&output_sb);
         }
     }
     // Render the actual document into a string as html.
@@ -732,7 +734,7 @@ run_the_dndc(uint64_t flags,
         }
         else {
             assert(outstring);
-            *outstring = msb_detach(&output_sb);
+            *outstring = msb_detach_ls(&output_sb);
         }
     }
     // Write the make-style dependency file to the Dependency directory.
@@ -825,6 +827,7 @@ run_the_dndc(uint64_t flags,
 #include "dndc_htmlgen.c"
 #include "dndc_parser.c"
 #include "dndc_context.c"
+#include "dndc_file_cache.c"
 #include "allocator.c"
 
 #ifndef WASM
@@ -875,13 +878,13 @@ free_qjs_rt(QJSRuntime*rt, ArenaAllocator*aa){
 
 DNDC_API
 int
-dndc_format(LongString source_text, LongString* output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
+dndc_format(StringView source_text, LongString* output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
     uint64_t flags = 0
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_REFORMAT_ONLY
         ;
-    auto e = run_the_dndc(flags, SV(""), source_text, LS(""), LS(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source_text, SV(""), SV(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL);
     return e.errored;
 }
 
@@ -1929,9 +1932,9 @@ int
 dndc_compile_dnd_file(
     unsigned long long flags,
     DndcStringView base_directory,
-    DndcLongString source_text,
-    DndcLongString source_path,
-    DndcLongString outpath,
+    DndcStringView source_text,
+    DndcStringView source_path,
+    DndcStringView outpath,
     DndcLongString* outstring,
     DNDC_NULLABLE(DndcFileCache*) base64cache,
     DNDC_NULLABLE(DndcFileCache*) textcache,

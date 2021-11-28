@@ -10,7 +10,7 @@ TestFunction(TestMStringBuilder1){
     Allocator a = new_recorded_mallocator();
     MStringBuilder sb = {.allocator=a};
     MSB_FORMAT(&sb, "hello there", " = ", 5, "\n");
-    StringView s = msb_borrow(&sb);
+    StringView s = msb_borrow_sv(&sb);
     TestExpectEquals2(SV_equals, s, SV("hello there = 5\n"));
     msb_destroy(&sb);
     shallow_free_recorded_mallocator(a);
@@ -38,7 +38,7 @@ TestFunction(TestMStringBuilder2){
         msb_reset(&sb);
         struct test_case test = test_cases[i];
         msb_write_int32(&sb, test.integer);
-        StringView s = msb_borrow(&sb);
+        StringView s = msb_borrow_sv(&sb);
         TestExpectEquals2(SV_equals,s, test.sv);
         }
     }
@@ -57,7 +57,7 @@ TestFunction(TestMStringBuilder2){
         msb_write_literal(&sb, "foo");
         struct test_case test = test_cases[i];
         msb_write_int_space_padded(&sb, test.integer, 8);
-        StringView s = msb_borrow(&sb);
+        StringView s = msb_borrow_sv(&sb);
         TestExpectEquals2(SV_equals, s, test.sv);
         }
     }
@@ -71,12 +71,12 @@ TestFunction(TestMStringBuilder3){
     MStringBuilder sb = {.allocator=a};
     MSB_FORMAT(&sb, "I have ", 2, " apples!");
     {
-        StringView s = msb_borrow(&sb);
+        StringView s = msb_borrow_sv(&sb);
         TestExpectEquals2(SV_equals, s, SV("I have 2 apples!"));
     }
     MSB_FORMAT(&sb, "\nYou owe me ", 97u, " apples!");
     {
-        StringView s = msb_borrow(&sb);
+        StringView s = msb_borrow_sv(&sb);
         TestExpectEquals2(SV_equals, s, SV("I have 2 apples!\nYou owe me 97 apples!"));
     }
     msb_destroy(&sb);

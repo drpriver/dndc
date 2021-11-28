@@ -426,6 +426,8 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags){
 
 //
 // The main execution function.
+// str must be nul-terminated (underlying library). I should
+// probably type it as a LongString
 //
 static
 Errorable_f(void)
@@ -502,7 +504,7 @@ jsstring_to_kebabed(QJSContext* jsctx, QJSValueConst v, Allocator a){
     }
     MStringBuilder msb = {.allocator=a};
     msb_write_kebab(&msb, str, len);
-    return msb_detach(&msb);
+    return msb_detach_ls(&msb);
 }
 
 static inline
@@ -601,7 +603,7 @@ set_js_traceback(DndcContext* ctx, QJSContext* jsctx){
     }
     JS_FreeValue(jsctx, exception_val);
     msb_erase(&msb, 2); // XXX: I get the one, but why two?
-    ctx->error.message = msb_detach(&msb);
+    ctx->error.message = msb_detach_ls(&msb);
 }
 
 static
@@ -675,7 +677,7 @@ js_console_log(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
         if(i != 0) msb_write_char(&msb, ' ');
         js_console_inner(jsctx, argv[i], &msb);
     }
-    auto msg = msb_borrow(&msb);
+    LongString msg = msb_borrow_ls(&msb);
     ctx->error_func(ctx->error_user_data, DNDC_DEBUG_MESSAGE, filename?:"js", filename?strlen(filename):2, line_num-1, -1, msg.text, msg.length);
     msb_destroy(&msb);
     if(filename)
@@ -789,7 +791,7 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
         return JS_ThrowTypeError(jsctx, "Invalid directory argument");
     }
     msb_nul_terminate(&sb);
-    auto dir = msb_borrow(&sb);
+    LongString dir = msb_borrow_ls(&sb);
 #if defined(__APPLE__) || defined(__linux__)
     // On apple we could try using [NSFileManager
     //      enumeratorAtURL:includingPropertiesForKeys:options:errorHandler:]
@@ -848,7 +850,7 @@ js_list_dnd_files_inner(QJSContext* jsctx, DndcContext* ctx, QJSValue array, Str
     MStringBuilder tempbuilder = {.allocator = ctx->temp_allocator};
     MSB_FORMAT(&tempbuilder, directory, "/*.dnd");
     msb_nul_terminate(&tempbuilder);
-    auto dndwildcard = msb_borrow(&tempbuilder);
+    LongString dndwildcard = msb_borrow_ls(&tempbuilder);
     WIN32_FIND_DATAA findd;
     HANDLE handle = FindFirstFileExA(dndwildcard.text, FindExInfoBasic, &findd, FindExSearchNameMatch, NULL, FIND_FIRST_EX_LARGE_FETCH);
     msb_erase(&tempbuilder, sizeof("/*.dnd")-1);
@@ -858,7 +860,7 @@ js_list_dnd_files_inner(QJSContext* jsctx, DndcContext* ctx, QJSValue array, Str
         do {
             auto cursor = tempbuilder.cursor;
             MSB_FORMAT(&tempbuilder, SV("/"), findd.cFileName);
-            auto text = msb_borrow(&tempbuilder);
+            StringView text = msb_borrow_sv(&tempbuilder);
             QJSValue s = JS_NewStringLen(jsctx, text.text+base_length+1, text.length-(base_length+1));
             auto v = JS_ArrayPush(jsctx, array, 1, &s);
             JS_FreeValue(jsctx, s);
@@ -869,7 +871,7 @@ js_list_dnd_files_inner(QJSContext* jsctx, DndcContext* ctx, QJSValue array, Str
     }
     msb_write_literal(&tempbuilder, "/*");
     msb_nul_terminate(&tempbuilder);
-    auto thisdir = msb_borrow(&tempbuilder);
+    LongString thisdir = msb_borrow_ls(&tempbuilder);
     handle = FindFirstFileExA(thisdir.text, FindExInfoBasic, &findd, FindExSearchNameMatch, NULL, FIND_FIRST_EX_LARGE_FETCH);
     if(handle == INVALID_HANDLE_VALUE){
         // fprintf(stderr, "Invalid handle: '%s'\n", thisdir.text);
@@ -889,7 +891,7 @@ js_list_dnd_files_inner(QJSContext* jsctx, DndcContext* ctx, QJSValue array, Str
         }
         MSB_FORMAT(&tempbuilder, "/", fn);
         msb_nul_terminate(&tempbuilder);
-        auto nextdir = msb_borrow(&tempbuilder);
+        StringView nextdir = msb_borrow_sv(&tempbuilder);
         auto e = js_list_dnd_files_inner(jsctx, ctx, array, nextdir, base_length, depth+1);
         msb_erase(&tempbuilder, 1+fn.length);
         if(JS_IsException(e)) {
@@ -930,7 +932,7 @@ js_path_exists(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
     }
     JS_FreeCString(jsctx, dir.text);
     msb_nul_terminate(&sb);
-    auto path = msb_borrow(&sb);
+    LongString path = msb_borrow_ls(&sb);
     struct stat s;
     bool exists = stat(path.text, &s) == 0;
     msb_destroy(&sb);
@@ -1266,7 +1268,7 @@ JSGETTER(js_dndc_node_get_id){
     }
     MStringBuilder msb = {.allocator = ctx->temp_allocator};
     msb_write_kebab(&msb, id->text, id->length);
-    StringView keb = msb_borrow(&msb);
+    StringView keb = msb_borrow_sv(&msb);
     QJSValue result = JS_NewStringLen(jsctx, keb.text, keb.length);
     msb_destroy(&msb);
     return result;
@@ -1310,7 +1312,7 @@ js_dndc_node_to_string(QJSContext* jsctx, QJSValueConst thisValue, int argc, QJS
             }
         MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node_children_count(node), " children])");
     }
-    StringView text = msb_borrow(&msb);
+    StringView text = msb_borrow_sv(&msb);
     QJSValue result = JS_NewStringLen(jsctx, text.text, text.length);
     msb_destroy(&msb);
     return result;
@@ -1575,7 +1577,7 @@ JSMETHOD(js_dndc_context_kebab){
         return JS_EXCEPTION;
     MStringBuilder msb = {.allocator = ctx->temp_allocator};
     msb_write_kebab(&msb, sv.text, sv.length);
-    auto keb = msb_borrow(&msb);
+    StringView keb = msb_borrow_sv(&msb);
     QJSValue result = JS_NewStringLen(jsctx, keb.text, keb.length);
     msb_destroy(&msb);
     Allocator_free(ctx->temp_allocator, sv.text, sv.length);
@@ -1743,7 +1745,7 @@ JSMETHOD(js_dndc_context_to_string){
     // TODO: hex format
     MSB_FORMAT(&msb, "  flags: ", ctx->flags, ",\n");
     msb_write_literal(&msb, "}");
-    StringView text = msb_borrow(&msb);
+    StringView text = msb_borrow_sv(&msb);
     QJSValue result = JS_NewStringLen(jsctx, text.text, text.length);
     msb_destroy(&msb);
     return result;
@@ -1817,14 +1819,14 @@ JSGETTER(js_dndc_context_get_outfile){
     DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
     if(!ctx)
         return JS_EXCEPTION;
-    StringView filename = ctx->outputfile.length?path_basename(LS_to_SV(ctx->outputfile)):SV("");
+    StringView filename = ctx->outputfile.length?path_basename(ctx->outputfile):SV("");
     return JS_NewStringLen(jsctx, filename.text, filename.length);
 }
 JSGETTER(js_dndc_context_get_outdir){
     DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
     if(!ctx)
         return JS_EXCEPTION;
-    StringView outdir = path_dirname(LS_to_SV(ctx->outputfile));
+    StringView outdir = path_dirname(ctx->outputfile);
     if(!outdir.length)
         outdir = SV(".");
     return JS_NewStringLen(jsctx, outdir.text, outdir.length);
@@ -1834,7 +1836,7 @@ JSGETTER(js_dndc_context_get_outpath){
     DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
     if(!ctx)
         return JS_EXCEPTION;
-    LongString filename = ctx->outputfile;
+    StringView filename = ctx->outputfile;
     return JS_NewStringLen(jsctx, filename.text, filename.length);
 }
 
@@ -1970,7 +1972,7 @@ JSMETHOD(js_dndc_attributes_to_string){
     }
     msb_erase(&msb, 1);
     msb_write_literal(&msb, "\n}");
-    StringView text = msb_borrow(&msb);
+    StringView text = msb_borrow_sv(&msb);
     QJSValue result = JS_NewStringLen(jsctx, text.text, text.length);
     msb_destroy(&msb);
     return result;
@@ -2051,7 +2053,7 @@ JSMETHOD(js_dndc_classlist_to_string){
     if(msb.cursor != 1)
         msb_erase(&msb, 2);
     msb_write_char(&msb, ']');
-    StringView text = msb_borrow(&msb);
+    StringView text = msb_borrow_sv(&msb);
     QJSValue result = JS_NewStringLen(jsctx, text.text, text.length);
     msb_destroy(&msb);
     return result;

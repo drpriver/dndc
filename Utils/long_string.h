@@ -101,6 +101,8 @@ bool
 SV_equals(const StringView a, const StringView b){
     if(a.length != b.length)
         return false;
+    if(!a.length)
+        return true;
     if(a.text == b.text)
         return true;
     // assert(a.text);

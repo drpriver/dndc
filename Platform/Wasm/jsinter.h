@@ -19,7 +19,7 @@ LongString
 PString_to_LongString(PString* pstr){
     LongString text = {.text=(char*)pstr->text, .length=pstr->length};
     return text;
-    }
+}
 
 static inline
 PString*
@@ -29,7 +29,7 @@ LongString_to_new_PString(LongString source){
     memcpy(result->text, source.text, source.length);
     result->text[result->length] = 0;
     return result;
-    }
+}
 
 extern
 void

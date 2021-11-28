@@ -83,7 +83,7 @@ DndcPyFileCache_remove(PyObject* self, PyObject* str){
         PyErr_SetString(PyExc_TypeError, "Argument to remove must be a string");
         return NULL;
     }
-    auto path = pystring_borrow_stringview(str);
+    StringView path = pystring_borrow_stringview(str);
     auto cache = (DndcPyFileCache*)self;
     FileCache_maybe_remove(&cache->text_cache, path);
     FileCache_maybe_remove(&cache->b64_cache, path);
@@ -103,20 +103,20 @@ static
 Nullable(PyObject*)
 DndcPyFileCache_paths(PyObject* self){
     auto cache = (DndcPyFileCache*)self;
-    Py_ssize_t nfiles = cache->b64_cache.files.count + cache->text_cache.files.count;
+    Py_ssize_t nfiles = cache->b64_cache._files.count + cache->text_cache._files.count;
     PyObject* result = PyList_New(nfiles);
     if(!result)
         goto error;
     Py_ssize_t index = 0;
-    for(size_t i = 0, count=cache->b64_cache.files.count; i < count; i++, index++){
-        auto path = &cache->b64_cache.files.data[i].sourcepath;
+    for(size_t i = 0, count=cache->b64_cache._files.count; i < count; i++, index++){
+        auto path = &cache->b64_cache._files.data[i].sourcepath.path;
         PyObject* s = PyUnicode_FromStringAndSize(path->text, path->length);
         if(!s)
             goto error;
         PyList_SET_ITEM(result, index, s); // steals the reference
     }
-    for(size_t i = 0, count = cache->text_cache.files.count; i < count; i++, index++){
-        auto path = &cache->text_cache.files.data[i].sourcepath;
+    for(size_t i = 0, count = cache->text_cache._files.count; i < count; i++, index++){
+        auto path = &cache->text_cache._files.data[i].sourcepath.path;
         PyObject* s = PyUnicode_FromStringAndSize(path->text, path->length);
         if(!s)
             goto error;
@@ -487,7 +487,7 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
         PyErr_SetString(PyExc_TypeError, "error_reporter must be a callable");
         return NULL;
     }
-    LongString source = pystring_borrow_longstring(text);
+    StringView source = pystring_borrow_stringview(text);
     uint64_t flags = 0;
     // flags |= DNDC_DONT_PRINT_ERRORS;
     // flags |= DNDC_SUPPRESS_WARNINGS;
@@ -497,7 +497,7 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
     DndcErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
-    auto e = run_the_dndc(flags, SV(""), source, LS(""), LS(""), &output, NULL, NULL, func, error_list, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, func, error_list, NULL, NULL, NULL, NULL, NULL);
     if(PyErr_Occurred()){
         goto finally;
     }
@@ -579,7 +579,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         PyErr_SetString(PyExc_TypeError, "file_cache must be a FileCache");
         return NULL;
     }
-    LongString source = pystring_borrow_longstring(text);
+    StringView source = pystring_borrow_stringview(text);
     StringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
     // flags |= DNDC_DONT_PRINT_ERRORS;
     // flags |= DNDC_SUPPRESS_WARNINGS;
@@ -596,8 +596,8 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         textcache = &cache->text_cache;
         b64cache = &cache->b64_cache;
     }
-    LongString outname = output_name?pystring_borrow_longstring(output_name) : LS("this.html");
-    auto e = run_the_dndc(flags, base_str, source, LS(""), outname, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, NULL, NULL);
+    StringView outname = output_name?pystring_borrow_stringview(output_name) : SV("this.html");
+    auto e = run_the_dndc(flags, base_str, source, SV(""), outname, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, NULL, NULL);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;

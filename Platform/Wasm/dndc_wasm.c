@@ -27,11 +27,12 @@ void dndc_error_func(void* error_user_data, int type, const char* filename, int 
         msb_write_str(&msb, message, message_len);
         msb_nul_terminate(&msb);
         log_string(buff, msb.cursor);
-        }
+    }
     else{
         log_string(message, message_len);
-        }
     }
+}
+
 extern
 PString*
 make_html(PString* source){
@@ -49,9 +50,9 @@ make_html(PString* source){
     auto e = run_the_dndc(
             flags,
             base,
-            text,
-            LS("(string input"),
-            LS("demo.html"), // base_directory, source, outpath
+            LS_to_SV(text),
+            SV("(string input"),
+            SV("demo.html"), // base_directory, source, outpath
             &output,               // outstring
             NULL, NULL,            // caches
             dndc_error_func, NULL, // error func
@@ -64,6 +65,7 @@ make_html(PString* source){
     PString* result = LongString_to_new_PString(output);
     return result;
 }
+
 extern
 PString*
 format_dnd(PString* source){
@@ -80,7 +82,8 @@ format_dnd(PString* source){
         | DNDC_REFORMAT_ONLY
         ;
     auto e = run_the_dndc(
-            flags, base, text, LS(""), LS(""), &output,
+            flags, base, LS_to_SV(text), SV(""), SV(""),
+            &output,
             NULL, NULL,            // caches
             dndc_error_func, NULL, // error func
             NULL, NULL,            // dependency funcs
@@ -91,7 +94,8 @@ format_dnd(PString* source){
         return NULL;
     PString* result = LongString_to_new_PString(output);
     return result;
-    }
+}
+
 printf_func(5, 6)
 static
 void logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, ...){
@@ -105,4 +109,4 @@ void logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, 
     msb_write_str(&msb, fmt, strlen(fmt));
     msb_nul_terminate(&msb);
     log_string(buff, msb.cursor);
-    }
+}

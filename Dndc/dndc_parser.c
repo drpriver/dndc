@@ -256,7 +256,7 @@ analyze_line(DndcContext* ctx){
         length -= 16;
     }
 #endif
-    for(;;cursor++){
+    for(;length;length--,cursor++){
         switch(*cursor){
             case '\n': case '\0':
                 endline = cursor;
@@ -306,7 +306,7 @@ analyze_line(DndcContext* ctx){
         length -= 16;
     }
 #endif
-    for(;;cursor++){
+    for(;length;length--,cursor++){
         switch(*cursor){
             case '\n': case '\0':
                 endline = cursor;
@@ -315,6 +315,7 @@ analyze_line(DndcContext* ctx){
                 continue;
         }
     }
+    endline = cursor;
 
     Lfinish:;
     ctx->doublecolon = doublecolon;
@@ -656,7 +657,7 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
     }
     regular_string_parsing:;
     Errorable(void) result = {};
-    for(;ctx->cursor[0];){
+    for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         if(ctx->linestart+ctx->nspaces == ctx->line_end){
             advance_row(ctx);
@@ -685,7 +686,7 @@ PARSEFUNC(parse_list_node){
         assert(parent->type == NODE_LIST);
     }
     Errorable(void) result = {};
-    for(;ctx->cursor[0];){
+    for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         // skip blanks
         if(ctx->linestart+ctx->nspaces == ctx->line_end){
@@ -736,7 +737,7 @@ PARSEFUNC(parse_list_item){
         auto parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_LIST_ITEM);
     }
-    for(;ctx->cursor[0];){
+    for(;ctx->cursor != ctx->end;){
         top:;
         analyze_line(ctx);
         if(ctx->linestart+ctx->nspaces == ctx->line_end){
@@ -787,7 +788,7 @@ PARSEFUNC(parse_raw_node){
     // off in the output. This is really unusual though.
     bool have_leading_indent = false;
     int leading_indent = 0;
-    for(;ctx->cursor[0];){
+    for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         if(!have_leading_indent and ctx->linestart+ctx->nspaces != ctx->line_end){
             leading_indent = ctx->nspaces;
@@ -829,7 +830,7 @@ PARSEFUNC(parse_table_node){
     bool converted = false;
     int previous_row_indentation = indentation;
     Errorable(void) result = {};
-    for(;ctx->cursor[0];){
+    for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         // skip blanks
         if(ctx->linestart+ctx->nspaces == ctx->line_end){
@@ -900,7 +901,7 @@ PARSEFUNC(parse_keyvalue_node){
     NodeHandle previous_value = INVALID_NODE_HANDLE;
     int previous_kv_indentation = indentation;
     bool previous_value_was_converted = false;
-    for(;ctx->cursor[0];){
+    for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         // skip blanks
         if(ctx->linestart+ctx->nspaces == ctx->line_end){
@@ -961,7 +962,7 @@ PARSEFUNC(parse_bullets_node){
         auto parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_BULLETS);
     }
-    for(;ctx->cursor[0];){
+    for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         // skip blanks
         if(ctx->linestart+ctx->nspaces == ctx->line_end){
@@ -1003,7 +1004,7 @@ PARSEFUNC(parse_bullet_node){
         auto parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_LIST_ITEM);
     }
-    for(;ctx->cursor[0];){
+    for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         if(ctx->linestart+ctx->nspaces == ctx->line_end){
             advance_row(ctx);
@@ -1042,7 +1043,7 @@ PARSEFUNC(parse_text_node){
     bool in_para_node = 0;
     NodeHandle para_handle = INVALID_NODE_HANDLE;
     Errorable(void) result = {};
-    for(;ctx->cursor[0];){
+    for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         // blank line
         if(ctx->linestart+ctx->nspaces == ctx->line_end){
@@ -1103,7 +1104,7 @@ PARSEFUNC(parse_md_node){
     NodeHandle para_handle = INVALID_NODE_HANDLE;
     int normal_indent = -1;
     Errorable(void) result = {};
-    for(;ctx->cursor[0];){
+    for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         // skip_blanks
         if(ctx->linestart+ctx->nspaces == ctx->line_end){

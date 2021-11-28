@@ -138,7 +138,7 @@ parse_set_err_q(DndcContext* ctx, NullUnspec(const char*) errchar, StringView ms
     msb_write_char(&msb, '\'');
     msb_write_str(&msb, quoted.text, quoted.length);
     msb_write_char(&msb, '\'');
-    ctx->error.message = msb_detach(&msb);
+    ctx->error.message = msb_detach_ls(&msb);
 }
 
 static
@@ -152,7 +152,7 @@ node_set_err_q(DndcContext* ctx, const Node* node, StringView msg, StringView qu
     msb_write_char(&msb, '\'');
     msb_write_str(&msb, quoted.text, quoted.length);
     msb_write_char(&msb, '\'');
-    ctx->error.message = msb_detach(&msb);
+    ctx->error.message = msb_detach_ls(&msb);
 }
 
 static
@@ -175,7 +175,7 @@ node_set_err_offset(DndcContext* ctx, const Node* node, int offset, LongString m
 
 static
 void
-node_print_err(DndcContext* ctx, const Node* node, StringView msg){
+node_print_err(DndcContext* ctx, const Node* node, LongString msg){
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
     if(not ctx->error_func)
@@ -216,7 +216,7 @@ node_print_warning2(DndcContext* ctx, const Node* node, StringView a, StringView
     MStringBuilder msb = {.allocator = ctx->temp_allocator};
     msb_write_str(&msb, a.text, a.length);
     msb_write_str(&msb, b.text, b.length);
-    auto msg = msb_borrow(&msb);
+    LongString msg = msb_borrow_ls(&msb);
     ctx->error_func(ctx->error_user_data, DNDC_WARNING_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
     msb_destroy(&msb);
 }
@@ -231,7 +231,7 @@ report_time(DndcContext* ctx, StringView msg, uint64_t microseconds){
     MStringBuilder temp = {.allocator=ctx->temp_allocator};
     msb_write_str(&temp, msg.text, msg.length);
     msb_write_us_as_ms(&temp, microseconds);
-    auto str = msb_borrow(&temp);
+    LongString str = msb_borrow_ls(&temp);
     ctx->error_func(ctx->error_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, str.text, str.length);
     msb_destroy(&temp);
 }
@@ -255,7 +255,7 @@ report_size(DndcContext* ctx, StringView msg, uint64_t size){
     MStringBuilder temp = {.allocator=ctx->temp_allocator};
     msb_write_str(&temp, msg.text, msg.length);
     msb_write_uint64(&temp, size);
-    auto str = msb_borrow(&temp);
+    LongString str = msb_borrow_ls(&temp);
     ctx->error_func(ctx->error_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, str.text, str.length);
     msb_destroy(&temp);
 }
@@ -288,94 +288,76 @@ ctx_note_dependency(DndcContext* ctx, StringView path){
         if(SV_equals(*dep, path))
             return;
     }
+    // This is weird that I am doing strndup, but then storing in a stringview
     StringView pathcpy = {.text = Allocator_strndup(ctx->string_allocator, path.text, path.length), .length=path.length};
     Marray_push(StringView)(&ctx->dependencies, ctx->allocator, pathcpy);
 }
 
 static inline
 void
-ctx_store_builtin_file(DndcContext* ctx, LongString sourcepath, LongString text){
-    auto loaded = Marray_alloc(LoadedSource)(&ctx->builtin_files, ctx->allocator);
+ctx_store_builtin_file(DndcContext* ctx, StringView sourcepath, StringView text){
+    auto loaded = Marray_alloc(BuiltinLoadedSource)(&ctx->builtin_files, ctx->allocator);
     loaded->sourcepath = sourcepath;
     loaded->sourcetext = text;
 }
 
 static
-Errorable_f(LongString)
+Errorable_f(StringView)
 ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
     // check if we already have it as a builtin
     MARRAY_FOR_EACH(builtin, ctx->builtin_files){
-        if(LS_SV_equals(builtin->sourcepath, sourcepath)){
-            return (Errorable(LongString)){.result=builtin->sourcetext};
+        if(SV_equals(builtin->sourcepath, sourcepath)){
+            return (Errorable(StringView)){.result=builtin->sourcetext};
         }
     }
     MStringBuilder temp_builder = {.allocator=ctx->temp_allocator};
     if(!sourcepath.length){
-        return (Errorable(LongString)){.errored=UNEXPECTED_END};
+        return (Errorable(StringView)){.errored=UNEXPECTED_END};
     }
     assert(sourcepath.length);
 
     if(not path_is_abspath(sourcepath) && ctx->base_directory.length){
         msb_write_str(&temp_builder, ctx->base_directory.text, ctx->base_directory.length);
         msb_append_path(&temp_builder, sourcepath.text, sourcepath.length);
-        sourcepath = msb_borrow(&temp_builder);
+        sourcepath = msb_borrow_sv(&temp_builder);
     }
     ctx_note_dependency(ctx, sourcepath);
-    // check if we already have it.
-    MARRAY_FOR_EACH(loaded, ctx->textcache.files){
-        if(LS_SV_equals(loaded->sourcepath, sourcepath)){
-            msb_destroy(&temp_builder);
-            return (Errorable(LongString)){.result=loaded->sourcetext};
-        }
-    }
-    if(unlikely(ctx->flags & DNDC_DONT_READ))
-        return (Errorable(LongString)){.errored=PARSE_ERROR};
-    char* path = Allocator_strndup(ctx->textcache.allocator, sourcepath.text, sourcepath.length);
-    msb_destroy(&temp_builder);
-
     auto before = get_t();
-    auto load_err = read_file(path, ctx->textcache.allocator);
+    Errorable(LongString) cache_result = FileCache_read_file(&ctx->textcache, sourcepath, !!(ctx->flags & DNDC_DONT_READ));
+    msb_destroy(&temp_builder);
+    if(cache_result.errored){
+        return (Errorable(StringView)){.errored = PARSE_ERROR};
+    }
     auto after = get_t();
-    if(!load_err.errored){
-        report_time(ctx, SV("Loading a file took "), after-before);
-        auto loaded = Marray_alloc(LoadedSource)(&ctx->textcache.files, ctx->textcache.allocator);
-        loaded->sourcepath.text = path;
-        loaded->sourcepath.length = sourcepath.length;
-        loaded->sourcetext = load_err.result;
-    }
-    else {
-        Allocator_free(ctx->textcache.allocator, path, sourcepath.length+1);
-    }
-    return (Errorable(LongString)){.errored=load_err.errored, .result=load_err.result};
+    report_time(ctx, SV("Loading a file took "), after-before);
+    return (Errorable(StringView)){.result =LS_to_SV(cache_result.result)};
 }
 
 static
-Errorable_f(LongString)
+Errorable_f(StringView)
 ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath){
-    if(unlikely(ctx->flags & DNDC_DONT_READ))
-        return (Errorable(LongString)){.errored=PARSE_ERROR};
     MStringBuilder path_builder = {.allocator=ctx->temp_allocator};
     if(not path_is_abspath(binarypath) && ctx->base_directory.length){
         msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
         msb_append_path(&path_builder, binarypath.text, binarypath.length);
-        binarypath = msb_borrow(&path_builder);
+        binarypath = msb_borrow_sv(&path_builder);
     }
     ctx_note_dependency(ctx, binarypath);
     ByteBuilder bb = {.allocator = ctx->allocator};
-    auto result = load_processed_binary_file(&ctx->b64cache, binarypath, &bb);
+    auto cache_result = FileCache_read_and_b64_file(&ctx->b64cache, binarypath, !!(ctx->flags & DNDC_DONT_READ), &bb);
     bb_destroy(&bb);
     msb_destroy(&path_builder);
-    return result;
+    return (Errorable(StringView)){.result=LS_to_SV(cache_result.result)};
 }
-
+#if 0
 static
-Errorable_f(LongString)
+Errorable_f(StringView)
 load_processed_binary_file(FileCache* cache, StringView binarypath, ByteBuilder* bb){
     // check if we already have it.
     MARRAY_FOR_EACH(loaded, cache->files){
         if(LS_SV_equals(loaded->sourcepath, binarypath)){
             // DBG("Returning cached b64: '%.*s'", (int)binarypath.length, binarypath.text);
-            return (Errorable(LongString)){.result=loaded->sourcetext};
+            return (Errorable(StringView)){.result=loaded->sourcetext};
         }
     }
     // DBG("Not cached, processing b64: '%.*s'", (int)binarypath.length, binarypath.text);
@@ -384,22 +366,23 @@ load_processed_binary_file(FileCache* cache, StringView binarypath, ByteBuilder*
     auto a = cache->allocator;
     MStringBuilder sb = {.allocator = a};
     msb_write_str(&sb, binarypath.text, binarypath.length);
-    auto path = msb_borrow(&sb);
+    LongString path = msb_borrow_ls(&sb);
 
     auto base64ed_e = read_and_base64_bin_file(bb, a, path.text);
     if(unlikely(base64ed_e.errored)){
         msb_destroy(&sb);
-        return (Errorable(LongString)){.errored = base64ed_e.errored};
+        return (Errorable(StringView)){.errored = base64ed_e.errored};
     }
-    auto base64ed = base64ed_e.result;
-    auto sourcepath = msb_detach(&sb);
+    auto base64ed = LS_to_SV(base64ed_e.result);
+    LongString sourcepath = msb_detach_ls(&sb);
     auto loaded = Marray_alloc(LoadedSource)(&cache->files, a);
     *loaded = (LoadedSource){
         .sourcepath = sourcepath,
         .sourcetext = base64ed,
     };
-    return (Errorable(LongString)){.result=base64ed};
+    return (Errorable(StringView)){.result=base64ed};
 }
+#endif
 
 static inline
 Nullable(StringView*)
@@ -444,25 +427,25 @@ add_link_from_sv(DndcContext* ctx, Node* node){
     Errorable(void) result = {};
     const char* equals = memchr(str.text, '=', str.length);
     if(!equals){
-        node_print_err(ctx, node, SV("no '=' in a link node"));
+        node_print_err(ctx, node, LS("no '=' in a link node"));
         Raise(PARSE_ERROR);
     }
     MStringBuilder sb = {.allocator=ctx->string_allocator};
     msb_write_kebab(&sb, str.text, equals - str.text);
     if(!sb.cursor){
-        node_print_err(ctx, node, SV("key is empty."));
+        node_print_err(ctx, node, LS("key is empty."));
         Raise(PARSE_ERROR);
     }
-    auto key = LS_to_SV(msb_detach(&sb));
+    StringView key = msb_detach_sv(&sb);
     StringView value = stripped_view(equals + 1, (str.text+str.length)-(equals+1));
     if(!value.length){
-        node_print_err(ctx, node, SV("link target is empty."));
+        node_print_err(ctx, node, LS("link target is empty."));
         Raise(PARSE_ERROR);
     }
     if(value.text[0] == '#'){
         StringView target = {.text = value.text+1, .length = value.length-1};
         if(!target.length){
-            node_print_err(ctx, node, SV("link target is empty after the '#'"));
+            node_print_err(ctx, node, LS("link target is empty after the '#'"));
             Raise(PARSE_ERROR);
         }
         // TODO: keep a binary tree or something?
@@ -470,7 +453,7 @@ add_link_from_sv(DndcContext* ctx, Node* node){
             if(SV_equals(li->value, value))
                 goto foundit;
         }
-        node_print_err(ctx, node, SV("Anchor does not correspond to any link"));
+        node_print_err(ctx, node, LS("Anchor does not correspond to any link"));
         Raise(PARSE_ERROR);
         foundit:;
     }
@@ -490,7 +473,7 @@ add_link_from_header(DndcContext* ctx, StringView str){
         msb_destroy(&sb);
         return;
     }
-    LongString anchor = msb_detach(&sb);
+    LongString anchor = msb_detach_ls(&sb);
     StringView kebabed = {.text = anchor.text+1, .length=anchor.length-1};
     auto li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
     li->key = kebabed;
@@ -690,7 +673,7 @@ static inline
 void
 ctx_add_builtins(DndcContext* ctx){
 #define JSRAW(...) #__VA_ARGS__
-    ctx_store_builtin_file(ctx, LS("builtins/coords.js"), LS(JSRAW(
+    ctx_store_builtin_file(ctx, SV("builtins/coords.js"), SV(JSRAW(
         document.addEventListener("DOMContentLoaded", function(){
             const svgs = document.getElementsByTagName("svg");
             for(let i = 0; i < svgs.length; i++){

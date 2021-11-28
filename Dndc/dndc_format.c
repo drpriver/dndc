@@ -427,7 +427,7 @@ FORMATFUNC(table_node){
         if(row->type != NODE_TABLE_ROW)
             continue;
         if(unlikely(node_children_count(row) > arrlen(widths))){
-            node_print_err(ctx, row, SV("Row of a table has more than 100 entries. This is not handled!"));
+            node_print_err(ctx, row, LS("Row of a table has more than 100 entries. This is not handled!"));
             Raise(FORMAT_ERROR);
             }
         if(node_children_count(row) > n_cells)

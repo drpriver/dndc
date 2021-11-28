@@ -34,7 +34,7 @@ typedef struct MStringBuilder {
 
 //
 // Dealloc the data and zeros out the builder.
-// Unneeded if you called msb_detach.
+// Unneeded if you called msb_detach_*.
 static inline
 void
 msb_destroy(MStringBuilder* msb){
@@ -42,7 +42,7 @@ msb_destroy(MStringBuilder* msb){
     msb->data=0;
     msb->cursor=0;
     msb->capacity=0;
-    }
+}
 
 static inline
 force_inline
@@ -57,7 +57,7 @@ void
 msb_nul_terminate(MStringBuilder* msb){
     _check_msb_remaining_size(msb, 1);
     msb->data[msb->cursor] = '\0';
-    }
+}
 
 
 //
@@ -67,7 +67,7 @@ static inline
 void
 msb_ensure_additional(MStringBuilder* msb, size_t additional_capacity){
     _check_msb_remaining_size(msb, additional_capacity);
-    }
+}
 
 //
 // Moves the ownership of the sring from the builder to the caller.
@@ -75,7 +75,7 @@ msb_ensure_additional(MStringBuilder* msb, size_t additional_capacity){
 // Builder can be reused afterwards; its fields are zeroed.
 static inline
 LongString
-msb_detach(MStringBuilder* msb){
+msb_detach_ls(MStringBuilder* msb){
     assert(msb->data);
     msb_nul_terminate(msb);
     LongString result = {};
@@ -85,7 +85,19 @@ msb_detach(MStringBuilder* msb){
     msb->capacity = 0;
     msb->cursor = 0;
     return result;
-    }
+}
+
+static inline
+StringView
+msb_detach_sv(MStringBuilder* msb){
+    StringView result = {};
+    result.text = msb->data;
+    result.length = msb->cursor;
+    msb->data = NULL;
+    msb->capacity = 0;
+    msb->cursor = 0;
+    return result;
+}
 
 //
 // "Borrows" the current contents of the builder and returns a nul-terminated
@@ -94,15 +106,24 @@ msb_detach(MStringBuilder* msb){
 // also confusing to have the contents of the string view change under you.
 static inline
 StringView
-msb_borrow(MStringBuilder* msb){
-    msb_nul_terminate(msb);
-    assert(msb->data);
+msb_borrow_sv(MStringBuilder* msb){
     return (StringView) {
         .text = msb->data,
         .length = msb->cursor,
         };
     }
 
+// "Borrows" a nul-terminated string
+static inline
+LongString
+msb_borrow_ls(MStringBuilder* msb){
+    msb_nul_terminate(msb);
+    assert(msb->data);
+    return (LongString) {
+        .text = msb->data,
+        .length = msb->cursor,
+        };
+    }
 
 //
 // "Resets" the builder. Logically clears the contents of the builder

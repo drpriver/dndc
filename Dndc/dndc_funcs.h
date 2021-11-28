@@ -109,9 +109,9 @@ static
 Errorable_f(void)
 run_the_dndc(uint64_t flags,
         StringView base_directory,
-        LongString source_text,
-        LongString source_path,
-        LongString outpath,
+        StringView source_text,
+        StringView source_path,
+        StringView outpath,
         LongString* outstring,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,
@@ -176,7 +176,7 @@ node_set_err_offset(DndcContext* ctx, const Node*, int, LongString);
 //
 static
 void
-node_print_err(DndcContext* ctx, const Node*, StringView);
+node_print_err(DndcContext* ctx, const Node*, LongString);
 
 //
 // Like node_set_err, but immediately prints the message instead of setting a
@@ -305,7 +305,7 @@ node_get_id(const Node* node);
 // sourcepath will be adjusted by the context's base directory.
 //
 static
-Errorable_f(LongString)
+Errorable_f(StringView)
 ctx_load_source_file(DndcContext* ctx, StringView sourcepath);
 
 //
@@ -317,22 +317,8 @@ ctx_load_source_file(DndcContext* ctx, StringView sourcepath);
 // binarypath will be adjusted by the context's base directory.
 //
 static
-Errorable_f(LongString)
+Errorable_f(StringView)
 ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath);
-
-//
-// Load a binary file as base64 text, or an error if something went wrong.
-//
-// This function provides caching and management of the text.
-// This is a lower level version of ctx_load_processed_binary_file. It allows
-// better control over re-using memory (in the ByteBuilder).
-//
-// binarypath is not adjusted by any implicit base directory. Thus, this function
-// should be called with a pre-adjusted path.
-//
-static
-Errorable_f(LongString)
-load_processed_binary_file(FileCache* cache, StringView binarypath, ByteBuilder* bb);
 
 //
 // Stores a file in the context as a special builtin file.
@@ -345,7 +331,7 @@ load_processed_binary_file(FileCache* cache, StringView binarypath, ByteBuilder*
 //
 static inline
 void
-ctx_store_builtin_file(DndcContext* ctx, LongString sourcepath, LongString text);
+ctx_store_builtin_file(DndcContext* ctx, StringView sourcepath, StringView text);
 
 //
 // Marks a file as being a dependency of the document. Deduplicates.

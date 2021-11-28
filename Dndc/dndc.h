@@ -236,7 +236,7 @@ typedef int DndcDependencyFunc(DNDC_NULLABLE(void*) dependency_user_data,
 //
 DNDC_API
 int
-dndc_format(DndcLongString source_text,
+dndc_format(DndcStringView source_text,
         DndcLongString* output,
         DNDC_NULLABLE(DndcErrorFunc*) error_func,
         DNDC_NULLABLE(void*) error_user_data);
@@ -578,9 +578,9 @@ int
 dndc_compile_dnd_file(
     unsigned long long flags,
     DndcStringView base_directory,
-    DndcLongString source_text,
-    DndcLongString source_path,
-    DndcLongString outpath,
+    DndcStringView source_text,
+    DndcStringView source_path,
+    DndcStringView outpath,
     DndcLongString* outstring,
     DNDC_NULLABLE(DndcFileCache*) base64cache,
     DNDC_NULLABLE(DndcFileCache*) textcache,

@@ -146,7 +146,7 @@ read_and_base64_bin_file(ByteBuilder* bb, const Allocator a, const char* filepat
     auto buff = bb_borrow(bb);
     MStringBuilder sb = {.allocator=a};
     msb_write_b64(&sb, buff.buff, buff.n_bytes);
-    result.result = msb_detach(&sb);
+    result.result = msb_detach_ls(&sb);
     bb_reset(bb);
     return result;
 }

@@ -5,6 +5,7 @@
 #include "long_string.h"
 #include "common_macros.h"
 #include "dndc_node_types.h"
+#include "dndc_file_cache.h"
 // Type definitions for dndc, shared across components.
 
 #ifndef __clang__
@@ -33,16 +34,14 @@
 #include "Rarray.h"
 
 
-// A cached loaded source file.
-// This is used both for actual sourcefiles loaded from physical storage
-// and for manufactured strings from javascript.
-typedef struct LoadedSource {
-    LongString sourcepath; // doesn't have to be a filename
-    LongString sourcetext; // the actual source text
-} LoadedSource;
+typedef struct BuiltinLoadedSource {
+    StringView sourcepath;
+    StringView sourcetext;
+} BuiltinLoadedSource;
 
-#define MARRAY_T LoadedSource
+#define MARRAY_T BuiltinLoadedSource
 #include "Marray.h"
+
 
 typedef struct LinkItem {
     StringView key;
@@ -190,50 +189,6 @@ node_remove_child(Node* node, size_t i, const Allocator a){
 
 #define NODE_CHILDREN_FOR_EACH(iter, n) for(NodeHandle *iter = node_children(n), *iter##end__=node_children(n)+node_children_count(n);iter != iter##end__;++iter)
 
-
-struct DndcFileCache {
-    Allocator allocator;
-    Marray(LoadedSource) files;
-};
-typedef struct DndcFileCache FileCache;
-
-static inline
-void
-FileCache_clear(FileCache* cache){
-    Allocator al = cache->allocator;
-    MARRAY_FOR_EACH(src, cache->files){
-        Allocator_free(al, src->sourcepath.text, src->sourcepath.length+1);
-        Allocator_free(al, src->sourcetext.text, src->sourcetext.length+1);
-    }
-    Marray_cleanup(LoadedSource)(&cache->files, al);
-}
-
-static inline
-int
-FileCache_maybe_remove(FileCache* cache, StringView path){
-    Allocator al = cache->allocator;
-    for(size_t i = 0; i < cache->files.count; i++){
-        LoadedSource src = cache->files.data[i];
-        if(LS_SV_equals(src.sourcepath, path)){
-            Marray_remove(LoadedSource)(&cache->files, i);
-            Allocator_free(al, src.sourcepath.text, src.sourcepath.length+1);
-            Allocator_free(al, src.sourcetext.text, src.sourcetext.length+1);
-            return 1;
-        }
-    }
-    return 0;
-}
-
-static inline
-bool
-FileCache_has_file(FileCache* cache, StringView path){
-    MARRAY_FOR_EACH(src, cache->files){
-        if(LS_SV_equals(src->sourcepath, path))
-            return true;
-    }
-    return false;
-}
-
 typedef struct DndcContext {
     // The actual storage for all the nodes.
     Marray(Node) nodes;
@@ -283,7 +238,7 @@ typedef struct DndcContext {
     struct {
         // Cached strings that are from loaded files.
         // We also copy the filename as we need those on our nodes.
-        Marray(LoadedSource) builtin_files;
+        Marray(BuiltinLoadedSource) builtin_files;
         FileCache textcache;
         FileCache b64cache;
     };
@@ -296,10 +251,11 @@ typedef struct DndcContext {
     Marray(DataItem) rendered_data;
     // If a nav block exists, this string holds the html fragment
     // that is the nav.
+    // TODO: make this a string view?
     LongString renderednav;
     // Where the output will go to.
     // Python gets read-only access to this.
-    LongString outputfile;
+    StringView outputfile;
     // See DndcFlags.
     uint64_t flags;
     // See dndc.h

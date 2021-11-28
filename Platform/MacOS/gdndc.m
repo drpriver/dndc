@@ -26,7 +26,7 @@
 static
 NSString*_Nonnull
 msb_detach_as_ns_string(MStringBuilder*sb){
-    auto text = msb_detach(sb);
+    StringView text = msb_detach_sv(sb);
     PushDiagnostic();
     SuppressCastQual();
     NSData* data = [NSData dataWithBytesNoCopy:(void*)text.text length:text.length freeWhenDone:YES];
@@ -285,8 +285,8 @@ typedef enum GdndInsertTag{
 @public NSString* scroll_resto_string;
 @public NSString* doc_title;
 }
--(LongString)get_text;
--(void)recalc_html:(LongString)text;
+-(NSString*)get_text;
+-(void)recalc_html:(NSString*)text;
 -(void)flop_editor:(id _Nullable)sender;
 -(NSURL*) this_dnd_url;
 @end
@@ -1173,7 +1173,7 @@ BOOL show_stats;
     auto len = strlen(source_text);
     error_text.editable = YES;
     [[error_text textStorage].mutableString setString:@""];
-    auto err = dndc_format((LongString){len, source_text}, &html, gdndc_error_func, (__bridge void*)error_text);
+    auto err = dndc_format((StringView){len, source_text}, &html, gdndc_error_func, (__bridge void*)error_text);
     error_text.editable = NO;
     if(err){
         return;
@@ -1225,7 +1225,7 @@ BOOL show_stats;
             scroll_resto_string = object;
         }];
 }
--(LongString)get_text{
+-(NSString*)get_text{
     [self save_scroll_position];
     NSString *string = self->text.string;
     // Inject javascript that will restore the scroll position in the window.
@@ -1328,6 +1328,9 @@ BOOL show_stats;
             });
         )];
     }
+    return string;
+}
+-(void)recalc_html:(NSString*)string{
     const char* source_text = [string UTF8String];
     LongString source = {
         .text = source_text,
@@ -1336,9 +1339,6 @@ BOOL show_stats;
         // NSData and then borrowing the buffer?
         .length = strlen(source_text),
     };
-    return source;
-}
--(void)recalc_html:(LongString)source{
     // FIXME: don't do this synchronously
     // FIXME: where the fuck are you supposed to put this stuff.
     if(!auto_recalc)
@@ -1347,7 +1347,7 @@ BOOL show_stats;
     NSString* dir = [[self->file_url URLByDeletingLastPathComponent] path];
     NSString* final = [[self->file_url path] lastPathComponent];
     // NSString* final = [self->file_url path];
-    LongString outputpath = LS("");
+    StringView outputpath = SV("");
     if(final){
         outputpath.text = [final UTF8String];
         outputpath.length = outputpath.text?strlen(outputpath.text):0;
@@ -1369,7 +1369,7 @@ BOOL show_stats;
     // flags |= DNDC_USE_DND_URL_SCHEME;
     error_text.editable = YES;
     [[error_text textStorage].mutableString setString:@""];
-    auto err = run_the_dndc(flags, base_dir, source, LS(""), outputpath, &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL, gdndc_ast_func, (__bridge void*)self, (WorkerThread*)B64WORKER).errored;
+    auto err = run_the_dndc(flags, base_dir, LS_to_SV(source), SV(""), outputpath, &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL, gdndc_ast_func, (__bridge void*)self, (WorkerThread*)B64WORKER).errored;
     // auto err = dndc_compile_dnd_file(flags, base_dir, source, &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL);
     error_text.editable = NO;
     // auto t1 = get_t();

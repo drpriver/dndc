@@ -94,7 +94,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
         MSB_FORMAT(msb, "<title>", n->header, "</title>\n");
     }
     else {
-        auto filename = path_basename(path_strip_extension(LS_to_SV(ctx->outputfile)));
+        auto filename = path_basename(path_strip_extension(ctx->outputfile));
         msb_write_literal(msb, "<title>");
         msb_write_title(msb, filename.text, filename.length);
         msb_write_literal(msb, "</title>\n");
@@ -203,7 +203,7 @@ build_nav_block(DndcContext* ctx){
     MStringBuilder sb = {.allocator=ctx->string_allocator};
     build_nav_block_node(ctx, ctx->root_handle, &sb, 1);
     if(sb.cursor)
-        ctx->renderednav = msb_detach(&sb);
+        ctx->renderednav = msb_detach_ls(&sb);
 }
 
 static
@@ -351,7 +351,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                 {
                     MStringBuilder temp = {.allocator=ctx->temp_allocator};
                     msb_write_kebab(&temp, alias, alias_length);
-                    auto temp_str = msb_borrow(&temp);
+                    StringView temp_str = msb_borrow_sv(&temp);
                     auto value = find_link_target(ctx, temp_str);
                     if(unlikely(!value)){
                         if(ctx->flags & DNDC_ALLOW_BAD_LINKS){
@@ -1122,7 +1122,7 @@ RENDERFUNC(IMGLINKS){
     }
 
     // FIXME: It's kind of janky that I parse at htmlgen time.
-    LongString imgdatab64 = {};
+    StringView imgdatab64 = {};
     auto children = node_children(node);
     if(not (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME))){
         auto imgpath_node = get_node(ctx, children[0]);
