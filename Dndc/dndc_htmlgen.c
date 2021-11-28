@@ -847,14 +847,6 @@ RENDERFUNC(STYLESHEETS){
     (void)header_depth;
     return (Errorable(void)){};
 }
-RENDERFUNC(DEPENDENCIES){
-    // intentionally do not render dependencies
-    (void)ctx;
-    (void)sb;
-    (void)node;
-    (void)header_depth;
-    return (Errorable(void)){};
-}
 RENDERFUNC(LINKS){
     // intentionally do not render links
     (void)ctx;

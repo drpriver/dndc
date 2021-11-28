@@ -701,7 +701,6 @@ export const NodeType = {
     TABLE:        number;
     TABLE_ROW:    number;
     STYLESHEETS:  number;
-    DEPENDENCIES: number;
     LINKS:        number;
     SCRIPTS:      number;
     IMPORT:       number;
