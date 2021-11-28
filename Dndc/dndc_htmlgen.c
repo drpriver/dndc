@@ -335,10 +335,22 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                     node_set_err_offset(ctx, node, i, LS("Unterminated '['"));
                     Raise(PARSE_ERROR);
                 }
-                size_t link_length = closing_brace - (text+i);
+                const size_t link_length = closing_brace - (text+i);
+                size_t text_length = link_length-1;
+                // Check for '|'-delimited alias.
+                const char* alias = memchr(text+i+1, '|', link_length);
+                if(likely(!alias)){
+                    alias = text+i+1;
+                }
+                else {
+                    text_length = alias - (text+i+1);
+                    alias += 1;
+                }
+                size_t alias_length = closing_brace - alias;
+
                 {
                     MStringBuilder temp = {.allocator=ctx->temp_allocator};
-                    msb_write_kebab(&temp, text+i+1, link_length-1);
+                    msb_write_kebab(&temp, alias, alias_length);
                     auto temp_str = msb_borrow(&temp);
                     auto value = find_link_target(ctx, temp_str);
                     if(unlikely(!value)){
@@ -359,7 +371,8 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                     msb_destroy(&temp);
                 }
                 msb_write_literal(sb, "\">");
-                msb_write_str(sb, text+i+1, link_length-1);
+                StringView sv = stripped_view(text+i+1, text_length);
+                msb_write_str(sb, sv.text, sv.length);
                 msb_write_literal(sb, "</a>");
                 i += link_length;
                 continue;
