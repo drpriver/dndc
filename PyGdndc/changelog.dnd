@@ -4,6 +4,13 @@ Version 0.9.1::md
     for version controlling your dnd files, this skips a lot of useless
     directories.
   * Removed undocumented <code>:</code><code>:dependencies</code> node.
+  * Added ability for links to be looked up by an alternative alias than their text.
+    - This is useful for if you want to have multiple links on the same page
+      that resolve to different targets.
+    - The syntax looks like <code>your text | alias</code>
+      inside of square brackets.
+    - The <code>|</code> character is the delimeter.
+    - The right hand side follows the normal rules for link look up.
 Version 0.9.0::md
   * Changed semantics of script and css nodes - they
     are now the equivelant of <code>@inline</code> by default. Tag
@@ -20,7 +27,8 @@ Version 0.8.0::md
     - <code>FileSystem.list_dnd_files(directory)</code> to list all dnd files in that folder and
       all subfolders.
     - <code>FileSystem.load_file(filepath)</code> to load a file as a string.
-    - <code>FileSystem.load_file_as_base64(filepath)</code> to load a file as base64.
+    - <code>FileSystem.load_file_as_base64(filepath)</code> to load a file as
+      base64.
 Version 0.7.3::md
   * A utility for converting dnd files to html without using the editor has
     been included in the distribution. It's called "dndbatch" and should be
