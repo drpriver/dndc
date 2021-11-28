@@ -36,7 +36,7 @@ extern
 PString*
 make_html(PString* source){
     LongString text = PString_to_LongString(source);
-    LongString base = LS("");
+    StringView base = SV("");
     LongString output;
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
@@ -68,7 +68,7 @@ extern
 PString*
 format_dnd(PString* source){
     LongString text = PString_to_LongString(source);
-    LongString base = LS("");
+    StringView base = SV("");
     LongString output;
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS

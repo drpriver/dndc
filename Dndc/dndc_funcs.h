@@ -108,7 +108,7 @@ typedef int (DndcPostParseAstFunc)(Nullable(void*)user_data, Nonnull(DndcContext
 static
 Errorable_f(void)
 run_the_dndc(uint64_t flags,
-        LongString base_directory,
+        StringView base_directory,
         LongString source_text,
         LongString source_path,
         LongString outpath,

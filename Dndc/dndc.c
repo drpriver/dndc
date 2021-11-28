@@ -274,7 +274,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
 static
 Errorable_f(void)
 run_the_dndc(uint64_t flags,
-        LongString base_directory,
+        StringView base_directory,
         LongString source_text,
         LongString source_path,
         LongString outpath,
@@ -881,7 +881,7 @@ dndc_format(LongString source_text, LongString* output, Nullable(DndcErrorFunc*)
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_REFORMAT_ONLY
         ;
-    auto e = run_the_dndc(flags, LS(""), source_text, LS(""), LS(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL);
+    auto e = run_the_dndc(flags, SV(""), source_text, LS(""), LS(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL);
     return e.errored;
 }
 
@@ -1928,7 +1928,7 @@ DNDC_API
 int
 dndc_compile_dnd_file(
     unsigned long long flags,
-    DndcLongString base_directory,
+    DndcStringView base_directory,
     DndcLongString source_text,
     DndcLongString source_path,
     DndcLongString outpath,

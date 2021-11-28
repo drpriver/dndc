@@ -1850,9 +1850,9 @@ JSGETTER(js_dndc_context_get_base){
     DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
     if(!ctx)
         return JS_EXCEPTION;
-    LongString base = ctx->base_directory;
+    StringView base = ctx->base_directory;
     if(!base.length)
-        base = LS(".");
+        base = SV(".");
     return JS_NewStringLen(jsctx, base.text, base.length);
 }
 

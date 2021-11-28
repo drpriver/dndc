@@ -577,7 +577,7 @@ DNDC_API
 int
 dndc_compile_dnd_file(
     unsigned long long flags,
-    DndcLongString base_directory,
+    DndcStringView base_directory,
     DndcLongString source_text,
     DndcLongString source_path,
     DndcLongString outpath,

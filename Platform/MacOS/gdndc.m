@@ -1352,7 +1352,7 @@ BOOL show_stats;
         outputpath.text = [final UTF8String];
         outputpath.length = outputpath.text?strlen(outputpath.text):0;
     }
-    LongString base_dir = LS("");
+    StringView base_dir = SV("");
     if(dir){
         const char* dir_text = [dir UTF8String];
         base_dir.text = dir_text;
