@@ -107,10 +107,10 @@ class Identer:
             th.sort()
             setattr(self, thing, th)
 
-def clang_default_include() -> str:
+def clang_default_include() -> List[str]:
     if os.name == 'nt':
         # XXX: machine specific path - nonportable
-        return r'C:\Program Files\LLVM\lib\clang\11.0.0\include'
+        return [r'-isystemC:\Program Files\LLVM\lib\clang\11.0.0\include']
     sub = subprocess.Popen(['clang', '-v', '-x', 'c', '-'],
                            stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     _, out = sub.communicate(b'')
@@ -374,22 +374,22 @@ def write_vim(funcs:List[str], enums:List[str], types:List[str], globs:List[str]
         fp.write('hi cCONSTGLOBAL cterm=bold gui=bold\n')
         # using BufEnter as I never learned the proper way to do this.
         if funcs:
-            fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cFunction ')
+            fp.write('au BufEnter *.c,*.h,*.m,*.mm,*.cpp syn keyword cFunction ')
             fp.write(' '.join(funcs))
             fp.write('\n')
             fp.write('\n')
         if types:
-            fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cType ')
+            fp.write('au BufEnter *.c,*.h,*.m,*.mm,*.cpp syn keyword cType ')
             fp.write(' '.join(types))
             fp.write('\n')
             fp.write('\n')
         if enums:
-            fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cEnum ')
+            fp.write('au BufEnter *.c,*.h,*.m,*.mm,*.cpp syn keyword cEnum ')
             fp.write(' '.join(enums))
             fp.write('\n')
             fp.write('\n')
         if macros:
-            fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cPreProc ')
+            fp.write('au BufEnter *.c,*.h,*.m,*.mm,*.cpp syn keyword cPreProc ')
             fp.write(' '.join(macros))
             fp.write('\n')
             fp.write('\n')
@@ -401,12 +401,12 @@ def write_vim(funcs:List[str], enums:List[str], types:List[str], globs:List[str]
             else:
                 noncapglobs.append(g)
         if noncapglobs:
-            fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cGLOBAL ')
+            fp.write('au BufEnter *.c,*.h,*.m,*.mm,*.cpp syn keyword cGLOBAL ')
             fp.write(' '.join(noncapglobs))
             fp.write('\n')
             fp.write('\n')
         if capglobs:
-            fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cCONSTGLOBAL ')
+            fp.write('au BufEnter *.c,*.h,*.m,*.mm,*.cpp syn keyword cCONSTGLOBAL ')
             fp.write(' '.join(capglobs))
             fp.write('\n')
             fp.write('\n')

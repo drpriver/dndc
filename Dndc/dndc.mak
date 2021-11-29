@@ -1,5 +1,5 @@
-DNDCVERSION=0.9.0
-DNDC_COMPAT_VERSION=0.9.0
+DNDCVERSION=0.9.2
+DNDC_COMPAT_VERSION=0.9.2
 
 ifeq ($(UNAME),Darwin)
 RPATH:=-rpath @executable_path

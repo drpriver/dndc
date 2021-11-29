@@ -791,8 +791,8 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
         return JS_ThrowTypeError(jsctx, "Invalid directory argument");
     }
     msb_nul_terminate(&sb);
-    LongString dir = msb_borrow_ls(&sb);
 #if defined(__APPLE__) || defined(__linux__)
+    LongString dir = msb_borrow_ls(&sb);
     // On apple we could try using [NSFileManager
     //      enumeratorAtURL:includingPropertiesForKeys:options:errorHandler:]
     // instead, but whatever, this also works on linux. Main drawback is we
@@ -828,6 +828,7 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
     msb_destroy(&sb);
     return result;
 #elif defined(_WIN32)
+    StringView dir = msb_borrow_sv(&sb);
     QJSValue result = JS_NewArray(jsctx);
     result = js_list_dnd_files_inner(jsctx, ctx, result, dir, dir.length, 0);
     msb_destroy(&sb);

@@ -160,7 +160,7 @@ thread_worker(void*){
             }
         LeaveCriticalSection(&worker_data.lock);
         if(text){
-            LongString source = {.length=strlen(text), .text=text};
+            StringView source = {.length=strlen(text), .text=text};
             LongString output = {};
             int fail = dndc_compile_dnd_file(DNDC_FLAGS_NONE
                     | DNDC_ALLOW_BAD_LINKS
@@ -169,9 +169,10 @@ thread_worker(void*){
                     | DNDC_DONT_PRINT_ERRORS
                     | DNDC_SUPPRESS_WARNINGS
                     ,
-                    LS(""),
+                    SV(""),
                     source,
-                    LS("this.html"),
+                    SV(""),
+                    SV("this.html"),
                     &output,
                     NULL,
                     NULL,
