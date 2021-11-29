@@ -233,7 +233,7 @@ def good_tag(cursor) -> bool:
     spelling = cursor.spelling
     if not spelling:
         return False
-    if not is_definition(cursor):
+    if cursor.kind != CursorKind.VAR_DECL and not is_definition(cursor):
         return False
     if cursor.kind == CursorKind.TYPEDEF_DECL:
         if spelling == cursor.underlying_typedef_type.spelling:
@@ -370,6 +370,8 @@ def write_vim(funcs:List[str], enums:List[str], types:List[str], globs:List[str]
         fp.write('hi cFunction ctermfg=109 guifg=#664499\n')
         fp.write('hi cEnum cterm=bold gui=bold\n')
         fp.write('hi cPreProc ctermfg=5\n')
+        fp.write('hi cGLOBAL ctermfg=7 cterm=bold gui=bold\n')
+        fp.write('hi cCONSTGLOBAL cterm=bold gui=bold\n')
         # using BufEnter as I never learned the proper way to do this.
         if funcs:
             fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cFunction ')
@@ -389,6 +391,23 @@ def write_vim(funcs:List[str], enums:List[str], types:List[str], globs:List[str]
         if macros:
             fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cPreProc ')
             fp.write(' '.join(macros))
+            fp.write('\n')
+            fp.write('\n')
+        capglobs = []
+        noncapglobs =[]
+        for g in globs:
+            if g.isupper():
+                capglobs.append(g)
+            else:
+                noncapglobs.append(g)
+        if noncapglobs:
+            fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cGLOBAL ')
+            fp.write(' '.join(noncapglobs))
+            fp.write('\n')
+            fp.write('\n')
+        if capglobs:
+            fp.write('au BufEnter *.c,*.h,*.m,*.mm syn keyword cCONSTGLOBAL ')
+            fp.write(' '.join(capglobs))
             fp.write('\n')
             fp.write('\n')
         fp.flush()

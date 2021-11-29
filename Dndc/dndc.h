@@ -507,7 +507,7 @@ dndc_worker_thread_destroy(DndcWorkerThread*);
 //    A bitwise-or combination of `enum DndcFlags`.
 //
 // base_directory:
-//    May be a zero-length LongString.  For relative filepaths referenced in
+//    May be a zero-length string.  For relative filepaths referenced in
 //    the document, what those paths are relative to. Defaults to the current
 //    directory for a zero length string view.
 //

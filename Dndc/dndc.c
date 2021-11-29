@@ -382,6 +382,7 @@ run_the_dndc(uint64_t flags,
             goto cleanup;
         }
     }
+    // Do reformatting if requested.
     if(unlikely(flags & DNDC_REFORMAT_ONLY)){
         MStringBuilder outsb = {.allocator = get_mallocator()};
         auto before = get_t();
@@ -404,6 +405,7 @@ run_the_dndc(uint64_t flags,
         }
         goto success;
     }
+    // Error out on untrusted input if requested.
     if(wasm || unlikely(flags & DNDC_INPUT_IS_UNTRUSTED)){
         if(ctx.imports.count){
             auto handle = ctx.imports.data[0];
@@ -632,7 +634,7 @@ run_the_dndc(uint64_t flags,
         // Sort so we can do a binary search.
         if(ctx.links.count){
             auto before_sort = get_t();
-            #if 1
+            #if defined(WASM) || 1
                 LinkItem__array_sort(ctx.links.data, ctx.links.count);
             #else
                 qsort(ctx.links.data, ctx.links.count, sizeof(ctx.links.data[0]), StringView_cmp);
@@ -685,6 +687,7 @@ run_the_dndc(uint64_t flags,
         report_time(&ctx, SV("Data blob rendering took: "), after_data-before_data);
         report_size(&ctx, SV("ctx.rendered_data.count = "), ctx.rendered_data.count);
     }
+    // User ast func
     if(!wasm && ast_func){
         int err = ast_func(ast_func_user_data, &ctx);
         if(err){
@@ -692,6 +695,7 @@ run_the_dndc(uint64_t flags,
             goto cleanup;
         }
     }
+    // Render as a .dnd file if requested.
     if(!wasm && (flags & DNDC_OUTPUT_EXPANDED_DND)){
         MStringBuilder output_sb = {.allocator = get_mallocator()};
         auto before_render = get_t();
@@ -737,7 +741,10 @@ run_the_dndc(uint64_t flags,
             *outstring = msb_detach_ls(&output_sb);
         }
     }
-    // Write the make-style dependency file to the Dependency directory.
+    // Call the user's dependency function so they can write a Makestyle
+    // dependency file, or watch those files, or whatever.
+    // Do this after rendering as we unfortunately read files (I think just images)
+    // during render.
     if(!wasm && dependency_func){
         int err = dependency_func(dependency_user_data, ctx.dependencies.count, ctx.dependencies.data);
         if(err){
@@ -745,6 +752,7 @@ run_the_dndc(uint64_t flags,
             goto cleanup;
         }
     }
+    // It's all over!
     success:;
     cleanup:;
     msb_destroy(&msb);

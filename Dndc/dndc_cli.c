@@ -53,7 +53,7 @@ main(int argc, char**argv){
     StringView output_path = SV("");
     DndcDependencyFunc* dependency_func = NULL;
     LongString dependency_path = LS("");
-    struct DependencyUserData dependency_user_data = {};
+    struct DependencyUserData dependency_user_data = {0};
     StringView base_dir = {0};
     uint64_t ast_func_flags = DNDC_MAIN_NONE;
     uint64_t flags = DNDC_FLAGS_NONE ;

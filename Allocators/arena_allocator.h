@@ -83,7 +83,7 @@ round_size_up(size_t size){
     if(remainder)
         size += 8 - remainder;
     return size;
-    }
+}
 
 //
 // Allocates an uninitialized chunk of memory from the arena.
@@ -98,14 +98,14 @@ ArenaAllocator_alloc(ArenaAllocator* aa, size_t size){
         ba->size = size;
         aa->big_allocations = ba;
         return ba+1;
-        }
+    }
     if(!aa->arena){
         Arena* arena = malloc(sizeof(*arena));
         arena->prev = NULL;
         arena->used = 0;
         arena->last = 0;
         aa->arena = arena;
-        }
+    }
     if(size > ARENA_BUFFER_SIZE - aa->arena->used){
         Arena* arena = malloc(sizeof(*arena));
         arena->prev = aa->arena;
@@ -113,11 +113,11 @@ ArenaAllocator_alloc(ArenaAllocator* aa, size_t size){
         arena->last = 0;
         aa->arena = arena;
         return arena->buff;
-        }
+    }
     aa->arena->last = aa->arena->used;
     aa->arena->used += size;
     return aa->arena->buff + aa->arena->last;
-    }
+}
 //
 // Allocates a zeroed chunk of memory from the arena.
 //
@@ -131,14 +131,14 @@ ArenaAllocator_zalloc(ArenaAllocator* aa, size_t size){
         ba->size = size;
         aa->big_allocations = ba;
         return ba+1;
-        }
+    }
     if(!aa->arena){
         Arena* arena = calloc(1, sizeof(*arena));
         arena->prev = NULL;
         arena->used = 0;
         arena->last = 0;
         aa->arena = arena;
-        }
+    }
     if(size > ARENA_BUFFER_SIZE - aa->arena->used){
         Arena* arena = calloc(1, sizeof(*arena));
         arena->prev = aa->arena;
@@ -146,13 +146,13 @@ ArenaAllocator_zalloc(ArenaAllocator* aa, size_t size){
         arena->last = 0;
         aa->arena = arena;
         return arena->buff;
-        }
+    }
     aa->arena->last = aa->arena->used;
     aa->arena->used += size;
     void* result =  aa->arena->buff + aa->arena->last;
     memset(result, 0, size);
     return result;
-    }
+}
 
 //
 // Reallocs an allocation from the arena, attempting to do it in place if it
@@ -161,9 +161,8 @@ ArenaAllocator_zalloc(ArenaAllocator* aa, size_t size){
 static
 void*_Nullable
 ArenaAllocator_realloc(ArenaAllocator* aa, void*_Nullable ptr, size_t old_size, size_t new_size){
-    if(!old_size || !ptr){
+    if(!old_size || !ptr)
         return ArenaAllocator_alloc(aa, new_size);
-        }
     if(!new_size)
         return NULL;
     old_size = round_size_up(old_size);
@@ -179,7 +178,7 @@ ArenaAllocator_realloc(ArenaAllocator* aa, void*_Nullable ptr, size_t old_size, 
         else
             memcpy(result, ptr, new_size);
         return result;
-        }
+    }
     if(old_size > ARENA_BUFFER_SIZE){
         void* result = ArenaAllocator_alloc(aa, new_size);
         if(old_size < new_size)
@@ -187,21 +186,21 @@ ArenaAllocator_realloc(ArenaAllocator* aa, void*_Nullable ptr, size_t old_size, 
         else
             memcpy(result, ptr, new_size);
         return result;
-        }
+    }
     assert(aa->arena);
     if(aa->arena->last + aa->arena->buff == ptr){
         if(new_size <= ARENA_BUFFER_SIZE - aa->arena->last){
             aa->arena->used = aa->arena->last + new_size;
             return ptr;
-            }
         }
+    }
     void* result = ArenaAllocator_alloc(aa, new_size);
     if(old_size < new_size)
         memcpy(result, ptr, old_size);
     else
         memcpy(result, ptr, new_size);
     return result;
-    }
+}
 //
 // Free all allocations from the arenas. Deallocs the arenas themselves and
 // frees the big allocation linked list as well.
@@ -214,17 +213,17 @@ ArenaAllocator_free_all(ArenaAllocator*_Nullable aa){
         Arena* to_free = arena;
         arena = arena->prev;
         free(to_free);
-        }
+    }
     BigAllocation* ba = aa->big_allocations;
     while(ba){
         BigAllocation* to_free = ba;
         ba = ba->next;
         free(to_free);
-        }
+    }
     aa->arena = NULL;
     aa->big_allocations = NULL;
     return;
-    }
+}
 
 typedef struct ArenaAllocatorStats {
     size_t used, capacity, big_used, big_count, arena_count;
@@ -238,13 +237,13 @@ ArenaAllocator_stats(ArenaAllocator* aa){
         result.used += arena->used;
         result.capacity += sizeof(arena->buff);
         result.arena_count++;
-        }
+    }
     for(BigAllocation* ba = aa->big_allocations; ba; ba = ba->next){
         result.big_used += ba->size;
         result.big_count++;
-        }
-    return result;
     }
+    return result;
+}
 
 //
 // Free is not supported, but maybe we should do the linear allocator strategy?
