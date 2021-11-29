@@ -1033,11 +1033,11 @@ Page::set_scroll_pos(QString&& x){
     // SAD: can't factor this into a function as we need textbytes to outlive textls
     auto text = get_text_for_preview();
     auto textbytes = text.toUtf8();
-    DndcLongString textls = {(size_t)textbytes.size(), textbytes.data()};
+    DndcStringView textsv = {(size_t)textbytes.size(), textbytes.data()};
     auto dirbytes = dirname.toUtf8();
-    DndcLongString basedir = {(size_t)dirbytes.size(), dirbytes.data()};
+    DndcStringView basedir = {(size_t)dirbytes.size(), dirbytes.data()};
     auto fnbytes = filename.toUtf8();
-    DndcLongString outpath = {(size_t)fnbytes.size(), fnbytes.data()};
+    DndcStringView outpath = {(size_t)fnbytes.size(), fnbytes.data()};
     // DndcLongString outpath = {sizeof("this.html")-1, "this.html"};
     DndcLongString outstring;
     DndcErrorFunc* errfunc = [](
@@ -1062,7 +1062,9 @@ Page::set_scroll_pos(QString&& x){
 
     int err = dndc_compile_dnd_file(
             flags,
-            basedir, textls, outpath,
+            basedir, textsv, 
+            outpath,
+            outpath,
             &outstring,
             b64cache, textcache,
             errfunc, this,
@@ -1079,7 +1081,7 @@ void
 Page::format(void){
     auto text = get_text_for_preview();
     auto textbytes = text.toUtf8();
-    DndcLongString textls = {(size_t)textbytes.size(), textbytes.data()};
+    DndcStringView textsv = {(size_t)textbytes.size(), textbytes.data()};
     DndcErrorFunc* errfunc = [](
             void* user_data,
             int type,
@@ -1098,7 +1100,10 @@ Page::format(void){
         flags |= DNDC_PRINT_STATS;
     int err = dndc_compile_dnd_file(
             flags,
-            DndcLongString{}, textls, DndcLongString{},
+            DndcStringView{}, 
+            DndcStringView{},
+            textsv, 
+            DndcStringView{},
             &outstring,
             nullptr, nullptr,
             errfunc, this,
@@ -1214,11 +1219,11 @@ Page::export_as_html(void){
     // Get the text directly, without any of the helpers inserted.
     auto text = textedit->toPlainText();
     auto textbytes = text.toUtf8();
-    DndcLongString textls = {(size_t)textbytes.size(), textbytes.data()};
+    DndcStringView textsv = {(size_t)textbytes.size(), textbytes.data()};
     auto dirbytes = dirname.toUtf8();
-    DndcLongString basedir = {(size_t)dirbytes.size(), dirbytes.data()};
+    DndcStringView basedir = {(size_t)dirbytes.size(), dirbytes.data()};
     // TODO: change to where it is going
-    DndcLongString outpath = {sizeof("this.html")-1, "this.html"};
+    DndcStringView outpath = {sizeof("this.html")-1, "this.html"};
     DndcLongString outstring;
     DndcErrorFunc* errfunc = [](
             void* user_data,
@@ -1233,7 +1238,10 @@ Page::export_as_html(void){
 
     int err = dndc_compile_dnd_file(
             flags,
-            basedir, textls, outpath,
+            basedir, 
+            textsv, 
+            DndcStringView{},
+            outpath,
             &outstring,
             b64cache, textcache,
             errfunc, this,
