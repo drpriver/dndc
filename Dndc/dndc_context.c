@@ -347,6 +347,7 @@ ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath){
     auto cache_result = FileCache_read_and_b64_file(&ctx->b64cache, binarypath, !!(ctx->flags & DNDC_DONT_READ), &bb);
     bb_destroy(&bb);
     msb_destroy(&path_builder);
+    if(cache_result.errored) return (Errorable(StringView)){.errored=cache_result.errored};
     return (Errorable(StringView)){.result=LS_to_SV(cache_result.result)};
 }
 #if 0

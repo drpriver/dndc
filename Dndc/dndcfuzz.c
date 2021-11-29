@@ -6,13 +6,6 @@
 // You can turn that off if you want.
 int
 LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
-    // We only accept null-terminated and I can't find any indication that that
-    // we can get fuzzer to give us nul-terminated, so do it ourselves I guess.
-    size_t msize = size+1;
-    char* str = malloc(msize);
-    assert(str);
-    memcpy(str, data, size);
-    str[size] = '\0';
     // It'd be nice to fuzz Python blocks as well, but I don't want
     // the fuzzer to accidentally do an os.system of anything.
     uint64_t flags = DNDC_FLAGS_NONE
@@ -25,12 +18,13 @@ LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
         | DNDC_REFORMAT_ONLY
 #endif
         ;
-    LongString source = {.text=str, .length=size};
+    StringView source = {.text=(const char*)data, .length=size};
     LongString out;
     auto e = run_the_dndc(flags,
-            LS(""),
-            source,
-            LS("lmao.html"),
+            SV(""), // base directory
+            source, // source text
+            SV("lmao.html"), // source path
+            SV(""), // outpath
             &out, // out
             NULL, NULL, // caches
             NULL, NULL, // errors
@@ -38,9 +32,7 @@ LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
             NULL, NULL, // astfunc
             NULL // worker
             );
-    if(!e.errored)
-        dndc_free_string(out);
-    free(str);
+    if(!e.errored) dndc_free_string(out);
     return 0;
     }
 #else

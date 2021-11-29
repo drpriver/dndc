@@ -116,13 +116,14 @@ FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only
     auto base64ed_e = read_and_base64_bin_file(bb, cache->allocator, path.path.text);
     if(unlikely(base64ed_e.errored)){
         FileCache_free_path(cache, path);
+        return (Errorable(LongString)){.errored=base64ed_e.errored};
     }
     else {
         LoadedSource* ls = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator);
         ls->sourcepath = path;
         ls->sourcetext = base64ed_e.result;
+        return (Errorable(LongString)){.result=base64ed_e.result};
     }
-    return (Errorable(LongString)){.result=base64ed_e.result};
 }
 
 #ifdef __clang__

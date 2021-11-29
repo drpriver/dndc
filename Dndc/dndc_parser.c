@@ -132,7 +132,7 @@ analyze_line(DndcContext* ctx){
         length -= 16;
     }
 #endif
-    for(;;cursor++){
+    for(;length;length--,cursor++){
         char ch = *cursor;
         switch(ch){
             case ' ': case '\r': case '\t':
@@ -262,7 +262,7 @@ analyze_line(DndcContext* ctx){
                 endline = cursor;
                 goto Lfinish;
             case ':':
-                if(cursor[1] == ':'){
+                if(length > 1 && cursor[1] == ':'){
                     doublecolon = cursor;
                     goto Lendonly;
                 }
@@ -328,7 +328,7 @@ static inline
 void
 force_inline
 advance_row(DndcContext* ctx){
-    if(unlikely(!ctx->line_end[0]))
+    if(unlikely(ctx->line_end == ctx->end))
         ctx->cursor = ctx->line_end;
     else
         ctx->cursor = ctx->line_end+1;
@@ -1131,7 +1131,7 @@ PARSEFUNC(parse_md_node){
             case '+':
             case '-':
             case '*':
-                if(firstchar[1] == ' '){
+                if(firstchar+1 != ctx->end && firstchar[1] == ' '){
                     prefix_length = 1;
                     newstate = BULLET;
                 }
@@ -1140,7 +1140,8 @@ PARSEFUNC(parse_md_node){
                 goto after;
             case '0' ... '9':{
                 prefix_length = 1;
-                for(const char* c = firstchar+1;;c++){
+                newstate = PARA;
+                for(const char* c = firstchar+1;c != ctx->end;c++){
                     switch(*c){
                         case '0' ... '9':
                             prefix_length++;
@@ -1150,7 +1151,6 @@ PARSEFUNC(parse_md_node){
                             newstate = LIST;
                             goto after;
                         default:
-                            newstate = PARA;
                             goto after;
                     }
                 }
