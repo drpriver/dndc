@@ -425,7 +425,7 @@ static inline
 Errorable_f(void)
 add_link_from_sv(DndcContext* ctx, Node* node){
     auto str = node->header;
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     const char* equals = memchr(str.text, '=', str.length);
     if(!equals){
         node_print_err(ctx, node, LS("no '=' in a link node"));
@@ -495,7 +495,7 @@ force_inline
 NodeHandle
 alloc_handle(DndcContext* ctx){
     size_t index = Marray_alloc_index(Node)(&ctx->nodes, ctx->allocator);
-    ctx->nodes.data[index] = (Node){};
+    ctx->nodes.data[index] = (Node){0};
     // debug to help find nodes without parents
     ctx->nodes.data[index].parent = INVALID_NODE_HANDLE;
     return (NodeHandle){.index=index};
@@ -529,7 +529,7 @@ append_child(DndcContext* ctx, NodeHandle parent_handle, NodeHandle child_handle
         return;
     }
     if(parent->children.count == 4){
-        Marray(NodeHandle) children = {};
+        Marray(NodeHandle) children = {0};
         Marray_ensure_total(NodeHandle)(&children, ctx->allocator, 4);
         memcpy(children.data, parent->inline_children, sizeof(parent->inline_children));
         children.count = 4;

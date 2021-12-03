@@ -90,9 +90,9 @@ THREADFUNC(binary_worker){
 static
 Errorable_f(void)
 execute_user_scripts(DndcContext* ctx){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     auto flags = ctx->flags;
-    ArenaAllocator aa = {};
+    ArenaAllocator aa = {0};
     // The rt is lazily initialized as they are pretty expensive
     // if not actually used.
     QJSRuntime* rt = NULL;
@@ -183,7 +183,7 @@ execute_user_scripts(DndcContext* ctx){
 static
 Errorable_f(void)
 execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) worker){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     auto flags = ctx->flags;
     // Setup the worker thread.
     BinaryJob job = {
@@ -232,7 +232,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
             }
         }
     }
-    ThreadHandle thread_worker = {};
+    ThreadHandle thread_worker = {0};
     bool binary_work_to_be_done = !!job.sourcepaths.count;
     bool thread_created = false;
     if(binary_work_to_be_done){
@@ -308,12 +308,12 @@ run_the_dndc(uint64_t flags,
     const bool wasm = false;
 #endif
     auto t0 = get_t();
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     if(!source_path.length)
         source_path = SV("(string input)");
-    ArenaAllocator arena_allocator = {};
+    ArenaAllocator arena_allocator = {0};
     const Allocator string_allocator = {.type=ALLOCATOR_ARENA, ._data=&arena_allocator};
-    ArenaAllocator main_arena = {};
+    ArenaAllocator main_arena = {0};
     const Allocator allocator = {.type=ALLOCATOR_ARENA, ._data=&main_arena};
     // The linear allocator is very useful for temporary allocations, like
     // when we need to turn a string into its kebabed form and then look it up

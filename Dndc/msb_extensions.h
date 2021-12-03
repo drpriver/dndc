@@ -63,10 +63,11 @@ msb_write_kebab(MStringBuilder* msb, const char* text, size_t length){
                 data[cursor] = '-';
                 data[cursor+1] = ENDSENTINEL;
                 continue;
-            case ' ': case '\t': case '-': case '/':{
+            case ' ': case '\t': case '-': case '/':{ // this slash is kind of sus
                 int is_dash = data[cursor] == '-';
                 cursor += is_dash;
-                }continue;
+                continue;
+            }
             default:
                 continue;
         }
@@ -95,7 +96,7 @@ msb_write_title(MStringBuilder* restrict msb, const char* restrict str, size_t l
         switch(c){
             case 'a' ... 'z':
                 if(wants_cap){
-                    c &= ~0x20;
+                    c &= ~0x20; // toupper
                     wants_cap = false;
                 }
                 break;

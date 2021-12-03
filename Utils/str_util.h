@@ -26,20 +26,20 @@ stripped_view(const char* str, size_t len){
                 continue;
             default:
                 break;
-            }
-        break;
         }
+        break;
+    }
     for(;len;len--){
         switch(str[len-1]){
             case ' ': case '\t': case '\r': case '\n': case '\f': case '\v':
                 continue;
             default:
                 break;
-            }
-        break;
         }
-    return (StringView){.text=str, .length=len};
+        break;
     }
+    return (StringView){.text=str, .length=len};
+}
 
 static inline
 StringViewUtf16
@@ -50,20 +50,20 @@ stripped_view_utf16(const uint16_t* str, size_t len){
                 continue;
             default:
                 break;
-            }
-        break;
         }
+        break;
+    }
     for(;len;len--){
         switch(str[len-1]){
             case ' ': case '\t': case '\r': case '\n': case '\f': case '\v':
                 continue;
             default:
                 break;
-            }
-        break;
         }
-    return (StringViewUtf16){.text=str, .length=len};
+        break;
     }
+    return (StringViewUtf16){.text=str, .length=len};
+}
 //
 // Like stripped_view, but only strips from the right.
 //
@@ -76,11 +76,11 @@ rstripped_view(const char* str, size_t len){
                 continue;
             default:
                 break;
-            }
-        break;
         }
-    return (StringView){.text=str, .length=len};
+        break;
     }
+    return (StringView){.text=str, .length=len};
+}
 //
 // Like stripped_view, but only strips from the left.
 //
@@ -93,11 +93,11 @@ lstripped_view(const char* str, size_t len){
                 continue;
             default:
                 break;
-            }
-        break;
         }
-    return (StringView){.text=str, .length=len};
+        break;
     }
+    return (StringView){.text=str, .length=len};
+}
 
 static inline
 StringViewUtf16
@@ -108,11 +108,11 @@ lstripped_view_utf16(const uint16_t* str, size_t len){
                 continue;
             default:
                 break;
-            }
-        break;
         }
-    return (StringViewUtf16){.text=str, .length=len};
+        break;
     }
+    return (StringViewUtf16){.text=str, .length=len};
+}
 typedef struct SplitPair {
     StringView head;
     StringView tail;
@@ -140,14 +140,14 @@ stripped_split(const char* a, size_t length, char splitter){
     if(!split){
         return (SplitPair){
             .head = {.text=a, .length=length},
-            .tail = {},
-            };
-        }
-    return (SplitPair){
-        .head = stripped_view(a, split-a),
-        .tail = stripped_view(split+1, (a+length) - (split+1)),
+                .tail = {0},
         };
     }
+    return (SplitPair){
+        .head = stripped_view(a, split-a),
+            .tail = stripped_view(split+1, (a+length) - (split+1)),
+    };
+}
 
 static inline
 SplitPair
@@ -156,16 +156,16 @@ string_split(const char* a, size_t length, char splitter){
     if(!split){
         return (SplitPair){
             .head.text = a,
-            .head.length = length,
-            };
-        }
-    return (SplitPair){
-        .head.text = a,
-        .head.length = split-a,
-        .tail.text = split+1,
-        .tail.length = (a+length)-(split+1),
+                .head.length = length,
         };
     }
+    return (SplitPair){
+        .head.text = a,
+            .head.length = split-a,
+            .tail.text = split+1,
+            .tail.length = (a+length)-(split+1),
+    };
+}
 
 static inline
 _Bool

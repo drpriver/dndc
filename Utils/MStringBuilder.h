@@ -78,7 +78,7 @@ LongString
 msb_detach_ls(MStringBuilder* msb){
     assert(msb->data);
     msb_nul_terminate(msb);
-    LongString result = {};
+    LongString result = {0};
     result.text = msb->data;
     result.length = msb->cursor;
     msb->data = NULL;
@@ -90,7 +90,7 @@ msb_detach_ls(MStringBuilder* msb){
 static inline
 StringView
 msb_detach_sv(MStringBuilder* msb){
-    StringView result = {};
+    StringView result = {0};
     result.text = msb->data;
     result.length = msb->cursor;
     msb->data = NULL;

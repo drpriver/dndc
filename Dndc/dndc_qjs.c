@@ -432,7 +432,7 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags){
 static
 Errorable_f(void)
 execute_qjs_string(QJSContext* jsctx, DndcContext* ctx, const char* str, size_t length, NodeHandle handle, NodeHandle firstline){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
 
 
     {
@@ -478,7 +478,7 @@ jsstring_to_longstring(QJSContext* jsctx, QJSValueConst v, Allocator a){
     size_t len;
     const char* str = JS_ToCStringLen(jsctx, &len, v);
     if(!str){
-        return (LongString){};
+        return (LongString){0};
     }
     // inefficient to dupe the string, but I don't know
     // the lifetime of the JS_ToCStringLen.
@@ -500,7 +500,7 @@ jsstring_to_kebabed(QJSContext* jsctx, QJSValueConst v, Allocator a){
     size_t len;
     const char* str = JS_ToCStringLen(jsctx, &len, v);
     if(!str){
-        return (LongString){};
+        return (LongString){0};
     }
     MStringBuilder msb = {.allocator=a};
     msb_write_kebab(&msb, str, len);
@@ -514,7 +514,7 @@ jsstring_make_stringview_js_allocated(QJSContext* jsctx, QJSValueConst v){
     size_t len;
     const char* str = JS_ToCStringLen(jsctx, &len, v);
     if(!str){
-        return (StringView){};
+        return (StringView){0};
     }
     return (StringView){.text=str, .length=len};
 }
@@ -1615,8 +1615,8 @@ JSMETHOD(js_dndc_context_select_nodes){
     LinearAllocator la = new_linear_storage(1024*1024, "select_nodes allocator");
     Allocator tmp = {.type = ALLOCATOR_LINEAR, ._data = &la};
     int32_t type = -1;
-    Marray(StringView) attributes_array = {};
-    Marray(StringView) classes_array = {};
+    Marray(StringView) attributes_array = {0};
+    Marray(StringView) classes_array = {0};
     {
         QJSValue jstype_ = JS_GetPropertyStr(jsctx, arg, "type");
         if(JS_IsException(jstype_))

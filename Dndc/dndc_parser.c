@@ -52,7 +52,7 @@ PARSEFUNC(parse_list_node);
 PARSEFUNC(parse_list_item);
 PARSEFUNC(parse_md_node);
 
-#if defined(__ARM_NEON)
+#if 1 && defined(__ARM_NEON)
 // Copied from https://stackoverflow.com/a/68694558
 // Is there a better way to do this?
 // It's pretty simple.
@@ -365,7 +365,7 @@ init_string_node(DndcContext* ctx, NodeHandle handle, StringView sv){
 static
 Errorable_f(void)
 dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const char* text, size_t length){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     ctx->cursor = text;
     ctx->end = text + length;
     ctx->linestart = NULL;
@@ -384,7 +384,7 @@ dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const 
 static
 Errorable_f(void)
 parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     // parse the node header
     const char* starttext = ctx->doublecolon + 2;
     size_t length = ctx->line_end - starttext;
@@ -656,7 +656,7 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
             unreachable();
     }
     regular_string_parsing:;
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         if(ctx->linestart+ctx->nspaces == ctx->line_end){
@@ -685,7 +685,7 @@ PARSEFUNC(parse_list_node){
         auto parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_LIST);
     }
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         // skip blanks
@@ -732,7 +732,7 @@ PARSEFUNC(parse_list_node){
 }
 
 PARSEFUNC(parse_list_item){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     {
         auto parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_LIST_ITEM);
@@ -756,13 +756,13 @@ PARSEFUNC(parse_list_item){
                 case '0' ... '9':
                     continue;
                 case '.':{
-                    auto new_handle = alloc_handle(ctx);
+                    NodeHandle new_handle = alloc_handle(ctx);
                     init_node(ctx, new_handle, ctx->linestart + ctx->nspaces, NODE_LIST);
                     append_child(ctx, parent_handle, new_handle);
                     auto e = parse_list_node(ctx, new_handle, indentation);
                     if(e.errored) return e;
                     goto top;
-                    }break;
+                }break;
                 default:
                     goto after;
             }
@@ -778,7 +778,7 @@ PARSEFUNC(parse_list_item){
     return result;
 }
 PARSEFUNC(parse_raw_node){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     // In order to avoid needing to scan all of the lines in the text
     // to figure out what the minimum leading indent is, we use the indent
     // of the first non-blank line. However, this can be greater than the indentation
@@ -829,7 +829,7 @@ PARSEFUNC(parse_table_node){
     NodeHandle last_cell_handle = INVALID_NODE_HANDLE;
     bool converted = false;
     int previous_row_indentation = indentation;
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         // skip blanks
@@ -897,7 +897,7 @@ PARSEFUNC(parse_keyvalue_node){
         auto parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_KEYVALUE);
     }
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     NodeHandle previous_value = INVALID_NODE_HANDLE;
     int previous_kv_indentation = indentation;
     bool previous_value_was_converted = false;
@@ -957,7 +957,7 @@ PARSEFUNC(parse_keyvalue_node){
 }
 
 PARSEFUNC(parse_bullets_node){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     {
         auto parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_BULLETS);
@@ -999,7 +999,7 @@ PARSEFUNC(parse_bullets_node){
 }
 
 PARSEFUNC(parse_bullet_node){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     {
         auto parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_LIST_ITEM);
@@ -1042,7 +1042,7 @@ PARSEFUNC(parse_text_node){
     }
     bool in_para_node = 0;
     NodeHandle para_handle = INVALID_NODE_HANDLE;
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         // blank line
@@ -1103,7 +1103,7 @@ PARSEFUNC(parse_md_node){
     int si = -1; // stack index
     NodeHandle para_handle = INVALID_NODE_HANDLE;
     int normal_indent = -1;
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         // skip_blanks

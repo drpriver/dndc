@@ -232,7 +232,7 @@ typedef struct ArenaAllocatorStats {
 static inline
 ArenaAllocatorStats
 ArenaAllocator_stats(ArenaAllocator* aa){
-    ArenaAllocatorStats result = {};
+    ArenaAllocatorStats result = {0};
     for(Arena* arena = aa->arena; arena; arena = arena->prev){
         result.used += arena->used;
         result.capacity += sizeof(arena->buff);

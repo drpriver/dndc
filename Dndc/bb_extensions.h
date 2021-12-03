@@ -24,7 +24,7 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename);
 static inline
 Errorable_f(void)
 bb_read_bin_file(ByteBuilder* bb, const char* filename){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     auto fp = fopen(filename, "rb");
     if(not fp)
         Raise(FILE_NOT_OPENED);
@@ -52,7 +52,7 @@ finally:
 static inline
 Errorable_f(void)
 bb_read_bin_file(ByteBuilder* bb, const char* filename){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     int fd = open(filename, O_RDONLY);
     if(fd < 0)
         Raise(FILE_NOT_OPENED);
@@ -80,7 +80,7 @@ finally:
 static inline
 Errorable_f(void)
 bb_read_bin_file(ByteBuilder* bb, const char* filename){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     PushDiagnostic();
     SuppressDiscardQualifiers();
     auto handle = CreateFile(
@@ -138,7 +138,7 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
 static
 Errorable_f(LongString)
 read_and_base64_bin_file(ByteBuilder* bb, const Allocator a, const char* filepath){
-    Errorable(LongString) result = {};
+    Errorable(LongString) result = {0};
     assert(bb->cursor == 0);
     auto e = bb_read_bin_file(bb, filepath);
     if(e.errored)

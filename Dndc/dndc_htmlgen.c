@@ -50,9 +50,9 @@ force_inline
 Errorable_f(void)
 render_node(DndcContext* ctx, MStringBuilder* restrict sb, Node* node, int header_depth){
     bool hide = node_has_attribute(node, SV("hide"));
-    if(hide) return (Errorable(void)){};
+    if(hide) return (Errorable(void)){0};
     if(node_has_attribute(node, SV("comment")))
-        return (Errorable(void)){};
+        return (Errorable(void)){0};
 #if 0
     switch(node->type){
 #define X(a, b) case NODE_##a: return RENDERFUNCNAME(a)(ctx, sb, node, header_depth);
@@ -66,7 +66,7 @@ render_node(DndcContext* ctx, MStringBuilder* restrict sb, Node* node, int heade
 static
 Errorable_f(void)
 render_tree(DndcContext* ctx, MStringBuilder* msb){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     auto imgcount = ctx->img_nodes.count + ctx->imglinks_nodes.count;
     // estimate memory usage as 120 characters per node and 200 kb images.
     auto reserve_amount = ctx->nodes.count*120 + imgcount*200*1024;
@@ -324,7 +324,7 @@ write_tag_escaped_str(MStringBuilder* sb, NullUnspec(const char*)text, size_t le
 static inline
 Errorable_f(void)
 write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const Node* node){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     for(size_t i = 0; i < length; i++){
         char c = text[i];
         switch(c){
@@ -498,11 +498,11 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
             // Don't print control characters.
             case  0 ... 8:
             case 10 ... 11:
-            case 14 ... 31:{
-            }break;
-            default:{
+            case 14 ... 31:
+                break;
+            default:
                 msb_write_char(sb, c);
-            }break;
+                break;
         }
     }
     return result;
@@ -641,7 +641,7 @@ write_header(DndcContext* ctx, MStringBuilder* sb, const Node* node, int header_
     auto e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
     if(e.errored) return e;
     MSB_FORMAT(sb, "</h", header_level, ">");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 
 static inline
@@ -671,7 +671,7 @@ RENDERFUNC(STRING){
     auto e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
     if(e.errored) return e;
     msb_write_char(sb, '\n');
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 
 RENDERFUNC(TEXT){
@@ -690,7 +690,7 @@ RENDERFUNC(TEXT){
         if(e.errored) return e;
     }
     msb_write_literal(sb, "</div>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(DIV){
     msb_write_literal(sb, "<div");
@@ -714,7 +714,7 @@ RENDERFUNC(DIV){
         if(e.errored) return e;
     }
     msb_write_literal(sb, "</div>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(NAV){
     (void)header_depth;
@@ -733,7 +733,7 @@ RENDERFUNC(NAV){
     msb_write_literal(sb, ">\n<ul>\n");
     msb_write_str(sb, ctx->renderednav.text, ctx->renderednav.length);
     msb_write_literal(sb, "</ul>\n</nav>");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(PARA){
     if(node->classes){
@@ -751,7 +751,7 @@ RENDERFUNC(PARA){
         if(e.errored) return e;
     }
     msb_write_literal(sb, "</p>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(TITLE){
     auto e = write_header(ctx, sb, node, header_depth);
@@ -763,7 +763,7 @@ RENDERFUNC(TITLE){
     if(node->classes){
         node_print_warning(ctx, node, SV("UNIMPLEMENTED: classes on the title"));
     }
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(HEADING){
     auto e = write_header(ctx, sb, node, header_depth+1);
@@ -775,7 +775,7 @@ RENDERFUNC(HEADING){
     if(node->classes){
         node_print_warning(ctx, node, SV("UNIMPLEMENTED: classes on the heading"));
     }
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(HR){
     (void)header_depth;
@@ -787,7 +787,7 @@ RENDERFUNC(HR){
     }
     msb_write_char(sb, '\n');
     msb_write_literal(sb, "<hr>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(TABLE){
     msb_write_literal(sb, "<div");
@@ -825,7 +825,7 @@ RENDERFUNC(TABLE){
         if(e.errored) return e;
     }
     msb_write_literal(sb, "</tbody></table>\n</div>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(TABLE_ROW){
     msb_write_literal(sb, "<tr>\n");
@@ -837,7 +837,7 @@ RENDERFUNC(TABLE_ROW){
         msb_write_literal(sb, "</td>\n");
     }
     msb_write_literal(sb, "</tr>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(STYLESHEETS){
     // intentionally do not render stylesheets
@@ -845,7 +845,7 @@ RENDERFUNC(STYLESHEETS){
     (void)sb;
     (void)node;
     (void)header_depth;
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(LINKS){
     // intentionally do not render links
@@ -853,7 +853,7 @@ RENDERFUNC(LINKS){
     (void)sb;
     (void)node;
     (void)header_depth;
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(SCRIPTS){
     // intentionally do not render scripts
@@ -861,7 +861,7 @@ RENDERFUNC(SCRIPTS){
     (void)sb;
     (void)node;
     (void)header_depth;
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(IMPORT){
     // An imports members are replaced with containers that were the things
@@ -875,10 +875,10 @@ RENDERFUNC(IMPORT){
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
     }
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(IMAGE){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     msb_write_literal(sb, "<div");
     write_classes(sb, node);
     auto id = node_get_id(node);
@@ -976,7 +976,7 @@ RENDERFUNC(QUOTE){
         if(e.errored) return e;
     }
     msb_write_literal(sb, "</blockquote>\n</div>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(JS){
     // intentionally not outputting this
@@ -984,7 +984,7 @@ RENDERFUNC(JS){
     (void)sb;
     (void)node;
     (void)header_depth;
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(RAW){
     // Don't let people smuggle <script> tags in!
@@ -997,7 +997,7 @@ RENDERFUNC(RAW){
             write_tag_escaped_str(sb, child->header.text, child->header.length);
             msb_write_char(sb, '\n');
         }
-        return (Errorable(void)){};
+        return (Errorable(void)){0};
     }
     // ignoring the header for now. Idk what the semantics are supposed to be.
     NODE_CHILDREN_FOR_EACH(it, node){
@@ -1008,7 +1008,7 @@ RENDERFUNC(RAW){
         msb_write_char(sb, '\n');
     }
     (void)header_depth;
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(PRE){
     msb_write_literal(sb, "<div");
@@ -1028,7 +1028,7 @@ RENDERFUNC(PRE){
         msb_write_char(sb, '\n');
     }
     msb_write_literal(sb, "</pre>\n</div>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(BULLETS){
     if(unlikely(node->header.length))
@@ -1042,7 +1042,7 @@ RENDERFUNC(BULLETS){
         if(e.errored) return e;
     }
     msb_write_literal(sb, "</ul>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(LIST){
     if(unlikely(node->header.length))
@@ -1056,7 +1056,7 @@ RENDERFUNC(LIST){
         if(e.errored) return e;
     }
     msb_write_literal(sb, "</ol>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(LIST_ITEM){
     msb_write_literal(sb, "<li>\n");
@@ -1074,7 +1074,7 @@ RENDERFUNC(LIST_ITEM){
         if(e.errored) return e;
     }
     msb_write_literal(sb, "</li>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(KEYVALUE){
     msb_write_literal(sb, "<div");
@@ -1092,7 +1092,7 @@ RENDERFUNC(KEYVALUE){
         if(e.errored) return e;
     }
     msb_write_literal(sb, "</tbody></table>\n</div>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(KEYVALUEPAIR){
     msb_write_literal(sb, "<tr>\n");
@@ -1104,10 +1104,10 @@ RENDERFUNC(KEYVALUEPAIR){
         msb_write_literal(sb, "</td>\n");
     }
     msb_write_literal(sb, "</tr>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(IMGLINKS){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     msb_write_literal(sb, "<div");
     write_classes(sb, node);
     msb_write_literal(sb, ">\n");
@@ -1122,7 +1122,7 @@ RENDERFUNC(IMGLINKS){
     }
 
     // FIXME: It's kind of janky that I parse at htmlgen time.
-    StringView imgdatab64 = {};
+    StringView imgdatab64 = {0};
     auto children = node_children(node);
     if(not (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME))){
         auto imgpath_node = get_node(ctx, children[0]);
@@ -1345,7 +1345,7 @@ RENDERFUNC(IMGLINKS){
     }
     msb_write_literal(sb, "</svg>\n");
     msb_write_literal(sb, "</div>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(DATA){
     // intentionally not rendering this
@@ -1353,7 +1353,7 @@ RENDERFUNC(DATA){
     (void)sb;
     (void)node;
     (void)header_depth;
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(COMMENT){
     // intentionally not rendering a comment
@@ -1361,7 +1361,7 @@ RENDERFUNC(COMMENT){
     (void)sb;
     (void)node;
     (void)header_depth;
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(MD){
     msb_write_literal(sb, "<div");
@@ -1379,7 +1379,7 @@ RENDERFUNC(MD){
         if(e.errored) return e;
     }
     msb_write_literal(sb, "</div>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(CONTAINER){
     if(node->header.length){
@@ -1390,7 +1390,7 @@ RENDERFUNC(CONTAINER){
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
     }
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 RENDERFUNC(INVALID){
     node_set_err(ctx, node, LS("Invalid node when rendering."));
@@ -1422,7 +1422,7 @@ RENDERFUNC(DETAILS){
         if(e.errored) return e;
     }
     msb_write_literal(sb, "</div>\n</details>\n");
-    return (Errorable(void)){};
+    return (Errorable(void)){0};
 }
 #undef RENDERFUNC
 #undef RENDERFUNCNAME

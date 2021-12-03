@@ -1125,40 +1125,35 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
             continue;
         if(s.length > 1){
             if(s.text[0] == '-'){
-                switch(s.text[1]){
-                    case '0' ... '9':
-                    case '.':
-                        // number, not an argument.
-                        break;
-                    default:{
-                        // Not a number, find matching kwarg
-                        ArgToParse* new_kwarg = find_matching_kwarg(parser, s);
-                        if(!new_kwarg){
-                            if(flags & ARGPARSE_FLAGS_UNKNOWN_KWARGS_AS_ARGS)
-                                break;
+                bool number = s.text[1] == '.' || (s.text[1] >= '0' && s.text[1] <= '9');
+                if(!number){
+                    // Not a number, find matching kwarg
+                    ArgToParse* new_kwarg = find_matching_kwarg(parser, s);
+                    if(!new_kwarg){
+                        if(flags & ARGPARSE_FLAGS_UNKNOWN_KWARGS_AS_ARGS)
+                            break;
+                        parser->failed.arg = *arg;
+                        return ARGPARSE_UNKNOWN_KWARG;
+                    }
+                    if(new_kwarg->visited){
+                        parser->failed.arg_to_parse = new_kwarg;
+                        parser->failed.arg = *arg;
+                        return ARGPARSE_DUPLICATE_KWARG;
+                    }
+                    if(pos_arg && pos_arg != past_the_end && pos_arg->visited)
+                        pos_arg++;
+                    kwarg = new_kwarg;
+                    kwarg->visited = true;
+                    if(kwarg->dest.type == ARG_FLAG || kwarg->dest.type == ARG_BITFLAG){
+                        enum ArgParseError error = set_flag(kwarg);
+                        if(error) {
+                            parser->failed.arg_to_parse = kwarg;
                             parser->failed.arg = *arg;
-                            return ARGPARSE_UNKNOWN_KWARG;
+                            return error;
                         }
-                        if(new_kwarg->visited){
-                            parser->failed.arg_to_parse = new_kwarg;
-                            parser->failed.arg = *arg;
-                            return ARGPARSE_DUPLICATE_KWARG;
-                        }
-                        if(pos_arg && pos_arg != past_the_end && pos_arg->visited)
-                            pos_arg++;
-                        kwarg = new_kwarg;
-                        kwarg->visited = true;
-                        if(kwarg->dest.type == ARG_FLAG || kwarg->dest.type == ARG_BITFLAG){
-                            enum ArgParseError error = set_flag(kwarg);
-                            if(error) {
-                                parser->failed.arg_to_parse = kwarg;
-                                parser->failed.arg = *arg;
-                                return error;
-                            }
-                            kwarg = NULL;
-                        }
-                        continue;
-                    }break;
+                        kwarg = NULL;
+                    }
+                    continue;
                 }
             }
         }
@@ -1235,42 +1230,37 @@ parse_args_longstrings(ArgParser* parser, const LongString*args, size_t args_cou
             continue;
         if(s.length > 1){
             if(s.text[0] == '-'){
-                switch(s.text[1]){
-                    case '0' ... '9':
-                    case '.':
-                        // number, not an argument.
-                        break;
-                    default:{
-                        // Not a number, find matching kwarg
-                        ArgToParse* new_kwarg = find_matching_kwarg(parser, s);
-                        if(!new_kwarg){
-                            if(flags & ARGPARSE_FLAGS_UNKNOWN_KWARGS_AS_ARGS)
-                                break;
-                            // @Sus
+                bool number = s.text[1] == '.' || (s.text[1] >= '0' && s.text[1] <= '9');
+                if(!number){
+                    // Not a number, find matching kwarg
+                    ArgToParse* new_kwarg = find_matching_kwarg(parser, s);
+                    if(!new_kwarg){
+                        if(flags & ARGPARSE_FLAGS_UNKNOWN_KWARGS_AS_ARGS)
+                            break;
+                        // @Sus
+                        parser->failed.arg = arg->text;
+                        return ARGPARSE_UNKNOWN_KWARG;
+                    }
+                    if(new_kwarg->visited){
+                        parser->failed.arg_to_parse = new_kwarg;
+                        // @Sus
+                        parser->failed.arg = arg->text;
+                        return ARGPARSE_DUPLICATE_KWARG;
+                    }
+                    if(pos_arg && pos_arg != past_the_end && pos_arg->visited)
+                        pos_arg++;
+                    kwarg = new_kwarg;
+                    kwarg->visited = true;
+                    if(kwarg->dest.type == ARG_FLAG || kwarg->dest.type == ARG_BITFLAG){
+                        enum ArgParseError error = set_flag(kwarg);
+                        if(error) {
+                            parser->failed.arg_to_parse = kwarg;
                             parser->failed.arg = arg->text;
-                            return ARGPARSE_UNKNOWN_KWARG;
+                            return error;
                         }
-                        if(new_kwarg->visited){
-                            parser->failed.arg_to_parse = new_kwarg;
-                            // @Sus
-                            parser->failed.arg = arg->text;
-                            return ARGPARSE_DUPLICATE_KWARG;
-                        }
-                        if(pos_arg && pos_arg != past_the_end && pos_arg->visited)
-                            pos_arg++;
-                        kwarg = new_kwarg;
-                        kwarg->visited = true;
-                        if(kwarg->dest.type == ARG_FLAG || kwarg->dest.type == ARG_BITFLAG){
-                            enum ArgParseError error = set_flag(kwarg);
-                            if(error) {
-                                parser->failed.arg_to_parse = kwarg;
-                                parser->failed.arg = arg->text;
-                                return error;
-                            }
-                            kwarg = NULL;
-                        }
-                        continue;
-                    }break;
+                        kwarg = NULL;
+                    }
+                    continue;
                 }
             }
         }

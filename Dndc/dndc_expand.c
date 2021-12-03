@@ -38,7 +38,7 @@ expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
 static
 Errorable_f(void)
 expand_to_dnd(DndcContext*ctx, MStringBuilder* msb){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     auto node = get_node(ctx, ctx->root_handle);
     if(node->type != NODE_MD){
         result = expand_node(ctx, node, 0, msb);
@@ -74,7 +74,7 @@ write_generic_header(Node* n, int indent, MStringBuilder*msb){
 static
 Errorable_f(void)
 expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     switch(n->type){
         case NODE_STRING:
             msb_write_nchar(msb, ' ', indent);
@@ -148,7 +148,7 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
 static
 Errorable_f(void)
 load_and_indent_raw_files(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     NODE_CHILDREN_FOR_EACH(p, n){
         Node* pathnode = get_node(ctx, *p);
         if(pathnode->type != NODE_STRING){
@@ -188,7 +188,7 @@ load_and_indent_raw_files(DndcContext*ctx, Node* n, int indent, MStringBuilder*m
 static
 Errorable_f(void)
 expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     switch(n->type){
         case NODE_DETAILS:
         case NODE_MD:
@@ -247,7 +247,7 @@ expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
 static
 Errorable_f(void)
 expand_md_bullets(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int depth){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     NODE_CHILDREN_FOR_EACH(l, n){
         Node* li = get_node(ctx, *l);
         if(li->type != NODE_LIST_ITEM){
@@ -303,7 +303,7 @@ expand_md_bullets(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
 static
 Errorable_f(void)
 expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     size_t list_number = 0;
     NODE_CHILDREN_FOR_EACH(l, n){
         list_number++;
@@ -358,7 +358,7 @@ expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
 static
 Errorable_f(void)
 expand_md_para(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     NODE_CHILDREN_FOR_EACH(c, n){
         Node* child = get_node(ctx, *c);
         if(child->type != NODE_STRING){
@@ -375,7 +375,7 @@ expand_md_para(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
 static
 Errorable_f(void)
 expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     NODE_CHILDREN_FOR_EACH(c, n){
         Node* child = get_node(ctx, *c);
         switch(child->type){
@@ -403,7 +403,7 @@ expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
 static
 Errorable_f(void)
 expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     NODE_CHILDREN_FOR_EACH(t, n){
         Node* row = get_node(ctx, *t);
         if(row->type != NODE_TABLE_ROW){
@@ -456,7 +456,7 @@ expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
 static
 Errorable_f(void)
 expand_text_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     NODE_CHILDREN_FOR_EACH(p, n){
         Node* para = get_node(ctx, *p);
         if(para->type != NODE_PARA){
@@ -481,7 +481,7 @@ expand_text_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
 static
 Errorable_f(void)
 expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     NODE_CHILDREN_FOR_EACH(c, n){
         Node* child = get_node(ctx, *c);
         if(child->type != NODE_KEYVALUEPAIR){

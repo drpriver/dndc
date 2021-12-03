@@ -37,7 +37,7 @@ base64_encode_size(size_t src_length){
     size_t size_needed = src_length * 4;
     size_needed = size_needed / 3 + !!(size_needed % 3);
     return size_needed;
-    }
+}
 
 // The size needed to decode a str into a buffer.
 static inline
@@ -46,7 +46,7 @@ base64_decode_size(size_t src_length){
     size_t size_needed = src_length * 3;
     size_needed = size_needed / 4 + !!(size_needed % 4);
     return size_needed;
-    }
+}
 
 // Base64 encodes the data into the output string.
 // This uses '+' and '/' and does not pad the end with '='.
@@ -154,16 +154,16 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
             t5 = str[i+4];
             t6 = str[i+5];
             *d++ = base64_encode_table0[t1];
-            unsigned index1 = ((t1 & 0b11) << 4) | ((t2 >> 4) & 0b1111);
+            unsigned index1 = ((t1 & 0x3) << 4) | ((t2 >> 4) & 0xf);
             *d++ = base64_encode_table1[index1];
-            unsigned index2 = ((t2 & 0b1111) << 2) | ((t3 >> 6) & 0b11);
+            unsigned index2 = ((t2 & 0xf) << 2) | ((t3 >> 6) & 0x3);
             *d++ = base64_encode_table1[index2];
             *d++ = base64_encode_table2[t3];
 
             *d++ = base64_encode_table0[t4];
-            unsigned index3 = ((t4 & 0b11) << 4) | ((t5 >> 4) & 0b1111);
+            unsigned index3 = ((t4 & 0x3) << 4) | ((t5 >> 4) & 0xf);
             *d++ = base64_encode_table1[index3];
-            unsigned index4 = ((t5 & 0b1111) << 2) | ((t6 >> 6) & 0b11);
+            unsigned index4 = ((t5 & 0xf) << 2) | ((t6 >> 6) & 0x3);
             *d++ = base64_encode_table1[index4];
             *d++ = base64_encode_table2[t6];
         }
@@ -173,9 +173,9 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
         t2 = str[i+1];
         t3 = str[i+2];
         *d++ = base64_encode_table0[t1];
-        unsigned index1 = ((t1 & 0b11) << 4) | ((t2 >> 4) & 0b1111);
+        unsigned index1 = ((t1 & 0x3) << 4) | ((t2 >> 4) & 0xf);
         *d++ = base64_encode_table1[index1];
-        unsigned index2 = ((t2 & 0b1111) << 2) | ((t3 >> 6) & 0b11);
+        unsigned index2 = ((t2 & 0xf) << 2) | ((t3 >> 6) & 0x3);
         *d++ = base64_encode_table1[index2];
         *d++ = base64_encode_table2[t3];
         i += 3;
@@ -187,13 +187,13 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
         case 1:
             t1 = str[i];
             *d++ = base64_encode_table0[t1];
-            *d++ = base64_encode_table1[(t1 & 0b11) << 4];
+            *d++ = base64_encode_table1[(t1 & 0x3) << 4];
             break;
         default: /* case 2 */
             t1 = str[i]; t2 = str[i+1];
             *d++ = base64_encode_table0[t1];
-            *d++ = base64_encode_table1[((t1 & 0b11) << 4) | ((t2 >> 4) & 0b1111)];
-            *d++ = base64_encode_table2[(t2 & 0b1111) << 2];
+            *d++ = base64_encode_table1[((t1 & 0x3) << 4) | ((t2 >> 4) & 0xf)];
+            *d++ = base64_encode_table2[(t2 & 0xf) << 2];
     }
     ptrdiff_t used_length = d - (uint8_t*)dst;
     assert(used_length == dst_length);
@@ -217,7 +217,7 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
         [13] = 'N', [29] = 'd', [45] = 't', [61] = '9',
         [14] = 'O', [30] = 'e', [46] = 'u', [62] = '+',
         [15] = 'P', [31] = 'f', [47] = 'v', [63] = '/',
-        };
+    };
     size_t size_needed = base64_encode_size(src_length);
     if(unlikely(!size_needed)) return 0;
     assert(dst_length >= size_needed);
@@ -229,16 +229,16 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
         unsigned b0 = *(d++);
         unsigned b1 = *(d++);
         unsigned b2 = *(d++);
-        unsigned index0 = (b0 & 0b11111100) >> 2;
-        unsigned index1 = (b0 & 0b11) | (( b1 & 0b11110000) >> 4);
-        unsigned index2 = (b1 & 0b1111) | ((b2 & 0b11000000) >> 6);
-        unsigned index3 = b2 & 0b111111;
+        unsigned index0 = (b0 & 0xfc) >> 2;
+        unsigned index1 = (b0 & 0x3) | (( b1 & 0xf0) >> 4);
+        unsigned index2 = (b1 & 0xf) | ((b2 & 0xc0) >> 6);
+        unsigned index3 = b2 & 0x3f;
         size_used +=4;
         *(dst++) = base64_table[index0];
         *(dst++) = base64_table[index1];
         *(dst++) = base64_table[index2];
         *(dst++) = base64_table[index3];
-        }
+    }
     uint32_t bits = 0;
     uint32_t remaining_bits = 0;
     int n_remaining = 0;
@@ -246,22 +246,22 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
     for(;length;){
         switch(n_remaining){
             case 0:
-                bits = (*d & 0b11111100) >> 2;
-                remaining_bits = ((*d) & 0b11) << 4;
+                bits = (*d & 0xfc) >> 2;
+                remaining_bits = ((*d) & 0x3) << 4;
                 n_remaining = 2;
                 *(dst++) = base64_table[bits];
                 size_used++;
                 break;
             case 2:
-                bits = (*d & 0b11110000) >> 4 | remaining_bits;
-                remaining_bits = (*d & 0b1111) << 2;
+                bits = (*d & 0xf0) >> 4 | remaining_bits;
+                remaining_bits = (*d & 0xf) << 2;
                 n_remaining = 4;
                 *(dst++) = base64_table[bits];
                 size_used++;
                 break;
             case 4:
-                bits = ((*d & 0b11000000) >> 6 ) | remaining_bits;
-                remaining_bits = *d & 0b111111;
+                bits = ((*d & 0xc0) >> 6 ) | remaining_bits;
+                remaining_bits = *d & 0x3f;
                 n_remaining = 0;
                 *(dst++) = base64_table[bits];
                 *(dst++) = base64_table[remaining_bits];
@@ -271,18 +271,18 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
                 break;
             default:
                 unreachable();
-            }
+        }
         length--;
         d++;
-        }
+    }
     if(n_remaining){
         *(dst++) = base64_table[remaining_bits];
         size_used++;
-        }
+    }
     assert(size_used == size_needed);
     return size_needed;
 #endif
-    }
+}
 
 // Writes the base64 representation of the data buffer into the builder.
 static inline
@@ -295,7 +295,7 @@ msb_write_b64(MStringBuilder* restrict sb, const void* data, size_t length){
     size_t size_used = base64_encode(sb->data + sb->cursor, size_needed, data, length);
     assert(size_used == size_needed);
     sb->cursor += size_used;
-    }
+}
 
 // Decodes a base64 string into a data buffer.
 // Returns a DECODING_ERROR if data is not a base64 character, like it's a '}' or something.
@@ -305,7 +305,7 @@ warn_unused
 Base64Error
 base64_decode(void* restrict dst, size_t dst_length, const uint8_t* restrict src, size_t src_length){
     // In order to detect invalid inputs, but without introducing a branch on
-    // every byte of input, we set bad inputs to have the 0b11000000  bits set
+    // every byte of input, we set bad inputs to have the 0xc0  bits set
     // (which is outside the range of a 64 bit number). We then OR our bad mask
     // with this from every byte, which lets us check at the end whether there
     // was an invalid byte. We lose which byte is bad and we always decode
@@ -337,7 +337,7 @@ base64_decode(void* restrict dst, size_t dst_length, const uint8_t* restrict src
         ['u'] = 46, ['v'] = 47, ['w'] = 48, ['x'] = 49,
         ['y'] = 50, ['z'] = 51,
         [123 ... 255] = BAD,
-        };
+    };
     size_t size_needed = base64_decode_size(src_length);
     if(!size_needed) return BASE64_NO_ERROR;
     // we allow a 1 byte under in case last few bits were just padding.
@@ -349,82 +349,82 @@ base64_decode(void* restrict dst, size_t dst_length, const uint8_t* restrict src
     size_t length = src_length;
     // Read 4 chars at a time into 3 bytes
     {
-    for(;length > 3;length-=4){
-        unsigned v1 = base64_decode_table[*(src++)];
-        unsigned v2 = base64_decode_table[*(src++)];
-        unsigned v3 = base64_decode_table[*(src++)];
-        unsigned v4 = base64_decode_table[*(src++)];
-        bad |= v1;
-        bad |= v2;
-        bad |= v3;
-        bad |= v4;
-        *(out++) = (v1 << 2) | (v2 >> 4);
-        *(out++) = (v2 << 4) | (v3 >> 2);
-        *(out++) = (v3 << 6) | v4;
+        for(;length > 3;length-=4){
+            unsigned v1 = base64_decode_table[*(src++)];
+            unsigned v2 = base64_decode_table[*(src++)];
+            unsigned v3 = base64_decode_table[*(src++)];
+            unsigned v4 = base64_decode_table[*(src++)];
+            bad |= v1;
+            bad |= v2;
+            bad |= v3;
+            bad |= v4;
+            *(out++) = (v1 << 2) | (v2 >> 4);
+            *(out++) = (v2 << 4) | (v3 >> 2);
+            *(out++) = (v3 << 6) | v4;
         }
     }
     {
-    // Since I did the optimization above, this becomes the cleanup loop instead
-    // of the main loop. Some of these cases are now dead code. So, TODO.
-    unsigned bits_remaining = 0;
-    unsigned remainder = 0;
-    for(;length;length--){
-        unsigned v = base64_decode_table[*(src++)];
-        bad |= v;
-        switch(bits_remaining){
-            case 0:
-                remainder = v;
-                bits_remaining = 6;
-                break;
-            case 2:
-                *(out++) = (remainder << 6) | v;
-                remainder = 0;
-                bits_remaining = 0;
-                break;
-            case 4:
-                *(out++) = (remainder << 4) | (v >> 2);
-                remainder = v & 0b11;
-                bits_remaining = 2;
-                break;
-            case 6:
-                *(out++) = (remainder << 2) | (v >> 4);
-                remainder = v & 0b1111;
-                bits_remaining = 4;
-                break;
-            default:
-                unreachable();
+        // Since I did the optimization above, this becomes the cleanup loop instead
+        // of the main loop. Some of these cases are now dead code. So, TODO.
+        unsigned bits_remaining = 0;
+        unsigned remainder = 0;
+        for(;length;length--){
+            unsigned v = base64_decode_table[*(src++)];
+            bad |= v;
+            switch(bits_remaining){
+                case 0:
+                    remainder = v;
+                    bits_remaining = 6;
+                    break;
+                case 2:
+                    *(out++) = (remainder << 6) | v;
+                    remainder = 0;
+                    bits_remaining = 0;
+                    break;
+                case 4:
+                    *(out++) = (remainder << 4) | (v >> 2);
+                    remainder = v & 0x3;
+                    bits_remaining = 2;
+                    break;
+                case 6:
+                    *(out++) = (remainder << 2) | (v >> 4);
+                    remainder = v & 0xf;
+                    bits_remaining = 4;
+                    break;
+                default:
+                    unreachable();
             }
         }
-    // It's possible the leftover bits are the result of padding with zeros.
-    if(size_needed == dst_length){
-        switch(bits_remaining){
-            case 0:
-                break;
-            case 2:
-                *(out++) = remainder << 6;
-                break;
-            case 4:
-                *(out++) = remainder << 4;
-                break;
-            case 6:
-                *(out++) = remainder << 2;
-                break;
-            default:
-                unreachable();
+        // It's possible the leftover bits are the result of padding with zeros.
+        if(size_needed == dst_length){
+            switch(bits_remaining){
+                case 0:
+                    break;
+                case 2:
+                    *(out++) = remainder << 6;
+                    break;
+                case 4:
+                    *(out++) = remainder << 4;
+                    break;
+                case 6:
+                    *(out++) = remainder << 2;
+                    break;
+                default:
+                    unreachable();
             }
         }
-    else {
-        // Assuming the last bits are always 0. Check that assumption here.
-        if(remainder)
-            return BASE64_DECODING_ERROR;
+        else {
+            // Assuming the last bits are always 0. Check that assumption here.
+            if(remainder)
+                return BASE64_DECODING_ERROR;
         }
     }
     // Return error if we read a bad input character.
-    if(unlikely(bad & 0b11000000))
+    if(unlikely(bad & 0xc0))
         return BASE64_DECODING_ERROR;
 
     return BASE64_NO_ERROR;
-    }
+}
 
 // Decodes a base64 string into a ByteBuilder.
 // ByteBuilder handles things like allocating the proper size, etc.
@@ -440,7 +440,7 @@ bb_decode_b64(ByteBuilder* bb, const uint8_t* restrict src, size_t src_length){
     if(e) return e;
     bb->cursor += reserved_size;
     return BASE64_NO_ERROR;
-    }
+}
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

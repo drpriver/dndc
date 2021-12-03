@@ -53,10 +53,10 @@ format_next_token(StringView sv){
                     goto breakloop;
                 default:
                     continue;
-                }
             }
-        breakloop:;
         }
+        breakloop:;
+    }
     for(; i < sv.length; i++){
         switch(sv.text[i]){
             case ' ':
@@ -66,19 +66,19 @@ format_next_token(StringView sv){
             case '\r':
                 return (FormatTokenized){
                     .token.text = sv.text,
-                    .token.length = i,
-                    .rest.text = sv.text+i,
-                    .rest.length = sv.length - i,
-                    };
+                        .token.length = i,
+                        .rest.text = sv.text+i,
+                        .rest.length = sv.length - i,
+                };
             default:
                 continue;
-            }
         }
+    }
     return (FormatTokenized){
         .token = sv,
-        .rest = {},
-        };
-    }
+        .rest = {0},
+    };
+}
 
 static inline
 void
@@ -87,7 +87,7 @@ format_write_wrapped_string(MStringBuilder* sb, FormatState* state, StringView s
     if(state->col < state->lead){
         msb_write_nchar(sb, ' ', state->lead);
         state->col = state->lead;
-        }
+    }
     while(tokenized.rest.length){
         tokenized = format_next_token(tokenized.rest);
         if(!tokenized.token.length)
@@ -96,15 +96,15 @@ format_write_wrapped_string(MStringBuilder* sb, FormatState* state, StringView s
             msb_write_char(sb, '\n');
             msb_write_nchar(sb, ' ', state->lead);
             state->col = state->lead;
-            }
+        }
         else if(state->col != state->lead){
             msb_write_char(sb, ' ');
             state->col++;
-            }
+        }
         msb_write_str(sb, tokenized.token.text, tokenized.token.length);
         state->col += tokenized.token.length;
-        }
     }
+}
 
 #define FORMATFUNCNAME(nt) format_##nt
 #define FORMATFUNC(nt) static Errorable_f(void) FORMATFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent)
@@ -165,16 +165,16 @@ format_node(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
         case NODE_INVALID:
             // Error cond
             unreachable();
-        }
-    unreachable();
     }
+    unreachable();
+}
 
 
 static
 Errorable_f(void)
 format_tree(DndcContext* ctx, MStringBuilder* sb){
     auto root = get_node(ctx, ctx->root_handle);
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     NODE_CHILDREN_FOR_EACH(it, root){
         auto child = get_node(ctx, *it);
         // this is copy-paste from md_node, as the root is an
@@ -192,21 +192,21 @@ format_tree(DndcContext* ctx, MStringBuilder* sb){
             default:
                 result = format_node(ctx, sb, child, 0);
                 break;
-            }
+        }
         if(result.errored)
             return result;
-        }
+    }
     if(sb->cursor && sb->data[sb->cursor-1] != '\n')
         msb_write_char(sb, '\n');
     return result;
-    }
+}
 static inline
 void
 format_header(MStringBuilder* sb, Node* node, int indent){
     msb_write_nchar(sb, ' ', indent);
     if(node->header.length){
         msb_write_str(sb, node->header.text,node->header.length);
-        }
+    }
     msb_write_char(sb, ':');
     msb_write_char(sb, ':');
     auto alias = &NODETYPE_TO_NODE_ALIASES[node->type];
@@ -216,7 +216,7 @@ format_header(MStringBuilder* sb, Node* node, int indent){
     RARRAY_FOR_EACH(cls, node->classes){
         msb_write_literal(sb, " .");
         msb_write_str(sb, cls->text, cls->length);
-        }
+    }
     RARRAY_FOR_EACH(attr, node->attributes){
         msb_write_literal(sb, " @");
         msb_write_str(sb, attr->key.text, attr->key.length);
@@ -224,22 +224,22 @@ format_header(MStringBuilder* sb, Node* node, int indent){
             msb_write_char(sb, '(');
             msb_write_str(sb, attr->value.text, attr->value.length);
             msb_write_char(sb, ')');
-            }
         }
-    msb_write_char(sb, '\n');
     }
+    msb_write_char(sb, '\n');
+}
 
 
 FORMATFUNC(regular_node){
     format_header(sb, node, indent);
     indent += FORMAT_INDENT;
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     FormatState state = {.lead = indent};
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
         if(child->type == NODE_STRING){
             format_write_wrapped_string(sb, &state, child->header);
-            }
+        }
         else {
             if(state.col)
                 msb_write_char(sb, '\n');
@@ -247,78 +247,78 @@ FORMATFUNC(regular_node){
             result = format_node(ctx, sb, child, indent);
             if(result.errored)
                 return result;
-            }
         }
+    }
     // unsure about this.
     if(state.col)
         msb_write_char(sb, '\n');
     return result;
-    }
+}
 FORMATFUNC(para_node){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     FormatState state = {.lead = indent};
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
         assert(child->type == NODE_STRING);
         format_write_wrapped_string(sb, &state, child->header);
-        }
+    }
     if(state.col)
         msb_write_char(sb, '\n');
     msb_write_char(sb, '\n');
     return result;
-    }
-static
+}
+    static
 Errorable_f(void)
-format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, int bullet_depth){
-    Errorable(void) result = {};
-    NODE_CHILDREN_FOR_EACH(it, node){
-        auto child = get_node(ctx, *it);
-        assert(child->type == NODE_LIST_ITEM);
-        msb_write_nchar(sb, ' ', indent);
-        switch(bullet_depth){
-            case 0:
-                msb_write_literal(sb, "* ");
-                break;
-            case 1:
-                msb_write_literal(sb, "- ");
-                break;
-            default:
-                msb_write_literal(sb, "+ ");
-                break;
+    format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, int bullet_depth){
+        Errorable(void) result = {0};
+        NODE_CHILDREN_FOR_EACH(it, node){
+            auto child = get_node(ctx, *it);
+            assert(child->type == NODE_LIST_ITEM);
+            msb_write_nchar(sb, ' ', indent);
+            switch(bullet_depth){
+                case 0:
+                    msb_write_literal(sb, "* ");
+                    break;
+                case 1:
+                    msb_write_literal(sb, "- ");
+                    break;
+                default:
+                    msb_write_literal(sb, "+ ");
+                    break;
             }
-        FormatState state = {.lead = indent+2, .col=indent+2};
-        NODE_CHILDREN_FOR_EACH(subit, child){
-            auto subchild = get_node(ctx, *subit);
-            if(subchild->type == NODE_STRING){
-                format_write_wrapped_string(sb, &state, subchild->header);
+            FormatState state = {.lead = indent+2, .col=indent+2};
+            NODE_CHILDREN_FOR_EACH(subit, child){
+                auto subchild = get_node(ctx, *subit);
+                if(subchild->type == NODE_STRING){
+                    format_write_wrapped_string(sb, &state, subchild->header);
                 }
-            else if(subchild->type == NODE_BULLETS){
-                if(state.col != state.lead)
-                    msb_write_char(sb, '\n');
-                result = format_md_bullets(ctx, sb, subchild, indent+2, bullet_depth+1);
-                if(result.errored)
-                    return result;
-                // FIXME: this is sketch - we shouldn't have strings after a nested list.
-                state = (FormatState){.lead=indent+2, .col=indent+2};
+                else if(subchild->type == NODE_BULLETS){
+                    if(state.col != state.lead)
+                        msb_write_char(sb, '\n');
+                    result = format_md_bullets(ctx, sb, subchild, indent+2, bullet_depth+1);
+                    if(result.errored)
+                        return result;
+                    // FIXME: this is sketch - we shouldn't have strings after a nested list.
+                    state = (FormatState){.lead=indent+2, .col=indent+2};
                 }
-            else {
-                if(state.col != state.lead)
-                    msb_write_char(sb, '\n');
-                result = format_node(ctx, sb, subchild, indent+2);
-                if(result.errored) return result;
-                // FIXME: this is sketch - we shouldn't have strings after a nested list.
-                state = (FormatState){.lead=indent+2, .col=indent+2};
+                else {
+                    if(state.col != state.lead)
+                        msb_write_char(sb, '\n');
+                    result = format_node(ctx, sb, subchild, indent+2);
+                    if(result.errored) return result;
+                    // FIXME: this is sketch - we shouldn't have strings after a nested list.
+                    state = (FormatState){.lead=indent+2, .col=indent+2};
                 }
             }
-        if(state.col != state.lead)
-            msb_write_char(sb, '\n');
+            if(state.col != state.lead)
+                msb_write_char(sb, '\n');
         }
-    if(!bullet_depth)
-        msb_write_char(sb, '\n');
-    return result;
+        if(!bullet_depth)
+            msb_write_char(sb, '\n');
+        return result;
     }
 FORMATFUNC(md_list){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     auto count = node_children_count(node);
     auto numwidth = 1;
     numwidth += count > 9;
@@ -335,7 +335,7 @@ FORMATFUNC(md_list){
             auto subchild = get_node(ctx, node_children(child)[j]);
             if(subchild->type == NODE_STRING){
                 format_write_wrapped_string(sb, &state, subchild->header);
-                }
+            }
             else {
                 if(state.col != state.lead)
                     msb_write_char(sb, '\n');
@@ -343,15 +343,15 @@ FORMATFUNC(md_list){
                 if(result.errored) return result;
                 // FIXME: this is sketch - we shouldn't have strings after a nested list.
                 state = (FormatState){.lead=indent+numwidth+2, .col=indent+numwidth+2};
-                }
             }
+        }
         if(state.col != state.lead)
             msb_write_char(sb, '\n');
-        }
-    return result;
     }
+    return result;
+}
 FORMATFUNC(md_node){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     format_header(sb, node, indent);
     indent += FORMAT_INDENT;
     NODE_CHILDREN_FOR_EACH(it, node){
@@ -369,15 +369,15 @@ FORMATFUNC(md_node){
             default:
                 result = format_node(ctx, sb, child, indent);
                 break;
-            }
-        if(result.errored) return result;
         }
+        if(result.errored) return result;
+    }
     // unsure about this.
     // msb_write_char(sb, '\n');
     return result;
-    }
+}
 FORMATFUNC(text_node){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     format_header(sb, node, indent);
     indent += FORMAT_INDENT;
     NODE_CHILDREN_FOR_EACH(it, node){
@@ -389,38 +389,38 @@ FORMATFUNC(text_node){
             default:
                 result = format_node(ctx, sb, child, indent);
                 break;
-            }
-        if(result.errored) return result;
         }
+        if(result.errored) return result;
+    }
     // unsure about this.
     msb_write_char(sb, '\n');
     return result;
-    }
+}
 static inline
 size_t
 write_str_or_container(DndcContext* ctx, MStringBuilder* sb, Node* node){
     if(node->type == NODE_STRING){
         msb_write_str(sb, node->header.text, node->header.length);
         return node->header.length;
-        }
+    }
     size_t writ = 0;
     for(size_t i = 0; i < node_children_count(node); i++){
         if(i != 0){
             msb_write_char(sb, ' ');
             writ++;
-            }
+        }
         Node* str = get_node(ctx, node_children(node)[i]);
         msb_write_str(sb, str->header.text, str->header.length);
         writ += str->header.length;
-        }
-    return writ;
     }
+    return writ;
+}
 FORMATFUNC(table_node){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     format_header(sb, node, indent);
     indent += FORMAT_INDENT;
     ssize_t n_cells = 0;
-    ssize_t widths[100] = {};
+    ssize_t widths[100] = {0};
     // pre-pass to figure out widths
     NODE_CHILDREN_FOR_EACH(row_iter, node){
         Node* row = get_node(ctx, *row_iter);
@@ -429,7 +429,7 @@ FORMATFUNC(table_node){
         if(unlikely(node_children_count(row) > arrlen(widths))){
             node_print_err(ctx, row, LS("Row of a table has more than 100 entries. This is not handled!"));
             Raise(FORMAT_ERROR);
-            }
+        }
         if(node_children_count(row) > n_cells)
             n_cells = node_children_count(row);
         for(size_t j = 0; j < node_children_count(row); j++){
@@ -437,7 +437,7 @@ FORMATFUNC(table_node){
             if(cell->type == NODE_STRING){
                 if(cell->header.length > widths[j])
                     widths[j] = cell->header.length;
-                }
+            }
             else {
                 assert(cell->type == NODE_CONTAINER);
                 size_t this_width = 0;
@@ -445,18 +445,18 @@ FORMATFUNC(table_node){
                     Node* str = get_node(ctx, *str_iter);
                     assert(str->type == NODE_STRING);
                     this_width += 1 + str->header.length;
-                    }
+                }
                 this_width -= 1;
                 widths[j] = this_width;
-                }
             }
         }
+    }
     // figure out if widths fit
     size_t total_except_last = indent;
     for(ssize_t i = 0; i < n_cells-1; i++){
         total_except_last += widths[i];
         total_except_last += sizeof(" | ")-1;
-        }
+    }
     size_t total = total_except_last + (n_cells? widths[n_cells-1] : 0);
     size_t effective_space = FORMAT_WIDTH - indent;
     if(total < effective_space || total_except_last > effective_space){
@@ -468,22 +468,22 @@ FORMATFUNC(table_node){
                 if(result.errored)
                     return result;
                 continue;
-                }
+            }
             for(size_t j = 0; j < node_children_count(row); j++){
                 if(j != 0){
                     msb_write_literal(sb, " | ");
-                    }
+                }
                 else
                     msb_write_nchar(sb, ' ', indent);
                 Node* cell = get_node(ctx, node_children(row)[j]);
                 size_t writ = write_str_or_container(ctx, sb, cell);
                 if(j != node_children_count(row)-1 && widths[j] > writ){
                     msb_write_nchar(sb, ' ', widths[j] - writ);
-                    }
                 }
-            msb_write_char(sb, '\n');
             }
+            msb_write_char(sb, '\n');
         }
+    }
     else {
         // we need to wrap just the last line
         NODE_CHILDREN_FOR_EACH(row_iter, node){
@@ -493,39 +493,39 @@ FORMATFUNC(table_node){
                 if(result.errored)
                     return result;
                 continue;
-                }
+            }
             for(ssize_t j = 0; j < node_children_count(row) - 1; j++){
                 if(j != 0){
                     msb_write_literal(sb, " | ");
-                    }
+                }
                 else
                     msb_write_nchar(sb, ' ', indent);
                 Node* cell = get_node(ctx, node_children(row)[j]);
                 size_t writ = write_str_or_container(ctx, sb, cell);
                 if(j != node_children_count(row)-1 && widths[j] > writ){
                     msb_write_nchar(sb, ' ', widths[j] - writ);
-                    }
                 }
+            }
             if(node_children_count(row) > 1)
                 msb_write_literal(sb, " | ");
             Node* last_cell = get_node(ctx, node_children(row)[node_children_count(row)-1]);
             FormatState state = {.lead = total_except_last, .col=total_except_last};
             if(last_cell->type == NODE_STRING){
                 format_write_wrapped_string(sb, &state, last_cell->header);
-                }
+            }
             else {
                 NODE_CHILDREN_FOR_EACH(it, last_cell){
                     Node* str = get_node(ctx, *it);
                     format_write_wrapped_string(sb, &state, str->header);
-                    }
                 }
-            msb_write_char(sb, '\n');
             }
+            msb_write_char(sb, '\n');
         }
-    return result;
     }
+    return result;
+}
 FORMATFUNC(kv_node){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     format_header(sb, node, indent);
     indent += FORMAT_INDENT;
     size_t key_width = 0;
@@ -536,7 +536,7 @@ FORMATFUNC(kv_node){
         auto key = get_node(ctx, node_children(child)[0])->header;
         if(key.length > key_width)
             key_width = key.length;
-        }
+    }
     key_width += 2; // for the ": "
     NODE_CHILDREN_FOR_EACH(it, node){
         auto child = get_node(ctx, *it);
@@ -544,7 +544,7 @@ FORMATFUNC(kv_node){
             result = format_node(ctx, sb, child, indent);
             if(result.errored) return result;
             continue;
-            }
+        }
         msb_write_nchar(sb, ' ', indent);
         assert(node_children_count(child) == 2);
         auto key = get_node(ctx, node_children(child)[0])->header;
@@ -557,22 +557,22 @@ FORMATFUNC(kv_node){
         if(value_node->type == NODE_STRING){
             auto value = value_node->header;
             format_write_wrapped_string(sb, &state, value);
-            }
+        }
         else {
             assert(value_node->type == NODE_CONTAINER);
             NODE_CHILDREN_FOR_EACH(c, value_node){
                 auto n = get_node(ctx, *c);
                 assert(n->type == NODE_STRING);
                 format_write_wrapped_string(sb, &state, n->header);
-                }
             }
-        msb_write_char(sb, '\n');
         }
+        msb_write_char(sb, '\n');
+    }
     // msb_write_char(sb, '\n');
     return result;
-    }
+}
 FORMATFUNC(raw_node){
-    Errorable(void) result = {};
+    Errorable(void) result = {0};
     format_header(sb, node, indent);
     indent += FORMAT_INDENT;
     auto nspace = indent < 80? indent: 80;
@@ -582,17 +582,17 @@ FORMATFUNC(raw_node){
             result = format_node(ctx, sb, child, indent);
             if(result.errored) return result;
             continue;
-            }
+        }
         assert(child->type == NODE_STRING);
         if(child->header.length){
             msb_write_nchar(sb, ' ', nspace);
             msb_write_str(sb, child->header.text, child->header.length);
-            }
-        msb_write_char(sb, '\n');
         }
+        msb_write_char(sb, '\n');
+    }
     // msb_write_char(sb, '\n');
     return result;
-    }
+}
 
 #undef FORMATFUNC
 #undef FORMATFUNCNAME

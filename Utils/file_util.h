@@ -100,7 +100,7 @@ force_inline
 warn_unused
 FileSizeResult
 file_size_from_fp(FILE* fp){
-    FileSizeResult result = {};
+    FileSizeResult result = {0};
     // sadly, the only way in standard c to do this.
     if(fseek(fp, 0, SEEK_END))
         goto errored;
@@ -114,13 +114,13 @@ file_size_from_fp(FILE* fp){
     errored:
     result.errored = FILE_ERROR;
     return result;
-    }
+}
 
 static inline
 warn_unused
 TextFileResult
 read_file(const char* filepath, Allocator a){
-    TextFileResult result = {};
+    TextFileResult result = {0};
     FILE* fp = fopen(filepath, "rb");
     if(not fp)
         Raise(FILE_NOT_OPENED);
@@ -129,32 +129,32 @@ read_file(const char* filepath, Allocator a){
         fclose(fp);
         result.errored = size_e.errored;
         return result;
-        }
+    }
     size_t nbytes = size_e.result;
     char* text = Allocator_alloc(a, nbytes+1);
     if(!text){
         result.errored = FILE_RESULT_ALLOC_FAILURE;
         goto finally;
-        }
+    }
     size_t fread_result = fread(text, 1, nbytes, fp);
     if(fread_result != nbytes){
         result.errored = FILE_ERROR;
         Allocator_free(a, text, nbytes+1);
         goto finally;
-        }
+    }
     text[nbytes] = '\0';
     result.result.text = text;
     result.result.length = nbytes;
 finally:
     fclose(fp);
     return result;
-    }
+}
 
 static inline
 warn_unused
 BinaryFileResult
 read_bin_file(const char* filepath, Allocator a){
-    BinaryFileResult result = {};
+    BinaryFileResult result = {0};
     FILE* fp = fopen(filepath, "rb");
     if(not fp)
         Raise(FILE_NOT_OPENED);
@@ -162,27 +162,27 @@ read_bin_file(const char* filepath, Allocator a){
     if(size_e.errored){
         result.errored = size_e.errored;
         goto finally;
-        }
+    }
     size_t nbytes = size_e.result;
     void* data = Allocator_alloc(a, nbytes);
     if(!data){
         result.errored = FILE_RESULT_ALLOC_FAILURE;
         goto finally;
-        }
+    }
     assert(data);
     size_t fread_result = fread(data, 1, nbytes, fp);
     if(fread_result != nbytes){
         Allocator_free(a, data, nbytes);
         result.errored = FILE_ERROR;
         goto finally;
-        }
+    }
     assert(fread_result == nbytes);
     result.result.buff = data;
     result.result.n_bytes = nbytes;
 finally:
     fclose(fp);
     return result;
-    }
+}
 
 static inline
 warn_unused
@@ -195,11 +195,11 @@ write_file(const char* filename, const void* data, size_t data_length){
     if(nwrit != data_length){
         fclose(fp);
         return FILE_ERROR;
-        }
+    }
     fflush(fp);
     fclose(fp);
     return 0;
-    }
+}
 
 #elif defined(__linux__) || defined(__APPLE__)
 #ifdef __clang__
@@ -215,44 +215,44 @@ force_inline
 warn_unused
 FileSizeResult
 file_size_from_fd(int fd){
-    FileSizeResult result = {};
+    FileSizeResult result = {0};
     struct stat s;
     int err = fstat(fd, &s);
     if(err == -1){
         result.errored = FILE_ERROR;
         return result;
-        }
+    }
     result.result = s.st_size;
     return result;
-    }
+}
 
 static inline
 warn_unused
 TextFileResult
 read_file(const char* filepath, Allocator a){
-    TextFileResult result = {};
+    TextFileResult result = {0};
     int fd = open(filepath, O_RDONLY);
     if(fd < 0){
         result.errored = FILE_NOT_OPENED;
         return result;
-        }
+    }
     FileSizeResult size_e = file_size_from_fd(fd);
     if(size_e.errored){
         result.errored = size_e.errored;
         goto finally;
-        }
+    }
     size_t nbytes = size_e.result;
     char* text = Allocator_alloc(a, nbytes+1);
     if(!text){
         result.errored = FILE_RESULT_ALLOC_FAILURE;
         goto finally;
-        }
+    }
     ssize_t read_result = read(fd, text, nbytes);
     if(read_result != nbytes){
         Allocator_free(a, text, nbytes+1);
         result.errored = FILE_ERROR;
         goto finally;
-        }
+    }
     assert(read_result == nbytes);
     text[nbytes] = '\0';
     result.result.text = text;
@@ -260,44 +260,44 @@ read_file(const char* filepath, Allocator a){
 finally:
     close(fd);
     return result;
-    }
+}
 
 
 static inline
 warn_unused
 BinaryFileResult
 read_bin_file(const char* filepath, Allocator a){
-    BinaryFileResult result = {};
+    BinaryFileResult result = {0};
     int fd = open(filepath, O_RDONLY);
     if(fd < 0){
         result.errored = FILE_NOT_OPENED;
         return result;
-        }
+    }
     FileSizeResult size_e = file_size_from_fd(fd);
     if(size_e.errored){
         result.errored = size_e.errored;
         goto finally;
-        }
+    }
     size_t nbytes = size_e.result;
     void* data = Allocator_alloc(a, nbytes);
     if(!data){
         result.errored = FILE_RESULT_ALLOC_FAILURE;
         goto finally;
-        }
+    }
     assert(data);
     ssize_t read_result = read(fd, data, nbytes);
     if(read_result != nbytes){
         Allocator_free(a, data, nbytes);
         result.errored = FILE_ERROR;
         goto finally;
-        }
+    }
     assert(read_result == nbytes);
     result.result.buff = data;
     result.result.n_bytes = nbytes;
 finally:
     close(fd);
     return result;
-    }
+}
 
 static inline
 warn_unused
@@ -313,10 +313,10 @@ write_file(const char* filename, const void* data, size_t data_length){
     if(nwrit != data_length){
         close(fd);
         return FILE_ERROR;
-        }
+    }
     close(fd);
     return 0;
-    }
+}
 
 #elif defined(_WIN32)
 #ifdef __clang__
@@ -336,7 +336,7 @@ static inline
 warn_unused
 TextFileResult
 read_file(const char* filepath, Allocator a){
-    TextFileResult result = {};
+    TextFileResult result = {0};
     HANDLE handle = CreateFileA(
             (char*)filepath,
             GENERIC_READ,
@@ -349,25 +349,25 @@ read_file(const char* filepath, Allocator a){
     if(handle == INVALID_HANDLE_VALUE){
         result.errored = FILE_NOT_OPENED;
         return result;
-        }
+    }
     LARGE_INTEGER size;
     BOOL size_success = GetFileSizeEx(handle, &size);
     if(!size_success){
         goto finally;
-        }
+    }
     size_t nbytes = size.QuadPart;
     char* text = (char*)Allocator_alloc(a, nbytes+1);
     if(!text){
         result.errored = FILE_RESULT_ALLOC_FAILURE;
         goto finally;
-        }
+    }
     DWORD nread;
     BOOL read_success = ReadFile(handle, text, nbytes, &nread, NULL);
     if(!read_success){
         Allocator_free(a, text, nbytes+1);
         result.errored = FILE_ERROR;
         goto finally;
-        }
+    }
     assert(nread == nbytes);
     text[nbytes] = '\0';
     result.result.text = text;
@@ -375,13 +375,13 @@ read_file(const char* filepath, Allocator a){
 finally:
     CloseHandle(handle);
     return result;
-    }
+}
 
 static inline
 warn_unused
 TextFileResult
 read_file_w(const wchar_t* filepath, Allocator a){
-    TextFileResult result = {};
+    TextFileResult result = {0};
     // TODO: first param is declared without const.
     // Do I need to pass a local buffer or is it just
     // old-fashioned?
@@ -397,25 +397,25 @@ read_file_w(const wchar_t* filepath, Allocator a){
     if(handle == INVALID_HANDLE_VALUE){
         result.errored = FILE_NOT_OPENED;
         return result;
-        }
+    }
     LARGE_INTEGER size;
     BOOL size_success = GetFileSizeEx(handle, &size);
     if(!size_success){
         goto finally;
-        }
+    }
     size_t nbytes = size.QuadPart;
     char* text = (char*)Allocator_alloc(a, nbytes+1);
     if(!text){
         result.errored = FILE_RESULT_ALLOC_FAILURE;
         goto finally;
-        }
+    }
     DWORD nread;
     BOOL read_success = ReadFile(handle, text, nbytes, &nread, NULL);
     if(!read_success){
         Allocator_free(a, text, nbytes+1);
         result.errored = FILE_ERROR;
         goto finally;
-        }
+    }
     assert(nread == nbytes);
     text[nbytes] = '\0';
     result.result.text = text;
@@ -423,13 +423,13 @@ read_file_w(const wchar_t* filepath, Allocator a){
 finally:
     CloseHandle(handle);
     return result;
-    }
+}
 
 static inline
 warn_unused
 BinaryFileResult
 read_bin_file(const char* filepath, Allocator a){
-    BinaryFileResult result = {};
+    BinaryFileResult result = {0};
     HANDLE handle = CreateFileA(
             (char*)filepath,
             GENERIC_READ,
@@ -442,38 +442,38 @@ read_bin_file(const char* filepath, Allocator a){
     if(handle == INVALID_HANDLE_VALUE){
         result.errored = FILE_NOT_OPENED;
         return result;
-        }
+    }
     LARGE_INTEGER size;
     BOOL size_success = GetFileSizeEx(handle, &size);
     if(!size_success){
         goto finally;
-        }
+    }
     size_t nbytes = size.QuadPart;
     void* data = Allocator_alloc(a, nbytes);
     if(!data){
         result.errored = FILE_RESULT_ALLOC_FAILURE;
         goto finally;
-        }
+    }
     DWORD nread;
     BOOL read_success = ReadFile(handle, data, nbytes, &nread, NULL);
     if(!read_success){
         Allocator_free(a, data, nbytes);
         result.errored = FILE_ERROR;
         goto finally;
-        }
+    }
     assert(nread == nbytes);
     result.result.buff = data;
     result.result.n_bytes = nbytes;
 finally:
     CloseHandle(handle);
     return result;
-    }
+}
 
 static inline
 warn_unused
 BinaryFileResult
 read_bin_file_w(const wchar_t* filepath, Allocator a){
-    BinaryFileResult result = {};
+    BinaryFileResult result = {0};
     HANDLE handle = CreateFileW(
             (wchar_t*)filepath,
             GENERIC_READ,
@@ -486,32 +486,32 @@ read_bin_file_w(const wchar_t* filepath, Allocator a){
     if(handle == INVALID_HANDLE_VALUE){
         result.errored = FILE_NOT_OPENED;
         return result;
-        }
+    }
     LARGE_INTEGER size;
     BOOL size_success = GetFileSizeEx(handle, &size);
     if(!size_success){
         goto finally;
-        }
+    }
     size_t nbytes = size.QuadPart;
     void* data = Allocator_alloc(a, nbytes);
     if(!data){
         result.errored = FILE_RESULT_ALLOC_FAILURE;
         goto finally;
-        }
+    }
     DWORD nread;
     BOOL read_success = ReadFile(handle, data, nbytes, &nread, NULL);
     if(!read_success){
         Allocator_free(a, data, nbytes);
         result.errored = FILE_ERROR;
         goto finally;
-        }
+    }
     assert(nread == nbytes);
     result.result.buff = data;
     result.result.n_bytes = nbytes;
 finally:
     CloseHandle(handle);
     return result;
-    }
+}
 
 static inline
 warn_unused
@@ -529,7 +529,7 @@ write_file(const char* filename, const void* data, size_t data_length){
             );
     if(handle == INVALID_HANDLE_VALUE){
         return FILE_NOT_OPENED;
-        }
+    }
     DWORD bytes_written;
     BOOL write_success = WriteFile(
             handle,
@@ -540,12 +540,12 @@ write_file(const char* filename, const void* data, size_t data_length){
     if(!write_success){
         result = FILE_ERROR;
         goto finally;
-        }
+    }
     assert(bytes_written == data_length);
 finally:
     CloseHandle(handle);
     return result;
-    }
+}
 
 static inline
 warn_unused
@@ -563,7 +563,7 @@ write_file_w(const wchar_t* filename, const void* data, size_t data_length){
             );
     if(handle == INVALID_HANDLE_VALUE){
         return FILE_NOT_OPENED;
-        }
+    }
     DWORD bytes_written;
     BOOL write_success = WriteFile(
             handle,
@@ -574,12 +574,12 @@ write_file_w(const wchar_t* filename, const void* data, size_t data_length){
     if(!write_success){
         result = FILE_ERROR;
         goto finally;
-        }
+    }
     assert(bytes_written == data_length);
 finally:
     CloseHandle(handle);
     return result;
-    }
+}
 
 #ifdef __clang__
 #pragma clang diagnostic pop
@@ -594,7 +594,7 @@ read_file(const char* filepath, Allocator a){
     (void)filepath;
     TextFileResult result = {.errored=FILE_ERROR};
     return result;
-    }
+}
 
 static inline
 warn_unused
@@ -604,7 +604,7 @@ read_bin_file(const char* filepath, Allocator a){
     (void)filepath;
     BinaryFileResult result = {.errored=FILE_ERROR};
     return result;
-    }
+}
 
 static inline
 warn_unused
@@ -614,7 +614,7 @@ write_file(const char* filename, const void* data, size_t data_length){
     (void)data;
     (void)data_length;
     return 1;
-    }
+}
 #endif
 
 #ifdef __clang__

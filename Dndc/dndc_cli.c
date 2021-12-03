@@ -324,7 +324,7 @@ main(int argc, char**argv){
             MStringBuilder sb = {.allocator=get_mallocator()};
             if(isatty(fileno(stdin))){
                 char buff[4096];
-                struct LineHistory history = {};
+                struct LineHistory history = {0};
                 for(;;){
                     ssize_t len = get_input_line(&history, SV("> "), buff, sizeof(buff));
                     if(len < 0)
@@ -379,7 +379,7 @@ main(int argc, char**argv){
         worker = (WorkerThread*)dndc_worker_thread_create();
 
     if(bench_iters){
-        LongString output = {};
+        LongString output = {0};
         flags &= ~DNDC_NO_CLEANUP;
         for(int i = 0; i < bench_iters; i++){
             Errorable(void) e = run_the_dndc(
