@@ -217,7 +217,6 @@ build_nav_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
         case NODE_PARA:
         case NODE_DIV:
         case NODE_IMAGE:
-        case NODE_TEXT:
         case NODE_LIST:
         case NODE_KEYVALUE:
         case NODE_IMGLINKS:
@@ -674,24 +673,6 @@ RENDERFUNC(STRING){
     return (Errorable(void)){0};
 }
 
-RENDERFUNC(TEXT){
-    msb_write_literal(sb, "<div");
-    write_classes(sb, node);
-    msb_write_literal(sb, ">\n");
-    if(node->header.length){
-        header_depth++;
-        auto e = write_header(ctx, sb, node, header_depth);
-        if(e.errored) return e;
-        msb_write_char(sb, '\n');
-    }
-    NODE_CHILDREN_FOR_EACH(it, node){
-        auto child = get_node(ctx, *it);
-        auto e = render_node(ctx, sb, child, header_depth);
-        if(e.errored) return e;
-    }
-    msb_write_literal(sb, "</div>\n");
-    return (Errorable(void)){0};
-}
 RENDERFUNC(DIV){
     msb_write_literal(sb, "<div");
     write_classes(sb, node);

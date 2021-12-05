@@ -142,58 +142,56 @@ Convenience::md
       but user beware, it gets wonky, but I think there are CSS properties
       to fix that.
     The Nodes::table
-      Node Type    | Block Name   | Container Tag | Heading
-      TEXT         | text         | <div>         | Yes
-      DIV          | div          | <div>         | Yes
-      STRING       | ---          |               | ---
-      PARA         | ---          | <p>           | ---
-      TITLE        | title        | <h1>          | Yes
-      HEADING      | h            | <hN>          | Yes
-      TABLE        | table        | <div><table>  | Yes
-      TABLE_ROW    | ---          | <tr>          | ---
-      STYLESHEETS  | css          | ---           | ---
-      LINKS        | links        | ---           | ---
-      SCRIPTS      | js           | ---           | ---
-      IMPORT       | import       | ---           | ---
-      IMAGE        | img          | <div><img>    | Yes
-      BULLETS      | bullets      | <div><ul>     | Yes
-      JAVASCRIPT   | js           | ---           | No
-      RAW          | raw          |               | No
-      PRE          | pre          | <div><pre>    | Yes
-      LIST         | list         | <div><ol>     | Yes
-      LIST_ITEM    | ---          | <li>          | No
-      KEYVALUE     | kv           | <div><table>  | Yes
-      KEYVALUEPAIR | ---          | <tr>          | No
-      IMGLINKS     | imglinks     | <div><svg>    | Yes
-      NAV          | nav          | <div><nav>    | Yes
-      DATA         | data         | ---           | No
-      COMMENT      | comment      | ---           | ---
-      MD           | md           | <div>         | Yes
-      CONTAINER    | ---          |               | No
-      QUOTE        | quote        | <blockquote>  | Yes
-      HR           | hr           | <hr>          | No
-      INVALID      | ---          | ---           | ---
+      Node Type    | Block Name   | Heading
+      MD           | md           | Yes
+      DIV          | div          | Yes
+      STRING       | ---          | ---
+      PARA         | ---          | ---
+      TITLE        | title        | Yes
+      HEADING      | h            | Yes
+      TABLE        | table        | Yes
+      TABLE_ROW    | ---          | ---
+      STYLESHEETS  | css          | ---
+      LINKS        | links        | ---
+      SCRIPTS      | script       | ---
+      IMPORT       | import       | ---
+      IMAGE        | img          | Yes
+      BULLETS      | ---          | Yes
+      RAW          | raw          | No
+      PRE          | pre          | Yes
+      LIST         | ---          | Yes
+      LIST_ITEM    | ---          | No
+      KEYVALUE     | kv           | Yes
+      KEYVALUEPAIR | ---          | No
+      IMGLINKS     | imglinks     | Yes
+      NAV          | nav          | Yes
+      DATA         | data         | No
+      COMMENT      | comment      | ---
+      CONTAINER    | ---          | No
+      QUOTE        | quote        | Yes
+      HR           | hr           | No
+      JS           | js           | No
+      DETAILS      | details      | Yes
+      INVALID      | ---          | ---
 
     ::md
       * Node Type is the type of the node.
       * Block name is how it is introduced via the double colon syntax
         (an empty entry indicates the node can only be created via scripts
         or implicitly as part of another node).
-      * Container tag is what html tag is outputted for the node.
       * Heading is whether or not the header is turned into a heading.
-      * Hidden nodes are not represented at that spot in the final document.
-        They usually have some side effect on the document.
       * The INVALID node will cause an error if encountered during rendering.
         It can be used as a poison node when debugging.
-      * text, bullets, and list are generally not used in favor of md blocks.
-        They are useful for script-generated nodes though.
+      For more detailed information, see the [reference].
+      ::links
+        reference = REFERENCE.html
     `
     let prenode = ctx.make_node(NodeType.PRE, {classes:['embedded']});
     for(let line of text.trim().split('\n'))
       prenode.add_child(line.trimRight());
     node.parent.add_child(prenode)
     // parse is convenient, it appends the nodes by
-    //parsing the string as if it were a document.
+    // parsing the string as if it were a document.
     node.parent.parse('::md\n  And here is that table')
     node.parent.parse(text)
 

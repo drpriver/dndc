@@ -604,7 +604,6 @@ gather_anchor(DndcContext* ctx, NodeHandle handle){
         case NODE_PARA:
         case NODE_DIV:
         case NODE_IMAGE:
-        case NODE_TEXT:
         case NODE_LIST:
         case NODE_KEYVALUE:
         case NODE_IMGLINKS:

@@ -112,7 +112,6 @@ format_write_wrapped_string(MStringBuilder* sb, FormatState* state, StringView s
 FORMATFUNC(regular_node);
 FORMATFUNC(md_node);
 FORMATFUNC(table_node);
-FORMATFUNC(text_node);
 FORMATFUNC(kv_node);
 FORMATFUNC(raw_node);
 FORMATFUNC(md_list);
@@ -132,8 +131,6 @@ format_node(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
         case NODE_QUOTE:
         case NODE_HR:
             return format_regular_node(ctx, sb, node, indent);
-        case NODE_TEXT:
-            return format_text_node(ctx, sb, node, indent);
         case NODE_KEYVALUE:
             return format_kv_node(ctx, sb, node, indent);
         case NODE_DETAILS:
@@ -374,26 +371,6 @@ FORMATFUNC(md_node){
     }
     // unsure about this.
     // msb_write_char(sb, '\n');
-    return result;
-}
-FORMATFUNC(text_node){
-    Errorable(void) result = {0};
-    format_header(sb, node, indent);
-    indent += FORMAT_INDENT;
-    NODE_CHILDREN_FOR_EACH(it, node){
-        auto child = get_node(ctx, *it);
-        switch(child->type){
-            case NODE_PARA:
-                result = format_para_node(ctx, sb, child, indent);
-                break;
-            default:
-                result = format_node(ctx, sb, child, indent);
-                break;
-        }
-        if(result.errored) return result;
-    }
-    // unsure about this.
-    msb_write_char(sb, '\n');
     return result;
 }
 static inline

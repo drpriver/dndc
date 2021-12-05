@@ -10,8 +10,8 @@ DNDC:=$(BINDIR)/dndc$(EXE)
 %.html: %.dnd | $(DNDC) $(DIRECTORIES)
 	$(DNDC) $< -o $@ -d $(DEPDIR)/$*.dep
 
-EXAMPLE.html: EXAMPLE.dnd | $(DNDC) $(DIRECTORIES)
-	$(DNDC) $< -o $@ -d $(DEPDIR)/EXAMPLE.dep
+OVERVIEW.html: OVERVIEW.dnd | $(DNDC) $(DIRECTORIES)
+	$(DNDC) $< -o $@ -d $(DEPDIR)/OVERVIEW.dep
 REFERENCE.html: REFERENCE.dnd | $(DNDC) $(DIRECTORIES)
 	$(DNDC) $< -o $@ -d $(DEPDIR)/REFERENCE.dep
 
@@ -50,7 +50,7 @@ convert:
 
 run-tests: clean-tests tests
 
-all: tests dndc EXAMPLE.html pydndc REFERENCE.html
+all: tests dndc OVERVIEW.html pydndc REFERENCE.html
 
 install: $(DNDC)
 	$(INSTALL) -C $< $(INSTALLDIR)/dndc$(EXE)

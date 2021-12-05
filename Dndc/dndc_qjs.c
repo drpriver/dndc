@@ -1161,7 +1161,6 @@ js_dndc_node_set_type(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst 
             return JS_ThrowTypeError(jsctx, "Setting a node to JS is not supported");
         case NODE_IMPORT:
             return JS_ThrowTypeError(jsctx, "Setting a node to IMPORT not supported.");
-        case NODE_TEXT:
         case NODE_DIV:
         case NODE_STRING:
         case NODE_PARA:

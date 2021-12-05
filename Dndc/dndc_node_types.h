@@ -27,13 +27,12 @@
     apply(NAV,            21)\
     apply(DATA,           22)\
     apply(COMMENT,        23)\
-    apply(TEXT,           24)\
-    apply(CONTAINER,      25)\
-    apply(QUOTE,          26)\
-    apply(HR,             27)\
-    apply(JS,             28)\
-    apply(DETAILS,        29)\
-    apply(INVALID,        30)\
+    apply(CONTAINER,      24)\
+    apply(QUOTE,          25)\
+    apply(HR,             26)\
+    apply(JS,             27)\
+    apply(DETAILS,        28)\
+    apply(INVALID,        29)\
 
 typedef enum NodeType {
     #define X(a, b) NODE_##a = b,
@@ -59,7 +58,6 @@ struct {
 } NODEALIASES[] = {
     {SV("md"),           NODE_MD},
     {SV("div"),          NODE_DIV},
-    {SV("text"),         NODE_TEXT},
     {SV("import"),       NODE_IMPORT},
     {SV("js"),           NODE_JS},
     {SV("title"),        NODE_TITLE},
@@ -108,7 +106,6 @@ StringView
 NODETYPE_TO_NODE_ALIASES[NODE_INVALID+1] = {
      [NODE_MD]           = SV("md"),
      [NODE_DIV]          = SV("div"),
-     [NODE_TEXT]         = SV("text"),
      [NODE_IMPORT]       = SV("import"),
      [NODE_TITLE]        = SV("title"),
      [NODE_HEADING]      = SV("h"),

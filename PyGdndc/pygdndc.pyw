@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-PYGDNDC_VERSION = '0.9.2'
+PYGDNDC_VERSION = '0.9.3'
 __version__ = PYGDNDC_VERSION
 import os
 # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"

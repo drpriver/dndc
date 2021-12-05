@@ -1,3 +1,8 @@
+Version 0.9.3::md
+  * Deleted vestigial TEXT node type.
+  * Added reference document for all the nodes you can create
+    via the regular text format.
+  * Renamed EXAMPLE.dnd to OVERVIEW.dnd as it wasn't really an EXAMPLE.
 Version 0.9.2::md
   * Big internal changes, which will be nice for future features, but not user visible.
     - Might have introduced some bugs, but hopefully not.

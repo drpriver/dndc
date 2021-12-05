@@ -42,7 +42,6 @@ advance_row(DndcContext*);
 static
 Errorable_f(void)
 parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int indentation, ParsedNodeFlags flags);
-PARSEFUNC(parse_text_node);
 PARSEFUNC(parse_table_node);
 PARSEFUNC(parse_keyvalue_node);
 PARSEFUNC(parse_bullets_node);
@@ -643,8 +642,6 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
         case NODE_STYLESHEETS:
             return parse_raw_node(ctx, parent_handle, indentation);
             break; // do regular string parsing
-        case NODE_TEXT:
-            return parse_text_node(ctx, parent_handle, indentation);
         case NODE_LIST_ITEM:
         case NODE_TABLE_ROW:
         case NODE_PARA:
@@ -1031,46 +1028,6 @@ PARSEFUNC(parse_bullet_node){
         auto new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
         append_child(ctx, parent_handle, new_node_handle);
-        advance_row(ctx);
-    }
-    return result;
-}
-PARSEFUNC(parse_text_node){
-    {
-        auto parent = get_node(ctx, parent_handle);
-        assert(parent->type == NODE_TEXT);
-    }
-    bool in_para_node = 0;
-    NodeHandle para_handle = INVALID_NODE_HANDLE;
-    Errorable(void) result = {0};
-    for(;ctx->cursor != ctx->end;){
-        analyze_line(ctx);
-        // blank line
-        if(ctx->linestart+ctx->nspaces == ctx->line_end){
-            in_para_node = false;
-            advance_row(ctx);
-            continue;
-        }
-        if(ctx->nspaces <= indentation)
-            break;
-        if(ctx->doublecolon){
-            // same comment as the table parser. Makes ::links and such work
-            // We'll flag those as errors in a later analysis
-            auto e = parse_double_colon(ctx, parent_handle);
-            if(e.errored) return e;
-            continue;
-        }
-        if(!in_para_node){
-            para_handle = alloc_handle(ctx);
-            init_node(ctx, para_handle, ctx->linestart+ctx->nspaces, NODE_PARA);
-            append_child(ctx, parent_handle, para_handle);
-        }
-        in_para_node = true;
-        // default: new paragraph node
-        StringView content = stripped_view(ctx->linestart+ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);
-        auto new_node_handle = alloc_handle(ctx);
-        init_string_node(ctx, new_node_handle, content);
-        append_child(ctx, para_handle, new_node_handle);
         advance_row(ctx);
     }
     return result;

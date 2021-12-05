@@ -1249,7 +1249,7 @@ js_syntax_is_builtin(StringView str){
 static inline
 _Bool
 js_syntax_is_node_type(StringView str){
-    #define words "|MD|DIV|STRING|PARA|TITLE|HEADING|TABLE|TABLE_ROW|STYLESHEETS|LINKS|SCRIPTS|IMPORT|IMAGE|BULLETS|RAW|PRE|LIST|LIST_ITEM|KEYVALUE|KEYVALUEPAIR|IMGLINKS|NAV|DATA|COMMENT|TEXT|CONTAINER|QUOTE|HR|JS|DETAILS|"
+    #define words "|MD|DIV|STRING|PARA|TITLE|HEADING|TABLE|TABLE_ROW|STYLESHEETS|LINKS|SCRIPTS|IMPORT|IMAGE|BULLETS|RAW|PRE|LIST|LIST_ITEM|KEYVALUE|KEYVALUEPAIR|IMGLINKS|NAV|DATA|COMMENT|CONTAINER|QUOTE|HR|JS|DETAILS|"
     const char* match = memmem(words, sizeof(words)-1, str.text, str.length);
     if(!match) return 0;
     return match[str.length] == '|' && match[-1] == '|';
@@ -1529,7 +1529,7 @@ js_syntax_is_builtin_utf16(StringViewUtf16 str){
 static inline
 _Bool
 js_syntax_is_node_type_utf16(StringViewUtf16 str){
-    #define words u"|MD|DIV|STRING|PARA|TITLE|HEADING|TABLE|TABLE_ROW|STYLESHEETS|LINKS|SCRIPTS|IMPORT|IMAGE|BULLETS|RAW|PRE|LIST|LIST_ITEM|KEYVALUE|KEYVALUEPAIR|IMGLINKS|NAV|DATA|COMMENT|TEXT|CONTAINER|QUOTE|HR|JS|DETAILS|"
+    #define words u"|MD|DIV|STRING|PARA|TITLE|HEADING|TABLE|TABLE_ROW|STYLESHEETS|LINKS|SCRIPTS|IMPORT|IMAGE|BULLETS|RAW|PRE|LIST|LIST_ITEM|KEYVALUE|KEYVALUEPAIR|IMGLINKS|NAV|DATA|COMMENT|CONTAINER|QUOTE|HR|JS|DETAILS|"
     const uint16_t* match = memmem(words, sizeof(words)-2, str.text, str.length*2);
     if(!match) return 0;
     return match[str.length] == u'|' && match[-1] == u'|';

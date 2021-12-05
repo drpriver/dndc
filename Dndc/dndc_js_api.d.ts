@@ -716,7 +716,6 @@ export const NodeType = {
     NAV:          number;
     DATA:         number;
     COMMENT:      number;
-    TEXT:         number;
     CONTAINER:    number;
     QUOTE:        number;
     HR:           number;

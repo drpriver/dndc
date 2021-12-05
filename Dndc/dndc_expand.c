@@ -30,9 +30,6 @@ Errorable_f(void)
 expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
 static
 Errorable_f(void)
-expand_text_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
-static
-Errorable_f(void)
 expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
 
 static
@@ -115,7 +112,6 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
         case NODE_KEYVALUE:
         case NODE_IMGLINKS:
         case NODE_COMMENT:
-        case NODE_TEXT:
         case NODE_QUOTE:
             write_generic_header(n, indent, msb);
             return expand_node_body(ctx, n, indent+2, msb);
@@ -211,8 +207,6 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
                 if(result.errored) return result;
                 }
             return result;
-        case NODE_TEXT:
-            return expand_text_body(ctx, n, indent, msb);
         case NODE_TABLE:
             return expand_table_body(ctx, n, indent, msb);
         case NODE_KEYVALUE:
@@ -447,31 +441,6 @@ expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
                 node_set_err_q(ctx, row, SV("Expected string or container, got "), NODETYPE_TO_NODE_ALIASES[row->type]);
                 Raise(PARSE_ERROR);
                 }
-            }
-        msb_write_char(msb, '\n');
-        }
-    return result;
-    }
-
-static
-Errorable_f(void)
-expand_text_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
-    Errorable(void) result = {0};
-    NODE_CHILDREN_FOR_EACH(p, n){
-        Node* para = get_node(ctx, *p);
-        if(para->type != NODE_PARA){
-            node_set_err_q(ctx, para, SV("Non paragraph child of a text node: "), NODETYPE_TO_NODE_ALIASES[para->type]);
-            Raise(PARSE_ERROR);
-            }
-        NODE_CHILDREN_FOR_EACH(s, para){
-            Node* str = get_node(ctx, *s);
-            if(str->type != NODE_STRING){
-                node_set_err_q(ctx, para, SV("Non string child of a PARA node: "), NODETYPE_TO_NODE_ALIASES[para->type]);
-                Raise(PARSE_ERROR);
-                }
-            msb_write_nchar(msb, ' ', indent);
-            msb_write_str(msb, str->header.text, str->header.length);
-            msb_write_char(msb, '\n');
             }
         msb_write_char(msb, '\n');
         }

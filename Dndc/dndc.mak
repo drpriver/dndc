@@ -1,5 +1,5 @@
-DNDCVERSION=0.9.2
-DNDC_COMPAT_VERSION=0.9.2
+DNDCVERSION=0.9.3
+DNDC_COMPAT_VERSION=0.9.3
 
 ifeq ($(UNAME),Darwin)
 RPATH:=-rpath @executable_path
@@ -45,7 +45,7 @@ PyGdndc/dndc_js_api.d.ts: Dndc/dndc_js_api.d.ts
 	$(CP) $< $@
 
 
-RELEASEFILES = $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pygdndc.pyw PyGdndc/dndbatch.pyw PyGdndc/changelog.dnd PyGdndc/install_deps.py PyGdndc/README.txt EXAMPLE.dnd PyGdndc/Manual.dnd Dndc/jsdoc.dnd Dndc/dndc_js_api.d.ts REFERENCE.dnd
+RELEASEFILES = $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pygdndc.pyw PyGdndc/dndbatch.pyw PyGdndc/changelog.dnd PyGdndc/install_deps.py PyGdndc/README.txt OVERVIEW.dnd PyGdndc/Manual.dnd Dndc/jsdoc.dnd Dndc/dndc_js_api.d.ts REFERENCE.dnd
 .PHONY: release
 release: $(RELEASEFILES)
 	$(RM) -f Release/Dndc Release/Dndc.$(DNDCVERSION).zip

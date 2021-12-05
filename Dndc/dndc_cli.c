@@ -518,7 +518,6 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
         case NODE_IMPORT:
         case NODE_IMAGE:
         case NODE_TABLE:
-        case NODE_TEXT:
         case NODE_TITLE:
         case NODE_HEADING:
         case NODE_LIST:
