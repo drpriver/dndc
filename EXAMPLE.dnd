@@ -464,25 +464,6 @@ But Wait, There's More::md
       display: initial;
     }
   }
-  @media (prefers-color-scheme: dark) {
-    body {
-      color:rgb(100, 100, 100);
-      background-color:rgb(40,40,40);
-      font-size: 1.1rem; /* dark mode is lower contrast, so enlarge text */
-    }
-    nav a {
-      color:rgb(100, 100, 100);
-    }
-    .embedded {
-      border: 1px solid rgb(100,100,100);
-    }
-    th {
-      border-bottom:2px solid rgb(100,100,100);
-    }
-  }
-  @media (prefers-color-scheme: light) {
-  }
-
 
 ::js
   // this shows more raw manipulation of the tree.
