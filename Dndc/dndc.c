@@ -111,6 +111,9 @@ execute_user_scripts(DndcContext* ctx){
             type = node->type;
             if(type != NODE_JS)
                 continue;
+            // Maybe Nodes should have flags?
+            if(node_has_attribute(node, SV("comment")))
+                continue;
             if(type == NODE_JS && (flags & DNDC_NO_COMPILETIME_JS))
                 continue;
             if(!node_children_count(node))
