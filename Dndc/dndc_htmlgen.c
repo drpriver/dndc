@@ -1101,6 +1101,11 @@ RENDERFUNC(KEYVALUEPAIR){
         msb_write_literal(sb, "<td>");
         auto e = render_node(ctx, sb, child, header_depth);
         if(e.errored) return e;
+        // This is sort of hacky, but we need the td to not
+        // have a trailing newline so that css content stuff
+        // works right.
+        while(msb_peek(sb) == '\n')
+            msb_erase(sb, 1);
         msb_write_literal(sb, "</td>\n");
     }
     msb_write_literal(sb, "</tr>\n");

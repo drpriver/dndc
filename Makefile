@@ -12,6 +12,8 @@ DNDC:=$(BINDIR)/dndc$(EXE)
 
 EXAMPLE.html: EXAMPLE.dnd | $(DNDC) $(DIRECTORIES)
 	$(DNDC) $< -o $@ -d $(DEPDIR)/EXAMPLE.dep
+REFERENCE.html: REFERENCE.dnd | $(DNDC) $(DIRECTORIES)
+	$(DNDC) $< -o $@ -d $(DEPDIR)/REFERENCE.dep
 
 # Assumes libclang is installed.
 tags: $(wildcard *.h *.c **/*.c **/*.h **/*.m) Scripts/tag_and_syntax.py compile_commands.json
@@ -48,7 +50,7 @@ convert:
 
 run-tests: clean-tests tests
 
-all: tests dndc EXAMPLE.html pydndc
+all: tests dndc EXAMPLE.html pydndc REFERENCE.html
 
 install: $(DNDC)
 	$(INSTALL) -C $< $(INSTALLDIR)/dndc$(EXE)

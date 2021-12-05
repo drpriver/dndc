@@ -45,7 +45,7 @@ PyGdndc/dndc_js_api.d.ts: Dndc/dndc_js_api.d.ts
 	$(CP) $< $@
 
 
-RELEASEFILES = $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pygdndc.pyw PyGdndc/dndbatch.pyw PyGdndc/changelog.dnd PyGdndc/install_deps.py PyGdndc/README.txt EXAMPLE.dnd PyGdndc/Manual.dnd Dndc/jsdoc.dnd Dndc/dndc_js_api.d.ts
+RELEASEFILES = $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pygdndc.pyw PyGdndc/dndbatch.pyw PyGdndc/changelog.dnd PyGdndc/install_deps.py PyGdndc/README.txt EXAMPLE.dnd PyGdndc/Manual.dnd Dndc/jsdoc.dnd Dndc/dndc_js_api.d.ts REFERENCE.dnd
 .PHONY: release
 release: $(RELEASEFILES)
 	$(RM) -f Release/Dndc Release/Dndc.$(DNDCVERSION).zip

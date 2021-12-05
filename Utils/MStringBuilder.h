@@ -221,6 +221,13 @@ msb_erase(MStringBuilder* msb, size_t len){
     msb->data[msb->cursor] = '\0';
     }
 
+static inline
+char
+msb_peek(MStringBuilder* msb){
+    if(!msb->cursor) return 0;
+    return msb->data[msb->cursor-1];
+}
+
 // Writes a string literal into the builder. Avoids the need to strlen
 // as the literal's size is known at compile time.
 #define msb_write_literal(msb, lit) msb_write_str(msb, ""lit, sizeof(""lit)-1)
