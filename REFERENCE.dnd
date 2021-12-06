@@ -1,3 +1,10 @@
+::comment
+  Some of this text looks pretty ugly due to all the <code>tags. This document
+  format is not optimized for rendering code, so that is an acceptable tradeoff.
+  Some spots have this weird <code>:</code><code>:nodename</code> pattern going
+  on. That is so that the parser doesn't see a double colon and issue an error
+  due to an illegal node. Again, it is extremely rare to actually talk about the
+  nodes themselves in your code, so it is not really a problem.
 ::nav .left
 ::md .right
   Reference::title
@@ -648,6 +655,13 @@
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
   }
+  code, pre {
+    font-family: -apple-system-mono, "Cascadia Mono", Consolas, mono;
+  }
+  pre {
+    font-size: 12px;
+  }
+  
 
 
 ::script

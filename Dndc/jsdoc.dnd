@@ -313,6 +313,10 @@ JS Api Documentation::title
   * {
     max-width: 40em;
   }
+  pre {
+    font-family: -apple-system-mono, "Cascadia Mono", Consolas, mono;
+    font-size: 12px;
+  }
   body > div {
     margin: auto;
   }
