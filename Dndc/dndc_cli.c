@@ -237,6 +237,13 @@ main(int argc, char**argv){
                 .help = "Execute in a repeated loop this many times.",
                 .hidden = true,
             },
+            {
+                .name = SV("--fragment"),
+                .altname1 = SV("--fragment-only"),
+                .dest = ArgBitFlagDest(&flags, DNDC_FRAGMENT_ONLY),
+                .help = "Produce an html fragment instead of a full html document.",
+                .hidden = false,
+            },
         };
         enum {HELP, VERSION, HIDDEN_HELP};
         ArgToParse early_args[] = {

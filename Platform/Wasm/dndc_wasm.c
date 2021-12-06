@@ -68,6 +68,40 @@ make_html(PString* source){
 
 extern
 PString*
+make_fragment(PString* source){
+    LongString text = PString_to_LongString(source);
+    StringView base = SV("");
+    LongString output;
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_ALLOW_BAD_LINKS
+        | DNDC_NO_CLEANUP
+        | DNDC_NO_THREADS
+        | DNDC_DONT_INLINE_IMAGES
+        | DNDC_INPUT_IS_UNTRUSTED
+        | DNDC_FRAGMENT_ONLY
+        ;
+    auto e = run_the_dndc(
+            flags,
+            base,
+            LS_to_SV(text),
+            SV("(string input"),
+            SV("demo.html"), // base_directory, source, outpath
+            &output,               // outstring
+            NULL, NULL,            // caches
+            dndc_error_func, NULL, // error func
+            NULL, NULL,            // dependency funcs
+            NULL, NULL,            // ast funcs
+            NULL                   // worker
+            );
+    if(e.errored)
+        return NULL;
+    PString* result = LongString_to_new_PString(output);
+    return result;
+}
+
+extern
+PString*
 format_dnd(PString* source){
     LongString text = PString_to_LongString(source);
     StringView base = SV("");

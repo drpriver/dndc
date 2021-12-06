@@ -438,6 +438,8 @@ PyInit_pydndc(void){
     PyModule_AddIntConstant(mod, "JS_BRACE",           DNDC_SYNTAX_JS_BRACE);
 
     // flags
+    PyModule_AddIntConstant(mod, "INPUT_IS_UNTRUSTED",  DNDC_INPUT_IS_UNTRUSTED);
+    PyModule_AddIntConstant(mod, "FRAGMENT_ONLY",  DNDC_FRAGMENT_ONLY);
     PyModule_AddIntConstant(mod, "DONT_INLINE_IMAGES",  DNDC_DONT_INLINE_IMAGES);
     PyModule_AddIntConstant(mod, "NO_THREADS",          DNDC_NO_THREADS);
     PyModule_AddIntConstant(mod, "USE_DND_URL_SCHEME",  DNDC_USE_DND_URL_SCHEME);
@@ -451,7 +453,6 @@ PyInit_pydndc(void){
     PyModule_AddIntConstant(mod, "NODELESS_MESSAGE",    DNDC_NODELESS_MESSAGE);
     PyModule_AddIntConstant(mod, "STATISTIC_MESSAGE",   DNDC_STATISTIC_MESSAGE);
     PyModule_AddIntConstant(mod, "DEBUG_MESSAGE",       DNDC_DEBUG_MESSAGE);
-    PyModule_AddIntConstant(mod, "INPUT_IS_UNTRUSTED",  DNDC_INPUT_IS_UNTRUSTED);
     return mod;
 }
 
@@ -554,6 +555,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_STRIP_WHITESPACE
         | DNDC_DONT_READ
         | DNDC_INPUT_IS_UNTRUSTED
+        | DNDC_FRAGMENT_ONLY
     };
     const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", "output_name", NULL};
     PushDiagnostic();

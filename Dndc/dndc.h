@@ -599,8 +599,9 @@ dndc_compile_dnd_file(
 enum DndcFlags {
 DNDC_FLAGS_NONE = 0x0,
 
-// This flag is currently unused
-DNDC_UNUSED_VALUE_0x1,
+// Instead of a complete document, only produce the html fragment.
+// If scripts and styles are included, they will also be produced.
+DNDC_FRAGMENT_ONLY = 0x1,
 
 // Don't write out the final result.
 DNDC_DONT_WRITE = 0x2,

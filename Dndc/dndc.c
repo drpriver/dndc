@@ -1958,6 +1958,7 @@ dndc_compile_dnd_file(
     enum {
         // All the valid flags.
         DNDC_VALID_FLAGS = 0
+            | DNDC_FRAGMENT_ONLY
             | DNDC_ALLOW_BAD_LINKS
             | DNDC_SUPPRESS_WARNINGS
             | DNDC_PRINT_STATS

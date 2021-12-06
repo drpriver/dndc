@@ -4,10 +4,12 @@
 #include "testing.h"
 #include "dndc.c"
 
+// These are forward function decls
 static TestFunc TestDndc1;
 static TestFunc TestDndc2;
 static TestFunc TestDndc3;
 static TestFunc TestDndcOutParam;
+static TestFunc TestDndcFragment;
 static TestFunc TestDndcTableMultiline;
 static TestFunc TestFormatTable;
 static TestFunc TestFormatList;
@@ -22,6 +24,7 @@ int main(int argc, char** argv){
     RegisterTest(TestDndc2);
     RegisterTest(TestDndc3);
     RegisterTest(TestDndcOutParam);
+    RegisterTest(TestDndcFragment);
     RegisterTest(TestDndcTableMultiline);
     RegisterTest(TestFormatTable);
     RegisterTest(TestFormatList);
@@ -141,7 +144,54 @@ TestFunction(TestDndcOutParam){
             "</html>\n");
         TestExpectEquals(expected.length, outdata.length);
         TestExpectEquals2(LS_equals, expected, outdata);
-        const_free(outdata.text);
+        dndc_free_string(outdata);
+    }
+    TESTEND();
+}
+TestFunction(TestDndcFragment){
+    TESTBEGIN();
+    StringView source = SV(
+        "Hello::title\n"
+        "::md\n"
+        "   * Hello World\n"
+        "   * This is amazing!\n"
+        "::js\n"
+        "  ctx.root.add_child('hello')\n"
+        "::css\n"
+        "  p { color: blue;}\n"
+    );
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_DONT_PRINT_ERRORS
+        | DNDC_FRAGMENT_ONLY
+        ;
+    LongString outdata = {};
+    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("hello.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    TestExpectSuccess(e);
+    if(!e.errored){
+        // A bit brittle of a test, but it shows that the outparam works.
+        auto expected = LS(
+            "<style>\n"
+            "p { color: blue;}\n"
+            "</style>\n"
+            "<div>\n"
+            "<h1 id=\"hello\">Hello</h1>\n"
+            "<div>\n"
+            "<ul>\n"
+            "<li>\n"
+            "Hello World\n"
+            "</li>\n"
+            "<li>\n"
+            "This is amazing!\n"
+            "</li>\n"
+            "</ul>\n"
+            "</div>\n"
+            "hello\n"
+            "</div>\n"
+            );
+        TestExpectEquals(expected.length, outdata.length);
+        TestExpectEquals2(LS_equals, expected, outdata);
+        dndc_free_string(outdata);
     }
     TESTEND();
 }
@@ -220,7 +270,7 @@ TestFunction(TestDndcTableMultiline){
             );
         TestExpectEquals(expected.length, outdata.length);
         TestExpectEquals2(LS_equals, expected, outdata);
-        const_free(outdata.text);
+        dndc_free_string(outdata);
     }
     TESTEND();
 }
@@ -261,7 +311,7 @@ TestFunction(TestFormatTable){
             );
         TestExpectEquals(expected.length, outdata.length);
         TestExpectEquals2(LS_equals, expected, outdata);
-        const_free(outdata.text);
+        dndc_free_string(outdata);
     }
     source = SV(
             "::table\n"
@@ -278,7 +328,7 @@ TestFunction(TestFormatTable){
                 "  b\n");
         TestExpectEquals(expected.length, outdata.length);
         TestExpectEquals2(LS_equals, expected, outdata);
-        const_free(outdata.text);
+        dndc_free_string(outdata);
     }
     TESTEND();
 }
@@ -334,7 +384,7 @@ TestFunction(TestFormatList){
             TestExpectFalse(output.text);
             TestExpectSuccess(e2);
         }
-        const_free(outdata.text);
+        dndc_free_string(outdata);
     }
     TESTEND();
 }
@@ -378,7 +428,7 @@ TestFunction(TestFormatKV){
             TestExpectFalse(output.text);
             TestExpectSuccess(e2);
         }
-        const_free(outdata.text);
+        dndc_free_string(outdata);
     }
     TESTEND();
 }

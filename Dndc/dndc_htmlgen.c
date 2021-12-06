@@ -71,13 +71,16 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
     // estimate memory usage as 120 characters per node and 200 kb images.
     auto reserve_amount = ctx->nodes.count*120 + imgcount*200*1024;
     msb_ensure_additional(msb, reserve_amount);
-    msb_write_literal(msb,
-        "<!DOCTYPE html>\n"
-        "<html lang=\"en\">\n"
-        "<head>\n"
-        "<meta charset=\"UTF-8\">\n"
-        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=yes\">\n"
-    );
+    bool complete_document = !(ctx->flags & DNDC_FRAGMENT_ONLY);
+    if(complete_document){
+        msb_write_literal(msb,
+            "<!DOCTYPE html>\n"
+            "<html lang=\"en\">\n"
+            "<head>\n"
+            "<meta charset=\"UTF-8\">\n"
+            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=yes\">\n"
+        );
+    }
     if(ctx->rendered_data.count){
         msb_write_literal(msb, "<script>\nconst data_blob = {");
         MARRAY_FOR_EACH(data, ctx->rendered_data){
@@ -89,15 +92,17 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
         }
         msb_write_literal(msb, "};\n</script>\n");
     }
-    if(!NodeHandle_eq(ctx->titlenode, INVALID_NODE_HANDLE)){
-        auto n = get_node(ctx, ctx->titlenode);
-        MSB_FORMAT(msb, "<title>", n->header, "</title>\n");
-    }
-    else {
-        auto filename = path_basename(path_strip_extension(ctx->outputfile));
-        msb_write_literal(msb, "<title>");
-        msb_write_title(msb, filename.text, filename.length);
-        msb_write_literal(msb, "</title>\n");
+    if(complete_document){
+        if(!NodeHandle_eq(ctx->titlenode, INVALID_NODE_HANDLE)){
+            auto n = get_node(ctx, ctx->titlenode);
+            MSB_FORMAT(msb, "<title>", n->header, "</title>\n");
+        }
+        else {
+            auto filename = path_basename(path_strip_extension(ctx->outputfile));
+            msb_write_literal(msb, "<title>");
+            msb_write_title(msb, filename.text, filename.length);
+            msb_write_literal(msb, "</title>\n");
+        }
     }
     if(ctx->stylesheets_nodes.count){
         msb_write_literal(msb, "<style>\n");
@@ -175,9 +180,12 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             continue;
         }
     }
-    msb_write_literal(msb, "</head>\n");
-    msb_write_literal(msb, "<body>\n");
+    if(complete_document){
+        msb_write_literal(msb, "</head>\n");
+        msb_write_literal(msb, "<body>\n");
+    }
     auto root_node = get_node(ctx, ctx->root_handle);
+    // elide useless wrapper div.
     if(root_node->type == NODE_MD && node_children_count(root_node) == 1){
         if(!root_node->attributes && !root_node->classes){
             auto child = get_node(ctx, node_children(root_node)[0]);
@@ -187,10 +195,12 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
     }
     auto e = render_node(ctx, msb, root_node, 1);
     if(e.errored) return e;
-    msb_write_literal(msb,
-        "</body>\n"
-        "</html>\n"
-    );
+    if(complete_document){
+        msb_write_literal(msb,
+            "</body>\n"
+            "</html>\n"
+        );
+    }
     return result;
 }
 
