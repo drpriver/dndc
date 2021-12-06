@@ -26,8 +26,8 @@
       - These attributes can be retrieved from javascript.
 
   Links::md .node @id(links-concept)
-    In almost any place that text can go, text including a link can go. Links look
-    like:
+    In almost any place that text can go, text including a link can go. Links
+    look like:
 
     ::pre @noid
       [link text]
@@ -39,10 +39,10 @@
     ::pre @noid
       [link text | some-link]
     The contents inside the square brackets are split by the pipe character,
-    <code>|</code>. The contents to the left is the text that will be rendered into
-    the document. The stuff to the right is where the link will go. This text is
-    used to look up what the link will resolve to. Therefore the following won't
-    work:
+    <code>|</code>. The contents to the left is the text that will be rendered
+    into the document. The stuff to the right is where the link will go. This
+    text is used to look up what the link will resolve to. Therefore the
+    following won't work:
 
     ::pre @noid
       [This is a bad link | https://google.com]
@@ -63,28 +63,54 @@
           When anyone enters this room, an alarm will sound,
           alerting the [goblins in 1. | room 1]
       Rendered::md .rightside @noid
-        Room 1::md
-          There's like 90d90 goblins.
+        ::comment
+          Use a raw node so that the nav doesn't see these.
+          Maybe we should add @nonav or something similar?
+        ::raw
+          <div>
+            <h4 id="room-1">Room 1</h4>
+            <p>
+              There's like 90d90 goblins.
+            </p>
+          </div>
+          <div>
+            <h4 id="room-2">Room 2</h4>
+            <p>
+              When anyone enters this room, an alarm will sound, alerting the
+              <a href="#room-1">goblins in 1</a>.
+            </p>
+          </div>
 
-        Room 2::md
-          When anyone enters this room, an alarm will sound, alerting the
-          [goblins in 1 | room 1].
+
   Attributes::md .node @id(attributes)
-    Nodes can have attributes, designated by the <code>@</code>.
-    Attributes are generally for the use of the author as they can be checked and accessed from [<code>:</code><code>:js</code> | js] nodes. Some attributes are instead uses to signal information to the compiler about how a node should be parsed or rendered.
+    Nodes can have attributes, designated by the <code>@</code>. Attributes are
+    generally for the use of the author as they can be checked and accessed from
+    [<code>:</code><code>:js</code> | js] nodes. Some attributes are instead uses
+    to signal information to the compiler about how a node should be parsed or
+    rendered.
+
     ::table
-      Attribute | Description
-      <code>@import</code> | Treat the lines of the node as filepaths to be imported and parsed, as children of this node.
-      <code>@comment</code> | Parse the node as if it were a comment node. This is useful for temporarily remove nodes from the document while editing.
-      <code>@noid</code> | Do not generate an id for this node.
-      <code>@hide</code> | Don't render the node in the html output. This is different from <code>@comment</code> as the node is still normally parsed and is available from js.
-      <code>@noinline</code> | [img] and [imglinks] nodes normally "inline" the image as a base64 string into the final document. This disables that behaviour for that node.
-      <code>@id</code> | This attribute takes an argument. This attribute overrides the normal generation of ids for this node and instead uses the argument as the id.
+      Attribute              | Description
+      <code>@import</code>   | Treat the lines of the node as filepaths to be
+                               imported and parsed, as children of this node.
+      <code>@comment</code>  | Parse the node as if it were a comment node. This
+                               is useful for temporarily remove nodes from the
+                               document while editing.
+      <code>@noid</code>     | Do not generate an id for this node.
+      <code>@hide</code>     | Don't render the node in the html output. This is
+                               different from <code>@comment</code> as the node
+                               is still normally parsed and is available from js.
+      <code>@noinline</code> | [img] and [imglinks] nodes normally "inline" the
+                               image as a base64 string into the final document.
+                               This disables that behaviour for that node.
+      <code>@id</code>       | This attribute takes an argument. This attribute
+                               overrides the normal generation of ids for this
+                               node and instead uses the argument as the id.
   <code>:</code><code>:md</code>::md .node @id(md)
     <code>md</code> nodes are inspired by markdown, while not exactly being the
-    same. <code>md</code> nodes accept any other nodes as children, as
-    well as 3 special forms for more convenient writing. Plain lines are treated
-    as paragraphs. Include a blank line between them to separate paragraphs. For
+    same. <code>md</code> nodes accept any other nodes as children, as well as 3
+    special forms for more convenient writing. Plain lines are treated as
+    paragraphs. Include a blank line between them to separate paragraphs. For
     example:
 
     ::div .side-by-side
@@ -172,6 +198,7 @@
         * Calico
         * Tortoise Shell
         * Black
+
     This node can't be used in untrusted input.
 
   <code>:</code><code>:js</code>::md .node @id(js)
@@ -194,6 +221,7 @@
       Rendered::md .rightside @noid
         Hello!!!::md @noid
           Hi there!
+
     This node can't be used in untrusted input.
 
   <code>:</code><code>:title</code>::md .node @id(title)
@@ -305,6 +333,7 @@
           });
       Rendered::md .rightside @noid
     This node can't be used in untrusted input.
+
   <code>:</code><code>:img</code>::md .node @id(img)
     The <code>:</code><code>:img</code> node is for adding an image to the
     document.
@@ -351,6 +380,7 @@
             button.textContent = 'You clicked!';
           }
     This node can't be used in untrusted input.
+
   <code>:</code><code>:pre</code>::md .node @id(pre)
     The <code>:</code><code>:pre</code> node is for pre-formatted text. It's like
     the <pre> tag in html.
@@ -547,8 +577,12 @@
         Strength::details @noid
           You add your strength to things like melee attacks or attempts to use
           raw brawn to overcome problems, like smashing open a door.
+
   <code>:</code><code>:meta</code>::md .node @id(meta)
-    The <code>:</code><code>:meta</code> node is parsed as a raw node. Each line is wrapped in a <meta> tag and placed verbatim into the <head> of the document. This allows you to set specific meta-attributes. Search online for what can be done with <meta> tags. This functionality is rarely needed.
+    The <code>:</code><code>:meta</code> node is parsed as a raw node. Each line
+    is wrapped in a <meta> tag and placed verbatim into the <head> of the
+    document. This allows you to set specific meta-attributes. Search online for
+    what can be done with <meta> tags. This functionality is rarely needed.
 
     This node can't be used in untrusted input.
 
@@ -562,15 +596,16 @@
     top: 0px;
   }
   .right {
+
     position: fixed;
     left: 10em;
     top: 0;
     overflow-y: scroll;
-    overflow-x: hidden;
+    width: calc(100% - 10em);
     height: 100%;
     padding-bottom: 40em;
   }
-  p {
+  .right ul, .right ol, .right p {
     max-width: 50em;
   }
   .side-by-side {
@@ -599,10 +634,16 @@
     max-width: 50em;
 
   }
+  .right * {
+    max-width: 100%;
+  }
   .node h2 {
     background-color: #eee;
     border-bottom: 1px solid black;
     width: 40em;
+  }
+  h1, h2, h3 {
+    width: 100%;
   }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
