@@ -191,7 +191,6 @@
             if(node.header)
               node.header += '!!!';
           }
-          //endjs
       Rendered::md .rightside @noid
         Hello!!!::md @noid
           Hi there!
@@ -266,14 +265,12 @@
           So angry!
         ::css
           .angry {color: red;}
-          /*endcss*/
       Rendered::md .rightside @noid
         I Am Angry!!::md .angry @noid
           So angry!
 
         ::css
           .angry {color: red;}
-          /*endcss*/
   <code>:</code><code>:links</code>::md .node @id(links)
     The <code>:</code><code>:links</code> node allows adding information on what
     links in the text should resolve to. Each line is parsed in the following
@@ -306,7 +303,6 @@
           document.addEventListener('DOMContentLoaded', function(){
             alert('Hello world');
           });
-          //endjs
       Rendered::md .rightside @noid
     This node can't be used in untrusted input.
   <code>:</code><code>:img</code>::md .node @id(img)
@@ -344,7 +340,6 @@
             let button = document.getElementById('clickme');
             button.textContent = 'You clicked!';
           }
-          //endjs
       Rendered::md .rightside @noid
         ::raw
           <button id="clickme" onclick="clicked()">
@@ -355,7 +350,6 @@
             let button = document.getElementById('clickme');
             button.textContent = 'You clicked!';
           }
-          //endjs
     This node can't be used in untrusted input.
   <code>:</code><code>:pre</code>::md .node @id(pre)
     The <code>:</code><code>:pre</code> node is for pre-formatted text. It's like
@@ -406,7 +400,6 @@
           .monster tr > td:nth-child(1)::after{
             content:":";
           }
-          /*endcss*/
       Rendered::md .rightside @noid
         Goblin::kv .monster @noid
           HP:  18
@@ -418,7 +411,6 @@
           .monster tr > td:nth-child(1)::after{
             content:":";
           }
-          /*endcss*/
     You could also add it back via javascript, but this feels more elegant.
 
   <code>:</code><code>:comment</code>::md .node @id(comment)
@@ -437,7 +429,6 @@
             const el = document.getElementById('add-me');
             el.add_child(document.createTextNode('Hello'));
           });
-          //endjs
       Rendered::md .rightside @noid
         ::comment
           This node is so the script tag has something to add
@@ -448,7 +439,6 @@
             const el = document.getElementById('add-me');
             el.appendChild(document.createTextNode('Hello'));
           });
-          //endjs
   <code>:</code><code>:imglinks</code>::md .node @id(imglinks)
     The <code>:</code><code>:imglinks</code> node is really awesome and is one of
     the reasons dnd files are really nice for writing up your dungeons. They have
@@ -519,7 +509,6 @@
           blockquote > div > *:before {
             content: "> ";
           }
-          /*endcss*/
       Rendered::md .rightside @noid
         ::quote
           ::md
@@ -529,7 +518,6 @@
           blockquote > div > *:before {
             content: "> ";
           }
-          /*endcss*/
   <code>:</code><code>:hr</code>::md .node @id(hr)
     The <code>:</code><code>:hr</code> inserts an <hr> element.
 
@@ -574,7 +562,6 @@
     top: 0px;
   }
   .right {
-    width: 65em;
     position: fixed;
     left: 10em;
     top: 0;
@@ -620,7 +607,6 @@
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
   }
-  /*endcss*/
 
 
 ::script
@@ -634,4 +620,3 @@
       });
     }
   });
-  //endjs
