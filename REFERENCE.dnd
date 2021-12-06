@@ -26,50 +26,60 @@
       - These attributes can be retrieved from javascript.
 
   Links::md .node @id(links-concept)
-  In almost any place that text can go, text including a link can go. Links look
-  like:
+    In almost any place that text can go, text including a link can go. Links look
+    like:
 
-  ::pre @noid
-    [link text]
-  This will indicate a link that resolved to an internal id of #link-text by
-  default. This behavior can be overriden in two ways. One way is with the
-  [links] node. This will override the default handling of links. The other way
-  is to put the override inline. It looks like this.
+    ::pre @noid
+      [link text]
+    This will indicate a link that resolved to an internal id of #link-text by
+    default. This behavior can be overriden in two ways. One way is with the
+    [links] node. This will override the default handling of links. The other way
+    is to put the override inline. It looks like this.
 
-  ::pre @noid
-    [link text | some-link]
-  The contents inside the square brackets are split by the pipe character,
-  <code>|</code>. The contents to the left is the text that will be rendered into
-  the document. The stuff to the right is where the link will go. This text is
-  used to look up what the link will resolve to. Therefore the following won't
-  work:
+    ::pre @noid
+      [link text | some-link]
+    The contents inside the square brackets are split by the pipe character,
+    <code>|</code>. The contents to the left is the text that will be rendered into
+    the document. The stuff to the right is where the link will go. This text is
+    used to look up what the link will resolve to. Therefore the following won't
+    work:
 
-  ::pre @noid
-    [This is a bad link | https://google.com]
-  What you would want to do instead is this:
+    ::pre @noid
+      [This is a bad link | https://google.com]
+    What you would want to do instead is this:
 
-  ::pre
-    [This is a good link | google]
-    ::links
-      google = https://google.com
-  This is an unusual use case. Usually you are referring to an internal anchor
-  which is what the syntax is optimized for. For example:
+    ::pre
+      [This is a good link | google]
+      ::links
+        google = https://google.com
+    This is an unusual use case. Usually you are referring to an internal anchor
+    which is what the syntax is optimized for. For example:
 
-  ::div .side-by-side
-    Input::pre .leftside @noid
-      Room 1::md
-        There's like 90d90 goblins.
-      Room 2::md
-        When anyone enters this room, an alarm will sound,
-        alerting the [goblins in 1. | room 1]
-    Rendered::md .rightside @noid
-      Room 1::md
-        There's like 90d90 goblins.
+    ::div .side-by-side
+      Input::pre .leftside @noid
+        Room 1::md
+          There's like 90d90 goblins.
+        Room 2::md
+          When anyone enters this room, an alarm will sound,
+          alerting the [goblins in 1. | room 1]
+      Rendered::md .rightside @noid
+        Room 1::md
+          There's like 90d90 goblins.
 
-      Room 2::md
-        When anyone enters this room, an alarm will sound, alerting the
-        [goblins in 1 | room 1].
-
+        Room 2::md
+          When anyone enters this room, an alarm will sound, alerting the
+          [goblins in 1 | room 1].
+  Attributes::md .node @id(attributes)
+    Nodes can have attributes, designated by the <code>@</code>.
+    Attributes are generally for the use of the author as they can be checked and accessed from [<code>:</code><code>:js</code> | js] nodes. Some attributes are instead uses to signal information to the compiler about how a node should be parsed or rendered.
+    ::table
+      Attribute | Description
+      <code>@import</code> | Treat the lines of the node as filepaths to be imported and parsed, as children of this node.
+      <code>@comment</code> | Parse the node as if it were a comment node. This is useful for temporarily remove nodes from the document while editing.
+      <code>@noid</code> | Do not generate an id for this node.
+      <code>@hide</code> | Don't render the node in the html output. This is different from <code>@comment</code> as the node is still normally parsed and is available from js.
+      <code>@noinline</code> | [img] and [imglinks] nodes normally "inline" the image as a base64 string into the final document. This disables that behaviour for that node.
+      <code>@id</code> | This attribute takes an argument. This attribute overrides the normal generation of ids for this node and instead uses the argument as the id.
   <code>:</code><code>:md</code>::md .node @id(md)
     <code>md</code> nodes are inspired by markdown, while not exactly being the
     same. <code>md</code> nodes accept any other nodes as children, as
@@ -130,7 +140,7 @@
     Note that the top level of the document is implicitly an <code>md</code>
     node.
 
-  <code>:</code><code>:div</code>::md .node
+  <code>:</code><code>:div</code>::md .node @id(div)
     The <code>div</code> node is useful for creating wrapper nodes. Plain lines
     within the div node are not parsed specially and are outputted as plain lines
     within the div element. This is useful if you specifically do not want
@@ -147,7 +157,7 @@
       Rendered::div .rightside @noid
         * This is not a list. - Still not a list. 1. Not a nested list. This is
         not a paragraph
-  <code>:</code><code>:import</code>::md .node
+  <code>:</code><code>:import</code>::md .node @id(import)
     <code>:</code><code>:import</code> nodes are used to reuse the contents of
     other <code>.dnd</code> files. Every line of an import is treated as a
     filepath of another <code>.dnd</code>. That file is loaded and parsed and the
@@ -162,8 +172,9 @@
         * Calico
         * Tortoise Shell
         * Black
+    This node can't be used in untrusted input.
 
-  <code>:</code><code>:js</code>::md .node
+  <code>:</code><code>:js</code>::md .node @id(js)
     <code>:</code><code>:js</code> nodes are used to script the document. See the
     [js documentation] for more information on what js nodes can do.
 
@@ -184,8 +195,9 @@
       Rendered::md .rightside @noid
         Hello!!!::md @noid
           Hi there!
+    This node can't be used in untrusted input.
 
-  <code>:</code><code>:title</code>::md .node
+  <code>:</code><code>:title</code>::md .node @id(title)
     The <code>:</code><code>:title</code> node is used to set the title of the
     document. The title node is also rendered as an <h1>. This node can have no
     children. The text before the double colon is all that is considered.
@@ -198,7 +210,7 @@
         ::raw
           <h1>My Document</h1>
           <p>This is my document</h1>
-  <code>:</code><code>:h</code>::md .node
+  <code>:</code><code>:h</code>::md .node @id(h)
     The <code>:</code><code>:h</code> creates a heading. Generally, a nested md
     block is more useful, but sometimes you want to avoid overly indented
     documents.
@@ -216,7 +228,7 @@
           Subheading::h @noid
           Blah Blah
 
-  <code>:</code><code>:table</code>::md .node
+  <code>:</code><code>:table</code>::md .node @id(table)
     The <code>:</code><code>:table</code> node is for tabless! Columns are
     separted by the pipe character: <code>|</code>. The first row is the table
     heading. The last column of each row is allowed to continue on the next line
@@ -243,7 +255,7 @@
           4  | Gambler, in an existential crisis
           5  | Ghost of christmas past.
           6  | Roll again twice
-  <code>:</code><code>:css</code>::md .node
+  <code>:</code><code>:css</code>::md .node @id(css)
     The <code>:</code><code>:css</code> node allows adding styling information to
     the final rendered document. The contents will be placed in a <style> tag in
     the resulting html.
@@ -280,7 +292,7 @@
 
         ::links
           krug's basement = https://krugsbasement.com
-  <code>:</code><code>:script</code>::md .node
+  <code>:</code><code>:script</code>::md .node @id(script)
     The <code>:</code><code>:script</code> node allows adding javascript that
     will be in the final output document. Don't confuse this with the
     <code>:</code><code>:js</code> node, which is used to script the document at
@@ -296,7 +308,8 @@
           });
           //endjs
       Rendered::md .rightside @noid
-  <code>:</code><code>:img</code>::md .node
+    This node can't be used in untrusted input.
+  <code>:</code><code>:img</code>::md .node @id(img)
     The <code>:</code><code>:img</code> node is for adding an image to the
     document.
 
@@ -314,7 +327,7 @@
           Roxie is a beautiful cat
         TODO
 
-  <code>:</code><code>:raw</code>::md .node
+  <code>:</code><code>:raw</code>::md .node @id(raw)
     The <code>:</code><code>:raw</code> node allows adding unescaped content into
     the document, without being parsed specially in any way. Double colons don't
     introduce nodes, tags won't be escaped, etc. This allows you to add content
@@ -343,7 +356,8 @@
             button.textContent = 'You clicked!';
           }
           //endjs
-  <code>:</code><code>:pre</code>::md .node
+    This node can't be used in untrusted input.
+  <code>:</code><code>:pre</code>::md .node @id(pre)
     The <code>:</code><code>:pre</code> node is for pre-formatted text. It's like
     the <pre> tag in html.
 
@@ -357,7 +371,7 @@
         * This is some preformatted text.
         * These are parsed as-is.
         <tags> are still escaped though.
-  <code>:</code><code>:kv</code>::md .node
+  <code>:</code><code>:kv</code>::md .node @id(kv)
     The <code>:</code><code>:kv</code> node allows for a display of key-value
     data. It is rendered as a two column table and is typically used for things
     like monster statistics. You can programmatically access the values as well.
@@ -407,7 +421,7 @@
           /*endcss*/
     You could also add it back via javascript, but this feels more elegant.
 
-  <code>:</code><code>:comment</code>::md .node
+  <code>:</code><code>:comment</code>::md .node @id(comment)
     The <code>:</code><code>:comment</code> node is for describing potentially
     confusing sections of your document to editors of your document. It is not
     rendered in the final html.
@@ -435,7 +449,7 @@
             el.appendChild(document.createTextNode('Hello'));
           });
           //endjs
-  <code>:</code><code>:imglinks</code>::md .node
+  <code>:</code><code>:imglinks</code>::md .node @id(imglinks)
     The <code>:</code><code>:imglinks</code> node is really awesome and is one of
     the reasons dnd files are really nice for writing up your dungeons. They have
     a very specific syntax.
@@ -470,7 +484,7 @@
       Rendered::md .rightside @noid
         TODO
 
-  <code>:</code><code>:nav</code>::md .node
+  <code>:</code><code>:nav</code>::md .node @id(nav)
     The <code>:</code><code>:nav</code> node is a special kind of node. It
     renders into effectively a table of contents of the document, grabbing all
     h2s and h3s and putting them into an unordered list.
@@ -480,7 +494,7 @@
         ::nav
       Rendered::md .rightside @noid
         ::nav
-  <code>:</code><code>:data</code>::md .node
+  <code>:</code><code>:data</code>::md .node @id(data)
     The <code>:</code><code>:data</code> node is for storing nodes that should be
     rendered to html, but not immediately included in the document. They are
     instead store in the data blob.
@@ -492,7 +506,7 @@
 
     There is no example for this node as it doesn't render into anything.
 
-  <code>:</code><code>:quote</code>::md .node
+  <code>:</code><code>:quote</code>::md .node @id(quote)
     The <code>:</code><code>:quote</code> node is for block quotes. It's like a
     div, but wraps in a <blockquote> instead of a div.
 
@@ -516,7 +530,7 @@
             content: "> ";
           }
           /*endcss*/
-  <code>:</code><code>:hr</code>::md .node
+  <code>:</code><code>:hr</code>::md .node @id(hr)
     The <code>:</code><code>:hr</code> inserts an <hr> element.
 
     ::div .side-by-side
@@ -530,7 +544,7 @@
         ::hr
         Goodbye.
 
-  <code>:</code><code>:details</code>::md .node
+  <code>:</code><code>:details</code>::md .node @id(details)
     The <code>:</code><code>:details</code> node is parsed like a <code>md</code>
     node, but the final output will be in a <details> tag. The header will be put
     in the summary instead of as a heading.
@@ -586,12 +600,16 @@
   pre {
     width: 44em;
   }
-  table * {
+  td, th  {
     border: 1px solid black;
-    padding: 0 8px;
+    padding: 2px 8px;
+  }
+  th {
+    padding: 8px;
   }
   table {
     border-collapse: collapse;
+    max-width: 50em;
 
   }
   .node h2 {
