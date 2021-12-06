@@ -664,6 +664,7 @@ DNDC_USE_DND_URL_SCHEME = 0x20000,
 // as a single file .dnd file instead of html.
 DNDC_OUTPUT_EXPANDED_DND = 0x40000,
 
+// Flags currently uses 19 bits, 3 of those are unused.
 };
 
 #ifdef __cplusplus
