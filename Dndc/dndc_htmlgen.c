@@ -77,9 +77,33 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             "<!DOCTYPE html>\n"
             "<html lang=\"en\">\n"
             "<head>\n"
+            // We only support UTF-8
             "<meta charset=\"UTF-8\">\n"
+            // This is just forced on everyone, idk if that is
+            // desirable. It is certainly convenient this way.
+            // Could add a flag to suppress this, but that is
+            // kind of expensive for just a flag.
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=yes\">\n"
         );
+        if(!(ctx->flags & DNDC_INPUT_IS_UNTRUSTED)){
+            MARRAY_FOR_EACH(m, ctx->meta_nodes){
+                Node* mn = get_node(ctx, *m);
+                if(mn->type != NODE_META) continue;
+                NODE_CHILDREN_FOR_EACH(s, mn){
+                    Node* ch = get_node(ctx, *s);
+                    if(ch->type != NODE_STRING)
+                        continue;
+                    StringView content = stripped_view(ch->header.text, ch->header.length);
+                    if(!content.length) continue;
+                    MSB_FORMAT(msb, SV("<meta "), ch->header, SV(">\n"));
+                }
+            }
+        }
+        else {
+            if(ctx->meta_nodes.count){
+                node_print_warning(ctx, get_node(ctx, ctx->meta_nodes.data[0]), SV("Meta nodes are not allowed for untrusted input. Ignoring meta nodes."));
+            }
+        }
     }
     if(ctx->rendered_data.count){
         msb_write_literal(msb, "<script>\nconst data_blob = {");
@@ -261,6 +285,7 @@ build_nav_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
         case NODE_KEYVALUEPAIR:{
             build_nav_block_children(ctx, handle, sb, depth);
         }break;
+        case NODE_META:
         case NODE_TITLE: // skip title as everything would be a child of it
         case NODE_TABLE_ROW:
         case NODE_STYLESHEETS:
@@ -1418,6 +1443,13 @@ RENDERFUNC(DETAILS){
         if(e.errored) return e;
     }
     msb_write_literal(sb, "</div>\n</details>\n");
+    return (Errorable(void)){0};
+}
+RENDERFUNC(META){
+    (void)ctx;
+    (void)sb;
+    (void)node;
+    (void)header_depth;
     return (Errorable(void)){0};
 }
 #undef RENDERFUNC

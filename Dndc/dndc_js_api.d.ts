@@ -722,4 +722,5 @@ export const NodeType = {
     JS:           number;
     DETAILS:      number;
     INVALID:      number;
+    META:         number;
 };

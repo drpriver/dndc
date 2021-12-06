@@ -225,6 +225,7 @@ typedef struct DndcContext {
         Marray(NodeHandle) link_nodes;
         Marray(NodeHandle) script_nodes;
         Marray(NodeHandle) data_nodes;
+        Marray(NodeHandle) meta_nodes;
         // NOTE: we only grab these during parsing right now,
         // we don't add to them from user scripts.
         // These are used for speculatively pre-loading images.

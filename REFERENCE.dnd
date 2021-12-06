@@ -545,6 +545,10 @@
         Strength::details @noid
           You add your strength to things like melee attacks or attempts to use
           raw brawn to overcome problems, like smashing open a door.
+  <code>:</code><code>:meta</code>::md .node @id(meta)
+    The <code>:</code><code>:meta</code> node is parsed as a raw node. Each line is wrapped in a <meta> tag and placed verbatim into the <head> of the document. This allows you to set specific meta-attributes. Search online for what can be done with <meta> tags. This functionality is rarely needed.
+
+    This node can't be used in untrusted input.
 
 ::css
   * {

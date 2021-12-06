@@ -515,6 +515,7 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:
             break;
+        case NODE_META:
         case NODE_RAW:
         case NODE_PRE:
         case NODE_JS:

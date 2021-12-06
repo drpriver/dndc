@@ -101,6 +101,7 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
         case NODE_PARA:
             node_set_err_q(ctx, n, SV("Node escaped to top level: "), NODETYPE_TO_NODE_ALIASES[n->type]);
             Raise(PARSE_ERROR);
+        case NODE_META:
         case NODE_DETAILS:
         case NODE_MD:
         case NODE_DIV:
@@ -201,6 +202,7 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
         case NODE_IMAGE:
         case NODE_LINKS:
         case NODE_DIV:
+        case NODE_META:
             NODE_CHILDREN_FOR_EACH(ch, n){
                 Node* child = get_node(ctx, *ch);
                 result = expand_node(ctx, child, indent, msb);

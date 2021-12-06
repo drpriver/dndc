@@ -32,7 +32,8 @@
     apply(HR,             26)\
     apply(JS,             27)\
     apply(DETAILS,        28)\
-    apply(INVALID,        29)\
+    apply(META,           29)\
+    apply(INVALID,        30)\
 
 typedef enum NodeType {
     #define X(a, b) NODE_##a = b,
@@ -78,6 +79,7 @@ struct {
     {SV("quote"),        NODE_QUOTE},
     {SV("hr"),           NODE_HR},
     {SV("details"),      NODE_DETAILS},
+    {SV("meta"),         NODE_META},
 };
 
 enum {RAW_NODE_JS_INDEX = 5 };
@@ -90,6 +92,7 @@ StringView RAW_NODES[] = {
     SV("css"),
     [RAW_NODE_SCRIPT_INDEX] = SV("script"),
     [RAW_NODE_JS_INDEX] = SV("js"),
+    SV("meta"),
 };
 static const
 StringViewUtf16 RAW_NODES_UTF16[] = {
@@ -99,33 +102,35 @@ StringViewUtf16 RAW_NODES_UTF16[] = {
     SV16("css"),
     [RAW_NODE_SCRIPT_INDEX] = SV16("script"),
     [RAW_NODE_JS_INDEX] = SV16("js"),
+    SV16("meta"),
 };
 
 static const
 StringView
 NODETYPE_TO_NODE_ALIASES[NODE_INVALID+1] = {
-     [NODE_MD]           = SV("md"),
-     [NODE_DIV]          = SV("div"),
-     [NODE_IMPORT]       = SV("import"),
-     [NODE_TITLE]        = SV("title"),
-     [NODE_HEADING]      = SV("h"),
-     [NODE_TABLE]        = SV("table"),
-     [NODE_STYLESHEETS]  = SV("css"),
-     [NODE_LINKS]        = SV("links"),
-     [NODE_SCRIPTS]      = SV("script"),
-     [NODE_IMAGE]        = SV("img"),
-     [NODE_BULLETS]      = SV("bullets"),
-     [NODE_RAW]          = SV("raw"),
-     [NODE_PRE]          = SV("pre"),
-     [NODE_KEYVALUE]     = SV("kv"),
-     [NODE_COMMENT]      = SV("comment"),
-     [NODE_IMGLINKS]     = SV("imglinks"),
-     [NODE_NAV]          = SV("nav"),
-     [NODE_DATA]         = SV("data"),
-     [NODE_QUOTE]        = SV("quote"),
-     [NODE_HR]           = SV("hr"),
-     [NODE_JS]           = SV("js"),
-     [NODE_DETAILS]      = SV("details"),
+     [NODE_MD]          = SV("md"),
+     [NODE_DIV]         = SV("div"),
+     [NODE_IMPORT]      = SV("import"),
+     [NODE_TITLE]       = SV("title"),
+     [NODE_HEADING]     = SV("h"),
+     [NODE_TABLE]       = SV("table"),
+     [NODE_STYLESHEETS] = SV("css"),
+     [NODE_LINKS]       = SV("links"),
+     [NODE_SCRIPTS]     = SV("script"),
+     [NODE_IMAGE]       = SV("img"),
+     [NODE_BULLETS]     = SV("bullets"),
+     [NODE_RAW]         = SV("raw"),
+     [NODE_PRE]         = SV("pre"),
+     [NODE_KEYVALUE]    = SV("kv"),
+     [NODE_COMMENT]     = SV("comment"),
+     [NODE_IMGLINKS]    = SV("imglinks"),
+     [NODE_NAV]         = SV("nav"),
+     [NODE_DATA]        = SV("data"),
+     [NODE_QUOTE]       = SV("quote"),
+     [NODE_HR]          = SV("hr"),
+     [NODE_JS]          = SV("js"),
+     [NODE_DETAILS]     = SV("details"),
+     [NODE_META]        = SV("meta"),
 };
 
 #endif

@@ -491,6 +491,9 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                     case NODE_DATA:
                         Marray_push(NodeHandle)(&ctx->data_nodes, ctx->allocator, node_handle);
                         break;
+                    case NODE_META:
+                        Marray_push(NodeHandle)(&ctx->meta_nodes, ctx->allocator, node_handle);
+                        break;
                     case NODE_IMAGE:
                         Marray_push(NodeHandle)(&ctx->img_nodes, ctx->allocator, node_handle);
                         break;
@@ -612,6 +615,7 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
     if(flags & PARSEDNODE_IS_IMPORT)
         goto regular_string_parsing;
     switch(parent_type){
+        case NODE_META:
         case NODE_PRE:
         case NODE_RAW:
         case NODE_JS:
