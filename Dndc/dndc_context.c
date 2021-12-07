@@ -411,25 +411,25 @@ add_link_from_sv(DndcContext* ctx, Node* node){
     const char* equals = memchr(str.text, '=', str.length);
     if(!equals){
         node_print_err(ctx, node, LS("no '=' in a link node"));
-        Raise(PARSE_ERROR);
+        return (Errorable(void)){PARSE_ERROR};
     }
     MStringBuilder sb = {.allocator=ctx->string_allocator};
     msb_write_kebab(&sb, str.text, equals - str.text);
     if(!sb.cursor){
         node_print_err(ctx, node, LS("key is empty."));
-        Raise(PARSE_ERROR);
+        return (Errorable(void)){PARSE_ERROR};
     }
     StringView key = msb_detach_sv(&sb);
     StringView value = stripped_view(equals + 1, (str.text+str.length)-(equals+1));
     if(!value.length){
         node_print_err(ctx, node, LS("link target is empty."));
-        Raise(PARSE_ERROR);
+        return (Errorable(void)){PARSE_ERROR};
     }
     if(value.text[0] == '#'){
         StringView target = {.text = value.text+1, .length = value.length-1};
         if(!target.length){
             node_print_err(ctx, node, LS("link target is empty after the '#'"));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         // TODO: keep a binary tree or something?
         MARRAY_FOR_EACH(LinkItem, li, ctx->links){
@@ -437,7 +437,7 @@ add_link_from_sv(DndcContext* ctx, Node* node){
                 goto foundit;
         }
         node_print_err(ctx, node, LS("Anchor does not correspond to any link"));
-        Raise(PARSE_ERROR);
+        return (Errorable(void)){PARSE_ERROR};
         foundit:;
     }
     LinkItem* li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);

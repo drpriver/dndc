@@ -57,7 +57,7 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
     Errorable(void) result = {0};
     int fd = open(filename, O_RDONLY);
     if(fd < 0)
-        Raise(FILE_NOT_OPENED);
+        return (Errorable(void)){FILE_NOT_OPENED};
     FileSizeResult size_e = file_size_from_fd(fd);
     if(size_e.errored){
         result.errored = FILE_ERROR;
@@ -95,9 +95,8 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
             NULL
             );
     PopDiagnostic();
-    if(handle == INVALID_HANDLE_VALUE){
-        Raise(FILE_NOT_OPENED);
-    }
+    if(handle == INVALID_HANDLE_VALUE)
+        return (Errorable(void)){FILE_NOT_OPENED};
     LARGE_INTEGER size;
     BOOL size_success = GetFileSizeEx(handle, &size);
     if(!size_success){
@@ -143,8 +142,10 @@ read_and_base64_bin_file(ByteBuilder* bb, const Allocator a, const char* filepat
     Errorable(LongString) result = {0};
     assert(bb->cursor == 0);
     Errorable(void) e = bb_read_bin_file(bb, filepath);
-    if(e.errored)
-        Raise(e.errored);
+    if(e.errored){
+        result.errored = e.errored;
+        return result;
+    }
     ByteBuffer buff = bb_borrow(bb);
     MStringBuilder sb = {.allocator=a};
     msb_write_b64(&sb, buff.buff, buff.n_bytes);

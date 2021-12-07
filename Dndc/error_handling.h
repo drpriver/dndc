@@ -50,7 +50,7 @@ enum {
 #define X(x, v) [x] = #x,
 static const char* const ERROR_NAMES[] = {
     ERROR_CODES(X)
-    };
+};
 #undef X
 #undef ERROR_CODES
 
@@ -67,12 +67,5 @@ static const char* const ERROR_NAMES[] = {
 struct Errorable_impl(void) {
     uint8_t errored;
 };
-
-//
-// Assumes there is an Errorable named result in the local scope.
-// Sets the errored field to the given value and then returns result.
-// Saves a bit of repetition.
-//
-#define Raise(error_value) do{result.errored = error_value; return result;}while(0)
 
 #endif

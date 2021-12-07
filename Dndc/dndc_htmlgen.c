@@ -371,7 +371,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                 const char* closing_brace = memchr(text+i, ']', length-i);
                 if(unlikely(!closing_brace)){
                     node_set_err_offset(ctx, node, i, LS("Unterminated '['"));
-                    Raise(PARSE_ERROR);
+                    return (Errorable(void)){PARSE_ERROR};
                 }
                 const size_t link_length = closing_brace - (text+i);
                 size_t text_length = link_length-1;
@@ -399,7 +399,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                         else {
                             node_set_err_q(ctx, node, SV("Unable to resolve link: "), temp_str);
                             msb_destroy(&temp);
-                            Raise(PARSE_ERROR);
+                            return (Errorable(void)){PARSE_ERROR};
                         }
                     }
                     else {
@@ -924,7 +924,7 @@ RENDERFUNC(IMAGE){
     size_t count = node_children_count(node);
     if(!count){
         node_set_err(ctx, node, LS("Image node missing any children (first should be a string that is path to the image"));
-        Raise(PARSE_ERROR);
+        return (Errorable(void)){PARSE_ERROR};
     }
     NodeHandle* children = node_children(node);
     // CLEANUP: lots of copy and paste here.
@@ -932,7 +932,7 @@ RENDERFUNC(IMAGE){
         Node* imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image."));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         StringView header = imgpath_node->header;
         msb_write_literal(sb, "<img src=\"dnd://");
@@ -950,7 +950,7 @@ RENDERFUNC(IMAGE){
         Node* imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image."));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         StringView header = imgpath_node->header;
         msb_write_literal(sb, "<img src=\"");
@@ -961,13 +961,13 @@ RENDERFUNC(IMAGE){
         Node* imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image."));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         StringView header = imgpath_node->header;
         Errorable(StringView) processed_e = ctx_load_processed_binary_file(ctx, header);
         if(processed_e.errored){
             node_set_err_q(ctx, imgpath_node, SV("Unable to read "), header);
-            Raise(processed_e.errored);
+            return (Errorable(void)){processed_e.errored};
         }
         else {
             msb_write_literal(sb, "<img src=\"data:image/png;base64,");
@@ -1141,7 +1141,6 @@ RENDERFUNC(KEYVALUEPAIR){
 }
 RENDERFUNC(IMGLINKS){
     Node* node = get_node(ctx, handle);
-    Errorable(void) result = {0};
     msb_write_literal(sb, "<div");
     write_classes(sb, node);
     msb_write_literal(sb, ">\n");
@@ -1152,7 +1151,7 @@ RENDERFUNC(IMGLINKS){
     }
     if(node_children_count(node) < 4){
         node_set_err(ctx, node, LS("Too few children of an imglinks node (expected path to the image, width, height, viewBox in that order)"));
-        Raise(PARSE_ERROR);
+        return (Errorable(void)){PARSE_ERROR};
     }
 
     // FIXME: It's kind of janky that I parse at htmlgen time.
@@ -1162,13 +1161,13 @@ RENDERFUNC(IMGLINKS){
         Node* imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         StringView header = imgpath_node->header;
         Errorable(StringView) processed_e = ctx_load_processed_binary_file(ctx, header);
         if(processed_e.errored){
             node_set_err_q(ctx, imgpath_node, SV("Unable to read "), header);
-            Raise(processed_e.errored);
+            return (Errorable(void)){processed_e.errored};
         }
         imgdatab64 = processed_e.result;
     }
@@ -1177,22 +1176,22 @@ RENDERFUNC(IMGLINKS){
         Node* width_node = get_node(ctx, children[1]);
         if(width_node->type != NODE_STRING){
             node_set_err(ctx, width_node, LS("Second should be a string and be 'width = WIDTH'"));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         StringView header = width_node->header;
         SplitPair pair = stripped_split(header.text, header.length, '=');
         if(pair.head.length == header.length){
             node_set_err(ctx, width_node, LS("Missing a '='"));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         if(!SV_equals(pair.head, SV("width"))){
             node_set_err_q(ctx, width_node, SV("Expected 'width', got "), pair.head);
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         IntResult e = parse_int(pair.tail.text, pair.tail.length);
         if(e.errored){
             node_set_err_q(ctx, width_node, SV("Unable to parse an int from "), pair.tail);
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         width = e.result;
     }
@@ -1201,22 +1200,22 @@ RENDERFUNC(IMGLINKS){
         Node* height_node  = get_node(ctx, children[2]);
         if(height_node->type != NODE_STRING){
             node_set_err(ctx, height_node, LS("Third should be a string and be 'height = HEIGHT'"));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         StringView header = height_node->header;
         SplitPair pair = stripped_split(header.text, header.length, '=');
         if(pair.head.length == header.length){
             node_set_err(ctx, height_node, LS("Missing a '='"));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         if(!SV_equals(pair.head, SV("height"))){
             node_set_err_q(ctx, height_node, SV("Expected 'height', got "), pair.head);
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         IntResult e = parse_int(pair.tail.text, pair.tail.length);
         if(e.errored){
             node_set_err_q(ctx, height_node, SV("Unable to parse an int from "), pair.tail);
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         height = e.result;
     }
@@ -1225,18 +1224,18 @@ RENDERFUNC(IMGLINKS){
         Node* viewBox_node = get_node(ctx, children[3]);
         if(viewBox_node->type != NODE_STRING){
             node_set_err(ctx, viewBox_node, LS("Fourth should be a string and be 'viewBox = x0 y0 x1 y1'"));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         StringView header = viewBox_node->header;
         const char* equals = memchr(header.text, '=', header.length);
         if(!equals){
             node_set_err(ctx, viewBox_node, LS("Missing a '='"));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         StringView lead = stripped_view(header.text, equals - header.text);
         if(!SV_equals(lead, SV("viewBox"))){
             node_set_err_q(ctx, viewBox_node, SV("Expected 'viewBox', got "), lead);
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         const char* cursor = equals+1;
         int which = 0;
@@ -1244,7 +1243,7 @@ RENDERFUNC(IMGLINKS){
         for(;;){
             if(cursor == end){
                 node_set_err(ctx, viewBox_node, LS("Unexpected end of line before we finished parsing the ints"));
-                Raise(PARSE_ERROR);
+                return (Errorable(void)){PARSE_ERROR};
             }
             switch(*cursor){
                 case ' ': case '\t': case '\r': case '\n':
@@ -1254,7 +1253,7 @@ RENDERFUNC(IMGLINKS){
                     break;
                 default:
                     node_set_err(ctx, viewBox_node, LS("Found non-numeric when trying to parse the viewBox"));
-                    Raise(PARSE_ERROR);
+                    return (Errorable(void)){PARSE_ERROR};
             }
             const char* after_number = cursor+1;
             for(;;){
@@ -1273,7 +1272,7 @@ RENDERFUNC(IMGLINKS){
             IntResult e = parse_int(cursor, num_length);
             if(e.errored){
                 node_set_err_q(ctx, viewBox_node, SV("Failed to parse an int from "), (StringView){.length=num_length, .text=cursor});
-                Raise(PARSE_ERROR);
+                return (Errorable(void)){PARSE_ERROR};
             }
             viewbox[which++] = e.result;
             cursor = after_number;
@@ -1289,7 +1288,7 @@ RENDERFUNC(IMGLINKS){
                     continue;
                 default:
                     node_set_err_q(ctx, viewBox_node, SV("Found trailing text after successfully parsing 4 ints: "), (StringView){.text=cursor, .length = end-cursor});
-                    Raise(PARSE_ERROR);
+                    return (Errorable(void)){PARSE_ERROR};
             }
         }
     }
@@ -1300,7 +1299,7 @@ RENDERFUNC(IMGLINKS){
         Node* imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         StringView header = imgpath_node->header;
         if((not path_is_abspath(header)) and ctx->base_directory.length){
@@ -1318,7 +1317,7 @@ RENDERFUNC(IMGLINKS){
         Node* imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         StringView header = imgpath_node->header;
         msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
@@ -1346,17 +1345,17 @@ RENDERFUNC(IMGLINKS){
         const char* equals = memchr(header.text, '=', header.length);
         if(!equals){
             node_set_err(ctx, child, LS("No '=' found in an imglinks line"));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         const char* at = memchr(equals, '@', end - equals);
         if(!at){
             node_set_err(ctx, child, LS("No '@' found in an imglinks line"));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         const char* comma = memchr(at, ',', end - at);
         if(!comma){
             node_set_err(ctx, child, LS("No ',' found in an imglinks line separating the coordinates"));
-            Raise(PARSE_ERROR);
+            return (Errorable(void)){PARSE_ERROR};
         }
         StringView first = stripped_view(header.text, equals - header.text);
         StringView second = stripped_view(equals+1, at - (equals + 1));
@@ -1365,13 +1364,13 @@ RENDERFUNC(IMGLINKS){
         IntResult x_err = parse_int(third.text, third.length);
         if(x_err.errored){
             node_set_err_q(ctx, child, SV("Unable to parse an int from "), third);
-            Raise(x_err.errored);
+            return (Errorable(void)){x_err.errored};
         }
         int x = x_err.result;
         IntResult y_err = parse_int(fourth.text, fourth.length);
         if(y_err.errored){
             node_set_err_q(ctx, child, SV("Unable to parse an int from "), fourth);
-            Raise(y_err.errored);
+            return (Errorable(void)){y_err.errored};
         }
         int y = y_err.result;
         MSB_FORMAT(sb, "<a href=\"", second, "\"><text style=\"text-anchor:middle;\" transform=\"translate(",x,",",y,")\">\n",

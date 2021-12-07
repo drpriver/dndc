@@ -123,7 +123,7 @@ read_file(const char* filepath, Allocator a){
     TextFileResult result = {0};
     FILE* fp = fopen(filepath, "rb");
     if(not fp)
-        Raise(FILE_NOT_OPENED);
+        return (TextFileResult){.errored=FILE_NOT_OPENED};
     FileSizeResult size_e = file_size_from_fp(fp);
     if(size_e.errored){
         fclose(fp);
@@ -157,7 +157,7 @@ read_bin_file(const char* filepath, Allocator a){
     BinaryFileResult result = {0};
     FILE* fp = fopen(filepath, "rb");
     if(not fp)
-        Raise(FILE_NOT_OPENED);
+        return (BinaryFileResult){.errored=FILE_NOT_OPENED};
     FileSizeResult size_e = file_size_from_fp(fp);
     if(size_e.errored){
         result.errored = size_e.errored;
