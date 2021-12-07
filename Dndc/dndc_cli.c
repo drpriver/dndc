@@ -563,10 +563,10 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
         case NODE_HR:
         case NODE_DIV:{
             printf(" '%.*s' ", (int)node->header.length, node->header.text);
-            RARRAY_FOR_EACH(c, node->classes){
+            RARRAY_FOR_EACH(StringView, c, node->classes){
                 printf(".%.*s ", (int)c->length, c->text);
             }
-            RARRAY_FOR_EACH(a, node->attributes){
+            RARRAY_FOR_EACH(Attribute, a, node->attributes){
                 printf("@%.*s", (int)a->key.length, a->key.text);
                 if(a->value.length)
                     printf("(%.*s) ", (int)a->value.length, a->value.text);

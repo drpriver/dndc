@@ -28,7 +28,7 @@ node_has_attribute(const Node* node, StringView attr){
     // In using this program, I don't think I've ever exceeded 2 attributes.
     if(!node->attributes)
         return false;
-    RARRAY_FOR_EACH(a, node->attributes){
+    RARRAY_FOR_EACH(Attribute, a, node->attributes){
         if(SV_equals(a->key, attr))
             return true;
     }
@@ -40,7 +40,7 @@ bool
 node_has_class(const Node* node, StringView c){
     if(!node->classes)
         return false;
-    RARRAY_FOR_EACH(cls, node->classes){
+    RARRAY_FOR_EACH(StringView, cls, node->classes){
         if(SV_equals(*cls, c))
             return true;
     }
@@ -54,7 +54,7 @@ node_get_attribute(const Node* node, StringView attr){
     // In using this program, I don't think I've ever exceeded 2 attributes.
     if(!node->attributes)
         return NULL;
-    RARRAY_FOR_EACH(a, node->attributes){
+    RARRAY_FOR_EACH(Attribute, a, node->attributes){
         if(SV_equals(a->key, attr))
             return &a->value;
     }
@@ -64,7 +64,7 @@ node_get_attribute(const Node* node, StringView attr){
 static inline
 void
 node_set_attribute(Node* node, Allocator allocator, StringView attr, StringView value){
-    RARRAY_FOR_EACH(a, node->attributes){
+    RARRAY_FOR_EACH(Attribute, a, node->attributes){
         if(SV_equals(a->key, attr)){
             a->value = value;
             return;
@@ -120,10 +120,10 @@ node_clone(DndcContext* ctx, NodeHandle handle){
     else {
         Marray_extend(NodeHandle)(&dstnode->children, ctx->allocator, node_children(srcnode), node_children_count(srcnode));
     }
-    RARRAY_FOR_EACH(at, srcnode->attributes){
+    RARRAY_FOR_EACH(Attribute, at, srcnode->attributes){
         dstnode->attributes = Rarray_push(Attribute)(dstnode->attributes, ctx->allocator, *at);
     }
-    RARRAY_FOR_EACH(cls, srcnode->classes){
+    RARRAY_FOR_EACH(StringView, cls, srcnode->classes){
         dstnode->classes = Rarray_push(StringView)(dstnode->classes, ctx->allocator, *cls);
     }
     dstnode->filename_idx = srcnode->filename_idx;

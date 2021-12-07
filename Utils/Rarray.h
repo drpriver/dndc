@@ -22,9 +22,8 @@
 // case where it is NULL. Note that `rarray` should be an RARRAY* and that
 // `rarray` is evaluated multiple times.
 //
-#define RARRAY_FOR_EACH(iter, rarray) \
-for(typeof((rarray)->data[0]) \
-      *iter=((rarray)?(rarray)->data:NULL), \
+#define RARRAY_FOR_EACH(type, iter, rarray) \
+for(type *iter=((rarray)?(rarray)->data:NULL), \
       *iter##end__=((rarray)?(rarray)->data+(rarray)->count:NULL); \
     iter!=iter##end__;\
     ++iter)

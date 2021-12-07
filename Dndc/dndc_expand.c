@@ -56,13 +56,13 @@ write_generic_header(Node* n, int indent, MStringBuilder*msb){
         msb_write_str(msb, n->header.text, n->header.length);
     const StringView* hd = &NODETYPE_TO_NODE_ALIASES[n->type];
     MSB_FORMAT(msb, "::", *hd);
-    RARRAY_FOR_EACH(at, n->attributes){
+    RARRAY_FOR_EACH(Attribute, at, n->attributes){
         MSB_FORMAT(msb, " @", at->key);
         if(at->value.length){
             MSB_FORMAT(msb, "(", at->value, ")");
             }
         }
-    RARRAY_FOR_EACH(cls, n->classes){
+    RARRAY_FOR_EACH(StringView, cls, n->classes){
         MSB_FORMAT(msb, " .", *cls);
         }
     msb_write_char(msb, '\n');

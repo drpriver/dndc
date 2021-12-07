@@ -1352,7 +1352,7 @@ js_dndc_node_to_string(QJSContext* jsctx, QJSValueConst thisValue, int argc, QJS
     Node* node = get_node(ctx, handle);
     MStringBuilder msb = {.allocator=ctx->temp_allocator};
     MSB_FORMAT(&msb, "Node(", NODENAMES[node->type].text);
-    RARRAY_FOR_EACH(class, node->classes){
+    RARRAY_FOR_EACH(StringView, class, node->classes){
         MSB_FORMAT(&msb, ".", *class);
     }
     if(node->flags & NODEFLAG_HIDE)
@@ -1408,7 +1408,7 @@ JSGETTER(js_dndc_node_get_classes){
     assert(ctx);
     Node* node = get_node(ctx, handle);
     uint32_t i = 0;
-    RARRAY_FOR_EACH(c, node->classes){
+    RARRAY_FOR_EACH(StringView, c, node->classes){
         JS_DefinePropertyValueUint32(jsctx, obj, i, JS_NewStringLen(jsctx, c->text, c->length), JS_PROP_ENUMERABLE);
         i++;
     }
@@ -2020,7 +2020,7 @@ JSMETHOD(js_dndc_attributes_to_string){
     Node* node = get_node(ctx, handle);
     MStringBuilder msb = {.allocator = ctx->temp_allocator};
     msb_write_literal(&msb, "{ ");
-    RARRAY_FOR_EACH(kv, node->attributes){
+    RARRAY_FOR_EACH(Attribute, kv, node->attributes){
         MSB_FORMAT(&msb, "\n  ", kv->key, ": \"", kv->value, "\",");
     }
     msb_erase(&msb, 1);
@@ -2044,7 +2044,7 @@ JSMETHOD(js_dndc_attributes_entries){
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
     Node* node = get_node(ctx, handle);
     QJSValue result = JS_NewArray(jsctx);
-    RARRAY_FOR_EACH(kv, node->attributes){
+    RARRAY_FOR_EACH(Attribute, kv, node->attributes){
         QJSValue pair = JS_NewArray(jsctx);
         QJSValue js_kv[2] = {
             JS_NewStringLen(jsctx, kv->key.text, kv->key.length),
@@ -2100,7 +2100,7 @@ JSMETHOD(js_dndc_classlist_to_string){
     Node* node = get_node(ctx, handle);
     MStringBuilder msb = {.allocator = ctx->temp_allocator};
     msb_write_char(&msb, '[');
-    RARRAY_FOR_EACH(c, node->classes){
+    RARRAY_FOR_EACH(StringView, c, node->classes){
         MSB_FORMAT(&msb, "\"", *c, "\", ");
     }
     if(msb.cursor != 1)
@@ -2124,7 +2124,7 @@ JSMETHOD(js_dndc_classlist_values){
     Node* node = get_node(ctx, handle);
     QJSValue array = JS_NewArray(jsctx);
     unsigned i = 0;
-    RARRAY_FOR_EACH(c, node->classes){
+    RARRAY_FOR_EACH(StringView, c, node->classes){
         JS_SetPropertyUint32(jsctx, array, i, JS_NewStringLen(jsctx, c->text, c->length));
         i++;
     }

@@ -211,11 +211,11 @@ format_header(MStringBuilder* sb, Node* node, int indent){
     // we fucked up if this is 0
     assert(alias->length);
     msb_write_str(sb, alias->text, alias->length);
-    RARRAY_FOR_EACH(cls, node->classes){
+    RARRAY_FOR_EACH(StringView, cls, node->classes){
         msb_write_literal(sb, " .");
         msb_write_str(sb, cls->text, cls->length);
     }
-    RARRAY_FOR_EACH(attr, node->attributes){
+    RARRAY_FOR_EACH(Attribute, attr, node->attributes){
         msb_write_literal(sb, " @");
         msb_write_str(sb, attr->key.text, attr->key.length);
         if(attr->value.length){

@@ -447,7 +447,7 @@ run_the_dndc(uint64_t flags,
                     was_import = true;
                 }
                 newnode->attributes = NULL;
-                RARRAY_FOR_EACH(attr, node->attributes){
+                RARRAY_FOR_EACH(Attribute, attr, node->attributes){
                     if(!SV_equals(attr->key, SV("import")))
                         node_set_attribute(newnode, ctx.allocator, attr->key, attr->value);
                 }
