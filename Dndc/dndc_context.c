@@ -70,23 +70,39 @@ node_set_attribute(Node* node, Allocator allocator, StringView attr, StringView 
             return;
         }
     }
-    auto a = Rarray_alloc(Attribute)(&node->attributes, allocator);
+    Attribute* a = Rarray_alloc(Attribute)(&node->attributes, allocator);
     a->key = attr;
     a->value = value;
     return;
 }
 
+// Returns a zero-length string if noid
 static inline
-Nullable(const StringView*)
-node_get_id(const Node* node){
-    if(node_has_attribute(node, SV("noid")))
-        return NULL;
-    const StringView* id = node_get_attribute(node, SV("id"));
-    if(likely(!id)){
-        if(node->header.length)
-            id = &node->header;
+StringView
+node_get_id(DndcContext* ctx, NodeHandle handle){
+    Node* node = get_node(ctx, handle);
+    if(node->flags & NODEFLAG_NOID)
+        return SV("");
+    MARRAY_FOR_EACH(item, ctx->explicit_node_ids){
+        if(NodeHandle_eq(item->node, handle)){
+            return item->text;
+        }
     }
-    return id;
+    return node->header;
+}
+
+static inline
+void
+node_set_id(DndcContext* ctx, NodeHandle handle, StringView sv){
+    MARRAY_FOR_EACH(item, ctx->explicit_node_ids){
+        if(NodeHandle_eq(item->node, handle)){
+            item->text = sv;
+            return;
+        }
+    }
+    IdItem* item = Marray_alloc(IdItem)(&ctx->explicit_node_ids, ctx->allocator);
+    item->node = handle;
+    item->text = sv;
 }
 
 static inline
@@ -180,8 +196,8 @@ node_print_err(DndcContext* ctx, const Node* node, LongString msg){
         return;
     if(not ctx->error_func)
         return;
-    auto filename = ctx->filenames.data[node->filename_idx];
-    auto lineno = node->row;
+    StringView filename = ctx->filenames.data[node->filename_idx];
+    int lineno = node->row;
     int col = node->col;
     ctx->error_func(ctx->error_user_data, DNDC_ERROR_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
 }
@@ -195,8 +211,8 @@ node_print_warning(DndcContext* ctx, const Node* node, StringView msg){
         return;
     if(not ctx->error_func)
         return;
-    auto filename = ctx->filenames.data[node->filename_idx];
-    auto lineno = node->row;
+    StringView filename = ctx->filenames.data[node->filename_idx];
+    int lineno = node->row;
     int col = node->col;
     ctx->error_func(ctx->error_user_data, DNDC_WARNING_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
 }
@@ -210,8 +226,8 @@ node_print_warning2(DndcContext* ctx, const Node* node, StringView a, StringView
         return;
     if(not ctx->error_func)
         return;
-    auto filename = ctx->filenames.data[node->filename_idx];
-    auto lineno = node->row;
+    StringView filename = ctx->filenames.data[node->filename_idx];
+    int lineno = node->row;
     int col = node->col;
     MStringBuilder msb = {.allocator = ctx->temp_allocator};
     msb_write_str(&msb, a.text, a.length);
@@ -296,7 +312,7 @@ ctx_note_dependency(DndcContext* ctx, StringView path){
 static inline
 void
 ctx_store_builtin_file(DndcContext* ctx, StringView sourcepath, StringView text){
-    auto loaded = Marray_alloc(BuiltinLoadedSource)(&ctx->builtin_files, ctx->allocator);
+    BuiltinLoadedSource* loaded = Marray_alloc(BuiltinLoadedSource)(&ctx->builtin_files, ctx->allocator);
     loaded->sourcepath = sourcepath;
     loaded->sourcetext = text;
 }
@@ -322,13 +338,13 @@ ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
         sourcepath = msb_borrow_sv(&temp_builder);
     }
     ctx_note_dependency(ctx, sourcepath);
-    auto before = get_t();
+    uint64_t before = get_t();
     Errorable(LongString) cache_result = FileCache_read_file(&ctx->textcache, sourcepath, !!(ctx->flags & DNDC_DONT_READ));
     msb_destroy(&temp_builder);
     if(cache_result.errored){
         return (Errorable(StringView)){.errored = PARSE_ERROR};
     }
-    auto after = get_t();
+    uint64_t after = get_t();
     report_time(ctx, SV("Loading a file took "), after-before);
     return (Errorable(StringView)){.result =LS_to_SV(cache_result.result)};
 }
@@ -344,46 +360,12 @@ ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath){
     }
     ctx_note_dependency(ctx, binarypath);
     ByteBuilder bb = {.allocator = ctx->allocator};
-    auto cache_result = FileCache_read_and_b64_file(&ctx->b64cache, binarypath, !!(ctx->flags & DNDC_DONT_READ), &bb);
+    Errorable(LongString) cache_result = FileCache_read_and_b64_file(&ctx->b64cache, binarypath, !!(ctx->flags & DNDC_DONT_READ), &bb);
     bb_destroy(&bb);
     msb_destroy(&path_builder);
     if(cache_result.errored) return (Errorable(StringView)){.errored=cache_result.errored};
     return (Errorable(StringView)){.result=LS_to_SV(cache_result.result)};
 }
-#if 0
-static
-Errorable_f(StringView)
-load_processed_binary_file(FileCache* cache, StringView binarypath, ByteBuilder* bb){
-    // check if we already have it.
-    MARRAY_FOR_EACH(loaded, cache->files){
-        if(LS_SV_equals(loaded->sourcepath, binarypath)){
-            // DBG("Returning cached b64: '%.*s'", (int)binarypath.length, binarypath.text);
-            return (Errorable(StringView)){.result=loaded->sourcetext};
-        }
-    }
-    // DBG("Not cached, processing b64: '%.*s'", (int)binarypath.length, binarypath.text);
-
-    // We don't have it, try to load it ourselves.
-    auto a = cache->allocator;
-    MStringBuilder sb = {.allocator = a};
-    msb_write_str(&sb, binarypath.text, binarypath.length);
-    LongString path = msb_borrow_ls(&sb);
-
-    auto base64ed_e = read_and_base64_bin_file(bb, a, path.text);
-    if(unlikely(base64ed_e.errored)){
-        msb_destroy(&sb);
-        return (Errorable(StringView)){.errored = base64ed_e.errored};
-    }
-    auto base64ed = LS_to_SV(base64ed_e.result);
-    LongString sourcepath = msb_detach_ls(&sb);
-    auto loaded = Marray_alloc(LoadedSource)(&cache->files, a);
-    *loaded = (LoadedSource){
-        .sourcepath = sourcepath,
-        .sourcetext = base64ed,
-    };
-    return (Errorable(StringView)){.result=base64ed};
-}
-#endif
 
 static inline
 Nullable(StringView*)
@@ -391,7 +373,7 @@ find_link_target(DndcContext* ctx, StringView kebabed){
     if(!ctx->links.count)
         return NULL;
 #if 1
-    auto data = ctx->links.data;
+    LinkItem* data = ctx->links.data;
     size_t low = 0, high = ctx->links.count-1;
     size_t mid;
     if(SV_equals(data[low].key, kebabed))
@@ -424,7 +406,7 @@ find_link_target(DndcContext* ctx, StringView kebabed){
 static inline
 Errorable_f(void)
 add_link_from_sv(DndcContext* ctx, Node* node){
-    auto str = node->header;
+    StringView str = node->header;
     Errorable(void) result = {0};
     const char* equals = memchr(str.text, '=', str.length);
     if(!equals){
@@ -458,7 +440,7 @@ add_link_from_sv(DndcContext* ctx, Node* node){
         Raise(PARSE_ERROR);
         foundit:;
     }
-    auto li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
+    LinkItem* li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
     li->key = key;
     li->value = value;
     return result;
@@ -476,7 +458,7 @@ add_link_from_header(DndcContext* ctx, StringView str){
     }
     LongString anchor = msb_detach_ls(&sb);
     StringView kebabed = {.text = anchor.text+1, .length=anchor.length-1};
-    auto li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
+    LinkItem* li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
     li->key = kebabed;
     li->value = LS_to_SV(anchor);
     return;
@@ -485,7 +467,7 @@ add_link_from_header(DndcContext* ctx, StringView str){
 static inline
 void
 add_link_from_pair(DndcContext* ctx, StringView kebabed, StringView value){
-    auto li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
+    LinkItem* li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
     li->key = kebabed;
     li->value = value;
 }
@@ -506,7 +488,7 @@ Node*
 force_inline
 get_node(DndcContext* ctx, NodeHandle handle){
     assert(handle.index < ctx->nodes.count);
-    auto result = &ctx->nodes.data[handle.index];
+    Node* result = &ctx->nodes.data[handle.index];
     return result;
 }
 
@@ -521,8 +503,8 @@ static inline
 void
 force_inline
 append_child(DndcContext* ctx, NodeHandle parent_handle, NodeHandle child_handle){
-    auto parent = get_node(ctx, parent_handle);
-    auto child = get_node(ctx, child_handle);
+    Node* parent = get_node(ctx, parent_handle);
+    Node* child = get_node(ctx, child_handle);
     child->parent = parent_handle;
     if(parent->children.count < 4){
         parent->inline_children[parent->children.count++] = child_handle;
@@ -570,14 +552,14 @@ check_depth(DndcContext* ctx){
 static
 Errorable_f(void)
 check_node_depth(DndcContext* ctx, NodeHandle handle, int depth){
-    auto node = get_node(ctx, handle);
+    Node* node = get_node(ctx, handle);
     enum {MAX_DEPTH=64};
     if(unlikely(depth > MAX_DEPTH)){
         node_set_err(ctx, node, LS("Tree depth exceeded: greater than 64"));
         return (Errorable(void)){.errored=PARSE_ERROR};
     }
     NODE_CHILDREN_FOR_EACH(it, node){
-        auto e = check_node_depth(ctx, *it, depth+1);
+        Errorable(void) e = check_node_depth(ctx, *it, depth+1);
         if(e.errored) return e;
     }
     return (Errorable(void)){.errored=NO_ERROR};
@@ -588,14 +570,14 @@ static void gather_anchor(DndcContext* ctx, NodeHandle handle);
 static
 void
 gather_anchors(DndcContext* ctx){
-    auto root = ctx->root_handle;
+    NodeHandle root = ctx->root_handle;
     return gather_anchor(ctx, root);
 }
 
 static
 void
 gather_anchor(DndcContext* ctx, NodeHandle handle){
-    auto node = get_node(ctx, handle);
+    Node* node = get_node(ctx, handle);
     switch(node->type){
         case NODE_BULLETS:
         case NODE_TABLE:
@@ -611,9 +593,9 @@ gather_anchor(DndcContext* ctx, NodeHandle handle){
         case NODE_MD:
         case NODE_QUOTE:
         case NODE_CONTAINER:{
-            auto id = node_get_id(node);
-            if(id){
-                add_link_from_header(ctx, *id);
+            StringView id = node_get_id(ctx, handle);
+            if(id.length){
+                add_link_from_header(ctx, id);
             }
         }
         // fall-through
@@ -638,17 +620,12 @@ gather_anchor(DndcContext* ctx, NodeHandle handle){
         case NODE_HR:
             break;
         case NODE_PRE:
-        case NODE_RAW:
-            if(node->header.length and !node_has_attribute(node, SV("noid"))){
-                auto id = node_get_attribute(node, SV("id"));
-                if(unlikely(id)){
-                    add_link_from_header(ctx, *id);
-                }
-                else{
-                    add_link_from_header(ctx, node->header);
-                }
+        case NODE_RAW:{
+            StringView id = node_get_id(ctx, handle);
+            if(id.length){
+                add_link_from_header(ctx, id);
             }
-            break;
+        }break;
     }
 }
 
@@ -656,9 +633,9 @@ static
 inline
 void
 convert_node_to_container_containing_clone_of_former_self(DndcContext* ctx, NodeHandle handle){
-    auto new_handle = alloc_handle(ctx);
-    auto new_node = get_node(ctx, new_handle);
-    auto old_node = get_node(ctx, handle);
+    NodeHandle new_handle = alloc_handle(ctx);
+    Node* new_node = get_node(ctx, new_handle);
+    Node* old_node = get_node(ctx, handle);
     assert(!node_children_count(old_node));
     memcpy(new_node, old_node, sizeof(*new_node));
     new_node->parent = handle;

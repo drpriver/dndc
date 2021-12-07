@@ -50,6 +50,7 @@ TestFunction(TestDndc1){
         | DNDC_DONT_WRITE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString output = {};
     auto e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -71,6 +72,7 @@ TestFunction(TestDndc2){
         | DNDC_DONT_WRITE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString output = {};
     auto e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -91,6 +93,7 @@ TestFunction(TestDndc3){
         | DNDC_DONT_WRITE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString output = {};
     auto e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -111,6 +114,7 @@ TestFunction(TestDndcOutParam){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
     auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("hello.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -164,6 +168,7 @@ TestFunction(TestDndcFragment){
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_FRAGMENT_ONLY
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
     auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("hello.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -212,6 +217,7 @@ TestFunction(TestDndcTableMultiline){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
     auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -293,6 +299,7 @@ TestFunction(TestFormatTable){
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_REFORMAT_ONLY
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
     auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -353,6 +360,7 @@ TestFunction(TestFormatList){
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_REFORMAT_ONLY
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
     auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -404,6 +412,7 @@ TestFunction(TestFormatKV){
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_REFORMAT_ONLY
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
     auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -439,6 +448,7 @@ TestFunction(TestCrashesFixed){
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_DONT_WRITE
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     struct {
         LongString name;
@@ -449,7 +459,7 @@ TestFunction(TestCrashesFixed){
     };
     for(size_t i = 0; i < arrlen(cases); i++){
         LongString output = {};
-        auto allocator = get_mallocator();
+        Allocator allocator = get_mallocator();
         auto data = read_file(cases[i].name.text, allocator);
         TestAssertSuccess(data);
         auto e = run_the_dndc(flags, SV("TestCases"), LS_to_SV(data.result), LS_to_SV(cases[i].name), SV("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -470,6 +480,7 @@ TestFunction(TestExamplesWork){
         | DNDC_SUPPRESS_WARNINGS
         // | DNDC_DONT_PRINT_ERRORS
         | DNDC_DONT_WRITE
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString examples[] = {
         LS("Examples/Calendar/calendar.dnd"),
@@ -485,6 +496,11 @@ TestFunction(TestExamplesWork){
         LS("Examples/Wiki/lorem.dnd"),
         LS("Examples/Wiki/wiki.dnd"),
         LS("Examples/index.dnd"),
+        LS("OVERVIEW.dnd"),
+        LS("REFERENCE.dnd"),
+        LS("PyGdndc/jsdoc.dnd"),
+        LS("PyGdndc/changelog.dnd"),
+        LS("PyGdndc/Manual.dnd"),
     };
     StringView base_dirs[] = {
         SV("Examples/Calendar"),
@@ -500,12 +516,20 @@ TestFunction(TestExamplesWork){
         SV("Examples/Wiki"),
         SV("Examples/Wiki"),
         SV("Examples"),
+        SV(""),
+        SV(""),
+        SV("PyGdndc"),
+        SV(""),
+        SV(""),
     };
     _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString output = {};
-        auto allocator = get_mallocator();
+        Allocator allocator = get_mallocator();
         auto data = read_file(examples[i].text, allocator);
+        if(data.errored){
+            TestPrintValue("Unable to open: examples[i]", examples[i]);
+        }
         TestAssertSuccess(data);
         auto e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
         TestExpectFalse(output.text);
@@ -524,6 +548,7 @@ TestFunction(TestUntrusted){
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_INPUT_IS_UNTRUSTED
         | DNDC_DONT_WRITE
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString examples[] = {
         LS("Examples/Calendar/calendar.dnd"),
@@ -547,7 +572,7 @@ TestFunction(TestUntrusted){
     _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString output = {};
-        auto allocator = get_mallocator();
+        Allocator allocator = get_mallocator();
         auto data = read_file(examples[i].text, allocator);
         TestAssertSuccess(data);
         auto e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);

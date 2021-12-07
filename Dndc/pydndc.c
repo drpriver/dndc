@@ -272,13 +272,24 @@ PyMethodDef pydndc_methods[] = {
         "    Bit flags controlling some behavior. The allowed flags are\n"
         "    exported on the module and are as follows:\n"
         "\n"
+        "    INPUT_IS_UNTRUSTED: Input is from an untrusted source and so\n"
+        "                        should not be allowed to load files, output\n"
+        "                        raw html, etc. as that could lead to\n"
+        "                        data leakage, etc. JavaScript will be\n"
+        "                        disabled.\n"
+        "\n"
+        "    FRAGMENT_ONLY:      Output an html fragment instead of a complete\n"
+        "                        html document The fragment will still include \n"
+        "                        the styles and script tags, they will just be \n"
+        "                        before the content.\n"
+        "\n"
         "    DONT_INLINE_IMAGES: If set, don't embed images as base64 urls.\n"
         "                        This is overruled by USE_DND_URL_SCHEME.\n"
         "\n"
         "    NO_THREADS:         Do all work on the calling thread.\n"
         "\n"
         "    USE_DND_URL_SCHEME: Don't embed images as base64 urls. Instead\n"
-        "                        Use a dnd:absolute/path/to/img url instead.\n"
+        "                        Use a dnd:///absolute/path/to/img url instead.\n"
         "                        This is for applications.\n"
         "\n"
         "    PRINT_STATS:        Generate Info messages for the error_reporter.\n"
@@ -292,6 +303,10 @@ PyMethodDef pydndc_methods[] = {
         "\n"
         "    DONT_READ:          Don't read any files not already in the file\n"
         "                        cache.\n"
+        "\n"
+        "    DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP: Attributes and directives are\n"
+        "                        in separate namespaces, but that can be confusing.\n"
+        "                        Set this flag to disallow that.\n"
         "\n"
         "Returns:\n"
         "--------\n"
@@ -422,6 +437,7 @@ PyInit_pydndc(void){
     PyModule_AddIntConstant(mod, "HEADER",             DNDC_SYNTAX_HEADER);
     PyModule_AddIntConstant(mod, "NODE_TYPE",          DNDC_SYNTAX_NODE_TYPE);
     PyModule_AddIntConstant(mod, "ATTRIBUTE",          DNDC_SYNTAX_ATTRIBUTE);
+    PyModule_AddIntConstant(mod, "DIRECTIVE",          DNDC_SYNTAX_DIRECTIVE);
     PyModule_AddIntConstant(mod, "ATTRIBUTE_ARGUMENT", DNDC_SYNTAX_ATTRIBUTE_ARGUMENT);
     PyModule_AddIntConstant(mod, "CLASS",              DNDC_SYNTAX_CLASS);
     PyModule_AddIntConstant(mod, "RAW_STRING",         DNDC_SYNTAX_RAW_STRING);
@@ -439,14 +455,14 @@ PyInit_pydndc(void){
 
     // flags
     PyModule_AddIntConstant(mod, "INPUT_IS_UNTRUSTED",  DNDC_INPUT_IS_UNTRUSTED);
-    PyModule_AddIntConstant(mod, "FRAGMENT_ONLY",  DNDC_FRAGMENT_ONLY);
+    PyModule_AddIntConstant(mod, "FRAGMENT_ONLY",       DNDC_FRAGMENT_ONLY);
     PyModule_AddIntConstant(mod, "DONT_INLINE_IMAGES",  DNDC_DONT_INLINE_IMAGES);
     PyModule_AddIntConstant(mod, "NO_THREADS",          DNDC_NO_THREADS);
     PyModule_AddIntConstant(mod, "USE_DND_URL_SCHEME",  DNDC_USE_DND_URL_SCHEME);
     PyModule_AddIntConstant(mod, "STRIP_WHITESPACE",    DNDC_STRIP_WHITESPACE);
     PyModule_AddIntConstant(mod, "DONT_READ",           DNDC_DONT_READ);
     PyModule_AddIntConstant(mod, "PRINT_STATS",         DNDC_PRINT_STATS);
-
+    PyModule_AddIntConstant(mod, "DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP", DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP);
     // error message types
     PyModule_AddIntConstant(mod, "ERROR_MESSAGE",       DNDC_ERROR_MESSAGE);
     PyModule_AddIntConstant(mod, "WARNING_MESSAGE",     DNDC_WARNING_MESSAGE);
@@ -556,6 +572,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_DONT_READ
         | DNDC_INPUT_IS_UNTRUSTED
         | DNDC_FRAGMENT_ONLY
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
     };
     const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", "output_name", NULL};
     PushDiagnostic();

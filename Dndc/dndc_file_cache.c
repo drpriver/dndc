@@ -113,7 +113,7 @@ FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only
         return (Errorable(LongString)){.errored = PARSE_ERROR};
     }
     FileCachePath path = FileCache_alloc_path(cache, spath);
-    auto base64ed_e = read_and_base64_bin_file(bb, cache->allocator, path.path.text);
+    Errorable(LongString) base64ed_e = read_and_base64_bin_file(bb, cache->allocator, path.path.text);
     if(unlikely(base64ed_e.errored)){
         FileCache_free_path(cache, path);
         return (Errorable(LongString)){.errored=base64ed_e.errored};

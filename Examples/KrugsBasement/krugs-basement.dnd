@@ -1,4 +1,4 @@
-::css @import
+::css #import
   dungeon.css
 ::js
   let root = ctx.root;
@@ -87,14 +87,14 @@ rituals/puzzles.
          away) of the monster. Treat a group as a single monster. This effect
          last for until your long rest. Even on a successful save you are braver
          than normal.
-2. Poison Gas::md .room @coord(359,412) @id(poison-gas)
+2. Poison Gas::md .room @coord(359,412) #id(poison-gas)
   There is a large cloud of poisonous gas. The vapors are thick heavy and milky
   and more or less stick together. Entering the room people get some small whiffs
   off it, burning some of their nose hairs. Running through it without holding
   your breath is DC 16 con save for half damage, 6d10 poison damage. Holding your
   breath reduces it to 3d10 poison damage and being poisoned for 2 dungeon turns.
 
-3. Smashed Room::md .room @coord(404,324) @id(smashed-room)
+3. Smashed Room::md .room @coord(404,324) #id(smashed-room)
   Overturned bunks, torn sheets and smashed trunks fill this room. In the center
   of the room is a large bit of shed snake-skin.
 
@@ -113,7 +113,7 @@ rituals/puzzles.
   missing. Replacing the fangs (which are in Room 15, in the pile of the monster)
   will reveal a chest and treasure.
 
-6. Orange Gas::md .room @coord(350,126) @id(orange-gas)
+6. Orange Gas::md .room @coord(350,126) #id(orange-gas)
   A strange thin orange gas fills this room, transforming anyone in it into an
   animal. DC 10 cha save or be transmuted, rolled each round and changing form
   each round.

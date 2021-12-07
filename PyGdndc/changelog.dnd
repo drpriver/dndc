@@ -1,3 +1,12 @@
+Version 0.10.0::md
+  * Removed the @comment attribute. It wasn't actually useful
+    and its semantics were weird, especially for things
+    like expansion and reformatting.
+  * Separated user defined attributes and system specific
+    directives. User defined attributes or tags are prefixed
+  . with '@', while system directives are prefixed with '#'.
+    This ensures that there will be no collision and also
+    cleaned some stuff up internally.
 Version 0.9.3::md
   * Deleted vestigial TEXT node type.
   * Added reference document for all the nodes you can create

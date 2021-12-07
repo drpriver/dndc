@@ -7,9 +7,14 @@
 #define DNDC_STRINGIFY_IMPL(x) #x
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
 #define DNDC_MAJOR 0
-#define DNDC_MINOR 9
-#define DNDC_MICRO 3
+#define DNDC_MINOR 10
+#define DNDC_MICRO 0
 #define DNDC_VERSION DNDC_STRINGIFY(DNDC_MAJOR) "." DNDC_STRINGIFY(DNDC_MINOR) "." DNDC_STRINGIFY(DNDC_MICRO)
+// 11 bits for major
+// 10 bits for minor
+// 10 bits for micro
+#define DNDC_INT_VERSION(major, minor, micro) ((major) << 20 | (minor) << 10 | (micro))
+enum {DNDC_NUMERIC_VERSION = DNDC_INT_VERSION(DNDC_MAJOR, DNDC_MINOR, DNDC_MICRO)};
 
 // for size_t
 #include <stddef.h>
@@ -260,27 +265,29 @@ enum DndcSyntax {
     DNDC_SYNTAX_HEADER = 2,
     DNDC_SYNTAX_NODE_TYPE = 3,
     DNDC_SYNTAX_ATTRIBUTE = 4,
-    DNDC_SYNTAX_ATTRIBUTE_ARGUMENT = 5,
-    DNDC_SYNTAX_CLASS = 6,
-    DNDC_SYNTAX_RAW_STRING = 7,
+    DNDC_SYNTAX_DIRECTIVE = 5,
+    DNDC_SYNTAX_ATTRIBUTE_ARGUMENT = 6,
+    DNDC_SYNTAX_CLASS = 7,
+    DNDC_SYNTAX_RAW_STRING = 8,
     // Javascript syntax
-    DNDC_SYNTAX_JS_COMMENT = 8,
-    DNDC_SYNTAX_JS_STRING = 9,
-    DNDC_SYNTAX_JS_REGEX = 10,
-    DNDC_SYNTAX_JS_NUMBER = 11,
-    DNDC_SYNTAX_JS_KEYWORD = 12,
-    DNDC_SYNTAX_JS_KEYWORD_VALUE = 13,
-    DNDC_SYNTAX_JS_VAR = 14,
-    DNDC_SYNTAX_JS_IDENTIFIER = 15,
-    DNDC_SYNTAX_JS_BUILTIN = 16,
-    DNDC_SYNTAX_JS_NODETYPE = 17,
-    DNDC_SYNTAX_JS_BRACE = 18,
+    DNDC_SYNTAX_JS_COMMENT = 9,
+    DNDC_SYNTAX_JS_STRING = 10,
+    DNDC_SYNTAX_JS_REGEX = 11,
+    DNDC_SYNTAX_JS_NUMBER = 12,
+    DNDC_SYNTAX_JS_KEYWORD = 13,
+    DNDC_SYNTAX_JS_KEYWORD_VALUE = 14,
+    DNDC_SYNTAX_JS_VAR = 15,
+    DNDC_SYNTAX_JS_IDENTIFIER = 16,
+    DNDC_SYNTAX_JS_BUILTIN = 17,
+    DNDC_SYNTAX_JS_NODETYPE = 18,
+    DNDC_SYNTAX_JS_BRACE = 19,
     // DNDC_SYNTAX_BULLET,
     // DNDC_SYNTAX_COMMENT,
     // DNDC_SYNTAX_KEY,
     // DNDC_SYNTAX_VALUE,
 };
-enum{DNDC_SYNTAX_MAX=19};
+enum{DNDC_SYNTAX_MAX=20};
+_Static_assert(DNDC_SYNTAX_MAX > DNDC_SYNTAX_JS_BRACE, "");
 
 //
 // DndcSyntaxFunc
@@ -636,9 +643,15 @@ DNDC_ALLOW_BAD_LINKS = 0x100,
 // Don't execute js blocks.
 DNDC_NO_COMPILETIME_JS = 0x200,
 
+// Attributes and directives are in separate namespaces, but that can be
+// confusing.  It's generally bad practice to use an attribute that is the same
+// as a directive as that is really confusing and error-prone.  However, to
+// allow for future changes we do not error on that.  Set this flag to turn
+// that into an error so you can migrate your collisions.
+DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP = 0x400,
+
 // These flags are unused (used to be for controlling python, but no longer).
 // They will be used in the future.
-DNDC_UNUSED_VALUE_0x400 = 0x400,
 DNDC_UNUSED_VALUE_0x800 = 0x800,
 DNDC_UNUSED_VALUE_0x1000 = 0x1000,
 

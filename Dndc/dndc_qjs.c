@@ -40,9 +40,15 @@ NodeHandle_to_opaque(NodeHandle handle){
 #define JSSETTER(name) \
     static QJSValue \
     name(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst arg)
+#define JSMAGICSETTER(name) \
+    static QJSValue \
+    name(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst arg, int magic)
 #define JSGETTER(name) \
     static QJSValue \
     name(QJSContext* jsctx, QJSValueConst thisValue)
+#define JSMAGICGETTER(name) \
+    static QJSValue \
+    name(QJSContext* jsctx, QJSValueConst thisValue, int magic)
 
 //
 // Utility or free functions
@@ -172,6 +178,8 @@ JSClassDef JS_DNDC_NODE_CLASS = {
 JSGETTER(js_dndc_node_get_parent);
 JSSETTER(js_dndc_node_set_type);
 JSGETTER(js_dndc_node_get_type);
+JSMAGICSETTER(js_dndc_node_flag_setter);
+JSMAGICGETTER(js_dndc_node_flag_getter);
 JSGETTER(js_dndc_node_get_children);
 JSMETHOD(js_dndc_node_to_string);
 JSGETTER(js_dndc_node_get_header);
@@ -194,6 +202,9 @@ const
 JSCFunctionListEntry JS_DNDC_NODE_FUNCS[] = {
     JS_CGETSET_DEF("parent", js_dndc_node_get_parent, NULL),
     JS_CGETSET_DEF("type", js_dndc_node_get_type, js_dndc_node_set_type),
+    JS_CGETSET_MAGIC_DEF("noinline", js_dndc_node_flag_getter, js_dndc_node_flag_setter, NODEFLAG_NOINLINE),
+    JS_CGETSET_MAGIC_DEF("noid", js_dndc_node_flag_getter, js_dndc_node_flag_setter, NODEFLAG_NOID),
+    JS_CGETSET_MAGIC_DEF("hide", js_dndc_node_flag_getter, js_dndc_node_flag_setter, NODEFLAG_HIDE),
     JS_CGETSET_DEF("children", js_dndc_node_get_children, NULL),
     JS_CFUNC_DEF("toString", 0, js_dndc_node_to_string),
     JS_CGETSET_DEF("header", js_dndc_node_get_header, js_dndc_node_set_header),
@@ -1204,6 +1215,43 @@ js_dndc_node_get_type(QJSContext* jsctx, QJSValueConst thisValue){
     return JS_NewInt32(jsctx, node->type);
 }
 
+// TODO: look into magic variants
+static
+QJSValue
+js_dndc_node_flag_setter(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst arg, int flag){
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    NodeHandle handle;
+    if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
+        return JS_EXCEPTION;
+    assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
+    Node* node = get_node(ctx, handle);
+    int b = JS_ToBool(jsctx, arg);
+    if(b < 0){
+        return JS_EXCEPTION;
+    }
+    if(b){
+        node->flags |= flag;
+    }
+    else {
+        node->flags &= ~flag;
+    }
+    return JS_UNDEFINED;
+}
+
+static
+QJSValue
+js_dndc_node_flag_getter(QJSContext* jsctx, QJSValueConst thisValue, int flag){
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    NodeHandle handle;
+    if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
+        return JS_EXCEPTION;
+    assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
+    Node* node = get_node(ctx, handle);
+    return JS_NewBool(jsctx, node->flags & flag);
+}
+
 static
 QJSValue
 js_dndc_node_get_children(QJSContext* jsctx, QJSValueConst thisValue){
@@ -1264,13 +1312,12 @@ JSGETTER(js_dndc_node_get_id){
     if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
         return JS_EXCEPTION;
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
-    Node* node = get_node(ctx, handle);
-    auto id = node_get_id(node);
-    if(!id){
+    StringView id = node_get_id(ctx, handle);
+    if(!id.length){
         return JS_NewString(jsctx, "");
     }
     MStringBuilder msb = {.allocator = ctx->temp_allocator};
-    msb_write_kebab(&msb, id->text, id->length);
+    msb_write_kebab(&msb, id.text, id.length);
     StringView keb = msb_borrow_sv(&msb);
     QJSValue result = JS_NewStringLen(jsctx, keb.text, keb.length);
     msb_destroy(&msb);
@@ -1284,12 +1331,11 @@ JSSETTER(js_dndc_node_set_id){
     if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
         return JS_EXCEPTION;
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
-    Node* node = get_node(ctx, handle);
     if(!JS_IsString(arg)){
         return JS_ThrowTypeError(jsctx, "id must be a string");
     }
     StringView new_id = jsstring_to_stringview(jsctx, arg, ctx->string_allocator);
-    node_set_attribute(node, ctx->allocator, SV("id"), new_id);
+    node_set_id(ctx, handle, new_id);
     return JS_UNDEFINED;
 }
 
@@ -1305,16 +1351,17 @@ js_dndc_node_to_string(QJSContext* jsctx, QJSValueConst thisValue, int argc, QJS
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
     Node* node = get_node(ctx, handle);
     MStringBuilder msb = {.allocator=ctx->temp_allocator};
-    size_t class_count = node->classes?node->classes->count:0;
-    if(!class_count)
-        MSB_FORMAT(&msb, "Node(", NODENAMES[node->type], ", '", node->header, "', [", (int)node_children_count(node), " children])");
-    else {
-        MSB_FORMAT(&msb, "Node(", NODENAMES[node->type].text);
-        RARRAY_FOR_EACH(class, node->classes){
-            MSB_FORMAT(&msb, ".", *class);
-            }
-        MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node_children_count(node), " children])");
+    MSB_FORMAT(&msb, "Node(", NODENAMES[node->type].text);
+    RARRAY_FOR_EACH(class, node->classes){
+        MSB_FORMAT(&msb, ".", *class);
     }
+    if(node->flags & NODEFLAG_HIDE)
+        msb_write_literal(&msb, " #hide");
+    if(node->flags & NODEFLAG_NOID)
+        msb_write_literal(&msb, " #noid");
+    if(node->flags & NODEFLAG_NOINLINE)
+        msb_write_literal(&msb, " #noinline");
+    MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node_children_count(node), " children])");
     StringView text = msb_borrow_sv(&msb);
     QJSValue result = JS_NewStringLen(jsctx, text.text, text.length);
     msb_destroy(&msb);

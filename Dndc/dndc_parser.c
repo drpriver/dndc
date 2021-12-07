@@ -16,19 +16,13 @@
 #pragma clang assume_nonnull begin
 #endif
 
-typedef enum ParsedNodeFlags {
-    PARSEDNODE_NONE = 0,
-    PARSEDNODE_IS_IMPORT = 0x1,
-    PARSEDNODE_IS_COMMENT = 0x2,
-} ParsedNodeFlags;
-
-struct ErrorableParsedNodeFlags{
-    ParsedNodeFlags result;
+struct ErrorableNodeFlags{
+    enum NodeFlags result;
     int errored;
 };
 
 static
-struct ErrorableParsedNodeFlags
+struct ErrorableNodeFlags
 parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle);
 
 static
@@ -41,7 +35,7 @@ advance_row(DndcContext*);
 #define PARSEFUNC(name) static Errorable_f(void) name(DndcContext* ctx, NodeHandle parent_handle, int indentation)
 static
 Errorable_f(void)
-parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int indentation, ParsedNodeFlags flags);
+parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int indentation, NodeFlags flags);
 PARSEFUNC(parse_table_node);
 PARSEFUNC(parse_keyvalue_node);
 PARSEFUNC(parse_bullets_node);
@@ -375,7 +369,7 @@ dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const 
     ctx->filename = filename;
     Marray_push(StringView)(&ctx->filenames, ctx->allocator, filename);
     NodeType type = get_node(ctx, root_handle)->type;
-    auto e = parse_node(ctx, root_handle, type, -1, 0);
+    auto e = parse_node(ctx, root_handle, type, -1, NODEFLAG_NONE);
     if(e.errored) return e;
     return result;
 }
@@ -390,7 +384,7 @@ parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
     StringView postcolon = stripped_view(starttext, length);
     auto new_node_handle = alloc_handle(ctx);
     init_node(ctx, new_node_handle, ctx->linestart+ctx->nspaces, NODE_INVALID);
-    ParsedNodeFlags flags;
+    NodeFlags flags;
     {
         auto e = parse_post_colon(ctx, postcolon, new_node_handle);
         if(e.errored){
@@ -444,10 +438,10 @@ advance_sv(StringView* sv){
 }
 
 static
-struct ErrorableParsedNodeFlags
+struct ErrorableNodeFlags
 parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle){
-    struct ErrorableParsedNodeFlags result = {0};
-    auto node = get_node(ctx, node_handle);
+    struct ErrorableNodeFlags result = {0};
+    Node* node = get_node(ctx, node_handle);
     size_t boundary = postcolon.length;
     for(size_t i = 0; i < postcolon.length;i++){
         switch(postcolon.text[i]){
@@ -468,16 +462,16 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
             if(memcmp(NODEALIASES[i].name.text, postcolon.text, boundary)==0){
                 auto type = NODEALIASES[i].type;
                 switch(type){
-                    case NODE_COMMENT:
-                        result.result |= PARSEDNODE_IS_COMMENT;
-                        break;
+                    // case NODE_COMMENT:
+                        // result.result |= NODEFLAG_COMMENT;
+                        // break;
                     case NODE_JS:
                         Marray_push(NodeHandle)(&ctx->user_script_nodes, ctx->allocator, node_handle);
                         break;
                     case NODE_IMPORT:
                         // This is pushed later.
                         // Marray_push(NodeHandle)(&ctx->imports, ctx->allocator, node_handle);
-                        result.result |= PARSEDNODE_IS_IMPORT;
+                        result.result |= NODEFLAG_IMPORT;
                         break;
                     case NODE_STYLESHEETS:
                         Marray_push(NodeHandle)(&ctx->stylesheets_nodes, ctx->allocator, node_handle);
@@ -522,13 +516,88 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
         if(!aftertype.length)
             break;
         switch(aftertype.text[0]){
+            case '#':{
+                advance_sv(&aftertype);
+                eat_leading_tabspaces(&aftertype);
+                const char* directive_start = aftertype.text;
+                while(aftertype.length){
+                    char first = aftertype.text[0];
+                    if(first == ' ' or first == '\t' or first == '@' or first == '.' or first == '#' or first == '(')
+                        break;
+                    advance_sv(&aftertype);
+                }
+                size_t directive_length = aftertype.text - directive_start;
+                StringView directive = {.length = directive_length, .text = directive_start};
+                if(!directive_length){
+                    parse_set_err(ctx, aftertype.text, LS("Empty directive name after a '#'"));
+                    Raise(PARSE_ERROR);
+                }
+                if(aftertype.text[0] == '('){
+                    if(SV_equals(directive, SV("id"))){
+                        advance_sv(&aftertype);
+                        eat_leading_tabspaces(&aftertype);
+                        const char* argstart = aftertype.text;
+                        size_t n_parens = 1;
+                        while(aftertype.length){
+                            if(aftertype.text[0] == ')')
+                                n_parens--;
+                            if(aftertype.text[0] == '(')
+                                n_parens++;
+                            advance_sv(&aftertype);
+                            if(!n_parens)
+                                break;
+                        }
+                        if(n_parens){
+                            parse_set_err(ctx, aftertype.text, LS("End of line when expecting a closing ')'"));
+                            Raise(PARSE_ERROR);
+                        }
+                        StringView contents = stripped_view(argstart, aftertype.text-1-argstart);
+                        if(!contents.length){
+                            parse_set_err(ctx, aftertype.text, LS("#id needs non-empty argument."));
+                            Raise(PARSE_ERROR);
+                        }
+                        node_set_id(ctx, node_handle, contents);
+                        continue;
+                    }
+                    else {
+                        parse_set_err(ctx, aftertype.text, LS("only #id takes an argument"));
+                        Raise(PARSE_ERROR);
+                    }
+                }
+                switch(*directive_start){
+                    case 'i':
+                        if(SV_equals(directive, SV("import"))){
+                            result.result |= NODEFLAG_IMPORT;
+                            continue;
+                        }
+                        break;
+                    case 'n':
+                        if(SV_equals(directive, SV("noid"))){
+                            result.result |= NODEFLAG_NOID;
+                            continue;
+                        }
+                        if(SV_equals(directive, SV("noinline"))){
+                            result.result |= NODEFLAG_NOINLINE;
+                            continue;
+                        }
+                        break;
+                    case 'h':
+                        if(SV_equals(directive, SV("hide"))){
+                            result.result |= NODEFLAG_HIDE;
+                            continue;
+                        }
+                        break;
+                }
+                parse_set_err(ctx, aftertype.text, LS("Unrecognized directive"));
+                Raise(PARSE_ERROR);
+            }break;
             case '.':{
                 advance_sv(&aftertype);
                 eat_leading_tabspaces(&aftertype);
                 const char* class_start = aftertype.text;
                 while(aftertype.length){
                     char first = aftertype.text[0];
-                    if(first == ' ' or first == '\t' or first == '@' or first == '.')
+                    if(first == ' ' or first == '\t' or first == '@' or first == '.' or first == '#')
                         break;
                     advance_sv(&aftertype);
                 }
@@ -546,7 +615,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                 const char* attribute_start = aftertype.text;
                 while(aftertype.length){
                     char first = aftertype.text[0];
-                    if(first == ' ' or first == '\t' or first == '@' or first == '.' or first == '(')
+                    if(first == ' ' or first == '\t' or first == '@' or first == '.' or first == '(' or first == '#')
                         break;
                     advance_sv(&aftertype);
                 }
@@ -555,13 +624,42 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                     parse_set_err(ctx, aftertype.text, LS("Empty attribute name after a '@'"));
                     Raise(PARSE_ERROR);
                 }
+                StringView attr_name = {
+                    .text = attribute_start,
+                    .length = attribute_length,
+                };
+                if(unlikely(ctx->flags & DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP)){
+                    switch(attr_name.text[0]){
+                        case 'i':
+                            if(SV_equals(attr_name, SV("import"))){
+                                parse_set_err(ctx, aftertype.text, LS("#import is the name of a directive."));
+                                Raise(PARSE_ERROR);
+                            }
+                            if(SV_equals(attr_name, SV("id"))){
+                                parse_set_err(ctx, aftertype.text, LS("#id is the name of a directive."));
+                                Raise(PARSE_ERROR);
+                            }
+                            break;
+                        case 'n':
+                            if(SV_equals(attr_name, SV("noid"))){
+                                parse_set_err(ctx, aftertype.text, LS("#noid is the name of a directive."));
+                                Raise(PARSE_ERROR);
+                            }
+                            if(SV_equals(attr_name, SV("noinline"))){
+                                parse_set_err(ctx, aftertype.text, LS("#noinline is the name of a directive."));
+                                Raise(PARSE_ERROR);
+                            }
+                            break;
+                        case 'h':
+                            if(SV_equals(attr_name, SV("hide"))){
+                                parse_set_err(ctx, aftertype.text, LS("#hide is the name of a directive."));
+                                Raise(PARSE_ERROR);
+                            }
+                            break;
+                        }
+                }
                 auto attr = Rarray_alloc(Attribute)(&node->attributes, ctx->allocator);
-                attr->key.length = attribute_length;
-                attr->key.text = attribute_start;
-                if(SV_equals(attr->key, SV("import")))
-                    result.result |= PARSEDNODE_IS_IMPORT;
-                if(SV_equals(attr->key, SV("comment")))
-                    result.result |= PARSEDNODE_IS_COMMENT;
+                attr->key = attr_name;
                 attr->value = SV("");
                 if(aftertype.length){
                     eat_leading_tabspaces(&aftertype);
@@ -596,23 +694,22 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                 Raise(PARSE_ERROR);
         }
     }
-    if(result.result & PARSEDNODE_IS_IMPORT){
+    if(result.result & NODEFLAG_IMPORT){
         Marray_push(NodeHandle)(&ctx->imports, ctx->allocator, node_handle);
     }
+    node->flags = result.result;
     return result;
 }
 
 // generic parsing function
 static
 Errorable_f(void)
-parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int indentation, ParsedNodeFlags flags){
+parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int indentation, NodeFlags flags){
     if(unlikely(indentation > 64)){
         node_set_err(ctx, get_node(ctx, parent_handle), LS("Too deep! Indentation greater than 64 is unsupported."));
         return (Errorable(void)){.errored=PARSE_ERROR};
     }
-    if(flags & PARSEDNODE_IS_COMMENT)
-        return parse_raw_node(ctx, parent_handle, indentation);
-    if(flags & PARSEDNODE_IS_IMPORT)
+    if(flags & NODEFLAG_IMPORT)
         goto regular_string_parsing;
     switch(parent_type){
         case NODE_META:

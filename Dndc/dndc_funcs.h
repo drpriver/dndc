@@ -246,12 +246,6 @@ get_node_e(DndcContext*, NodeHandle);
 //
 // Checks if the node has an attribute or not.
 //
-// For example:
-//
-//    if(node_has_attribute(mynode, SV("noid"))){
-//       ... Do something based on the fact that the node is noid ...
-//    }
-//
 static inline
 bool
 node_has_attribute(const Node* node, StringView attr);
@@ -285,15 +279,13 @@ void
 node_set_attribute(Node* node, Allocator allocator, StringView attr, StringView value);
 
 //
-// Retrieves the id of the node. Handles the id being set via attribute. If
-// the node has empty header, returns NULL.
-//
-// Note that the pointer returned by this function is unstable.
-// Adding attributes can invalidate the pointer.
+// Retrieves the id of the node. Handles the id being set via attribute. 
+// If the node has empty header, or if it's noid, returns zero length
+// string.
 //
 static inline
-Nullable(const StringView*)
-node_get_id(const Node* node);
+StringView
+node_get_id(DndcContext*, NodeHandle);
 
 //
 // Loads the text of a sourcefile given by sourcepath, or an error if
@@ -382,7 +374,7 @@ render_tree(DndcContext*, MStringBuilder*);
 static inline
 force_inline
 Errorable_f(void)
-render_node(DndcContext*, MStringBuilder* restrict, Node*, int header_depth);
+render_node(DndcContext*, MStringBuilder* restrict, NodeHandle, int header_depth);
 
 //
 // Writes the document tree (starting from the context's root node)
@@ -485,6 +477,10 @@ ctx_add_builtins(DndcContext* ctx);
 static inline
 NodeHandle
 node_clone(DndcContext* ctx, NodeHandle);
+
+static inline
+void
+node_set_id(DndcContext* ctx, NodeHandle, StringView);
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

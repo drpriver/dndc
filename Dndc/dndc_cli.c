@@ -4,6 +4,7 @@
 #include "dndc_funcs.h"
 #include "dndc_types.h"
 #include "dndc_node_types.h"
+#include "dndc_credits.h"
 #include "argument_parsing.h"
 #include "term_util.h"
 #include "file_util.h"
@@ -239,13 +240,22 @@ main(int argc, char**argv){
             },
             {
                 .name = SV("--fragment"),
+                .max_num = 1,
                 .altname1 = SV("--fragment-only"),
                 .dest = ArgBitFlagDest(&flags, DNDC_FRAGMENT_ONLY),
                 .help = "Produce an html fragment instead of a full html document.",
                 .hidden = false,
             },
+            {
+                .name = SV("--disallow-attribute-directive-overlap"),
+                .max_num = 1,
+                .altname1 = SV("--dado"),
+                .dest = ArgBitFlagDest(&flags, DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP),
+                .help = "Error if an attribute name overlaps with a directive name.",
+                .hidden = true,
+            },
         };
-        enum {HELP, VERSION, HIDDEN_HELP};
+        enum {HELP, VERSION, HIDDEN_HELP, OPEN_SOURCE};
         ArgToParse early_args[] = {
             [HELP] = {
                 .name = SV("-h"),
@@ -261,6 +271,10 @@ main(int argc, char**argv){
                 .name = SV("-H"),
                 .altname1 = SV("--hidden-help"),
                 .help = "Print out help for the hidden arguments and exit.",
+            },
+            [OPEN_SOURCE] = {
+                .name = SV("--open-source-licenses"),
+                .help = "Print out the required open source copyright notices and exit.",
             },
         };
         const char* version = "dndc version " DNDC_VERSION ". Compiled " __DATE__ " " __TIME__;
@@ -295,13 +309,20 @@ main(int argc, char**argv){
                 if(columns > 80)
                     columns = 80;
                 for(int i = 0; i < arrlen(kw_args); i++){
-                    auto arg = &kw_args[i];
+                    ArgToParse* arg = &kw_args[i];
                     if(!arg->hidden){
                         continue;
                     }
                     putchar('\n');
                     print_arg_help(arg, columns);
                 }
+                return 0;
+            }
+            case OPEN_SOURCE:{
+                int columns = get_terminal_size().columns;
+                if(columns > 80)
+                    columns = 80;
+                print_wrapped(DNDC_OPEN_SOURCE_CREDITS, columns);
                 return 0;
             }
             default:
@@ -347,7 +368,7 @@ main(int argc, char**argv){
                     enum {N = 4096};
                     msb_ensure_additional(&sb, N);
                     char* buff = sb.data + sb.cursor;
-                    auto numread = fread(buff, 1, N, stdin);
+                    size_t numread = fread(buff, 1, N, stdin);
                     sb.cursor += numread;
                     if(numread != N)
                         break;
@@ -358,8 +379,8 @@ main(int argc, char**argv){
             source_text = msb_detach_sv(&sb);
         }
         else {
-            auto allocator = get_mallocator();
-            auto load_err = read_file(source_path.text, allocator);
+            Allocator allocator = get_mallocator();
+            TextFileResult load_err = read_file(source_path.text, allocator);
             if(load_err.errored){
                 fprintf(stderr, "Unable to read: '%s'\n", source_path.text);
                 return 1;
@@ -427,7 +448,7 @@ main(int argc, char**argv){
         if(flags & DNDC_DONT_WRITE)
             return 0;
         if(output_path.length){
-            auto write_err = write_file(output_path.text, output.text, output.length);
+            int write_err = write_file(output_path.text, output.text, output.length);
             if(write_err){
                 // TODO: retrieve platform specific error message.
                 fprintf(stderr, "Failed to write to output path: %s\n", output_path.text);
@@ -464,19 +485,19 @@ dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths){
     msb_write_str(&msb, ud->outfile.text, ud->outfile.length);
     msb_write_char(&msb, ':');
     for(size_t i = 0; i < npaths; i++){
-        auto dep = &paths[i];
+        StringView* dep = &paths[i];
         msb_write_char(&msb, ' ');
         msb_write_str(&msb, dep->text, dep->length);
     }
     msb_write_char(&msb, '\n');
     // generate empty rules so deleted files don't fail the build
     for(size_t i = 0; i < npaths; i++){
-        auto dep = &paths[i];
+        StringView* dep = &paths[i];
         msb_write_str(&msb, dep->text, dep->length);
         msb_write_literal(&msb, ":\n");
     }
     StringView deptext = msb_borrow_sv(&msb);
-    auto write_err = write_file(ud->depfile.text, deptext.text, deptext.length);
+    int write_err = write_file(ud->depfile.text, deptext.text, deptext.length);
     msb_destroy(&msb);
     if(write_err){
         perror("Error on write");
@@ -494,7 +515,7 @@ dndc_main_ast_func(void*_Nullable user_data, DndcContext*_Nonnull ctx){
     }
     if(flags & DNDC_MAIN_PRINT_LINKS){
         for(size_t i = 0; i < ctx->links.count; i++){
-            auto li = &ctx->links.data[i];
+            LinkItem* li = &ctx->links.data[i];
             fprintf(stderr, "[%zu] key: '%.*s', value: '%.*s'\n", i, (int)li->key.length, li->key.text, (int)li->value.length, li->value.text);
         }
     }
@@ -504,7 +525,7 @@ dndc_main_ast_func(void*_Nullable user_data, DndcContext*_Nonnull ctx){
 static inline
 void
 print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
-    auto node = get_node(ctx, handle);
+    Node* node = get_node(ctx, handle);
     for(int i = 0 ; i < depth*2; i++){
         putchar(' ');
     }
@@ -577,7 +598,7 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, const char* 
     const char* blue    = "\033[94m";
     const char* green   = "\033[92m";
     const char* red     = "\033[91m";
-    // const char* yellow  = "\033[93m";
+    const char* yellow  = "\033[93m";
     const char* magenta = "\033[95m";
     const char* cyan    = "\033[96m";
     const char* white   = "\033[37m";
@@ -596,6 +617,9 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, const char* 
             break;
         case DNDC_SYNTAX_NODE_TYPE:
             fputs(red, stdout);
+            break;
+        case DNDC_SYNTAX_DIRECTIVE:
+            fputs(yellow, stdout);
             break;
         case DNDC_SYNTAX_ATTRIBUTE:
             fputs(white, stdout);

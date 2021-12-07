@@ -1,4 +1,4 @@
-Mechanics::title @hide
+Mechanics::title #hide
 ::import
   rules.dnd
 Spell Recovery::md
@@ -228,34 +228,34 @@ Encumbrance::md
   * Move at half speed (unless you're a dwarf)
   * -4 penalty to dex (unless you're a dwarf)
   * Extra -4 penalty to ACP (especially if you're a dwarf)
-  Weapons::kv @id(encumbrance-weapons)
+  Weapons::kv #id(encumbrance-weapons)
     1-handed: 1 slot
     2-handed: 2 slots
     Javelin: 5 per slot
     40 ammo (bullets/arrows/bolts): 1 slot
-  Armors::kv @id(encumbrance-armors)
+  Armors::kv #id(encumbrance-armors)
     Light Armor: 1 slot
     Medium: 3 slots
     Heavy: 5 slots
     Light Shields: 1
     Heavy Shields: 2
     Tower Shield: 5
-  Gear::kv @id(encumbrance-gear)
+  Gear::kv #id(encumbrance-gear)
     Things like rope: 1 slot
     Lockpicks: hand waved
     10 torches: 1 slot
     Sledge Hammer: 2 slots
     Shovel: 2 slots
     Tent: 4 slots
-  Supplies::kv @id(encumbrance-supplies)
+  Supplies::kv #id(encumbrance-supplies)
     Day of supplies: 1 slot
-  Potions::kv @id(encubmrance-potions)
+  Potions::kv #id(encubmrance-potions)
     4 potions: 1 slot
-  Scrolls::kv @id(encumbrance-scrolls)
+  Scrolls::kv #id(encumbrance-scrolls)
     10 to a case: 1 slot
-  Coins::kv @id(encumbrance-coins)
+  Coins::kv #id(encumbrance-coins)
     250 coins: 1 slot
-  Misc::kv @id(encumbrance-misc)
+  Misc::kv #id(encumbrance-misc)
     Incapacitated person: 10 slots
 Misc Gear Rules::md
   Tent::md .def

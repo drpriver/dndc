@@ -1027,6 +1027,7 @@ Page::set_scroll_pos(QString&& x){
     unsigned long long flags = 0
         | DNDC_USE_DND_URL_SCHEME
         | DNDC_ALLOW_BAD_LINKS
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     if(PRINT_STATS)
         flags |= DNDC_PRINT_STATS;

@@ -10,6 +10,7 @@
 #import "mallocator.h"
 #import "msb_format.h"
 #import "dndc_funcs.h"
+#import "dndc_credits.h"
 // #import "log_print.h"
 // #import "terminal_logger.c"
 #define LOGIT(...) NSLog(@ "%d: " #__VA_ARGS__ "= %@", __LINE__, __VA_ARGS__)
@@ -322,6 +323,9 @@ static NSRegularExpression* indent_pattern;
 //
 // The app's image. We embed the png into the binary and decode it at startup.
 static NSImage* appimage;
+//
+// Name of the app
+NSString* APPNAME = @"Gdndc";
 
 
 @implementation DndDocument
@@ -354,7 +358,9 @@ static NSImage* appimage;
 
     NSWindow* window = [[NSWindow alloc]
         initWithContentRect: rect
-        styleMask: NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
+        styleMask: NSWindowStyleMaskTitled 
+                 | NSWindowStyleMaskClosable
+                 | NSWindowStyleMaskResizable 
         backing: NSBackingStoreBuffered
         defer: NO];
     window.title = @"Dndc";
@@ -1362,6 +1368,7 @@ BOOL show_stats;
     uint64_t flags = 0;
     // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
+    flags |= DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP;
     if(show_stats)
         flags |= DNDC_PRINT_STATS;
     // Disabled until I can figure out how to get wkwebview to invalidate
@@ -1488,6 +1495,7 @@ completionHandler:(void (^)(NSString *result))completionHandler{
 
 @implementation DndAppDelegate{
     DndFontDelegate* fontdel;
+    NSWindow* licenses_window;
 }
 -(void)applicationWillFinishLaunching:(NSNotification *)notification{
     do_syntax_colors();
@@ -1534,6 +1542,32 @@ completionHandler:(void (^)(NSString *result))completionHandler{
     auto mgr = [NSFontManager sharedFontManager];
     [mgr setTarget:fontdel];
     // [mgr setAction:@selector(change_font)];
+    
+    NSRect rect = NSMakeRect(600, 600, 600, 600);
+    licenses_window = [[NSWindow alloc]
+        initWithContentRect: rect
+        styleMask: NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
+        backing: NSBackingStoreBuffered
+        defer: YES];
+    licenses_window.releasedWhenClosed = NO;
+    NSTextView* creditstext;
+    creditstext = [[NSTextView alloc] initWithFrame:NSMakeRect(0, 0, 600, 600)];
+    creditstext.string = @DNDC_OPEN_SOURCE_CREDITS;
+    creditstext.usesAdaptiveColorMappingForDarkAppearance = YES;
+    creditstext.editable = NO;
+    creditstext.textStorage.font = [NSFont fontWithName:@"SF Mono" size:11];
+    NSScrollView* credits;
+    credits = [[NSScrollView alloc] initWithFrame:NSMakeRect(0, 0, 600, 600)];
+    credits.hasVerticalScroller = YES;
+    credits.hasHorizontalScroller = NO;
+    credits.autoresizingMask = NSViewHeightSizable | NSViewWidthSizable;
+    credits.documentView = creditstext;
+    licenses_window.contentView = credits;
+    licenses_window.title = @"Open Source Licenses";
+    
+}
+-(void)show_licenses:(nullable id) sender{
+    [licenses_window makeKeyAndOrderFront:self];
 }
 
 @end
@@ -1628,12 +1662,11 @@ do_menus(void){
     [NSApp setMainMenu:mainMenu];
 
     {
-        NSString *appName = @"Gdndc";
         // Create the application menu
         NSMenu *menu = [[NSMenu alloc] initWithTitle:@""];
 
         // Add menu items
-        NSString *title = [@"About " stringByAppendingString:appName];
+        NSString *title = [[@"About " stringByAppendingString:APPNAME] stringByAppendingString:@"…"];
         [menu addItemWithTitle:title action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
 
         [menu addItem:[NSMenuItem separatorItem]];
@@ -1650,7 +1683,7 @@ do_menus(void){
 
         [menu addItem:[NSMenuItem separatorItem]];
 
-        title = [@"Hide " stringByAppendingString:appName];
+        title = [@"Hide " stringByAppendingString:APPNAME];
         [menu addItemWithTitle:title action:@selector(hide:) keyEquivalent:@"h"];
 
         menu_item = [menu addItemWithTitle:@"Hide Others" action:@selector(hideOtherApplications:) keyEquivalent:@"h"];
@@ -1660,7 +1693,7 @@ do_menus(void){
 
         [menu addItem:[NSMenuItem separatorItem]];
 
-        title = [@"Quit " stringByAppendingString:appName];
+        title = [@"Quit " stringByAppendingString:APPNAME];
         [menu addItemWithTitle:title action:@selector(terminate:) keyEquivalent:@"q"];
 
         menu_item = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
@@ -1789,6 +1822,7 @@ do_menus(void){
         NSMenu* menu = [[NSMenu alloc] initWithTitle:@"Help"];
 
         NSMenuItem* menu_item = [[NSMenuItem alloc] initWithTitle:@"Help" action:nil keyEquivalent:@""];
+        [menu addItemWithTitle:@"Open Source Licenses…" action:@selector(show_licenses:) keyEquivalent:@""];
         [menu_item setSubmenu:menu];
         [[NSApp mainMenu] addItem:menu_item];
         [NSApp setHelpMenu:menu];

@@ -12,15 +12,16 @@
     Nodes are defined by lines that contain a double colon
     (<code>:</code><code>:</code>). Immediately following the node is the node
     type. The text preceding the double colon is the "header". For most nodes,
-    this header will be represented in the document as a heading that is a child
-    of the tag that contains that node. The node type can be followed by classes,
-    which are indicated by a leading dot (.) and attributes, which are indiciated
-    by a leading at (@). Attributes can take a parenthesized argument which is
-    stored as a string.
+    this header will be represented in the document as a heading that is a
+    child of the tag that contains that node. The node type can be followed by
+    classes, which are indicated by a leading dot (.), attributes, which are
+    indiciated by a leading at (@), or a directive, which are indicated by a
+    leading pound sign (#). Attributes can take a parenthesized argument which
+    is stored as a string.
 
     For example, in the following line:
 
-    ::pre @noid
+    ::pre #noid
       Hello World::md .hello @greeting @bonjour(monde)
     will be parsed as follows:
 
@@ -32,18 +33,18 @@
       - The second attribute is "bonjour" with an associated value of "monde"
       - These attributes can be retrieved from javascript.
 
-  Links::md .node @id(links-concept)
+  Links::md .node #id(links-concept)
     In almost any place that text can go, text including a link can go. Links
     look like:
 
-    ::pre @noid
+    ::pre #noid
       [link text]
     This will indicate a link that resolved to an internal id of #link-text by
     default. This behavior can be overriden in two ways. One way is with the
     [links] node. This will override the default handling of links. The other way
     is to put the override inline. It looks like this.
 
-    ::pre @noid
+    ::pre #noid
       [link text | some-link]
     The contents inside the square brackets are split by the pipe character,
     <code>|</code>. The contents to the left is the text that will be rendered
@@ -51,7 +52,7 @@
     text is used to look up what the link will resolve to. Therefore the
     following won't work:
 
-    ::pre @noid
+    ::pre #noid
       [This is a bad link | https://google.com]
     What you would want to do instead is this:
 
@@ -63,13 +64,13 @@
     which is what the syntax is optimized for. For example:
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         Room 1::md
           There's like 90d90 goblins.
         Room 2::md
           When anyone enters this room, an alarm will sound,
           alerting the [goblins in 1. | room 1]
-      Rendered::md .rightside @noid
+      Rendered::md .rightside #noid
         ::comment
           Use a raw node so that the nav doesn't see these.
           Maybe we should add @nonav or something similar?
@@ -89,31 +90,32 @@
           </div>
 
 
-  Attributes::md .node @id(attributes)
+  Attributes::md .node #id(attributes)
     Nodes can have attributes, designated by the <code>@</code>. Attributes are
     generally for the use of the author as they can be checked and accessed from
-    [<code>:</code><code>:js</code> | js] nodes. Some attributes are instead uses
-    to signal information to the compiler about how a node should be parsed or
-    rendered.
+    [<code>:</code><code>:js</code> | js] nodes. All attributes are available for
+    the user.
+
+  Directives::md.node #id(directive)
+    Nodes can have directives, designated by the <code>#</code>. Directives can affect
+    the parsing of a node, its behavior or its rendered output. The current ones are described
+    in the table below.
 
     ::table
       Attribute              | Description
-      <code>@import</code>   | Treat the lines of the node as filepaths to be
+      <code>#import</code>   | Treat the lines of the node as filepaths to be
                                imported and parsed, as children of this node.
-      <code>@comment</code>  | Parse the node as if it were a comment node. This
-                               is useful for temporarily remove nodes from the
-                               document while editing.
-      <code>@noid</code>     | Do not generate an id for this node.
-      <code>@hide</code>     | Don't render the node in the html output. This is
-                               different from <code>@comment</code> as the node
+      <code>#noid</code>     | Do not generate an id for this node.
+      <code>#hide</code>     | Don't render the node in the html output.
+                               The node
                                is still normally parsed and is available from js.
-      <code>@noinline</code> | [img] and [imglinks] nodes normally "inline" the
+      <code>#noinline</code> | [img] and [imglinks] nodes normally "inline" the
                                image as a base64 string into the final document.
                                This disables that behaviour for that node.
-      <code>@id</code>       | This attribute takes an argument. This attribute
+      <code>#id</code>       | This directive takes an argument. This directive
                                overrides the normal generation of ids for this
                                node and instead uses the argument as the id.
-  <code>:</code><code>:md</code>::md .node @id(md)
+  <code>:</code><code>:md</code>::md .node #id(md)
     <code>md</code> nodes are inspired by markdown, while not exactly being the
     same. <code>md</code> nodes accept any other nodes as children, as well as 3
     special forms for more convenient writing. Plain lines are treated as
@@ -121,7 +123,7 @@
     example:
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         ::md
           This is some text.
           Adjacent lines are merged into one paragraph.
@@ -130,12 +132,12 @@
           Nested node::md
             Paragraphs are also break on node change.
           Another paragraph
-      Rendered::md .rightside @noid
+      Rendered::md .rightside #noid
         This is some text. Adjacent lines are merged into one paragraph.
 
         Use a blank line to break paragraphs into more than one.
 
-        Nested node::md @noid
+        Nested node::md #noid
           Paragraphs are also break on node change.
 
         Another paragraph
@@ -145,7 +147,7 @@
     Ordered lists begin with a number, a <code>.</code> and a space. For example:
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         ::md
           * This is a list.
           - This is a continuation of the same list
@@ -158,7 +160,7 @@
           This is a new paragraph as it is not indented
           and does not start with a list. This is a little
           confusing, so avoid this stylistically.
-      Rendered::md .rightside @noid
+      Rendered::md .rightside #noid
         * This is a list.
         * This is a continuation of the same list This is still considered one
           item, just with linebreaks.
@@ -173,7 +175,7 @@
     Note that the top level of the document is implicitly an <code>md</code>
     node.
 
-  <code>:</code><code>:div</code>::md .node @id(div)
+  <code>:</code><code>:div</code>::md .node #id(div)
     The <code>div</code> node is useful for creating wrapper nodes. Plain lines
     within the div node are not parsed specially and are outputted as plain lines
     within the div element. This is useful if you specifically do not want
@@ -181,16 +183,16 @@
     intent that this is just a wrapper node.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         ::div
           * This is not a list.
           - Still not a list.
             1. Not a nested list.
           This is not a paragraph
-      Rendered::div .rightside @noid
+      Rendered::div .rightside #noid
         * This is not a list. - Still not a list. 1. Not a nested list. This is
         not a paragraph
-  <code>:</code><code>:import</code>::md .node @id(import)
+  <code>:</code><code>:import</code>::md .node #id(import)
     <code>:</code><code>:import</code> nodes are used to reuse the contents of
     other <code>.dnd</code> files. Every line of an import is treated as a
     filepath of another <code>.dnd</code>. That file is loaded and parsed and the
@@ -198,24 +200,24 @@
     itself is then converted to xxx what actualy happens to imports.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         ::import
           list-of-cats.dnd
-      Rendered::md .rightside @noid
+      Rendered::md .rightside #noid
         * Calico
         * Tortoise Shell
         * Black
 
     This node can't be used in untrusted input.
 
-  <code>:</code><code>:js</code>::md .node @id(js)
+  <code>:</code><code>:js</code>::md .node #id(js)
     <code>:</code><code>:js</code> nodes are used to script the document. See the
     [js documentation] for more information on what js nodes can do.
 
     ::links
       js documentation = jsdoc.html
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         Hello::md
           Hi there!
         ::js
@@ -225,44 +227,44 @@
             if(node.header)
               node.header += '!!!';
           }
-      Rendered::md .rightside @noid
-        Hello!!!::md @noid
+      Rendered::md .rightside #noid
+        Hello!!!::md #noid
           Hi there!
 
     This node can't be used in untrusted input.
 
-  <code>:</code><code>:title</code>::md .node @id(title)
+  <code>:</code><code>:title</code>::md .node #id(title)
     The <code>:</code><code>:title</code> node is used to set the title of the
     document. The title node is also rendered as an <h1>. This node can have no
     children. The text before the double colon is all that is considered.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         My Document::title
         This is my document.
-      Rendered::md .rightside @noid
+      Rendered::md .rightside #noid
         ::raw
           <h1>My Document</h1>
           <p>This is my document</h1>
-  <code>:</code><code>:h</code>::md .node @id(h)
+  <code>:</code><code>:h</code>::md .node #id(h)
     The <code>:</code><code>:h</code> creates a heading. Generally, a nested md
     block is more useful, but sometimes you want to avoid overly indented
     documents.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         Some Information::md
           Blah blah
           Subheading::h
           Blah Blah
-      Rendered::md .rightside @noid
-        Some Information::md @noid
+      Rendered::md .rightside #noid
+        Some Information::md #noid
           Blah blah
 
-          Subheading::h @noid
+          Subheading::h #noid
           Blah Blah
 
-  <code>:</code><code>:table</code>::md .node @id(table)
+  <code>:</code><code>:table</code>::md .node #id(table)
     The <code>:</code><code>:table</code> node is for tabless! Columns are
     separted by the pipe character: <code>|</code>. The first row is the table
     heading. The last column of each row is allowed to continue on the next line
@@ -270,7 +272,7 @@
     column.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         Wandering Monsters::table
           d6 | Monster
           1 | 1d6 orcs
@@ -280,8 +282,8 @@
               in an existential crisis
           5 | Ghost of christmas past.
           6 | Roll again twice
-      Rendered::md .rightside @noid
-        Wandering Monsters::table @noid
+      Rendered::md .rightside #noid
+        Wandering Monsters::table #noid
           d6 | Monster
           1  | 1d6 orcs
           2  | 2d10 gremlins
@@ -289,24 +291,24 @@
           4  | Gambler, in an existential crisis
           5  | Ghost of christmas past.
           6  | Roll again twice
-  <code>:</code><code>:css</code>::md .node @id(css)
+  <code>:</code><code>:css</code>::md .node #id(css)
     The <code>:</code><code>:css</code> node allows adding styling information to
     the final rendered document. The contents will be placed in a <style> tag in
     the resulting html.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         I Am Angry!!::md.angry
           So angry!
         ::css
           .angry {color: red;}
-      Rendered::md .rightside @noid
-        I Am Angry!!::md .angry @noid
+      Rendered::md .rightside #noid
+        I Am Angry!!::md .angry #noid
           So angry!
 
         ::css
           .angry {color: red;}
-  <code>:</code><code>:links</code>::md .node @id(links)
+  <code>:</code><code>:links</code>::md .node #id(links)
     The <code>:</code><code>:links</code> node allows adding information on what
     links in the text should resolve to. Each line is parsed in the following
     way: the line is split on the '<code>=</code>' character. The left hand side
@@ -315,16 +317,16 @@
     punctuation, spaces and upper vs lower case doesn't matter.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         There's a great website for playing dnd, [krug's basement]!
         ::links
           krug's basement = https://krugsbasement.com
-      Rendered::md .rightside @noid
+      Rendered::md .rightside #noid
         There's a great website for playing dnd, [krug's basement]!
 
         ::links
           krug's basement = https://krugsbasement.com
-  <code>:</code><code>:script</code>::md .node @id(script)
+  <code>:</code><code>:script</code>::md .node #id(script)
     The <code>:</code><code>:script</code> node allows adding javascript that
     will be in the final output document. Don't confuse this with the
     <code>:</code><code>:js</code> node, which is used to script the document at
@@ -333,15 +335,15 @@
     javascript in a webpage. The contents will be in a <script> tag.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         ::script
           document.addEventListener('DOMContentLoaded', function(){
             alert('Hello world');
           });
-      Rendered::md .rightside @noid
+      Rendered::md .rightside #noid
     This node can't be used in untrusted input.
 
-  <code>:</code><code>:img</code>::md .node @id(img)
+  <code>:</code><code>:img</code>::md .node #id(img)
     The <code>:</code><code>:img</code> node is for adding an image to the
     document.
 
@@ -349,24 +351,24 @@
     rendered as strings.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         ::img
           roxie-the-cat.png
           Roxie is a beautiful cat
-      Rendered::md .rightside @noid
-        ::img @noinline @comment
+      Rendered::md .rightside #noid
+        ::img #noinline
           roxie-the-cat.png
           Roxie is a beautiful cat
         TODO
 
-  <code>:</code><code>:raw</code>::md .node @id(raw)
+  <code>:</code><code>:raw</code>::md .node #id(raw)
     The <code>:</code><code>:raw</code> node allows adding unescaped content into
     the document, without being parsed specially in any way. Double colons don't
     introduce nodes, tags won't be escaped, etc. This allows you to add content
     that can't be expressed via another node.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         ::raw
           <button id="click-me" onclick="clicked()">
           Click::Me!
@@ -376,7 +378,7 @@
             let button = document.getElementById('clickme');
             button.textContent = 'You clicked!';
           }
-      Rendered::md .rightside @noid
+      Rendered::md .rightside #noid
         ::raw
           <button id="clickme" onclick="clicked()">
           Click::Me!
@@ -388,35 +390,35 @@
           }
     This node can't be used in untrusted input.
 
-  <code>:</code><code>:pre</code>::md .node @id(pre)
+  <code>:</code><code>:pre</code>::md .node #id(pre)
     The <code>:</code><code>:pre</code> node is for pre-formatted text. It's like
     the <pre> tag in html.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         ::pre
           * This is some preformatted text.
           * These are parsed as-is.
           <tags> are still escaped though.
-      Rendered::pre .rightside @noid
+      Rendered::pre .rightside #noid
         * This is some preformatted text.
         * These are parsed as-is.
         <tags> are still escaped though.
-  <code>:</code><code>:kv</code>::md .node @id(kv)
+  <code>:</code><code>:kv</code>::md .node #id(kv)
     The <code>:</code><code>:kv</code> node allows for a display of key-value
     data. It is rendered as a two column table and is typically used for things
     like monster statistics. You can programmatically access the values as well.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         Goblin::kv
           HP: 18
           AC: 14
           Atk: +4
           Dmg: 1d6+2
           Spd: 30'
-      Rendered::md .rightside @noid
-        Goblin::kv @noid
+      Rendered::md .rightside #noid
+        Goblin::kv #noid
           HP:  18
           AC:  14
           Atk: +4
@@ -426,7 +428,7 @@
     via javascript is easier. For example:
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         Goblin::kv.monster
           HP: 18
           AC: 14
@@ -437,8 +439,8 @@
           .monster tr > td:nth-child(1)::after{
             content:":";
           }
-      Rendered::md .rightside @noid
-        Goblin::kv .monster @noid
+      Rendered::md .rightside #noid
+        Goblin::kv .monster #noid
           HP:  18
           AC:  14
           Atk: +4
@@ -450,33 +452,33 @@
           }
     You could also add it back via javascript, but this feels more elegant.
 
-  <code>:</code><code>:comment</code>::md .node @id(comment)
+  <code>:</code><code>:comment</code>::md .node #id(comment)
     The <code>:</code><code>:comment</code> node is for describing potentially
     confusing sections of your document to editors of your document. It is not
     rendered in the final html.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         ::comment
           This node is so the script tag has something to add
           content to.
-        ::div @id(add-me)
+        ::div #id(add-me)
         ::script
           document.addEventListener('DOMContentLoaded', function(){
             const el = document.getElementById('add-me');
             el.add_child(document.createTextNode('Hello'));
           });
-      Rendered::md .rightside @noid
+      Rendered::md .rightside #noid
         ::comment
           This node is so the script tag has something to add
           content to.
-        ::div @id(add-me)
+        ::div #id(add-me)
         ::script
           document.addEventListener('DOMContentLoaded', function(){
             const el = document.getElementById('add-me');
             el.appendChild(document.createTextNode('Hello'));
           });
-  <code>:</code><code>:imglinks</code>::md .node @id(imglinks)
+  <code>:</code><code>:imglinks</code>::md .node #id(imglinks)
     The <code>:</code><code>:imglinks</code> node is really awesome and is one of
     the reasons dnd files are really nice for writing up your dungeons. They have
     a very specific syntax.
@@ -501,27 +503,27 @@
     Really, just look at the krug's basement example dnd file.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         ::imglinks
           imgs/cells.png
           width = 600
           height = 450
           viewBox = 0 0 800 600
           1 = #den-of-evil @ 20, 30
-      Rendered::md .rightside @noid
+      Rendered::md .rightside #noid
         TODO
 
-  <code>:</code><code>:nav</code>::md .node @id(nav)
+  <code>:</code><code>:nav</code>::md .node #id(nav)
     The <code>:</code><code>:nav</code> node is a special kind of node. It
     renders into effectively a table of contents of the document, grabbing all
     h2s and h3s and putting them into an unordered list.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         ::nav
-      Rendered::md .rightside @noid
+      Rendered::md .rightside #noid
         ::nav
-  <code>:</code><code>:data</code>::md .node @id(data)
+  <code>:</code><code>:data</code>::md .node #id(data)
     The <code>:</code><code>:data</code> node is for storing nodes that should be
     rendered to html, but not immediately included in the document. They are
     instead store in the data blob.
@@ -533,12 +535,12 @@
 
     There is no example for this node as it doesn't render into anything.
 
-  <code>:</code><code>:quote</code>::md .node @id(quote)
+  <code>:</code><code>:quote</code>::md .node #id(quote)
     The <code>:</code><code>:quote</code> node is for block quotes. It's like a
     div, but wraps in a <blockquote> instead of a div.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         ::quote
           ::md
             Hello world
@@ -546,7 +548,7 @@
           blockquote > div > *:before {
             content: "> ";
           }
-      Rendered::md .rightside @noid
+      Rendered::md .rightside #noid
         ::quote
           ::md
             Hello world
@@ -555,37 +557,37 @@
           blockquote > div > *:before {
             content: "> ";
           }
-  <code>:</code><code>:hr</code>::md .node @id(hr)
+  <code>:</code><code>:hr</code>::md .node #id(hr)
     The <code>:</code><code>:hr</code> inserts an <hr> element.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         Hello.
         ::hr
         Goodbye.
-      Rendered::md .rightside @noid
+      Rendered::md .rightside #noid
         Hello.
 
         ::hr
         Goodbye.
 
-  <code>:</code><code>:details</code>::md .node @id(details)
+  <code>:</code><code>:details</code>::md .node #id(details)
     The <code>:</code><code>:details</code> node is parsed like a <code>md</code>
     node, but the final output will be in a <details> tag. The header will be put
     in the summary instead of as a heading.
 
     ::div .side-by-side
-      Input::pre .leftside @noid
+      Input::pre .leftside #noid
         Strength::details
           You add your strength to things like melee attacks or
           attempts to use raw brawn to overcome problems, like
           smashing open a door.
-      Rendered::md .rightside @noid
-        Strength::details @noid
+      Rendered::md .rightside #noid
+        Strength::details #noid
           You add your strength to things like melee attacks or attempts to use
           raw brawn to overcome problems, like smashing open a door.
 
-  <code>:</code><code>:meta</code>::md .node @id(meta)
+  <code>:</code><code>:meta</code>::md .node #id(meta)
     The <code>:</code><code>:meta</code> node is parsed as a raw node. Each line
     is wrapped in a <meta> tag and placed verbatim into the <head> of the
     document. This allows you to set specific meta-attributes. Search online for
@@ -656,7 +658,7 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
   }
   code, pre {
-    font-family: -apple-system-mono, "Cascadia Mono", Consolas, mono;
+    font-family: "SF Mono", ui-mono, "Cascadia Mono", Consolas, monospace;
   }
   pre {
     font-size: 12px;

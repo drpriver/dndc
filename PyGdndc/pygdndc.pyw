@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-PYGDNDC_VERSION = '0.9.3'
+PYGDNDC_VERSION = '0.10.0'
 __version__ = PYGDNDC_VERSION
 import os
 # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
@@ -243,6 +243,7 @@ class DndSyntaxHighlighter(QSyntaxHighlighter):
         self.highlight_regions = {}  # type: Dict[int, List[Tuple[int, int, int, int]]]
         self.color_names = {
             pydndc.ATTRIBUTE: 'lightsteelblue',
+            pydndc.DIRECTIVE: 'lightsteelblue',
             pydndc.ATTRIBUTE_ARGUMENT: 'darkkhaki',
             pydndc.CLASS: 'burlywood',
             pydndc.DOUBLE_COLON: 'darkgray',
@@ -798,6 +799,7 @@ class Page(QSplitter):
             flags = pydndc.USE_DND_URL_SCHEME
             if PRINT_STATS:
                 flags |= pydndc.PRINT_STATS
+            flags |= pydndc.DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
             html, depends = pydndc.htmlgen(
                 self.get_text_for_preview(),
                 base_dir=self.dirname,

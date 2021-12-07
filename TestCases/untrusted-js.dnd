@@ -1,4 +1,4 @@
-::js @import
+::js #import
   hello.js
 
 

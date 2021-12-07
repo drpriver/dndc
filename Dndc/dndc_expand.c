@@ -36,7 +36,7 @@ static
 Errorable_f(void)
 expand_to_dnd(DndcContext*ctx, MStringBuilder* msb){
     Errorable(void) result = {0};
-    auto node = get_node(ctx, ctx->root_handle);
+    Node* node = get_node(ctx, ctx->root_handle);
     if(node->type != NODE_MD){
         result = expand_node(ctx, node, 0, msb);
 
@@ -54,7 +54,7 @@ write_generic_header(Node* n, int indent, MStringBuilder*msb){
     msb_write_nchar(msb, ' ', indent);
     if(n->header.length)
         msb_write_str(msb, n->header.text, n->header.length);
-    auto hd = &NODETYPE_TO_NODE_ALIASES[n->type];
+    const StringView* hd = &NODETYPE_TO_NODE_ALIASES[n->type];
     MSB_FORMAT(msb, "::", *hd);
     RARRAY_FOR_EACH(at, n->attributes){
         MSB_FORMAT(msb, " @", at->key);
@@ -141,46 +141,6 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
         }
     unreachable();
     }
-#if 0
-static
-Errorable_f(void)
-load_and_indent_raw_files(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
-    Errorable(void) result = {0};
-    NODE_CHILDREN_FOR_EACH(p, n){
-        Node* pathnode = get_node(ctx, *p);
-        if(pathnode->type != NODE_STRING){
-            node_set_err_q(ctx, pathnode, SV("Expected string for a path, got "), NODETYPE_TO_NODE_ALIASES[pathnode->type]);
-            Raise(PARSE_ERROR);
-            }
-        if(!pathnode->header.length)
-            continue;
-        auto e = ctx_load_source_file(ctx, pathnode->header);
-        if(e.errored){
-            node_set_err_q(ctx, pathnode, SV("Unable to load "), pathnode->header);
-            result.errored = e.errored;
-            return result;
-            }
-        LongString text = e.result;
-        const char* begin = text.text;
-        const char* end = text.text + text.length;
-        while(begin != end){
-            const char* newline = memchr(begin, '\n', end - begin);
-            if(!newline){
-                msb_write_nchar(msb, ' ', indent);
-                msb_write_str(msb, begin, end-begin);
-                msb_write_char(msb, '\n');
-                break;
-                }
-            msb_write_nchar(msb, ' ', indent);
-            if(newline-begin)
-                msb_write_str(msb, begin, newline-begin);
-            msb_write_char(msb, '\n');
-            begin = newline+1;
-            }
-        }
-    return result;
-    }
-#endif
 
 static
 Errorable_f(void)

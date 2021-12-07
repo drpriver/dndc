@@ -821,15 +821,21 @@ void
 print_wrapped(const char*text, int columns){
     HelpState hs = {.output_width = columns, .lead=0, .remaining=0};
     hs.remaining = hs.output_width;
+    // Track if we had a hardbreak so we can preserve paragraph breaks.
+    bool newline = false;
     for(;*text;){
         struct HelpTokenized tok = next_tokenize_help((const char*)text); // cast away nullability
         text = tok.rest;
         if(tok.is_newline){
-            if(hs.remaining != hs.output_width){
+            if(newline || hs.remaining != hs.output_width){
                 putchar('\n');
                 hs.remaining = hs.output_width;
             }
+            newline = true;
             continue;
+        }
+        else {
+            newline = false;
         }
         help_state_update(&hs, tok.token.length);
         printf("%.*s", (int)tok.token.length, tok.token.text);

@@ -208,21 +208,21 @@ Self-Contained::md
   Example:
 
   ::pre .embedded
-    ::css @import
+    ::css #import
       cssfile1.css
       another/css/file.css
       and/another.css
-    ::script @import
+    ::script #import
       somejsfile.js
       another/jsfile.js
     ::comment
-      You haven't seen this before. The '@' symbol to the right of the double
-      colon indicates an attribute. Attributes can be simple identifiers. They
-      are generally used to tag nodes with extra metadata for your js blocks.
-      Some identifiers are special to the system. For example, this @import
-      attribute tells the system to not interpret the contents as raw strings to be included in a <script> tag, but instead as file paths to load.
+      You haven't seen this before. The '#' symbol to the right of the double
+      colon indicates a directive. Only certain directives are allowed. 
+      For example, this #import
+      attribute tells the system to not interpret the contents as raw strings
+      to be included in a <script> tag, but instead as file paths to load.
 
-      css blocks also support @import with the same meaning, but for <script>.
+      css blocks also support #import with the same meaning, but for <script>.
     ::css
       * {
         box-sizing: border-box;
@@ -273,7 +273,7 @@ Self-Contained::md
     node, set the 'inline' attribute and then just insert whatever you want using
     js syntax.
 
-Attributes and Classes::md
+Attributes, Classes and Directives::md
   Blocks can have classes, which directly correspond to css classes in the output
   html.
 
@@ -285,21 +285,17 @@ Attributes and Classes::md
         hello, aloha
   In this example the Hola div will have .foo and .bar as css classes.
 
-  Blocks can also have attributes, which are generally user defined tags, but
-  some have special meaning.
+  Blocks can also have attributes, which are user defined tags. They only have whatever
+  meaning you give to them. 
 
   Example:
 
   ::pre .embedded
-    Don't look::div @hide
-      Don't put me in the document!
     A room::md @coord(1,2)
       some stuff is in the room
-    Duplicate Heading::h @id(my-id)
-    Duplicate Heading::h @id(my-id-2)
+    Another room::md @coord(4, 6)
+      A goblin is in this room.
 
-    Don't ID me bro::md @noid
-      IDs are for squares!
   A block can have any number of attributes. Attributes are identifiers and can
   have arguments in parens. The contents of the parens are stored as a string.
 
@@ -308,23 +304,32 @@ Attributes and Classes::md
   attribute without a value, which will give it an empty string as its value.
   Many things only check for the presence of the key and ignore the value.
 
-  Special Attributes::md
-    The following attributes are special to the system:
+
+  Directives::md
+    Blocks can also have directives, which are prefixed by the '#'.
+
+    Example:
+
+    ::pre .embedded
+      Don't look::div #hide
+        Don't put me in the document!
+      Duplicate Heading::h #id(my-id)
+      Duplicate Heading::h #id(my-id-2)
+
+      Don't ID me bro::md #noid
+        IDs are for squares!
+    The following directives are currently used.
 
     ::table
       Attribute              | Meaning
-      <code>@noid</code>     | Don't give the heading an id
-      <code>@id(iden)</code> | Instead of the automatic id, use <code>iden</code>
+      <code>#noid</code>     | Don't give the heading an id
+      <code>#id(iden)</code> | Instead of the automatic id, use <code>iden</code>
                                as the id for the heading
-      <code>@hide</code>     | Don't output the block in the rendered output.
-      <code>@noinline</code> | Produce a link (href) instead of embedding.
-      <code>@comment</code>  | Treat the block as a comment instead of its
-                               declared type.
-      <code>@import</code>   | Treat the lines inside the block as paths to be
+      <code>#hide</code>     | Don't output the block in the rendered output.
+      <code>#noinline</code> | Produce a link (href) instead of embedding.
+      <code>#import</code>   | Treat the lines inside the block as paths to be
                                imported and import them as children of this node.
-    All other attributes are used for user javascript blocks. I can't guarantee
-    that they won't break when I add a new attribute though! We'll stabilize when
-    the version is 1.0.
+    Directives may be expanded in future versions.
 
 But Wait, There's More::md
   The structured document format is convenient to write in, but sometimes you
@@ -444,7 +449,7 @@ But Wait, There's More::md
     text-align: left;
   }
   th {
-    border-bottom:2px solid black;
+    border-bottom: 2px solid black;
   }
   table {
     border-collapse: collapse;
@@ -452,6 +457,12 @@ But Wait, There's More::md
   }
   body {
     font-family: "Helvetica", "Verdana", "Tahoma", sans;
+  }
+  code, pre {
+    font-family: "SF Mono", ui-mono, "Cascadia Mono", Consolas, monospace;
+  }
+  pre {
+    font-size: 12px;
   }
 
   @media only screen and (max-width: 720px) {

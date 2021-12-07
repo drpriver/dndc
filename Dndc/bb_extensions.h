@@ -25,18 +25,20 @@ static inline
 Errorable_f(void)
 bb_read_bin_file(ByteBuilder* bb, const char* filename){
     Errorable(void) result = {0};
-    auto fp = fopen(filename, "rb");
-    if(not fp)
-        Raise(FILE_NOT_OPENED);
-    auto size_e = file_size_from_fp(fp);
+    FILE* fp = fopen(filename, "rb");
+    if(!fp){
+        result.errored = FILE_NOT_OPENED;
+        return result;
+    }
+    FileSizeResult size_e = file_size_from_fp(fp);
     if(size_e.errored){
         result.errored = FILE_ERROR;
         goto finally;
     }
-    auto nbytes = size_e.result;
+    size_t nbytes = size_e.result;
     bb_reserve(bb, nbytes);
     void* data = bb->data + bb->cursor;
-    auto fread_result = fread(data, 1, nbytes, fp);
+    size_t fread_result = fread(data, 1, nbytes, fp);
     if(fread_result != nbytes){
         result.errored = FILE_ERROR;
         goto finally;
@@ -56,15 +58,15 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
     int fd = open(filename, O_RDONLY);
     if(fd < 0)
         Raise(FILE_NOT_OPENED);
-    auto size_e = file_size_from_fd(fd);
+    FileSizeResult size_e = file_size_from_fd(fd);
     if(size_e.errored){
         result.errored = FILE_ERROR;
         goto finally;
     }
-    auto nbytes = size_e.result;
+    size_t nbytes = size_e.result;
     bb_reserve(bb, nbytes);
     void* data = bb->data + bb->cursor;
-    auto read_result = read(fd, data, nbytes);
+    ssize_t read_result = read(fd, data, nbytes);
     if(read_result != nbytes){
         result.errored = FILE_ERROR;
         goto finally;
@@ -83,7 +85,7 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
     Errorable(void) result = {0};
     PushDiagnostic();
     SuppressDiscardQualifiers();
-    auto handle = CreateFile(
+    HANDLE handle = CreateFile(
             filename,
             GENERIC_READ,
             FILE_SHARE_READ,
@@ -140,10 +142,10 @@ Errorable_f(LongString)
 read_and_base64_bin_file(ByteBuilder* bb, const Allocator a, const char* filepath){
     Errorable(LongString) result = {0};
     assert(bb->cursor == 0);
-    auto e = bb_read_bin_file(bb, filepath);
+    Errorable(void) e = bb_read_bin_file(bb, filepath);
     if(e.errored)
         Raise(e.errored);
-    auto buff = bb_borrow(bb);
+    ByteBuffer buff = bb_borrow(bb);
     MStringBuilder sb = {.allocator=a};
     msb_write_b64(&sb, buff.buff, buff.n_bytes);
     result.result = msb_detach_ls(&sb);

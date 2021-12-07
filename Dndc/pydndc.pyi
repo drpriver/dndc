@@ -33,12 +33,15 @@ def analyze_syntax_for_highlight(text:str) -> Dict[int, List[SyntaxRegion]]:
 __version__: str
 
 # flags
+INPUT_IS_UNTRUSTED: int
+FRAGMENT_ONLY:      int
 DONT_INLINE_IMAGES: int
 NO_THREADS:         int
 USE_DND_URL_SCHEME: int
+PRINT_STATS:        int
 STRIP_WHITESPACE:   int
 DONT_READ:          int
-PRINT_STATS:        int
+DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP: int
 
 # error message types
 ERROR_MESSAGE:     int
@@ -53,6 +56,7 @@ DOUBLE_COLON:       int
 HEADER:             int
 NODE_TYPE:          int
 ATTRIBUTE:          int
+HEADER:             int
 ATTRIBUTE_ARGUMENT: int
 CLASS:              int
 RAW_STRING:         int

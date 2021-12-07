@@ -105,6 +105,30 @@ NodeHandle_eq(NodeHandle a, NodeHandle b){
 #define MARRAY_T NodeHandle
 #include "Marray.h"
 
+// For tracking what's the id of a node.
+typedef struct IdItem {
+    NodeHandle node;
+    // text needs to be kebabed before use.
+    StringView text;
+} IdItem;
+#define MARRAY_T IdItem
+#include "Marray.h"
+
+typedef enum NodeFlags {
+    NODEFLAG_NONE = 0,
+    // Import children
+    NODEFLAG_IMPORT = 0x1,
+    // Don't give an id to this node
+    NODEFLAG_NOID = 0x2,
+    // Hide this node from final output
+    NODEFLAG_HIDE = 0x4,
+    // Don't inline the images from this node
+    NODEFLAG_NOINLINE = 0x8,
+    // ID is not derived from header -> it's stored elsewhere.
+    // Look it up via the NodeHandle of the node.
+    NODEFLAG_ID = 0x10,
+} NodeFlags;
+
 typedef struct Node {
     // The type of the node
     NodeType type;                // 4 bytes
@@ -126,12 +150,12 @@ typedef struct Node {
     Rarray(Attribute)*_Nullable attributes;  // 8 bytes
     Rarray(StringView)*_Nullable classes;    // 8 bytes
     // Source filename (used for reporting errors)
-    unsigned filename_idx; // 4 bytes
+    uint32_t filename_idx; // 4 bytes
     // Location of first character of where this node originated from.
     // These are 0-based. Functions that report errors add 1 to this number
     // for the general human-readable version.
-    int row, col;                  // 4 + 4 bytes.
-    // 4 bytes of padding in this struct
+    int row, col;         // 4 + 4 bytes.
+    NodeFlags flags; // 4 bytes
 } Node;
 
 #if UINTPTR_MAX != 0xFFFFFFFF
@@ -250,6 +274,9 @@ typedef struct DndcContext {
     Marray(LinkItem) links;
     // Mapping of key to string (will be outputted as "data_blob").
     Marray(DataItem) rendered_data;
+    // TODO: use an adaptive table (linear at small N, hashmap
+    //       at large N).
+    Marray(IdItem) explicit_node_ids;
     // If a nav block exists, this string holds the html fragment
     // that is the nav.
     // TODO: make this a string view?
