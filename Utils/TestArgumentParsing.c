@@ -43,7 +43,7 @@ TestFunction(TestArgumentParsing1){
         LongString a;
         bool flag;
         int an_int;
-    } h = {};
+    } h = {0};
     ArgToParse kw_args[] = {
         {
             .name = SV("--x"),
@@ -150,7 +150,7 @@ TestFunction(TestArgumentParsing1){
 
 TestFunction(TestArgumentParsing2){
     TESTBEGIN();
-    LongString f = {};
+    LongString f = {0};
     ArgToParse kw_args[] = {
         {
             .name = SV("--f"),
@@ -203,7 +203,7 @@ TestFunction(TestArgumentParsing3){
             .dest = ARGDEST(&bar),
         },
     };
-    ArgToParse kwargs[1] = {};
+    ArgToParse kwargs[1] = {0};
     ArgParser argparser = {
         .name = "barzle",
         .description = "A flim flam.",
@@ -222,8 +222,8 @@ TestFunction(TestArgumentParsing3){
 
 TestFunction(TestArgumentParsing4){
     TESTBEGIN();
-    const char* a[2] = {};
-    const char* b[1] = {};
+    const char* a[2] = {0};
+    const char* b[1] = {0};
     ArgToParse pos_args[] = {
         [0] = {
             .name = SV("a"),
@@ -365,10 +365,10 @@ TestFunction(TestParseEnum){
         BAR = 2,
     };
     enum FooBar fb = NOFOOBAR;
-    LongString names[] = {
-        [NOFOOBAR] = LS("no-foo-bar"),
-        [FOO] = LS("foo"),
-        [BAR] = LS("bar"),
+    StringView names[] = {
+        [NOFOOBAR] = SV("no-foo-bar"),
+        [FOO] = SV("foo"),
+        [BAR] = SV("bar"),
     };
     ArgParseEnumType enum_def = {
         .enum_size = sizeof(enum FooBar),
@@ -418,6 +418,7 @@ TestFunction(TestParseEnum){
 }
 TestFunction(TestParseHex){
     TESTBEGIN();
+
     #define HexTest(hexval) do{\
         char argstring[] = #hexval;\
         Uint64Result e = parse_hex(argstring, sizeof(argstring)-1);\
@@ -437,27 +438,31 @@ TestFunction(TestParseHex){
     HexTest(0XaaFF);
     HexTest(0XFffF);
     HexTest(0XF0fa);
+
     #undef HexTest
+
     #define FailHexTest(hexstr, error_code) do{\
         char argstring[] = hexstr;\
         Uint64Result e = parse_hex(argstring, sizeof(argstring)-1);\
         TestExpectEquals(e.errored, error_code);\
     }while(0)
-    FailHexTest("0 xff", PARSENUMBER_INVALID_CHARACTER);
-    FailHexTest("0xff ", PARSENUMBER_INVALID_CHARACTER);
-    FailHexTest("0xff 0x", PARSENUMBER_INVALID_CHARACTER);
-    FailHexTest("0x", PARSENUMBER_UNEXPECTED_END);
-    FailHexTest("0X", PARSENUMBER_UNEXPECTED_END);
-    FailHexTest("0X-", PARSENUMBER_INVALID_CHARACTER);
-    FailHexTest("X", PARSENUMBER_UNEXPECTED_END);
-    FailHexTest("a", PARSENUMBER_UNEXPECTED_END);
-    FailHexTest("1", PARSENUMBER_UNEXPECTED_END);
-    FailHexTest("?", PARSENUMBER_UNEXPECTED_END);
-    FailHexTest("0xfff??ff", PARSENUMBER_INVALID_CHARACTER);
+
+    FailHexTest("0 xff",                PARSENUMBER_INVALID_CHARACTER);
+    FailHexTest("0xff ",                PARSENUMBER_INVALID_CHARACTER);
+    FailHexTest("0xff 0x",              PARSENUMBER_INVALID_CHARACTER);
+    FailHexTest("0x",                   PARSENUMBER_UNEXPECTED_END);
+    FailHexTest("0X",                   PARSENUMBER_UNEXPECTED_END);
+    FailHexTest("0X-",                  PARSENUMBER_INVALID_CHARACTER);
+    FailHexTest("X",                    PARSENUMBER_UNEXPECTED_END);
+    FailHexTest("a",                    PARSENUMBER_UNEXPECTED_END);
+    FailHexTest("1",                    PARSENUMBER_UNEXPECTED_END);
+    FailHexTest("?",                    PARSENUMBER_UNEXPECTED_END);
+    FailHexTest("0xfff??ff",            PARSENUMBER_INVALID_CHARACTER);
     FailHexTest("0xffffffffffffffffff", PARSENUMBER_OVERFLOWED_VALUE);
+
     #undef FailHexTest
     TESTEND();
-    }
+}
 
 TestFunction(TestIntegerParsing){
     TESTBEGIN();
@@ -495,12 +500,14 @@ TestFunction(TestIntegerParsing){
         Int64Result e2 = parse_int64("9223372036854775809", sizeof("9223372036854775809")-1);
         TestAssertFailure(e2);
     }
+
     #define TESTINT(N) do { \
         Int64Result e = parse_int64(#N, sizeof(#N)-3); \
         TestAssertSuccess(e); \
         int64_t val = e.result; \
         TestExpectEquals(val, N); \
     }while(0)
+
     TESTINT(128ll);
     TESTINT(0ll);
     TESTINT(-1ll);
@@ -509,13 +516,16 @@ TestFunction(TestIntegerParsing){
     TESTINT(12873812ll);
     TESTINT(21378109127ll);
     TESTINT(-9223372036854775807ll);
+
     #undef TESTINT
+
     #define TESTUINT(N) do { \
         Uint64Result e = parse_uint64(#N, sizeof(#N)-4); \
         TestAssertSuccess(e); \
         uint64_t val = e.result; \
         TestExpectEquals(val, N); \
     }while(0)
+
     TESTUINT(128llu);
     TESTUINT(0llu);
     TESTUINT(1llu);
@@ -524,17 +534,21 @@ TestFunction(TestIntegerParsing){
     TESTUINT(12873812llu);
     TESTUINT(21378109127llu);
     TESTUINT(18446744073709551615llu);
+
     {
         Uint64Result e = parse_uint64("88446744073709551615", sizeof("88446744073709551615")-1);
         TestAssertFailure(e);
     }
+
     #undef TESTUINT
+
     #define TESTINT(N) do { \
         IntResult e = parse_int(#N, sizeof(#N)-1); \
         TestAssertSuccess(e); \
         int val = e.result; \
         TestExpectEquals(val, N); \
     }while(0)
+
     TESTINT(3);
     TESTINT(0);
     TESTINT(-1);
@@ -544,7 +558,9 @@ TestFunction(TestIntegerParsing){
     TESTINT(-1298);
     TESTINT(31928);
     TESTINT(1128312123);
+
     #undef TESTINT
+
     TESTEND();
 }
 
@@ -654,7 +670,7 @@ append_short(void* dest, const void* arg){
 }
 TestFunction(TestAppender){
     TESTBEGIN();
-    Marray(short) shorts = {};
+    Marray(short) shorts = {0};
     struct ShortContext ctx = {
         .marray = &shorts,
         .a = new_recorded_mallocator(),

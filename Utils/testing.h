@@ -28,6 +28,7 @@
 // BUG:
 // We use __auto_type in the testing macros, so this will only compile
 // with gcc and clang.
+// Maybe one day C will standardize auto.
 
 // Internal use color definitions. They will be set to escape codes if
 // stderr is detected to be interactive.
@@ -97,14 +98,15 @@ TestPrintFuncs(TestPrintImpl_)
 //
 
 #define TestFunction(name) static struct TestStats name(void)
-#define TESTBEGIN() struct TestStats TEST_stats = {}; {
+#define TESTBEGIN() struct TestStats TEST_stats = {0}; {
 #define TESTEND() } return TEST_stats
 
 //
 // If this macro is defined, suppresses generating a test_main function. You will
 // be responsible for calling run_the_tests yourself and reporting the results.
+
 // #define SUPPRESS_TEST_MAIN
-//
+
 
 //
 // Internal use struct to keep track of the number of tests executed, failed,
@@ -130,7 +132,7 @@ enum TestCaseFlags {
 
 // Internal use.
 typedef struct TestCase {
-    LongString test_name;
+    StringView test_name;
     TestFunc* test_func;
     enum TestCaseFlags flags;
 } TestCase;
@@ -150,32 +152,32 @@ typedef struct TestCase {
 // }
 
 // Implemented as a macro to capture the name of the test
-#define RegisterTest(tf) register_test(LS(#tf), tf, TEST_CASE_FLAGS_NONE)
+#define RegisterTest(tf) register_test(SV(#tf), tf, TEST_CASE_FLAGS_NONE)
 // Ditto, but allows specifying flags.
-#define RegisterTestFlags(tf, flags) register_test(LS(#tf), tf, flags)
+#define RegisterTestFlags(tf, flags) register_test(SV(#tf), tf, flags)
 static inline
 void
-register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags);
+register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags);
 
 // Internal use, use the RegisterTest function to register a test.
 // This array is where registered tests are located.
 // A single test program can not directly register more than 1000 tests.
-static LongString test_names[1000];
+static StringView test_names[1000];
 static TestCase test_funcs[1000];
 // How many were registered. Internal use.
 static size_t test_funcs_count;
 
 static inline
 void
-register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
+register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
     assert(test_funcs_count < arrlen(test_funcs));
     test_names[test_funcs_count] = test_name;
     test_funcs[test_funcs_count++] = (TestCase){
         .test_name = test_name,
         .test_func=func,
         .flags=flags,
-        };
-    }
+    };
+}
 
 
 //
@@ -237,9 +239,9 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
             TestReport("!%s(%s, %s)", #func, #lhs, #rhs); \
             TestPrintValue(#lhs, _lhs);\
             TestPrintValue(#rhs, _rhs);\
-            }\
+        }\
         equal__;\
-        })
+    })
 
 //
 // Expects lhs != rhs, using the != operator
@@ -254,8 +256,8 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
             TestReport("%s != %s", #lhs, #rhs); \
             TestPrintValue(#lhs, _lhs);\
             TestPrintValue(#rhs, _rhs);\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // Expects the condition is truthy (for the usual C definition of truth).
@@ -268,8 +270,8 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s", #cond);\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // Expects the condition is falsey (for the usual C definition of truth).
@@ -280,8 +282,8 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
             TEST_stats.failures++; \
             TestReport("Test condition failed (expected falsey)");\
             TestPrintValue(#cond, cond);\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // For an Errorable, expects .errored is NO_ERROR
@@ -294,9 +296,9 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s = %d", #cond, (cond).errored);\
-            }\
+        }\
         succeeded; \
-        })
+    })
 
 //
 // For an Errorable, expects .errored is not NO_ERROR
@@ -333,8 +335,8 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
             TestReport("%s prematurely ended", __func__);\
             TestReport("%s", #cond); \
             return TEST_stats;\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // Asserts lhs is equal to rhs, using ==
@@ -352,8 +354,8 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
             TestPrintValue(#lhs, _lhs);\
             TestPrintValue(#rhs, _rhs); \
             return TEST_stats;\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // For an Errorable, asserts .errored is NO_ERROR
@@ -367,8 +369,8 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
             TestReport("%s prematurely ended", __func__);\
             TestReport("%s = %d", #cond, (cond).errored); \
             return TEST_stats;\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // For an Errorable, asserts .errored is not NO_ERROR
@@ -382,8 +384,8 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
             TestReport("%s prematurely ended", __func__);\
             TestReport("%s = %d", #cond, (cond).errored); \
             return TEST_stats;\
-            }\
-        }while(0)
+        }\
+    }while(0)
 
 //
 // Immediately ends the test function, counting as an early termination of
@@ -394,7 +396,7 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
         TestReport("Reason: %s", reason); \
         TEST_stats.assert_failures++;\
         return TEST_stats;\
-        }while(0)
+    }while(0)
 
 //
 // The actual test runner.
@@ -418,10 +420,10 @@ run_the_tests(size_t*_Nullable which_tests, int test_count){
             result.failures += func_result.failures;
             result.executed += func_result.executed;
             result.assert_failures += func_result.assert_failures;
-            }
         }
+    }
     else {
-        for (size_t i = 0; i < test_funcs_count; i++){
+        for(size_t i = 0; i < test_funcs_count; i++){
             if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED)
                 continue;
             TestFunc* func = test_funcs[i].test_func;
@@ -431,10 +433,10 @@ run_the_tests(size_t*_Nullable which_tests, int test_count){
             result.failures += func_result.failures;
             result.executed += func_result.executed;
             result.assert_failures += func_result.assert_failures;
-            }
         }
-    return result;
     }
+    return result;
+}
 
 #ifdef __clang__
 #pragma clang assume_nonnull end
@@ -453,7 +455,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     if(argc < 1){
         fprintf(stderr, "Somehow this program was called without an argv.\n");
         return 1;
-        }
+    }
     const char* filename = argv[0];
     bool no_colors = false;
     bool force_colors = false;
@@ -463,7 +465,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
         .enum_size = sizeof(size_t),
         .enum_count = test_funcs_count,
         .enum_names = test_names,
-        };
+    };
     ArgToParse kw_args[] = {
         {
             .name = SV("-C"),
@@ -523,7 +525,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
                 columns = 80;
             print_argparse_help(&argparser, columns);
             return 1;
-            }
+        }
         case LIST:
             for(size_t i = 0; i < test_funcs_count; i++){
                 fprintf(stdout, "%s\t", test_funcs[i].test_name.text);
@@ -531,7 +533,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
                     fprintf(stdout, "Will-Skip");
                     }
                 fputc('\n', stdout);
-                }
+            }
             return 1;
         default:
             break;
@@ -541,15 +543,15 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
         print_argparse_error(&argparser, e);
         fprintf(stderr, "Use --help to see usage.\n");
         return (int)e;
-        }
+    }
     if(directory.length){
         int changed = chdir(directory.text);
         if(changed != 0){
             fprintf(stderr, "Failed to change directory to '%s': %s.\n",
                     directory.text, strerror(errno));
             return changed;
-            }
         }
+    }
 
     filename = strrchr(filename, '/')? strrchr(filename, '/')+1 : filename;
     bool use_colors = force_colors || (!no_colors && isatty(fileno(stderr)));
@@ -600,7 +602,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
             reset, text);
 
     return result.failures + result.assert_failures == 0? 0 : 1;
-    }
+}
 
 #endif
 

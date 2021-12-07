@@ -248,12 +248,12 @@ typedef struct ArgParseEnumType {
     size_t enum_size;
     // This should be the largest enum value + 1.
     size_t enum_count;
-    // This should be a pointer to an array of `LongString`s that is
+    // This should be a pointer to an array of `StringView`s that is
     // `enum_count` in length.
     // These will be used for both printing the help and for
     // parsing strings into the enum, so they should be in a
     // format that you would type in a command line.
-    const LongString* enum_names;
+    const StringView* enum_names;
 } ArgParseEnumType;
 
 typedef struct ArgParseDestination {
@@ -742,7 +742,7 @@ print_arg_help(const ArgToParse* arg, int columns){
         }break;
         case ARG_ENUM:{
             const ArgParseEnumType* enu = arg->dest.enum_pointer;
-            LongString enu_name = LS("???");
+            StringView enu_name = SV("???");
             switch(enu->enum_size){
                 case 1:{
                     uint8_t* def = arg->dest.pointer;
@@ -765,7 +765,7 @@ print_arg_help(const ArgToParse* arg, int columns){
                         enu_name = enu->enum_names[*def];
                 }break;
             }
-            printf(" = %s", enu_name.text);
+            printf(" = %.*s", (int)enu_name.length, enu_name.text);
             print_wrapped_help(help, columns);
             print_enum_options(enu);
         }break;
@@ -1013,7 +1013,7 @@ parse_arg(ArgToParse* arg, StringView s){
             // requirements, then just a create a user defined type instead of
             // using this.
             for(size_t i = 0; i < enu->enum_count; i++){
-                if(LS_SV_equals(enu->enum_names[i], s)){
+                if(SV_equals(enu->enum_names[i], s)){
                     switch(enu->enum_size){
                         case 1:{
                             APPEND_ARG(uint8_t, i);
