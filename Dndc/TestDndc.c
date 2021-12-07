@@ -18,6 +18,7 @@ static TestFunc TestCrashesFixed;
 static TestFunc TestExamplesWork;
 static TestFunc TestUntrusted;
 static TestFunc TestSpecialChars;
+static TestFunc TestJs;
 
 int main(int argc, char** argv){
     RegisterTest(TestDndc1);
@@ -33,6 +34,7 @@ int main(int argc, char** argv){
     RegisterTest(TestExamplesWork);
     RegisterTest(TestUntrusted);
     RegisterTest(TestSpecialChars);
+    RegisterTest(TestJs);
     int ret = test_main(argc, argv);
     return ret;
 }
@@ -635,3 +637,49 @@ TestFunction(TestSpecialChars){
     }
     TESTEND();
 }
+
+
+int 
+post_js_ast_func(void* user_data, DndcContext*ctx){
+    struct TestStats* ts = user_data;
+    struct TestStats TEST_stats = *ts;
+    int n_md = 0;
+    for(size_t i = 0; i < ctx->nodes.count; i++){
+        Node* node = &ctx->nodes.data[i];
+        if(node->type == NODE_MD){
+            n_md++;
+            TestExpectEquals2(endswith, node->header, SV("12345"));
+            TestExpectTrue(node->flags & NODEFLAG_NOID);
+            TestExpectTrue(node->flags & NODEFLAG_HIDE);
+            TestExpectTrue(node->flags & NODEFLAG_NOINLINE);
+        }
+    }
+    TestExpectEquals(n_md, 2);
+
+    *ts = TEST_stats;
+    return 0;
+}
+
+TestFunction(TestJs){
+    TESTBEGIN();
+    StringView input = SV(""
+            "Hello World::md\n"
+            "  This is something special, ain't it\n"
+            "::js\n"
+            "  const md = ctx.select_nodes({type:NodeType.MD});\n"
+            "  for(let m of md){\n"
+            "    m.header += '12345';\n"
+            "    m.hide = true;\n"
+            "    m.noid = true;\n"
+            "    m.noinline = true;\n"
+            "  }\n"
+            "");
+    uint64_t flags = 0
+        | DNDC_DONT_WRITE;
+    DndcLongString output;
+    Errorable(void) e = run_the_dndc(flags, SV(""),input, SV(""), SV(""), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, post_js_ast_func, &TEST_stats, NULL);
+    TestAssertSuccess(e);
+    TESTEND();
+}
+
+
