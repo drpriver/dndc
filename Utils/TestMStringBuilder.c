@@ -15,7 +15,7 @@ TestFunction(TestMStringBuilder1){
     msb_destroy(&sb);
     shallow_free_recorded_mallocator(a);
     TESTEND();
-    }
+}
 TestFunction(TestMStringBuilder2){
     TESTBEGIN();
     Allocator a = new_recorded_mallocator();
@@ -25,46 +25,46 @@ TestFunction(TestMStringBuilder2){
         StringView sv;
     };
     {
-    struct test_case test_cases[] = {
-        {9999, SV("9999")},
-        {-9999, SV("-9999")},
-        {0, SV("0")},
-        {1929128, SV("1929128")},
-        {-1929128, SV("-1929128")},
-        {2147483647, SV("2147483647")},
-        {INT32_MIN, SV("-2147483648")}, // INT32_MIN cannot be written as a literal in C
-    };
-    for(int i = 0; i < arrlen(test_cases); i++){
-        msb_reset(&sb);
-        struct test_case test = test_cases[i];
-        msb_write_int32(&sb, test.integer);
-        StringView s = msb_borrow_sv(&sb);
-        TestExpectEquals2(SV_equals,s, test.sv);
+        struct test_case test_cases[] = {
+            {9999, SV("9999")},
+            {-9999, SV("-9999")},
+            {0, SV("0")},
+            {1929128, SV("1929128")},
+            {-1929128, SV("-1929128")},
+            {2147483647, SV("2147483647")},
+            {INT32_MIN, SV("-2147483648")}, // INT32_MIN cannot be written as a literal in C
+        };
+        for(size_t i = 0; i < arrlen(test_cases); i++){
+            msb_reset(&sb);
+            struct test_case test = test_cases[i];
+            msb_write_int32(&sb, test.integer);
+            StringView s = msb_borrow_sv(&sb);
+            TestExpectEquals2(SV_equals,s, test.sv);
         }
     }
     {
-    struct test_case test_cases[] = {
-        {9999,       SV("foo    9999")},
-        {-9999,      SV("foo   -9999")},
-        {0,          SV("foo       0")},
-        {1929128,    SV("foo 1929128")},
-        {-1929128,   SV("foo-1929128")},
-        {2147483647, SV("foo2147483647")},
-        {INT32_MIN,  SV("foo-2147483648")}, // INT32_MIN cannot be written as a literal in C
-    };
-    for(int i = 0; i < arrlen(test_cases); i++){
-        msb_reset(&sb);
-        msb_write_literal(&sb, "foo");
-        struct test_case test = test_cases[i];
-        msb_write_int_space_padded(&sb, test.integer, 8);
-        StringView s = msb_borrow_sv(&sb);
-        TestExpectEquals2(SV_equals, s, test.sv);
+        struct test_case test_cases[] = {
+            {9999,       SV("foo    9999")},
+            {-9999,      SV("foo   -9999")},
+            {0,          SV("foo       0")},
+            {1929128,    SV("foo 1929128")},
+            {-1929128,   SV("foo-1929128")},
+            {2147483647, SV("foo2147483647")},
+            {INT32_MIN,  SV("foo-2147483648")}, // INT32_MIN cannot be written as a literal in C
+        };
+        for(size_t i = 0; i < arrlen(test_cases); i++){
+            msb_reset(&sb);
+            msb_write_literal(&sb, "foo");
+            struct test_case test = test_cases[i];
+            msb_write_int_space_padded(&sb, test.integer, 8);
+            StringView s = msb_borrow_sv(&sb);
+            TestExpectEquals2(SV_equals, s, test.sv);
         }
     }
     msb_destroy(&sb);
     shallow_free_recorded_mallocator(a);
     TESTEND();
-    }
+}
 TestFunction(TestMStringBuilder3){
     TESTBEGIN();
     Allocator a = new_recorded_mallocator();
@@ -82,7 +82,7 @@ TestFunction(TestMStringBuilder3){
     msb_destroy(&sb);
     shallow_free_recorded_mallocator(a);
     TESTEND();
-    }
+}
 
 int 
 main(int argc, char** argv){
@@ -90,5 +90,5 @@ main(int argc, char** argv){
     RegisterTest(TestMStringBuilder2);
     RegisterTest(TestMStringBuilder3);
     return test_main(argc, argv);
-    }
+}
 #include "Allocators/allocator.c"

@@ -209,7 +209,7 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
 //
 #define TestExpectEquals(lhs, rhs) ({\
         __auto_type _lhs = lhs; \
-        __auto_type _rhs = rhs; \
+        typeof(lhs) _rhs = rhs; \
         TEST_stats.executed++;\
         int equal__ = 1; \
         if (!(_lhs == _rhs)) {\
@@ -246,7 +246,7 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
 //
 #define TestExpectNotEquals(lhs, rhs) do{\
         __auto_type _lhs = lhs; \
-        __auto_type _rhs = rhs; \
+        typeof(lhs) _rhs = rhs; \
         TEST_stats.executed++;\
         if (!(_lhs != _rhs)) {\
             TEST_stats.failures++; \
@@ -341,7 +341,7 @@ register_test(LongString test_name, TestFunc* func, enum TestCaseFlags flags){
 //
 #define TestAssertEquals(lhs, rhs) do{\
         __auto_type _lhs = lhs; \
-        __auto_type _rhs = rhs; \
+        typeof(lhs) _rhs = rhs; \
         TEST_stats.executed++;\
         if (! (_lhs==_rhs)){ \
             TEST_stats.failures++; \

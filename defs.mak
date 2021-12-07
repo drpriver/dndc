@@ -25,7 +25,6 @@ WARNING_FLAGS:=-Wall\
 	-Wcast-qual\
 	-Wdeprecated\
 	-Wdouble-promotion\
-	-Wno-sign-compare\
 	-Werror=int-conversion\
 	-Werror=implicit-int\
 	-Werror=implicit-function-declaration\

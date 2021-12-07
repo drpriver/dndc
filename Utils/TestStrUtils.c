@@ -13,15 +13,15 @@ TestFunction(TestStrip){
         {SV("   \r\t\t\nyo"), SV("yo")},
         {SV("   \r\t\t\nyo   \t\t"), SV("yo")},
         {SV("yo   \t\t"), SV("yo")},
-        };
-    for(int i = 0; i < arrlen(testvalues); i++){
+    };
+    for(size_t i = 0; i < arrlen(testvalues); i++){
         struct TestCase* testval = &testvalues[i];
         StringView pre = testval->prestrip;
         StringView stripped = stripped_view(pre.text, pre.length);
         TestExpectEquals2(SV_equals,stripped, testval->poststrip);
-        }
-    TESTEND();
     }
+    TESTEND();
+}
 
 TestFunction(TestCmp){
     TESTBEGIN();
@@ -34,7 +34,7 @@ TestFunction(TestCmp){
         SV("b"),
         SV("A"),
         SV("asdas"),
-        };
+    };
     StringView expected[] = {
         SV(""),
         SV("A"),
@@ -44,14 +44,14 @@ TestFunction(TestCmp){
         SV("asdas"),
         SV("asfoo"),
         SV("b"),
-        };
+    };
     qsort(strings, arrlen(strings), sizeof(strings[0]), StringView_cmp);
     TestExpectEquals(memcmp(strings, expected, sizeof(strings)), 0);
     TESTEND();
-    }
+}
 
 int main(int argc, char** argv){
     RegisterTest(TestStrip);
     RegisterTest(TestCmp);
     return test_main(argc, argv);
-    }
+}

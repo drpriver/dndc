@@ -23,7 +23,7 @@ TestFunction(TestBaseName){
         {SV("\\foo\\bar\\"), SV("")},
         {SV("\\\\bar\\"), SV("")},
     };
-    for(int i = 0; i < arrlen(cases); i++){
+    for(size_t i = 0; i < arrlen(cases); i++){
         StringView expected = cases[i].expected;
         StringView result = path_basename(cases[i].input);
         bool equality = SV_equals(expected, result);
@@ -31,10 +31,10 @@ TestFunction(TestBaseName){
         if(!equality){
             TestPrintValue("result", result);
             TestPrintValue("expected", expected);
-            }
         }
-    TESTEND();
     }
+    TESTEND();
+}
 
 TestFunction(TestDirName){
     TESTBEGIN();
@@ -53,7 +53,7 @@ TestFunction(TestDirName){
         {SV("\\foo\\bar\\"), SV("\\foo\\bar")},
         {SV("\\\\bar\\"), SV("\\\\bar")},
     };
-    for(int i = 0; i < arrlen(cases); i++){
+    for(size_t i = 0; i < arrlen(cases); i++){
         StringView expected = cases[i].expected;
         StringView result = path_dirname(cases[i].input);
         bool equality = SV_equals(expected, result);
@@ -61,10 +61,10 @@ TestFunction(TestDirName){
         if(!equality){
             TestPrintValue("result", result);
             TestPrintValue("expected", expected);
-            }
         }
-    TESTEND();
     }
+    TESTEND();
+}
 
 TestFunction(TestStripExtension){
     TESTBEGIN();
@@ -93,7 +93,7 @@ TestFunction(TestStripExtension){
         {SV("\\bar\\foo.txt.mx"), SV("\\bar\\foo.txt")},
         {SV("lmao.txt"), SV("lmao")},
     };
-    for(int i = 0; i < arrlen(cases); i++){
+    for(size_t i = 0; i < arrlen(cases); i++){
         StringView expected = cases[i].expected;
         StringView result = path_strip_extension(cases[i].input);
         bool equality = SV_equals(expected, result);
@@ -101,10 +101,10 @@ TestFunction(TestStripExtension){
         if(!equality){
             TestPrintValue("result", result);
             TestPrintValue("expected", expected);
-            }
         }
-    TESTEND();
     }
+    TESTEND();
+}
 
 int main(int argc, char** argv){
     RegisterTest(TestBaseName);
