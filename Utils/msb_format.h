@@ -273,6 +273,7 @@ msb_write_int64(MStringBuilder* sb, int64_t value){
 static inline
 void
 msb_write_int_space_padded(MStringBuilder* sb, int32_t value, int width){
+    assert(width >= 0);
     char buff[10];
     const char* p;
     size_t size;
@@ -280,35 +281,35 @@ msb_write_int_space_padded(MStringBuilder* sb, int32_t value, int width){
     if(value == INT32_MIN){
         p = "-2147483648";
         size = sizeof("-2147483648")-1;
-        }
+    }
     else {
         if(value < 0){
             value = -value;
             is_negative = true;
-            }
+        }
         p = uint32_to_str_buffer(buff, value);
         size = (buff+10) - p;
-        }
+    }
     size_t needed_size = size + is_negative;
     size_t cursor = sb->cursor;
     char* data;
-    if(needed_size >= width){
+    if(needed_size >= (unsigned)width){
         _check_msb_remaining_size(sb, needed_size);
         data = sb->data;
-        }
+    }
     else {
         _check_msb_remaining_size(sb, width);
         data = sb->data;
         intptr_t pad = width - needed_size;
         memset(data+cursor, ' ', pad);
         cursor += pad;
-        }
+    }
     if(is_negative)
         data[cursor++] = '-';
     memcpy(data+cursor, p, size);
     cursor += size;
     sb->cursor = cursor;
-    }
+}
 
 static inline
 void

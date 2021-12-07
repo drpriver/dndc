@@ -89,7 +89,7 @@ typedef union NodeHandle {
 //
 // As 0 is the root node, we use this as the invalid value instead.
 //
-enum {INVALID_NODE_HANDLE_VALUE = (uint32_t)-1};
+enum {INVALID_NODE_HANDLE_VALUE = -1};
 // NOTE: not static so it is visible in the debugger.
 const NodeHandle INVALID_NODE_HANDLE = {._value=INVALID_NODE_HANDLE_VALUE};
 // Shadow the above symbol intentionally.

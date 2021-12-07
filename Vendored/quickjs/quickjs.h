@@ -693,7 +693,11 @@ static inline QJSValue JS_DupValue(QJSContext *ctx, QJSValueConst v)
         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
         p->ref_count++;
     }
+    #ifdef CONFIG_CHECK_JSVALUE
     return (QJSValue)v;
+    #else
+    return v;
+    #endif
 }
 
 static inline QJSValue JS_DupValueRT(QJSRuntime *rt, QJSValueConst v)
@@ -703,7 +707,11 @@ static inline QJSValue JS_DupValueRT(QJSRuntime *rt, QJSValueConst v)
         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
         p->ref_count++;
     }
+    #ifdef CONFIG_CHECK_JSVALUE
     return (QJSValue)v;
+    #else
+    return v;
+    #endif
 }
 
 QJS_API int JS_ToBool(QJSContext *ctx, QJSValueConst val); /* return -1 for JS_EXCEPTION */

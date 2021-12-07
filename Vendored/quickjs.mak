@@ -13,7 +13,7 @@ else ifeq ($(UNAME), Darwin)
 endif
 
 $(OBJDIR)/libquickjs.o: Vendored/libquickjs.c $(DEPDIR)/libquickjs_o.dep | $(DIRECTORIES)
-	$(CC) $(FLAGS) -O2 $(PLATFORM_FLAGS) $(QUICKJS_CEXTRA) $(DEPFLAGS) $(DEPDIR)/libquickjs_o.dep -fvisibility=hidden -c -o $@ Vendored/libquickjs.c
+	$(CC) $(FLAGS) -O2 $(PLATFORM_FLAGS) $(QUICKJS_CEXTRA) $(DEPFLAGS) $(DEPDIR)/libquickjs_o.dep -fvisibility=hidden -c -o $@ Vendored/libquickjs.c -Wno-sign-compare
 
 $(BINDIR)/libquickjs$(SO): Vendored/libquickjs.c $(DEPDIR)/libquickjs_so.dep | $(DIRECTORIES)
-	$(CC) $(FLAGS) -O2 $(PLATFORM_FLAGS) $(QUICKJS_CEXTRA) $(DEPFLAGS) $(DEPDIR)/libquickjs_so.dep -shared -fvisibility=hidden -o $@ Vendored/libquickjs.c -DBUILDING_SHARED_OBJECT=1 $(QUICKJS_LDEXTRA)
+	$(CC) $(FLAGS) -O2 $(PLATFORM_FLAGS) $(QUICKJS_CEXTRA) $(DEPFLAGS) $(DEPDIR)/libquickjs_so.dep -shared -fvisibility=hidden -o $@ Vendored/libquickjs.c -DBUILDING_SHARED_OBJECT=1 $(QUICKJS_LDEXTRA) -Wno-sign-compare

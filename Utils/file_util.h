@@ -248,12 +248,12 @@ read_file(const char* filepath, Allocator a){
         goto finally;
     }
     ssize_t read_result = read(fd, text, nbytes);
-    if(read_result != nbytes){
+    if((size_t)read_result != nbytes){
         Allocator_free(a, text, nbytes+1);
         result.errored = FILE_ERROR;
         goto finally;
     }
-    assert(read_result == nbytes);
+    assert((size_t)read_result == nbytes);
     text[nbytes] = '\0';
     result.result.text = text;
     result.result.length = nbytes;
@@ -286,12 +286,12 @@ read_bin_file(const char* filepath, Allocator a){
     }
     assert(data);
     ssize_t read_result = read(fd, data, nbytes);
-    if(read_result != nbytes){
+    if(read_result != (ssize_t)nbytes){
         Allocator_free(a, data, nbytes);
         result.errored = FILE_ERROR;
         goto finally;
     }
-    assert(read_result == nbytes);
+    assert(read_result == (ssize_t)nbytes);
     result.result.buff = data;
     result.result.n_bytes = nbytes;
 finally:
@@ -310,7 +310,7 @@ write_file(const char* filename, const void* data, size_t data_length){
     if(fd < 0)
         return FILE_NOT_OPENED;
     ssize_t nwrit = write(fd, data, data_length);
-    if(nwrit != data_length){
+    if((size_t)nwrit != data_length){
         close(fd);
         return FILE_ERROR;
     }

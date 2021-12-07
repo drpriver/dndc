@@ -571,7 +571,7 @@ static
 void
 gather_anchors(DndcContext* ctx){
     NodeHandle root = ctx->root_handle;
-    return gather_anchor(ctx, root);
+    gather_anchor(ctx, root);
 }
 
 static

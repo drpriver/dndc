@@ -14,12 +14,14 @@
 #include <fts.h>
 #elif defined(_WIN32)
 #endif
-PushDiagnostic();
+
+PushDiagnostic()
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wunused-parameter"
 #endif
 #include "quickjs.h"
-PopDiagnostic();
+PopDiagnostic()
+
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
@@ -541,7 +543,7 @@ js_dndc_get_node_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out){
     if(!p){
         return false;
     }
-    if(p == ZERO_NODE_VALUE)
+    if(p == (uintptr_t)ZERO_NODE_VALUE)
         out->_value = 0;
     else
         out->_value = p;
@@ -557,7 +559,7 @@ js_dndc_get_attributes_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* 
     if(!p){
         return false;
     }
-    if(p == ZERO_NODE_VALUE)
+    if(p == (uintptr_t)ZERO_NODE_VALUE)
         out->_value = 0;
     else
         out->_value = p;
@@ -573,7 +575,7 @@ js_dndc_get_classlist_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* o
     if(!p){
         return false;
     }
-    if(p == ZERO_NODE_VALUE)
+    if(p == (uintptr_t)ZERO_NODE_VALUE)
         out->_value = 0;
     else
         out->_value = p;
@@ -689,7 +691,7 @@ js_console_log(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
         js_console_inner(jsctx, argv[i], &msb);
     }
     LongString msg = msb_borrow_ls(&msb);
-    ctx->error_func(ctx->error_user_data, DNDC_DEBUG_MESSAGE, filename?:"js", filename?strlen(filename):2, line_num-1, -1, msg.text, msg.length);
+    ctx->error_func(ctx->error_user_data, DNDC_DEBUG_MESSAGE, filename?filename:"js", filename?strlen(filename):2, line_num-1, -1, msg.text, msg.length);
     msb_destroy(&msb);
     if(filename)
         JS_FreeCString(jsctx, filename);
@@ -1754,7 +1756,7 @@ JSMETHOD(js_dndc_context_select_nodes){
             Node* node = &ctx->nodes.data[i];
             if(node->type == NODE_INVALID) continue;
             if(type >= 0){
-                if(node->type != type)
+                if(node->type != (NodeType)type)
                     goto Continue;
             }
             MARRAY_FOR_EACH(StringView, attr, attributes_array){

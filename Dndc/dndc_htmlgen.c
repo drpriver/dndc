@@ -343,9 +343,14 @@ write_tag_escaped_str(MStringBuilder* sb, NullUnspec(const char*)text, size_t le
                 msb_write_char(sb, ' ');
                 break;
             // Don't print control characters.
-            case  0 ... 8:
-            case 10 ... 11:
-            case 14 ... 31:
+            case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7: case 8:
+            case 10: case 11:
+            // This would've been so much nicer!
+            // case 14 ... 31:
+            case 14: case 15: case 16: case 17: case 18: case 19: case 20: 
+            case 21: case 22: case 23: case 24: case 25: case 26: case 27: 
+            case 28: case 29: case 30: case 31:
+
                 break;
             default:
                 msb_write_char(sb, c);
@@ -529,9 +534,13 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                 msb_write_char(sb, ' ');
             }break;
             // Don't print control characters.
-            case  0 ... 8:
-            case 10 ... 11:
-            case 14 ... 31:
+            case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7: case 8:
+            case 10: case 11:
+            // This would've been so much nicer!
+            // case 14 ... 31:
+            case 14: case 15: case 16: case 17: case 18: case 19: case 20: 
+            case 21: case 22: case 23: case 24: case 25: case 26: case 27: 
+            case 28: case 29: case 30: case 31:
                 break;
             default:
                 msb_write_char(sb, c);
@@ -1241,7 +1250,7 @@ RENDERFUNC(IMGLINKS){
                 case ' ': case '\t': case '\r': case '\n':
                     cursor++;
                     continue;
-                case '0' ... '9':
+                case CASE_0_9:
                     break;
                 default:
                     node_set_err(ctx, viewBox_node, LS("Found non-numeric when trying to parse the viewBox"));
@@ -1252,7 +1261,7 @@ RENDERFUNC(IMGLINKS){
                 if(after_number == end)
                     break;
                 switch(*after_number){
-                    case '0' ... '9':
+                    case CASE_0_9:
                         after_number++;
                         continue;
                     default:

@@ -445,7 +445,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
     size_t boundary = postcolon.length;
     for(size_t i = 0; i < postcolon.length;i++){
         switch(postcolon.text[i]){
-            case 'a' ... 'z':
+            case CASE_a_z:
                 continue;
             default:
                 boundary = i;
@@ -805,7 +805,7 @@ PARSEFUNC(parse_list_node){
         const char* firstchar = ctx->linestart + ctx->nspaces;
         for(;;firstchar++){
             switch(*firstchar){
-                case '0' ... '9':
+                case CASE_0_9:
                     continue;
                 case '.':
                     firstchar++;
@@ -851,7 +851,7 @@ PARSEFUNC(parse_list_item){
         const char* firstchar = ctx->linestart + ctx->nspaces;
         for(;;firstchar++){
             switch(*firstchar){
-                case '0' ... '9':
+                case CASE_0_9:
                     continue;
                 case '.':{
                     NodeHandle new_handle = alloc_handle(ctx);
@@ -1196,12 +1196,12 @@ PARSEFUNC(parse_md_node){
                 else
                     newstate = PARA;
                 goto after;
-            case '0' ... '9':{
+            case CASE_0_9:{
                 prefix_length = 1;
                 newstate = PARA;
                 for(const char* c = firstchar+1;c != ctx->end;c++){
                     switch(*c){
-                        case '0' ... '9':
+                        case CASE_0_9:
                             prefix_length++;
                             continue;
                         case '.':

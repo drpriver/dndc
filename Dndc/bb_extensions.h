@@ -67,11 +67,11 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
     bb_reserve(bb, nbytes);
     void* data = bb->data + bb->cursor;
     ssize_t read_result = read(fd, data, nbytes);
-    if(read_result != nbytes){
+    if(read_result != (ssize_t)nbytes){
         result.errored = FILE_ERROR;
         goto finally;
     }
-    assert(read_result == nbytes);
+    assert(read_result == (ssize_t)nbytes);
     bb->cursor += nbytes;
 finally:
     close(fd);

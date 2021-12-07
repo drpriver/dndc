@@ -38,6 +38,20 @@
 
 #endif
 
+// gnu_case_ranges are so much nicer but are non-standard
+// leave off a colon and don't have a leading case
+#ifndef CASE_a_f
+#define CASE_a_f 'a': case 'b': case 'c': case 'd': case 'e': case 'f'
+#endif
+
+#ifndef CASE_A_F
+#define CASE_A_F 'A': case 'B': case 'C': case 'D': case 'E': case 'F'
+#endif
+
+#ifndef CASE_0_9
+#define CASE_0_9 '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9'
+#endif
+
 // NOTE: The first error that is happened to be detected will be reported.
 //       For strings with multiple errors, this is arbitrary.
 //       For example, parsing '12dddddddddddddddddddddd12' into an int
@@ -445,13 +459,13 @@ parse_hex_inner(const char* str, size_t length){
         char c = str[i];
         uint64_t char_value;
         switch(c){
-            case '0'...'9':
+            case CASE_0_9:
                 char_value = (uint64_t)(c - '0');
                 break;
-            case 'a'...'f':
+            case CASE_a_f:
                 char_value = (uint64_t)(c - 'a' + 10);
                 break;
-            case 'A'...'F':
+            case CASE_A_F:
                 char_value = (uint64_t)(c - 'A' + 10);
                 break;
             default:

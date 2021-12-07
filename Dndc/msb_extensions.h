@@ -17,6 +17,20 @@
 // left as an exercise to the reader.
 //
 
+// It'd be nicer to use gnu-case ranges, but this is where we're at.
+#ifndef CASE_0_9
+#define CASE_0_9 '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9'
+#endif
+
+#ifndef CASE_a_z 
+#define CASE_a_z 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g': case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n': case 'o': case 'p': case 'q': case 'r': case 's': case 't': case 'u': case 'v': case 'w': case 'x': case 'y': case 'z'
+#endif
+
+#ifndef CASE_A_Z
+#define CASE_A_Z 'A': case 'B': case 'C': case 'D': case 'E': case 'F': case 'G': case 'H': case 'I': case 'J': case 'K': case 'L': case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R': case 'S': case 'T': case 'U': case 'V': case 'W': case 'X': case 'Y': case 'Z'
+#endif
+
+
 //
 // Writes the string into the builder, but kebabs the string.
 // "Kebabs" the string, turning into something usable as an html id.
@@ -54,11 +68,11 @@ msb_write_kebab(MStringBuilder* msb, const char* text, size_t length){
     for(size_t i = 0; i < length; i++){
         char c = text[i];
         switch(c){
-            case 'A' ... 'Z':
+            case CASE_A_Z:
                 c |= 0x20; // tolower
                 // fall-through
-            case 'a' ... 'z':
-            case '0' ... '9':
+            case CASE_a_z:
+            case CASE_0_9:
                 data[cursor++] = c;
                 data[cursor] = '-';
                 data[cursor+1] = ENDSENTINEL;
@@ -94,13 +108,13 @@ msb_write_title(MStringBuilder* restrict msb, const char* restrict str, size_t l
     for(size_t i = 0; i < len; i++){
         char c = str[i];
         switch(c){
-            case 'a' ... 'z':
+            case CASE_a_z:
                 if(wants_cap){
                     c &= ~0x20; // toupper
                     wants_cap = false;
                 }
                 break;
-            case 'A' ... 'Z':
+            case CASE_A_Z:
                 wants_cap = false;
                 break;
             default:

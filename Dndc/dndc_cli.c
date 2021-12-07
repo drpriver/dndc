@@ -308,7 +308,7 @@ main(int argc, char**argv){
                 int columns = get_terminal_size().columns;
                 if(columns > 80)
                     columns = 80;
-                for(int i = 0; i < arrlen(kw_args); i++){
+                for(size_t i = 0; i < arrlen(kw_args); i++){
                     ArgToParse* arg = &kw_args[i];
                     if(!arg->hidden){
                         continue;

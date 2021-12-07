@@ -18,7 +18,7 @@ TestFunction(TestKebab){
         {SV("123, North Elm St."), SV("123-north-elm-st")},
         {SV(""), SV("")},
     };
-    for(int i = 0; i < arrlen(testcases); i++){
+    for(size_t i = 0; i < arrlen(testcases); i++){
         struct test_case* tc = &testcases[i];
         MStringBuilder sb = {.allocator=get_mallocator()};
         msb_write_kebab(&sb, tc->before.text, tc->before.length);

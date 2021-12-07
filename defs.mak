@@ -14,6 +14,9 @@ DIRECTORIES= $(DEPDIR) $(OBJDIR) $(BINDIR) $(DOCDIR)
 DEPFILES:= $(wildcard Depends/*.dep)
 include $(DEPFILES)
 
+# NOTE: You have to turn off sign compare because C is nuts.
+#       Enumeration constants are type int, but clang/gcc make enums
+#       unsigned ints. WTF.
 WARNING_FLAGS:=-Wall\
 	-Wbad-function-cast\
 	-Wextra \
@@ -22,7 +25,6 @@ WARNING_FLAGS:=-Wall\
 	-Wcast-qual\
 	-Wdeprecated\
 	-Wdouble-promotion\
-	-Wno-multichar\
 	-Wno-sign-compare\
 	-Werror=int-conversion\
 	-Werror=implicit-int\

@@ -408,12 +408,12 @@ FORMATFUNC(table_node){
             node_print_err(ctx, row, LS("Row of a table has more than 100 entries. This is not handled!"));
             Raise(FORMAT_ERROR);
         }
-        if(node_children_count(row) > n_cells)
+        if(node_children_count(row) > (size_t)n_cells)
             n_cells = node_children_count(row);
         for(size_t j = 0; j < node_children_count(row); j++){
             Node* cell = get_node(ctx, node_children(row)[j]);
             if(cell->type == NODE_STRING){
-                if(cell->header.length > widths[j])
+                if((ssize_t)cell->header.length > widths[j])
                     widths[j] = cell->header.length;
             }
             else {
@@ -455,7 +455,7 @@ FORMATFUNC(table_node){
                     msb_write_nchar(sb, ' ', indent);
                 Node* cell = get_node(ctx, node_children(row)[j]);
                 size_t writ = write_str_or_container(ctx, sb, cell);
-                if(j != node_children_count(row)-1 && widths[j] > writ){
+                if(j != node_children_count(row)-1 && widths[j] > (ssize_t)writ){
                     msb_write_nchar(sb, ' ', widths[j] - writ);
                 }
             }
@@ -472,7 +472,7 @@ FORMATFUNC(table_node){
                     return result;
                 continue;
             }
-            for(ssize_t j = 0; j < node_children_count(row) - 1; j++){
+            for(ssize_t j = 0; j < (ssize_t)node_children_count(row) - 1; j++){
                 if(j != 0){
                     msb_write_literal(sb, " | ");
                 }
@@ -480,7 +480,7 @@ FORMATFUNC(table_node){
                     msb_write_nchar(sb, ' ', indent);
                 Node* cell = get_node(ctx, node_children(row)[j]);
                 size_t writ = write_str_or_container(ctx, sb, cell);
-                if(j != node_children_count(row)-1 && widths[j] > writ){
+                if(j != (ssize_t)node_children_count(row)-1 && widths[j] > (ssize_t)writ){
                     msb_write_nchar(sb, ' ', widths[j] - writ);
                 }
             }

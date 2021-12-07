@@ -1079,7 +1079,7 @@ check_for_early_out_args(ArgParser* parser, const Args* args){
 static inline
 intptr_t
 check_for_early_out_args_longstrings(ArgParser* parser, const LongString* args, size_t args_count){
-    for(int i = 0; i < args_count; i++){
+    for(size_t i = 0; i < args_count; i++){
         StringView argstring = LS_to_SV(args[i]);
         for(size_t j = 0; j < parser->early_out.count; j++){
             ArgToParse* early = &parser->early_out.args[j];

@@ -26,7 +26,7 @@ SO=.dylib
 SOLIB=.dylib
 
 $(BINDIR)/gdndc: Platform/MacOS/gdndc.m Platform/MacOS/Info.plist Platform/MacOS/app_icon.png opt.mak $(OBJDIR)/libquickjs.o
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/gdndc.dep $< -o $@ $(LINK_FLAGS) -framework Cocoa -framework WebKit -fobjc-arc -Wl,-sectcreate,__TEXT,__info_plist,Platform/MacOS/Info.plist $(OBJDIR)/libquickjs.o
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/gdndc.dep $< -o $@ $(LINK_FLAGS) -framework Cocoa -framework WebKit -fobjc-arc -Wl,-sectcreate,__TEXT,__info_plist,Platform/MacOS/Info.plist $(OBJDIR)/libquickjs.o -Wno-sign-compare
 gdndc: $(BINDIR)/gdndc
 install-gdndc: $(BINDIR)/gdndc
 	$(INSTALL) -C $< $(INSTALLDIR)/gdndc

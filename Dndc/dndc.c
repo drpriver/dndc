@@ -1083,7 +1083,7 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                 const char* nodenameend = aftercolon.text;
                 for(;nodenameend != aftercolon.text+aftercolon.length;nodenameend++){
                     switch(*nodenameend){
-                        case 'a' ... 'z':
+                        case CASE_a_z:
                             continue;
                         default:
                             break;
@@ -1120,9 +1120,9 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                             for(;postnodename != endline;postnodename++){
                                 char c = *postnodename;
                                 switch(c){
-                                    case 'a' ... 'z':
-                                    case 'A' ... 'Z':
-                                    case '0' ... '9':
+                                    case CASE_a_z:
+                                    case CASE_A_Z:
+                                    case CASE_0_9:
                                     case '-': case '_':
                                         continue;
                                     default:
@@ -1154,9 +1154,9 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                             for(;postnodename != endline;postnodename++){
                                 char c = *postnodename;
                                 switch(c){
-                                    case 'a' ... 'z':
-                                    case 'A' ... 'Z':
-                                    case '0' ... '9':
+                                    case CASE_a_z:
+                                    case CASE_A_Z:
+                                    case CASE_0_9:
                                     case '-': case '_':
                                         continue;
                                     default:
@@ -1188,9 +1188,9 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                             for(;postnodename != endline;postnodename++){
                                 char c = *postnodename;
                                 switch(c){
-                                    case 'a' ... 'z':
-                                    case 'A' ... 'Z':
-                                    case '0' ... '9':
+                                    case CASE_a_z:
+                                    case CASE_A_Z:
+                                    case CASE_0_9:
                                     case '-': case '_':
                                         continue;
                                     default:
@@ -1218,9 +1218,9 @@ static inline
 _Bool
 js_syntax_is_word(char c){
     switch(c){
-        case 'a' ... 'z':
-        case 'A' ... 'Z':
-        case '0' ... '9':
+        case CASE_a_z:
+        case CASE_A_Z:
+        case CASE_0_9:
         case '_':
         case '$':
             return true;
@@ -1445,15 +1445,15 @@ dndc_analyze_syntax_js(struct JsStyleState* state, StringView line, DndcSyntaxFu
                 syntax_func(syntax_data, DNDC_SYNTAX_JS_BRACE, lineno, indentation+start, str+start, 1);
                 state->can_regex = 0;
                 break;
-            case '0' ... '9':
+            case CASE_0_9:
                 state->can_regex = 0;
                 // parse number
                 while(i < n && (js_syntax_is_word(str[i]) || (str[i] == '.' && (i == n - 1 || str[i+1] != '.'))))
                     i++;
                 syntax_func(syntax_data, DNDC_SYNTAX_JS_NUMBER, lineno, indentation+start, str+start, i - start);
                 break;
-            case 'a' ... 'z':
-            case 'A' ... 'Z':
+            case CASE_a_z:
+            case CASE_A_Z:
             case '$': case '_':
                 state->can_regex = 1;
                 // parse identifier
@@ -1498,9 +1498,9 @@ static inline
 _Bool
 js_syntax_is_word_utf16(uint16_t c){
     switch(c){
-        case u'a' ... u'z':
-        case u'A' ... u'Z':
-        case u'0' ... u'9':
+        case CASE_u16_a_z:
+        case CASE_u16_A_Z:
+        case CASE_u16_0_9:
         case u'_':
         case u'$':
             return true;
@@ -1725,15 +1725,15 @@ dndc_analyze_syntax_js_utf16(struct JsStyleState* state, StringViewUtf16 line, D
                 syntax_func(syntax_data, DNDC_SYNTAX_JS_BRACE, lineno, indentation+start, str+start, 1);
                 state->can_regex = 0;
                 break;
-            case u'0' ... u'9':
+            case CASE_u16_0_9:
                 state->can_regex = 0;
                 // parse number
                 while(i < n && (js_syntax_is_word_utf16(str[i]) || (str[i] == u'.' && (i == n - 1 || str[i+1] != u'.'))))
                     i++;
                 syntax_func(syntax_data, DNDC_SYNTAX_JS_NUMBER, lineno, indentation+start, str+start, i - start);
                 break;
-            case u'a' ... u'z':
-            case u'A' ... u'Z':
+            case CASE_u16_a_z:
+            case CASE_u16_A_Z:
             case u'$': case u'_':
                 state->can_regex = 1;
                 // parse identifier
@@ -1821,7 +1821,7 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                 const uint16_t* nodenameend = aftercolon.text;
                 for(;nodenameend != aftercolon.text+aftercolon.length;nodenameend++){
                     switch(*nodenameend){
-                        case u'a' ... u'z':
+                        case CASE_u16_a_z:
                             continue;
                         default:
                             break;
@@ -1858,9 +1858,9 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                             for(;postnodename != endline;postnodename++){
                                 uint16_t c = *postnodename;
                                 switch(c){
-                                    case u'a' ... u'z':
-                                    case u'A' ... u'Z':
-                                    case u'0' ... u'9':
+                                    case CASE_u16_a_z:
+                                    case CASE_u16_A_Z:
+                                    case CASE_u16_0_9:
                                     case u'-': case u'_':
                                         continue;
                                     default:
@@ -1893,9 +1893,9 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                             for(;postnodename != endline;postnodename++){
                                 uint16_t c = *postnodename;
                                 switch(c){
-                                    case u'a' ... u'z':
-                                    case u'A' ... u'Z':
-                                    case u'0' ... u'9':
+                                    case CASE_u16_a_z:
+                                    case CASE_u16_A_Z:
+                                    case CASE_u16_0_9:
                                     case u'-': case u'_':
                                         continue;
                                     default:
@@ -1927,9 +1927,9 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                             for(;postnodename != endline;postnodename++){
                                 uint16_t c = *postnodename;
                                 switch(c){
-                                    case u'a' ... u'z':
-                                    case u'A' ... u'Z':
-                                    case u'0' ... u'9':
+                                    case CASE_u16_a_z:
+                                    case CASE_u16_A_Z:
+                                    case CASE_u16_0_9:
                                     case u'-': case u'_':
                                         continue;
                                     default:
