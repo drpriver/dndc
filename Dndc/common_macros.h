@@ -58,6 +58,9 @@
    structure initializer (or where-ever else comma expressions aren't
    permitted).
 */
+#if 1
+#define __must_be_array(a) 0
+#else
 #ifndef _WIN32
 #define BUILD_BUG_IF(e) (sizeof(struct { int:-!!(e); }))
 #define __must_be_array(a) \
@@ -65,6 +68,7 @@
 #else
 // Windows bit fields are different in the abi.
 #define __must_be_array(a) 0
+#endif
 #endif
 
 // Gets the length of an array, while avoiding the problem of pointers.

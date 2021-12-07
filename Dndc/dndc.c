@@ -198,7 +198,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
         };
         for(size_t n = 0; n < arrlen(img_nodes); n++){
             Marray(NodeHandle)* nodes = img_nodes[n];
-            MARRAY_FOR_EACH(it, *nodes){
+            MARRAY_FOR_EACH(NodeHandle, it, *nodes){
                 Node* node = get_node(ctx, *it);
                 if(!node_children_count(node))
                     continue;
@@ -618,7 +618,7 @@ run_the_dndc(uint64_t flags,
 
     // Add in the links from explicit link blocks.
     {
-        MARRAY_FOR_EACH(link_handle, ctx.link_nodes){
+        MARRAY_FOR_EACH(NodeHandle, link_handle, ctx.link_nodes){
             Node* link_node = get_node(&ctx, *link_handle);
             NODE_CHILDREN_FOR_EACH(it, link_node){
                 Node* link_str_node = get_node(&ctx, *it);
@@ -649,7 +649,7 @@ run_the_dndc(uint64_t flags,
     if(!wasm){
         uint64_t before_data = get_t();
         MStringBuilder sb = {.allocator=ctx.allocator};
-        MARRAY_FOR_EACH(handle, ctx.data_nodes){
+        MARRAY_FOR_EACH(NodeHandle, handle, ctx.data_nodes){
             Node* data_node = get_node(&ctx, *handle);
             // Node could've been mutated after being registered.
             if(data_node->type != NODE_DATA)

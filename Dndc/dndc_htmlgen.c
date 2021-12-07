@@ -85,7 +85,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=yes\">\n"
         );
         if(!(ctx->flags & DNDC_INPUT_IS_UNTRUSTED)){
-            MARRAY_FOR_EACH(m, ctx->meta_nodes){
+            MARRAY_FOR_EACH(NodeHandle, m, ctx->meta_nodes){
                 Node* mn = get_node(ctx, *m);
                 if(mn->type != NODE_META) continue;
                 NODE_CHILDREN_FOR_EACH(s, mn){
@@ -106,7 +106,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
     }
     if(ctx->rendered_data.count){
         msb_write_literal(msb, "<script>\nconst data_blob = {");
-        MARRAY_FOR_EACH(data, ctx->rendered_data){
+        MARRAY_FOR_EACH(DataItem, data, ctx->rendered_data){
             msb_write_char(msb, '"');
             msb_write_str(msb, data->key.text, data->key.length);
             msb_write_literal(msb, "\": \"");
@@ -130,7 +130,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
     if(ctx->stylesheets_nodes.count){
         msb_write_literal(msb, "<style>\n");
         bool written = false;
-        MARRAY_FOR_EACH(ss, ctx->stylesheets_nodes){
+        MARRAY_FOR_EACH(NodeHandle, ss, ctx->stylesheets_nodes){
             Node* node = get_node(ctx, *ss);
             // css nodes can change node types after they are registered
             if(unlikely(node->type != NODE_STYLESHEETS))
@@ -168,7 +168,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             msb_write_literal(msb, "</style>\n");
     }
     if(ctx->script_nodes.count){
-        MARRAY_FOR_EACH(s, ctx->script_nodes){
+        MARRAY_FOR_EACH(NodeHandle, s, ctx->script_nodes){
             Node* node = get_node(ctx, *s);
             // script nodes can change node types after they are registered
             if(unlikely(node->type != NODE_SCRIPTS))

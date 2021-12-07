@@ -119,8 +119,8 @@ marray_resize_to_some_weird_number(size_t x){
 //    }
 //
 //
-#define MARRAY_FOR_EACH(iter, marray) \
-for(typeof((marray).data[0]) \
+#define MARRAY_FOR_EACH(type, iter, marray) \
+for(type \
      *iter = (marray).data, \
      *iter##end__ = (marray).data?((marray).data+(marray).count):NULL; \
   iter != iter##end__; \

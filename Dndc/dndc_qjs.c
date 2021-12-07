@@ -1757,11 +1757,11 @@ JSMETHOD(js_dndc_context_select_nodes){
                 if(node->type != type)
                     goto Continue;
             }
-            MARRAY_FOR_EACH(attr, attributes_array){
+            MARRAY_FOR_EACH(StringView, attr, attributes_array){
                 if(!node_has_attribute(node, *attr))
                     goto Continue;
             }
-            MARRAY_FOR_EACH(class_, classes_array){
+            MARRAY_FOR_EACH(StringView, class_, classes_array){
                 if(!node_has_class(node, *class_))
                     goto Continue;
             }

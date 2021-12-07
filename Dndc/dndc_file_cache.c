@@ -18,7 +18,7 @@ static inline
 void
 FileCache_clear(FileCache* cache){
     Allocator al = cache->allocator;
-    MARRAY_FOR_EACH(src, cache->_files){
+    MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
         FileCache_free_path(cache, src->sourcepath);
         Allocator_free(al, src->sourcetext.text, src->sourcetext.length+1);
     }
@@ -44,7 +44,7 @@ FileCache_maybe_remove(FileCache* cache, StringView path){
 static inline
 bool
 FileCache_has_file(FileCache* cache, StringView path){
-    MARRAY_FOR_EACH(src, cache->_files){
+    MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
         if(LS_SV_equals(src->sourcepath.path, path))
             return true;
     }
@@ -80,7 +80,7 @@ static inline
 warn_unused
 Errorable(LongString)
 FileCache_read_file(FileCache* cache, StringView spath, bool cached_only){
-    MARRAY_FOR_EACH(src, cache->_files){
+    MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
         if(LS_SV_equals(src->sourcepath.path, spath)){
             return (Errorable(LongString)){
                 .result = src->sourcetext,
@@ -102,7 +102,7 @@ static inline
 warn_unused
 Errorable(LongString)
 FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only, ByteBuilder* bb){
-    MARRAY_FOR_EACH(src, cache->_files){
+    MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
         if(LS_SV_equals(src->sourcepath.path, spath)){
             return (Errorable(LongString)){
                 .result = src->sourcetext,

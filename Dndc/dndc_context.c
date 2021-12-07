@@ -83,7 +83,7 @@ node_get_id(DndcContext* ctx, NodeHandle handle){
     Node* node = get_node(ctx, handle);
     if(node->flags & NODEFLAG_NOID)
         return SV("");
-    MARRAY_FOR_EACH(item, ctx->explicit_node_ids){
+    MARRAY_FOR_EACH(IdItem, item, ctx->explicit_node_ids){
         if(NodeHandle_eq(item->node, handle)){
             return item->text;
         }
@@ -94,7 +94,7 @@ node_get_id(DndcContext* ctx, NodeHandle handle){
 static inline
 void
 node_set_id(DndcContext* ctx, NodeHandle handle, StringView sv){
-    MARRAY_FOR_EACH(item, ctx->explicit_node_ids){
+    MARRAY_FOR_EACH(IdItem, item, ctx->explicit_node_ids){
         if(NodeHandle_eq(item->node, handle)){
             item->text = sv;
             return;
@@ -300,7 +300,7 @@ static inline
 void
 ctx_note_dependency(DndcContext* ctx, StringView path){
     // FIXME: O(n^2) deduplication
-    MARRAY_FOR_EACH(dep, ctx->dependencies){
+    MARRAY_FOR_EACH(StringView, dep, ctx->dependencies){
         if(SV_equals(*dep, path))
             return;
     }
@@ -321,7 +321,7 @@ static
 Errorable_f(StringView)
 ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
     // check if we already have it as a builtin
-    MARRAY_FOR_EACH(builtin, ctx->builtin_files){
+    MARRAY_FOR_EACH(BuiltinLoadedSource, builtin, ctx->builtin_files){
         if(SV_equals(builtin->sourcepath, sourcepath)){
             return (Errorable(StringView)){.result=builtin->sourcetext};
         }
@@ -432,7 +432,7 @@ add_link_from_sv(DndcContext* ctx, Node* node){
             Raise(PARSE_ERROR);
         }
         // TODO: keep a binary tree or something?
-        MARRAY_FOR_EACH(li, ctx->links){
+        MARRAY_FOR_EACH(LinkItem, li, ctx->links){
             if(SV_equals(li->value, value))
                 goto foundit;
         }
