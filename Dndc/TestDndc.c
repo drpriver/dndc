@@ -53,7 +53,7 @@ TestFunction(TestDndc1){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString output = {};
-    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    Errorable(void) e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectFalse(output.text);
     TestExpectSuccess(e);
     TESTEND();
@@ -75,7 +75,7 @@ TestFunction(TestDndc2){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString output = {};
-    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    Errorable(void) e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectFalse(output.text);
     TestExpectSuccess(e);
     TESTEND();
@@ -96,7 +96,7 @@ TestFunction(TestDndc3){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString output = {};
-    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    Errorable(void) e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectFalse(output.text);
     TestExpectFailure(e);
     TESTEND();
@@ -117,11 +117,11 @@ TestFunction(TestDndcOutParam){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("hello.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    Errorable(void) e = run_the_dndc(flags, SV(""), source, SV(""), SV("hello.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
-        auto expected = LS(
+        LongString expected = LS(
             "<!DOCTYPE html>\n"
             "<html lang=\"en\">\n"
             "<head>\n"
@@ -171,11 +171,11 @@ TestFunction(TestDndcFragment){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("hello.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    Errorable(void) e = run_the_dndc(flags, SV(""), source, SV(""), SV("hello.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
-        auto expected = LS(
+        LongString expected = LS(
             "<style>\n"
             "p { color: blue;}\n"
             "</style>\n"
@@ -220,11 +220,11 @@ TestFunction(TestDndcTableMultiline){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    Errorable(void) e = run_the_dndc(flags, SV(""), source, SV(""), SV("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
-        auto expected = LS(
+        LongString expected = LS(
             "<!DOCTYPE html>\n"
             "<html lang=\"en\">\n"
             "<head>\n"
@@ -302,11 +302,11 @@ TestFunction(TestFormatTable){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    Errorable(void) e = run_the_dndc(flags, SV(""), source, SV(""), SV("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
-        auto expected = LS(
+        LongString expected = LS(
         "::table\n"
         "  d8 | thing\n"
         "  1  | this is a multiline table\n"
@@ -329,7 +329,7 @@ TestFunction(TestFormatTable){
     e = run_the_dndc(flags, SV(""), source, SV(""), SV("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
-        auto expected = LS(
+        LongString expected = LS(
                 "::table\n"
                 "  a\n"
                 "  b\n");
@@ -363,11 +363,11 @@ TestFunction(TestFormatList){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    Errorable(void) e = run_the_dndc(flags, SV(""), source, SV(""), SV("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
-        auto expected = LS(
+        LongString expected = LS(
             "Hello\n"
             "\n"
             "1. 1\n"
@@ -388,7 +388,7 @@ TestFunction(TestFormatList){
         {
             // check it parses after format
             LongString output = {};
-            auto e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""), LS_to_SV(outdata),  SV(""), SV("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+            Errorable(void) e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""), LS_to_SV(outdata),  SV(""), SV("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
             TestExpectFalse(output.text);
             TestExpectSuccess(e2);
         }
@@ -415,11 +415,11 @@ TestFunction(TestFormatKV){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
-    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    Errorable(void) e = run_the_dndc(flags, SV(""), source, SV(""), SV("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectSuccess(e);
     if(!e.errored){
         // A bit brittle of a test, but it shows that the outparam works.
-        auto expected = LS(
+        LongString expected = LS(
             "::kv\n"
             "  AC:      13\n"
             "  Attacks: +3 claws (2) +5 bite\n"
@@ -433,7 +433,7 @@ TestFunction(TestFormatKV){
         {
             // check it parses after format
             LongString output = {};
-            auto e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""),  LS_to_SV(outdata), SV(""), SV("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+            Errorable(void) e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""),  LS_to_SV(outdata), SV(""), SV("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
             TestExpectFalse(output.text);
             TestExpectSuccess(e2);
         }
@@ -460,9 +460,9 @@ TestFunction(TestCrashesFixed){
     for(size_t i = 0; i < arrlen(cases); i++){
         LongString output = {};
         Allocator allocator = get_mallocator();
-        auto data = read_file(cases[i].name.text, allocator);
+        TextFileResult data = read_file(cases[i].name.text, allocator);
         TestAssertSuccess(data);
-        auto e = run_the_dndc(flags, SV("TestCases"), LS_to_SV(data.result), LS_to_SV(cases[i].name), SV("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+        Errorable(void) e = run_the_dndc(flags, SV("TestCases"), LS_to_SV(data.result), LS_to_SV(cases[i].name), SV("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
         TestExpectFalse(output.text);
         if(cases[i].error){
             TestExpectFailure(e);
@@ -526,12 +526,12 @@ TestFunction(TestExamplesWork){
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString output = {};
         Allocator allocator = get_mallocator();
-        auto data = read_file(examples[i].text, allocator);
+        TextFileResult data = read_file(examples[i].text, allocator);
         if(data.errored){
             TestPrintValue("Unable to open: examples[i]", examples[i]);
         }
         TestAssertSuccess(data);
-        auto e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
+        Errorable(void) e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
         TestExpectFalse(output.text);
         if(!TestExpectSuccess(e)){
             TestPrintValue("Example failed:", examples[i]);
@@ -573,9 +573,9 @@ TestFunction(TestUntrusted){
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString output = {};
         Allocator allocator = get_mallocator();
-        auto data = read_file(examples[i].text, allocator);
+        TextFileResult data = read_file(examples[i].text, allocator);
         TestAssertSuccess(data);
-        auto e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
+        Errorable(void) e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
         TestExpectFalse(output.text);
         if(!TestExpectFailure(e)){
             TestPrintValue("source file", examples[i]);
@@ -626,7 +626,7 @@ TestFunction(TestSpecialChars){
     };
     for(size_t i = 0; i < arrlen(testcases); i++){
         LongString output = {};
-        auto e = run_the_dndc(flags, SV(""), testcases[i].source, SV(""), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
+        Errorable(void) e = run_the_dndc(flags, SV(""), testcases[i].source, SV(""), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
         TestAssertSuccess(e);
         if(!TestExpectEquals2(SV_equals, sv_slice(LS_to_SV(output), 198, testcases[i].result.length), testcases[i].result)){
             TestPrintValue("output", output);

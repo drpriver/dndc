@@ -48,7 +48,7 @@ make_html(PString* source){
         | DNDC_INPUT_IS_UNTRUSTED
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    auto e = run_the_dndc(
+    Errorable(void) e = run_the_dndc(
             flags,
             base,
             LS_to_SV(text),
@@ -83,7 +83,7 @@ make_fragment(PString* source){
         | DNDC_FRAGMENT_ONLY
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    auto e = run_the_dndc(
+    Errorable(void) e = run_the_dndc(
             flags,
             base,
             LS_to_SV(text),
@@ -118,7 +118,7 @@ format_dnd(PString* source){
         | DNDC_REFORMAT_ONLY
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    auto e = run_the_dndc(
+    Errorable(void) e = run_the_dndc(
             flags, base, LS_to_SV(text), SV(""), SV(""),
             &output,
             NULL, NULL,            // caches

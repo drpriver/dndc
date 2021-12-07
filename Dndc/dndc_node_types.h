@@ -52,11 +52,14 @@ LongString NODENAMES[] = {
 // It is intentional that not all nodes have an alias. Many nodes can not
 // be directly created.
 //
-static const
-struct {
+typedef struct NodeAlias {
     StringView name;
     NodeType type;
-} NODEALIASES[] = {
+} NodeAlias;
+
+static const
+NodeAlias
+NODEALIASES[] = {
     {SV("md"),           NODE_MD},
     {SV("div"),          NODE_DIV},
     {SV("import"),       NODE_IMPORT},

@@ -18,6 +18,9 @@
 // Note that you need to semi-colon terminate all of your lines.
 #define JSRAW(...) #__VA_ARGS__
 
+// We only compile this with apple clang anyway, so using extensions is fine.
+#define auto __auto_type
+
 #if !__has_feature(objc_arc)
 #error "ARC is off"
 #endif

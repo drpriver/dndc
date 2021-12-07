@@ -84,7 +84,7 @@ DndcPyFileCache_remove(PyObject* self, PyObject* str){
         return NULL;
     }
     StringView path = pystring_borrow_stringview(str);
-    auto cache = (DndcPyFileCache*)self;
+    DndcPyFileCache* cache = (DndcPyFileCache*)self;
     FileCache_maybe_remove(&cache->text_cache, path);
     FileCache_maybe_remove(&cache->b64_cache, path);
     Py_RETURN_NONE;
@@ -93,7 +93,7 @@ DndcPyFileCache_remove(PyObject* self, PyObject* str){
 static
 Nullable(PyObject*)
 DndcPyFileCache_clear(PyObject* self){
-    auto cache = (DndcPyFileCache*)self;
+    DndcPyFileCache* cache = (DndcPyFileCache*)self;
     FileCache_clear(&cache->text_cache);
     FileCache_clear(&cache->b64_cache);
     Py_RETURN_NONE;
@@ -102,22 +102,22 @@ DndcPyFileCache_clear(PyObject* self){
 static
 Nullable(PyObject*)
 DndcPyFileCache_paths(PyObject* self){
-    auto cache = (DndcPyFileCache*)self;
+    DndcPyFileCache* cache = (DndcPyFileCache*)self;
     Py_ssize_t nfiles = cache->b64_cache._files.count + cache->text_cache._files.count;
     PyObject* result = PyList_New(nfiles);
     if(!result)
         goto error;
     Py_ssize_t index = 0;
     for(size_t i = 0, count=cache->b64_cache._files.count; i < count; i++, index++){
-        auto path = &cache->b64_cache._files.data[i].sourcepath.path;
-        PyObject* s = PyUnicode_FromStringAndSize(path->text, path->length);
+        LongString path = cache->b64_cache._files.data[i].sourcepath.path;
+        PyObject* s = PyUnicode_FromStringAndSize(path.text, path.length);
         if(!s)
             goto error;
         PyList_SET_ITEM(result, index, s); // steals the reference
     }
     for(size_t i = 0, count = cache->text_cache._files.count; i < count; i++, index++){
-        auto path = &cache->text_cache._files.data[i].sourcepath.path;
-        PyObject* s = PyUnicode_FromStringAndSize(path->text, path->length);
+        LongString path = cache->text_cache._files.data[i].sourcepath.path;
+        PyObject* s = PyUnicode_FromStringAndSize(path.text, path.length);
         if(!s)
             goto error;
         PyList_SET_ITEM(result, index, s); // steals the reference
@@ -133,7 +133,7 @@ Nullable(PyObject*)
 DndcPyFileCache_new(PyTypeObject* subtype, PyObject *_Null_unspecified args, PyObject *_Null_unspecified kwds){
     (void)args;
     (void)kwds;
-    auto obj = (DndcPyFileCache*)subtype->tp_alloc(subtype, 1);
+    DndcPyFileCache* obj = (DndcPyFileCache*)subtype->tp_alloc(subtype, 1);
     if(!obj)
         return NULL;
     obj->b64_cache = (FileCache){.allocator = get_mallocator()};
@@ -144,7 +144,7 @@ DndcPyFileCache_new(PyTypeObject* subtype, PyObject *_Null_unspecified args, PyO
 static
 void
 DndcPyFileCache_dealloc(PyObject* self){
-    auto cache = (DndcPyFileCache*)self;
+    DndcPyFileCache* cache = (DndcPyFileCache*)self;
     FileCache_clear(&cache->text_cache);
     FileCache_clear(&cache->b64_cache);
 }
@@ -480,7 +480,7 @@ pydndc_collect_errors(Nullable(void*)user_data, int type, const char* filename, 
         return;
     }
     PyObject* list = user_data;
-    auto fail = PyList_Append(list, tup);
+    int fail = PyList_Append(list, tup);
     (void)fail;
     Py_XDECREF(tup);
 }
@@ -514,7 +514,7 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
     DndcErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
-    auto e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, func, error_list, NULL, NULL, NULL, NULL, NULL);
+    Errorable(void) e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, func, error_list, NULL, NULL, NULL, NULL, NULL);
     if(PyErr_Occurred()){
         goto finally;
     }
@@ -544,7 +544,7 @@ int
 pydndc_add_dependencies(Nullable(void*)user_data, size_t npaths, StringView* paths){
     PyObject* list = user_data;
     for(size_t i = 0; i < npaths; i++){
-        auto path = paths[i];
+        StringView path = paths[i];
         PyObject* str = PyUnicode_FromStringAndSize(path.text, path.length);
         PyList_Append(list, str);
         Py_XDECREF(str);
@@ -611,12 +611,12 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     FileCache* textcache = NULL;
     FileCache* b64cache = NULL;
     if(file_cache){
-        auto cache = (DndcPyFileCache*)file_cache;
+        DndcPyFileCache* cache = (DndcPyFileCache*)file_cache;
         textcache = &cache->text_cache;
         b64cache = &cache->b64_cache;
     }
     StringView outname = output_name?pystring_borrow_stringview(output_name) : SV("this.html");
-    auto e = run_the_dndc(flags, base_str, source, SV(""), outname, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, NULL, NULL);
+    Errorable(void) e = run_the_dndc(flags, base_str, source, SV(""), outname, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, NULL, NULL);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
@@ -699,7 +699,7 @@ pydndc_anaylze_syntax_for_highlight(PyObject* mod, PyObject* args, PyObject* kwa
     };
     if(!cd.dict)
         return NULL;
-    auto error = dndc_analyze_syntax(source, pydndc_collect_syntax_tokens, &cd);
+    int error = dndc_analyze_syntax(source, pydndc_collect_syntax_tokens, &cd);
     if(PyErr_Occurred()){
         Py_XDECREF(cd.dict);
         return NULL;

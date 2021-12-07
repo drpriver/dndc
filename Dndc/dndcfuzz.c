@@ -20,7 +20,7 @@ LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
         ;
     StringView source = {.text=(const char*)data, .length=size};
     LongString out;
-    auto e = run_the_dndc(flags,
+    Errorable(void) e = run_the_dndc(flags,
             SV(""), // base directory
             source, // source text
             SV("lmao.html"), // source path

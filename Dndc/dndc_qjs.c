@@ -458,7 +458,7 @@ execute_qjs_string(QJSContext* jsctx, DndcContext* ctx, const char* str, size_t 
         const char* filename;
         {
             Node* node = get_node(ctx, firstline);
-            auto node_filename = ctx->filenames.data[node->filename_idx];
+            StringView node_filename = ctx->filenames.data[node->filename_idx];
             filename = Allocator_strndup(ctx->string_allocator, node_filename.text, node_filename.length);
         }
 
@@ -718,15 +718,15 @@ js_load_file_as_base64(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJS
     // sloppy as fuck, whatever.
     ByteBuilder bb = {.allocator = get_mallocator()};
 
-    auto sv = jsstring_make_stringview_js_allocated(jsctx, str);
-    auto alloc = get_mallocator();
-    auto e = read_and_base64_bin_file(&bb, alloc, sv.text);
+    StringView sv = jsstring_make_stringview_js_allocated(jsctx, str);
+    Allocator alloc = get_mallocator();
+    Errorable(LongString) e = read_and_base64_bin_file(&bb, alloc, sv.text);
     JS_FreeCString(jsctx, sv.text);
     bb_destroy(&bb);
     if(e.errored){
         return JS_ThrowTypeError(jsctx, "%s: Error when loading file: '%s'", __func__, sv.text);
     }
-    auto result = JS_NewString(jsctx, e.result.text);
+    QJSValue result = JS_NewString(jsctx, e.result.text);
     Allocator_free(alloc, e.result.text, e.result.length+1);
     return result;
 }
@@ -747,13 +747,13 @@ js_load_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst
     if(ctx->flags & DNDC_DONT_READ){
         return JS_ThrowTypeError(jsctx, "File loading is disabled");
     }
-    auto sv = jsstring_make_stringview_js_allocated(jsctx, str);
-    auto e = ctx_load_source_file(ctx, sv);
+    StringView sv = jsstring_make_stringview_js_allocated(jsctx, str);
+    Errorable(StringView) e = ctx_load_source_file(ctx, sv);
     JS_FreeCString(jsctx, sv.text);
     if(e.errored){
         return JS_ThrowTypeError(jsctx, "load_file: Error when loading file");
     }
-    auto result = JS_NewString(jsctx, e.result.text);
+    QJSValue result = JS_NewString(jsctx, e.result.text);
     return result;
 }
 
@@ -776,9 +776,9 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
         return JS_ThrowTypeError(jsctx, "File system access is disabled.");
     }
     MStringBuilder sb = {.allocator = ctx->temp_allocator};
-    auto base = ctx->base_directory;
+    StringView base = ctx->base_directory;
     if(argc == 1){
-        auto dir = jsstring_make_stringview_js_allocated(jsctx, argv[0]);
+        StringView dir = jsstring_make_stringview_js_allocated(jsctx, argv[0]);
         if(base.length && !path_is_abspath(dir)){
             msb_write_str_with_backslashes_as_forward_slashes(&sb, base.text, base.length);
             if(dir.length){
@@ -828,8 +828,8 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
         if(ent->fts_info & (FTS_F | FTS_NSOK)){
             StringView name = {.text = ent->fts_name, .length=ent->fts_namelen};
             if(endswith(name, SV(".dnd"))){
-                auto item = JS_NewString(jsctx, ent->fts_path + dir.length+1);
-                auto v = JS_ArrayPush(jsctx, result, 1, &item);
+                QJSValue item = JS_NewString(jsctx, ent->fts_path + dir.length+1);
+                QJSValue v = JS_ArrayPush(jsctx, result, 1, &item);
                 JS_FreeValue(jsctx, v);
                 JS_FreeValue(jsctx, item);
             }
@@ -870,11 +870,11 @@ js_list_dnd_files_inner(QJSContext* jsctx, DndcContext* ctx, QJSValue array, Str
     }
     else{
         do {
-            auto cursor = tempbuilder.cursor;
+            size_t cursor = tempbuilder.cursor;
             MSB_FORMAT(&tempbuilder, SV("/"), findd.cFileName);
             StringView text = msb_borrow_sv(&tempbuilder);
             QJSValue s = JS_NewStringLen(jsctx, text.text+base_length+1, text.length-(base_length+1));
-            auto v = JS_ArrayPush(jsctx, array, 1, &s);
+            QJSValue v = JS_ArrayPush(jsctx, array, 1, &s);
             JS_FreeValue(jsctx, s);
             JS_FreeValue(jsctx, v);
             tempbuilder.cursor = cursor;
@@ -904,7 +904,7 @@ js_list_dnd_files_inner(QJSContext* jsctx, DndcContext* ctx, QJSValue array, Str
         MSB_FORMAT(&tempbuilder, "/", fn);
         msb_nul_terminate(&tempbuilder);
         StringView nextdir = msb_borrow_sv(&tempbuilder);
-        auto e = js_list_dnd_files_inner(jsctx, ctx, array, nextdir, base_length, depth+1);
+        QJSValue e = js_list_dnd_files_inner(jsctx, ctx, array, nextdir, base_length, depth+1);
         msb_erase(&tempbuilder, 1+fn.length);
         if(JS_IsException(e)) {
             array = e;
@@ -931,8 +931,8 @@ js_path_exists(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
         return JS_ThrowTypeError(jsctx, "File system access is disabled.");
     }
     MStringBuilder sb = {.allocator = ctx->temp_allocator};
-    auto base = ctx->base_directory;
-    auto dir = jsstring_make_stringview_js_allocated(jsctx, argv[0]);
+    StringView base = ctx->base_directory;
+    StringView dir = jsstring_make_stringview_js_allocated(jsctx, argv[0]);
     if(base.length && !path_is_abspath(dir)){
         msb_write_str(&sb, base.text, base.length);
         if(dir.length){
@@ -974,8 +974,8 @@ JSMETHOD(js_dndc_node_parse){
         return JS_EXCEPTION;
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
     LongString text = jsstring_to_longstring(jsctx, str, ctx->string_allocator);
-    auto old_filename = ctx->filename;
-    auto parse_e = dndc_parse(ctx, handle, SV("(generated string from script)"), text.text, text.length);
+    StringView old_filename = ctx->filename;
+    Errorable(void) parse_e = dndc_parse(ctx, handle, SV("(generated string from script)"), text.text, text.length);
     if(parse_e.errored){
         return JS_ThrowInternalError(jsctx, "Error while parsing");
     }
@@ -1742,8 +1742,8 @@ JSMETHOD(js_dndc_context_select_nodes){
         for(size_t i = 0; i < ctx->nodes.count; i++){
             if(ctx->nodes.data[i].type == NODE_INVALID)
                 continue;
-            auto nh = js_make_dndc_node(jsctx, (NodeHandle){.index = i});
-            auto v = JS_ArrayPush(jsctx, result, 1, &nh);
+            QJSValue nh = js_make_dndc_node(jsctx, (NodeHandle){.index = i});
+            QJSValue v = JS_ArrayPush(jsctx, result, 1, &nh);
             JS_FreeValue(jsctx, v);
             JS_FreeValue(jsctx, nh);
         }
@@ -1919,7 +1919,7 @@ JSGETTER(js_dndc_context_get_all_nodes){
     for(size_t i = 0; i < ctx->nodes.count; i++){
         if(ctx->nodes.data[i].type == NODE_INVALID) continue;
         QJSValue n = js_make_dndc_node(jsctx, (NodeHandle){._value=i});
-        auto v = JS_ArrayPush(jsctx, result, 1, &n);
+        QJSValue v = JS_ArrayPush(jsctx, result, 1, &n);
         JS_FreeValue(jsctx, v);
         JS_FreeValue(jsctx, n);
     }
@@ -2054,7 +2054,7 @@ JSMETHOD(js_dndc_attributes_entries){
         assert(!JS_IsException(call));
         JS_FreeValue(jsctx, js_kv[0]);
         JS_FreeValue(jsctx, js_kv[1]);
-        auto v = JS_ArrayPush(jsctx, result, 1, &pair);
+        QJSValue v = JS_ArrayPush(jsctx, result, 1, &pair);
         JS_FreeValue(jsctx, v);
         JS_FreeValue(jsctx, pair);
     }

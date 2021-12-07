@@ -333,7 +333,7 @@ static inline
 void
 force_inline
 init_node(DndcContext* ctx, NodeHandle handle, const char* src_char, NodeType type){
-    auto node = get_node(ctx, handle);
+    Node* node = get_node(ctx, handle);
     int col = (int)(src_char - ctx->linestart);
     node->col = col;
     assert(node->col >= 0);
@@ -346,7 +346,7 @@ static inline
 void
 force_inline
 init_string_node(DndcContext* ctx, NodeHandle handle, StringView sv){
-    auto node = get_node(ctx, handle);
+    Node* node = get_node(ctx, handle);
     int col = (int)(sv.text - ctx->linestart);
     node->col = col;
     node->filename_idx = ctx->filenames.count-1;
@@ -369,7 +369,7 @@ dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const 
     ctx->filename = filename;
     Marray_push(StringView)(&ctx->filenames, ctx->allocator, filename);
     NodeType type = get_node(ctx, root_handle)->type;
-    auto e = parse_node(ctx, root_handle, type, -1, NODEFLAG_NONE);
+    Errorable(void) e = parse_node(ctx, root_handle, type, -1, NODEFLAG_NONE);
     if(e.errored) return e;
     return result;
 }
@@ -382,11 +382,11 @@ parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
     const char* starttext = ctx->doublecolon + 2;
     size_t length = ctx->line_end - starttext;
     StringView postcolon = stripped_view(starttext, length);
-    auto new_node_handle = alloc_handle(ctx);
+    NodeHandle new_node_handle = alloc_handle(ctx);
     init_node(ctx, new_node_handle, ctx->linestart+ctx->nspaces, NODE_INVALID);
     NodeFlags flags;
     {
-        auto e = parse_post_colon(ctx, postcolon, new_node_handle);
+        struct ErrorableNodeFlags e = parse_post_colon(ctx, postcolon, new_node_handle);
         if(e.errored){
             result.errored = e.errored;
             return result;
@@ -396,7 +396,7 @@ parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
     append_child(ctx, parent_handle, new_node_handle);
     NodeType type;
     {
-        auto node = get_node(ctx, new_node_handle);
+        Node* node = get_node(ctx, new_node_handle);
         const char* header = ctx->linestart + ctx->nspaces;
         node->header = stripped_view(header, ctx->doublecolon - header);
         // if(flags & PARSEDNODE_IS_COMMENT){
@@ -405,9 +405,9 @@ parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
         // }
         type = node->type;
     }
-    auto new_indent = ctx->nspaces;
+    int new_indent = ctx->nspaces;
     advance_row(ctx);
-    auto e = parse_node(ctx, new_node_handle, type, new_indent, flags);
+    Errorable(void) e = parse_node(ctx, new_node_handle, type, new_indent, flags);
     if(e.errored) return e;
     return result;
 }
@@ -460,7 +460,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
     for(size_t i = 0; i < arrlen(NODEALIASES); i++){
         if(NODEALIASES[i].name.length == boundary){
             if(memcmp(NODEALIASES[i].name.text, postcolon.text, boundary)==0){
-                auto type = NODEALIASES[i].type;
+                NodeType type = NODEALIASES[i].type;
                 switch(type){
                     // case NODE_COMMENT:
                         // result.result |= NODEFLAG_COMMENT;
@@ -658,7 +658,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                             break;
                         }
                 }
-                auto attr = Rarray_alloc(Attribute)(&node->attributes, ctx->allocator);
+                Attribute* attr = Rarray_alloc(Attribute)(&node->attributes, ctx->allocator);
                 attr->key = attr_name;
                 attr->value = SV("");
                 if(aftertype.length){
@@ -764,14 +764,14 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
         if(ctx->nspaces <= indentation)
             break;
         if(ctx->doublecolon){
-            auto e = parse_double_colon(ctx, parent_handle);
+            Errorable(void) e = parse_double_colon(ctx, parent_handle);
             if(e.errored) return e;
             continue;
         }
         // default: string node
         StringView content = stripped_view(ctx->linestart + ctx->nspaces,
             (ctx->line_end - ctx->linestart)-ctx->nspaces);
-        auto new_node_handle = alloc_handle(ctx);
+        NodeHandle new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
         append_child(ctx, parent_handle, new_node_handle);
         advance_row(ctx);
@@ -780,7 +780,7 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
 }
 PARSEFUNC(parse_list_node){
     {
-        auto parent = get_node(ctx, parent_handle);
+        Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_LIST);
     }
     Errorable(void) result = {0};
@@ -798,7 +798,7 @@ PARSEFUNC(parse_list_node){
             // so that things like ::links and ::js nodes work properly.
             // Those will be removed at render time, so it's not invalid to
             // parse them.
-            auto e = parse_double_colon(ctx, parent_handle);
+            Errorable(void) e = parse_double_colon(ctx, parent_handle);
             if(e.errored) return e;
             continue;
         }
@@ -816,14 +816,14 @@ PARSEFUNC(parse_list_node){
             }
         }
         after:;
-        auto li_handle = alloc_handle(ctx);
+        NodeHandle li_handle = alloc_handle(ctx);
         init_node(ctx, li_handle, ctx->linestart+ctx->nspaces, NODE_LIST_ITEM);
         append_child(ctx, parent_handle, li_handle);
         StringView text = stripped_view(firstchar, ctx->line_end - firstchar);
-        auto first_child = alloc_handle(ctx);
+        NodeHandle first_child = alloc_handle(ctx);
         init_string_node(ctx, first_child, text);
         advance_row(ctx);
-        auto e = parse_list_item(ctx, li_handle, ctx->nspaces);
+        Errorable(void) e = parse_list_item(ctx, li_handle, ctx->nspaces);
         if(e.errored) return e;
     }
     return result;
@@ -832,7 +832,7 @@ PARSEFUNC(parse_list_node){
 PARSEFUNC(parse_list_item){
     Errorable(void) result = {0};
     {
-        auto parent = get_node(ctx, parent_handle);
+        Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_LIST_ITEM);
     }
     for(;ctx->cursor != ctx->end;){
@@ -857,7 +857,7 @@ PARSEFUNC(parse_list_item){
                     NodeHandle new_handle = alloc_handle(ctx);
                     init_node(ctx, new_handle, ctx->linestart + ctx->nspaces, NODE_LIST);
                     append_child(ctx, parent_handle, new_handle);
-                    auto e = parse_list_node(ctx, new_handle, indentation);
+                    Errorable(void) e = parse_list_node(ctx, new_handle, indentation);
                     if(e.errored) return e;
                     goto top;
                 }break;
@@ -868,7 +868,7 @@ PARSEFUNC(parse_list_item){
         after:;
         // default: string node
         StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);
-        auto new_node_handle = alloc_handle(ctx);
+        NodeHandle new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
         append_child(ctx, parent_handle, new_node_handle);
         advance_row(ctx);
@@ -898,7 +898,7 @@ PARSEFUNC(parse_raw_node){
             if(ctx->nspaces <= indentation)
                 break;
             length = ctx->line_end - ctx->linestart;
-            auto effective_indent = leading_indent < ctx->nspaces?leading_indent: ctx->nspaces;
+            int effective_indent = leading_indent < ctx->nspaces?leading_indent: ctx->nspaces;
             length -= effective_indent;
             text = ctx->linestart + effective_indent;
         }
@@ -908,10 +908,10 @@ PARSEFUNC(parse_raw_node){
             text = ctx->linestart + ctx->nspaces - length;
         }
         // default: string node
-        auto content = rstripped_view(text, length);
+        StringView content = rstripped_view(text, length);
         if(ctx->flags & DNDC_STRIP_WHITESPACE)
             content = lstripped_view(content.text, content.length);
-        auto new_node_handle = alloc_handle(ctx);
+        NodeHandle new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
         append_child(ctx, parent_handle, new_node_handle);
         advance_row(ctx);
@@ -921,7 +921,7 @@ PARSEFUNC(parse_raw_node){
 
 PARSEFUNC(parse_table_node){
     {
-        auto parent = get_node(ctx, parent_handle);
+        Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_TABLE);
     }
     NodeHandle last_cell_handle = INVALID_NODE_HANDLE;
@@ -942,7 +942,7 @@ PARSEFUNC(parse_table_node){
             // so that things like ::links and ::js nodes work properly.
             // Those will be removed at render time, so it's not invalid to
             // parse them.
-            auto e = parse_double_colon(ctx, parent_handle);
+            Errorable(void) e = parse_double_colon(ctx, parent_handle);
             if(e.errored) return e;
             continue;
         }
@@ -957,7 +957,7 @@ PARSEFUNC(parse_table_node){
                             convert_node_to_container_containing_clone_of_former_self(ctx, last_cell_handle);
                             converted = true;
                         }
-                        auto str_handle = alloc_handle(ctx);
+                        NodeHandle str_handle = alloc_handle(ctx);
                         init_string_node(ctx, str_handle, content);
                         append_child(ctx, last_cell_handle, str_handle);
                     }
@@ -966,14 +966,14 @@ PARSEFUNC(parse_table_node){
                 }
             }
         }
-        auto new_node_handle = alloc_handle(ctx);
+        NodeHandle new_node_handle = alloc_handle(ctx);
         init_node(ctx, new_node_handle, ctx->linestart+ctx->nspaces, NODE_TABLE_ROW);
         append_child(ctx, parent_handle, new_node_handle);
         previous_row_indentation = ctx->nspaces;
         // last_cell_handle = INVALID_NODE_HANDLE;
         converted = false;
         while(pipe){
-            auto cell_index = alloc_handle(ctx);
+            NodeHandle cell_index = alloc_handle(ctx);
             size_t length = pipe - cursor;
             StringView content = stripped_view(cursor,length);
             init_string_node(ctx, cell_index, content);
@@ -981,7 +981,7 @@ PARSEFUNC(parse_table_node){
             cursor = pipe+1;
             pipe = memchr(cursor, '|', ctx->line_end - cursor);
         }
-        auto cell_index = alloc_handle(ctx);
+        NodeHandle cell_index = alloc_handle(ctx);
         last_cell_handle = cell_index;
         StringView content = stripped_view(cursor, ctx->line_end-cursor);
         init_string_node(ctx, cell_index, content);
@@ -992,7 +992,7 @@ PARSEFUNC(parse_table_node){
 }
 PARSEFUNC(parse_keyvalue_node){
     {
-        auto parent = get_node(ctx, parent_handle);
+        Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_KEYVALUE);
     }
     Errorable(void) result = {0};
@@ -1009,7 +1009,7 @@ PARSEFUNC(parse_keyvalue_node){
         if(ctx->nspaces <= indentation)
             break;
         if(ctx->doublecolon){
-            auto e = parse_double_colon(ctx, parent_handle);
+            Errorable(void) e = parse_double_colon(ctx, parent_handle);
             if(e.errored) return e;
             continue;
         }
@@ -1020,14 +1020,14 @@ PARSEFUNC(parse_keyvalue_node){
                     previous_value_was_converted = true;
                 }
                 StringView content = stripped_view(ctx->linestart+ctx->nspaces, ctx->line_end-(ctx->linestart+ctx->nspaces));
-                auto str_handle = alloc_handle(ctx);
+                NodeHandle str_handle = alloc_handle(ctx);
                 init_string_node(ctx, str_handle, content);
                 append_child(ctx, previous_value, str_handle);
                 advance_row(ctx);
                 continue;
             }
         }
-        auto new_node_handle = alloc_handle(ctx);
+        NodeHandle new_node_handle = alloc_handle(ctx);
         init_node(ctx, new_node_handle, ctx->linestart + ctx->nspaces, NODE_KEYVALUEPAIR);
         append_child(ctx, parent_handle, new_node_handle);
         const char* cursor = ctx->linestart+ctx->nspaces;
@@ -1040,9 +1040,9 @@ PARSEFUNC(parse_keyvalue_node){
 
         StringView pre = stripped_view(pre_text,colon - pre_text);
         StringView post = stripped_view(colon+1, (ctx->line_end-colon)-1);
-        auto key_idx = alloc_handle(ctx);
+        NodeHandle key_idx = alloc_handle(ctx);
         init_string_node(ctx, key_idx, pre);
-        auto val_idx = alloc_handle(ctx);
+        NodeHandle val_idx = alloc_handle(ctx);
         init_string_node(ctx, val_idx, post);
         append_child(ctx, new_node_handle, key_idx);
         append_child(ctx, new_node_handle, val_idx);
@@ -1057,7 +1057,7 @@ PARSEFUNC(parse_keyvalue_node){
 PARSEFUNC(parse_bullets_node){
     Errorable(void) result = {0};
     {
-        auto parent = get_node(ctx, parent_handle);
+        Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_BULLETS);
     }
     for(;ctx->cursor != ctx->end;){
@@ -1071,7 +1071,7 @@ PARSEFUNC(parse_bullets_node){
             break;
         if(ctx->doublecolon){
             // same comment as the table parser. Makes ::links and such work
-            auto e = parse_double_colon(ctx, parent_handle);
+            Errorable(void) e = parse_double_colon(ctx, parent_handle);
             if(e.errored) return e;
             continue;
         }
@@ -1083,14 +1083,14 @@ PARSEFUNC(parse_bullets_node){
         }
         firstchar++;
         StringView bullet_text = stripped_view(firstchar, ctx->line_end - firstchar);
-        auto bullet_node_handle = alloc_handle(ctx);
+        NodeHandle bullet_node_handle = alloc_handle(ctx);
         init_node(ctx, bullet_node_handle, ctx->linestart+ctx->nspaces, NODE_LIST_ITEM);
         append_child(ctx, parent_handle, bullet_node_handle);
-        auto first_child_index = alloc_handle(ctx);
+        NodeHandle first_child_index = alloc_handle(ctx);
         init_string_node(ctx, first_child_index, bullet_text);
         append_child(ctx, bullet_node_handle, first_child_index);
         advance_row(ctx);
-        auto e = parse_bullet_node(ctx, bullet_node_handle, ctx->nspaces);
+        Errorable(void) e = parse_bullet_node(ctx, bullet_node_handle, ctx->nspaces);
         if(e.errored) return e;
     }
     return result;
@@ -1099,7 +1099,7 @@ PARSEFUNC(parse_bullets_node){
 PARSEFUNC(parse_bullet_node){
     Errorable(void) result = {0};
     {
-        auto parent = get_node(ctx, parent_handle);
+        Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_LIST_ITEM);
     }
     for(;ctx->cursor != ctx->end;){
@@ -1117,16 +1117,16 @@ PARSEFUNC(parse_bullet_node){
         const char* firstchar = ctx->linestart + ctx->nspaces;
         char first = *firstchar;
         if(first == '*' or first == '+' or first == '-'){
-            auto new_index = alloc_handle(ctx);
+            NodeHandle new_index = alloc_handle(ctx);
             init_node(ctx, new_index, firstchar, NODE_BULLETS);
             append_child(ctx, parent_handle, new_index);
-            auto e = parse_bullets_node(ctx, new_index, indentation);
+            Errorable(void) e = parse_bullets_node(ctx, new_index, indentation);
             if(e.errored) return e;
             continue;
         }
         // default: string node
         StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);
-        auto new_node_handle = alloc_handle(ctx);
+        NodeHandle new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
         append_child(ctx, parent_handle, new_node_handle);
         advance_row(ctx);
@@ -1142,7 +1142,7 @@ PARSEFUNC(parse_md_node){
     // accept sloppy trees when we output anyway. I think we properly error
     // instead of asserting in htmlgen.
     if(0){
-        auto parent = get_node(ctx, parent_handle);
+        Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_MD || parent->type == NODE_DETAILS);
     }
     enum MDSTATE {
@@ -1152,7 +1152,7 @@ PARSEFUNC(parse_md_node){
         LIST = 3,
     };
     enum MDSTATE state = NONE;
-    struct {
+    struct StackItem {
         NodeHandle list;
         NodeHandle item;
         int indentation;
@@ -1178,7 +1178,7 @@ PARSEFUNC(parse_md_node){
         if(ctx->doublecolon){
             state = NONE;
             si = -1;
-            auto e = parse_double_colon(ctx, parent_handle);
+            Errorable(void) e = parse_double_colon(ctx, parent_handle);
             if(e.errored) return e;
             continue;
         }
@@ -1222,7 +1222,7 @@ PARSEFUNC(parse_md_node){
         if(newstate == BULLET or newstate == LIST){
             if(si == -1){
                 si = 0;
-                auto s = &stack[si];
+                struct StackItem* s = &stack[si];
                 s->list = alloc_handle(ctx);
                 s->item = INVALID_NODE_HANDLE;
                 s->indentation = ctx->nspaces;
@@ -1238,7 +1238,7 @@ PARSEFUNC(parse_md_node){
                         parse_set_err(ctx, ctx->linestart+ctx->nspaces, LS("Only up to 8 levels of nested lists are supported."));
                         Raise(PARSE_ERROR);
                         }
-                    auto s = &stack[si];
+                    struct StackItem* s = &stack[si];
                     s->list = alloc_handle(ctx);
                     s->item = INVALID_NODE_HANDLE;
                     s->indentation = ctx->nspaces;
@@ -1249,7 +1249,7 @@ PARSEFUNC(parse_md_node){
                 }
                 // neighbors
                 else if(ctx->nspaces == stack[si].indentation){
-                    auto s = &stack[si];
+                    struct StackItem* s = &stack[si];
                     if(s->state != newstate){
                         // neighbor of different type
                         NodeHandle prev = si>0? stack[si-1].item : parent_handle;
@@ -1273,7 +1273,7 @@ PARSEFUNC(parse_md_node){
                             Raise(PARSE_ERROR);
                         }
                         assert(si >= 0);
-                        auto indent = stack[si].indentation;
+                        int indent = stack[si].indentation;
                         if(indent > ctx->nspaces)
                             continue;
                         if(indent == ctx->nspaces)
@@ -1283,7 +1283,7 @@ PARSEFUNC(parse_md_node){
                             Raise(PARSE_ERROR);
                         }
                     }
-                    auto s = &stack[si];
+                    struct StackItem* s = &stack[si];
                     if(s->state != newstate){
                         s->list = alloc_handle(ctx);
                         s->item = INVALID_NODE_HANDLE;
@@ -1297,7 +1297,7 @@ PARSEFUNC(parse_md_node){
                     }
                 }
             }
-            auto s = &stack[si];
+            struct StackItem* s = &stack[si];
             s->item = alloc_handle(ctx);
             init_node(ctx, s->item, ctx->linestart+ctx->nspaces, NODE_LIST_ITEM);
             append_child(ctx, s->list, s->item);
@@ -1317,7 +1317,7 @@ PARSEFUNC(parse_md_node){
                 append_child(ctx, parent_handle, para_handle);
             }
             StringView content = stripped_view( ctx->linestart + ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);
-            auto new_node_handle = alloc_handle(ctx);
+            NodeHandle new_node_handle = alloc_handle(ctx);
             init_string_node(ctx, new_node_handle, content);
             append_child(ctx, para_handle, new_node_handle);
             advance_row(ctx);
@@ -1331,7 +1331,7 @@ PARSEFUNC(parse_md_node){
         }
         // don't change state for these
         StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);
-        auto new_node_handle = alloc_handle(ctx);
+        NodeHandle new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
         append_child(ctx, stack[si].item, new_node_handle);
         advance_row(ctx);

@@ -27,10 +27,6 @@
 #endif
 
 #ifndef __cplusplus
-// I could probably work around the other gnuc extensions, but I use
-// auto pretty pervasively. I would need to compile as C++ with msvc
-// if I care about that. But I don't. So whatever.
-#define auto __auto_type
 #define and &&
 #define or ||
 #define not !
