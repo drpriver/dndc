@@ -23,7 +23,7 @@ typedef long long ssize_t;
 #pragma clang assume_nonnull begin
 #endif
 
-enum {FORMAT_WIDTH=80};
+enum {FORMAT_WIDTH=79};
 enum {FORMAT_INDENT=2};
 typedef struct FormatState {
     // signed so it can go negative (simplifies things)
