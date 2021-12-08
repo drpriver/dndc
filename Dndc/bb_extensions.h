@@ -4,16 +4,7 @@
 #include "file_util.h"
 #include "base64.h"
 #include "errorable_long_string.h"
-
-#ifndef warn_unused
-#if defined(__GNUC__) || defined(__clang__)
-#define warn_unused __attribute__((warn_unused_result))
-#elif defined(_MSC_VER)
-#define warn_unused _Check_return
-#else
-#error "No warn unused analogue"
-#endif
-#endif
+#include "error_handling.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
