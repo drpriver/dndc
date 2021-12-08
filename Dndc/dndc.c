@@ -386,10 +386,10 @@ run_the_dndc(uint64_t flags,
     if(unlikely(flags & DNDC_REFORMAT_ONLY)){
         MStringBuilder outsb = {.allocator = get_mallocator()};
         uint64_t before = get_t();
-        Errorable(void) format_error = format_tree(&ctx, &outsb);
-        if(format_error.errored){
+        int format_error = format_tree(&ctx, &outsb);
+        if(format_error){
             msb_destroy(&outsb);
-            result.errored = format_error.errored;
+            result.errored = format_error;
             goto cleanup;
         }
         uint64_t after = get_t();
