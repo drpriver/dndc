@@ -30,13 +30,13 @@
 /* Rendering */
 
 #define RENDERFUNCNAME(nt) render_##nt
-#define RENDERFUNC(nt) static Errorable_f(void) RENDERFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, NodeHandle handle, int header_depth)
+#define RENDERFUNC(nt) static int RENDERFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, NodeHandle handle, int header_depth)
 
 #define X(a, b) RENDERFUNC(a);
 NODETYPES(X)
 #undef X
 
-typedef Errorable_f(void)(renderfunc)(DndcContext*, MStringBuilder*, NodeHandle, int);
+typedef int(renderfunc)(DndcContext*, MStringBuilder*, NodeHandle, int);
 
 static
 renderfunc*_Nonnull const RENDERFUNCS[] = {
@@ -47,11 +47,11 @@ renderfunc*_Nonnull const RENDERFUNCS[] = {
 
 static inline
 force_inline
-Errorable_f(void)
+int
 render_node(DndcContext* ctx, MStringBuilder* restrict sb, NodeHandle handle, int header_depth){
     Node* node = get_node(ctx, handle);
     bool hide = !!node->flags & NODEFLAG_HIDE;
-    if(hide) return (Errorable(void)){0};
+    if(hide) return 0;
 #if 0
     switch(node->type){
 #define X(a, b) case NODE_##a: return RENDERFUNCNAME(a)(ctx, sb, node, header_depth);
@@ -216,8 +216,8 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
                 root_node = child;
         }
     }
-    Errorable(void) e = render_node(ctx, msb, ctx->root_handle, 1);
-    if(e.errored) return e;
+    int e = render_node(ctx, msb, ctx->root_handle, 1);
+    if(e) return (Errorable(void)){e};
     if(complete_document){
         msb_write_literal(msb,
             "</body>\n"
@@ -360,9 +360,8 @@ write_tag_escaped_str(MStringBuilder* sb, NullUnspec(const char*)text, size_t le
 }
 
 static inline
-Errorable_f(void)
+int
 write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const Node* node){
-    Errorable(void) result = {0};
     for(size_t i = 0; i < length; i++){
         char c = text[i];
         switch(c){
@@ -371,7 +370,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                 const char* closing_brace = memchr(text+i, ']', length-i);
                 if(unlikely(!closing_brace)){
                     node_set_err_offset(ctx, node, i, LS("Unterminated '['"));
-                    return (Errorable(void)){PARSE_ERROR};
+                    return PARSE_ERROR;
                 }
                 const size_t link_length = closing_brace - (text+i);
                 size_t text_length = link_length-1;
@@ -399,7 +398,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                         else {
                             node_set_err_q(ctx, node, SV("Unable to resolve link: "), temp_str);
                             msb_destroy(&temp);
-                            return (Errorable(void)){PARSE_ERROR};
+                            return PARSE_ERROR;
                         }
                     }
                     else {
@@ -547,7 +546,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                 break;
         }
     }
-    return result;
+    return 0;
 }
 
 #if 0
@@ -565,7 +564,7 @@ print_u8x16(const char* prefix, uint8x16_t v){
 #endif
 
 static inline
-Errorable_f(void)
+int
 write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const Node* node){
     msb_ensure_additional(sb, length);
 #if 1 && defined(__x86_64__)
@@ -669,7 +668,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
 }
 
 static inline
-Errorable_f(void)
+int
 write_header(DndcContext* ctx, MStringBuilder* sb, NodeHandle handle, int header_level){
     StringView id = node_get_id(ctx, handle);
     Node* node = get_node(ctx, handle);
@@ -681,10 +680,10 @@ write_header(DndcContext* ctx, MStringBuilder* sb, NodeHandle handle, int header
         msb_write_kebab(sb, id.text, id.length);
         msb_write_literal(sb, "\">");
     }
-    Errorable(void) e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
-    if(e.errored) return e;
+    int e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
+    if(e) return e;
     MSB_FORMAT(sb, "</h", header_level, ">");
-    return (Errorable(void)){0};
+    return 0;
 }
 
 static inline
@@ -712,10 +711,10 @@ RENDERFUNC(STRING){
         node_print_warning(ctx, node, SV("Ignoring classes on string node"));
     if(unlikely(node_children_count(node)))
         node_print_warning(ctx, node, SV("Ignoring children of string node"));
-    Errorable(void) e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
-    if(e.errored) return e;
+    int e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
+    if(e) return e;
     msb_write_char(sb, '\n');
-    return (Errorable(void)){0};
+    return 0;
 }
 
 RENDERFUNC(DIV){
@@ -731,16 +730,16 @@ RENDERFUNC(DIV){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        Errorable(void) e = write_header(ctx, sb, handle, header_depth);
-        if(e.errored) return e;
+        int e = write_header(ctx, sb, handle, header_depth);
+        if(e) return e;
         msb_write_char(sb, '\n');
     }
     NODE_CHILDREN_FOR_EACH(it, node){
-        Errorable(void) e = render_node(ctx, sb, *it, header_depth);
-        if(e.errored) return e;
+        int e = render_node(ctx, sb, *it, header_depth);
+        if(e) return e;
     }
     msb_write_literal(sb, "</div>\n");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(NAV){
     (void)header_depth;
@@ -760,7 +759,7 @@ RENDERFUNC(NAV){
     msb_write_literal(sb, ">\n<ul>\n");
     msb_write_str(sb, ctx->renderednav.text, ctx->renderednav.length);
     msb_write_literal(sb, "</ul>\n</nav>");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(PARA){
     Node* node = get_node(ctx, handle);
@@ -773,16 +772,16 @@ RENDERFUNC(PARA){
     }
     msb_write_literal(sb, "<p>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
-        Errorable(void) e = render_node(ctx, sb, *it, header_depth);
-        if(e.errored) return e;
+        int e = render_node(ctx, sb, *it, header_depth);
+        if(e) return e;
     }
     msb_write_literal(sb, "</p>\n");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(TITLE){
     Node* node = get_node(ctx, handle);
-    Errorable(void) e = write_header(ctx, sb, handle, header_depth);
-    if(e.errored) return e;
+    int e = write_header(ctx, sb, handle, header_depth);
+    if(e) return e;
     msb_write_char(sb, '\n');
     if(node_children_count(node)){
         node_print_warning(ctx, node, SV("Ignoring children of title"));
@@ -790,12 +789,12 @@ RENDERFUNC(TITLE){
     if(node->classes){
         node_print_warning(ctx, node, SV("UNIMPLEMENTED: classes on the title"));
     }
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(HEADING){
     Node* node = get_node(ctx, handle);
-    Errorable(void) e = write_header(ctx, sb, handle, header_depth+1);
-    if(e.errored) return e;
+    int e = write_header(ctx, sb, handle, header_depth+1);
+    if(e) return e;
     msb_write_char(sb, '\n');
     if(node_children_count(node)){
         node_print_warning(ctx, node, SV("Ignoring children of heading"));
@@ -803,7 +802,7 @@ RENDERFUNC(HEADING){
     if(node->classes){
         node_print_warning(ctx, node, SV("UNIMPLEMENTED: classes on the heading"));
     }
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(HR){
     (void)header_depth;
@@ -816,7 +815,7 @@ RENDERFUNC(HR){
     }
     msb_write_char(sb, '\n');
     msb_write_literal(sb, "<hr>\n");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(TABLE){
     Node* node = get_node(ctx, handle);
@@ -825,8 +824,8 @@ RENDERFUNC(TABLE){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        Errorable(void) e = write_header(ctx, sb, handle, header_depth);
-        if(e.errored) return e;
+        int e = write_header(ctx, sb, handle, header_depth);
+        if(e) return e;
     }
     msb_write_literal(sb, "<table>\n<thead>\n");
     size_t count = node_children_count(node);
@@ -835,37 +834,37 @@ RENDERFUNC(TABLE){
         Node* child = get_node(ctx, children[0]);
         if(child->type != NODE_TABLE_ROW){
             node_set_err(ctx, child, LS("children of a table ought to be table rows..."));
-            return (Errorable(void)){.errored=GENERIC_ERROR};
+            return GENERIC_ERROR;
         }
         // inline rendering table row here so we can do heads
         msb_write_literal(sb, "<tr>\n");
         NODE_CHILDREN_FOR_EACH(it, child){
             msb_write_literal(sb, "<th>");
-            Errorable(void) e = render_node(ctx, sb, *it, header_depth);
-            if(e.errored) return e;
+            int e = render_node(ctx, sb, *it, header_depth);
+            if(e) return e;
             msb_write_literal(sb, "</th>\n");
         }
         msb_write_literal(sb, "</tr>\n");
     }
     msb_write_literal(sb, "</thead>\n<tbody>\n");
     for(size_t i = 1; i < count; i++){
-        Errorable(void) e = render_node(ctx, sb, children[i], header_depth);
-        if(e.errored) return e;
+        int e = render_node(ctx, sb, children[i], header_depth);
+        if(e) return e;
     }
     msb_write_literal(sb, "</tbody></table>\n</div>\n");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(TABLE_ROW){
     Node* node = get_node(ctx, handle);
     msb_write_literal(sb, "<tr>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
         msb_write_literal(sb, "<td>");
-        Errorable(void) e = render_node(ctx, sb, *it, header_depth);
-        if(e.errored) return e;
+        int e = render_node(ctx, sb, *it, header_depth);
+        if(e) return e;
         msb_write_literal(sb, "</td>\n");
     }
     msb_write_literal(sb, "</tr>\n");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(STYLESHEETS){
     // intentionally do not render stylesheets
@@ -873,7 +872,7 @@ RENDERFUNC(STYLESHEETS){
     (void)sb;
     (void)handle;
     (void)header_depth;
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(LINKS){
     // intentionally do not render links
@@ -881,7 +880,7 @@ RENDERFUNC(LINKS){
     (void)sb;
     (void)handle;
     (void)header_depth;
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(SCRIPTS){
     // intentionally do not render scripts
@@ -889,7 +888,7 @@ RENDERFUNC(SCRIPTS){
     (void)sb;
     (void)handle;
     (void)header_depth;
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(IMPORT){
     Node* node = get_node(ctx, handle);
@@ -900,14 +899,13 @@ RENDERFUNC(IMPORT){
         node_print_warning(ctx, node, SV("Ignoring import header"));
     }
     NODE_CHILDREN_FOR_EACH(it, node){
-        Errorable(void) e = render_node(ctx, sb, *it, header_depth);
-        if(e.errored) return e;
+        int e = render_node(ctx, sb, *it, header_depth);
+        if(e) return e;
     }
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(IMAGE){
     Node* node = get_node(ctx, handle);
-    Errorable(void) result = {0};
     msb_write_literal(sb, "<div");
     write_classes(sb, node);
     StringView id = node_get_id(ctx, handle);
@@ -917,14 +915,14 @@ RENDERFUNC(IMAGE){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        Errorable(void) e = write_header(ctx, sb, handle, header_depth);
-        if(e.errored) return e;
+        int e = write_header(ctx, sb, handle, header_depth);
+        if(e) return e;
         msb_write_char(sb, '\n');
     }
     size_t count = node_children_count(node);
     if(!count){
         node_set_err(ctx, node, LS("Image node missing any children (first should be a string that is path to the image"));
-        return (Errorable(void)){PARSE_ERROR};
+        return PARSE_ERROR;
     }
     NodeHandle* children = node_children(node);
     // CLEANUP: lots of copy and paste here.
@@ -932,7 +930,7 @@ RENDERFUNC(IMAGE){
         Node* imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image."));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         StringView header = imgpath_node->header;
         msb_write_literal(sb, "<img src=\"dnd://");
@@ -950,7 +948,7 @@ RENDERFUNC(IMAGE){
         Node* imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image."));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         StringView header = imgpath_node->header;
         msb_write_literal(sb, "<img src=\"");
@@ -961,13 +959,13 @@ RENDERFUNC(IMAGE){
         Node* imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image."));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         StringView header = imgpath_node->header;
         Errorable(StringView) processed_e = ctx_load_processed_binary_file(ctx, header);
         if(processed_e.errored){
             node_set_err_q(ctx, imgpath_node, SV("Unable to read "), header);
-            return (Errorable(void)){processed_e.errored};
+            return processed_e.errored;
         }
         else {
             msb_write_literal(sb, "<img src=\"data:image/png;base64,");
@@ -1004,12 +1002,12 @@ RENDERFUNC(IMAGE){
                 }
             }
         }
-        Errorable(void) e = render_node(ctx, sb, children[i], header_depth);
-        if(e.errored) return e;
+        int e = render_node(ctx, sb, children[i], header_depth);
+        if(e) return e;
     }
     msb_write_literal(sb, ">\n");
     msb_write_literal(sb, "</div>\n");
-    return result;
+    return 0;
 }
 RENDERFUNC(QUOTE){
     Node* node = get_node(ctx, handle);
@@ -1018,16 +1016,16 @@ RENDERFUNC(QUOTE){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        Errorable(void) e = write_header(ctx, sb,  handle, header_depth);
-        if(e.errored) return e;
+        int e = write_header(ctx, sb,  handle, header_depth);
+        if(e) return e;
     }
     msb_write_literal(sb, "<blockquote>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
-        Errorable(void) e = render_node(ctx, sb, *it, header_depth);
-        if(e.errored) return e;
+        int e = render_node(ctx, sb, *it, header_depth);
+        if(e) return e;
     }
     msb_write_literal(sb, "</blockquote>\n</div>\n");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(JS){
     // intentionally not outputting this
@@ -1035,7 +1033,7 @@ RENDERFUNC(JS){
     (void)sb;
     (void)handle;
     (void)header_depth;
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(RAW){
     Node* node = get_node(ctx, handle);
@@ -1049,7 +1047,7 @@ RENDERFUNC(RAW){
             write_tag_escaped_str(sb, child->header.text, child->header.length);
             msb_write_char(sb, '\n');
         }
-        return (Errorable(void)){0};
+        return 0;
     }
     // ignoring the header for now. Idk what the semantics are supposed to be.
     NODE_CHILDREN_FOR_EACH(it, node){
@@ -1060,7 +1058,7 @@ RENDERFUNC(RAW){
         msb_write_char(sb, '\n');
     }
     (void)header_depth;
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(PRE){
     Node* node = get_node(ctx, handle);
@@ -1069,8 +1067,8 @@ RENDERFUNC(PRE){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        Errorable(void) e = write_header(ctx, sb, handle, header_depth);
-        if(e.errored) return e;
+        int e = write_header(ctx, sb, handle, header_depth);
+        if(e) return e;
     }
     msb_write_literal(sb, "<pre>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
@@ -1081,7 +1079,7 @@ RENDERFUNC(PRE){
         msb_write_char(sb, '\n');
     }
     msb_write_literal(sb, "</pre>\n</div>\n");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(BULLETS){
     Node* node = get_node(ctx, handle);
@@ -1091,11 +1089,11 @@ RENDERFUNC(BULLETS){
         node_print_warning(ctx, node, SV("Ignoring classes on bullet list"));
     msb_write_literal(sb, "<ul>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
-        Errorable(void) e = render_node(ctx, sb, *it, header_depth);
-        if(e.errored) return e;
+        int e = render_node(ctx, sb, *it, header_depth);
+        if(e) return e;
     }
     msb_write_literal(sb, "</ul>\n");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(LIST){
     Node* node = get_node(ctx, handle);
@@ -1105,11 +1103,11 @@ RENDERFUNC(LIST){
         node_print_warning(ctx, node, SV("Ignoring classes on list"));
     msb_write_literal(sb, "<ol>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
-        Errorable(void) e = render_node(ctx, sb, *it, header_depth);
-        if(e.errored) return e;
+        int e = render_node(ctx, sb, *it, header_depth);
+        if(e) return e;
     }
     msb_write_literal(sb, "</ol>\n");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(LIST_ITEM){
     Node* node = get_node(ctx, handle);
@@ -1123,11 +1121,11 @@ RENDERFUNC(LIST_ITEM){
     for(size_t i = 0; i < count; i++){
         if(i != 0)
             msb_write_char(sb, ' ');
-        Errorable(void) e = render_node(ctx, sb, children[i], header_depth);
-        if(e.errored) return e;
+        int e = render_node(ctx, sb, children[i], header_depth);
+        if(e) return e;
     }
     msb_write_literal(sb, "</li>\n");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(KEYVALUE){
     Node* node = get_node(ctx, handle);
@@ -1136,24 +1134,24 @@ RENDERFUNC(KEYVALUE){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        Errorable(void) e = write_header(ctx, sb, handle, header_depth);
-        if(e.errored) return e;
+        int e = write_header(ctx, sb, handle, header_depth);
+        if(e) return e;
     }
     msb_write_literal(sb, "<table><tbody>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
-        Errorable(void) e = render_node(ctx, sb, *it, header_depth);
-        if(e.errored) return e;
+        int e = render_node(ctx, sb, *it, header_depth);
+        if(e) return e;
     }
     msb_write_literal(sb, "</tbody></table>\n</div>\n");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(KEYVALUEPAIR){
     Node* node = get_node(ctx, handle);
     msb_write_literal(sb, "<tr>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
         msb_write_literal(sb, "<td>");
-        Errorable(void) e = render_node(ctx, sb, *it, header_depth);
-        if(e.errored) return e;
+        int e = render_node(ctx, sb, *it, header_depth);
+        if(e) return e;
         // This is sort of hacky, but we need the td to not
         // have a trailing newline so that css content stuff
         // works right.
@@ -1162,7 +1160,7 @@ RENDERFUNC(KEYVALUEPAIR){
         msb_write_literal(sb, "</td>\n");
     }
     msb_write_literal(sb, "</tr>\n");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(IMGLINKS){
     Node* node = get_node(ctx, handle);
@@ -1171,12 +1169,12 @@ RENDERFUNC(IMGLINKS){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        Errorable(void) e = write_header(ctx, sb, handle, header_depth);
-        if(e.errored) return e;
+        int e = write_header(ctx, sb, handle, header_depth);
+        if(e) return e;
     }
     if(node_children_count(node) < 4){
         node_set_err(ctx, node, LS("Too few children of an imglinks node (expected path to the image, width, height, viewBox in that order)"));
-        return (Errorable(void)){PARSE_ERROR};
+        return PARSE_ERROR;
     }
 
     // FIXME: It's kind of janky that I parse at htmlgen time.
@@ -1186,13 +1184,13 @@ RENDERFUNC(IMGLINKS){
         Node* imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         StringView header = imgpath_node->header;
         Errorable(StringView) processed_e = ctx_load_processed_binary_file(ctx, header);
         if(processed_e.errored){
             node_set_err_q(ctx, imgpath_node, SV("Unable to read "), header);
-            return (Errorable(void)){processed_e.errored};
+            return processed_e.errored;
         }
         imgdatab64 = processed_e.result;
     }
@@ -1201,22 +1199,22 @@ RENDERFUNC(IMGLINKS){
         Node* width_node = get_node(ctx, children[1]);
         if(width_node->type != NODE_STRING){
             node_set_err(ctx, width_node, LS("Second should be a string and be 'width = WIDTH'"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         StringView header = width_node->header;
         SplitPair pair = stripped_split(header.text, header.length, '=');
         if(pair.head.length == header.length){
             node_set_err(ctx, width_node, LS("Missing a '='"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         if(!SV_equals(pair.head, SV("width"))){
             node_set_err_q(ctx, width_node, SV("Expected 'width', got "), pair.head);
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         IntResult e = parse_int(pair.tail.text, pair.tail.length);
         if(e.errored){
             node_set_err_q(ctx, width_node, SV("Unable to parse an int from "), pair.tail);
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         width = e.result;
     }
@@ -1225,22 +1223,22 @@ RENDERFUNC(IMGLINKS){
         Node* height_node  = get_node(ctx, children[2]);
         if(height_node->type != NODE_STRING){
             node_set_err(ctx, height_node, LS("Third should be a string and be 'height = HEIGHT'"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         StringView header = height_node->header;
         SplitPair pair = stripped_split(header.text, header.length, '=');
         if(pair.head.length == header.length){
             node_set_err(ctx, height_node, LS("Missing a '='"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         if(!SV_equals(pair.head, SV("height"))){
             node_set_err_q(ctx, height_node, SV("Expected 'height', got "), pair.head);
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         IntResult e = parse_int(pair.tail.text, pair.tail.length);
         if(e.errored){
             node_set_err_q(ctx, height_node, SV("Unable to parse an int from "), pair.tail);
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         height = e.result;
     }
@@ -1249,18 +1247,18 @@ RENDERFUNC(IMGLINKS){
         Node* viewBox_node = get_node(ctx, children[3]);
         if(viewBox_node->type != NODE_STRING){
             node_set_err(ctx, viewBox_node, LS("Fourth should be a string and be 'viewBox = x0 y0 x1 y1'"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         StringView header = viewBox_node->header;
         const char* equals = memchr(header.text, '=', header.length);
         if(!equals){
             node_set_err(ctx, viewBox_node, LS("Missing a '='"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         StringView lead = stripped_view(header.text, equals - header.text);
         if(!SV_equals(lead, SV("viewBox"))){
             node_set_err_q(ctx, viewBox_node, SV("Expected 'viewBox', got "), lead);
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         const char* cursor = equals+1;
         int which = 0;
@@ -1268,7 +1266,7 @@ RENDERFUNC(IMGLINKS){
         for(;;){
             if(cursor == end){
                 node_set_err(ctx, viewBox_node, LS("Unexpected end of line before we finished parsing the ints"));
-                return (Errorable(void)){PARSE_ERROR};
+                return PARSE_ERROR;
             }
             switch(*cursor){
                 case ' ': case '\t': case '\r': case '\n':
@@ -1278,7 +1276,7 @@ RENDERFUNC(IMGLINKS){
                     break;
                 default:
                     node_set_err(ctx, viewBox_node, LS("Found non-numeric when trying to parse the viewBox"));
-                    return (Errorable(void)){PARSE_ERROR};
+                    return PARSE_ERROR;
             }
             const char* after_number = cursor+1;
             for(;;){
@@ -1297,7 +1295,7 @@ RENDERFUNC(IMGLINKS){
             IntResult e = parse_int(cursor, num_length);
             if(e.errored){
                 node_set_err_q(ctx, viewBox_node, SV("Failed to parse an int from "), (StringView){.length=num_length, .text=cursor});
-                return (Errorable(void)){PARSE_ERROR};
+                return PARSE_ERROR;
             }
             viewbox[which++] = e.result;
             cursor = after_number;
@@ -1313,7 +1311,7 @@ RENDERFUNC(IMGLINKS){
                     continue;
                 default:
                     node_set_err_q(ctx, viewBox_node, SV("Found trailing text after successfully parsing 4 ints: "), (StringView){.text=cursor, .length = end-cursor});
-                    return (Errorable(void)){PARSE_ERROR};
+                    return PARSE_ERROR;
             }
         }
     }
@@ -1324,7 +1322,7 @@ RENDERFUNC(IMGLINKS){
         Node* imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         StringView header = imgpath_node->header;
         if((not path_is_abspath(header)) and ctx->base_directory.length){
@@ -1342,7 +1340,7 @@ RENDERFUNC(IMGLINKS){
         Node* imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         StringView header = imgpath_node->header;
         msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
@@ -1370,17 +1368,17 @@ RENDERFUNC(IMGLINKS){
         const char* equals = memchr(header.text, '=', header.length);
         if(!equals){
             node_set_err(ctx, child, LS("No '=' found in an imglinks line"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         const char* at = memchr(equals, '@', end - equals);
         if(!at){
             node_set_err(ctx, child, LS("No '@' found in an imglinks line"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         const char* comma = memchr(at, ',', end - at);
         if(!comma){
             node_set_err(ctx, child, LS("No ',' found in an imglinks line separating the coordinates"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         StringView first = stripped_view(header.text, equals - header.text);
         StringView second = stripped_view(equals+1, at - (equals + 1));
@@ -1389,13 +1387,13 @@ RENDERFUNC(IMGLINKS){
         IntResult x_err = parse_int(third.text, third.length);
         if(x_err.errored){
             node_set_err_q(ctx, child, SV("Unable to parse an int from "), third);
-            return (Errorable(void)){x_err.errored};
+            return x_err.errored;
         }
         int x = x_err.result;
         IntResult y_err = parse_int(fourth.text, fourth.length);
         if(y_err.errored){
             node_set_err_q(ctx, child, SV("Unable to parse an int from "), fourth);
-            return (Errorable(void)){y_err.errored};
+            return y_err.errored;
         }
         int y = y_err.result;
         MSB_FORMAT(sb, "<a href=\"", second, "\"><text style=\"text-anchor:middle;\" transform=\"translate(",x,",",y,")\">\n",
@@ -1403,7 +1401,7 @@ RENDERFUNC(IMGLINKS){
     }
     msb_write_literal(sb, "</svg>\n");
     msb_write_literal(sb, "</div>\n");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(DATA){
     // intentionally not rendering this
@@ -1411,7 +1409,7 @@ RENDERFUNC(DATA){
     (void)sb;
     (void)handle;
     (void)header_depth;
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(COMMENT){
     // intentionally not rendering a comment
@@ -1419,7 +1417,7 @@ RENDERFUNC(COMMENT){
     (void)sb;
     (void)handle;
     (void)header_depth;
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(MD){
     Node* node = get_node(ctx, handle);
@@ -1428,16 +1426,16 @@ RENDERFUNC(MD){
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
-        Errorable(void) e = write_header(ctx, sb, handle, header_depth);
-        if(e.errored) return e;
+        int e = write_header(ctx, sb, handle, header_depth);
+        if(e) return e;
         msb_write_char(sb, '\n');
     }
     NODE_CHILDREN_FOR_EACH(it, node){
-        Errorable(void) e = render_node(ctx, sb, *it, header_depth);
-        if(e.errored) return e;
+        int e = render_node(ctx, sb, *it, header_depth);
+        if(e) return e;
     }
     msb_write_literal(sb, "</div>\n");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(CONTAINER){
     Node* node = get_node(ctx, handle);
@@ -1445,10 +1443,10 @@ RENDERFUNC(CONTAINER){
         node_print_warning(ctx, node, SV("Ignoring container header."));
     }
     NODE_CHILDREN_FOR_EACH(it, node){
-        Errorable(void) e = render_node(ctx, sb, *it, header_depth);
-        if(e.errored) return e;
+        int e = render_node(ctx, sb, *it, header_depth);
+        if(e) return e;
     }
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(INVALID){
     Node* node = get_node(ctx, handle);
@@ -1457,7 +1455,7 @@ RENDERFUNC(INVALID){
     (void)sb;
     (void)handle;
     (void)header_depth;
-    return (Errorable(void)){.errored=GENERIC_ERROR};
+    return GENERIC_ERROR;
 }
 RENDERFUNC(DETAILS){
     Node* node = get_node(ctx, handle);
@@ -1475,18 +1473,18 @@ RENDERFUNC(DETAILS){
     msb_write_literal(sb, "</summary>\n");
     msb_write_literal(sb, "<div>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
-        Errorable(void) e = render_node(ctx, sb, *it, header_depth);
-        if(e.errored) return e;
+        int e = render_node(ctx, sb, *it, header_depth);
+        if(e) return e;
     }
     msb_write_literal(sb, "</div>\n</details>\n");
-    return (Errorable(void)){0};
+    return 0;
 }
 RENDERFUNC(META){
     (void)ctx;
     (void)sb;
     (void)handle;
     (void)header_depth;
-    return (Errorable(void)){0};
+    return 0;
 }
 #undef RENDERFUNC
 #undef RENDERFUNCNAME

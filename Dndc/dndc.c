@@ -666,10 +666,10 @@ run_the_dndc(uint64_t flags,
                 // recursive call.
                 {
                     msb_reset(&sb);
-                    Errorable(void) e = render_node(&ctx, &sb, *it, 1);
-                    if(e.errored){
+                    int e = render_node(&ctx, &sb, *it, 1);
+                    if(e){
                         report_set_error(&ctx);
-                        result.errored = e.errored;
+                        result.errored = e;
                         goto cleanup;
                     }
                 }

@@ -385,7 +385,7 @@ render_tree(DndcContext*, MStringBuilder*);
 //
 static inline
 force_inline
-Errorable_f(void)
+int
 render_node(DndcContext*, MStringBuilder* restrict, NodeHandle, int header_depth);
 
 //
