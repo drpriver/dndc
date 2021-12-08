@@ -1,8 +1,27 @@
 #ifndef error_handling_h
 #define error_handling_h
-#include <stdint.h>
-// size_t
-#include <stddef.h>
+//
+// Provides two things:
+//   1. Definition of warn_unused macro for signalling the return value
+//      of a function must be used.
+//   2. Some general purpose error codes.
+//
+// Note: The design of error-handling in this project is that errors are
+//       returned as plain ints, so you do not need to know the exact type
+//       of the error to know there is one. 0 should *ALWAYS* be success.
+//
+//       You can either return plain ints from fallible functions, or return
+//       a special wrapped struct of your return value. The wrapper struct
+//       should have an int field named "errored" that can be checked for
+//       the error code.
+//
+//       Do not use errno for anything unless you are using it to retrieve
+//       the specfific error from the OS or CRT. errno is a dumpster fire.
+//
+//       If you need to provide further context for your error, use the
+//       "error on the handle" pattern, where you provide more detailed
+//       information on a context pointer that is passed in. You often
+//       need this pointer for handling state for complex functions anyway.
 
 #ifndef warn_unused
 
