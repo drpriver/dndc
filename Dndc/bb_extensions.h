@@ -5,6 +5,16 @@
 #include "base64.h"
 #include "errorable_long_string.h"
 
+#ifndef warn_unused
+#if defined(__GNUC__) || defined(__clang__)
+#define warn_unused __attribute__((warn_unused_result))
+#elif defined(_MSC_VER)
+#define warn_unused _Check_return
+#else
+#error "No warn unused analogue"
+#endif
+#endif
+
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
@@ -15,24 +25,28 @@
 // whatever reason (file doesn't exist, some random file error, whatever).
 // The byte builder handles allocating enough data to hold the contents
 // of the file.
+//
+// Returns 0 on success.
+//
 static inline
-Errorable_f(void)
+warn_unused
+int
 bb_read_bin_file(ByteBuilder* bb, const char* filename);
 
 #ifdef USE_C_STDIO
 
 static inline
-Errorable_f(void)
+warn_unused
+int
 bb_read_bin_file(ByteBuilder* bb, const char* filename){
-    Errorable(void) result = {0};
+    int result = 0;
     FILE* fp = fopen(filename, "rb");
     if(!fp){
-        result.errored = FILE_NOT_OPENED;
-        return result;
+        return FILE_NOT_OPENED;
     }
     FileSizeResult size_e = file_size_from_fp(fp);
     if(size_e.errored){
-        result.errored = FILE_ERROR;
+        result = FILE_ERROR;
         goto finally;
     }
     size_t nbytes = size_e.result;
@@ -40,7 +54,7 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
     void* data = bb->data + bb->cursor;
     size_t fread_result = fread(data, 1, nbytes, fp);
     if(fread_result != nbytes){
-        result.errored = FILE_ERROR;
+        result = FILE_ERROR;
         goto finally;
     }
     assert(fread_result == nbytes);
@@ -52,15 +66,16 @@ finally:
 
 #elif defined(__linux__) || defined(__APPLE__)
 static inline
-Errorable_f(void)
+warn_unused
+int
 bb_read_bin_file(ByteBuilder* bb, const char* filename){
-    Errorable(void) result = {0};
+    int result = 0;
     int fd = open(filename, O_RDONLY);
     if(fd < 0)
-        return (Errorable(void)){FILE_NOT_OPENED};
+        return FILE_NOT_OPENED;
     FileSizeResult size_e = file_size_from_fd(fd);
     if(size_e.errored){
-        result.errored = FILE_ERROR;
+        result = FILE_ERROR;
         goto finally;
     }
     size_t nbytes = size_e.result;
@@ -68,7 +83,7 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
     void* data = bb->data + bb->cursor;
     ssize_t read_result = read(fd, data, nbytes);
     if(read_result != (ssize_t)nbytes){
-        result.errored = FILE_ERROR;
+        result = FILE_ERROR;
         goto finally;
     }
     assert(read_result == (ssize_t)nbytes);
@@ -80,9 +95,10 @@ finally:
 
 #elif defined(_WIN32)
 static inline
-Errorable_f(void)
+warn_unused
+int
 bb_read_bin_file(ByteBuilder* bb, const char* filename){
-    Errorable(void) result = {0};
+    int result = 0;
     PushDiagnostic();
     SuppressDiscardQualifiers();
     HANDLE handle = CreateFile(
@@ -96,7 +112,7 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
             );
     PopDiagnostic();
     if(handle == INVALID_HANDLE_VALUE)
-        return (Errorable(void)){FILE_NOT_OPENED};
+        return FILE_NOT_OPENED;
     LARGE_INTEGER size;
     BOOL size_success = GetFileSizeEx(handle, &size);
     if(!size_success){
@@ -108,7 +124,7 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
     DWORD nread;
     BOOL read_success = ReadFile(handle, data, nbytes, &nread, NULL);
     if(!read_success){
-        result.errored = FILE_ERROR;
+        result = FILE_ERROR;
         goto finally;
     }
     assert(nread == nbytes);
@@ -119,10 +135,11 @@ finally:
 }
 #elif defined(WASM)
 static inline
-Errorable_f(void)
+warn_unused
+int
 bb_read_bin_file(ByteBuilder* bb, const char* filename){
     (void)bb, (void)filename;
-    Errorable(void) result = {.errored=OS_ERROR};
+    int result = OS_ERROR;
     return result;
 }
 #endif
@@ -141,9 +158,9 @@ Errorable_f(LongString)
 read_and_base64_bin_file(ByteBuilder* bb, const Allocator a, const char* filepath){
     Errorable(LongString) result = {0};
     assert(bb->cursor == 0);
-    Errorable(void) e = bb_read_bin_file(bb, filepath);
-    if(e.errored){
-        result.errored = e.errored;
+    int e = bb_read_bin_file(bb, filepath);
+    if(e){
+        result.errored = e;
         return result;
     }
     ByteBuffer buff = bb_borrow(bb);
