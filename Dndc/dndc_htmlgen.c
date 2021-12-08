@@ -984,9 +984,9 @@ RENDERFUNC(IMAGE){
         msb_write_char(sb, '"');
     }
     for(size_t i = 1; i < count; i++){
-        Node* node = get_node(ctx, children[i]);
-        if(node->type == NODE_STRING){
-            SplitPair stripped = stripped_split(node->header.text, node->header.length, '=');
+        Node* line = get_node(ctx, children[i]);
+        if(line->type == NODE_STRING){
+            SplitPair stripped = stripped_split(line->header.text, line->header.length, '=');
             if(stripped.tail.length){
                 if(SV_equals(stripped.head, SV("width"))){
                     MSB_FORMAT(sb, SV(" "), stripped.head, SV("=\""));
