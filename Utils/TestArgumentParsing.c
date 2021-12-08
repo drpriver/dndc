@@ -422,7 +422,7 @@ TestFunction(TestParseHex){
     #define HexTest(hexval) do{\
         char argstring[] = #hexval;\
         Uint64Result e = parse_hex(argstring, sizeof(argstring)-1);\
-        TestExpect(! e.errored);\
+        TestExpectTrue(! e.errored);\
         if( e.errored) {\
             TestExpectEquals(e.result, hexval);\
         }\

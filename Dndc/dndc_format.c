@@ -5,6 +5,7 @@
 #include "dndc_funcs.h"
 #include "str_util.h"
 #include "msb_format.h"
+#include "error_handling.h"
 
 // NOTE: Formatting can only be applied to freshly parsed syntax
 //       trees. The code makes assertions about what kinds of nodes

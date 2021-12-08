@@ -320,7 +320,8 @@ node_set_id(DndcContext* ctx, NodeHandle, StringView);
 // sourcepath will be adjusted by the context's base directory.
 //
 static
-Errorable_f(StringView)
+warn_unused
+StringViewResult
 ctx_load_source_file(DndcContext* ctx, StringView sourcepath);
 
 //
@@ -332,7 +333,8 @@ ctx_load_source_file(DndcContext* ctx, StringView sourcepath);
 // binarypath will be adjusted by the context's base directory.
 //
 static
-Errorable_f(StringView)
+warn_unused
+StringViewResult
 ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath);
 
 //

@@ -1,5 +1,6 @@
 #ifndef STR_UTIL_H
 #define STR_UTIL_H
+#include <assert.h>
 // size_t
 #include <stddef.h>
 // memchr

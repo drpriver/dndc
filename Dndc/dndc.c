@@ -74,7 +74,7 @@ THREADFUNC(binary_worker){
     ByteBuilder bb = {.allocator=cache.allocator};
     for(size_t i = 0; i < count; i++){
         StringView sv = data[i];
-        Errorable(LongString) e = FileCache_read_and_b64_file(&cache, sv, false, &bb);
+        StringResult e = FileCache_read_and_b64_file(&cache, sv, false, &bb);
         // We'll let the renderer report the error when it tries
         // to load it.
         (void)e;
@@ -469,7 +469,7 @@ run_the_dndc(uint64_t flags,
                     goto cleanup;
                 }
                 StringView filename = child->header;
-                Errorable(StringView) imp_e = ctx_load_source_file(&ctx, filename);
+                StringViewResult imp_e = ctx_load_source_file(&ctx, filename);
                 if(imp_e.errored){
                     MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
                     if(ctx.base_directory.length){

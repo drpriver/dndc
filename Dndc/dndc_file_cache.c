@@ -65,7 +65,7 @@ FileCache_alloc_path(FileCache* cache, StringView spath){
 
 static inline
 warn_unused
-Errorable(LongString)
+StringResult
 FileCache_read_file_(FileCache* cache, FileCachePath path){
     TextFileResult fr = read_file(path.path.text, cache->allocator);
     if(!fr.errored){
@@ -73,25 +73,25 @@ FileCache_read_file_(FileCache* cache, FileCachePath path){
         ls->sourcepath = path;
         ls->sourcetext = fr.result;
     }
-    return (Errorable(LongString)){.result = fr.result, .errored=fr.errored};
+    return (StringResult){.result = fr.result, .errored=fr.errored};
 }
 
 static inline
 warn_unused
-Errorable(LongString)
+StringResult
 FileCache_read_file(FileCache* cache, StringView spath, bool cached_only){
     MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
         if(LS_SV_equals(src->sourcepath.path, spath)){
-            return (Errorable(LongString)){
+            return (StringResult){
                 .result = src->sourcetext,
             };
         }
     }
     if(unlikely(cached_only)){
-        return (Errorable(LongString)){.errored = PARSE_ERROR};
+        return (StringResult){.errored = PARSE_ERROR};
     }
     FileCachePath path = FileCache_alloc_path(cache, spath);
-    Errorable(LongString) result = FileCache_read_file_(cache, path);
+    StringResult result = FileCache_read_file_(cache, path);
     if(result.errored){
         FileCache_free_path(cache, path);
     }
@@ -100,29 +100,29 @@ FileCache_read_file(FileCache* cache, StringView spath, bool cached_only){
 
 static inline
 warn_unused
-Errorable(LongString)
+StringResult
 FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only, ByteBuilder* bb){
     MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
         if(LS_SV_equals(src->sourcepath.path, spath)){
-            return (Errorable(LongString)){
+            return (StringResult){
                 .result = src->sourcetext,
             };
         }
     }
     if(unlikely(cached_only)){
-        return (Errorable(LongString)){.errored = PARSE_ERROR};
+        return (StringResult){.errored = PARSE_ERROR};
     }
     FileCachePath path = FileCache_alloc_path(cache, spath);
-    Errorable(LongString) base64ed_e = read_and_base64_bin_file(bb, cache->allocator, path.path.text);
+    StringResult base64ed_e = read_and_base64_bin_file(bb, cache->allocator, path.path.text);
     if(unlikely(base64ed_e.errored)){
         FileCache_free_path(cache, path);
-        return (Errorable(LongString)){.errored=base64ed_e.errored};
+        return (StringResult){.errored=base64ed_e.errored};
     }
     else {
         LoadedSource* ls = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator);
         ls->sourcepath = path;
         ls->sourcetext = base64ed_e.result;
-        return (Errorable(LongString)){.result=base64ed_e.result};
+        return (StringResult){.result=base64ed_e.result};
     }
 }
 

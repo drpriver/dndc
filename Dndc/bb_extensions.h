@@ -154,9 +154,9 @@ bb_read_bin_file(ByteBuilder* bb, const char* filename){
 // The base64-ifying can't fail.
 //
 static
-Errorable_f(LongString)
+StringResult
 read_and_base64_bin_file(ByteBuilder* bb, const Allocator a, const char* filepath){
-    Errorable(LongString) result = {0};
+    StringResult result = {0};
     assert(bb->cursor == 0);
     int e = bb_read_bin_file(bb, filepath);
     if(e){

@@ -723,7 +723,7 @@ js_load_file_as_base64(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJS
 
     StringView sv = jsstring_make_stringview_js_allocated(jsctx, str);
     Allocator alloc = get_mallocator();
-    Errorable(LongString) e = read_and_base64_bin_file(&bb, alloc, sv.text);
+    StringResult e = read_and_base64_bin_file(&bb, alloc, sv.text);
     JS_FreeCString(jsctx, sv.text);
     bb_destroy(&bb);
     if(e.errored){
@@ -751,7 +751,7 @@ js_load_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst
         return JS_ThrowTypeError(jsctx, "File loading is disabled");
     }
     StringView sv = jsstring_make_stringview_js_allocated(jsctx, str);
-    Errorable(StringView) e = ctx_load_source_file(ctx, sv);
+    StringViewResult e = ctx_load_source_file(ctx, sv);
     JS_FreeCString(jsctx, sv.text);
     if(e.errored){
         return JS_ThrowTypeError(jsctx, "load_file: Error when loading file");

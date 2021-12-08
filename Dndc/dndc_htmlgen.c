@@ -961,7 +961,7 @@ RENDERFUNC(IMAGE){
             return PARSE_ERROR;
         }
         StringView header = imgpath_node->header;
-        Errorable(StringView) processed_e = ctx_load_processed_binary_file(ctx, header);
+        StringViewResult processed_e = ctx_load_processed_binary_file(ctx, header);
         if(processed_e.errored){
             node_set_err_q(ctx, imgpath_node, SV("Unable to read "), header);
             return processed_e.errored;
@@ -1186,7 +1186,7 @@ RENDERFUNC(IMGLINKS){
             return PARSE_ERROR;
         }
         StringView header = imgpath_node->header;
-        Errorable(StringView) processed_e = ctx_load_processed_binary_file(ctx, header);
+        StringViewResult processed_e = ctx_load_processed_binary_file(ctx, header);
         if(processed_e.errored){
             node_set_err_q(ctx, imgpath_node, SV("Unable to read "), header);
             return processed_e.errored;

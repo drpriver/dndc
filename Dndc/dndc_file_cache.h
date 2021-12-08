@@ -25,12 +25,12 @@ FileCache_has_file(FileCache* cache, StringView path);
 
 static inline
 warn_unused
-Errorable(LongString)
+StringResult
 FileCache_read_file(FileCache* cache, StringView spath, bool cached_only);
 
 static inline
 warn_unused
-Errorable(LongString)
+StringResult
 FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only, ByteBuilder* bb);
 
 

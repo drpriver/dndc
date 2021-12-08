@@ -318,17 +318,17 @@ ctx_store_builtin_file(DndcContext* ctx, StringView sourcepath, StringView text)
 }
 
 static
-Errorable_f(StringView)
+StringViewResult
 ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
     // check if we already have it as a builtin
     MARRAY_FOR_EACH(BuiltinLoadedSource, builtin, ctx->builtin_files){
         if(SV_equals(builtin->sourcepath, sourcepath)){
-            return (Errorable(StringView)){.result=builtin->sourcetext};
+            return (StringViewResult){.result=builtin->sourcetext};
         }
     }
     MStringBuilder temp_builder = {.allocator=ctx->temp_allocator};
     if(!sourcepath.length){
-        return (Errorable(StringView)){.errored=UNEXPECTED_END};
+        return (StringViewResult){.errored=UNEXPECTED_END};
     }
     assert(sourcepath.length);
 
@@ -339,18 +339,18 @@ ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
     }
     ctx_note_dependency(ctx, sourcepath);
     uint64_t before = get_t();
-    Errorable(LongString) cache_result = FileCache_read_file(&ctx->textcache, sourcepath, !!(ctx->flags & DNDC_DONT_READ));
+    StringResult cache_result = FileCache_read_file(&ctx->textcache, sourcepath, !!(ctx->flags & DNDC_DONT_READ));
     msb_destroy(&temp_builder);
     if(cache_result.errored){
-        return (Errorable(StringView)){.errored = PARSE_ERROR};
+        return (StringViewResult){.errored = PARSE_ERROR};
     }
     uint64_t after = get_t();
     report_time(ctx, SV("Loading a file took "), after-before);
-    return (Errorable(StringView)){.result =LS_to_SV(cache_result.result)};
+    return (StringViewResult){.result =LS_to_SV(cache_result.result)};
 }
 
 static
-Errorable_f(StringView)
+StringViewResult
 ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath){
     MStringBuilder path_builder = {.allocator=ctx->temp_allocator};
     if(not path_is_abspath(binarypath) && ctx->base_directory.length){
@@ -360,11 +360,11 @@ ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath){
     }
     ctx_note_dependency(ctx, binarypath);
     ByteBuilder bb = {.allocator = ctx->allocator};
-    Errorable(LongString) cache_result = FileCache_read_and_b64_file(&ctx->b64cache, binarypath, !!(ctx->flags & DNDC_DONT_READ), &bb);
+    StringResult cache_result = FileCache_read_and_b64_file(&ctx->b64cache, binarypath, !!(ctx->flags & DNDC_DONT_READ), &bb);
     bb_destroy(&bb);
     msb_destroy(&path_builder);
-    if(cache_result.errored) return (Errorable(StringView)){.errored=cache_result.errored};
-    return (Errorable(StringView)){.result=LS_to_SV(cache_result.result)};
+    if(cache_result.errored) return (StringViewResult){.errored=cache_result.errored};
+    return (StringViewResult){.result=LS_to_SV(cache_result.result)};
 }
 
 static inline

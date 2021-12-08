@@ -285,7 +285,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
     })
 
 //
-// For an Errorable, expects .errored is NO_ERROR
+// For an errorable (struct with .errored field), expects .errored is 0
 //
 #define TestExpectSuccess(cond) ({\
         TEST_stats.executed++;\
@@ -300,7 +300,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
     })
 
 //
-// For an Errorable, expects .errored is not NO_ERROR
+// For an errorable (struct with .errored field), expects .errored is not 0
 //
 #define TestExpectFailure(cond) ({\
         TEST_stats.executed++;\
@@ -369,7 +369,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
     }while(0)
 
 //
-// For an Errorable, asserts .errored is NO_ERROR
+// For an errorable (struct with .errored field), asserts .errored is 0
 //
 #define TestAssertSuccess(cond) do{\
         TEST_stats.executed++;\
@@ -384,7 +384,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
     }while(0)
 
 //
-// For an Errorable, asserts .errored is not NO_ERROR
+// For an errorable (struct with .errored field), asserts .errored is not 0
 //
 #define TestAssertFailure(cond) do{\
         TEST_stats.executed++;\
