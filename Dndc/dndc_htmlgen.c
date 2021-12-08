@@ -63,9 +63,8 @@ render_node(DndcContext* ctx, MStringBuilder* restrict sb, NodeHandle handle, in
 #endif
     }
 static
-Errorable_f(void)
+int
 render_tree(DndcContext* ctx, MStringBuilder* msb){
-    Errorable(void) result = {0};
     size_t imgcount = ctx->img_nodes.count + ctx->imglinks_nodes.count;
     // estimate memory usage as 120 characters per node and 200 kb images.
     size_t reserve_amount = ctx->nodes.count*120 + imgcount*200*1024;
@@ -217,14 +216,14 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
         }
     }
     int e = render_node(ctx, msb, ctx->root_handle, 1);
-    if(e) return (Errorable(void)){e};
+    if(e) return e;
     if(complete_document){
         msb_write_literal(msb,
             "</body>\n"
             "</html>\n"
         );
     }
-    return result;
+    return 0;
 }
 
 static void build_nav_block_node(DndcContext* , NodeHandle, MStringBuilder*, int);

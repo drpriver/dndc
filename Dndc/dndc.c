@@ -721,12 +721,12 @@ run_the_dndc(uint64_t flags,
     else {
         MStringBuilder output_sb = {.allocator = get_mallocator()};
         uint64_t before_render = get_t();
-        Errorable(void) e = render_tree(&ctx, &output_sb);
+        int e = render_tree(&ctx, &output_sb);
 
-        if(e.errored){
+        if(e){
             report_set_error(&ctx);
             msb_destroy(&output_sb);
-            result.errored = e.errored;
+            result.errored = e;
             goto cleanup;
         }
         uint64_t after_render = get_t();

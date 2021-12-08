@@ -374,7 +374,7 @@ expand_to_dnd(DndcContext*, MStringBuilder*);
 // document including head tags, etc.
 //
 static
-Errorable_f(void)
+int
 render_tree(DndcContext*, MStringBuilder*);
 
 //
