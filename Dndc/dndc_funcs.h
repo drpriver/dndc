@@ -349,8 +349,10 @@ ctx_note_dependency(DndcContext* ctx, StringView path);
 // Resulting nodes will be added as children of the node indicated by
 // the given NodeHandle.
 //
+// Returns 0 on success.
+//
 static
-Errorable_f(void)
+int
 dndc_parse(DndcContext*, NodeHandle root, StringView filename, const char* text, size_t length);
 
 //

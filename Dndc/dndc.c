@@ -373,12 +373,12 @@ run_the_dndc(uint64_t flags,
     // Parse the initial document.
     {
         uint64_t before_parse = get_t();
-        Errorable(void) e = dndc_parse(&ctx, ctx.root_handle, source_path, source_text.text, source_text.length);
+        int e = dndc_parse(&ctx, ctx.root_handle, source_path, source_text.text, source_text.length);
         uint64_t after_parse = get_t();
         report_time(&ctx, SV("Initial parsing took: "), after_parse-before_parse);
-        if(e.errored){
+        if(e){
             report_set_error(&ctx);
-            result.errored = e.errored;
+            result.errored = e;
             goto cleanup;
         }
     }
@@ -482,10 +482,10 @@ run_the_dndc(uint64_t flags,
                     goto cleanup;
                 }
                 StringView imp_text = imp_e.result;
-                Errorable(void) parse_e = dndc_parse(&ctx, newhandle, filename, imp_text.text, imp_text.length);
-                if(parse_e.errored){
+                int parse_e = dndc_parse(&ctx, newhandle, filename, imp_text.text, imp_text.length);
+                if(parse_e){
                     report_set_error(&ctx);
-                    result.errored = parse_e.errored;
+                    result.errored = parse_e;
                     goto cleanup;
                 }
             }

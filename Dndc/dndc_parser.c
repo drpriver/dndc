@@ -32,9 +32,9 @@ static
 void
 advance_row(DndcContext*);
 
-#define PARSEFUNC(name) static Errorable_f(void) name(DndcContext* ctx, NodeHandle parent_handle, int indentation)
+#define PARSEFUNC(name) static int name(DndcContext* ctx, NodeHandle parent_handle, int indentation)
 static
-Errorable_f(void)
+int
 parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int indentation, NodeFlags flags);
 PARSEFUNC(parse_table_node);
 PARSEFUNC(parse_keyvalue_node);
@@ -356,9 +356,8 @@ init_string_node(DndcContext* ctx, NodeHandle handle, StringView sv){
 }
 
 static
-Errorable_f(void)
+int
 dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const char* text, size_t length){
-    Errorable(void) result = {0};
     ctx->cursor = text;
     ctx->end = text + length;
     ctx->linestart = NULL;
@@ -369,15 +368,14 @@ dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const 
     ctx->filename = filename;
     Marray_push(StringView)(&ctx->filenames, ctx->allocator, filename);
     NodeType type = get_node(ctx, root_handle)->type;
-    Errorable(void) e = parse_node(ctx, root_handle, type, -1, NODEFLAG_NONE);
-    if(e.errored) return e;
-    return result;
+    int e = parse_node(ctx, root_handle, type, -1, NODEFLAG_NONE);
+    if(e) return e;
+    return 0;
 }
 
 static
-Errorable_f(void)
+int
 parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
-    Errorable(void) result = {0};
     // parse the node header
     const char* starttext = ctx->doublecolon + 2;
     size_t length = ctx->line_end - starttext;
@@ -388,8 +386,7 @@ parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
     {
         ErrorableNodeFlags e = parse_post_colon(ctx, postcolon, new_node_handle);
         if(e.errored){
-            result.errored = e.errored;
-            return result;
+            return e.errored;
         }
         flags = e.result;
     }
@@ -407,9 +404,9 @@ parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
     }
     int new_indent = ctx->nspaces;
     advance_row(ctx);
-    Errorable(void) e = parse_node(ctx, new_node_handle, type, new_indent, flags);
-    if(e.errored) return e;
-    return result;
+    int e = parse_node(ctx, new_node_handle, type, new_indent, flags);
+    if(e) return e;
+    return 0;
 }
 
 static
@@ -703,11 +700,11 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
 
 // generic parsing function
 static
-Errorable_f(void)
+int
 parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int indentation, NodeFlags flags){
     if(unlikely(indentation > 64)){
         node_set_err(ctx, get_node(ctx, parent_handle), LS("Too deep! Indentation greater than 64 is unsupported."));
-        return (Errorable(void)){.errored=PARSE_ERROR};
+        return PARSE_ERROR;
     }
     if(flags & NODEFLAG_IMPORT)
         goto regular_string_parsing;
@@ -754,7 +751,6 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
             unreachable();
     }
     regular_string_parsing:;
-    Errorable(void) result = {0};
     for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         if(ctx->linestart+ctx->nspaces == ctx->line_end){
@@ -764,8 +760,8 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
         if(ctx->nspaces <= indentation)
             break;
         if(ctx->doublecolon){
-            Errorable(void) e = parse_double_colon(ctx, parent_handle);
-            if(e.errored) return e;
+            int e = parse_double_colon(ctx, parent_handle);
+            if(e) return e;
             continue;
         }
         // default: string node
@@ -776,14 +772,13 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
         append_child(ctx, parent_handle, new_node_handle);
         advance_row(ctx);
     }
-    return result;
+    return 0;
 }
 PARSEFUNC(parse_list_node){
     {
         Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_LIST);
     }
-    Errorable(void) result = {0};
     for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         // skip blanks
@@ -798,8 +793,8 @@ PARSEFUNC(parse_list_node){
             // so that things like ::links and ::js nodes work properly.
             // Those will be removed at render time, so it's not invalid to
             // parse them.
-            Errorable(void) e = parse_double_colon(ctx, parent_handle);
-            if(e.errored) return e;
+            int e = parse_double_colon(ctx, parent_handle);
+            if(e) return e;
             continue;
         }
         const char* firstchar = ctx->linestart + ctx->nspaces;
@@ -812,7 +807,7 @@ PARSEFUNC(parse_list_node){
                     goto after;
                 default:
                     parse_set_err_q(ctx, firstchar, SV("Non numeric found when parsing list: "), (StringView){.text=firstchar, .length=1});
-                    return (Errorable(void)){PARSE_ERROR};
+                    return PARSE_ERROR;
             }
         }
         after:;
@@ -823,14 +818,13 @@ PARSEFUNC(parse_list_node){
         NodeHandle first_child = alloc_handle(ctx);
         init_string_node(ctx, first_child, text);
         advance_row(ctx);
-        Errorable(void) e = parse_list_item(ctx, li_handle, ctx->nspaces);
-        if(e.errored) return e;
+        int e = parse_list_item(ctx, li_handle, ctx->nspaces);
+        if(e) return e;
     }
-    return result;
+    return 0;
 }
 
 PARSEFUNC(parse_list_item){
-    Errorable(void) result = {0};
     {
         Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_LIST_ITEM);
@@ -846,7 +840,7 @@ PARSEFUNC(parse_list_item){
             break;
         if(ctx->doublecolon){
             parse_set_err(ctx, ctx->doublecolon, LS("This node type cannot contain subnodes, only strings"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         const char* firstchar = ctx->linestart + ctx->nspaces;
         for(;;firstchar++){
@@ -857,8 +851,8 @@ PARSEFUNC(parse_list_item){
                     NodeHandle new_handle = alloc_handle(ctx);
                     init_node(ctx, new_handle, ctx->linestart + ctx->nspaces, NODE_LIST);
                     append_child(ctx, parent_handle, new_handle);
-                    Errorable(void) e = parse_list_node(ctx, new_handle, indentation);
-                    if(e.errored) return e;
+                    int e = parse_list_node(ctx, new_handle, indentation);
+                    if(e) return e;
                     goto top;
                 }break;
                 default:
@@ -873,10 +867,9 @@ PARSEFUNC(parse_list_item){
         append_child(ctx, parent_handle, new_node_handle);
         advance_row(ctx);
     }
-    return result;
+    return 0;
 }
 PARSEFUNC(parse_raw_node){
-    Errorable(void) result = {0};
     // In order to avoid needing to scan all of the lines in the text
     // to figure out what the minimum leading indent is, we use the indent
     // of the first non-blank line. However, this can be greater than the indentation
@@ -916,7 +909,7 @@ PARSEFUNC(parse_raw_node){
         append_child(ctx, parent_handle, new_node_handle);
         advance_row(ctx);
     }
-    return result;
+    return 0;
 }
 
 PARSEFUNC(parse_table_node){
@@ -927,7 +920,6 @@ PARSEFUNC(parse_table_node){
     NodeHandle last_cell_handle = INVALID_NODE_HANDLE;
     bool converted = false;
     int previous_row_indentation = indentation;
-    Errorable(void) result = {0};
     for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         // skip blanks
@@ -942,8 +934,8 @@ PARSEFUNC(parse_table_node){
             // so that things like ::links and ::js nodes work properly.
             // Those will be removed at render time, so it's not invalid to
             // parse them.
-            Errorable(void) e = parse_double_colon(ctx, parent_handle);
-            if(e.errored) return e;
+            int e = parse_double_colon(ctx, parent_handle);
+            if(e) return e;
             continue;
         }
         const char* cursor = ctx->linestart+ctx->nspaces;
@@ -988,14 +980,13 @@ PARSEFUNC(parse_table_node){
         append_child(ctx, new_node_handle, cell_index);
         advance_row(ctx);
     }
-    return result;
+    return 0;
 }
 PARSEFUNC(parse_keyvalue_node){
     {
         Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_KEYVALUE);
     }
-    Errorable(void) result = {0};
     NodeHandle previous_value = INVALID_NODE_HANDLE;
     int previous_kv_indentation = indentation;
     bool previous_value_was_converted = false;
@@ -1009,8 +1000,8 @@ PARSEFUNC(parse_keyvalue_node){
         if(ctx->nspaces <= indentation)
             break;
         if(ctx->doublecolon){
-            Errorable(void) e = parse_double_colon(ctx, parent_handle);
-            if(e.errored) return e;
+            int e = parse_double_colon(ctx, parent_handle);
+            if(e) return e;
             continue;
         }
         if(not NodeHandle_eq(previous_value, INVALID_NODE_HANDLE)){
@@ -1034,7 +1025,7 @@ PARSEFUNC(parse_keyvalue_node){
         const char* colon = memchr(cursor, ':', ctx->line_end - cursor);
         if(!colon){
             parse_set_err(ctx, cursor, LS("Expected a colon for key value pairs"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         const char* pre_text = ctx->linestart+ctx->nspaces;
 
@@ -1051,11 +1042,10 @@ PARSEFUNC(parse_keyvalue_node){
         previous_kv_indentation = ctx->nspaces;
         previous_value_was_converted = false;
     }
-    return result;
+    return 0;
 }
 
 PARSEFUNC(parse_bullets_node){
-    Errorable(void) result = {0};
     {
         Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_BULLETS);
@@ -1071,15 +1061,15 @@ PARSEFUNC(parse_bullets_node){
             break;
         if(ctx->doublecolon){
             // same comment as the table parser. Makes ::links and such work
-            Errorable(void) e = parse_double_colon(ctx, parent_handle);
-            if(e.errored) return e;
+            int e = parse_double_colon(ctx, parent_handle);
+            if(e) return e;
             continue;
         }
         const char* firstchar = ctx->linestart+ctx->nspaces;
         char first = *firstchar;
         if(first != '*' and first != '+' and first != '-'){
             parse_set_err_q(ctx, firstchar, SV("Bullets must begin with one of *-+, got "), (StringView){.text=firstchar, .length=1});
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         firstchar++;
         StringView bullet_text = stripped_view(firstchar, ctx->line_end - firstchar);
@@ -1090,14 +1080,13 @@ PARSEFUNC(parse_bullets_node){
         init_string_node(ctx, first_child_index, bullet_text);
         append_child(ctx, bullet_node_handle, first_child_index);
         advance_row(ctx);
-        Errorable(void) e = parse_bullet_node(ctx, bullet_node_handle, ctx->nspaces);
-        if(e.errored) return e;
+        int e = parse_bullet_node(ctx, bullet_node_handle, ctx->nspaces);
+        if(e) return e;
     }
-    return result;
+    return 0;
 }
 
 PARSEFUNC(parse_bullet_node){
-    Errorable(void) result = {0};
     {
         Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_LIST_ITEM);
@@ -1112,7 +1101,7 @@ PARSEFUNC(parse_bullet_node){
             break;
         if(ctx->doublecolon){
             parse_set_err(ctx, ctx->doublecolon,LS("This node type cannot contain subnodes, only strings"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         const char* firstchar = ctx->linestart + ctx->nspaces;
         char first = *firstchar;
@@ -1120,8 +1109,8 @@ PARSEFUNC(parse_bullet_node){
             NodeHandle new_index = alloc_handle(ctx);
             init_node(ctx, new_index, firstchar, NODE_BULLETS);
             append_child(ctx, parent_handle, new_index);
-            Errorable(void) e = parse_bullets_node(ctx, new_index, indentation);
-            if(e.errored) return e;
+            int e = parse_bullets_node(ctx, new_index, indentation);
+            if(e) return e;
             continue;
         }
         // default: string node
@@ -1131,8 +1120,9 @@ PARSEFUNC(parse_bullet_node){
         append_child(ctx, parent_handle, new_node_handle);
         advance_row(ctx);
     }
-    return result;
+    return 0;
 }
+
 PARSEFUNC(parse_md_node){
     // This was originally for debugging, but `dndc_parse` will parse set the
     // parse mode to NODE_MD, which means we get to this assertion, which is no
@@ -1161,7 +1151,6 @@ PARSEFUNC(parse_md_node){
     int si = -1; // stack index
     NodeHandle para_handle = INVALID_NODE_HANDLE;
     int normal_indent = -1;
-    Errorable(void) result = {0};
     for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         // skip_blanks
@@ -1178,8 +1167,8 @@ PARSEFUNC(parse_md_node){
         if(ctx->doublecolon){
             state = NONE;
             si = -1;
-            Errorable(void) e = parse_double_colon(ctx, parent_handle);
-            if(e.errored) return e;
+            int e = parse_double_colon(ctx, parent_handle);
+            if(e) return e;
             continue;
         }
         enum MDSTATE newstate = NONE;
@@ -1236,7 +1225,7 @@ PARSEFUNC(parse_md_node){
                     si++;
                     if(si == arrlen(stack)){
                         parse_set_err(ctx, ctx->linestart+ctx->nspaces, LS("Only up to 8 levels of nested lists are supported."));
-                        return (Errorable(void)){PARSE_ERROR};
+                        return PARSE_ERROR;
                     }
                     struct StackItem* s = &stack[si];
                     s->list = alloc_handle(ctx);
@@ -1270,7 +1259,7 @@ PARSEFUNC(parse_md_node){
                         si--;
                         if(si < 0){
                             parse_set_err(ctx, ctx->linestart+ctx->nspaces, LS("Dedent does not match initial indent"));
-                            return (Errorable(void)){PARSE_ERROR};
+                            return PARSE_ERROR;
                         }
                         assert(si >= 0);
                         int indent = stack[si].indentation;
@@ -1280,7 +1269,7 @@ PARSEFUNC(parse_md_node){
                             break;
                         if(indent < ctx->nspaces){
                             parse_set_err(ctx, ctx->linestart+ctx->nspaces, LS("Ambiguous dedent inside a list"));
-                            return (Errorable(void)){PARSE_ERROR};
+                            return PARSE_ERROR;
                         }
                     }
                     struct StackItem* s = &stack[si];
@@ -1327,7 +1316,7 @@ PARSEFUNC(parse_md_node){
         }
         if(ctx->nspaces <= stack[si].indentation){
             parse_set_err(ctx, ctx->linestart+ctx->nspaces, LS("Ambiguous dedent inside a list"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         // don't change state for these
         StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);
@@ -1337,7 +1326,7 @@ PARSEFUNC(parse_md_node){
         advance_row(ctx);
         continue;
     }
-    return result;
+    return 0;
 }
 
 #ifdef __clang__
