@@ -362,7 +362,7 @@ dndc_parse(DndcContext*, NodeHandle root, StringView filename, const char* text,
 // like CONTAINER nodes).
 //
 static
-Errorable_f(void)
+int
 expand_to_dnd(DndcContext*, MStringBuilder*);
 
 

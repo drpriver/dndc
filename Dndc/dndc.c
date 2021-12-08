@@ -699,11 +699,11 @@ run_the_dndc(uint64_t flags,
     if(!wasm && (flags & DNDC_OUTPUT_EXPANDED_DND)){
         MStringBuilder output_sb = {.allocator = get_mallocator()};
         uint64_t before_render = get_t();
-        Errorable(void) e = expand_to_dnd(&ctx, &output_sb);
-        if(e.errored){
+        int e = expand_to_dnd(&ctx, &output_sb);
+        if(e){
             report_set_error(&ctx);
             msb_destroy(&output_sb);
-            result.errored = e.errored;
+            result.errored = e;
             goto cleanup;
         }
         uint64_t after_render = get_t();
