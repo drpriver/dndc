@@ -554,8 +554,9 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
     return 0;
 }
 
-#if 0
+#if 0 && !defined(NO_SIMD) && defined(__ARM_NEON)
 // For printf debugging
+static inline
 void
 print_u8x16(const char* prefix, uint8x16_t v){
     unsigned char buff[16];
@@ -645,7 +646,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
         uint64x2_t had_it = vreinterpretq_u64_u8(Ored5);
 
         if(vgetq_lane_u64(had_it, 0) | vgetq_lane_u64(had_it, 1)){
-#if 0
+            #if 0
             fprintf(stdout, "'%.*s'\n", 16, text);
             print_u8x16("data", data);
             print_u8x16("   [", test_lsquare);
@@ -655,7 +656,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
             print_u8x16("   &", test_amp);
             print_u8x16("ctrl", test_control);
             print_u8x16("comb", Ored5);
-#endif
+            #endif
             break;
         }
         // Safe to store as we did the ensure additional above and
