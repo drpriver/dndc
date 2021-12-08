@@ -4,12 +4,14 @@
 #include "dndc_types.h"
 #include "str_util.h"
 
+#ifndef NO_SIMD
 #ifdef __x86_64__
 #include <immintrin.h>
 #endif
 
 #ifdef __ARM_NEON
 #include <arm_neon.h>
+#endif
 #endif
 
 #ifdef __clang__
@@ -45,7 +47,7 @@ PARSEFUNC(parse_list_node);
 PARSEFUNC(parse_list_item);
 PARSEFUNC(parse_md_node);
 
-#if 1 && defined(__ARM_NEON)
+#if 1 &&!defined(NO_SIMD) && defined(__ARM_NEON)
 // Copied from https://stackoverflow.com/a/68694558
 // Is there a better way to do this?
 // It's pretty simple.
@@ -78,7 +80,7 @@ analyze_line(DndcContext* ctx){
     const char* cursor = ctx->cursor;
     int nspace = 0;
     size_t length = ctx->end - ctx->cursor;
-#if 1 && defined(__x86_64__)
+#if 1 && !defined(NO_SIMD) && defined(__x86_64__)
     __m128i spaces  = _mm_set1_epi8(' ');
     __m128i cr      = _mm_set1_epi8('\r');
     __m128i tabs    = _mm_set1_epi8('\t');
@@ -101,7 +103,7 @@ analyze_line(DndcContext* ctx){
         length -= 16;
     }
 #endif
-#if 1 && defined(__ARM_NEON)
+#if 1 && !defined(NO_SIMD) && defined(__ARM_NEON)
     uint8x16_t spaces = vdupq_n_u8(' ');
     uint8x16_t cr     = vdupq_n_u8('\r');
     uint8x16_t tabs   = vdupq_n_u8('\t');
@@ -137,7 +139,7 @@ analyze_line(DndcContext* ctx){
     }
     Lafterwhitespace:;
     length = ctx->end - cursor;
-#if 1 && defined(__x86_64__)
+#if 1 && !defined(NO_SIMD) && defined(__x86_64__)
     __m128i colons  = _mm_set1_epi8(':');
     __m128i newline = _mm_set1_epi8('\n');
     __m128i zed     = _mm_set1_epi8(0);
@@ -193,7 +195,7 @@ analyze_line(DndcContext* ctx){
         length -= 16;
     }
 #endif
-#if 1 && defined(__ARM_NEON)
+#if 1 && !defined(NO_SIMD) && defined(__ARM_NEON)
     uint8x16_t colons  = vdupq_n_u8(':');
     uint8x16_t newline = vdupq_n_u8('\n');
     uint8x16_t zed     = vdupq_n_u8(0);
@@ -267,7 +269,7 @@ analyze_line(DndcContext* ctx){
     }
     Lendonly:;
     length = ctx->end - cursor;
-#if 1 && defined(__x86_64__)
+#if 1 && !defined(NO_SIMD) && defined(__x86_64__)
     while(length >= 16){
         __m128i data    = _mm_loadu_si128((const __m128i*)(cursor));
         __m128i testnl  = _mm_cmpeq_epi8(data, newline);
@@ -283,7 +285,7 @@ analyze_line(DndcContext* ctx){
         length -= 16;
     }
 #endif
-#if 1 && defined(__ARM_NEON)
+#if 1 && !defined(NO_SIMD) && defined(__ARM_NEON)
     while(length >= 16){
         uint8x16_t data    = vld1q_u8((const unsigned char*)cursor);
         uint8x16_t testnl  = vceqq_u8(data, newline);

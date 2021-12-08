@@ -10,12 +10,14 @@
 #include "msb_format.h"
 #include "error_handling.h"
 
+#ifndef NO_SIMD
 #ifdef __x86_64__
 #include <immintrin.h>
 #endif
 
 #ifdef __ARM_NEON
 #include <arm_neon.h>
+#endif
 #endif
 
 
@@ -570,7 +572,7 @@ static inline
 int
 write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const Node* node){
     msb_ensure_additional(sb, length);
-#if 1 && defined(__x86_64__)
+#if 1 && !defined(NO_SIMD) && defined(__x86_64__)
     size_t cursor = sb->cursor;
     char* sbdata = sb->data + cursor;
     __m128i lsquare = _mm_set1_epi8('[');
@@ -613,7 +615,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
     }
     sb->cursor = cursor;
 #endif
-#if 1 && defined(__ARM_NEON)
+#if 1 && !defined(NO_SIMD) && defined(__ARM_NEON)
     // NOTE: this code is untested on actual arm chip.
     // It compiles and the logic is the same, but I didn't have
     // access to this arch when I wrote it.
