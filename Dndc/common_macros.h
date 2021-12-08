@@ -5,16 +5,6 @@
 // non-clang compilers. Oh well.
 // This header shouldn't leak into the public interface.
 
-#ifndef warn_unused
-#if defined(__GNUC__) || defined(__clang__)
-#define warn_unused __attribute__((warn_unused_result))
-#elif defined(_MSC_VER)
-#define warn_unused _Check_return
-#else
-#error "No warn unused analogue"
-#endif
-#endif
-
 #include <assert.h>
 #include <stdbool.h>
 
