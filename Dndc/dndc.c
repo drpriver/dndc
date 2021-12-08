@@ -88,9 +88,10 @@ THREADFUNC(binary_worker){
 }
 
 static
-Errorable_f(void)
+warn_unused
+int
 execute_user_scripts(DndcContext* ctx){
-    Errorable(void) result = {0};
+    int result = 0;
     uint64_t flags = ctx->flags;
     ArenaAllocator aa = {0};
     // The rt is lazily initialized as they are pretty expensive
@@ -139,7 +140,7 @@ execute_user_scripts(DndcContext* ctx){
                 jsctx = new_qjs_ctx(rt, ctx, jsflags);
                 if(!jsctx){
                     report_system_error(ctx, SV("Failed to initialize javascript context"));
-                    result.errored = GENERIC_ERROR;
+                    result = GENERIC_ERROR;
                     goto cleanup;
                 }
                 uint64_t after_init = get_t();
@@ -149,7 +150,7 @@ execute_user_scripts(DndcContext* ctx){
             msb_destroy(&msb);
             if(js_err.errored){
                 report_set_error(ctx);
-                result.errored = js_err.errored;
+                result = js_err.errored;
                 goto cleanup;
             }
         }
@@ -181,9 +182,10 @@ execute_user_scripts(DndcContext* ctx){
 // However, care must be taken that the spawned thread is
 // joined by the time we exit.
 static
-Errorable_f(void)
+warn_unused
+int
 execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) worker){
-    Errorable(void) result = {0};
+    int result = 0;
     uint64_t flags = ctx->flags;
     // Setup the worker thread.
     BinaryJob job = {
@@ -559,9 +561,9 @@ run_the_dndc(uint64_t flags,
         // the worker has joined before continuing beyond this point.
         // Putting it in its own function with single-point-of-exit style
         // makes that easier to do.
-        Errorable(void) e = execute_user_scripts_and_load_images(&ctx, worker);
-        if(e.errored){
-            result.errored = e.errored;
+        int e = execute_user_scripts_and_load_images(&ctx, worker);
+        if(e){
+            result.errored = e;
             goto cleanup;
         }
     }
