@@ -7,6 +7,16 @@
 #include "ByteBuilder.h"
 #include "dndc_types.h"
 
+#ifndef warn_unused
+#if defined(__GNUC__) || defined(__clang__)
+#define warn_unused __attribute__((warn_unused_result))
+#elif defined(_MSC_VER)
+#define warn_unused _Check_return
+#else
+#error "No warn unused analogue"
+#endif
+#endif
+
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
@@ -352,6 +362,7 @@ ctx_note_dependency(DndcContext* ctx, StringView path);
 // Returns 0 on success.
 //
 static
+warn_unused
 int
 dndc_parse(DndcContext*, NodeHandle root, StringView filename, const char* text, size_t length);
 
@@ -366,6 +377,7 @@ dndc_parse(DndcContext*, NodeHandle root, StringView filename, const char* text,
 // Returns 0 on success.
 //
 static
+warn_unused
 int
 expand_to_dnd(DndcContext*, MStringBuilder*);
 
@@ -376,6 +388,7 @@ expand_to_dnd(DndcContext*, MStringBuilder*);
 // document including head tags, etc.
 //
 static
+warn_unused
 int
 render_tree(DndcContext*, MStringBuilder*);
 
@@ -391,6 +404,7 @@ render_tree(DndcContext*, MStringBuilder*);
 //
 static inline
 force_inline
+warn_unused
 int
 render_node(DndcContext*, MStringBuilder* restrict, NodeHandle, int header_depth);
 
@@ -401,6 +415,7 @@ render_node(DndcContext*, MStringBuilder* restrict, NodeHandle, int header_depth
 // Returns 0 on success.
 //
 static
+warn_unused
 int
 format_tree(DndcContext*, MStringBuilder*);
 
@@ -424,6 +439,7 @@ gather_anchors(DndcContext*);
 // Returns 0 on success.
 //
 static
+warn_unused
 int
 check_depth(DndcContext*);
 
@@ -473,6 +489,7 @@ find_link_target(DndcContext* ctx, StringView kebabed);
 // Returns 0 on success.
 //
 static inline
+warn_unused
 int
 add_link_from_sv(DndcContext* ctx, Node* node);
 
