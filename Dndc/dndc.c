@@ -583,10 +583,10 @@ run_the_dndc(uint64_t flags,
     // Check that the tree is not too deep!
     if(!wasm){
         uint64_t before = get_t();
-        Errorable(void) e = check_depth(&ctx);
-        if(e.errored){
+        int e = check_depth(&ctx);
+        if(e){
             report_set_error(&ctx);
-            result.errored = e.errored;
+            result.errored = e;
             goto cleanup;
         }
         uint64_t after = get_t();
@@ -624,9 +624,9 @@ run_the_dndc(uint64_t flags,
                 Node* link_str_node = get_node(&ctx, *it);
                 if(link_str_node->type != NODE_STRING)
                     continue;
-                Errorable(void) e = add_link_from_sv(&ctx, link_str_node);
-                if(e.errored){
-                    result.errored = e.errored;
+                int e = add_link_from_sv(&ctx, link_str_node);
+                if(e){
+                    result.errored = e;
                     goto cleanup;
                 }
             }

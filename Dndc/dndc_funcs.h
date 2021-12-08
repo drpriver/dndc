@@ -361,6 +361,8 @@ dndc_parse(DndcContext*, NodeHandle root, StringView filename, const char* text,
 // different as some nodes can't be created from the regular syntax,
 // like CONTAINER nodes).
 //
+// Returns 0 on success.
+//
 static
 int
 expand_to_dnd(DndcContext*, MStringBuilder*);
@@ -383,6 +385,8 @@ render_tree(DndcContext*, MStringBuilder*);
 //
 // The result is an html fragment.
 //
+// Returns 0 on success.
+//
 static inline
 force_inline
 int
@@ -391,6 +395,8 @@ render_node(DndcContext*, MStringBuilder* restrict, NodeHandle, int header_depth
 //
 // Writes the document tree (starting from the context's root node)
 // as a .dnd file, formatted to remove trailing spaces, wrap to 80 columns, etc.
+//
+// Returns 0 on success.
 //
 static
 int
@@ -413,8 +419,10 @@ gather_anchors(DndcContext*);
 // This is probably a bad idea and we should just have a depth argument to render
 // funcs and error if too deep.
 //
+// Returns 0 on success.
+//
 static
-Errorable_f(void)
+int
 check_depth(DndcContext*);
 
 //
@@ -460,8 +468,10 @@ find_link_target(DndcContext* ctx, StringView kebabed);
 //
 // Parses a line of a ::links block, which is of the form "link = target"
 //
+// Returns 0 on success.
+//
 static inline
-Errorable_f(void)
+int
 add_link_from_sv(DndcContext* ctx, Node* node);
 
 //

@@ -404,32 +404,31 @@ find_link_target(DndcContext* ctx, StringView kebabed){
 }
 
 static inline
-Errorable_f(void)
+int
 add_link_from_sv(DndcContext* ctx, Node* node){
     StringView str = node->header;
-    Errorable(void) result = {0};
     const char* equals = memchr(str.text, '=', str.length);
     if(!equals){
         node_print_err(ctx, node, LS("no '=' in a link node"));
-        return (Errorable(void)){PARSE_ERROR};
+        return PARSE_ERROR;
     }
     MStringBuilder sb = {.allocator=ctx->string_allocator};
     msb_write_kebab(&sb, str.text, equals - str.text);
     if(!sb.cursor){
         node_print_err(ctx, node, LS("key is empty."));
-        return (Errorable(void)){PARSE_ERROR};
+        return PARSE_ERROR;
     }
     StringView key = msb_detach_sv(&sb);
     StringView value = stripped_view(equals + 1, (str.text+str.length)-(equals+1));
     if(!value.length){
         node_print_err(ctx, node, LS("link target is empty."));
-        return (Errorable(void)){PARSE_ERROR};
+        return PARSE_ERROR;
     }
     if(value.text[0] == '#'){
         StringView target = {.text = value.text+1, .length = value.length-1};
         if(!target.length){
             node_print_err(ctx, node, LS("link target is empty after the '#'"));
-            return (Errorable(void)){PARSE_ERROR};
+            return PARSE_ERROR;
         }
         // TODO: keep a binary tree or something?
         MARRAY_FOR_EACH(LinkItem, li, ctx->links){
@@ -437,13 +436,13 @@ add_link_from_sv(DndcContext* ctx, Node* node){
                 goto foundit;
         }
         node_print_err(ctx, node, LS("Anchor does not correspond to any link"));
-        return (Errorable(void)){PARSE_ERROR};
+        return PARSE_ERROR;
         foundit:;
     }
     LinkItem* li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
     li->key = key;
     li->value = value;
-    return result;
+    return 0;
 }
 
 static inline
@@ -541,28 +540,28 @@ node_insert_child(DndcContext* ctx, NodeHandle parent, size_t i, NodeHandle chil
     data[i] = child;
 }
 
-static Errorable_f(void) check_node_depth(DndcContext* ctx, NodeHandle handle, int depth);
+static int check_node_depth(DndcContext* ctx, NodeHandle handle, int depth);
 
 static
-Errorable_f(void)
+int
 check_depth(DndcContext* ctx){
     return check_node_depth(ctx, ctx->root_handle, 0);
 }
 
 static
-Errorable_f(void)
+int
 check_node_depth(DndcContext* ctx, NodeHandle handle, int depth){
     Node* node = get_node(ctx, handle);
     enum {MAX_DEPTH=64};
     if(unlikely(depth > MAX_DEPTH)){
         node_set_err(ctx, node, LS("Tree depth exceeded: greater than 64"));
-        return (Errorable(void)){.errored=PARSE_ERROR};
+        return PARSE_ERROR;
     }
     NODE_CHILDREN_FOR_EACH(it, node){
-        Errorable(void) e = check_node_depth(ctx, *it, depth+1);
-        if(e.errored) return e;
+        int e = check_node_depth(ctx, *it, depth+1);
+        if(e) return e;
     }
-    return (Errorable(void)){.errored=NO_ERROR};
+    return 0;
 }
 
 static void gather_anchor(DndcContext* ctx, NodeHandle handle);
