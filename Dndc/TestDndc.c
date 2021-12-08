@@ -18,6 +18,7 @@ static TestFunc TestCrashesFixed;
 static TestFunc TestExamplesWork;
 static TestFunc TestUntrusted;
 static TestFunc TestSpecialChars;
+static TestFunc TestImgAttributes;
 static TestFunc TestJs;
 
 int main(int argc, char** argv){
@@ -34,6 +35,7 @@ int main(int argc, char** argv){
     RegisterTest(TestExamplesWork);
     RegisterTest(TestUntrusted);
     RegisterTest(TestSpecialChars);
+    RegisterTest(TestImgAttributes);
     RegisterTest(TestJs);
     int ret = test_main(argc, argv);
     return ret;
@@ -101,6 +103,37 @@ TestFunction(TestDndc3){
     Errorable(void) e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     TestExpectFalse(output.text);
     TestExpectFailure(e);
+    TESTEND();
+}
+
+
+TestFunction(TestImgAttributes){
+    TESTBEGIN();
+    StringView source = SV(
+        "::img #noinline\n"
+        "   SomeImg.png\n"
+        "   width=600\n"
+        "   height = 800\n"
+        "   alt = \"Hello World!\"\n"
+    );
+    LongString expected = LS(
+            "<div>\n"
+            "<div>\n"
+            "<img src=\"SomeImg.png\" width=\"600\" height=\"800\" alt=\"&quot;Hello World!&quot;\">\n"
+            "</div>\n"
+            "</div>\n"
+            );
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_DONT_PRINT_ERRORS
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+        | DNDC_FRAGMENT_ONLY
+        ;
+    LongString output = {0};
+    Errorable(void) e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    TestExpectSuccess(e);
+    TestExpectEquals2(LS_equals, output, expected);
+    dndc_free_string(output);
     TESTEND();
 }
 TestFunction(TestDndcOutParam){
@@ -588,16 +621,6 @@ TestFunction(TestUntrusted){
     TESTEND();
 }
 
-static inline
-StringView
-sv_slice(StringView src, size_t begin, size_t length){
-    assert(begin < src.length);
-    assert(length <= src.length -begin);
-    return (StringView){
-        .text = src.text+begin,
-        .length = length,
-    };
-}
 TestFunction(TestSpecialChars){
     TESTBEGIN();
     struct test_case {

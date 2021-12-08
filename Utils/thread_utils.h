@@ -116,7 +116,8 @@ static void create_thread(ThreadHandle* handle, thread_func* func, void*_Nullabl
 // This is a synchronization event between the joiner and the joinee.
 // (I know that is true for pthreads and assume it is true for Win32 as well.)
 //
-static void join_thread(ThreadHandle);
+// Commented as it takes the handle by value.
+// static void join_thread(ThreadHandle);
 
 typedef struct WorkerThread WorkerThread;
 static THREADFUNC(worker_thread_main);

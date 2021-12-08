@@ -202,12 +202,18 @@ class DndMainWindow(QMainWindow):
                     if not os.path.isfile(filename):
                         continue
                     add_tab(filename)
-
-    def closeEvent(self, e:QCloseEvent) -> None:
+        timer = QTimer(this)
+        timer.timeout.connect(self.save_windows)
+        timer.start(1000)
+    def save_windows(self, *args) -> None:
+        LOGGER.debug('Saving Window Positions and Settings.')
         filenames = list(all_windows.keys())
         self.settings.setValue('filenames', filenames)
         self.settings.setValue('editor_on_left', EDITOR_ON_LEFT)
         self.settings.setValue('window_geometry', self.saveGeometry())
+
+    def closeEvent(self, e:QCloseEvent) -> None:
+        self.save_windows()
         for page in all_windows.values():
             page.save()
         e.accept()

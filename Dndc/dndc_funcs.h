@@ -142,6 +142,7 @@ static
 void
 parse_set_err(DndcContext* ctx, NullUnspec(const char*) errchar, LongString);
 
+// Ditto, but the last argument is quoted.
 static
 void
 parse_set_err_q(DndcContext* ctx, NullUnspec(const char*) errchar, StringView, StringView);
@@ -154,6 +155,7 @@ static
 void
 node_set_err(DndcContext* ctx, const Node*, LongString);
 
+// Ditto, but the last argument is quoted.
 static
 void
 node_set_err_q(DndcContext* ctx, const Node* node, StringView msg, StringView quoted);
@@ -185,6 +187,7 @@ node_print_err(DndcContext* ctx, const Node*, LongString);
 static
 void
 node_print_warning(DndcContext* ctx, const Node* node, StringView msg);
+// ditto
 static
 void
 node_print_warning2(DndcContext* ctx, const Node* node, StringView, StringView);
@@ -245,6 +248,8 @@ get_node_e(DndcContext*, NodeHandle);
 
 //
 // Checks if the node has an attribute or not.
+// You generally should not be calling this as attributes are for user scripts only,
+// but you can use this in the implementation of the bindings.
 //
 static inline
 bool
@@ -279,13 +284,20 @@ void
 node_set_attribute(Node* node, Allocator allocator, StringView attr, StringView value);
 
 //
-// Retrieves the id of the node. Handles the id being set via attribute. 
+// Retrieves the id of the node. Handles the id being set via directive.
 // If the node has empty header, or if it's noid, returns zero length
 // string.
 //
 static inline
 StringView
 node_get_id(DndcContext*, NodeHandle);
+
+//
+// Overrides the id of the node.
+//
+static inline
+void
+node_set_id(DndcContext* ctx, NodeHandle, StringView);
 
 //
 // Loads the text of a sourcefile given by sourcepath, or an error if
@@ -398,6 +410,9 @@ gather_anchors(DndcContext*);
 // Ensures that the tree is not so deep that there is a danger of exhausting
 // the stack.
 //
+// This is probably a bad idea and we should just have a depth argument to render
+// funcs and error if too deep.
+//
 static
 Errorable_f(void)
 check_depth(DndcContext*);
@@ -447,7 +462,7 @@ find_link_target(DndcContext* ctx, StringView kebabed);
 //
 static inline
 Errorable_f(void)
-add_link_from_sv(DndcContext* ctx, Nonnull(Node*)node);
+add_link_from_sv(DndcContext* ctx, Node* node);
 
 //
 // Adds the link to the link map as derived from the header
@@ -474,13 +489,12 @@ static inline
 void
 ctx_add_builtins(DndcContext* ctx);
 
+// Hacky clone function
+// Read the implementation as this has weird caveats.
 static inline
 NodeHandle
 node_clone(DndcContext* ctx, NodeHandle);
 
-static inline
-void
-node_set_id(DndcContext* ctx, NodeHandle, StringView);
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

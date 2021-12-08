@@ -944,7 +944,7 @@ RENDERFUNC(IMAGE){
         else {
             msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
         }
-        msb_write_literal(sb, "\">");
+        msb_write_char(sb, '"');
     }
     else if((ctx->flags & DNDC_DONT_INLINE_IMAGES) || (node->flags & NODEFLAG_NOINLINE)){
         Node* imgpath_node = get_node(ctx, children[0]);
@@ -955,7 +955,7 @@ RENDERFUNC(IMAGE){
         StringView header = imgpath_node->header;
         msb_write_literal(sb, "<img src=\"");
         msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
-        msb_write_literal(sb, "\">");
+        msb_write_char(sb, '"');
     }
     else{
         Node* imgpath_node = get_node(ctx, children[0]);
@@ -977,12 +977,37 @@ RENDERFUNC(IMAGE){
             uint64_t after = get_t();
             report_time(ctx, SV("Copying the base64 data of an img took "), after-before);
         }
-        msb_write_literal(sb, "\">");
+        msb_write_char(sb, '"');
     }
     for(size_t i = 1; i < count; i++){
+        Node* node = get_node(ctx, children[i]);
+        if(node->type == NODE_STRING){
+            SplitPair stripped = stripped_split(node->header.text, node->header.length, '=');
+            if(stripped.tail.length){
+                if(SV_equals(stripped.head, SV("width"))){
+                    MSB_FORMAT(sb, SV(" "), stripped.head, SV("=\""));
+                    msb_write_html_quote_escaped_string(sb, stripped.tail.text, stripped.tail.length);
+                    msb_write_char(sb, '"');
+                    continue;
+                }
+                if(SV_equals(stripped.head, SV("height"))){
+                    MSB_FORMAT(sb, SV(" "), stripped.head, SV("=\""));
+                    msb_write_html_quote_escaped_string(sb, stripped.tail.text, stripped.tail.length);
+                    msb_write_char(sb, '"');
+                    continue;
+                }
+                if(SV_equals(stripped.head, SV("alt"))){
+                    MSB_FORMAT(sb, SV(" "), stripped.head, SV("=\""));
+                    msb_write_html_quote_escaped_string(sb, stripped.tail.text, stripped.tail.length);
+                    msb_write_char(sb, '"');
+                    continue;
+                }
+            }
+        }
         Errorable(void) e = render_node(ctx, sb, children[i], header_depth);
         if(e.errored) return e;
     }
+    msb_write_literal(sb, ">\n");
     msb_write_literal(sb, "</div>\n");
     return result;
 }

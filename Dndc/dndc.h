@@ -202,7 +202,7 @@ typedef int DndcDependencyFunc(DNDC_NULLABLE(void*) dependency_user_data,
 // -----------
 //
 // Turns the given .dnd string into another .dnd string, but formatted such
-// that lines do not exceed 80 characters if it is possible to semantically do
+// that lines do not exceed 79 characters if it is possible to semantically do
 // so, lines are right-stripped, redundant blank lines are merged, etc.
 // The resulting string is stored in output.
 //
@@ -376,7 +376,7 @@ typedef void DndcSyntaxFuncUtf16(DNDC_NULLABLE(void*) user_data, int type,
 // files.
 //
 // Note: this function is looser with parsing than the other dndc funcs. In the
-// interest of providing syntax highlighting to an entire document,
+// interest of providing syntax highlighting to an entire document as you edit it,
 // unrecognized node types will be treated as regular nodes.
 //
 // Arguments
@@ -465,7 +465,6 @@ dndc_filecache_remove(DndcFileCache* cache, DndcStringView path);
 // Remove all paths from the filecache.
 //
 DNDC_API
-// int // should we allow for possibility of error?
 void
 dndc_filecache_clear(DndcFileCache* cache);
 
@@ -499,11 +498,10 @@ dndc_worker_thread_destroy(DndcWorkerThread*);
 //
 // Low-level function to compile a dnd source file. The behavior of this
 // function is complex and is greatly controlled by the flags argument.
-// See `enum DndcFlags` for details on the exact meaning of the flags. When
-// arguments change meaning based on the flags that will be described below.
+// See `enum DndcFlags` for details on the exact meaning of the flags.
 //
-// In its default mode, this function will load the given source file, parse
-// it, resolve imports, execute javascript blocks, spawn a thread to base64
+// In its default mode, this function will parse the given source text,
+// resolve imports, execute javascript blocks, spawn a thread to base64
 // referenced images, load referenced files such as js files and css files,
 // and render the result into an html file at the given location.
 //
@@ -624,7 +622,7 @@ DNDC_DONT_READ = 0x4,
 DNDC_INPUT_IS_UNTRUSTED  = 0x8,
 
 // Instead of rendering to html, render to .dnd with trailing
-// spaces removed, text aligned to 80 columns (if semantically equivelant)
+// spaces removed, text aligned to 79 columns (if semantically equivelant)
 // etc.
 DNDC_REFORMAT_ONLY = 0x10,
 
@@ -677,7 +675,7 @@ DNDC_USE_DND_URL_SCHEME = 0x20000,
 // as a single file .dnd file instead of html.
 DNDC_OUTPUT_EXPANDED_DND = 0x40000,
 
-// Flags currently uses 19 bits, 3 of those are unused.
+// Flags currently uses 19 bits, 2 of those are unused.
 };
 
 #ifdef __cplusplus

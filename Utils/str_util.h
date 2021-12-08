@@ -175,6 +175,17 @@ endswith(StringView haystack, StringView needle){
     return memcmp(haystack.text+haystack.length-needle.length, needle.text, needle.length) == 0;
 }
 
+static inline
+StringView
+sv_slice(StringView src, size_t begin, size_t length){
+    assert(begin < src.length);
+    assert(length <= src.length -begin);
+    return (StringView){
+        .text = src.text+begin,
+        .length = length,
+    };
+}
+
 #ifdef __clang__
 #pragma clang assume_nonnull end
 #endif

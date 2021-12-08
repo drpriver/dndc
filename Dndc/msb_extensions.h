@@ -189,6 +189,22 @@ msb_write_str_with_backslashes_as_forward_slashes(MStringBuilder* sb, const char
     sb->cursor = cursor;
 }
 
+static inline
+void
+msb_write_html_quote_escaped_string(MStringBuilder*sb, const char* restrict str, size_t length){
+    _check_msb_remaining_size(sb, length);
+    for(;;){
+        const char* quote = memchr(str, '"', length);
+        if(!quote)
+            break;
+        msb_write_str(sb, str, quote-str);
+        msb_write_literal(sb, "&quot;");
+        length -= quote + 1 - str;
+        str = quote+1;
+    }
+    msb_write_str(sb, str, length);
+}
+
 //
 // Writes the string into the buffer, but strips trailing and leading
 // whitespace from each line in the input. A newline is still written for each

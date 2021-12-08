@@ -6,7 +6,10 @@
 #include "common_macros.h"
 #include "dndc_node_types.h"
 #include "dndc_file_cache.h"
+
+//
 // Type definitions for dndc, shared across components.
+//
 
 #ifndef __clang__
 #ifndef _Nonnull
@@ -271,6 +274,7 @@ typedef struct DndcContext {
     // Mapping of shorthand for a link to its actual link.
     // Actually an array of pairs, we sort this and then do binary searches
     // for lookup.
+    // TODO: use an adaptive table.
     Marray(LinkItem) links;
     // Mapping of key to string (will be outputted as "data_blob").
     Marray(DataItem) rendered_data;

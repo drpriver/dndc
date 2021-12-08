@@ -55,6 +55,7 @@ typedef struct LoadedSource {
 
 struct DndcFileCache {
     Allocator allocator;
+    // TODO: use an adaptive table. Paths can get long and slow.
     Marray(LoadedSource) _files;
 };
 
