@@ -48,7 +48,7 @@ make_html(PString* source){
         | DNDC_INPUT_IS_UNTRUSTED
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    Errorable(void) e = run_the_dndc(
+    int e = run_the_dndc(
             flags,
             base,
             LS_to_SV(text),
@@ -61,8 +61,7 @@ make_html(PString* source){
             NULL, NULL,            // ast funcs
             NULL                   // worker
             );
-    if(e.errored)
-        return NULL;
+    if(e) return NULL;
     PString* result = LongString_to_new_PString(output);
     return result;
 }
@@ -83,7 +82,7 @@ make_fragment(PString* source){
         | DNDC_FRAGMENT_ONLY
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    Errorable(void) e = run_the_dndc(
+    int e = run_the_dndc(
             flags,
             base,
             LS_to_SV(text),
@@ -96,8 +95,7 @@ make_fragment(PString* source){
             NULL, NULL,            // ast funcs
             NULL                   // worker
             );
-    if(e.errored)
-        return NULL;
+    if(e) return NULL;
     PString* result = LongString_to_new_PString(output);
     return result;
 }
@@ -118,7 +116,7 @@ format_dnd(PString* source){
         | DNDC_REFORMAT_ONLY
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    Errorable(void) e = run_the_dndc(
+    int e = run_the_dndc(
             flags, base, LS_to_SV(text), SV(""), SV(""),
             &output,
             NULL, NULL,            // caches
@@ -127,8 +125,7 @@ format_dnd(PString* source){
             NULL, NULL,            // ast funcs
             NULL                   // worker
             );
-    if(e.errored)
-        return NULL;
+    if(e) return NULL;
     PString* result = LongString_to_new_PString(output);
     return result;
 }

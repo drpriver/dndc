@@ -410,7 +410,7 @@ main(int argc, char**argv){
         LongString output = {0};
         flags &= ~DNDC_NO_CLEANUP;
         for(int i = 0; i < bench_iters; i++){
-            Errorable(void) e = run_the_dndc(
+            int e = run_the_dndc(
                 flags,
                 base_dir,
                 source_text,
@@ -422,7 +422,7 @@ main(int argc, char**argv){
                 dependency_func, &dependency_user_data,
                 dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
                 worker);
-            assert(!e.errored);
+            assert(!e);
             dndc_free_string(output);
         }
         if(worker)
@@ -431,7 +431,7 @@ main(int argc, char**argv){
     }
     else {
         LongString output;
-        Errorable(void) e = run_the_dndc(
+        int e = run_the_dndc(
             flags,
             base_dir,
             source_text,
@@ -444,7 +444,7 @@ main(int argc, char**argv){
             dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
             worker
             );
-        if(e.errored) return e.errored;
+        if(e) return e;
         if(flags & DNDC_DONT_WRITE)
             return 0;
         if(output_path.length){

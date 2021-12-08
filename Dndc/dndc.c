@@ -276,7 +276,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
 }
 
 static
-Errorable_f(void)
+int
 run_the_dndc(uint64_t flags,
         StringView base_directory,
         StringView source_text,
@@ -310,7 +310,7 @@ run_the_dndc(uint64_t flags,
     const bool wasm = false;
 #endif
     uint64_t t0 = get_t();
-    Errorable(void) result = {0};
+    int result = 0;
     if(!source_path.length)
         source_path = SV("(string input)");
     ArenaAllocator arena_allocator = {0};
@@ -353,7 +353,7 @@ run_the_dndc(uint64_t flags,
     ctx_add_builtins(&ctx);
     if(!source_text.text){
         report_system_error(&ctx, SV("String with no data given as input"));
-        result.errored = UNEXPECTED_END;
+        result = UNEXPECTED_END;
         goto cleanup;
     }
     ctx_store_builtin_file(&ctx, source_path, source_text);
@@ -380,7 +380,7 @@ run_the_dndc(uint64_t flags,
         report_time(&ctx, SV("Initial parsing took: "), after_parse-before_parse);
         if(e){
             report_set_error(&ctx);
-            result.errored = e;
+            result = e;
             goto cleanup;
         }
     }
@@ -391,7 +391,7 @@ run_the_dndc(uint64_t flags,
         int format_error = format_tree(&ctx, &outsb);
         if(format_error){
             msb_destroy(&outsb);
-            result.errored = format_error;
+            result = format_error;
             goto cleanup;
         }
         uint64_t after = get_t();
@@ -413,21 +413,21 @@ run_the_dndc(uint64_t flags,
             NodeHandle handle = ctx.imports.data[0];
             Node* node = get_node(&ctx, handle);
             node_print_err(&ctx, node, LS("Imports are illegal for untrusted input."));
-            result.errored = PARSE_ERROR;
+            result = PARSE_ERROR;
             goto cleanup;
         }
         if(ctx.user_script_nodes.count){
             NodeHandle handle = ctx.user_script_nodes.data[0];
             Node* node = get_node(&ctx, handle);
             node_print_err(&ctx, node, LS("JS blocks are illegal for untrusted input."));
-            result.errored = PARSE_ERROR;
+            result = PARSE_ERROR;
             goto cleanup;
         }
         if(ctx.script_nodes.count){
             NodeHandle handle = ctx.script_nodes.data[0];
             Node* node = get_node(&ctx, handle);
             node_print_err(&ctx, node, LS("Script blocks are illegal for untrusted input."));
-            result.errored = PARSE_ERROR;
+            result = PARSE_ERROR;
             goto cleanup;
         }
     }
@@ -456,7 +456,7 @@ run_the_dndc(uint64_t flags,
             }
             if(ctx.imports.count > 1000){
                 node_print_err(&ctx, node, LS("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)"));
-                result.errored = PARSE_ERROR;
+                result = PARSE_ERROR;
                 goto cleanup;
             }
             // NOTE: re-get the node every loop as the pointer is invalidated.
@@ -465,7 +465,7 @@ run_the_dndc(uint64_t flags,
                 Node* child = get_node(&ctx, child_handle);
                 if(child->type != NODE_STRING){
                     node_print_err(&ctx, child, LS("import child is not a string"));
-                    result.errored = PARSE_ERROR;
+                    result = PARSE_ERROR;
                     goto cleanup;
                 }
                 StringView filename = child->header;
@@ -480,14 +480,14 @@ run_the_dndc(uint64_t flags,
                     }
                     node_print_err(&ctx, child, msb_borrow_ls(&err_builder));
                     msb_destroy(&err_builder);
-                    result.errored = imp_e.errored;
+                    result = imp_e.errored;
                     goto cleanup;
                 }
                 StringView imp_text = imp_e.result;
                 int parse_e = dndc_parse(&ctx, newhandle, filename, imp_text.text, imp_text.length);
                 if(parse_e){
                     report_set_error(&ctx);
-                    result.errored = parse_e;
+                    result = parse_e;
                     goto cleanup;
                 }
             }
@@ -563,7 +563,7 @@ run_the_dndc(uint64_t flags,
         // makes that easier to do.
         int e = execute_user_scripts_and_load_images(&ctx, worker);
         if(e){
-            result.errored = e;
+            result = e;
             goto cleanup;
         }
     }
@@ -579,7 +579,7 @@ run_the_dndc(uint64_t flags,
     // one.
     if(NodeHandle_eq(ctx.root_handle, INVALID_NODE_HANDLE)){
         report_system_error(&ctx, SV("ctx has no root Node."));
-        result.errored = PARSE_ERROR;
+        result = PARSE_ERROR;
         goto cleanup;
     }
     // Check that the tree is not too deep!
@@ -588,7 +588,7 @@ run_the_dndc(uint64_t flags,
         int e = check_depth(&ctx);
         if(e){
             report_set_error(&ctx);
-            result.errored = e;
+            result = e;
             goto cleanup;
         }
         uint64_t after = get_t();
@@ -604,7 +604,7 @@ run_the_dndc(uint64_t flags,
         // return an error!
         if(ctx.error.message.length){
             report_set_error(&ctx);
-            result.errored = PARSE_ERROR;
+            result = PARSE_ERROR;
             goto cleanup;
         }
     }
@@ -628,7 +628,7 @@ run_the_dndc(uint64_t flags,
                     continue;
                 int e = add_link_from_sv(&ctx, link_str_node);
                 if(e){
-                    result.errored = e;
+                    result = e;
                     goto cleanup;
                 }
             }
@@ -671,7 +671,7 @@ run_the_dndc(uint64_t flags,
                     int e = render_node(&ctx, &sb, *it, 1);
                     if(e){
                         report_set_error(&ctx);
-                        result.errored = e;
+                        result = e;
                         goto cleanup;
                     }
                 }
@@ -705,7 +705,7 @@ run_the_dndc(uint64_t flags,
         if(e){
             report_set_error(&ctx);
             msb_destroy(&output_sb);
-            result.errored = e;
+            result = e;
             goto cleanup;
         }
         uint64_t after_render = get_t();
@@ -728,7 +728,7 @@ run_the_dndc(uint64_t flags,
         if(e){
             report_set_error(&ctx);
             msb_destroy(&output_sb);
-            result.errored = e;
+            result = e;
             goto cleanup;
         }
         uint64_t after_render = get_t();
@@ -750,7 +750,7 @@ run_the_dndc(uint64_t flags,
     if(!wasm && dependency_func){
         int err = dependency_func(dependency_user_data, ctx.dependencies.count, ctx.dependencies.data);
         if(err){
-            result.errored = err;
+            result = err;
             goto cleanup;
         }
     }
@@ -894,8 +894,8 @@ dndc_format(StringView source_text, LongString* output, Nullable(DndcErrorFunc*)
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_REFORMAT_ONLY
         ;
-    Errorable(void) e = run_the_dndc(flags, SV(""), source_text, SV(""), SV(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL);
-    return e.errored;
+    int e = run_the_dndc(flags, SV(""), source_text, SV(""), SV(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL);
+    return e;
 }
 
 DNDC_API
@@ -2041,8 +2041,8 @@ dndc_compile_dnd_file(
         return GENERIC_ERROR;
     if(!outstring)
         return GENERIC_ERROR;
-    Errorable(void) err = run_the_dndc(flags, base_directory, source_text, source_path, outpath, outstring, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread);
-    return err.errored;
+    int err = run_the_dndc(flags, base_directory, source_text, source_path, outpath, outstring, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread);
+    return err;
 }
 
 #ifdef __clang__

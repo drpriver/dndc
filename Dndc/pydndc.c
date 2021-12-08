@@ -514,7 +514,7 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
     DndcErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
-    Errorable(void) e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, func, error_list, NULL, NULL, NULL, NULL, NULL);
+    int e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, func, error_list, NULL, NULL, NULL, NULL, NULL);
     if(PyErr_Occurred()){
         goto finally;
     }
@@ -528,7 +528,7 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
             Py_XDECREF(call_result);
         }
     }
-    if(e.errored){
+    if(e){
         PyErr_SetString(PyExc_ValueError, "Format error.");
         goto finally;
     }
@@ -616,7 +616,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         b64cache = &cache->b64_cache;
     }
     StringView outname = output_name?pystring_borrow_stringview(output_name) : SV("this.html");
-    Errorable(void) e = run_the_dndc(flags, base_str, source, SV(""), outname, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, NULL, NULL);
+    int e = run_the_dndc(flags, base_str, source, SV(""), outname, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, NULL, NULL);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
@@ -631,7 +631,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
             Py_XDECREF(call_result);
         }
     }
-    if(e.errored){
+    if(e){
         PyErr_SetString(PyExc_ValueError, "html error.");
         goto finally;
     }

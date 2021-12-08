@@ -116,7 +116,8 @@ typedef int (DndcPostParseAstFunc)(Nullable(void*)user_data, Nonnull(DndcContext
 //
 
 static
-Errorable_f(void)
+warn_unused
+int
 run_the_dndc(uint64_t flags,
         StringView base_directory,
         StringView source_text,
