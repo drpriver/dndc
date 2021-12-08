@@ -4,9 +4,11 @@ Version 0.10.0::md
     like expansion and reformatting.
   * Separated user defined attributes and system specific
     directives. User defined attributes or tags are prefixed
-  . with '@', while system directives are prefixed with '#'.
+    with '@', while system directives are prefixed with '#'.
     This ensures that there will be no collision and also
     cleaned some stuff up internally.
+  * Add ability to specify width, height and alt attributes
+    in Image tags.
 Version 0.9.3::md
   * Deleted vestigial TEXT node type.
   * Added reference document for all the nodes you can create
