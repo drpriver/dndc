@@ -8,6 +8,7 @@
 #include "parse_numbers.h"
 #include "measure_time.h"
 #include "msb_format.h"
+#include "error_handling.h"
 
 #ifdef __x86_64__
 #include <immintrin.h>
@@ -30,7 +31,7 @@
 /* Rendering */
 
 #define RENDERFUNCNAME(nt) render_##nt
-#define RENDERFUNC(nt) static int RENDERFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, NodeHandle handle, int header_depth)
+#define RENDERFUNC(nt) static warn_unused int RENDERFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, NodeHandle handle, int header_depth)
 
 #define X(a, b) RENDERFUNC(a);
 NODETYPES(X)
@@ -47,6 +48,7 @@ renderfunc*_Nonnull const RENDERFUNCS[] = {
 
 static inline
 force_inline
+warn_unused
 int
 render_node(DndcContext* ctx, MStringBuilder* restrict sb, NodeHandle handle, int header_depth){
     Node* node = get_node(ctx, handle);
@@ -62,7 +64,9 @@ render_node(DndcContext* ctx, MStringBuilder* restrict sb, NodeHandle handle, in
     return RENDERFUNCS[node->type](ctx, sb, handle, header_depth);
 #endif
     }
+
 static
+warn_unused
 int
 render_tree(DndcContext* ctx, MStringBuilder* msb){
     size_t imgcount = ctx->img_nodes.count + ctx->imglinks_nodes.count;

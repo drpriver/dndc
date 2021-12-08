@@ -11,28 +11,37 @@
 #endif
 
 static
+warn_unused
 int
 expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
 
 static
+warn_unused
 int
 expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
 
 static
+warn_unused
 int
 expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
 
 static
+warn_unused
 int
 expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
+
 static
+warn_unused
 int
 expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
+
 static
+warn_unused
 int
 expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
 
 static
+warn_unused
 int
 expand_to_dnd(DndcContext*ctx, MStringBuilder* msb){
     int result = 0;

@@ -105,7 +105,7 @@ format_write_wrapped_string(MStringBuilder* sb, FormatState* state, StringView s
 }
 
 #define FORMATFUNCNAME(nt) format_##nt
-#define FORMATFUNC(nt) static int FORMATFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent)
+#define FORMATFUNC(nt) static warn_unused int FORMATFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent)
 
 FORMATFUNC(regular_node);
 FORMATFUNC(md_node);
@@ -115,7 +115,7 @@ FORMATFUNC(raw_node);
 FORMATFUNC(md_list);
 FORMATFUNC(para_node);
 
-static int format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, int bullet_depth);
+static warn_unused int format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, int bullet_depth);
 
 static inline
 int
