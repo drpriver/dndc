@@ -194,18 +194,12 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 // These macros are for expressing the test conditions.
 // They only work within a test function.
 //
+// Each one "returns" the condition being tested. For example, 
+// TestExpectEquals returns lhs == rhs.
+// This means you can use these as expressions to do conditional
+// printing or extra testing or whatever.
+//
 
-//
-// Expects the condition is truthy (for the usual C definition of truth).
-//
-#define TestExpect(cond) do{\
-        TEST_stats.executed++;\
-        if (! (cond)){\
-            TEST_stats.failures++;\
-            TestReport("Test condition failed");\
-            TestReport("%s", #cond);\
-            }\
-        }while(0)
 //
 // Expects lhs == rhs, using the == operator
 //
@@ -246,44 +240,49 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 //
 // Expects lhs != rhs, using the != operator
 //
-#define TestExpectNotEquals(lhs, rhs) do{\
+#define TestExpectNotEquals(lhs, rhs) ({\
         __auto_type _lhs = lhs; \
         typeof(lhs) _rhs = rhs; \
         TEST_stats.executed++;\
+        int neq = 1; \
         if (!(_lhs != _rhs)) {\
+            neq = 0; \
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s != %s", #lhs, #rhs); \
             TestPrintValue(#lhs, _lhs);\
             TestPrintValue(#rhs, _rhs);\
         }\
-    }while(0)
+        neq ;\
+    })
 
 //
 // Expects the condition is truthy (for the usual C definition of truth).
-// This is identical to TestExpect and is provided to mirror TestExpectFalse
-// below.
 //
-#define TestExpectTrue(cond) do{\
+#define TestExpectTrue(cond) ({\
         TEST_stats.executed++;\
-        if (! (cond)){ \
+        _Bool cond_ = !!(cond); \
+        if (! (cond_)){ \
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s", #cond);\
         }\
-    }while(0)
+        cond_; \
+    })
 
 //
 // Expects the condition is falsey (for the usual C definition of truth).
 //
-#define TestExpectFalse(cond) do{\
+#define TestExpectFalse(cond) ({\
+        _Bool cond_ = !!(cond); \
         TEST_stats.executed++;\
-        if ((cond)){ \
+        if (cond_){ \
             TEST_stats.failures++; \
             TestReport("Test condition failed (expected falsey)");\
             TestPrintValue(#cond, cond);\
         }\
-    }while(0)
+        !cond_; \
+    })
 
 //
 // For an Errorable, expects .errored is NO_ERROR
@@ -338,6 +337,18 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
         }\
     }while(0)
 
+// Ditto, but for falsey
+#define TestAssertFalse(cond) do{\
+        TEST_stats.executed++;\
+        if ((cond)){ \
+            TEST_stats.failures++; \
+            TEST_stats.assert_failures++; \
+            TestReport("Test condition failed");\
+            TestReport("%s prematurely ended", __func__);\
+            TestReport("%s", #cond); \
+            return TEST_stats;\
+        }\
+    }while(0)
 //
 // Asserts lhs is equal to rhs, using ==
 //
