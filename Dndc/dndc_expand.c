@@ -41,7 +41,7 @@ expand_to_dnd(DndcContext*ctx, MStringBuilder* msb){
         result = expand_node(ctx, node, 0, msb);
 
         // node_set_err_q(ctx, node, SV("Expected md, got "), NODETYPE_TO_NODE_ALIASES[node->type]);
-        // return (Errorable(void){PARSE_ERROR};
+        // return PARSE_ERROR;
     }
     else
         result = expand_node_body(ctx, node, 0, msb);

@@ -146,11 +146,11 @@ execute_user_scripts(DndcContext* ctx){
                 uint64_t after_init = get_t();
                 report_time(ctx, SV("qjs init took: "), after_init-before_init);
             }
-            Errorable(void) js_err = execute_qjs_string(jsctx, ctx, str.text, str.length, handle, firstchild);
+            int js_err = execute_qjs_string(jsctx, ctx, str.text, str.length, handle, firstchild);
             msb_destroy(&msb);
-            if(js_err.errored){
+            if(js_err){
                 report_set_error(ctx);
-                result = js_err.errored;
+                result = js_err;
                 goto cleanup;
             }
         }
@@ -854,10 +854,10 @@ run_the_dndc(uint64_t flags,
 #endif
 
 static
-Errorable_f(void)
+int
 execute_qjs_string(QJSContext*jsctx, DndcContext*ctx, const char* str, size_t length, NodeHandle handle, NodeHandle firstline){
     (void)jsctx, (void)ctx, (void)str, (void)length, (void)handle, (void)firstline;
-    return (Errorable(void)){.errored=OS_ERROR};
+    return OS_ERROR;
 }
 
 static

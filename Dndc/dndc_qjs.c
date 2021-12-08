@@ -443,9 +443,10 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags){
 // probably type it as a LongString
 //
 static
-Errorable_f(void)
+warn_unused
+int
 execute_qjs_string(QJSContext* jsctx, DndcContext* ctx, const char* str, size_t length, NodeHandle handle, NodeHandle firstline){
-    Errorable(void) result = {0};
+    int result = 0;
 
 
     {
@@ -473,7 +474,7 @@ execute_qjs_string(QJSContext* jsctx, DndcContext* ctx, const char* str, size_t 
             else {
                 set_js_traceback(ctx, jsctx);
             }
-            result.errored = GENERIC_ERROR;
+            result = GENERIC_ERROR;
         }
         JS_FreeValue(jsctx, err);
     }

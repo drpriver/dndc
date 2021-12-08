@@ -24,7 +24,8 @@ typedef enum DndcJsFlags {
 } DndcJsFlags;
 
 static
-Errorable_f(void)
+warn_unused
+int
 execute_qjs_string(QJSContext*jsctx, DndcContext* ctx, const char* str, size_t length, NodeHandle handle, NodeHandle firstline);
 
 static
