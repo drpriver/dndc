@@ -54,7 +54,7 @@ warn_unused
 int
 render_node(DndcContext* ctx, MStringBuilder* restrict sb, NodeHandle handle, int header_depth){
     Node* node = get_node(ctx, handle);
-    bool hide = !!node->flags & NODEFLAG_HIDE;
+    bool hide = !!(node->flags & NODEFLAG_HIDE);
     if(hide) return 0;
 #if 0
     switch(node->type){
