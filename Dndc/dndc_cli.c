@@ -294,41 +294,28 @@ main(int argc, char**argv){
             .keyword.count = arrlen(kw_args),
             .early_out.args = early_args,
             .early_out.count = arrlen(early_args),
+            .styling.plain = !isatty(fileno(stdout)),
         };
         Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
         switch(check_for_early_out_args(&argparser, &args)){
             case HELP:{
                 int columns = get_terminal_size().columns;
-                if(columns > 80)
-                    columns = 80;
+                if(columns > 80) columns = 80;
                 print_argparse_help(&argparser, columns);
-                putchar('\n');
                 return 0;
             }
             case VERSION:
                 puts(version);
                 return 0;
             case HIDDEN_HELP:{
-                fputs(
-                    "Hidden Arguments:\n"
-                    "-----------------", stdout);
                 int columns = get_terminal_size().columns;
-                if(columns > 80)
-                    columns = 80;
-                for(size_t i = 0; i < arrlen(kw_args); i++){
-                    ArgToParse* arg = &kw_args[i];
-                    if(!arg->hidden){
-                        continue;
-                    }
-                    putchar('\n');
-                    print_arg_help(arg, columns);
-                }
+                if(columns > 80) columns = 80;
+                print_argparse_hidden_help(&argparser, columns);
                 return 0;
             }
             case OPEN_SOURCE:{
                 int columns = get_terminal_size().columns;
-                if(columns > 80)
-                    columns = 80;
+                if(columns > 80) columns = 80;
                 print_wrapped(DNDC_OPEN_SOURCE_CREDITS, columns);
                 return 0;
             }

@@ -527,6 +527,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
         .keyword.count = arrlen(kw_args),
         .early_out.args = early_args,
         .early_out.count = arrlen(early_args),
+        .styling.plain = !isatty(fileno(stdout)),
     };
     Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
     switch(check_for_early_out_args(&argparser, &args)){

@@ -396,6 +396,44 @@ typedef struct ArgToParse {
     int (*_Nullable append_proc)(void*, const void*);
 } ArgToParse;
 
+typedef struct ArgParseStyling {
+    // Set to true to not style the output at all.
+    bool plain;
+    // Don't print a "------" style heading underneath a section heading.
+    bool no_dashed_header_underline;
+    // Will be used before the name of a section heading.
+    const char*_Nullable pre_header;
+    // Used after a section heading, before the ':'.
+    // If NULL, will use the reset style ansi sequence.
+    const char*_Nullable post_header;
+
+    // This is like the *_header members, but for the name of the arg.
+    const char*_Nullable pre_argname;
+    const char*_Nullable post_argname;
+    // This is like the *_header members, but for the type of the arg.
+    const char*_Nullable pre_typename;
+    const char*_Nullable post_typename;
+    // In the default style, these do nothing. If you set them, they will be
+    // printed before and after the beginning of the description of each
+    // argument (the explanatory text below the arg name and its type).
+    const char*_Nullable pre_description;
+    const char*_Nullable post_description;
+} ArgParseStyling;
+
+// This is the above, but collected into a struct to simplify
+// passing to specific argument printers.
+// These pointers are nonnull.
+typedef struct ArgStyle {
+    const char* pre_header;
+    const char* post_header;
+    const char* pre_argname;
+    const char* post_argname;
+    const char* pre_typename;
+    const char* post_typename;
+    const char* pre_description;
+    const char* post_description;
+} ArgStyle;
+
 //
 // Parser structure.
 typedef struct ArgParser {
@@ -437,13 +475,17 @@ typedef struct ArgParser {
         // If failure happened on a specific argument, this will be set.
         const char*_Nullable arg;
     } failed;
+    // This allows you to control the appearance of the help text.  Leave as
+    // nulls to use the default styling. Set to empty string to disable that
+    // particular style. Set plain to true to disable styling entirely.
+    ArgParseStyling styling;
 } ArgParser;
 
 //
 // Prints the help for a single argument.
 static inline
 void
-print_arg_help(const ArgToParse*, int);
+print_arg_help(const ArgToParse*, int, const ArgStyle* style);
 
 
 // Internal helper struct for text-wrapping.
@@ -470,12 +512,57 @@ static inline
 void
 print_wrapped_help(const char*_Nullable, int);
 
+ArgStyle
+determine_styling(const ArgParser* p){
+    const char* pre_argname = "\033[1m";
+    const char* post_argname = "\033[0m";
+    const char* pre_typename = "\033[3m";
+    const char* post_typename = "\033[0m";
+    const char* pre_header = "\033[1m";
+    const char* post_header = "\033[0m";
+    const char* pre_description = "";
+    const char* post_description = "";
+    if(p->styling.plain){
+        pre_argname = "";
+        post_argname = "";
+        pre_typename = "";
+        post_typename = "";
+        pre_header = "";
+        post_header = "";
+        pre_description = "";
+        post_description = "";
+    }
+    else {
+        #define SETIFSET(x) if(p->styling.x) x = p->styling.x
+        SETIFSET(pre_argname);
+        SETIFSET(post_argname);
+        SETIFSET(pre_typename);
+        SETIFSET(post_typename);
+        SETIFSET(pre_header);
+        SETIFSET(post_header);
+        SETIFSET(pre_description);
+        SETIFSET(post_description);
+        #undef SETIFSET
+    }
+    ArgStyle style = {
+        .pre_header       = pre_header,
+        .post_header      = post_header,
+        .pre_argname      = pre_argname,
+        .post_argname     = post_argname,
+        .pre_typename     = pre_typename,
+        .post_typename    = post_typename,
+        .pre_description  = pre_description,
+        .post_description = post_description,
+    };
+    return style;
+}
+
 // See top of file.
 static inline
 void
 print_argparse_help(const ArgParser* p, int columns){
-    printf("%s: %s\n", p->name, p->description);
-    puts("");
+    ArgStyle style = determine_styling(p);
+    printf("%s: %s\n\n", p->name, p->description);
     const int printed = printf("usage: %s", p->name);
     HelpState hs = {
         .output_width = columns - printed,
@@ -527,29 +614,33 @@ print_argparse_help(const ArgParser* p, int columns){
             }
         }
     }
-    puts("\n");
+    putchar('\n');
     if(p->early_out.count){
-        puts("Early Out Arguments:\n"
-                "--------------------");
+        printf("\n%sEarly Out Arguments%s:\n", style.pre_header, style.post_header);
+        if(!p->styling.no_dashed_header_underline){
+            printf("--------------------\n");
+        }
     }
     for(size_t i = 0; i < p->early_out.count; i++){
         ArgToParse* early = &p->early_out.args[i];
         if(early->altname1.length){
-            printf("%s, %s:", early->name.text, early->altname1.text);
+            printf("%s%s%s, %s%s%s:\n", style.pre_argname, early->name.text, style.post_argname, style.pre_argname, early->altname1.text, style.post_argname);
         }
         else{
-            printf("%s:", early->name.text);
+            printf("%s%s%s:\n", style.pre_argname, early->name.text, style.post_argname);
         }
+        printf("%s", style.pre_description);
         print_wrapped_help(early->help, columns);
-        putchar('\n');
+        printf("%s", style.post_description);
     }
     if(p->positional.count){
-        puts("Positional Arguments:\n"
-                "---------------------");
+        printf("\n%sPositional Arguments%s:\n", style.pre_header, style.post_header);
+        if(!p->styling.no_dashed_header_underline){
+            printf("---------------------\n");
+        }
         for(size_t i = 0; i < p->positional.count; i++){
             ArgToParse* arg = &p->positional.args[i];
-            print_arg_help(arg, columns);
-            putchar('\n');
+            print_arg_help(arg, columns, &style);
         }
     }
     // It's possible for all keyword arguments to be hidden,
@@ -561,102 +652,42 @@ print_argparse_help(const ArgParser* p, int columns){
             continue;
         if(!printed_keyword_header){
             printed_keyword_header = true;
-            fputs("Keyword Arguments:\n"
-                    "------------------", stdout);
+            printf("\n%sKeyword Arguments%s:\n", style.pre_header, style.post_header);
+            if(!p->styling.no_dashed_header_underline)
+                printf("------------------\n");
         }
-        putchar('\n');
-        print_arg_help(arg, columns);
+        print_arg_help(arg, columns, &style);
+    }
+}
+
+
+static inline
+void
+print_argparse_hidden_help(const ArgParser* p, int columns){
+    ArgStyle style = determine_styling(p);
+    // There might be no hidden args. Only print the header if we are actually
+    // going to print an arg.
+    bool printed_an_arg = false;
+    for(size_t i = 0; i < p->keyword.count; i++){
+        ArgToParse* arg = &p->keyword.args[i];
+        if(!arg->hidden) continue;
+        if(!printed_an_arg){
+            printed_an_arg = true;
+            printf("%sHidden Arguments%s:\n", style.pre_header, style.post_header);
+            if(!p->styling.no_dashed_header_underline)
+                printf("-----------------\n");
+        }
+        print_arg_help(arg, columns, &style);
     }
 }
 
 static inline
 void
-print_argparse_help_compact(const ArgParser* p, int columns){
-    printf("%s: %s\n", p->name, p->description);
-    puts("");
-    const int printed = printf("usage: %s", p->name);
-    HelpState hs = {
-        .output_width = columns - printed,
-        .lead = printed,
-        .remaining = 0,
-    };
-    hs.remaining = hs.output_width;
-    for(size_t i = 0; i < p->positional.count; i++){
-        ArgToParse* arg = &p->positional.args[i];
-        if(arg->max_num > 1){
-            int to_print = 1 + arg->name.length + 4;
-            help_state_update(&hs, to_print);
-            printf(" %s ...", arg->name.text);
-        }
-        else {
-            int to_print = 1 + arg->name.length;
-            help_state_update(&hs, to_print);
-            printf(" %s", arg->name.text);
-        }
-    }
-    for(size_t i = 0; i < p->keyword.count; i++){
-        ArgToParse* arg = &p->keyword.args[i];
-        if(arg->hidden)
-            continue;
-        if(arg->dest.type == ARG_FLAG || arg->dest.type == ARG_BITFLAG){
-            if(arg->altname1.length){
-                int to_print = sizeof(" [%s | %s]") - 5 + arg->name.length + arg->altname1.length;
-                help_state_update(&hs, to_print);
-                printf(" [%s | %s]", arg->name.text, arg->altname1.text);
-            }
-            else{
-                int to_print = sizeof(" [%s]") - 3 + arg->name.length;
-                help_state_update(&hs, to_print);
-                printf(" [%s]", arg->name.text);
-            }
-        }
-        else {
-            if(arg->altname1.text){
-                LongString tn = ArgTypeNames[arg->dest.type];
-                int to_print = sizeof(" [%s | %s <%s>%s]") - 9 + arg->name.length + arg->altname1.length + tn.length + (arg->max_num > 1?sizeof(" ...")-1: 0);
-                help_state_update(&hs, to_print);
-                printf(" [%s | %s <%s>%s]", arg->name.text, arg->altname1.text, tn.text, arg->max_num > 1?" ...":"");
-            }
-            else{
-                LongString tn = ArgTypeNames[arg->dest.type];
-                int to_print = sizeof(" [%s <%s>%s]") - 7 + arg->name.length + tn.length + (arg->max_num > 1?sizeof(" ...")-1:0);
-                help_state_update(&hs, to_print);
-                printf(" [%s <%s>%s]", arg->name.text, tn.text, arg->max_num>1?" ...":"");
-            }
-        }
-    }
-    puts("\n");
-    for(size_t i = 0; i < p->early_out.count; i++){
-        ArgToParse* early = &p->early_out.args[i];
-        if(early->altname1.length){
-            printf("%s, %s:", early->name.text, early->altname1.text);
-        }
-        else{
-            printf("%s:", early->name.text);
-        }
-        print_wrapped_help(early->help, columns);
-    }
-    for(size_t i = 0; i < p->positional.count; i++){
-        ArgToParse* arg = &p->positional.args[i];
-        print_arg_help(arg, columns);
-    }
-    // It's possible for all keyword arguments to be hidden,
-    // so only print the header until we hit a non-hidden argument.
-    for(size_t i = 0; i < p->keyword.count; i++){
-        ArgToParse* arg = &p->keyword.args[i];
-        if(arg->hidden)
-            continue;
-        print_arg_help(arg, columns);
-    }
-}
-
-static inline
-void
-print_enum_options(const ArgParseEnumType*_Nullable enu_){
+print_enum_options(const ArgParseEnumType*_Nullable enu_, const ArgStyle* style){
     if(!enu_) return;
     // cast away nullability
     const ArgParseEnumType* enu = enu_;
-    printf("    Options:\n");
+    printf("\n    %sOptions%s:\n", style->pre_header, style->post_header);
     printf("    --------\n");
     for(size_t i = 0; i < enu->enum_count; i++){
         printf("    [%2zu] %s\n", i, enu->enum_names[i].text);
@@ -666,7 +697,7 @@ print_enum_options(const ArgParseEnumType*_Nullable enu_){
 // See top of file.
 static inline
 void
-print_arg_help(const ArgToParse* arg, int columns){
+print_arg_help(const ArgToParse* arg, int columns, const ArgStyle* style){
     const char* help = arg->help;
     const char* name = arg->name.text;
     ArgType type = arg->dest.type;
@@ -680,65 +711,58 @@ print_arg_help(const ArgToParse* arg, int columns){
             typename = ArgTypeNames[type];
             break;
     }
-    printf("%s", name);
+    printf("%s%s%s", style->pre_argname, name, style->post_argname);
     if(arg->altname1.length){
-        printf(", %s", arg->altname1.text);
+        printf(", %s%s\%s", style->pre_argname, arg->altname1.text, style->post_argname);
     }
-    printf(": %s", typename.text);
+    printf(": %s%s%s", style->pre_typename, typename.text, style->post_typename);
 
     if(arg->min_num != 0 || !arg->show_default){
+        putchar('\n');
+        printf("%s", style->pre_description);
         print_wrapped_help(help, columns);
+        printf("%s", style->post_description);
         if(type == ARG_ENUM)
-            print_enum_options(arg->dest.enum_pointer);
+            print_enum_options(arg->dest.enum_pointer, style);
         return;
     }
     switch(type){
         case ARG_INTEGER64:{
             int64_t* data = arg->dest.pointer;
             printf(" = %lld", (long long)*data);
-            print_wrapped_help(help, columns);
         }break;
         case ARG_UINTEGER64:{
             uint64_t* data = arg->dest.pointer;
             printf(" = %llu", (unsigned long long)*data);
-            print_wrapped_help(help, columns);
         }break;
         case ARG_INT:{
             int* data = arg->dest.pointer;
             printf(" = %d", *data);
-            print_wrapped_help(help, columns);
         }break;
         case ARG_FLOAT32:{
             float* data = arg->dest.pointer;
             printf(" = %f", (double)*data);
-            print_wrapped_help(help, columns);
         }break;
         case ARG_FLOAT64:{
             double* data = arg->dest.pointer;
             printf(" = %f", *data);
-            print_wrapped_help(help, columns);
         }break;
         case ARG_BITFLAG:{
-            print_wrapped_help(help, columns);
         }break;
         case ARG_FLAG:{
-            print_wrapped_help(help, columns);
         }break;
         case ARG_CSTRING:{
             const char* s = arg->dest.pointer;
             printf(" = '%s'", s);
-            print_wrapped_help(help, columns);
         }break;
         case ARG_STRING:{
             LongString* s = arg->dest.pointer;
             printf(" = '%.*s'", (int)s->length, s->text);
-            print_wrapped_help(help, columns);
         }break;
         case ARG_USER_DEFINED:{
             if(arg->dest.user_pointer->default_printer){
                 arg->dest.user_pointer->default_printer(arg->dest.pointer);
             }
-            print_wrapped_help(help, columns);
         }break;
         case ARG_ENUM:{
             const ArgParseEnumType* enu = arg->dest.enum_pointer;
@@ -766,9 +790,16 @@ print_arg_help(const ArgToParse* arg, int columns){
                 }break;
             }
             printf(" = %.*s", (int)enu_name.length, enu_name.text);
-            print_wrapped_help(help, columns);
-            print_enum_options(enu);
+            print_enum_options(enu, style);
         }break;
+    }
+    putchar('\n');
+    printf("%s", style->pre_description);
+    print_wrapped_help(help, columns);
+    printf("%s", style->post_description);
+    if(type == ARG_ENUM){
+        const ArgParseEnumType* enu = arg->dest.enum_pointer;
+        print_enum_options(enu, style);
     }
 }
 
@@ -851,10 +882,9 @@ static inline
 void
 print_wrapped_help(const char*_Nullable help, int columns){
     if(!help){
-        putchar('\n');
         return;
     }
-    printf("\n    ");
+    printf("    ");
     HelpState hs = {.output_width = columns - 4, .lead = 4, .remaining = 0};
     hs.remaining = hs.output_width;
     for(;*help;){
