@@ -254,6 +254,13 @@ main(int argc, char**argv){
                 .help = "Error if an attribute name overlaps with a directive name.",
                 .hidden = true,
             },
+            {
+                .name = SV("--allow-js-write"),
+                .max_num = 1,
+                .dest = ArgBitFlagDest(&flags, DNDC_ENABLE_JS_WRITE),
+                .help = "Allow compiletime javascript to write files.",
+                .hidden = true,
+            },
         };
         enum {HELP, VERSION, HIDDEN_HELP, OPEN_SOURCE};
         ArgToParse early_args[] = {

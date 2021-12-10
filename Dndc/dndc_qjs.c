@@ -108,6 +108,7 @@ JSMETHOD(js_load_file_as_base64);
 JSMETHOD(js_load_file);
 JSMETHOD(js_list_dnd_files);
 JSMETHOD(js_path_exists);
+JSMETHOD(js_write_file);
 // JSMETHOD(js_file_exists);
 // JSMETHOD(js_dir_exists);
 
@@ -421,6 +422,7 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags){
             JS_SetPropertyStr(jsctx, filesystem, "load_file", JS_NewCFunction(jsctx, js_load_file, "load_file", 1)); // create and steal in one go.
             JS_SetPropertyStr(jsctx, filesystem, "list_dnd_files", JS_NewCFunction(jsctx, js_list_dnd_files, "list_dnd_files", 1)); // create and steal in one go.
             JS_SetPropertyStr(jsctx, filesystem, "exists", JS_NewCFunction(jsctx, js_path_exists, "exists", 1)); // create and steal in one go.
+            JS_SetPropertyStr(jsctx, filesystem, "write_file", JS_NewCFunction(jsctx, js_write_file, "write_file", 2)); // create and steal in one go.
             JS_SetPropertyStr(jsctx, global_obj, "FileSystem", filesystem); // Steals ref
         }
 
@@ -759,6 +761,37 @@ js_load_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst
     QJSValue result = JS_NewString(jsctx, e.result.text);
     return result;
 }
+
+static
+QJSValue
+js_write_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst *argv){
+    (void)thisValue;
+    if(argc != 2){
+        return JS_ThrowTypeError(jsctx, "Must be given two args: filename and data to write");
+    }
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    if(!(ctx->flags & DNDC_ENABLE_JS_WRITE)){
+        return JS_ThrowTypeError(jsctx, "File writing is disabled");
+    }
+    QJSValueConst filename_s = argv[0];
+    QJSValueConst text_s     = argv[1];
+    if(!JS_IsString(filename_s) || !JS_IsString(text_s)){
+        return JS_ThrowTypeError(jsctx, "Must be given two args: filename and data to write");
+    }
+    LongString filepath = jsstring_to_longstring(jsctx, filename_s, ctx->temp_allocator);
+    StringView data = jsstring_make_stringview_js_allocated(jsctx, text_s);
+    int err = write_file(filepath.text, data.text, data.length);
+    Allocator_free(ctx->temp_allocator, filepath.text, filepath.length+1);
+    JS_FreeCString(jsctx, data.text);
+    if(err){
+        // this is the wrong way to report this error.
+        return JS_ThrowTypeError(jsctx, "Error writing file");
+    }
+    else
+        return JS_UNDEFINED;
+}
+
 
 #if defined(_WIN32)
 // Posix-likes provide an API that will do this for us.

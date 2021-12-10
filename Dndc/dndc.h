@@ -648,9 +648,11 @@ DNDC_NO_COMPILETIME_JS = 0x200,
 // that into an error so you can migrate your collisions.
 DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP = 0x400,
 
+// Allow JavaScript to write files.
+DNDC_ENABLE_JS_WRITE = 0x800,
+
 // These flags are unused (used to be for controlling python, but no longer).
 // They will be used in the future.
-DNDC_UNUSED_VALUE_0x800 = 0x800,
 DNDC_UNUSED_VALUE_0x1000 = 0x1000,
 
 // Don't spawn any worker threads. No parallelism.
