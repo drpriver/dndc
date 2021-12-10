@@ -29,6 +29,9 @@
 // We use __auto_type in the testing macros, so this will only compile
 // with gcc and clang.
 // Maybe one day C will standardize auto.
+//
+// We also use statement expressions. In theory capturing lambdas
+// could replace that if those are added to C23.
 
 // Internal use color definitions. They will be set to escape codes if
 // stderr is detected to be interactive.
@@ -112,10 +115,10 @@ TestPrintFuncs(TestPrintImpl_)
 // Internal use struct to keep track of the number of tests executed, failed,
 // etc.
 struct TestStats {
-    int funcs_executed;
-    int failures;
-    int executed;
-    int assert_failures;
+    unsigned long long funcs_executed;
+    unsigned long long failures;
+    unsigned long long executed;
+    unsigned long long assert_failures;
 };
 
 // The type of a test function.
@@ -256,6 +259,22 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
         neq ;\
     })
 
+#define TestExpectNotEqual2(func, lhs, rhs) ({\
+        __auto_type _lhs = lhs; \
+        __auto_type _rhs = rhs; \
+        TEST_stats.executed++;\
+        int notequal__ = 1; \
+        if (func(_lhs, _rhs)) {\
+            notequal__ = 0; \
+            TEST_stats.failures++; \
+            TestReport("Test condition failed");\
+            TestReport("%s(%s, %s)", #func, #lhs, #rhs); \
+            TestPrintValue(#lhs, _lhs);\
+            TestPrintValue(#rhs, _rhs);\
+            }\
+        notequal__; \
+        })
+
 //
 // Expects the condition is truthy (for the usual C definition of truth).
 //
@@ -289,9 +308,9 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 //
 #define TestExpectSuccess(cond) ({\
         TEST_stats.executed++;\
-        bool succeeded = true; \
+        _Bool succeeded = 1; \
         if ((cond).errored){ \
-            succeeded = false; \
+            succeeded = 0; \
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s = %d", #cond, (cond).errored);\
@@ -304,9 +323,9 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 //
 #define TestExpectFailure(cond) ({\
         TEST_stats.executed++;\
-        bool did_fail = true; \
+        _Bool did_fail = 1; \
         if (!(cond).errored){ \
-            did_fail = false; \
+            did_fail = 0; \
             TEST_stats.failures++; \
             TestReport("Test condition failed");\
             TestReport("%s = %d", #cond, (cond).errored);\
@@ -586,31 +605,31 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     const char* text = result.funcs_executed == 1?
         "test function executed"
         : "test functions executed";
-    fprintf(stderr, "%s%s: %s%d%s %s\n",
+    fprintf(stderr, "%s%s: %s%llu%s %s\n",
             gray, filename,
-            blue, result.funcs_executed,
+            blue, (unsigned long long)result.funcs_executed,
             reset, text);
 
     text = result.executed == 1? "test executed" : "tests executed";
-    fprintf(stderr, "%s%s: %s%d%s %s\n",
+    fprintf(stderr, "%s%s: %s%llu%s %s\n",
             gray, filename,
-            blue, result.executed,
+            blue, (unsigned long long)result.executed,
             reset, text);
 
     text = result.assert_failures == 1?
         "test function aborted early"
         : "test functions aborted early";
     const char* color = result.assert_failures?red:green;
-    fprintf(stderr, "%s%s: %s%d%s %s\n",
+    fprintf(stderr, "%s%s: %s%llu%s %s\n",
             gray, filename,
-            color, result.assert_failures,
+            color, (unsigned long long)result.assert_failures,
             reset, text);
 
     color = result.failures?red:green;
     text = result.failures == 1? "test failed" : "tests failed";
-    fprintf(stderr, "%s%s: %s%d%s %s\n",
+    fprintf(stderr, "%s%s: %s%llu%s %s\n",
             gray, filename,
-            color, result.failures,
+            color, (unsigned long long)result.failures,
             reset, text);
 
     return result.failures + result.assert_failures == 0? 0 : 1;
