@@ -1632,10 +1632,14 @@ main(int argc, const char *_Null_unspecified *_Nonnull argv) {
 static
 void
 do_syntax_colors(void){
+    for(int i = 0; i < DNDC_SYNTAX_MAX; i++){
+        SYNTAX_COLORS[i] = [NSColor textColor]; // set up backup
+    }
     SYNTAX_COLORS[DNDC_SYNTAX_DOUBLE_COLON]       = [NSColor lightGrayColor];
     SYNTAX_COLORS[DNDC_SYNTAX_HEADER]             = [NSColor systemBlueColor];
     SYNTAX_COLORS[DNDC_SYNTAX_NODE_TYPE]          = [NSColor darkGrayColor];
     SYNTAX_COLORS[DNDC_SYNTAX_ATTRIBUTE]          = [NSColor systemBrownColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_DIRECTIVE]          = [NSColor systemPurpleColor];
     SYNTAX_COLORS[DNDC_SYNTAX_ATTRIBUTE_ARGUMENT] = [NSColor systemBrownColor];
     SYNTAX_COLORS[DNDC_SYNTAX_CLASS]              = [NSColor systemGrayColor];
     SYNTAX_COLORS[DNDC_SYNTAX_RAW_STRING]         = [NSColor systemPinkColor]; // currently unused
