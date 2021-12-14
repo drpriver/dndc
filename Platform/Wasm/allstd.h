@@ -15,7 +15,7 @@ _Static_assert(sizeof(size_t) == sizeof(ssize_t), "");
 enum {SIZE_T_SIZE=sizeof(size_t)};
 typedef short int16_t;
 typedef unsigned short uint16_t;
-typedef char int8_t;
+typedef signed char int8_t;
 typedef unsigned char uint8_t;
 typedef int int32_t;
 typedef unsigned int uint32_t;
@@ -63,12 +63,13 @@ memchr(const void*_Nonnull pointer, int c, size_t nbytes){
     }
     return NULL;
 }
+
 size_t strlen(const char* p){
     for(size_t i = 0; ; i++){
         if(p[i] == 0)
             return i;
-        }
     }
+}
 
 static
 void*_Nullable
@@ -77,9 +78,9 @@ strchr(const char*_Nonnull pointer, int c){
         if(*pointer == c)
             return pointer;
         pointer++;
-        }
-    return NULL;
     }
+    return NULL;
+}
 
 // static inline
 void*_Null_unspecified
@@ -121,7 +122,7 @@ alloc(size_t size, size_t alignment){
     if(b & (alignment-1)){
         b += alignment - (b & (alignment-1));
         _base_ptr = (unsigned char*)b;
-        }
+    }
     void* result = _base_ptr;
     _base_ptr += size;
     return result;
@@ -141,7 +142,7 @@ extern
 void
 reset_memory(void){
     _base_ptr = __heap_base;
-    }
+}
 
 void*_Nonnull
 malloc(size_t size){
@@ -153,7 +154,7 @@ calloc(size_t n_items, size_t item_size){
     void* result = malloc(n_items*item_size);
     memset(result, 0, n_items*item_size);
     return result;
-    }
+}
 
 void
 free(void* p){
@@ -169,16 +170,16 @@ typedef struct FILE FILE;
 int puts(const char* str){
     (void)str;
     return 0;
-    }
+}
 int fputs(const char* str, FILE*stream){
     (void)str;
     (void)stream;
     return 0;
-    }
+}
 int putchar(int c){
     (void)c;
     return c;
-    }
+}
 
 int
 fprintf(FILE*_Nonnull fp, const char*_Nonnull fmt, ...){
@@ -189,12 +190,12 @@ fprintf(FILE*_Nonnull fp, const char*_Nonnull fmt, ...){
 size_t fread(void* ptr, size_t size, size_t nitems, FILE* stream){
     (void)ptr, (void)size, (void)nitems, (void)stream;
     return 0;
-    }
+}
 
 void
 perror(const char* s){
     (void)s;
-    }
+}
 
 static
 void*
@@ -203,7 +204,7 @@ sane_realloc(void* p, size_t orig_size, size_t size){
     if(orig_size){
         memcpy(result, p, orig_size);
         free(p);
-        }
+    }
     return result;
 }
 
@@ -221,9 +222,10 @@ memcmp(const void* s1, const void* s2, size_t n){
         int diff = a - b;
         if(diff)
             return diff;
-        }
-    return 0;
     }
+    return 0;
+}
+
 int
 strcmp(const char* s1, const char* s2){
     const unsigned char* pa = s1;
@@ -236,9 +238,9 @@ strcmp(const char* s1, const char* s2){
             return diff;
         if(!a) // both are zero by the above comparison.
             return 0;
-        }
-    return 0;
     }
+    return 0;
+}
 
 void*
 memmove(void* dst, const void* src, size_t len){
@@ -250,10 +252,10 @@ memmove(void* dst, const void* src, size_t len){
         while(len--)
             *--d_end = *--s_end;
         return dst;
-        }
+    }
     else
         return memcpy(dst, src, len);
-    }
+}
 
 #define stdout (FILE*)0xcafebabe
 #define stdin (FILE*)0xcafebabe

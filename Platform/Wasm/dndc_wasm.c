@@ -66,6 +66,7 @@ make_html(PString* source){
     return result;
 }
 
+#if 0
 extern
 PString*
 make_fragment(PString* source){
@@ -99,6 +100,7 @@ make_fragment(PString* source){
     PString* result = LongString_to_new_PString(output);
     return result;
 }
+#endif
 
 extern
 PString*
@@ -130,6 +132,7 @@ format_dnd(PString* source){
     return result;
 }
 
+#if 0
 printf_func(5, 6)
 static
 void logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, ...){
@@ -144,3 +147,4 @@ void logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, 
     msb_nul_terminate(&msb);
     log_string(buff, msb.cursor);
 }
+#endif
