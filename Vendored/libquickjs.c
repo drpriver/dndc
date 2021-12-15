@@ -48,3 +48,41 @@
 #endif
 
 #include "quickjs/quickjs.c"
+
+//
+// NOTE(dpriver): This was not originally in quickjs
+// I added it so I could implement logging
+//
+QJS_API
+int
+JS_get_caller_location(QJSContext* ctx, const char** filename, const char** funcname, int* line_num){
+    JSStackFrame* sf = ctx->rt->current_stack_frame;
+    if(sf == NULL)
+        return -1;
+    sf = sf->prev_frame;
+    if(sf == NULL)
+        return -1;
+    if(funcname)
+        *funcname = get_func_name(ctx, sf->cur_func);
+    JSObject* p = JS_VALUE_GET_OBJ(sf->cur_func);
+    if(js_class_has_bytecode(p->class_id)){
+        JSFunctionBytecode* b = p->u.func.function_bytecode;
+        if(b->has_debug) {
+            if(line_num)
+                *line_num = find_line_num(ctx, b, sf->cur_pc - b->byte_code_buf - 1);
+            if(filename)
+                *filename = JS_AtomToCString(ctx, b->debug.filename);
+        }
+    }
+    return 0;
+}
+
+//
+// NOTE(dpriver): This not being exposed was super
+// annoying.
+//
+QJS_API
+QJSValue
+JS_ArrayPush(QJSContext *ctx, QJSValueConst this_val, int argc, QJSValueConst *argv){
+    return js_array_push(ctx, this_val, argc, argv, 0);
+}
