@@ -182,7 +182,7 @@ uint32_to_str_buffer(char*  buff, uint32_t value){
         value /= 100;
         uint32_t last_two_digits = old - 100*value; // Will always be in range of [00, 99]
         memcpy(p, &ZERO_TO_NINETY_NINE[last_two_digits], sizeof(uint16_t));
-        }
+    }
     p -= 2;
     // Value is < 100 at this point.
     memcpy(p, &ZERO_TO_NINETY_NINE[value], sizeof(uint16_t));
@@ -191,7 +191,23 @@ uint32_to_str_buffer(char*  buff, uint32_t value){
     // Also note, that in the exact case that value == 0, we write 00
     // and then return a pointer to the second 0.
     return p+(value < 10);
-    }
+}
+
+// Buff must be at least 11 chars long.
+static
+void
+uint32_to_ascii(char* buff, size_t bufsize, uint32_t value){
+    char tmp[10];
+    char* begin = uint32_to_str_buffer(tmp, value);
+    ptrdiff_t length = (tmp+10) - begin;
+    if(bufsize < length)
+        length = bufsize;
+    memcpy(buff, begin, length);
+    if(bufsize > length+1)
+        buff[length] = 0;
+    else
+        buff[bufsize-1] = 0;
+}
 
 // Just do the same for u64
 // There might be a faster way to do this? It kind of depends on your prior for
@@ -221,7 +237,7 @@ uint64_to_str_buffer(char*  buff, uint64_t value){
         value /= 100;
         uint64_t last_two_digits = old - 100*value; // Will always be in range of [00, 99]
         memcpy(p, &ZERO_TO_NINETY_NINE[last_two_digits], sizeof(uint16_t));
-        }
+    }
     p -= 2;
     // Value is < 100 at this point.
     memcpy(p, &ZERO_TO_NINETY_NINE[value], sizeof(uint16_t));
@@ -230,7 +246,50 @@ uint64_to_str_buffer(char*  buff, uint64_t value){
     // Also note, that in the exact case that value == 0, we write 00
     // and then return pointer to the second 0.
     return p+(value < 10);
+}
+
+
+// buff must be at least 21 long
+static
+void
+uint64_to_ascii(char* buff, size_t bufsize, uint64_t value){
+    if(!bufsize) return;
+    char tmp[20];
+    char* begin = uint64_to_str_buffer(tmp, value);
+    ptrdiff_t length = (tmp+20)-begin;
+    if(bufsize < length)
+        length = bufsize;
+    memcpy(buff, begin, length);
+    if(bufsize > length+1)
+        buff[length] = 0;
+    else
+        buff[bufsize-1] = 0;
+}
+
+// Does NOT include prefix.
+// always pads to 4 characters
+// buff should be 4 characters long
+static
+void
+uint16_to_hex(char* buff, uint16_t value){
+    const char* hexstring = "0123456789aabcdef";
+    uint64_t v = value;
+    for(int i = 3; i >= 0; i--){
+        *buff++ = hexstring[(v >> i*4) &0xf];
     }
+}
+// Does NOT include prefix.
+// always pads to 8 characters
+// buff should be 8 characters long
+static
+void
+uint32_to_hex(char* buff, uint32_t value){
+    const char* hexstring = "0123456789aabcdef";
+    uint64_t v = value;
+    for(int i = 7; i >= 0; i--){
+        *buff++ = hexstring[(v >> i*4) &0xf];
+    }
+}
 
 static inline
 void
@@ -238,18 +297,18 @@ msb_write_int32(MStringBuilder* sb, int32_t value){
     if(value == INT32_MIN){
         msb_write_literal(sb, "-2147483648");
         return;
-        }
+    }
     char buff[10];
     if(value < 0){
         msb_write_char(sb, '-');
         value = -value;
-        }
+    }
     char* p = uint32_to_str_buffer(buff, value);
     ptrdiff_t size = (buff+10) - p;
     _check_msb_remaining_size(sb, size);
     memcpy(sb->data+sb->cursor, p, size);
     sb->cursor += size;
-    }
+}
 
 static inline
 void
@@ -257,18 +316,18 @@ msb_write_int64(MStringBuilder* sb, int64_t value){
     if(value == INT64_MIN){
         msb_write_literal(sb, "-9223372036854775808");
         return;
-        }
+    }
     if(value < 0){
         msb_write_char(sb, '-');
         value = -value;
-        }
+    }
     char buff[20];
     char* p = uint64_to_str_buffer(buff, value);
     ptrdiff_t size = (buff+20) - p;
     _check_msb_remaining_size(sb, size);
     memcpy(sb->data+sb->cursor, p, size);
     sb->cursor += size;
-    }
+}
 
 static inline
 void
@@ -331,7 +390,7 @@ msb_write_uint64(MStringBuilder* sb, uint64_t value){
     _check_msb_remaining_size(sb, size);
     memcpy(sb->data+sb->cursor, p, size);
     sb->cursor += size;
-    }
+}
 
 static inline
 force_inline
