@@ -733,7 +733,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
             auto this_char = r.location?[self.string characterAtIndex:r.location-1]:'\0';
             // how far into the line the current selection is
             auto rel = r.location - currentLineRange.location;
-            if(rel and !(rel & 1) and this_char == ' ' and rel <= indent_matched.range.length){
+            if(rel && !(rel & 1) && this_char == ' ' && rel <= indent_matched.range.length){
                     [super deleteBackward:sender];
                     [super deleteBackward:sender];
                     [self display];
@@ -846,7 +846,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     auto method = [request HTTPMethod];
     // Handle the click helper for adding rooms by clicking
     // on map.
-    if([method isEqualToString:@"POST"] and [url isEqual:[NSURL URLWithString:@"dnd:///roomclick"]]){
+    if([method isEqualToString:@"POST"] && [url isEqual:[NSURL URLWithString:@"dnd:///roomclick"]]){
         auto response = [[NSURLResponse alloc]
             initWithURL:request.mainDocumentURL
             MIMEType:@"text/plain"
@@ -860,7 +860,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         return;
     }
     if([method isEqualToString:@"GET"]){
-        if([[url scheme] isEqualToString:DND_SCHEME] and [[url path] isEqualToString:@"/scrollresto"]){
+        if([[url scheme] isEqualToString:DND_SCHEME] && [[url path] isEqualToString:@"/scrollresto"]){
         auto response = [[NSHTTPURLResponse alloc]
             initWithURL:(NSURL*)[NSURL URLWithString:DND_SCHEME_HOST]
              statusCode:200
@@ -1433,7 +1433,7 @@ BOOL show_stats;
         [self.view addSubview:scrollview];
         [self.view addSubview:webview];
     }
-    editor_on_left = not editor_on_left;
+    editor_on_left = ! editor_on_left;
     return;
 }
 -(void) toggle_editor:(id)sender{

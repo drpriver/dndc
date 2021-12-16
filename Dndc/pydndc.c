@@ -420,7 +420,7 @@ PyModuleDef pydndc = {
 PyMODINIT_FUNC _Nullable
 PyInit_pydndc(void){
     PyObject* mod = PyModule_Create(&pydndc);
-    if(not mod)
+    if(! mod)
         return NULL;
     if(PyType_Ready(&DndcPyFileCache_Type) != 0)
         return NULL;
@@ -498,9 +498,9 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
         return NULL;
     }
     PopDiagnostic();
-    if(error_reporter and error_reporter == Py_None)
+    if(error_reporter && error_reporter == Py_None)
         error_reporter = NULL;
-    if(error_reporter and !PyCallable_Check(error_reporter)){
+    if(error_reporter && !PyCallable_Check(error_reporter)){
         PyErr_SetString(PyExc_TypeError, "error_reporter must be a callable");
         return NULL;
     }
@@ -586,15 +586,15 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         PyErr_SetString(PyExc_ValueError, "flags argument contains illegal bits");
         return NULL;
     }
-    if(error_reporter and error_reporter == Py_None)
+    if(error_reporter && error_reporter == Py_None)
         error_reporter = NULL;
-    if(error_reporter and !PyCallable_Check(error_reporter)){
+    if(error_reporter && !PyCallable_Check(error_reporter)){
         PyErr_SetString(PyExc_TypeError, "error_reporter must be a callable");
         return NULL;
     }
-    if(file_cache and file_cache == Py_None)
+    if(file_cache && file_cache == Py_None)
         file_cache = NULL;
-    if(file_cache and !PyObject_IsInstance(file_cache, (PyObject*)&DndcPyFileCache_Type)){
+    if(file_cache && !PyObject_IsInstance(file_cache, (PyObject*)&DndcPyFileCache_Type)){
         PyErr_SetString(PyExc_TypeError, "file_cache must be a FileCache");
         return NULL;
     }

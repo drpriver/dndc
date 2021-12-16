@@ -30,6 +30,9 @@
 
 typedef struct WorkerThread WorkerThread;
 
+//
+// Callback for working with the tree right before rendering.
+// This is misleadingly named.
 typedef int (DndcPostParseAstFunc)(Nullable(void*)user_data, Nonnull(DndcContext*));
 
 //

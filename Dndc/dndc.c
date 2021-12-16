@@ -188,10 +188,12 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
     int result = 0;
     uint64_t flags = ctx->flags;
     // Setup the worker thread.
+    // NOTE: a pointer to this struct is sent to the worker thread, so if
+    //       you return before the thread is done, bad things will happen.
     BinaryJob job = {
         .b64cache = &ctx->b64cache,
     };
-    if(not (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME | DNDC_DONT_READ))){
+    if(! (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME | DNDC_DONT_READ))){
         // Populate a list of filepaths to load up in order
         // to pre-populate the cahce.
         Marray(NodeHandle)* img_nodes[] = {
@@ -209,8 +211,8 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
                     continue;
                 // Already absolute or we're relative to cwd, so
                 // keep it as is.
-                if(path_is_abspath(child->header) or !ctx->base_directory.length){
-                    if(not FileCache_has_file(job.b64cache, child->header)){
+                if(path_is_abspath(child->header) || !ctx->base_directory.length){
+                    if(! FileCache_has_file(job.b64cache, child->header)){
                         StringView* sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
                         *sv = child->header;
                     }
@@ -223,7 +225,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
                     msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
                     msb_append_path(&path_builder, child->header.text, child->header.length);
                     StringView path = msb_borrow_sv(&path_builder);
-                    if(not FileCache_has_file(job.b64cache, path)){
+                    if(! FileCache_has_file(job.b64cache, path)){
                         StringView* sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
                         *sv = msb_detach_sv(&path_builder);
                     }
@@ -293,6 +295,8 @@ run_the_dndc(uint64_t flags,
         Nullable(void*)ast_func_user_data,
         Nullable(WorkerThread*)worker
         ){
+    // Some flags imply other flags. Set those to simplify code that
+    // needs to check those conditions.
     if(flags & DNDC_REFORMAT_ONLY){
         flags |= DNDC_NO_COMPILETIME_JS;
     }
@@ -304,17 +308,27 @@ run_the_dndc(uint64_t flags,
         flags |= DNDC_DONT_INLINE_IMAGES;
         flags |= DNDC_DONT_READ;
     }
+    // Having const bools is easier to work with than ifdef-ing everywhere
+    // and the optimizer will strip out dead code anyway.
 #ifdef WASM
     const bool wasm = true;
 #else
     const bool wasm = false;
 #endif
     uint64_t t0 = get_t();
+    // The error code returned from this function. This function has a lot of
+    // resources it needs to manage, so it uses single-point-of-exit style.
+    // Use `goto success` or `goto cleanup` if you need to logically early
+    // return. (These are actually the same label at the moment, but it
+    // signals your intent more clearly).
     int result = 0;
     if(!source_path.length)
         source_path = SV("(string input)");
+    // Strings live for the entire duration of this function, so the linear
+    // arena allocator is appropriate.
     ArenaAllocator arena_allocator = {0};
     const Allocator string_allocator = {.type=ALLOCATOR_ARENA, ._data=&arena_allocator};
+    // General purpose allocation (nodes, attributes, etc.).
     ArenaAllocator main_arena = {0};
     const Allocator allocator = {.type=ALLOCATOR_ARENA, ._data=&main_arena};
     // The linear allocator is very useful for temporary allocations, like
@@ -349,13 +363,13 @@ run_the_dndc(uint64_t flags,
         .error_func = error_func,
         .error_user_data = error_user_data,
     };
-    MStringBuilder msb = {.allocator=ctx.allocator};
     ctx_add_builtins(&ctx);
     if(!source_text.text){
         report_system_error(&ctx, SV("String with no data given as input"));
         result = UNEXPECTED_END;
         goto cleanup;
     }
+    // Store the input text as a builtin so user scripts can access it.
     ctx_store_builtin_file(&ctx, source_path, source_text);
     // Quick and dirty estimate of how many nodes we will need.
     Marray_ensure_total(Node)(&ctx.nodes, ctx.allocator, source_text.length/10+1);
@@ -434,6 +448,7 @@ run_the_dndc(uint64_t flags,
     else {
         // Handle imports. Imports can import more imports, so don't use a FOR_EACH.
         uint64_t before_imports = get_t();
+        // for(size_t i = 0; i < ctx.imports.count; progbar("Imports", &i, ctx.imports.count)){
         for(size_t i = 0; i < ctx.imports.count; i++){
             NodeHandle handle = ctx.imports.data[i];
             // We parse into a different node and then swap the two.
@@ -612,7 +627,7 @@ run_the_dndc(uint64_t flags,
     // Render the nav block if we have one.
     {
         uint64_t before = get_t();
-        if(not NodeHandle_eq(ctx.navnode, INVALID_NODE_HANDLE))
+        if(! NodeHandle_eq(ctx.navnode, INVALID_NODE_HANDLE))
             build_nav_block(&ctx);
         uint64_t after =  get_t();
         report_time(&ctx, SV("Nav block building took: "), after-before);
@@ -757,7 +772,6 @@ run_the_dndc(uint64_t flags,
     // It's all over!
     success:;
     cleanup:;
-    msb_destroy(&msb);
     report_size(&ctx, SV("source_text.length = "), source_text.length);
     report_size(&ctx, SV("la_.high_water = "), la_.high_water);
     if(!wasm && !(flags & DNDC_NO_CLEANUP)){
@@ -1063,7 +1077,7 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
             endline = end;
         StringView stripped = lstripped_view(begin, endline-begin);
         ptrdiff_t indent = stripped.text - begin;
-        if(stripped.length and indent <= raw_indentation)
+        if(stripped.length && indent <= raw_indentation)
             which = GENERIC;
         if(which == JAVASCRIPT){
             dndc_analyze_syntax_js(&jsstyle, stripped, syntax_func, syntax_data, line, indent);
@@ -1073,7 +1087,7 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
         }
         else {
             const char* doublecolon = find_double_colon(stripped.text, stripped.length);
-            if(not doublecolon){
+            if(! doublecolon){
             }
             else {
                 StringView header = lstripped_view(stripped.text, doublecolon - stripped.text);
@@ -1133,7 +1147,7 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                                 break;
                             }
                             syntax_func(syntax_data, DNDC_SYNTAX_ATTRIBUTE, line, attrfirst-begin, attrfirst, postnodename-attrfirst);
-                            if(postnodename != endline and *postnodename == '('){
+                            if(postnodename != endline && *postnodename == '('){
                                 int parens = 1;
                                 postnodename++;
                                 const char* argfirst = postnodename;
@@ -1167,7 +1181,7 @@ dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullabl
                                 break;
                             }
                             syntax_func(syntax_data, DNDC_SYNTAX_DIRECTIVE, line, attrfirst-begin, attrfirst, postnodename-attrfirst);
-                            if(postnodename != endline and *postnodename == '('){
+                            if(postnodename != endline && *postnodename == '('){
                                 int parens = 1;
                                 postnodename++;
                                 const char* argfirst = postnodename;
@@ -1329,7 +1343,7 @@ dndc_analyze_syntax_js(struct JsStyleState* state, StringView line, DndcSyntaxFu
             case '-':
                 if(i < n && str[i] == c){
                     // -- or ++ token
-                    i++; 
+                    i++;
                     continue;
                 }
                 state->can_regex = 1;
@@ -1609,7 +1623,7 @@ dndc_analyze_syntax_js_utf16(struct JsStyleState* state, StringViewUtf16 line, D
             case u'-':
                 if(i < n && str[i] == c){
                     // -- or ++ token
-                    i++; 
+                    i++;
                     continue;
                 }
                 state->can_regex = 1;
@@ -1801,7 +1815,7 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
             endline = end;
         StringViewUtf16 stripped = lstripped_view_utf16(begin, endline-begin);
         ptrdiff_t indent = stripped.text - begin;
-        if(stripped.length and indent <= raw_indentation)
+        if(stripped.length && indent <= raw_indentation)
             which = GENERIC;
         if(which == JAVASCRIPT){
             dndc_analyze_syntax_js_utf16(&jsstyle, stripped, syntax_func, syntax_data, line, indent);
@@ -1811,7 +1825,7 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
         }
         else {
             const uint16_t* doublecolon = find_double_colon_utf16(stripped.text, stripped.length);
-            if(not doublecolon){
+            if(! doublecolon){
             }
             else {
                 StringViewUtf16 header = lstripped_view_utf16(stripped.text, doublecolon - stripped.text);
@@ -1871,7 +1885,7 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                                 break;
                             }
                             syntax_func(syntax_data, DNDC_SYNTAX_ATTRIBUTE, line, attrfirst-begin, attrfirst, postnodename-attrfirst);
-                            if(postnodename != endline and *postnodename == u'('){
+                            if(postnodename != endline && *postnodename == u'('){
                                 int parens = 1;
                                 postnodename++;
                                 const uint16_t* argfirst = postnodename;
@@ -1906,7 +1920,7 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
                                 break;
                             }
                             syntax_func(syntax_data, DNDC_SYNTAX_DIRECTIVE, line, attrfirst-begin, attrfirst, postnodename-attrfirst);
-                            if(postnodename != endline and *postnodename == u'('){
+                            if(postnodename != endline && *postnodename == u'('){
                                 int parens = 1;
                                 postnodename++;
                                 const uint16_t* argfirst = postnodename;

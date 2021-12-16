@@ -141,7 +141,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             if(unlikely(node->type != NODE_STYLESHEETS))
                 continue;
             if(node->flags & NODEFLAG_NOINLINE){
-                if(not written){
+                if(! written){
                     msb_erase(msb, sizeof("<style>\n")-1);
                 }
                 else {
@@ -940,7 +940,7 @@ RENDERFUNC(IMAGE){
         }
         StringView header = imgpath_node->header;
         msb_write_literal(sb, "<img src=\"dnd://");
-        if((not path_is_abspath(header)) and ctx->base_directory.length){
+        if((! path_is_abspath(header)) && ctx->base_directory.length){
             msb_write_str_with_backslashes_as_forward_slashes(sb, ctx->base_directory.text, ctx->base_directory.length);
             msb_write_char(sb, '/');
             msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);
@@ -1186,7 +1186,7 @@ RENDERFUNC(IMGLINKS){
     // FIXME: It's kind of janky that I parse at htmlgen time.
     StringView imgdatab64 = {0};
     NodeHandle* children = node_children(node);
-    if(not (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME))){
+    if(! (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME))){
         Node* imgpath_node = get_node(ctx, children[0]);
         if(imgpath_node->type != NODE_STRING){
             node_set_err(ctx, imgpath_node, LS("First should be a string and be the path to the image"));
@@ -1331,7 +1331,7 @@ RENDERFUNC(IMGLINKS){
             return PARSE_ERROR;
         }
         StringView header = imgpath_node->header;
-        if((not path_is_abspath(header)) and ctx->base_directory.length){
+        if((! path_is_abspath(header)) && ctx->base_directory.length){
             msb_write_str_with_backslashes_as_forward_slashes(sb, ctx->base_directory.text, ctx->base_directory.length);
             msb_write_char(sb, '/');
             msb_write_str_with_backslashes_as_forward_slashes(sb, header.text, header.length);

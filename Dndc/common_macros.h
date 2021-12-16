@@ -16,12 +16,6 @@
 #endif
 #endif
 
-#ifndef __cplusplus
-#define and &&
-#define or ||
-#define not !
-#endif
-
 #ifndef __clang__
 
 #ifndef _Nonnull

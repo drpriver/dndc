@@ -1183,7 +1183,7 @@ js_dndc_node_set_type(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst 
     int32_t type;
     if(JS_ToInt32(jsctx, &type, arg))
         return JS_ThrowTypeError(jsctx, "Expected an integer when trying to set node type");
-    if(type < 0 or type >= NODE_INVALID)
+    if(type < 0 || type >= NODE_INVALID)
         return JS_ThrowTypeError(jsctx, "Integer out of range for valid node types.");
     switch(type){
         case NODE_NAV:
@@ -1522,7 +1522,7 @@ JSMETHOD(js_dndc_context_make_node){
     DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
     if(!ctx)
         return JS_EXCEPTION;
-    if(argc == 0 or argc > 2)
+    if(argc == 0 || argc > 2)
         return JS_ThrowTypeError(jsctx, "Need type arg and an optional options obj as arguments to make_node");
     QJSValueConst obj = argc == 1? JS_UNDEFINED:argv[1];
     int32_t type;

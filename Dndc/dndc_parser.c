@@ -521,7 +521,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                 const char* directive_start = aftertype.text;
                 while(aftertype.length){
                     char first = aftertype.text[0];
-                    if(first == ' ' or first == '\t' or first == '@' or first == '.' or first == '#' or first == '(')
+                    if(first == ' ' || first == '\t' || first == '@' || first == '.' || first == '#' || first == '(')
                         break;
                     advance_sv(&aftertype);
                 }
@@ -596,7 +596,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                 const char* class_start = aftertype.text;
                 while(aftertype.length){
                     char first = aftertype.text[0];
-                    if(first == ' ' or first == '\t' or first == '@' or first == '.' or first == '#')
+                    if(first == ' ' || first == '\t' || first == '@' || first == '.' || first == '#')
                         break;
                     advance_sv(&aftertype);
                 }
@@ -614,7 +614,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                 const char* attribute_start = aftertype.text;
                 while(aftertype.length){
                     char first = aftertype.text[0];
-                    if(first == ' ' or first == '\t' or first == '@' or first == '.' or first == '(' or first == '#')
+                    if(first == ' ' || first == '\t' || first == '@' || first == '.' || first == '(' || first == '#')
                         break;
                     advance_sv(&aftertype);
                 }
@@ -662,7 +662,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                 attr->value = SV("");
                 if(aftertype.length){
                     eat_leading_tabspaces(&aftertype);
-                    if(aftertype.length and aftertype.text[0] == '('){
+                    if(aftertype.length && aftertype.text[0] == '('){
                         size_t n_parens = 1;
                         advance_sv(&aftertype);
                         const char* valstart = aftertype.text;
@@ -883,7 +883,7 @@ PARSEFUNC(parse_raw_node){
     int leading_indent = 0;
     for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
-        if(!have_leading_indent and ctx->linestart+ctx->nspaces != ctx->line_end){
+        if(!have_leading_indent && ctx->linestart+ctx->nspaces != ctx->line_end){
             leading_indent = ctx->nspaces;
             have_leading_indent = true;
         }
@@ -1006,7 +1006,7 @@ PARSEFUNC(parse_keyvalue_node){
             if(e) return e;
             continue;
         }
-        if(not NodeHandle_eq(previous_value, INVALID_NODE_HANDLE)){
+        if(! NodeHandle_eq(previous_value, INVALID_NODE_HANDLE)){
             if(ctx->nspaces > previous_kv_indentation){
                 if(!previous_value_was_converted){
                     convert_node_to_container_containing_clone_of_former_self(ctx, previous_value);
@@ -1069,7 +1069,7 @@ PARSEFUNC(parse_bullets_node){
         }
         const char* firstchar = ctx->linestart+ctx->nspaces;
         char first = *firstchar;
-        if(first != '*' and first != '+' and first != '-'){
+        if(first != '*' && first != '+' && first != '-'){
             parse_set_err_q(ctx, firstchar, SV("Bullets must begin with one of *-+, got "), (StringView){.text=firstchar, .length=1});
             return PARSE_ERROR;
         }
@@ -1107,7 +1107,7 @@ PARSEFUNC(parse_bullet_node){
         }
         const char* firstchar = ctx->linestart + ctx->nspaces;
         char first = *firstchar;
-        if(first == '*' or first == '+' or first == '-'){
+        if(first == '*' || first == '+' || first == '-'){
             NodeHandle new_index = alloc_handle(ctx);
             init_node(ctx, new_index, firstchar, NODE_BULLETS);
             append_child(ctx, parent_handle, new_index);
@@ -1210,7 +1210,7 @@ PARSEFUNC(parse_md_node){
         }
         after:;
         assert(newstate != NONE);
-        if(newstate == BULLET or newstate == LIST){
+        if(newstate == BULLET || newstate == LIST){
             if(si == -1){
                 si = 0;
                 struct StackItem* s = &stack[si];
@@ -1301,7 +1301,7 @@ PARSEFUNC(parse_md_node){
             continue;
         }
         assert(newstate == PARA);
-        if(state == PARA or state == NONE or ctx->nspaces == normal_indent){
+        if(state == PARA || state == NONE || ctx->nspaces == normal_indent){
             if(state != PARA){
                 para_handle = alloc_handle(ctx);
                 init_node(ctx, para_handle, ctx->linestart+ctx->nspaces, NODE_PARA);

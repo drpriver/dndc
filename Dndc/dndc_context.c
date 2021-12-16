@@ -194,7 +194,7 @@ void
 node_print_err(DndcContext* ctx, const Node* node, LongString msg){
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
-    if(not ctx->error_func)
+    if(! ctx->error_func)
         return;
     StringView filename = ctx->filenames.data[node->filename_idx];
     int lineno = node->row;
@@ -209,7 +209,7 @@ node_print_warning(DndcContext* ctx, const Node* node, StringView msg){
         return;
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
-    if(not ctx->error_func)
+    if(! ctx->error_func)
         return;
     StringView filename = ctx->filenames.data[node->filename_idx];
     int lineno = node->row;
@@ -224,7 +224,7 @@ node_print_warning2(DndcContext* ctx, const Node* node, StringView a, StringView
         return;
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
-    if(not ctx->error_func)
+    if(! ctx->error_func)
         return;
     StringView filename = ctx->filenames.data[node->filename_idx];
     int lineno = node->row;
@@ -240,9 +240,9 @@ node_print_warning2(DndcContext* ctx, const Node* node, StringView a, StringView
 static
 void
 report_time(DndcContext* ctx, StringView msg, uint64_t microseconds){
-    if(not (ctx->flags & DNDC_PRINT_STATS))
+    if(! (ctx->flags & DNDC_PRINT_STATS))
         return;
-    if(not ctx->error_func)
+    if(! ctx->error_func)
         return;
     MStringBuilder temp = {.allocator=ctx->temp_allocator};
     msb_write_str(&temp, msg.text, msg.length);
@@ -255,18 +255,18 @@ report_time(DndcContext* ctx, StringView msg, uint64_t microseconds){
 static
 void
 report_info(DndcContext* ctx, StringView msg){
-    if(not (ctx->flags & DNDC_PRINT_STATS))
+    if(! (ctx->flags & DNDC_PRINT_STATS))
         return;
-    if(not ctx->error_func)
+    if(! ctx->error_func)
         return;
     ctx->error_func(ctx->error_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, msg.text, msg.length);
 }
 static
 void
 report_size(DndcContext* ctx, StringView msg, uint64_t size){
-    if(not (ctx->flags & DNDC_PRINT_STATS))
+    if(! (ctx->flags & DNDC_PRINT_STATS))
         return;
-    if(not ctx->error_func)
+    if(! ctx->error_func)
         return;
     MStringBuilder temp = {.allocator=ctx->temp_allocator};
     msb_write_str(&temp, msg.text, msg.length);
@@ -281,7 +281,7 @@ void
 report_set_error(DndcContext* ctx){
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
-    if(not ctx->error_func)
+    if(! ctx->error_func)
         return;
     ctx->error_func(ctx->error_user_data, DNDC_ERROR_MESSAGE, ctx->error.filename.text, ctx->error.filename.length, ctx->error.line, ctx->error.col, ctx->error.message.text, ctx->error.message.length);
 }
@@ -291,7 +291,7 @@ void
 report_system_error(DndcContext* ctx, StringView msg){
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
-    if(not ctx->error_func)
+    if(! ctx->error_func)
         return;
     ctx->error_func(ctx->error_user_data, DNDC_NODELESS_MESSAGE, "", 0, 0, 0, msg.text, msg.length);
 }
@@ -332,7 +332,7 @@ ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
     }
     assert(sourcepath.length);
 
-    if(not path_is_abspath(sourcepath) && ctx->base_directory.length){
+    if(! path_is_abspath(sourcepath) && ctx->base_directory.length){
         msb_write_str(&temp_builder, ctx->base_directory.text, ctx->base_directory.length);
         msb_append_path(&temp_builder, sourcepath.text, sourcepath.length);
         sourcepath = msb_borrow_sv(&temp_builder);
@@ -353,7 +353,7 @@ static
 StringViewResult
 ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath){
     MStringBuilder path_builder = {.allocator=ctx->temp_allocator};
-    if(not path_is_abspath(binarypath) && ctx->base_directory.length){
+    if(! path_is_abspath(binarypath) && ctx->base_directory.length){
         msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
         msb_append_path(&path_builder, binarypath.text, binarypath.length);
         binarypath = msb_borrow_sv(&path_builder);
