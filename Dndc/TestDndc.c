@@ -118,9 +118,7 @@ TestFunction(TestImgAttributes){
     );
     LongString expected = LS(
             "<div>\n"
-            "<div>\n"
             "<img src=\"SomeImg.png\" width=\"600\" height=\"800\" alt=\"&quot;Hello World!&quot;\">\n"
-            "</div>\n"
             "</div>\n"
             );
     uint64_t flags = DNDC_FLAGS_NONE
@@ -165,7 +163,6 @@ TestFunction(TestDndcOutParam){
             "<title>Hello</title>\n"
             "</head>\n"
             "<body>\n"
-            "<div>\n"
             "<h1 id=\"hello\">Hello</h1>\n"
             "<div>\n"
             "<ul>\n"
@@ -178,7 +175,6 @@ TestFunction(TestDndcOutParam){
             "</ul>\n"
             "</div>\n"
             "hello\n"
-            "</div>\n"
             "</body>\n"
             "</html>\n");
         TestExpectEquals(expected.length, outdata.length);
@@ -214,7 +210,6 @@ TestFunction(TestDndcFragment){
             "<style>\n"
             "p { color: blue;}\n"
             "</style>\n"
-            "<div>\n"
             "<h1 id=\"hello\">Hello</h1>\n"
             "<div>\n"
             "<ul>\n"
@@ -227,7 +222,6 @@ TestFunction(TestDndcFragment){
             "</ul>\n"
             "</div>\n"
             "hello\n"
-            "</div>\n"
             );
         TestExpectEquals(expected.length, outdata.length);
         TestExpectEquals2(LS_equals, expected, outdata);
@@ -269,7 +263,6 @@ TestFunction(TestDndcTableMultiline){
             "</head>\n"
             "<body>\n"
             "<div>\n"
-            "<div>\n"
             "<table>\n"
             "<thead>\n"
             "<tr>\n"
@@ -304,7 +297,6 @@ TestFunction(TestDndcTableMultiline){
             "</td>\n"
             "</tr>\n"
             "</tbody></table>\n"
-            "</div>\n"
             "</div>\n"
             "</body>\n"
             "</html>\n"
@@ -653,7 +645,7 @@ TestFunction(TestSpecialChars){
         LongString output = {};
         int e = run_the_dndc(flags, SV(""), testcases[i].source, SV(""), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
         TestAssertFalse(e);
-        if(!TestExpectEquals2(SV_equals, sv_slice(LS_to_SV(output), 198, testcases[i].result.length), testcases[i].result)){
+        if(!TestExpectEquals2(SV_equals, sv_slice(LS_to_SV(output), 192, testcases[i].result.length), testcases[i].result)){
             TestPrintValue("output", output);
         }
         dndc_free_string(output);

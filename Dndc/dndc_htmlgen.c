@@ -65,7 +65,7 @@ render_node(DndcContext* ctx, MStringBuilder* restrict sb, NodeHandle handle, in
 #else
     return RENDERFUNCS[node->type](ctx, sb, handle, header_depth);
 #endif
-    }
+}
 
 static
 warn_unused
@@ -212,16 +212,26 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
         msb_write_literal(msb, "</head>\n");
         msb_write_literal(msb, "<body>\n");
     }
-    Node* root_node = get_node(ctx, ctx->root_handle);
+    NodeHandle root_handle = ctx->root_handle;
+    Node* root_node = get_node(ctx, root_handle);
     // elide useless wrapper div.
     if(root_node->type == NODE_MD && node_children_count(root_node) == 1){
         if(!root_node->attributes && !root_node->classes){
             Node* child = get_node(ctx, node_children(root_node)[0]);
             if(child->type == NODE_DIV || child->type == NODE_MD)
-                root_node = child;
+                root_handle = node_children(root_node)[0];
         }
     }
-    int e = render_node(ctx, msb, ctx->root_handle, 1);
+    root_node = get_node(ctx, root_handle);
+    NodeType oldtype = root_node->type;
+    if(oldtype == NODE_DIV || oldtype == NODE_MD){
+        if(!root_node->attributes && !root_node->classes && !root_node->header.length){
+            root_node->type = NODE_CONTAINER;
+        }
+    }
+    int e = render_node(ctx, msb, root_handle, 1);
+    root_node = get_node(ctx, root_handle);
+    root_node->type = oldtype;
     if(e) return e;
     if(complete_document){
         msb_write_literal(msb,

@@ -82,7 +82,7 @@ void print_error(const wchar_t* where_failed){
 
     LocalFree(MsgBuf);
     LocalFree(DisplayBuf);
-    }
+}
 #else
 #define print_error(mess) (void)mess
 #endif
@@ -127,7 +127,7 @@ make_windows_string_from_utf8_string(const char* text){
     wchar_t* result = (wchar_t*)malloc(n_needed * sizeof(*result));
     if(!result){
         return {NULL, 0};
-        }
+    }
     int n_written = MultiByteToWideChar(CP_UTF8, 0, text, -1, result, n_needed);
     return {result, (size_t)n_written};
 }
@@ -157,18 +157,19 @@ thread_worker(void*){
         if(worker_data.should_quit){
             LeaveCriticalSection(&worker_data.lock);
             return 0;
-            }
+        }
         LeaveCriticalSection(&worker_data.lock);
         if(text){
             StringView source = {.length=strlen(text), .text=text};
             LongString output = {};
-            int fail = dndc_compile_dnd_file(DNDC_FLAGS_NONE
-                    | DNDC_ALLOW_BAD_LINKS
-                    | DNDC_NO_THREADS
-                    | DNDC_STRIP_WHITESPACE
-                    | DNDC_DONT_PRINT_ERRORS
-                    | DNDC_SUPPRESS_WARNINGS
-                    ,
+            uint64_t flags =  DNDC_FLAGS_NONE
+                            | DNDC_ALLOW_BAD_LINKS
+                            | DNDC_NO_THREADS
+                            | DNDC_STRIP_WHITESPACE
+                            | DNDC_DONT_PRINT_ERRORS
+                            | DNDC_SUPPRESS_WARNINGS
+                            ;
+            int fail = dndc_compile_dnd_file( flags,
                     SV(""),
                     source,
                     SV(""),
@@ -184,35 +185,35 @@ thread_worker(void*){
                     );
             if(!fail){
                 {
-                auto fh = CreateFileW(L"D:/DndC/html/foo.html", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-                if(fh != INVALID_HANDLE_VALUE){
-                    DWORD bytes_written;
-                    BOOL write_success = WriteFile(
-                            fh,
-                            output.text,
-                            output.length,
-                            &bytes_written,
-                            NULL);
-                    assert(bytes_written == output.length);
-                    (void)bytes_written;
-                    (void)write_success;
-                    CloseHandle(fh);
-                    PostMessage(mainwindow, WM_USER, 0, 0);
+                    auto fh = CreateFileW(L"D:/DndC/html/foo.html", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+                    if(fh != INVALID_HANDLE_VALUE){
+                        DWORD bytes_written;
+                        BOOL write_success = WriteFile(
+                                fh,
+                                output.text,
+                                output.length,
+                                &bytes_written,
+                                NULL);
+                        assert(bytes_written == output.length);
+                        (void)bytes_written;
+                        (void)write_success;
+                        CloseHandle(fh);
+                        PostMessage(mainwindow, WM_USER, 0, 0);
                     }
-                else {
-                    print_error(L"Failed to write the html");
+                    else {
+                        print_error(L"Failed to write the html");
                     }
                 }
                 dndc_free_string(output);
-                }
+            }
             else {
                 // MessageBox(NULL, TEXT("Unable to compile the dndc file"), TEXT("Error"), MB_OK);
-                }
-            free((void*)text);
             }
+            free((void*)text);
         }
-    return 0;
     }
+    return 0;
+}
 
 static
 void
@@ -220,11 +221,11 @@ set_text(const char* text){
     EnterCriticalSection(&worker_data.lock);
     if(worker_data.text){
         free((void*)worker_data.text);
-        }
+    }
     worker_data.text = text;
     LeaveCriticalSection(&worker_data.lock);
     WakeConditionVariable(&worker_data.cond);
-    }
+}
 
 enum {
     IDM_MESSAGE_BASE = 40000,
@@ -253,7 +254,7 @@ int main(){
     HINSTANCE app_instance = GetModuleHandle(NULL);
     LoadLibraryW(L"Msftedit.dll");
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-	WNDCLASSEX wcex = {
+	WNDCLASSEXW wcex = {
         .cbSize = sizeof(WNDCLASSEX),
         .style = CS_HREDRAW | CS_VREDRAW,
         .lpfnWndProc = WndProc,
@@ -270,7 +271,7 @@ int main(){
 	}
 
 	// Store instance handle in our global variable
-	mainwindow = CreateWindow(
+	mainwindow = CreateWindowW(
 		win_class,  // name of app
 		title,      // title bar text
 		WS_OVERLAPPEDWINDOW, // window style
@@ -307,103 +308,108 @@ int main(){
 LRESULT
 CALLBACK
 WndProc(HWND mainwindow_handle, UINT message, WPARAM wParam, LPARAM lParam){
-	switch(message){
-    case WM_CREATE:{
-        RECT bounds;
-        GetClientRect(mainwindow_handle, &bounds);
-        textedit_handle = CreateWindowEx(0,
-                MSFTEDIT_CLASS,
-                NULL,
-            ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP,
-            0, 0, TEXTEDIT_WIDTH, 0,
-            mainwindow_handle, (HMENU)ID_EDIT, ((CREATESTRUCT*)lParam)->hInstance, NULL);
-        CHARFORMATW fmt1 = {
-            .cbSize = sizeof(fmt1),
-            .dwMask = CFM_FACE,
-            // .szFaceName = L"Consolas",
-            .szFaceName = L"Cascadia Mono",
-            };
-        LRESULT font_success = SendMessage(textedit_handle, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&fmt1);
-        if(!font_success){
-            CHARFORMATW fmt2 = {
-                .cbSize = sizeof(fmt2),
+    switch(message){
+        case WM_CREATE:{
+            RECT bounds;
+            GetClientRect(mainwindow_handle, &bounds);
+            textedit_handle = CreateWindowEx(0,
+                    MSFTEDIT_CLASS,
+                    NULL,
+                    ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP,
+                    0, 0, TEXTEDIT_WIDTH, 0,
+                    mainwindow_handle, (HMENU)ID_EDIT, ((CREATESTRUCT*)lParam)->hInstance, NULL);
+            CHARFORMATW fmt1 = {
+                .cbSize = sizeof(fmt1),
                 .dwMask = CFM_FACE,
-                .szFaceName = L"Consolas",  // I think Consolas is guaranteed to be installed?
+                // .szFaceName = L"Consolas",
+                .szFaceName = L"Cascadia Mono",
+            };
+            LRESULT font_success = SendMessage(textedit_handle, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&fmt1);
+            if(!font_success){
+                CHARFORMATW fmt2 = {
+                    .cbSize = sizeof(fmt2),
+                    .dwMask = CFM_FACE,
+                    .szFaceName = L"Consolas",  // I think Consolas is guaranteed to be installed?
                 };
-            font_success = SendMessage(textedit_handle, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&fmt2);
+                font_success = SendMessage(textedit_handle, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&fmt2);
             }
-        SendMessage(textedit_handle, EM_SETEVENTMASK, 0, ENM_CHANGE);
-        if(webviewController != nullptr){
-            bounds.left += TEXTEDIT_WIDTH;
-            webviewController->put_Bounds(bounds);
-        }
-        PostMessage(mainwindow_handle, WM_USER+1, 0, 0);
+            SendMessage(textedit_handle, EM_SETEVENTMASK, 0, ENM_CHANGE);
+            if(webviewController != nullptr){
+                bounds.left += TEXTEDIT_WIDTH;
+                webviewController->put_Bounds(bounds);
+            }
+            PostMessage(mainwindow_handle, WM_USER+1, 0, 0);
         }return 0;
 
-    case WM_SETFOCUS:{
-        SetFocus(textedit_handle);
+        case WM_SETFOCUS:{
+            SetFocus(textedit_handle);
         }return 0;
-    case WM_USER+1:{
-        choose_open_file(textedit_handle);
+
+        case WM_USER+1:{
+            choose_open_file(textedit_handle);
         }return 0;
-    case WM_USER:{
-        if(webviewWindow)
-            webviewWindow->ExecuteScript(L"location.reload();", NULL);
+
+        case WM_USER:{
+            if(webviewWindow)
+                webviewWindow->ExecuteScript(L"location.reload();", NULL);
         }return 0;
-    case WM_COMMAND:{
-        switch(LOWORD(wParam)){
-            case ID_EDIT:{
-                switch(HIWORD(wParam)){
-                    case EN_CHANGE:{
-                        handle_edit((HWND)lParam);
+
+        case WM_COMMAND:{
+            switch(LOWORD(wParam)){
+                case ID_EDIT:{
+                    switch(HIWORD(wParam)){
+                        case EN_CHANGE:{
+                            handle_edit((HWND)lParam);
                         }break;
                     }
                 }break; // fallthrough to defwindowproc
-            case IDM_FILE_NEW:{
+                case IDM_FILE_NEW:{
                 }return 0;
-            case IDM_FILE_OPEN:{
-                choose_open_file(textedit_handle);
+                case IDM_FILE_OPEN:{
+                    choose_open_file(textedit_handle);
                 }return 0;
-            case IDM_FILE_SAVE:{
-                save_file(textedit_handle);
+                case IDM_FILE_SAVE:{
+                    save_file(textedit_handle);
                 }return 0;
-            case IDM_FILE_SAVE_AS:{
-                save_as_file(textedit_handle);
+                case IDM_FILE_SAVE_AS:{
+                    save_as_file(textedit_handle);
                 }return 0;
-            case IDM_EDIT_UNDO:
-                SendMessage(textedit_handle, WM_UNDO, 0, 0);
-                return 0;
-            case IDM_EDIT_REDO:
-                SendMessage(textedit_handle, EM_REDO, 0, 0);
-                return 0;
-            case IDM_EDIT_CUT:
-                SendMessage(textedit_handle, WM_CUT, 0, 0);
-                return 0;
-            case IDM_EDIT_COPY:
-                SendMessage(textedit_handle, WM_COPY, 0, 0);
-                return 0;
-            case IDM_EDIT_PASTE:
-                SendMessage(textedit_handle, WM_PASTE, 0, 0);
-                return 0;
-            case IDM_APP_EXIT:
-                SendMessage(mainwindow_handle, WM_CLOSE, 0, 0);
-                return 0;
-            case IDM_FORMAT_FONT:
-                choose_font(textedit_handle);
-                return 0;
+                case IDM_EDIT_UNDO:
+                    SendMessage(textedit_handle, WM_UNDO, 0, 0);
+                    return 0;
+                case IDM_EDIT_REDO:
+                    SendMessage(textedit_handle, EM_REDO, 0, 0);
+                    return 0;
+                case IDM_EDIT_CUT:
+                    SendMessage(textedit_handle, WM_CUT, 0, 0);
+                    return 0;
+                case IDM_EDIT_COPY:
+                    SendMessage(textedit_handle, WM_COPY, 0, 0);
+                    return 0;
+                case IDM_EDIT_PASTE:
+                    SendMessage(textedit_handle, WM_PASTE, 0, 0);
+                    return 0;
+                case IDM_APP_EXIT:
+                    SendMessage(mainwindow_handle, WM_CLOSE, 0, 0);
+                    return 0;
+                case IDM_FORMAT_FONT:
+                    choose_font(textedit_handle);
+                    return 0;
             }
         }break; // default
-	case WM_SIZE:{
-        RECT bounds;
-        GetClientRect(mainwindow_handle, &bounds);
-        if(webviewController != nullptr){
-            bounds.left += TEXTEDIT_WIDTH;
-            webviewController->put_Bounds(bounds);
-        }
-        MoveWindow(textedit_handle, 0, 0, TEXTEDIT_WIDTH, HIWORD(lParam), TRUE);
+
+        case WM_SIZE:{
+            RECT bounds;
+            GetClientRect(mainwindow_handle, &bounds);
+            if(webviewController != nullptr){
+                bounds.left += TEXTEDIT_WIDTH;
+                webviewController->put_Bounds(bounds);
+            }
+            MoveWindow(textedit_handle, 0, 0, TEXTEDIT_WIDTH, HIWORD(lParam), TRUE);
         }return 0;
-	case WM_DESTROY:{
-		PostQuitMessage(0);
+
+        case WM_DESTROY:{
+            PostQuitMessage(0);
         }return 0;
     }
     return DefWindowProc(mainwindow_handle, message, wParam, lParam);
@@ -442,14 +448,14 @@ make_menus(HWND window){
 
 	ShowWindow(window, SW_SHOWDEFAULT);
 	UpdateWindow(window);
-    }
+}
 
 static
 void
 handle_edit(HWND textedit){
     auto text = get_utf8_string_from_window(textedit);
     set_text(text.text);
-    }
+}
 
 static
 void
@@ -462,19 +468,23 @@ choose_open_file(HWND textedit){
         .nFilterIndex = 1,
         .lpstrFile = filestr,
         .nMaxFile = 1024,
-        .Flags = OFN_CREATEPROMPT | OFN_EXPLORER | OFN_NOREADONLYRETURN | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST,
+        .Flags =  OFN_CREATEPROMPT
+                | OFN_EXPLORER
+                | OFN_NOREADONLYRETURN
+                | OFN_PATHMUSTEXIST
+                | OFN_FILEMUSTEXIST,
         .lpstrDefExt = L"dnd",
-        };
+    };
     BOOL ok_clicked = GetOpenFileNameW(&openfilename);
     if(ok_clicked){
         auto handle = CreateFileW(
-            filestr,
-            GENERIC_READ,
-            FILE_SHARE_READ,
-            NULL,
-            OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL,
-            NULL);
+                filestr,
+                GENERIC_READ,
+                FILE_SHARE_READ,
+                NULL,
+                OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL,
+                NULL);
         if(handle != INVALID_HANDLE_VALUE){
             LARGE_INTEGER size;
             BOOL size_success = GetFileSizeEx(handle, &size);
@@ -493,46 +503,47 @@ choose_open_file(HWND textedit){
                         static_assert(sizeof(filepath) == sizeof(filestr));
                         memcpy(filepath, filestr, sizeof(filestr));
                         free(ws.text);
-                        }
                     }
-                free(text);
                 }
+                free(text);
             }
-        CloseHandle(handle);
         }
+        CloseHandle(handle);
     }
+}
 
 static
 bool
 save_file(HWND textedit){
     if(!filepath[0]){
         return save_as_file(textedit);
-        }
+    }
     auto text = get_utf8_string_from_window(textedit);
     WinString path = {.text=filepath, .nchars_with_zero = wcslen(filepath)+1};
     auto result = sortof_atomically_write_file(text, path);
     free((void*)text.text);
     return result;
-    }
+}
+
 static
 bool
 sortof_atomically_write_file(LongString text, WinString path){
     {
-    // First thing to do is to try to create the file if it does not exist.
-    // Only if it does exist do we try to overwrite it using ReplaceFile.
-    auto fh = CreateFileW(
-            path.text,
-            GENERIC_WRITE,
-            0,
-            NULL,
-            CREATE_NEW,
-            FILE_ATTRIBUTE_NORMAL,
-            NULL);
-    if(fh != INVALID_HANDLE_VALUE){
-        DWORD written;
-        auto success = WriteFile(fh, text.text, text.length, &written, NULL);
-        CloseHandle(fh);
-        return success? true : false;
+        // First thing to do is to try to create the file if it does not exist.
+        // Only if it does exist do we try to overwrite it using ReplaceFile.
+        auto fh = CreateFileW(
+                path.text,
+                GENERIC_WRITE,
+                0,
+                NULL,
+                CREATE_NEW,
+                FILE_ATTRIBUTE_NORMAL,
+                NULL);
+        if(fh != INVALID_HANDLE_VALUE){
+            DWORD written;
+            auto success = WriteFile(fh, text.text, text.length, &written, NULL);
+            CloseHandle(fh);
+            return success? true : false;
         }
     }
     // Ok, so we tried to create the file and failed. Therefore it already
@@ -541,7 +552,7 @@ sortof_atomically_write_file(LongString text, WinString path){
     wchar_t tmppath2[1024];
     if(path.nchars_with_zero > 1022){ // space for '\0' and trailing char
         return false;
-        }
+    }
     memcpy(tmppath, path.text, path.nchars_with_zero*sizeof(path.text[0]));
     memcpy(tmppath2, path.text, path.nchars_with_zero*sizeof(path.text[0]));
     // append a 't'
@@ -560,22 +571,22 @@ sortof_atomically_write_file(LongString text, WinString path){
             NULL);
     if(tmpfile == INVALID_HANDLE_VALUE){
         return false;
-        }
+    }
     DWORD written;
     auto success = WriteFile(tmpfile, text.text, text.length, &written, NULL);
     CloseHandle(tmpfile);
     if(!success){
         return false;
-        }
+    }
     auto replaced = ReplaceFileW(path.text, tmppath, tmppath2, 0, 0, 0);
     if(replaced == 0){
         print_error(L"replace failed");
         DeleteFileW(tmppath2);
         return false;
-        }
+    }
     DeleteFileW(tmppath2);
     return true;
-    }
+}
 
 static
 bool
@@ -590,7 +601,7 @@ save_as_file(HWND textedit){
         .nMaxFile = 1024,
         .Flags =  OFN_EXPLORER | OFN_NOREADONLYRETURN,
         .lpstrDefExt = L"dnd",
-        };
+    };
     BOOL ok_clicked = GetSaveFileNameW(&openfilename);
     if(!ok_clicked)
         return false;
@@ -601,8 +612,7 @@ save_as_file(HWND textedit){
     auto result = sortof_atomically_write_file(text, path);
     free((void*)text.text);
     return result;
-    }
-
+}
 
 static
 void
@@ -691,15 +701,17 @@ choose_font(HWND textedit){
         .lStructSize = sizeof(fontstruct),
         .hwndOwner = textedit,
         .lpLogFont = &font,
-        .Flags = CF_FIXEDPITCHONLY | CF_FORCEFONTEXIST | CF_INITTOLOGFONTSTRUCT | CF_SCALABLEONLY,
-        };
+        .Flags = CF_FIXEDPITCHONLY
+               | CF_FORCEFONTEXIST
+               | CF_INITTOLOGFONTSTRUCT
+               | CF_SCALABLEONLY,
+    };
     BOOL ok = ChooseFontW(&fontstruct);
-    if(!ok)
-        return false;
+    if(!ok) return false;
     HFONT new_font_handle = CreateFontIndirect(&font);
     SendMessage(textedit, WM_SETFONT, (WPARAM)new_font_handle, 0);
     static HFONT font_handle;
     DeleteObject(font_handle);
     font_handle = new_font_handle;
     return true;
-    }
+}
