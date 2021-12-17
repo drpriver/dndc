@@ -1,3 +1,6 @@
+#if !defined(_WIN32)
+#include <errno.h> // For reporting write file erors
+#endif
 #define DNDC_API static inline
 #include "dndc.h"
 #include "dndc_long_string.h"
@@ -13,19 +16,29 @@
 #define GET_INPUT_API static inline
 #include "get_input.h"
 
+// Print out syntax-highlighted version of the file to stdout.
 static
 void
 dndc_print_out_syntax(StringView source);
 
+// Writes out the make-style dependency file.
 static
 int
 dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths);
 
+// Print out the dependencies instead of writing to file.
+static int depends_print_callback(void*_Nullable, size_t, StringView*);
+
+//
+// Peek into the private ctx so we can print out links and print
+// out the tree.
 static
 int
 dndc_main_ast_func(void*_Nullable user_data, DndcContext*_Nonnull ctx);
 
-static int depends_print_callback(void*_Nullable, size_t, StringView*);
+static
+void
+print_file_writing_error(const char* filename, FileWriteResult err);
 
 //
 // Prints out a representation of the final document tree.
@@ -286,7 +299,7 @@ main(int argc, char**argv){
         };
         const char* version = "dndc version " DNDC_VERSION ". Compiled " __DATE__ " " __TIME__;
         ArgParser argparser = {
-            .name = argv[0],
+            .name = argc? argv[0]: "dndc",
             .description = "A .dnd to .html parser and compiler.",
             .positional.args = pos_args,
             .positional.count = arrlen(pos_args),
@@ -442,12 +455,9 @@ main(int argc, char**argv){
         if(flags & DNDC_DONT_WRITE)
             return 0;
         if(output_path.length){
-            int write_err = write_file(output_path.text, output.text, output.length);
-            if(write_err){
-                // TODO: retrieve platform specific error message.
-                fprintf(stderr, "Failed to write to output path: %s\n", output_path.text);
-                return write_err;
-            }
+            FileWriteResult write_err = write_file(output_path.text, output.text, output.length);
+            print_file_writing_error(output_path.text, write_err);
+            return write_err.errored;
         }
         else {
             puts(output.text);
@@ -491,11 +501,11 @@ dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths){
         msb_write_literal(&msb, ":\n");
     }
     StringView deptext = msb_borrow_sv(&msb);
-    int write_err = write_file(ud->depfile.text, deptext.text, deptext.length);
+    FileWriteResult write_err = write_file(ud->depfile.text, deptext.text, deptext.length);
     msb_destroy(&msb);
-    if(write_err){
-        perror("Error on write");
-        return write_err;
+    if(write_err.errored){
+        print_file_writing_error(ud->depfile.text, write_err);
+        return write_err.errored;
     }
     return 0;
 }
@@ -678,6 +688,44 @@ dndc_print_out_syntax(StringView source_text){
     if(where != source_text.text+source_text.length){
         fwrite(where, 1, (source_text.text+source_text.length) - where, stdout);
     }
+}
+
+static
+void
+print_file_writing_error(const char* filename, FileWriteResult err){
+    #if !defined(_WIN32)
+    switch(err.errored){
+        case FILE_NOT_OPENED:
+            fprintf(stderr, "Failed to open '%s' for writing: %s\n", filename, strerror(err.native_error));
+            return;
+        case FILE_ERROR:
+            fprintf(stderr, "Error when writing to  '%s': %s\n", filename, strerror(err.native_error));
+            return;
+        default:
+            return;
+    }
+    #else
+    char errbuff[4192];
+    if(err.errored){
+        DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM 
+                       // "when you are not in control of the message, you
+                       // had better pass the FORMAT_MESSAGE_IGNORE_INSERTS
+                       // flag"  - Raymond Chen
+                       | FORMAT_MESSAGE_IGNORE_INSERTS
+                       ;
+        FormatMessageA(flags, NULL, err.native_error, 0, errbuff, sizeof errbuff, NULL);
+    }
+    switch(err.errored){
+        case FILE_NOT_OPENED:
+            fprintf(stderr, "Failed to open '%s' for writing: %s\n", filename, errbuff);
+            return;
+        case FILE_ERROR:
+            fprintf(stderr, "Error when writing to  '%s': %s\n", filename, errbuff);
+            return;
+        default:
+            return;
+    }
+    #endif
 }
 
 #include "dndc.c"

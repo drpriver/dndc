@@ -194,9 +194,9 @@ uint32_to_str_buffer(char*  buff, uint32_t value){
 }
 
 // Buff must be at least 11 chars long.
-static
+static inline
 void
-uint32_to_ascii(char* buff, size_t bufsize, uint32_t value){
+uint32_to_ascii(char* buff, ptrdiff_t bufsize, uint32_t value){
     char tmp[10];
     char* begin = uint32_to_str_buffer(tmp, value);
     ptrdiff_t length = (tmp+10) - begin;
@@ -250,9 +250,9 @@ uint64_to_str_buffer(char*  buff, uint64_t value){
 
 
 // buff must be at least 21 long
-static
+static inline
 void
-uint64_to_ascii(char* buff, size_t bufsize, uint64_t value){
+uint64_to_ascii(char* buff, ptrdiff_t bufsize, uint64_t value){
     if(!bufsize) return;
     char tmp[20];
     char* begin = uint64_to_str_buffer(tmp, value);
@@ -269,7 +269,7 @@ uint64_to_ascii(char* buff, size_t bufsize, uint64_t value){
 // Does NOT include prefix.
 // always pads to 4 characters
 // buff should be 4 characters long
-static
+static inline
 void
 uint16_to_hex(char* buff, uint16_t value){
     const char* hexstring = "0123456789aabcdef";
@@ -281,7 +281,7 @@ uint16_to_hex(char* buff, uint16_t value){
 // Does NOT include prefix.
 // always pads to 8 characters
 // buff should be 8 characters long
-static
+static inline
 void
 uint32_to_hex(char* buff, uint32_t value){
     const char* hexstring = "0123456789aabcdef";

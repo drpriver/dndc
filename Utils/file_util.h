@@ -5,6 +5,9 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#if !defined(_WIN32) || defined(USE_C_STDIO)
+#include <errno.h>
+#endif
 #include "long_string.h"
 #include "ByteBuffer.h"
 #include "Allocators/allocator.h"
@@ -51,20 +54,32 @@ enum {
     FILE_RESULT_ALLOC_FAILURE = 2,
 };
 
+// Re: the `native_error` member of the following:
+//   On POSIX or with C_STDIO, this is errno.
+//   On WINDOWS, this is the value from GetLastError()
+//
 typedef struct TextFileResult {
     LongString result;
     int errored;
+    int native_error;
 } TextFileResult;
 
 typedef struct BinaryFileResult {
     ByteBuffer result;
     int errored;
+    int native_error;
 } BinaryFileResult;
 
 typedef struct FileSizeResult {
     size_t result;
     int errored;
+    int native_error;
 } FileSizeResult;
+
+typedef struct FileWriteResult {
+    int errored;
+    int native_error;
+} FileWriteResult;
 
 
 // Read an entire file into a string. Reads it in binary mode, so all
@@ -91,7 +106,7 @@ read_bin_file(const char* filepath, Allocator a);
 // or anything like that.
 static inline
 warn_unused
-int
+FileWriteResult
 write_file(const char* filename, const void* data, size_t data_length);
 
 #ifdef USE_C_STDIO
@@ -113,6 +128,7 @@ file_size_from_fp(FILE* fp){
 
     errored:
     result.errored = FILE_ERROR;
+    result.native_error = errno;
     return result;
 }
 
@@ -123,11 +139,12 @@ read_file(const char* filepath, Allocator a){
     TextFileResult result = {0};
     FILE* fp = fopen(filepath, "rb");
     if(not fp)
-        return (TextFileResult){.errored=FILE_NOT_OPENED};
+        return (TextFileResult){.errored=FILE_NOT_OPENED, .native_error=errno};
     FileSizeResult size_e = file_size_from_fp(fp);
     if(size_e.errored){
         fclose(fp);
         result.errored = size_e.errored;
+        result.native_error = size_e.native_error;
         return result;
     }
     size_t nbytes = size_e.result;
@@ -139,6 +156,7 @@ read_file(const char* filepath, Allocator a){
     size_t fread_result = fread(text, 1, nbytes, fp);
     if(fread_result != nbytes){
         result.errored = FILE_ERROR;
+        result.native_error = errno;
         Allocator_free(a, text, nbytes+1);
         goto finally;
     }
@@ -157,10 +175,11 @@ read_bin_file(const char* filepath, Allocator a){
     BinaryFileResult result = {0};
     FILE* fp = fopen(filepath, "rb");
     if(not fp)
-        return (BinaryFileResult){.errored=FILE_NOT_OPENED};
+        return (BinaryFileResult){.errored=FILE_NOT_OPENED, .native_error=errno};
     FileSizeResult size_e = file_size_from_fp(fp);
     if(size_e.errored){
         result.errored = size_e.errored;
+        result.native_error = size_e.native_error;
         goto finally;
     }
     size_t nbytes = size_e.result;
@@ -174,6 +193,7 @@ read_bin_file(const char* filepath, Allocator a){
     if(fread_result != nbytes){
         Allocator_free(a, data, nbytes);
         result.errored = FILE_ERROR;
+        result.native_error = errno;
         goto finally;
     }
     assert(fread_result == nbytes);
@@ -186,19 +206,20 @@ finally:
 
 static inline
 warn_unused
-int
+FileWriteResult;
 write_file(const char* filename, const void* data, size_t data_length){
     FILE* fp = fopen(filename, "wb");
-    if(!fp) return FILE_NOT_OPENED;
+    if(!fp)
+        return (FileWriteResult){errored=.FILE_NOT_OPENED, .native_error=errno};
 
     size_t nwrit = fwrite(data, 1, data_length, fp);
     if(nwrit != data_length){
         fclose(fp);
-        return FILE_ERROR;
+        return (FileWriteResult){errored=.FILE_ERROR, .native_error=errno};
     }
     fflush(fp);
     fclose(fp);
-    return 0;
+    return (FileWriteResult){0};
 }
 
 #elif defined(__linux__) || defined(__APPLE__)
@@ -220,6 +241,7 @@ file_size_from_fd(int fd){
     int err = fstat(fd, &s);
     if(err == -1){
         result.errored = FILE_ERROR;
+        result.native_error = errno;
         return result;
     }
     result.result = s.st_size;
@@ -234,11 +256,13 @@ read_file(const char* filepath, Allocator a){
     int fd = open(filepath, O_RDONLY);
     if(fd < 0){
         result.errored = FILE_NOT_OPENED;
+        result.native_error = errno;
         return result;
     }
     FileSizeResult size_e = file_size_from_fd(fd);
     if(size_e.errored){
         result.errored = size_e.errored;
+        result.native_error = size_e.native_error;
         goto finally;
     }
     size_t nbytes = size_e.result;
@@ -251,6 +275,7 @@ read_file(const char* filepath, Allocator a){
     if((size_t)read_result != nbytes){
         Allocator_free(a, text, nbytes+1);
         result.errored = FILE_ERROR;
+        result.native_error = errno;
         goto finally;
     }
     assert((size_t)read_result == nbytes);
@@ -271,11 +296,13 @@ read_bin_file(const char* filepath, Allocator a){
     int fd = open(filepath, O_RDONLY);
     if(fd < 0){
         result.errored = FILE_NOT_OPENED;
+        result.native_error = errno;
         return result;
     }
     FileSizeResult size_e = file_size_from_fd(fd);
     if(size_e.errored){
         result.errored = size_e.errored;
+        result.native_error = size_e.native_error;
         goto finally;
     }
     size_t nbytes = size_e.result;
@@ -289,6 +316,7 @@ read_bin_file(const char* filepath, Allocator a){
     if(read_result != (ssize_t)nbytes){
         Allocator_free(a, data, nbytes);
         result.errored = FILE_ERROR;
+        result.native_error = errno;
         goto finally;
     }
     assert(read_result == (ssize_t)nbytes);
@@ -301,21 +329,22 @@ finally:
 
 static inline
 warn_unused
-int
+FileWriteResult
 write_file(const char* filename, const void* data, size_t data_length){
     int fd = open(
             filename,
             O_WRONLY | O_NOFOLLOW | O_CREAT | O_TRUNC,
             S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if(fd < 0)
-        return FILE_NOT_OPENED;
+        return (FileWriteResult){.errored=FILE_NOT_OPENED, .native_error=errno};
     ssize_t nwrit = write(fd, data, data_length);
     if((size_t)nwrit != data_length){
+        int native = errno;
         close(fd);
-        return FILE_ERROR;
+        return (FileWriteResult){.errored=FILE_ERROR, .native_error=native};
     }
     close(fd);
-    return 0;
+    return (FileWriteResult){0};
 }
 
 #elif defined(_WIN32)
@@ -515,9 +544,9 @@ finally:
 
 static inline
 warn_unused
-int
+FileWriteResult
 write_file(const char* filename, const void* data, size_t data_length){
-    int result = 0;
+    FileWriteResult result = {0};
     HANDLE handle = CreateFileA(
             (char*)filename,
             GENERIC_WRITE,
@@ -528,7 +557,9 @@ write_file(const char* filename, const void* data, size_t data_length){
             NULL
             );
     if(handle == INVALID_HANDLE_VALUE){
-        return FILE_NOT_OPENED;
+        result.errored = FILE_NOT_OPENED;
+        result.native_error = GetLastError();
+        return result;
     }
     DWORD bytes_written;
     BOOL write_success = WriteFile(
@@ -538,7 +569,8 @@ write_file(const char* filename, const void* data, size_t data_length){
             &bytes_written,
             NULL);
     if(!write_success){
-        result = FILE_ERROR;
+        result.errored = FILE_ERROR;
+        result.native_error = GetLastError();
         goto finally;
     }
     assert(bytes_written == data_length);
@@ -549,9 +581,9 @@ finally:
 
 static inline
 warn_unused
-int
+FileWriteResult result = {0};
 write_file_w(const wchar_t* filename, const void* data, size_t data_length){
-    int result = 0;
+    FileWriteResult result = {0};
     HANDLE handle = CreateFileW(
             (wchar_t*)filename,
             GENERIC_WRITE,
@@ -562,7 +594,9 @@ write_file_w(const wchar_t* filename, const void* data, size_t data_length){
             NULL
             );
     if(handle == INVALID_HANDLE_VALUE){
-        return FILE_NOT_OPENED;
+        result.errored = FILE_NOT_OPENED;
+        result.native_error = GetLastError();
+        return result;
     }
     DWORD bytes_written;
     BOOL write_success = WriteFile(
@@ -572,7 +606,8 @@ write_file_w(const wchar_t* filename, const void* data, size_t data_length){
             &bytes_written,
             NULL);
     if(!write_success){
-        result = FILE_ERROR;
+        result.errored = FILE_ERROR;
+        result.native_error = GetLastError();
         goto finally;
     }
     assert(bytes_written == data_length);
@@ -608,12 +643,12 @@ read_bin_file(const char* filepath, Allocator a){
 
 static inline
 warn_unused
-int
+FileWriteResult
 write_file(const char* filename, const void* data, size_t data_length){
     (void)filename;
     (void)data;
     (void)data_length;
-    return 1;
+    return (FileWriteResult){1, 1};
 }
 #endif
 

@@ -781,10 +781,10 @@ js_write_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCons
     }
     LongString filepath = jsstring_to_longstring(jsctx, filename_s, ctx->temp_allocator);
     StringView data = jsstring_make_stringview_js_allocated(jsctx, text_s);
-    int err = write_file(filepath.text, data.text, data.length);
+    FileWriteResult err = write_file(filepath.text, data.text, data.length);
     Allocator_free(ctx->temp_allocator, filepath.text, filepath.length+1);
     JS_FreeCString(jsctx, data.text);
-    if(err){
+    if(err.errored){
         // this is the wrong way to report this error.
         return JS_ThrowTypeError(jsctx, "Error writing file");
     }

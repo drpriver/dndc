@@ -241,8 +241,8 @@ static void* sane_realloc(void* ptr, size_t orig_size, size_t size);
 #endif
 
 
-// gnu_case_ranges are so much nicer but are non-standard
-// leave off a colon and don't have a leading case
+// gnu_case_ranges are so much nicer but are non-standard.
+// Leave off a colon and don't have a leading `case`.
 #ifndef CASE_a_f
 #define CASE_a_f 'a': case 'b': case 'c': case 'd': case 'e': case 'f'
 #endif
@@ -255,7 +255,7 @@ static void* sane_realloc(void* ptr, size_t orig_size, size_t size);
 #define CASE_0_9 '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9'
 #endif
 
-#ifndef CASE_a_z 
+#ifndef CASE_a_z
 #define CASE_a_z 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g': case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n': case 'o': case 'p': case 'q': case 'r': case 's': case 't': case 'u': case 'v': case 'w': case 'x': case 'y': case 'z'
 #endif
 
@@ -263,6 +263,7 @@ static void* sane_realloc(void* ptr, size_t orig_size, size_t size);
 #define CASE_A_Z 'A': case 'B': case 'C': case 'D': case 'E': case 'F': case 'G': case 'H': case 'I': case 'J': case 'K': case 'L': case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R': case 'S': case 'T': case 'U': case 'V': case 'W': case 'X': case 'Y': case 'Z'
 #endif
 
+// utf-16 versions
 #ifndef CASE_u16_a_f
 #define CASE_u16_a_f case u'a': case u'b': case u'c': case u'd': case u'e': case u'f'
 #endif
@@ -275,7 +276,7 @@ static void* sane_realloc(void* ptr, size_t orig_size, size_t size);
 #define CASE_u16_0_9 '0': case u'1': case u'2': case u'3': case u'4': case u'5': case u'6': case u'7': case u'8': case u'9'
 #endif
 
-#ifndef CASE_u16_a_z 
+#ifndef CASE_u16_a_z
 #define CASE_u16_a_z 'a': case u'b': case u'c': case u'd': case u'e': case u'f': case u'g': case u'h': case u'i': case u'j': case u'k': case u'l': case u'm': case u'n': case u'o': case u'p': case u'q': case u'r': case u's': case u't': case u'u': case u'v': case u'w': case u'x': case u'y': case u'z'
 #endif
 

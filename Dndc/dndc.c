@@ -17,6 +17,7 @@
 #include "path_util.h"
 #include "MStringBuilder.h"
 #include "msb_extensions.h"
+#include "msb_format.h"
 #include "allocator.h"
 #include "mallocator.h"
 #include "linear_allocator.h"
