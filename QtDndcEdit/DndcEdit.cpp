@@ -215,7 +215,8 @@ MainWindow::open_file(void){
     if(filename.isNull())
         return;
     add_tab(filename);
-    }
+}
+
 void
 MainWindow::add_menus(void){
     auto menubar = menuBar();
@@ -447,21 +448,24 @@ DndEditor::update_syntax(void){
         auto regions = (QHash<int, QList<HighlightRegion>>*)user_data;
         HighlightRegion region = {type, col, (int)length};
         (*regions)[line].append(region);
-        };
+    };
     dndc_analyze_syntax_utf16(textu16, synf, &highlight_regions);
     highlight->update_regions(std::move(highlight_regions));
-    }
+}
+
 int
 DndEditor::lineNumberAreaWidth(void){
     int digits = 1;
     auto max_value = std::max(1, blockCount());
     int space = 3 + fontMetrics().horizontalAdvance(QString::number(max_value*10));
     return space;
-    }
+}
+
 void
 DndEditor::updateLineNumberAreaWidth(int){
     setViewportMargins(lineNumberAreaWidth(), 0, 0, 0);
-    }
+}
+
 void
 DndEditor::updateLineNumberArea(QRect rect, int dy){
     if(dy)
@@ -470,13 +474,15 @@ DndEditor::updateLineNumberArea(QRect rect, int dy){
         lineNumberArea->update(0, rect.y(), lineNumberArea->width(), rect.height());
     if(rect.contains(viewport()->rect()))
         updateLineNumberAreaWidth(0);
-    }
+}
+
 void
 DndEditor::resizeEvent(QResizeEvent*event){
     QPlainTextEdit::resizeEvent(event);
     auto cr = contentsRect();
     lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), lineNumberAreaWidth(), cr.height()));
-    }
+}
+
 void
 DndEditor::keyPressEvent(QKeyEvent* event){
     if(event->key() == Qt::Key::Key_Tab){
@@ -485,10 +491,10 @@ DndEditor::keyPressEvent(QKeyEvent* event){
         if(textCursor().hasSelection()){
             alter_indent(true);
             return;
-            }
+        }
         insertPlainText(QS("  "));
         return;
-        }
+    }
     if(event->key() == Qt::Key::Key_Return || event->key() == Qt::Key::Key_Enter){
         if(isReadOnly())
             return;
@@ -497,12 +503,12 @@ DndEditor::keyPressEvent(QKeyEvent* event){
         auto leading_space = WHITESPACE_RE->match(text);
         if(leading_space.hasMatch()){
             insertPlainText(QS("\n") + leading_space.captured());
-            }
+        }
         else{
             insertPlainText(QS("\n"));
-            }
-        return;
         }
+        return;
+    }
     if(event->key() == Qt::Key::Key_Backspace){
         if(isReadOnly())
             return;
@@ -515,16 +521,16 @@ DndEditor::keyPressEvent(QKeyEvent* event){
                 cursor.deletePreviousChar();
                 cursor.deletePreviousChar();
                 return;
-                }
             }
         }
-    QPlainTextEdit::keyPressEvent(event);
     }
+    QPlainTextEdit::keyPressEvent(event);
+}
 void
 DndEditor::highlightCurrentLine(void){
     // ... what?
     return;
-    }
+}
 void
 DndEditor::lineNumberAreaPaintEvent(QPaintEvent* event){
     QPainter painter(lineNumberArea);
@@ -542,20 +548,21 @@ DndEditor::lineNumberAreaPaintEvent(QPaintEvent* event){
         if(block.isVisible() && bottom >= event->rect().top()){
             if(blockNumber == cursor_number){
                 painter.fillRect(QRect(0, top, lineNumberArea->width(), height), Qt::yellow);
-                }
+            }
             if(blockNumber == error_line){
                 painter.fillRect(QRect(0, top, lineNumberArea->width(), height), Qt::red);
-                }
+            }
             QString number = QString::number(blockNumber + 1);
             painter.setPen(palette.button().color());
             painter.drawText(0, top, lineNumberArea->width()-5, height, Qt::AlignRight, number);
-            }
+        }
         block = block.next();
         top = bottom;
         bottom = top + blockBoundingRect(block).height();
         blockNumber++;
-        }
     }
+}
+
 void
 DndEditor::insert_dnd_block(const QString& dndtext){
     if(isReadOnly())
@@ -569,35 +576,39 @@ DndEditor::insert_dnd_block(const QString& dndtext){
         if(lead.length() == text.length()){
             auto new_string = parts.join(QS("\n") + lead);
             insertPlainText(new_string);
-            }
+        }
         else {
             auto new_string = QS("\n") + lead + parts.join(QS("\n") + lead);
             insertPlainText(new_string);
-            }
-        }
-    else if(text.length()){
-        insertPlainText(QS("\n") + dndtext);
-        }
-    else {
-        insertPlainText(dndtext);
         }
     }
+    else if(text.length()){
+        insertPlainText(QS("\n") + dndtext);
+    }
+    else {
+        insertPlainText(dndtext);
+    }
+}
+
 void
 DndEditor::insert_image(const QString& filename){
     insert_dnd_block(QS("::img\n  ") + filename + QS("\n"));
-    }
+}
+
 void
 DndEditor::insert_dnd(const QString& filename){
     insert_dnd_block(QS("::import\n  ") + filename + QS("\n"));
-    }
+}
+
 void
 DndEditor::insert_css(const QString& filename){
     insert_dnd_block(QS("::css\n  ") + filename + QS("\n"));
-    }
+}
+
 void
 DndEditor::insert_script(const QString& filename){
     insert_dnd_block(QS("::script\n  ") + filename + QS("\n"));
-    }
+}
 
 void
 DndEditor::insert_image_links(const QString& fullname, const QString& fname){
@@ -628,7 +639,7 @@ DndEditor::insert_image_links(const QString& fullname, const QString& fname){
         .arg((int)(h*scale))
         .arg(w)
         .arg(h));
-    }
+}
 
 void
 DndEditor::alter_indent(bool indent){
@@ -650,27 +661,27 @@ DndEditor::alter_indent(bool indent){
             s.append(QS("  "));
             s.append(block.text());
             s.append(QS("\n"));
-            }
+        }
         else {
             auto text = block.text();
             if(text.startsWith(QS("  "))){
                 s.append(text.right(text.size()-2));
-                }
+            }
             else
                 s.append(text);
             s.append(QS("\n"));
-            }
+        }
         if(block.position() == end_block.position())
             break;
         block = block.next();
-        }
+    }
     cursor.setPosition(first_block.position());
     cursor.setPosition(end_block.position() + end_block.text().size(), QTextCursor::KeepAnchor);
     auto str = s.join(QS(""));
     while(str.endsWith('\n') || str.endsWith(' '))
         str.chop(1);
     cursor.insertText(str);
-    }
+}
 
 void
 DndEditor::contextMenuEvent(QContextMenuEvent* event){
@@ -690,7 +701,7 @@ DndEditor::contextMenuEvent(QContextMenuEvent* event){
     action->setShortcut(QKeySequence(QS("Ctrl+<")));
     menu->insertAction(menu->actions()[8], action);
     menu->exec(event->globalPos());
-    }
+}
 
 void append_room_with_name_at(const QString& name, int x, int y);
 
@@ -710,28 +721,28 @@ class DndcSchemeHandler: public QWebEngineUrlSchemeHandler {
             parts.removeLast();
             auto name = parts.join(',');
             QTimer::singleShot(0, this, [=](){
-                append_room_with_name_at(name, x, y);
-                });
+                    append_room_with_name_at(name, x, y);
+                    });
             return;
-            }
+        }
         if(request->requestMethod() != QS("GET")){
             request->fail(QWebEngineUrlRequestJob::Error::RequestDenied);
             return;
-            }
+        }
         auto url = request->requestUrl();
         auto imgpath = url.path();
         auto info = QFileInfo(imgpath);
         if(!info.exists()){
             request->fail(QWebEngineUrlRequestJob::Error::UrlNotFound);
             return;
-            }
+        }
         QMimeDatabase db;
         QMimeType type = db.mimeTypeForFile(imgpath);
         auto file = new QFile(imgpath, request);
         request->reply(type.name().toUtf8(), file);
         return;
-        }
-    };
+    }
+};
 void
 create_scheme(void){
     DndScheme = new QWebEngineUrlScheme("dnd");
@@ -761,7 +772,7 @@ DndWebPage::acceptNavigationRequest(const QUrl& url, QWebEnginePage::NavigationT
         if(host != APPHOST){
             QDesktopServices::openUrl(url);
             return false;
-            }
+        }
         if(path.endsWith(QS(".html"))){
             #if defined(_WIN32)
             path = path.right(path.length()-1);
@@ -783,11 +794,11 @@ DndWebPage::acceptNavigationRequest(const QUrl& url, QWebEnginePage::NavigationT
                 }
             }
             return false;
-            }
-        return false;
         }
-    return false;
+        return false;
     }
+    return false;
+}
 
 bool
 SplitterHandler::eventFilter(QObject* watched, QEvent* event){
@@ -795,16 +806,17 @@ SplitterHandler::eventFilter(QObject* watched, QEvent* event){
         auto handle = qobject_cast<QSplitterHandle*>(watched);
         if(handle->splitter()->widget(0)->width()){
             handle->splitter()->setSizes({0, 1});
-            }
+        }
         else{
             handle->splitter()->setSizes({1, 10000});
-            }
-        return true;
         }
+        return true;
+    }
     return false;
-    }
+}
+
 SplitterHandler::~SplitterHandler(){
-    }
+}
 
 void
 create_caches(void){
@@ -815,7 +827,7 @@ create_caches(void){
     QObject::connect(watcher, &QFileSystemWatcher::fileChanged, [](const QString& path){
         if(path.endsWith(QS("png"))){
             QWebEngineProfile::defaultProfile()->clearHttpCache();
-            }
+        }
         auto bytes = path.toUtf8();
         DndcStringView sv = {(size_t)bytes.length(), bytes.data()};
         dndc_filecache_remove(b64cache, sv);
@@ -833,10 +845,10 @@ append_room_with_name_at(const QString& name, int x, int y){
         return;
     page->textedit->appendPlainText(QS("\n%1 ::md .room @coord(%2,%2)\n").arg(!name.contains('.')?name+'.':name).arg(x).arg(y));
     page->textedit->setFocus(Qt::FocusReason::NoFocusReason);
-    }
+}
 
 void add_tab(const QString& filename){
-    }
+}
 
 Page::Page(QWidget*parent): QSplitter(parent) {
     webpage = new DndWebPage(this);
@@ -881,7 +893,7 @@ Page::Page(QWidget*parent): QSplitter(parent) {
         auto first_window = ALL_WINDOWS.constKeyValueBegin();
         left = (*first_window).second->editor_is_on_left;
         show_errors = (*first_window).second->show_errors;
-        }
+    }
     if(left)
         put_editor_left();
     else
@@ -892,9 +904,11 @@ Page::Page(QWidget*parent): QSplitter(parent) {
         hide_error();
     handle(1)->installEventFilter(new SplitterHandler(this));
 }
+
 Page::~Page(){
     // qDebug("Page dtor");
 }
+
 void
 Page::keyPressEvent(QKeyEvent* event){
     // Idk if this is where I should be intercepting these.
@@ -920,7 +934,7 @@ void
 Page::contents_changed(void){
     if(auto_apply)
         update_html();
-    }
+}
 
 void
 Page::auto_apply_changed(int state){
@@ -929,15 +943,15 @@ Page::auto_apply_changed(int state){
     if(state == Qt::CheckState::Checked){
         auto_apply = true;
         update_html();
-        }
     }
+}
 void
 Page::read_only_changed(int state){
     if(state == Qt::CheckState::Unchecked)
         textedit->setReadOnly(false);
     if(state == Qt::CheckState::Checked)
         textedit->setReadOnly(true);
-    }
+}
 void
 Page::coord_helper_changed(int state){
     if(state == Qt::CheckState::Unchecked)
@@ -945,19 +959,19 @@ Page::coord_helper_changed(int state){
     if(state == Qt::CheckState::Checked){
         coord_helper = true;
         update_html();
-        }
     }
+}
 void
 Page::file_changed(const QString& path){
     if(!dependencies.contains(path))
         return;
     update_html();
-    }
+}
 void
 Page::clear_errors(void){
     error_display->setPlainText(QS(""));
     textedit->error_line = -1;
-    }
+}
 
 void
 Page::display_dndc_error(int error_type, const QString& filename, int row, int col, const QString& message){
@@ -967,7 +981,7 @@ Page::display_dndc_error(int error_type, const QString& filename, int row, int c
         [DNDC_NODELESS_MESSAGE]  = QS("Error"),
         [DNDC_STATISTIC_MESSAGE] = QS("Info"),
         [DNDC_DEBUG_MESSAGE]     = QS("Debug"),
-        };
+    };
     if(error_type < 0 || error_type > 4)
         return;
     if(error_type == 0)
@@ -975,11 +989,12 @@ Page::display_dndc_error(int error_type, const QString& filename, int row, int c
     const auto& et = error_types[error_type];
     if(error_type == DNDC_STATISTIC_MESSAGE){
         error_display->appendPlainText(et + QS(": ") + message);
-        }
+    }
     else {
         error_display->appendPlainText(QS("%1:%2:%3: %4").arg(et).arg(row+1).arg(col+1).arg(message));
-        }
     }
+}
+
 QString
 Page::get_text_for_preview(void){
     auto text = textedit->toPlainText();
@@ -988,19 +1003,22 @@ Page::get_text_for_preview(void){
     if(scroll_pos_string.length()){
         text += QS("\n::script\n  const SCROLLRESTO = ") + scroll_pos_string + QS("\n");
         text += SCROLL_RESTO_SCRIPT;
-        }
-    return text + QS("\n");
     }
+    return text + QS("\n");
+}
+
 void
 Page::update_html(void){
-    if(inflight)
+    // qDebug() << "In flight: " << inflight << "\n";
+    if(inflight){
         return;
+    }
     inflight = true;
     webpage->runJavaScript(GET_SCROLL_POSITION_SCRIPT, 0, [this](const QVariant& x){
-
         set_scroll_pos(std::move(x.toString()));
-        });
-    }
+    });
+}
+
 void
 Page::add_dependencies(size_t count, DndcStringView* paths){
     QSet<QString> new_deps;
@@ -1009,14 +1027,15 @@ Page::add_dependencies(size_t count, DndcStringView* paths){
         QString str = QString::fromUtf8(sv.text, sv.length);
         if(!dependencies.contains(str)){
             watcher->addPath(str);
-            }
-        new_deps.insert(std::move(str));
         }
-    dependencies = std::move(new_deps);
+        new_deps.insert(std::move(str));
     }
+    dependencies = std::move(new_deps);
+}
 void
 Page::set_scroll_pos(QString&& x){
     // This whole set up is kind of janksville.
+    // qDebug() << "Set scroll pos\n";;
     scroll_pos_string = x;
     inflight = false;
     clear_errors();
@@ -1049,6 +1068,8 @@ Page::set_scroll_pos(QString&& x){
             const char* message, int message_len
         ) -> void {
             auto page = (Page*)user_data;
+            // qDebug() <<  type << " " << QString::fromUtf8(filename, filename_len) <<  ":" << line << ":" <<col<< ":" << QString::fromUtf8(message, message_len);
+
             page->display_dndc_error(type, QString::fromUtf8(filename, filename_len), line, col, QString::fromUtf8(message, message_len));
         };
     DndcDependencyFunc* depfunc = [](
@@ -1071,10 +1092,12 @@ Page::set_scroll_pos(QString&& x){
             errfunc, this,
             depfunc, this,
             dndc_worker);
+    // qDebug() << "err:" << err;
     if(err) {
         return;
-        }
+    }
     auto url = QUrl(QS("https://") + APPHOST + QS("/") + filename);
+    // qDebug() << "url: " << url;
     webpage->setHtml(QString::fromUtf8(outstring.text, outstring.length), url);
     dndc_free_string(outstring);
     }

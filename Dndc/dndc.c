@@ -2050,6 +2050,7 @@ dndc_compile_dnd_file(
             | DNDC_INPUT_IS_UNTRUSTED
             | DNDC_STRIP_WHITESPACE
             | DNDC_DONT_READ
+            | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
     };
     uint64_t new_flags = flags & DNDC_VALID_FLAGS;
     if(new_flags != flags)
