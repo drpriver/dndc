@@ -202,9 +202,9 @@ class DndMainWindow(QMainWindow):
                     if not os.path.isfile(filename):
                         continue
                     add_tab(filename)
-        timer = QTimer(this)
+        timer = QTimer(self)
         timer.timeout.connect(self.save_windows)
-        timer.start(1000)
+        timer.start(10000)
     def save_windows(self, *args) -> None:
         LOGGER.debug('Saving Window Positions and Settings.')
         filenames = list(all_windows.keys())

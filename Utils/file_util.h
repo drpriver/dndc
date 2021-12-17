@@ -581,7 +581,7 @@ finally:
 
 static inline
 warn_unused
-FileWriteResult result = {0};
+FileWriteResult
 write_file_w(const wchar_t* filename, const void* data, size_t data_length){
     FileWriteResult result = {0};
     HANDLE handle = CreateFileW(

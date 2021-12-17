@@ -187,8 +187,8 @@ JS Api Documentation::title
         default:
           if(is_digit(c)){
             // parse number
-            while(i < n && (is_word(str[i]) || (str[i] == '.' && i
-              == n -1 || str[i+1] != '.')))
+            while(i < n && (is_word(str[i]) || (str[i] == '.' && (i
+              == n -1 || str[i+1] != '.'))))
               i++;
             let substr = str.slice(start, i);
             outfunc(substr, 'literal');
