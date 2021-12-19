@@ -297,7 +297,7 @@ main(int argc, char**argv){
                 .help = "Print out the required open source copyright notices and exit.",
             },
         };
-        const char* version = "dndc version " DNDC_VERSION ". Compiled " __DATE__ " " __TIME__;
+        const char* version = "dndc version " DNDC_VERSION ". Compiled " __DATE__ " " __TIME__ ".";
         ArgParser argparser = {
             .name = argc? argv[0]: "dndc",
             .description = "A .dnd to .html parser and compiler.",
