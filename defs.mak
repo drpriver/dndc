@@ -3,13 +3,16 @@
 DEPDIR := Depends
 OBJDIR := Objs
 BINDIR := Bin
+TESTDIR := TestResults
 DEPFLAGS = -MT $@ -MMD -MP -MF
+# Templates require an extra $
 TDEPFLAGS = -MT $$@ -MMD -MP -MF
-$(DEPDIR): ; @$(MKDIR) -p $@
-$(OBJDIR): ; @$(MKDIR) -p $@
-$(BINDIR): ; @$(MKDIR) -p $@
-$(DOCDIR): ; @$(MKDIR) -p $@
-DIRECTORIES= $(DEPDIR) $(OBJDIR) $(BINDIR) $(DOCDIR)
+$(DEPDIR):  ; @$(MKDIR) -p $@
+$(OBJDIR):  ; @$(MKDIR) -p $@
+$(BINDIR):  ; @$(MKDIR) -p $@
+$(DOCDIR):  ; @$(MKDIR) -p $@
+$(TESTDIR): ; @$(MKDIR) -p $@
+DIRECTORIES= $(DEPDIR) $(OBJDIR) $(BINDIR) $(DOCDIR) $(TESTDIR)
 %.dep: ;
 DEPFILES:= $(wildcard Depends/*.dep)
 include $(DEPFILES)
@@ -37,7 +40,6 @@ STD:=-std=gnu17
 INCLUDE_FLAGS=-I.\
 	-IPlatform\
 	-IUtils\
-	-IPythonEmbed\
 	-IAllocators\
 	-IDndc\
 	-IVendored/quickjs\
@@ -127,20 +129,44 @@ endif
 # We leave out OPT_FLAGS, LINK_FLAGS
 FLAGS=$(INCLUDE_FLAGS) $(WARNING_FLAGS) $(PLATFORM_FLAGS)
 
-# TestDndc needs to link against the frozenstdlib
-TESTS:=$(filter-out Dndc/TestDndc.c, $(wildcard **/Test*.c))
-# All of the tests are compiled both in fast and debug mode as bugs can
-# sometimes will present themselves in one and not the other.
 
+
+# Testing
+
+
+# TestDndc needs special link arguments, so define it manually.
+TESTS:=$(filter-out Dndc/TestDndc.c, $(wildcard **/Test*.c))
+
+# This template defines how to build and run a test. Tests are automatically
+# discovered by convention: a test program is a C file starting with 'Test'.
+#
+# All of the tests are compiled both in fast and debug mode as bugs
+# sometimes will present themselves in one and not the other.
+#
+# Tests will write the results of their test to the TestResults directory.
+# If the test fails, the result is deleted. Maybe we should add another file
+# for telling make the test passed so you can review the tests results, but
+# meh. Just run the test again without using make. It'll be in the Bin folder.
+# You can even debug it using a debugger, imagine that.
 define TEST_template
 $(BINDIR)/$(notdir $(basename $(1)))_fast$(EXE): $(DEPDIR)/$(notdir $(1))_fast.dep defs.mak | $(DIRECTORIES)
 	@$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(TDEPFLAGS) $(DEPDIR)/$(notdir $(1))_fast.dep $(1) -o $$@ -g  $(LINK_FLAGS)
-	$$@
+
 $(BINDIR)/$(notdir $(basename $(1)))_debug$(EXE): $(DEPDIR)/$(notdir $(1))_debug.dep defs.mak | $(DIRECTORIES)
 	@$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(TDEPFLAGS) $(DEPDIR)/$(notdir $(1))_debug.dep $(1) -o $$@ -g  $(LINK_FLAGS)
-	$$@
-$(notdir $(basename $(1))): $(BINDIR)/$(notdir $(basename $(1)))_debug$(EXE) $(BINDIR)/$(notdir $(basename $(1)))_fast$(EXE)
+
+$(TESTDIR)/$(notdir $(basename $(1)))_debug: $(BINDIR)/$(notdir $(basename $(1)))_debug$(EXE)
+	$$< --tee $$@
+
+$(TESTDIR)/$(notdir $(basename $(1)))_fast: $(BINDIR)/$(notdir $(basename $(1)))_fast$(EXE)
+	$$< --tee $$@
+
+tests: $(TESTDIR)/$(notdir $(basename $(1)))_fast
+tests: $(TESTDIR)/$(notdir $(basename $(1)))_debug
 endef
 $(foreach test, $(TESTS), $(eval $(call TEST_template, $(test))))
 
-tests: $(notdir $(basename $(TESTS))) TestDndc
+.PHONY: tests
+
+# Delete output of targets that failed
+.DELETE_ON_ERROR:

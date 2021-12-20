@@ -25,11 +25,18 @@ $(FUZZDIR): ; @$(MKDIR) -p $@
 
 $(BINDIR)/TestDndc_fast$(EXE): Dndc/TestDndc.c $(DEPDIR)/TestDndc_fast.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndc_fast.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
-	$@
 $(BINDIR)/TestDndc_debug$(EXE): Dndc/TestDndc.c $(DEPDIR)/TestDndc_debug.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndc_debug.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
-	$@
-TestDndc: $(BINDIR)/TestDndc_debug$(EXE) $(BINDIR)/TestDndc_fast$(EXE)
+
+$(TESTDIR)/TestDndc_debug: $(BINDIR)/TestDndc_debug$(EXE)
+	$< --tee $@
+tests: $(TESTDIR)/TestDndc_debug
+$(TESTDIR)/TestDndc_fast: $(BINDIR)/TestDndc_fast$(EXE)
+	$< --tee $@
+tests: $(TESTDIR)/TestDndc_fast
+
+TestDndc: $(TESTDIR)/TestDndc_debug $(TESTDIR)/TestDndc_fast
+.PHONY: TestDndc
 
 $(BINDIR)/pydndc$(PYEXTENSION): Dndc/pydndc.c $(OBJDIR)/libquickjs.o
 	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -O2 $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS) $(OBJDIR)/libquickjs.o
