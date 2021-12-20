@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+#include <stdarg.h>
 #ifdef _WIN32
 // for chdir
 #include <direct.h>
@@ -44,6 +45,58 @@ static const char* _test_color_green = ""
 static const char* _test_color_red   = ""
 #endif
 
+static FILE*_Null_unspecified TestOutFiles[9] = {0};
+static size_t TestOutFileCount = 0;
+
+static void
+TestRegisterOutFile(FILE* fp){
+    if(TestOutFileCount >= arrlen(TestOutFiles))
+        return;
+    TestOutFiles[TestOutFileCount++] = fp;
+}
+
+
+
+static void
+TestPrintf(const char* fmt, ...){
+    va_list arg;
+    char buff[10000];
+    for(size_t i = 0; i < TestOutFileCount; i++){
+        va_start(arg, fmt);
+        FILE* fp = TestOutFiles[i];
+        if(fp == stderr || fp == stdout)
+            vfprintf(fp, fmt, arg);
+        else {
+            // janky control code stripper.
+            // FIXME:
+            // This is too late to strip control codes
+            // since the test output could have control codes and thus
+            // diffing outputs would be wrong.
+            // Oh well.
+            int printed = vsnprintf(buff, sizeof buff, fmt, arg);
+            if(printed > (int)sizeof buff) printed = sizeof buff;
+            char* p = buff;
+            char* begin = p;
+            char* end = p + printed;
+            while(p != end){
+                if(*p == '\033'){
+                    if(p != begin){
+                        fwrite(begin, p - begin, 1, fp);
+                    }
+                    while(p != end && *(p++) != 'm')
+                        ;
+                    begin = p;
+                    continue;
+                }
+                p++;
+            }
+            if(begin != end)
+                fwrite(begin, end - begin, 1, fp);
+        }
+        va_end(arg);
+    }
+}
+
 #ifndef TestPrintValue
 
 #define TestPrintFuncs(apply) \
@@ -77,7 +130,7 @@ static const char* _test_color_red   = ""
 #define TestPrintImpl_(suffix, type, fmt, ...) \
     static inline __attribute__((always_inline)) void \
     TestPrintImpl_##suffix(const char* file, const char* func, int line, const char* str, type x){ \
-        fprintf(stderr, "%s%s:%s:%d%s %s = " fmt "\n",\
+        TestPrintf("%s%s:%s:%d%s %s = " fmt "\n",\
                 _test_color_gray, file, func, line, _test_color_reset, str, __VA_ARGS__); \
         }
 TestPrintFuncs(TestPrintImpl_)
@@ -189,7 +242,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 // It's an fprintf wrapper (appends a newline though).
 //
 #define TestReport(fmt, ...) \
-    fprintf(stderr, "%s%s %s %d: %s" fmt "\n",\
+    TestPrintf("%s%s %s %d: %s" fmt "\n",\
         _test_color_gray, __FILE__, __func__, __LINE__, \
         _test_color_reset, ##__VA_ARGS__);
 
@@ -475,6 +528,8 @@ run_the_tests(size_t*_Nullable which_tests, int test_count){
 //
 // The default test_main implementation if you don't suppress it.
 // Executes run_the_tests and pretty prints the results to the terminal.
+// NOTE: you will need to register a file pointer for TestPrintf if you
+// don't use this function.
 //
 #ifndef SUPPRESS_TEST_MAIN
 #include "argument_parsing.h"
@@ -489,13 +544,15 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     const char* filename = argv[0];
     bool no_colors = false;
     bool force_colors = false;
-    LongString directory = {};
-    size_t tests_to_run[arrlen(test_funcs)] = {};
+    LongString directory = {0};
+    size_t tests_to_run[arrlen(test_funcs)] = {0};
     struct ArgParseEnumType targets = {
         .enum_size = sizeof(size_t),
         .enum_count = test_funcs_count,
         .enum_names = test_names,
     };
+    LongString outfile = {0};
+    LongString extrafiles[8] = {0};
     ArgToParse kw_args[] = {
         {
             .name = SV("-C"),
@@ -524,6 +581,22 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
             .dest = ArgEnumDest(tests_to_run, &targets),
             .help = "If given, only run the named test function. If not given, "
                     "all tests will be run. Specify by name or by number.",
+        },
+        {
+            .name = SV("-o"),
+            .altname1 = SV("--outfile"),
+            .max_num = 1,
+            .dest = ARGDEST(&outfile),
+            .help = "Where to print test results outputs to. If not given, defaults to "
+                    "stderr. Implies --no-colors. If you want to output to stderr and "
+                    "also to file, use --tee instead.",
+        },
+        {
+            .name = SV("--tee"),
+            .max_num = arrlen(extrafiles),
+            .dest = ARGDEST(extrafiles),
+            .help = "In addition to the primary output (either stderr or the file "
+                    "given to --outfile), also print results to this file.",
         },
     };
     enum {HELP=0, LIST=1};
@@ -562,7 +635,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
                 fprintf(stdout, "%s\t", test_funcs[i].test_name.text);
                 if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED){
                     fprintf(stdout, "Will-Skip");
-                    }
+                }
                 fputc('\n', stdout);
             }
             return 1;
@@ -574,6 +647,26 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
         print_argparse_error(&argparser, e);
         fprintf(stderr, "Use --help to see usage.\n");
         return (int)e;
+    }
+    if(outfile.length){
+        no_colors = true;
+        FILE* fp = fopen(outfile.text, "wb");
+        if(!fp){
+            fprintf(stderr, "Unable to open '%s': %s\n", outfile.text, strerror(errno));
+            return 1;
+        }
+        TestRegisterOutFile(fp);
+    }
+    else {
+        TestRegisterOutFile(stderr);
+    }
+    for(int i = 0; i < kw_args[5].num_parsed; i++){
+        FILE* fp = fopen(extrafiles[i].text, "wb");
+        if(!fp){
+            fprintf(stderr, "Unable to open '%s': %s\n", extrafiles[i].text, strerror(errno));
+            return 1;
+        }
+        TestRegisterOutFile(fp);
     }
     if(directory.length){
         int changed = chdir(directory.text);
@@ -605,13 +698,13 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     const char* text = result.funcs_executed == 1?
         "test function executed"
         : "test functions executed";
-    fprintf(stderr, "%s%s: %s%llu%s %s\n",
+    TestPrintf("%s%s: %s%llu%s %s\n",
             gray, filename,
             blue, (unsigned long long)result.funcs_executed,
             reset, text);
 
     text = result.executed == 1? "test executed" : "tests executed";
-    fprintf(stderr, "%s%s: %s%llu%s %s\n",
+    TestPrintf("%s%s: %s%llu%s %s\n",
             gray, filename,
             blue, (unsigned long long)result.executed,
             reset, text);
@@ -620,18 +713,21 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
         "test function aborted early"
         : "test functions aborted early";
     const char* color = result.assert_failures?red:green;
-    fprintf(stderr, "%s%s: %s%llu%s %s\n",
+    TestPrintf("%s%s: %s%llu%s %s\n",
             gray, filename,
             color, (unsigned long long)result.assert_failures,
             reset, text);
 
     color = result.failures?red:green;
     text = result.failures == 1? "test failed" : "tests failed";
-    fprintf(stderr, "%s%s: %s%llu%s %s\n",
+    TestPrintf("%s%s: %s%llu%s %s\n",
             gray, filename,
             color, (unsigned long long)result.failures,
             reset, text);
-
+    for(size_t i = 0 ; i < TestOutFileCount; i++){
+        if(TestOutFiles[i] != stderr)
+            fclose(TestOutFiles[i]);
+    }
     return result.failures + result.assert_failures == 0? 0 : 1;
 }
 
