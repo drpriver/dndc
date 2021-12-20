@@ -287,7 +287,7 @@ enum DndcSyntax {
     // DNDC_SYNTAX_VALUE,
 };
 enum{DNDC_SYNTAX_MAX=20};
-_Static_assert(DNDC_SYNTAX_MAX > DNDC_SYNTAX_JS_BRACE, "");
+_Static_assert((int)DNDC_SYNTAX_MAX > (int)DNDC_SYNTAX_JS_BRACE, "");
 
 //
 // DndcSyntaxFunc

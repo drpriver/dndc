@@ -92,7 +92,6 @@ endif
 testkw = {'include_directories': includes}
 test('argumentparsing', executable('TestArgumentParsing', 'Utils/TestArgumentParsing.c', kwargs:testkw, c_args:ignore_bogus_deprecations))
 test('base64', executable('TestBase64', 'Utils/TestBase64.c', kwargs:testkw, c_args:ignore_bogus_deprecations))
-test('bytebuilder', executable('TestByteBuilder', 'Utils/TestByteBuilder.c', kwargs:testkw, c_args:ignore_bogus_deprecations))
 test('mstringbuilder', executable('TestMStringBuilder', 'Utils/TestMStringBuilder.c', kwargs:testkw, c_args:ignore_bogus_deprecations))
 test('pathutil', executable('TestPathUtil', 'Utils/TestPathUtil.c', kwargs:testkw, c_args:ignore_bogus_deprecations))
 test('strutil', executable('TestStrUtils', 'Utils/TestStrUtils.c', kwargs:testkw, c_args:ignore_bogus_deprecations))

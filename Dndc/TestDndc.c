@@ -719,7 +719,7 @@ TestFunction(TestFileCache){
     int e = run_the_dndc(flags, SV(""), input, SV(""), SV(""), &output, &cache, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
     FileCache_clear(&cache);
     for(size_t i = 0; i < ra->count; i++){
-        TestExpectEquals(ra->allocations[i], NULL);
+        TestExpectEquals((void*)ra->allocations[i], NULL);
         TestExpectEquals(ra->allocation_sizes[i], 0);
     }
     TestAssertFalse(e);
