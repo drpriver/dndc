@@ -32,9 +32,9 @@ Allocator_free_all(Allocator a){
         case ALLOCATOR_ARENA:
             ArenaAllocator_free_all(a._data);
             return;
-        }
-    abort();
     }
+    abort();
+}
 
 MALLOC_FUNC
 static inline
@@ -54,10 +54,10 @@ Allocator_alloc(Allocator a, size_t size){
             return recording_alloc(a._data, size);
         case ALLOCATOR_ARENA:
             return ArenaAllocator_alloc(a._data, size);
-        }
+    }
     abort();
     __builtin_unreachable();
-    }
+}
 
 MALLOC_FUNC
 static inline
@@ -77,10 +77,10 @@ Allocator_zalloc(Allocator a, size_t size){
             return recording_zalloc(a._data, size);
         case ALLOCATOR_ARENA:
             return ArenaAllocator_zalloc(a._data, size);
-        }
+    }
     abort();
     __builtin_unreachable();
-    }
+}
 
 static inline
 // force_inline
@@ -99,10 +99,10 @@ Allocator_realloc(Allocator a, void*_Nullable data, size_t orig_size, size_t siz
             return recording_realloc(a._data, data, orig_size, size);
         case ALLOCATOR_ARENA:
             return (void*)ArenaAllocator_realloc(a._data, data, orig_size, size);
-        }
+    }
     abort();
     __builtin_unreachable();
-    }
+}
 
 static inline
 // force_inline
@@ -123,32 +123,56 @@ Allocator_free(Allocator a, const void*_Nullable data, size_t size){
             return;
         case ALLOCATOR_ARENA:
             return;
-        }
-    abort();
     }
+    abort();
+}
+
+static inline
+// force_inline
+size_t
+Allocator_good_size(Allocator a, size_t size){
+    switch(a.type){
+        case ALLOCATOR_UNSET:
+            abort();
+            return size;
+        case ALLOCATOR_LINEAR:
+            return size;
+        case ALLOCATOR_RECORDED:
+            // fall-through
+        case ALLOCATOR_MALLOC:
+        #ifdef __APPLE__
+            return malloc_good_size(size);
+        #else
+            return size;
+        #endif
+        case ALLOCATOR_ARENA:
+            return ArenaAllocator_round_size_up(size);
+    }
+    abort();
+}
 
 static inline
 warn_unused
 // force_inline
 void*
-Allocator_dupe(Allocator a, const void* data, size_t size){
-    void* result = Allocator_alloc(a, size);
+Allocator_dupe(Allocator allocator, const void* data, size_t size){
+    void* result = Allocator_alloc(allocator, size);
     memcpy(result, data, size);
     return result;
-    }
+}
 
 MALLOC_FUNC
 static inline
 warn_unused
 char*
-Allocator_strndup(Allocator a, const char* str, size_t length){
-    char* result = Allocator_alloc(a, length+1);
+Allocator_strndup(Allocator allocator, const char* str, size_t length){
+    char* result = Allocator_alloc(allocator, length+1);
     unhandled_error_condition(!result);
     if(length)
         memcpy(result, str, length);
     result[length] = '\0';
     return result;
-    }
+}
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

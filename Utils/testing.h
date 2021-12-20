@@ -56,8 +56,11 @@ TestRegisterOutFile(FILE* fp){
 }
 
 
-
-static void
+#ifdef __GNUC__
+__attribute__((__format__(__printf__, 1, 2)))
+#endif
+static
+void
 TestPrintf(const char* fmt, ...){
     va_list arg;
     char buff[10000];
@@ -126,7 +129,7 @@ TestPrintf(const char* fmt, ...){
     _Generic(val, \
     TestPrintFuncs(TestPrintFunc) \
     struct{int foo;}: 0)(__FILE__, __func__, __LINE__, str, val)
-    
+
 #define TestPrintImpl_(suffix, type, fmt, ...) \
     static inline __attribute__((always_inline)) void \
     TestPrintImpl_##suffix(const char* file, const char* func, int line, const char* str, type x){ \
@@ -250,7 +253,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 // These macros are for expressing the test conditions.
 // They only work within a test function.
 //
-// Each one "returns" the condition being tested. For example, 
+// Each one "returns" the condition being tested. For example,
 // TestExpectEquals returns lhs == rhs.
 // This means you can use these as expressions to do conditional
 // printing or extra testing or whatever.
@@ -535,15 +538,15 @@ run_the_tests(size_t*_Nullable which_tests, int test_count){
 #include "argument_parsing.h"
 #include "term_util.h"
 static
-int 
+int
 test_main(int argc, char*_Nonnull *_Nonnull argv){
     if(argc < 1){
         fprintf(stderr, "Somehow this program was called without an argv.\n");
         return 1;
     }
     const char* filename = argv[0];
-    bool no_colors = false;
-    bool force_colors = false;
+    _Bool no_colors = 0;
+    _Bool force_colors = 0;
     LongString directory = {0};
     size_t tests_to_run[arrlen(test_funcs)] = {0};
     struct ArgParseEnumType targets = {
@@ -553,26 +556,25 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     };
     LongString outfile = {0};
     LongString extrafiles[8] = {0};
+    _Bool append = 0;
     ArgToParse kw_args[] = {
         {
             .name = SV("-C"),
             .altname1 = SV("--change-directory"),
-            .max_num = 1,
             .dest = ARGDEST(&directory),
             .help = "Directory to change the working directory to before "
                     "executing tests.",
         },
         {
             .name = SV("--no-colors"),
-            .max_num = 1,
             .dest = ARGDEST(&no_colors),
             .help = "Dont use ANSI escape codes to print colors in reporting.",
         },
         {
             .name = SV("--force-colors"),
-            .max_num = 1,
             .dest = ARGDEST(&force_colors),
-            .help = "Always use ANSI escape codes to print colors in reporting, even if output is not a tty.",
+            .help = "Always use ANSI escape codes to print colors in reporting, "
+                    "even if output is not a tty.",
         },
         {
             .name = SV("-t"),
@@ -585,7 +587,6 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
         {
             .name = SV("-o"),
             .altname1 = SV("--outfile"),
-            .max_num = 1,
             .dest = ARGDEST(&outfile),
             .help = "Where to print test results outputs to. If not given, defaults to "
                     "stderr. Implies --no-colors. If you want to output to stderr and "
@@ -597,6 +598,11 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
             .dest = ARGDEST(extrafiles),
             .help = "In addition to the primary output (either stderr or the file "
                     "given to --outfile), also print results to this file.",
+        },
+        {
+            .name = SV("--append"),
+            .dest = ARGDEST(&append),
+            .help = "Open the files indicated by --outfile or --tee in append mode.",
         },
     };
     enum {HELP=0, LIST=1};
@@ -650,7 +656,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     }
     if(outfile.length){
         no_colors = true;
-        FILE* fp = fopen(outfile.text, "wb");
+        FILE* fp = fopen(outfile.text, append?"ab":"wb");
         if(!fp){
             fprintf(stderr, "Unable to open '%s': %s\n", outfile.text, strerror(errno));
             return 1;
@@ -661,7 +667,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
         TestRegisterOutFile(stderr);
     }
     for(int i = 0; i < kw_args[5].num_parsed; i++){
-        FILE* fp = fopen(extrafiles[i].text, "wb");
+        FILE* fp = fopen(extrafiles[i].text, append?"ab":"wb");
         if(!fp){
             fprintf(stderr, "Unable to open '%s': %s\n", extrafiles[i].text, strerror(errno));
             return 1;
@@ -678,7 +684,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     }
 
     filename = strrchr(filename, '/')? strrchr(filename, '/')+1 : filename;
-    bool use_colors = force_colors || (!no_colors && isatty(fileno(stderr)));
+    _Bool use_colors = force_colors || (!no_colors && isatty(fileno(stderr)));
     const char* gray  = use_colors? "\033[97m"    : "";
     const char* blue  = use_colors? "\033[94m"    : "";
     const char* green = use_colors? "\033[92m"    : "";

@@ -512,6 +512,7 @@ static inline
 void
 print_wrapped_help(const char*_Nullable, int);
 
+static inline
 ArgStyle
 determine_styling(const ArgParser* p){
     const char* pre_argname = "\033[1m";
@@ -713,7 +714,7 @@ print_arg_help(const ArgToParse* arg, int columns, const ArgStyle* style){
     }
     printf("%s%s%s", style->pre_argname, name, style->post_argname);
     if(arg->altname1.length){
-        printf(", %s%s\%s", style->pre_argname, arg->altname1.text, style->post_argname);
+        printf(", %s%s%s", style->pre_argname, arg->altname1.text, style->post_argname);
     }
     printf(": %s%s%s", style->pre_typename, typename.text, style->post_typename);
 
@@ -907,6 +908,8 @@ print_wrapped_help(const char*_Nullable help, int columns){
     putchar('\n');
 }
 
+static inline int agp_maxnum(int x){ return x?x:1; }
+
 static inline enum ArgParseError set_flag(ArgToParse* arg);
 // Parse a single argument from a string.
 // Used internally. I guess you could use it if you really wanted to, but you
@@ -915,7 +918,7 @@ static inline
 enum ArgParseError
 parse_arg(ArgToParse* arg, StringView s){
     // Append_procs should signal their own error.
-    if(arg->num_parsed >= arg->max_num)
+    if(arg->num_parsed >= agp_maxnum(arg->max_num))
         return ARGPARSE_EXCESS_ARGS;
     // If previous num parsed is nonzero, this means
     // that what we are pointing to is an array.
@@ -1082,7 +1085,7 @@ set_flag(ArgToParse* arg){
         return 0;
     }
     assert(arg->dest.type == ARG_FLAG);
-    if(arg->num_parsed >= arg->max_num)
+    if(arg->num_parsed >= agp_maxnum(arg->max_num))
         return ARGPARSE_DUPLICATE_KWARG;
     bool* dest = arg->dest.pointer;
     *dest = true;
@@ -1200,7 +1203,7 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
                 parser->failed.arg_to_parse = kwarg;
                 return err;
             }
-            if(kwarg->num_parsed == kwarg->max_num)
+            if(kwarg->num_parsed == agp_maxnum(kwarg->max_num))
                 kwarg = NULL;
         }
         else if(pos_arg && pos_arg != past_the_end){
@@ -1211,7 +1214,7 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
                 parser->failed.arg_to_parse = pos_arg;
                 return err;
             }
-            if(pos_arg->num_parsed == pos_arg->max_num)
+            if(pos_arg->num_parsed == agp_maxnum(pos_arg->max_num))
                 pos_arg++;
         }
         else {
@@ -1225,7 +1228,7 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
             parser->failed.arg_to_parse = arg;
             return ARGPARSE_INSUFFICIENT_ARGS;
         }
-        if(arg->num_parsed > arg->max_num){
+        if(arg->num_parsed > agp_maxnum(arg->max_num)){
             parser->failed.arg_to_parse = arg;
             return ARGPARSE_EXCESS_ARGS;
         }
@@ -1236,7 +1239,7 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
             parser->failed.arg_to_parse = arg;
             return ARGPARSE_INSUFFICIENT_ARGS;
         }
-        if(arg->num_parsed > arg->max_num){
+        if(arg->num_parsed > agp_maxnum(arg->max_num)){
             parser->failed.arg_to_parse = arg;
             return ARGPARSE_EXCESS_ARGS;
         }
@@ -1307,7 +1310,7 @@ parse_args_longstrings(ArgParser* parser, const LongString*args, size_t args_cou
                 parser->failed.arg_to_parse = kwarg;
                 return err;
             }
-            if(kwarg->num_parsed == kwarg->max_num)
+            if(kwarg->num_parsed == agp_maxnum(kwarg->max_num))
                 kwarg = NULL;
         }
         else if(pos_arg && pos_arg != past_the_end){
@@ -1318,7 +1321,7 @@ parse_args_longstrings(ArgParser* parser, const LongString*args, size_t args_cou
                 parser->failed.arg_to_parse = pos_arg;
                 return err;
             }
-            if(pos_arg->num_parsed == pos_arg->max_num)
+            if(pos_arg->num_parsed == agp_maxnum(pos_arg->max_num))
                 pos_arg++;
         }
         else {
@@ -1332,7 +1335,7 @@ parse_args_longstrings(ArgParser* parser, const LongString*args, size_t args_cou
             parser->failed.arg_to_parse = arg;
             return ARGPARSE_INSUFFICIENT_ARGS;
         }
-        if(arg->num_parsed > arg->max_num){
+        if(arg->num_parsed > agp_maxnum(arg->max_num)){
             parser->failed.arg_to_parse = arg;
             return ARGPARSE_EXCESS_ARGS;
         }
@@ -1343,7 +1346,7 @@ parse_args_longstrings(ArgParser* parser, const LongString*args, size_t args_cou
             parser->failed.arg_to_parse = arg;
             return ARGPARSE_INSUFFICIENT_ARGS;
         }
-        if(arg->num_parsed > arg->max_num){
+        if(arg->num_parsed > agp_maxnum(arg->max_num)){
             parser->failed.arg_to_parse = arg;
             return ARGPARSE_EXCESS_ARGS;
         }
@@ -1474,10 +1477,10 @@ print_argparse_error(ArgParser* parser, enum ArgParseError error){
             ArgToParse* arg_to_parse = parser->failed.arg_to_parse;
 
             if(!parser->failed.arg){
-                fprintf(stderr, "Excess arguments. No more than %d arguments needed. Unknown first excess argument (this is a bug)\n", arg_to_parse->max_num);
+                fprintf(stderr, "Excess arguments. No more than %d arguments needed. Unknown first excess argument (this is a bug)\n", agp_maxnum(arg_to_parse->max_num));
                 return;
             }
-            fprintf(stderr, "Excess arguments. No more than %d arguments needed. First excess argument: '%s'\n", arg_to_parse->max_num, parser->failed.arg) ;
+            fprintf(stderr, "Excess arguments. No more than %d arguments needed. First excess argument: '%s'\n", agp_maxnum(arg_to_parse->max_num), parser->failed.arg) ;
         }return;
         case ARGPARSE_INSUFFICIENT_ARGS:{
             if(!parser->failed.arg_to_parse){
@@ -1531,21 +1534,18 @@ main(int argc, const char*_Null_unspecified*_Null_unspecified argv){
         {
             .name = SV("-o"),
             .altname1 = SV("--output"),
-            .max_num = 1,
             .dest = ARGDEST(&output),
             .help = "Where to write the output file."
         },
         {
             .name = SV("-n"),
             .altname1 = SV("--n-times"),
-            .max_num = 1,
             .dest = ARGDEST(&n_times),
             .show_default = true,
             .help = "Do it n times.",
         },
         {
             .name = SV("--dry-run"),
-            .max_num = 1,
             .dest = ARGDEST(&dry_run),
             .help = "Do everything but actually write the file."
         },

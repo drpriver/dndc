@@ -78,7 +78,7 @@ typedef struct Arena{
 static inline
 force_inline
 size_t
-round_size_up(size_t size){
+ArenaAllocator_round_size_up(size_t size){
     size_t remainder = size & 7;
     if(remainder)
         size += 8 - remainder;
@@ -91,7 +91,7 @@ round_size_up(size_t size){
 static
 void*
 ArenaAllocator_alloc(ArenaAllocator* aa, size_t size){
-    size = round_size_up(size);
+    size = ArenaAllocator_round_size_up(size);
     if(size > ARENA_BUFFER_SIZE){
         BigAllocation* ba = malloc(sizeof(*ba)+size);
         ba->next = aa->big_allocations;
@@ -124,7 +124,7 @@ ArenaAllocator_alloc(ArenaAllocator* aa, size_t size){
 static
 void*
 ArenaAllocator_zalloc(ArenaAllocator* aa, size_t size){
-    size = round_size_up(size);
+    size = ArenaAllocator_round_size_up(size);
     if(size > ARENA_SIZE/2){
         BigAllocation* ba = calloc(1, sizeof(*ba)+size);
         ba->next = aa->big_allocations;
@@ -165,8 +165,8 @@ ArenaAllocator_realloc(ArenaAllocator* aa, void*_Nullable ptr, size_t old_size, 
         return ArenaAllocator_alloc(aa, new_size);
     if(!new_size)
         return NULL;
-    old_size = round_size_up(old_size);
-    new_size = round_size_up(new_size);
+    old_size = ArenaAllocator_round_size_up(old_size);
+    new_size = ArenaAllocator_round_size_up(new_size);
     if(new_size > ARENA_BUFFER_SIZE){
         BigAllocation* ba = malloc(sizeof(*ba)+new_size);
         ba->next = aa->big_allocations;

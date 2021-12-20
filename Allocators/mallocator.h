@@ -7,5 +7,5 @@ force_inline
 Allocator
 get_mallocator(void){
     return (Allocator){.type=ALLOCATOR_MALLOC};
-    }
+}
 #endif

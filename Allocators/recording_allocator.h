@@ -2,7 +2,6 @@
 #define RECORDING_ALLOCATOR_H
 #include <stdlib.h>
 #include <string.h>
-#include "arena_allocator.h"
 #include "allocator.h"
 
 // This stuff is for debugging alloc/free errors.
@@ -19,6 +18,13 @@
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
+#else
+#ifndef _Nullable
+#define _Nullable
+#endif
+#ifndef _Nonnull
+#define _Nonnull
+#endif
 #endif
 
 /*
@@ -117,6 +123,7 @@ recording_free(RecordingAllocator* r, const void*_Nullable data, size_t size){
         goto Lerror;
     if(data == r->allocations[count-1]){
         RA_LOGIT("Found the allocation");
+        unhandled_error_condition(r->allocation_sizes[count-1] != size);
         const_free(data);
         r->count--;
         return;
@@ -127,17 +134,16 @@ recording_free(RecordingAllocator* r, const void*_Nullable data, size_t size){
             RA_LOGIT("old ptr, size: %p, %zu", r->allocations[i], r->allocation_sizes[i]);
             unhandled_error_condition(size != r->allocation_sizes[i]);
             const_free(data);
-            r->allocations[i] = NULL;
-            r->allocation_sizes[i] = 0;
             RA_LOGIT("Free succeeded: %p, %zu", data, size);
+            // compact
+            r->allocations[i] = r->allocations[count-1];
+            r->allocation_sizes[i] = r->allocation_sizes[count-1];
+            r->count--;
             return;
         }
     }
     Lerror:;
-#ifdef ERROR
-    ERROR("Freeing a pointer not recorded in this allocator. Double free?");
-#endif
-    assert(0);
+    assert(!(_Bool)"Freeing pointer not tracked by this allocator.");
 }
 
 // The money function, the reason we did this in the first
@@ -166,15 +172,17 @@ recording_realloc(RecordingAllocator* r, void*_Nullable data, size_t orig_size, 
     // check to see if we are reallocing in a loop.
     if(data == r->allocations[count-1]){
         RA_LOGIT("Was the last allocation");
+        unhandled_error_condition(orig_size != r->allocation_sizes[count-1]);
         r->count--;
         goto Lrealloc;
     }
     for(size_t i = 0; i < count-1; i++){
         if(data == r->allocations[i]){
             unhandled_error_condition(orig_size != r->allocation_sizes[i]);
-            RA_LOGIT("Marking this free, leaving hole");
-            r->allocations[i] = NULL;
-            r->allocation_sizes[i] = 0;
+            // compact
+            r->allocations[i] = r->allocations[count-1];
+            r->allocation_sizes[i] = r->allocation_sizes[count-1];
+            r->count--;
             break;
         }
     }
@@ -196,12 +204,11 @@ recording_cleanup(RecordingAllocator* r){
     free(r->allocation_sizes);
     free(r->allocations);
     memset(r, 0, sizeof(*r));
-    return;
 }
 
 static inline
 void
-shallow_free_recorded_mallocator(const Allocator a){
+shallow_free_recorded_mallocator(Allocator a){
     RecordingAllocator* r = a._data;
     recording_cleanup(r);
     const_free(r);

@@ -80,7 +80,6 @@ main(int argc, char**argv){
         ArgToParse pos_args[] = {
             [0] = {
                 .name = SV("source"),
-                .max_num = 1,
                 .dest = ARGDEST(&source_path),
                 .help = "Source file (.dnd file) to read from.\n"
                         "If not given, will read from stdin.",
@@ -90,7 +89,6 @@ main(int argc, char**argv){
             {
                 .name = SV("-o"),
                 .altname1 = SV("--output"),
-                .max_num = 1,
                 .dest = ARGDEST(&output_path),
                 .help = "Output path (.html file) to write to.\n"
                         "If not given, will write to stdout.",
@@ -98,14 +96,12 @@ main(int argc, char**argv){
             {
                 .name = SV("-d"),
                 .altname1 = SV("--depends-path"),
-                .max_num = 1,
                 .dest = ARGDEST(&dependency_path),
                 .help = "If given, where to write a make-style dependency file.",
             },
             {
                 .name = SV("-C"),
                 .altname1 = SV("--base-directory"),
-                .max_num = 1,
                 .dest = ARGDEST(&base_dir),
                 .help = "Paths in source files will be relative "
                         "to the given directory.\n"
@@ -117,21 +113,18 @@ main(int argc, char**argv){
             },
             {
                 .name = SV("--no-js"),
-                .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_NO_COMPILETIME_JS),
                 .help = "Don't execute js nodes.",
                 .hidden = true,
             },
             {
                 .name = SV("--print-tree"),
-                .max_num = 1,
                 .dest = ArgBitFlagDest(&ast_func_flags, DNDC_MAIN_PRINT_TREE),
                 .help = "Print out the entire document tree.",
                 .hidden = true,
             },
             {
                 .name = SV("--print-links"),
-                .max_num = 1,
                 .dest = ArgBitFlagDest(&ast_func_flags, DNDC_MAIN_PRINT_LINKS),
                 .help = "Print out all links (and what they target) known by "
                         "the system.",
@@ -139,49 +132,42 @@ main(int argc, char**argv){
             },
             {
                 .name = SV("--print-syntax"),
-                .max_num = 1,
                 .dest = ARGDEST(&print_syntax),
                 .help = "Print out the input document with syntax highlighting.",
                 .hidden = true,
             },
             {
                 .name = SV("--print-stats"),
-                .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_PRINT_STATS),
                 .help = "Log some informative statistics.",
                 .hidden = true,
             },
             {
                 .name = SV("--print-depends"),
-                .max_num = 1,
                 .dest = ARGDEST(&print_depends),
                 .help = "Print out what paths the document depends on.",
                 .hidden = true,
             },
             {
                 .name = SV("--allow-bad-links"),
-                .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_ALLOW_BAD_LINKS),
                 .help = "Warn instead of erroring if a link can't be resolved.",
                 .hidden = true,
             },
             {
                 .name = SV("--suppress-warnings"),
-                .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_SUPPRESS_WARNINGS),
                 .help = "Don't report non-fatal errors.",
                 .hidden = true,
             },
             {
                 .name = SV("--dont-write"),
-                .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_DONT_WRITE),
                 .help = "Don't write out the document.",
                 .hidden = true,
             },
             {
                 .name = SV("--single-threaded"),
-                .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_NO_THREADS),
                 .help = "Do not create worker threads, do everything in the "
                         "same thread.",
@@ -189,7 +175,6 @@ main(int argc, char**argv){
             },
             {
                 .name = SV("--cleanup"),
-                .max_num = 1,
                 .dest = ARGDEST(&cleanup),
                 .help = "Cleanup all resources (memory allocations, etc.).\n"
                         "Development debugging tool, useless in regular cli use.",
@@ -197,7 +182,6 @@ main(int argc, char**argv){
             },
             {
                 .name = SV("--format"),
-                .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_REFORMAT_ONLY),
                 .help = "Instead of rendering to html, render to .dnd with "
                         "trailing spaces removed, text wrapped to 80 columns "
@@ -206,7 +190,6 @@ main(int argc, char**argv){
             {
                 .name = SV("--expand"),
                 .altname1 = SV("--expand-only"),
-                .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_OUTPUT_EXPANDED_DND),
                 .help = "After resolving imports and executing user scripts, "
                         "output as a single file .dnd file instead of html.",
@@ -214,7 +197,6 @@ main(int argc, char**argv){
             },
             {
                 .name = SV("--dont-inline-images"),
-                .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_DONT_INLINE_IMAGES),
                 .help = "Instead of base64ing the images, use a link.",
                 .hidden = true,
@@ -222,7 +204,6 @@ main(int argc, char**argv){
             {
                 .name = SV("--untrusted-input"),
                 .altname1 = SV("--untrusted"),
-                .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_INPUT_IS_UNTRUSTED),
                 .help = "Input is untrusted and thus should not be allowed to "
                         "import files, execute scripts or embed javascript in "
@@ -231,7 +212,6 @@ main(int argc, char**argv){
             },
             {
                 .name = SV("--strip-spaces"),
-                .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_STRIP_WHITESPACE),
                 .help = "Strip trailing and leading whitespace from all output "
                         "lines.",
@@ -239,7 +219,6 @@ main(int argc, char**argv){
             },
             {
                 .name = SV("--dont-read"),
-                .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_DONT_READ),
                 .help = "Don't read any files (other than builtins and the "
                         "initial input file).",
@@ -247,14 +226,12 @@ main(int argc, char**argv){
             },
             {
                 .name = SV("--bench-iters"),
-                .max_num = 1,
                 .dest = ARGDEST(&bench_iters),
                 .help = "Execute in a repeated loop this many times.",
                 .hidden = true,
             },
             {
                 .name = SV("--fragment"),
-                .max_num = 1,
                 .altname1 = SV("--fragment-only"),
                 .dest = ArgBitFlagDest(&flags, DNDC_FRAGMENT_ONLY),
                 .help = "Produce an html fragment instead of a full html document.",
@@ -262,7 +239,6 @@ main(int argc, char**argv){
             },
             {
                 .name = SV("--disallow-attribute-directive-overlap"),
-                .max_num = 1,
                 .altname1 = SV("--dado"),
                 .dest = ArgBitFlagDest(&flags, DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP),
                 .help = "Error if an attribute name overlaps with a directive name.",
@@ -270,7 +246,6 @@ main(int argc, char**argv){
             },
             {
                 .name = SV("--allow-js-write"),
-                .max_num = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_ENABLE_JS_WRITE),
                 .help = "Allow compiletime javascript to write files.",
                 .hidden = true,
@@ -708,7 +683,7 @@ print_file_writing_error(const char* filename, FileWriteResult err){
     #else
     char errbuff[4192];
     if(err.errored){
-        DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM 
+        DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM
                        // "when you are not in control of the message, you
                        // had better pass the FORMAT_MESSAGE_IGNORE_INSERTS
                        // flag"  - Raymond Chen

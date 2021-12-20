@@ -4,6 +4,11 @@
 #include <stddef.h>
 // free
 #include <stdlib.h>
+#include <assert.h>
+
+#ifdef __APPLE__
+#include <malloc/malloc.h>
+#endif
 
 #ifndef warn_unused
 
@@ -62,7 +67,6 @@
 #define const_free(ptr) do{\
     _Pragma("GCC diagnostic push");\
     _Pragma("GCC diagnostic ignored \"-Wdiscarded-qualifiers\"");\
-    _Pragma("GCC diagnostic ignored \"-Wcast-qual\"");\
     free((void*)ptr); \
     _Pragma("GCC diagnostic pop");\
     }while(0)
@@ -110,7 +114,6 @@ void*
 Allocator_dupe(Allocator allocator, const void* data, size_t size);
 
 static inline
-// force_inline
 void
 Allocator_free(Allocator allocator, const void*_Nullable data, size_t size);
 
@@ -123,6 +126,10 @@ static inline
 warn_unused
 char*
 Allocator_strndup(Allocator allocator, const char* str, size_t length);
+
+static inline
+size_t
+Allocator_good_size(Allocator allocator, size_t size);
 
 #ifdef __clang__
 #pragma clang assume_nonnull end
