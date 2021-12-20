@@ -1,12 +1,16 @@
 #ifndef DNDC_FILE_CACHE_C
 #define DNDC_FILE_CACHE_C
 #include "dndc_file_cache.h"
-#include "bb_extensions.h"
 #include "file_util.h"
+#include "base64.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
+
+static
+StringResult
+read_and_base64_bin_file(Allocator scratch, Allocator outallocator, const char* filepath);
 
 static inline
 void
@@ -101,7 +105,7 @@ FileCache_read_file(FileCache* cache, StringView spath, bool cached_only){
 static inline
 warn_unused
 StringResult
-FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only, ByteBuilder* bb){
+FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only){
     MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
         if(LS_SV_equals(src->sourcepath.path, spath)){
             return (StringResult){
@@ -113,7 +117,7 @@ FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only
         return (StringResult){.errored = PARSE_ERROR};
     }
     FileCachePath path = FileCache_alloc_path(cache, spath);
-    StringResult base64ed_e = read_and_base64_bin_file(bb, cache->allocator, path.path.text);
+    StringResult base64ed_e = read_and_base64_bin_file(cache->scratch, cache->allocator, path.path.text);
     if(unlikely(base64ed_e.errored)){
         FileCache_free_path(cache, path);
         return (StringResult){.errored=base64ed_e.errored};
@@ -125,6 +129,42 @@ FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only
         return (StringResult){.result=base64ed_e.result};
     }
 }
+
+static
+void
+FileCache_preload_b64_files(FileCache* cache, StringView* spaths, size_t count){
+    for(size_t i = 0; i < count; i++){
+        StringView spath = spaths[i];
+        StringResult e = FileCache_read_and_b64_file(cache, spath, false);
+        (void)e;
+    }
+}
+
+// TODO: figure out where to put this. It was previously in bb_extensions.
+
+//
+// Reads in a file as binary and base64-ifies it.
+//
+// All failures are file-related errors.
+// The base64-ifying can't fail.
+//
+static
+StringResult
+read_and_base64_bin_file(Allocator scratch, Allocator outallocator, const char* filepath){
+    StringResult result = {0};
+    BinaryFileResult bfr = read_bin_file(filepath, scratch);
+    if(bfr.errored){
+        result.errored = bfr.errored;
+        return result;
+    }
+    ByteBuffer buff = bfr.result;
+    MStringBuilder sb = {.allocator=outallocator};
+    msb_write_b64(&sb, buff.buff, buff.n_bytes);
+    Allocator_free(scratch, buff.buff, buff.n_bytes);
+    result.result = msb_detach_ls(&sb);
+    return result;
+}
+
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

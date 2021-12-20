@@ -38,7 +38,7 @@
 struct OverflowAllocation {
     struct OverflowAllocation*_Nullable next;
     char buff[];
-    };
+};
 typedef struct LinearAllocator {
     // The buffer to allocate from.
     void*_Null_unspecified  _data;
@@ -75,8 +75,8 @@ new_linear_storage(size_t size, const char*_Nullable name){
         ._cursor=0,
         .high_water=0,
         .name = name,
-        };
-    }
+    };
+}
 
 //
 // Effectively frees all outstanding pointers by setting the cursor to 0 as if
@@ -91,7 +91,7 @@ static inline
 void
 linear_reset(LinearAllocator* s){
     s->_cursor = 0;
-    }
+}
 
 //
 // If alloced via malloc, cleans-up the resources.
@@ -104,12 +104,12 @@ destroy_linear_storage(LinearAllocator* s){
         struct OverflowAllocation* next = oa->next;
         free(oa);
         oa = next;
-        }
+    }
     s->name = NULL;
     s->_data = NULL;
     s->_capacity = 0;
     s->_cursor = 0;
-    }
+}
 
 //
 // Allocates a buffer of size size, suitably aligned to alignment.
@@ -125,7 +125,7 @@ linear_aligned_alloc(LinearAllocator* restrict s, size_t size, size_t alignment)
     size_t align_mod = val & (alignment - 1);
     if(align_mod){
         s->_cursor += alignment - align_mod;
-        }
+    }
     if(s->_cursor + size > s->_capacity){
         // fall back to malloc
 #ifdef ERROR
@@ -138,14 +138,14 @@ linear_aligned_alloc(LinearAllocator* restrict s, size_t size, size_t alignment)
         result->next = s->overflow;
         s->overflow = result;
         return result->buff;
-        }
+    }
     void* result = ((char*)s->_data) + s->_cursor;
     s->_cursor += size;
     if(s->_cursor > s->high_water){
         s->high_water = s->_cursor;
-        }
-    return result;
     }
+    return result;
+}
 
 //
 // Allocates a buffer of size size, aligned to the generic alignment of 8.
@@ -160,7 +160,7 @@ linear_alloc(LinearAllocator* restrict s, size_t size){
     enum {GENERIC_ALIGNMENT = 8}; // lmao, but this allows for u64s on 32 bit platforms
     _Static_assert(sizeof(void*) <= GENERIC_ALIGNMENT, "");
     return linear_aligned_alloc(s, size, GENERIC_ALIGNMENT);
-    }
+}
 
 
 //
@@ -175,7 +175,7 @@ linear_aligned_zalloc(LinearAllocator* restrict s, size_t size, size_t alignment
     void* result = linear_aligned_alloc(s, size, alignment);
     memset(result, 0, size);
     return result;
-    }
+}
 
 //
 // Like linear_alloc, but zeros the memory. Just calls memset
@@ -187,7 +187,7 @@ warn_unused
 void*
 linear_zalloc(LinearAllocator* restrict s, size_t size){
     return linear_aligned_zalloc(s, size, _Alignof(void*));
-    }
+}
 
 //
 // Frees the allocation. If this pointer + size is exactly data + cursor, we can
@@ -204,8 +204,8 @@ linear_free(LinearAllocator* la, const void*_Nullable data, size_t size){
     assert(size);
     if(la->_cursor + (const char*)la->_data == (const char*)data + size){
         la->_cursor -= size;
-        }
     }
+}
 
 //
 // If the pointer + orig size is equal to the allocators cursor, then perfectly
@@ -219,21 +219,21 @@ linear_realloc(LinearAllocator* la, void*_Nullable data, size_t orig_size, size_
     assert(new_size > orig_size);
     if(!data){
         return linear_alloc(la, new_size);
-        }
+    }
     assert(new_size);
     // check if we can extend in place.
     if(la->_cursor + (char*)la->_data == (char*)data+orig_size){
         la->_cursor += new_size - orig_size;
         if(la->_cursor > la->high_water){
             la->high_water = la->_cursor;
-            }
-        return (void*)data; // cast to shut up nullability
         }
+        return (void*)data; // cast to shut up nullability
+    }
     // just do a memcpy
     void* result = linear_alloc(la, new_size);
     memcpy(result, data, orig_size);
     return result;
-    }
+}
 
 //
 // Turns a specific LinearAllocator into the erased Allocator. Take care
@@ -245,8 +245,8 @@ allocator_from_la(LinearAllocator* la){
     return (Allocator){
         ._data = la,
         .type = ALLOCATOR_LINEAR,
-        };
-    }
+    };
+}
 #ifdef __clang__
 #pragma clang assume_nonnull end
 #endif

@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <assert.h>
 #include "MStringBuilder.h"
-#include "ByteBuilder.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -21,6 +20,16 @@
 #define warn_unused _Check_return
 #else
 #define warn_unused
+#endif
+#endif
+
+#if !defined(likely) && !defined(unlikely)
+#if defined(__GNUC__) || defined(__clang__)
+#define likely(x)      __builtin_expect(!!(x), 1)
+#define unlikely(x)    __builtin_expect(!!(x), 0)
+#else
+#define likely(x) (x)
+#define unlikely(x) (x)
 #endif
 #endif
 
@@ -463,22 +472,6 @@ base64_decode(void* restrict dst, size_t dst_length, const uint8_t* restrict src
     if(unlikely(bad & 0xc0))
         return BASE64_DECODING_ERROR;
 
-    return BASE64_NO_ERROR;
-}
-
-// Decodes a base64 string into a ByteBuilder.
-// ByteBuilder handles things like allocating the proper size, etc.
-static inline
-warn_unused
-Base64Error
-bb_decode_b64(ByteBuilder* bb, const uint8_t* restrict src, size_t src_length){
-    size_t reserved_size = base64_decode_size(src_length);
-    if(!reserved_size) return BASE64_NO_ERROR;
-    bb_reserve(bb, reserved_size);
-    void* dst = bb->data + bb->cursor;
-    Base64Error e = base64_decode(dst, reserved_size, src, src_length);
-    if(e) return e;
-    bb->cursor += reserved_size;
     return BASE64_NO_ERROR;
 }
 

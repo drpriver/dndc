@@ -20,6 +20,7 @@ static TestFunc TestUntrusted;
 static TestFunc TestSpecialChars;
 static TestFunc TestImgAttributes;
 static TestFunc TestJs;
+static TestFunc TestFileCache;
 
 int main(int argc, char** argv){
     RegisterTest(TestDndc1);
@@ -37,6 +38,7 @@ int main(int argc, char** argv){
     RegisterTest(TestSpecialChars);
     RegisterTest(TestImgAttributes);
     RegisterTest(TestJs);
+    RegisterTest(TestFileCache);
     int ret = test_main(argc, argv);
     return ret;
 }
@@ -693,6 +695,33 @@ TestFunction(TestJs){
         | DNDC_DONT_WRITE;
     DndcLongString output;
     int e = run_the_dndc(flags, SV(""),input, SV(""), SV(""), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, post_js_ast_func, &TEST_stats, NULL);
+    TestAssertFalse(e);
+    TESTEND();
+}
+
+TestFunction(TestFileCache){
+    TESTBEGIN();
+    RecordingAllocator* ra = calloc(1, sizeof(*ra));
+    Allocator allocator = {
+        ._data = ra,
+        .type = ALLOCATOR_RECORDED,
+    };
+    FileCache cache = {
+        .allocator = allocator,
+        .scratch = allocator,
+    };
+    StringView input = SV(
+            "::img\n"
+            "  Makefile\n"
+            );
+    uint64_t flags = DNDC_DONT_WRITE;
+    DndcLongString output;
+    int e = run_the_dndc(flags, SV(""), input, SV(""), SV(""), &output, &cache, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL);
+    FileCache_clear(&cache);
+    for(size_t i = 0; i < ra->count; i++){
+        TestExpectEquals(ra->allocations[i], NULL);
+        TestExpectEquals(ra->allocation_sizes[i], 0);
+    }
     TestAssertFalse(e);
     TESTEND();
 }

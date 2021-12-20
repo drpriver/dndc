@@ -58,10 +58,12 @@ TestFunction(TestBase64_2){
     Allocator a = new_recorded_mallocator();
     {
         StringView data = SV("YW55IGNhcm5hbCBwbGVhc3Vy");
-        ByteBuilder bb = {.allocator = a};
-        Base64Error e = bb_decode_b64(&bb, (const unsigned char*)data.text, data.length);
+        size_t size = base64_decode_size(data.length);
+        void* buff = Allocator_alloc(a, size);
+
+        Base64Error e = base64_decode(buff, size, (const unsigned char*)data.text, data.length);
         TestExpectEquals(e, BASE64_NO_ERROR);
-        bb_destroy(&bb);
+        Allocator_free(a, buff, size);
     }
     {
         uint8_t data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 11};

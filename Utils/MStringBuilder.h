@@ -49,6 +49,11 @@ force_inline
 void
 _check_msb_remaining_size(MStringBuilder*, size_t);
 
+static inline
+void
+_msb_resize(MStringBuilder*, size_t);
+
+
 //
 // Nul-terminates the builder without actually increasing the length
 // of the string.
@@ -78,6 +83,7 @@ LongString
 msb_detach_ls(MStringBuilder* msb){
     assert(msb->data);
     msb_nul_terminate(msb);
+    _msb_resize(msb, msb->cursor+1);
     LongString result = {0};
     result.text = msb->data;
     result.length = msb->cursor;
@@ -91,6 +97,7 @@ static inline
 StringView
 msb_detach_sv(MStringBuilder* msb){
     StringView result = {0};
+    _msb_resize(msb, msb->cursor);
     result.text = msb->data;
     result.length = msb->cursor;
     msb->data = NULL;
@@ -110,8 +117,8 @@ msb_borrow_sv(MStringBuilder* msb){
     return (StringView) {
         .text = msb->data,
         .length = msb->cursor,
-        };
-    }
+    };
+}
 
 // "Borrows" a nul-terminated string
 static inline
@@ -122,8 +129,8 @@ msb_borrow_ls(MStringBuilder* msb){
     return (LongString) {
         .text = msb->data,
         .length = msb->cursor,
-        };
-    }
+    };
+}
 
 //
 // "Resets" the builder. Logically clears the contents of the builder
@@ -136,17 +143,17 @@ static inline
 void
 msb_reset(MStringBuilder* msb){
     msb->cursor = 0;
-    }
+}
 
 // Internal function, resizes the builder to the new size.
 static inline
 void
-_resize_msb(MStringBuilder* msb, size_t size){
+_msb_resize(MStringBuilder* msb, size_t size){
     char* new_data = Allocator_realloc(msb->allocator, msb->data, msb->capacity, size);
     unhandled_error_condition(!new_data);
     msb->data = new_data;
     msb->capacity = size;
-    }
+}
 
 // Internal function, ensures there is enough additional capacity.
 static inline
@@ -157,13 +164,13 @@ _check_msb_remaining_size(MStringBuilder* msb, size_t len){
         size_t new_size = msb->capacity?(msb->capacity*3)/2:16;
         while(new_size < msb->cursor+len){
             new_size *= 2;
-            }
+        }
         if(new_size & 15){
             new_size += (16- (new_size&15));
-            }
-        _resize_msb(msb, new_size);
         }
+        _msb_resize(msb, new_size);
     }
+}
 
 //
 // Writes a string into the builder. You must know the length.
@@ -176,7 +183,7 @@ msb_write_str(MStringBuilder* restrict msb, const char*_Null_unspecified restric
     _check_msb_remaining_size(msb, len);
     (memcpy)(msb->data + msb->cursor, str, len);
     msb->cursor += len;
-    }
+}
 
 //
 // Write a single char into the builder.
@@ -190,7 +197,7 @@ void
 msb_write_char(MStringBuilder* msb, char c){
     _check_msb_remaining_size(msb, 1);
     msb->data[msb->cursor++] = c;
-    }
+}
 
 //
 // Write a repeated pattern of characters into the builder.
@@ -205,7 +212,7 @@ msb_write_nchar(MStringBuilder* msb, char c, size_t n){
     _check_msb_remaining_size(msb, n);
     memset(msb->data + msb->cursor, c, n);
     msb->cursor += n;
-    }
+}
 
 //
 // Erases the given number of characters from the end of the builder.
@@ -216,10 +223,10 @@ msb_erase(MStringBuilder* msb, size_t len){
         msb->cursor = 0;
         msb->data[0] = '\0';
         return;
-        }
+    }
     msb->cursor -= len;
     msb->data[msb->cursor] = '\0';
-    }
+}
 
 static inline
 char
@@ -230,6 +237,7 @@ msb_peek(MStringBuilder* msb){
 
 // Writes a string literal into the builder. Avoids the need to strlen
 // as the literal's size is known at compile time.
+// The "" forces it to be a string literal.
 #define msb_write_literal(msb, lit) msb_write_str(msb, ""lit, sizeof(""lit)-1)
 
 #ifdef __clang__

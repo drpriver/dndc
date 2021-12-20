@@ -5,6 +5,18 @@
 #include "arena_allocator.h"
 #include "allocator.h"
 
+// This stuff is for debugging alloc/free errors.
+#if 0
+#define DEBUG_ALLOCATIONS
+#endif
+
+#ifdef DEBUG_ALLOCATIONS
+#include <stdio.h>
+#define RA_LOGIT(fmt, ...) fprintf(stderr, "%s:%d:" fmt "\n", __func__, __LINE__, ##__VA_ARGS__)
+#else
+#define RA_LOGIT(...) (void)0
+#endif
+
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
@@ -50,20 +62,22 @@ recording_ensure_capacity(RecordingAllocator* r){
         r->allocations = malloc(INITIAL_CAPACITY*sizeof(*r->allocations));
         r->allocation_sizes = malloc(INITIAL_CAPACITY*sizeof(*r->allocation_sizes));
         return;
-        }
+    }
     size_t old_cap = r->capacity;
     size_t new_cap = old_cap * 2;
     r->allocations = sane_realloc(r->allocations, old_cap * sizeof(*r->allocations), new_cap*sizeof(*r->allocations));
     r->allocation_sizes = sane_realloc(r->allocation_sizes, old_cap*sizeof(*r->allocation_sizes), new_cap*sizeof(*r->allocation_sizes));
     r->capacity = new_cap;
-    }
+}
 
 MALLOC_FUNC
 static
 warn_unused
 void*
 recording_alloc(RecordingAllocator* r, size_t size){
+    RA_LOGIT("Allocation for %zu requested.", size);
     void* result = malloc(size);
+    RA_LOGIT("Allocation for %zu granted: %p", size, result);
     if(!result)
         return result;
     recording_ensure_capacity(r);
@@ -71,14 +85,16 @@ recording_alloc(RecordingAllocator* r, size_t size){
     r->allocations[index] = result;
     r->allocation_sizes[index] = size;
     return result;
-    }
+}
 
 MALLOC_FUNC
 static
 warn_unused
 void*
 recording_zalloc(RecordingAllocator* r, size_t size){
+    RA_LOGIT("ZAllocation for %zu requested.", size);
     void* result = calloc(1, size);
+    RA_LOGIT("ZAllocation for %zu granted: %p", size, result);
     if(!result)
         return result;
     recording_ensure_capacity(r);
@@ -86,78 +102,62 @@ recording_zalloc(RecordingAllocator* r, size_t size){
     r->allocations[index] = result;
     r->allocation_sizes[index] = size;
     return result;
-    }
+}
 
 static
 void
 recording_free(RecordingAllocator* r, const void*_Nullable data, size_t size){
-    if(!data)
+    if(!data){
+        RA_LOGIT("Free with no data: %p, %zu", data, size);
         return;
+    }
+    RA_LOGIT("Free: %p, %zu", data, size);
     size_t count = r->count;
     if(!count)
         goto Lerror;
     if(data == r->allocations[count-1]){
+        RA_LOGIT("Found the allocation");
         const_free(data);
         r->count--;
         return;
-        }
+    }
     // inefficient, but whatever
     for(size_t i = 0; i < count-1; i++){
         if(data == r->allocations[i]){
+            RA_LOGIT("old ptr, size: %p, %zu", r->allocations[i], r->allocation_sizes[i]);
             unhandled_error_condition(size != r->allocation_sizes[i]);
             const_free(data);
             r->allocations[i] = NULL;
             r->allocation_sizes[i] = 0;
+            RA_LOGIT("Free succeeded: %p, %zu", data, size);
             return;
-            }
         }
+    }
     Lerror:;
 #ifdef ERROR
     ERROR("Freeing a pointer not recorded in this allocator. Double free?");
 #endif
     assert(0);
-    }
+}
 
 // The money function, the reason we did this in the first
 // place.
 static
 void
 recording_free_all(RecordingAllocator* r){
+    RA_LOGIT("Freeing all");
     for(size_t i = 0; i < r->count; i++){
         if(!r->allocations[i])
             continue;
         free(r->allocations[i]);
-        }
+    }
     r->count = 0;
-    }
-
-static
-void
-recording_cleanup(RecordingAllocator* r){
-    free(r->allocation_sizes);
-    free(r->allocations);
-    memset(r, 0, sizeof(*r));
-    return;
-    }
-
-static
-void
-recording_merge(RecordingAllocator* restrict dst, const RecordingAllocator* restrict src){
-    for(size_t i = 0; i < src->count; i++){
-        size_t size = src->allocation_sizes[i];
-        if(!size)
-            continue;
-        recording_ensure_capacity(dst);
-        void* pointer = src->allocations[i];
-        size_t index = dst->count++;
-        dst->allocations[index] = pointer;
-        dst->allocation_sizes[index] = size;
-        }
-    }
+}
 
 static inline
 void*
 recording_realloc(RecordingAllocator* r, void*_Nullable data, size_t orig_size, size_t new_size){
+    RA_LOGIT("realloc request: old ptr: %p, orig_size: %zu, new_size: %zu", data, orig_size, new_size);
     if(!data)
         goto Lrealloc;
     size_t count = r->count;
@@ -165,25 +165,39 @@ recording_realloc(RecordingAllocator* r, void*_Nullable data, size_t orig_size, 
         goto Lrealloc;
     // check to see if we are reallocing in a loop.
     if(data == r->allocations[count-1]){
+        RA_LOGIT("Was the last allocation");
         r->count--;
         goto Lrealloc;
-        }
+    }
     for(size_t i = 0; i < count-1; i++){
         if(data == r->allocations[i]){
             unhandled_error_condition(orig_size != r->allocation_sizes[i]);
+            RA_LOGIT("Marking this free, leaving hole");
             r->allocations[i] = NULL;
             r->allocation_sizes[i] = 0;
             break;
-            }
         }
+    }
     Lrealloc:;
+    RA_LOGIT("Falling back to actual realloc");
     void* result = sane_realloc(data, orig_size, new_size);
     recording_ensure_capacity(r);
     size_t index = r->count++;
     r->allocations[index] = result;
     r->allocation_sizes[index] = new_size;
+    RA_LOGIT("Realloced %p, size %zu into %p, size %zu", data, orig_size, result, new_size);
     return result;
-    }
+}
+
+static
+void
+recording_cleanup(RecordingAllocator* r){
+    RA_LOGIT("Cleaning up the recorder itself");
+    free(r->allocation_sizes);
+    free(r->allocations);
+    memset(r, 0, sizeof(*r));
+    return;
+}
 
 static inline
 void
@@ -191,14 +205,7 @@ shallow_free_recorded_mallocator(const Allocator a){
     RecordingAllocator* r = a._data;
     recording_cleanup(r);
     const_free(r);
-    }
-
-static inline
-void
-merge_recorded_mallocators_and_destroy_src(const Allocator dst, const Allocator src){
-    recording_merge(dst._data, src._data);
-    // shallow_free_recorded_mallocator(src);
-    }
+}
 
 static inline
 Allocator
@@ -207,8 +214,8 @@ new_recorded_mallocator(void){
     return (Allocator){
         ._data = ra,
         .type = ALLOCATOR_RECORDED,
-        };
-    }
+    };
+}
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

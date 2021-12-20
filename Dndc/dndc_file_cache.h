@@ -2,7 +2,6 @@
 #define DNDC_FILE_CACHE_H
 #include "dndc_long_string.h"
 #include "errorable_long_string.h"
-#include "ByteBuilder.h"
 #include "allocator.h"
 
 #ifdef __clang__
@@ -31,7 +30,11 @@ FileCache_read_file(FileCache* cache, StringView spath, bool cached_only);
 static inline
 warn_unused
 StringResult
-FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only, ByteBuilder* bb);
+FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only);
+
+static 
+void // preload only so no error code
+FileCache_preload_b64_files(FileCache* cache, StringView* spath, size_t count);
 
 
 // A cached loaded source file path
@@ -55,6 +58,7 @@ typedef struct LoadedSource {
 
 struct DndcFileCache {
     Allocator allocator;
+    Allocator scratch;
     // TODO: use an adaptive table. Paths can get long and slow.
     Marray(LoadedSource) _files;
 };

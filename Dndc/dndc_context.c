@@ -9,8 +9,6 @@
 #include "long_string.h"
 #include "measure_time.h"
 #include "file_util.h"
-#include "ByteBuilder.h"
-#include "bb_extensions.h"
 #include "msb_extensions.h"
 #include "msb_format.h"
 #include "str_util.h"
@@ -359,9 +357,7 @@ ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath){
         binarypath = msb_borrow_sv(&path_builder);
     }
     ctx_note_dependency(ctx, binarypath);
-    ByteBuilder bb = {.allocator = ctx->allocator};
-    StringResult cache_result = FileCache_read_and_b64_file(&ctx->b64cache, binarypath, !!(ctx->flags & DNDC_DONT_READ), &bb);
-    bb_destroy(&bb);
+    StringResult cache_result = FileCache_read_and_b64_file(&ctx->b64cache, binarypath, !!(ctx->flags & DNDC_DONT_READ));
     msb_destroy(&path_builder);
     if(cache_result.errored) return (StringViewResult){.errored=cache_result.errored};
     return (StringViewResult){.result=LS_to_SV(cache_result.result)};

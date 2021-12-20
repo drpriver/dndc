@@ -4,7 +4,6 @@
 #include "errorable_long_string.h"
 #include "common_macros.h"
 #include "MStringBuilder.h"
-#include "ByteBuilder.h"
 #include "dndc_types.h"
 
 #ifndef warn_unused

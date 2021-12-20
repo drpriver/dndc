@@ -5,8 +5,6 @@
 #include "dndc.h"
 #include "dndc_funcs.h"
 #include "dndc_types.h"
-#include "ByteBuilder.h"
-#include "bb_extensions.h"
 #include "msb_format.h"
 #include "str_util.h"
 #include <sys/stat.h>
@@ -316,7 +314,7 @@ void*_Nullable js_arena_realloc(JSMallocState*s, void* pointer, size_t size){
 }
 
 static
-QJSRuntime*
+QJSRuntime*_Nullable
 new_qjs_rt(ArenaAllocator* aa){
     static const JSMallocFunctions mf = {
         .js_malloc = js_arena_malloc,
@@ -327,21 +325,24 @@ new_qjs_rt(ArenaAllocator* aa){
     rt = JS_NewRuntime2(&mf, aa);
     JS_NewClassID(&JS_DNDC_CONTEXT_CLASS_ID);
     if(JS_NewClass(rt, JS_DNDC_CONTEXT_CLASS_ID, &JS_DNDC_CONTEXT_CLASS) < 0){
-        unhandled_error_condition(0);
+        goto fail;
     }
     JS_NewClassID(&JS_DNDC_ATTRIBUTES_CLASS_ID);
     if(JS_NewClass(rt, JS_DNDC_ATTRIBUTES_CLASS_ID, &JS_DNDC_ATTRIBUTES_CLASS) < 0){
-        unhandled_error_condition(0);
+        goto fail;
     }
     JS_NewClassID(&JS_DNDC_CLASSLIST_CLASS_ID);
     if(JS_NewClass(rt, JS_DNDC_CLASSLIST_CLASS_ID, &JS_DNDC_CLASSLIST_CLASS) < 0){
-        unhandled_error_condition(0);
+        goto fail;
     }
     JS_NewClassID(&JS_DNDC_NODE_CLASS_ID);
     if(JS_NewClass(rt, JS_DNDC_NODE_CLASS_ID, &JS_DNDC_NODE_CLASS) < 0){
-        unhandled_error_condition(0);
+        goto fail;
     }
     return rt;
+    fail:
+    ArenaAllocator_free_all(aa);
+    return NULL;
 }
 
 static
@@ -720,19 +721,14 @@ js_load_file_as_base64(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJS
     if(ctx->flags & DNDC_DONT_READ){
         return JS_ThrowTypeError(jsctx, "File loading is disabled");
     }
-    // sloppy as fuck, whatever.
-    ByteBuilder bb = {.allocator = get_mallocator()};
 
     StringView sv = jsstring_make_stringview_js_allocated(jsctx, str);
-    Allocator alloc = get_mallocator();
-    StringResult e = read_and_base64_bin_file(&bb, alloc, sv.text);
+    StringResult e = FileCache_read_and_b64_file(&ctx->b64cache, sv, false);
     JS_FreeCString(jsctx, sv.text);
-    bb_destroy(&bb);
     if(e.errored){
         return JS_ThrowTypeError(jsctx, "%s: Error when loading file: '%s'", __func__, sv.text);
     }
     QJSValue result = JS_NewString(jsctx, e.result.text);
-    Allocator_free(alloc, e.result.text, e.result.length+1);
     return result;
 }
 

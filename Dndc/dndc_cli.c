@@ -13,6 +13,7 @@
 #include "file_util.h"
 #include "path_util.h"
 #include "MStringBuilder.h"
+#include "mallocator.h"
 #define GET_INPUT_API static inline
 #include "get_input.h"
 

@@ -29,7 +29,7 @@ int
 execute_qjs_string(QJSContext*jsctx, DndcContext* ctx, const char* str, size_t length, NodeHandle handle, NodeHandle firstline);
 
 static
-QJSRuntime*
+QJSRuntime*_Nullable
 new_qjs_rt(ArenaAllocator*);
 
 static

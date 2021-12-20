@@ -25,8 +25,6 @@
 #include "arena_allocator.h"
 #include "measure_time.h"
 #include "thread_utils.h"
-#include "ByteBuilder.h"
-#include "bb_extensions.h"
 
 #define DSORT_T LinkItem
 #define DSORT_CMP StringView_cmp
@@ -72,16 +70,7 @@ THREADFUNC(binary_worker){
     FileCache cache = *jobp->b64cache;
     size_t count = jobp->sourcepaths.count;
     StringView* data = jobp->sourcepaths.data;
-    ByteBuilder bb = {.allocator=cache.allocator};
-    for(size_t i = 0; i < count; i++){
-        StringView sv = data[i];
-        StringResult e = FileCache_read_and_b64_file(&cache, sv, false, &bb);
-        // We'll let the renderer report the error when it tries
-        // to load it.
-        (void)e;
-        bb_reset(&bb);
-    }
-    bb_destroy(&bb);
+    FileCache_preload_b64_files(&cache, data, count);
     memcpy(jobp->b64cache, &cache, sizeof(cache));
     // uint64_t after = get_t();
     // fprintf(stderr, "binary worker: %.3fms\n", (after-before)/1000.);
@@ -136,6 +125,11 @@ execute_user_scripts(DndcContext* ctx){
             if(!rt){
                 uint64_t before_init = get_t();
                 rt = new_qjs_rt(&aa);
+                if(!rt) {
+                    report_system_error(ctx, SV("Failed to create javascript rt"));
+                    result = GENERIC_ERROR;
+                    goto cleanup;
+                }
                 assert(!jsctx);
                 DndcJsFlags jsflags = DNDC_JS_FLAGS_NONE;
                 jsctx = new_qjs_ctx(rt, ctx, jsflags);
@@ -354,7 +348,8 @@ run_the_dndc(uint64_t flags,
             (FileCache){
                 .allocator = (flags & DNDC_NO_CLEANUP)?
                     get_mallocator()
-                    : new_recorded_mallocator()
+                    : new_recorded_mallocator(),
+                .scratch = get_mallocator(), // lazy, but we should always clean up from the cache right?
             },
         // The text cache only runs on this thread so we can just use the
         // general allocator.
@@ -876,10 +871,10 @@ execute_qjs_string(QJSContext*jsctx, DndcContext*ctx, const char* str, size_t le
 }
 
 static
-QJSRuntime*
+QJSRuntime*_Nullable
 new_qjs_rt(ArenaAllocator*aa){
     (void)aa;
-    return (void*_Nonnull)NULL;
+    return NULL;
 }
 
 static
@@ -1975,7 +1970,7 @@ struct DndcFileCache*
 dndc_create_filecache(void){
     struct DndcFileCache* result = malloc(sizeof(*result));
     Allocator al = get_mallocator();
-    *result = (struct DndcFileCache){.allocator = al};
+    *result = (struct DndcFileCache){.allocator = al, .scratch=al};
     return result;
 }
 DNDC_API
