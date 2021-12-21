@@ -59,12 +59,10 @@ static inline
 FileCachePath
 FileCache_alloc_path(FileCache* cache, StringView spath){
     char* path = Allocator_strndup(cache->allocator, spath.text, spath.length);
-    return (FileCachePath){
-        (LongString){
+    return (FileCachePath){{
             .text = path,
             .length = spath.length
-        },
-    };
+        }};
 }
 
 static inline
