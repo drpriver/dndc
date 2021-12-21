@@ -8,6 +8,7 @@
     "application.\n" \
     "\n" \
     "---\n" \
+    "This software uses the QuickJS JavaScript Engine.\n" \
     "\n" \
     "https://bellard.org/quickjs\n" \
     "\n" \

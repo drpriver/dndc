@@ -269,8 +269,8 @@ main(int argc, char**argv){
                 .help = "Print out help for the hidden arguments and exit.",
             },
             [OPEN_SOURCE] = {
-                .name = SV("--open-source-licenses"),
-                .help = "Print out the required open source copyright notices and exit.",
+                .name = SV("--open-source-credits"),
+                .help = "Print out attribution of open source libraries used and exit.",
             },
         };
         const char* version = "dndc version " DNDC_VERSION ". Compiled " __DATE__ " " __TIME__ ".";
