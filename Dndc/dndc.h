@@ -482,6 +482,69 @@ DNDC_API
 int
 dndc_filecache_has_path(DndcFileCache*, DndcStringView path);
 
+//
+// dndc_filecache_n_paths
+// ----------------------
+//
+// Returns the number of paths cached in the file cache.
+//
+DNDC_API
+size_t
+dndc_filecache_n_paths(DndcFileCache*);
+
+//
+// dndc_filecache_cached_paths
+// ---------------------------
+//
+// Reads a number of cached paths into a buffer. These paths are unstable -
+// further interaction with the filecache may invalidate them. Call this
+// function multiple times with the cookie to get all of the paths out of
+// the cache.
+//
+// The return value is the number of paths written to buff. This may be fewer
+// than the number of paths in the filecache. Call this function until it
+// returns 0.
+//
+// Args:
+// -----
+//
+// cache:
+//   The cache to read the paths from.
+//
+// buff:
+//   A pointer to an array of DndcStringViews to store the results in.
+// 
+// bufflen:
+//   The length of the array pointed to by buff.
+//
+// cookie:
+//   A pointer to an opaque value to record the internal position of the filecache.
+//   Initialize this to 0 and pass it to this function as you call it in a loop.
+//
+// Returns:
+// --------
+// The number of paths written to buff. When all paths have been written or an
+// invalid argument is given, returns 0.
+//
+// Example:
+// --------
+//  enum {EXAMPLE_LENGTH=100};
+//  DndcStringView buff[EXAMPLE_LENGTH];
+//  for(size_t cookie = 0, 
+//             n = dndc_filecache_cached_paths(cache, buff, EXAMPLE_LENGTH, &cookie); 
+//      n != 0; 
+//      n = dndc_filecache_cached_paths(cache, buff, EXAMPLE_LENGTH, &cookie)
+//  ){
+//      for(size_t i = 0; i < n; i++){
+//          DndcStringView path = buff[i];
+//          printf("%.*s\n", (int)path.length, path.text);
+//      }
+//  }
+//
+DNDC_API
+size_t
+dndc_filecache_cached_paths(DndcFileCache*cache, DndcStringView* buff, size_t bufflen, size_t* cookie);
+
 typedef struct DndcWorkerThread DndcWorkerThread;
 
 DNDC_API

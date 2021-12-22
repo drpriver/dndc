@@ -2,9 +2,12 @@
 // Exposes dndc as a c-extension for python.
 //
 #define DNDC_API static inline
-#define PYTHONMODULE
-#include "dndc.c"
+#include "dndc.h"
+#include "dndc_long_string.h"
+#include "common_macros.h"
+#include "allocator.h"
 #include "pyhead.h"
+#include "log_print.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -17,7 +20,7 @@ PushDiagnostic();
 SuppressUnusedFunction();
 static inline
 LongString
-pystring_to_longstring(PyObject* pyobj, const Allocator a){
+pystring_to_longstring(PyObject* pyobj, Allocator a){
     const char* text;
     Py_ssize_t length;
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
@@ -34,7 +37,7 @@ pystring_to_longstring(PyObject* pyobj, const Allocator a){
 
 static inline
 StringView
-pystring_to_stringview(PyObject* pyobj, const Allocator a){
+pystring_to_stringview(PyObject* pyobj, Allocator a){
     const char* text;
     Py_ssize_t length;
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
@@ -72,8 +75,8 @@ PopDiagnostic(); // unused function
 
 typedef struct DndcPyFileCache {
     PyObject_HEAD
-    FileCache text_cache;
-    FileCache b64_cache;
+    DndcFileCache* text_cache;
+    DndcFileCache* b64_cache;
 } DndcPyFileCache;
 
 static
@@ -85,8 +88,8 @@ DndcPyFileCache_remove(PyObject* self, PyObject* str){
     }
     StringView path = pystring_borrow_stringview(str);
     DndcPyFileCache* cache = (DndcPyFileCache*)self;
-    FileCache_maybe_remove(&cache->text_cache, path);
-    FileCache_maybe_remove(&cache->b64_cache, path);
+    dndc_filecache_remove(cache->text_cache, path);
+    dndc_filecache_remove(cache->b64_cache, path);
     Py_RETURN_NONE;
 }
 
@@ -94,8 +97,8 @@ static
 Nullable(PyObject*)
 DndcPyFileCache_clear(PyObject* self){
     DndcPyFileCache* cache = (DndcPyFileCache*)self;
-    FileCache_clear(&cache->text_cache);
-    FileCache_clear(&cache->b64_cache);
+    dndc_filecache_clear(cache->text_cache);
+    dndc_filecache_clear(cache->b64_cache);
     Py_RETURN_NONE;
 }
 
@@ -103,24 +106,27 @@ static
 Nullable(PyObject*)
 DndcPyFileCache_paths(PyObject* self){
     DndcPyFileCache* cache = (DndcPyFileCache*)self;
-    Py_ssize_t nfiles = cache->b64_cache._files.count + cache->text_cache._files.count;
+    Py_ssize_t nfiles = dndc_filecache_n_paths(cache->b64_cache) + dndc_filecache_n_paths(cache->text_cache);
     PyObject* result = PyList_New(nfiles);
     if(!result)
         goto error;
     Py_ssize_t index = 0;
-    for(size_t i = 0, count=cache->b64_cache._files.count; i < count; i++, index++){
-        LongString path = cache->b64_cache._files.data[i].sourcepath.path;
-        PyObject* s = PyUnicode_FromStringAndSize(path.text, path.length);
-        if(!s)
-            goto error;
-        PyList_SET_ITEM(result, index, s); // steals the reference
-    }
-    for(size_t i = 0, count = cache->text_cache._files.count; i < count; i++, index++){
-        LongString path = cache->text_cache._files.data[i].sourcepath.path;
-        PyObject* s = PyUnicode_FromStringAndSize(path.text, path.length);
-        if(!s)
-            goto error;
-        PyList_SET_ITEM(result, index, s); // steals the reference
+    StringView buff[100];
+    DndcFileCache* caches[2] = {cache->b64_cache, cache->text_cache};
+    for(size_t c = 0; c < arrlen(caches); c++){
+        DndcFileCache* ch = caches[c];
+        for(size_t cookie = 0, n = dndc_filecache_cached_paths(ch, buff, arrlen(buff), &cookie); 
+            n != 0; 
+            n = dndc_filecache_cached_paths(ch, buff, arrlen(buff), &cookie)
+        ){
+            for(size_t i = 0; i < n; i++){
+                StringView path = buff[i];
+                PyObject* s = PyUnicode_FromStringAndSize(path.text, path.length);
+                if(!s)
+                    goto error;
+                PyList_SET_ITEM(result, index++, s); // steals the reference
+            }
+        }
     }
     return result;
     error:
@@ -136,8 +142,8 @@ DndcPyFileCache_new(PyTypeObject* subtype, PyObject *_Null_unspecified args, PyO
     DndcPyFileCache* obj = (DndcPyFileCache*)subtype->tp_alloc(subtype, 1);
     if(!obj)
         return NULL;
-    obj->b64_cache = (FileCache){.allocator = get_mallocator()};
-    obj->text_cache = (FileCache){.allocator = get_mallocator()};
+    obj->b64_cache = dndc_create_filecache();
+    obj->text_cache = dndc_create_filecache();
     return (PyObject*)obj;
 }
 
@@ -145,8 +151,8 @@ static
 void
 DndcPyFileCache_dealloc(PyObject* self){
     DndcPyFileCache* cache = (DndcPyFileCache*)self;
-    FileCache_clear(&cache->text_cache);
-    FileCache_clear(&cache->b64_cache);
+    dndc_filecache_destroy(cache->b64_cache);
+    dndc_filecache_destroy(cache->text_cache);
 }
 
 static
@@ -196,6 +202,10 @@ PyTypeObject DndcPyFileCache_Type = {
 static
 Nullable(PyObject*)
 pydndc_reformat(PyObject* , PyObject* , PyObject*);
+
+static
+Nullable(PyObject*)
+pydndc_expand(PyObject* , PyObject* , PyObject*);
 
 static
 Nullable(PyObject*)
@@ -365,6 +375,76 @@ PyMethodDef pydndc_methods[] = {
         "encountered any syntax errors will not be reported.\n"
         ,
     },
+#if 0
+    {
+        .ml_name = "expand",
+        .ml_meth = (PyCFunction)pydndc_expand,
+        .ml_flags = METH_VARARGS|METH_KEYWORDS,
+        .ml_doc =
+        "expand(text, base_dir='.', error_reporter=None, file_cache=None, flags=0)\n"
+        "--\n"
+        "\n"
+        "Parses and converts the .dnd string into an equivelant .dnd string after\n"
+        "imports are resolved and js blocks are executed.\n"
+        "\n"
+        "Args:\n"
+        "-----\n"
+        "text: str\n"
+        "    The .dnd string.\n"
+        "\n"
+        "Optional Args:\n"
+        "--------------\n"
+        "base_dir: str\n"
+        "    For relative filepaths referenced in the document, what those paths\n"
+        "    are relative to. Defaults to the current directory.\n"
+        "\n"
+        "error_reporter: Callable(int, str, int, int, str)\n"
+        "    A callable for reporting errors. See the discussion in htlmgen.\n"
+        "\n"
+        "file_cache: DndcFileCache\n"
+        "    The file cache for caching files in between invocations.\n"
+        "    Create a new one and pass it in between calls.\n"
+        "    It is your responsibility to remove stale files by calling\n"
+        "    .remove on it.\n"
+        "    If you don't pass one in, no caching will be done.\n"
+        "\n"
+        "flags: int\n"
+        "    Bit flags controlling some behavior. The allowed flags are\n"
+        "    exported on the module and are as follows:\n"
+        "\n"
+        "    INPUT_IS_UNTRUSTED: Input is from an untrusted source and so\n"
+        "                        should not be allowed to load files, output\n"
+        "                        raw html, etc. as that could lead to\n"
+        "                        data leakage, etc. JavaScript will be\n"
+        "                        disabled.\n"
+        "\n"
+        "                        It doesn't really make sense to set this for this\n"
+        "                        function, but it is allowed.\n"
+        "\n"
+        "    PRINT_STATS:        Generate Info messages for the error_reporter.\n"
+        "                        These are mostly information about timings of\n"
+        "                        various stages of execution. Info messages are\n"
+        "                        not generated if this is not set.\n"
+        "\n"
+        "    DONT_READ:          Don't read any files not already in the file\n"
+        "                        cache.\n"
+        "\n"
+        "    DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP: Attributes and directives are\n"
+        "                        in separate namespaces, but that can be confusing.\n"
+        "                        Set this flag to disallow that.\n"
+        "\n"
+        "Returns:\n"
+        "--------\n"
+        "str: The dnd string.\n"
+        "\n"
+        "Throws:\n"
+        "-------\n"
+        "Throws ValueError if there is a syntax error in the given string.\n"
+        "Can also throw due to missing files.\n"
+        "Can also throw due to errors in embedded javascript blocks.\n"
+        "\n"
+    },
+#endif
     {
         .ml_name = "analyze_syntax_for_highlight",
         .ml_meth = (PyCFunction)pydndc_anaylze_syntax_for_highlight,
@@ -419,18 +499,27 @@ PyModuleDef pydndc = {
 
 PyMODINIT_FUNC _Nullable
 PyInit_pydndc(void){
+    HERE();
     PyObject* mod = PyModule_Create(&pydndc);
-    if(! mod)
+        HERE();
+    if(!mod){
+        HERE();
         return NULL;
+    }
+    HERE();
     if(PyType_Ready(&DndcPyFileCache_Type) != 0)
         return NULL;
+    HERE();
 
     Py_INCREF(&DndcPyFileCache_Type);
+    HERE();
     if(PyModule_AddObject(mod, "FileCache", (PyObject*)&DndcPyFileCache_Type) < 0){
         Py_DECREF(&DndcPyFileCache_Type);
         Py_DECREF(mod);
+        HERE();
         return NULL;
     }
+    HERE();
     PyModule_AddStringConstant(mod, "__version__",     DNDC_VERSION);
     // syntax constants
     PyModule_AddIntConstant(mod, "DOUBLE_COLON",       DNDC_SYNTAX_DOUBLE_COLON);
@@ -463,12 +552,14 @@ PyInit_pydndc(void){
     PyModule_AddIntConstant(mod, "DONT_READ",           DNDC_DONT_READ);
     PyModule_AddIntConstant(mod, "PRINT_STATS",         DNDC_PRINT_STATS);
     PyModule_AddIntConstant(mod, "DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP", DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP);
+
     // error message types
     PyModule_AddIntConstant(mod, "ERROR_MESSAGE",       DNDC_ERROR_MESSAGE);
     PyModule_AddIntConstant(mod, "WARNING_MESSAGE",     DNDC_WARNING_MESSAGE);
     PyModule_AddIntConstant(mod, "NODELESS_MESSAGE",    DNDC_NODELESS_MESSAGE);
     PyModule_AddIntConstant(mod, "STATISTIC_MESSAGE",   DNDC_STATISTIC_MESSAGE);
     PyModule_AddIntConstant(mod, "DEBUG_MESSAGE",       DNDC_DEBUG_MESSAGE);
+    HERE();
     return mod;
 }
 
@@ -505,16 +596,11 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
         return NULL;
     }
     StringView source = pystring_borrow_stringview(text);
-    uint64_t flags = 0;
-    // flags |= DNDC_DONT_PRINT_ERRORS;
-    // flags |= DNDC_SUPPRESS_WARNINGS;
-    flags |= DNDC_ALLOW_BAD_LINKS;
-    flags |= DNDC_REFORMAT_ONLY;
     LongString output = {};
     DndcErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
-    int e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, func, error_list, NULL, NULL, NULL, NULL, NULL);
+    int e = dndc_format(source, &output, func, error_list);
     if(PyErr_Occurred()){
         goto finally;
     }
@@ -535,7 +621,7 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
     result = PyUnicode_FromStringAndSize(output.text, output.length);
     finally:
     Py_XDECREF(error_list);
-    const_free(output.text);
+    dndc_free_string(output);
     return result;
 }
 
@@ -564,14 +650,14 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     unsigned long long flags = 0;
     _Static_assert(sizeof(flags) == sizeof(uint64_t), "");
     enum {WHITELIST = 0
+        | DNDC_INPUT_IS_UNTRUSTED
+        | DNDC_FRAGMENT_ONLY
         | DNDC_DONT_INLINE_IMAGES
         | DNDC_NO_THREADS
         | DNDC_USE_DND_URL_SCHEME
-        | DNDC_PRINT_STATS
         | DNDC_STRIP_WHITESPACE
         | DNDC_DONT_READ
-        | DNDC_INPUT_IS_UNTRUSTED
-        | DNDC_FRAGMENT_ONLY
+        | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
     };
     const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", "output_name", NULL};
@@ -595,7 +681,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     if(file_cache && file_cache == Py_None)
         file_cache = NULL;
     if(file_cache && !PyObject_IsInstance(file_cache, (PyObject*)&DndcPyFileCache_Type)){
-        PyErr_SetString(PyExc_TypeError, "file_cache must be a FileCache");
+        PyErr_SetString(PyExc_TypeError, "file_cache must be a DndcFileCache");
         return NULL;
     }
     StringView source = pystring_borrow_stringview(text);
@@ -608,15 +694,15 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
     PyObject* depends_list = PyList_New(0);
-    FileCache* textcache = NULL;
-    FileCache* b64cache = NULL;
+    DndcFileCache* textcache = NULL;
+    DndcFileCache* b64cache = NULL;
     if(file_cache){
         DndcPyFileCache* cache = (DndcPyFileCache*)file_cache;
-        textcache = &cache->text_cache;
-        b64cache = &cache->b64_cache;
+        textcache = cache->text_cache;
+        b64cache = cache->b64_cache;
     }
     StringView outname = output_name?pystring_borrow_stringview(output_name) : SV("this.html");
-    int e = run_the_dndc(flags, base_str, source, SV(""), outname, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, NULL, NULL);
+    int e = dndc_compile_dnd_file(flags, base_str, source, SV(""), outname, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
@@ -639,7 +725,91 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     finally:
     Py_XDECREF(depends_list);
     Py_XDECREF(error_list);
-    const_free(output.text);
+    dndc_free_string(output);
+    return result;
+}
+static
+Nullable(PyObject*)
+pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
+    (void)mod;
+    PyObject* text;
+    PyObject* base_dir = NULL;
+    PyObject* error_reporter = NULL;
+    PyObject* file_cache = NULL;
+    PyObject* output_name = NULL;
+    unsigned long long flags = 0;
+    _Static_assert(sizeof(flags) == sizeof(uint64_t), "");
+    enum {WHITELIST = 0
+        | DNDC_INPUT_IS_UNTRUSTED
+        | DNDC_DONT_READ
+        | DNDC_PRINT_STATS
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+    };
+    const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", "output_name", NULL};
+    PushDiagnostic();
+    SuppressCastQual();
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOKO!:expand", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter, &file_cache, &flags, &PyUnicode_Type, &output_name)){
+        return NULL;
+    }
+    PopDiagnostic();
+    // Check for any flags that python callers shouldn't be able to set.
+    if((flags & WHITELIST) != flags){
+        PyErr_SetString(PyExc_ValueError, "flags argument contains illegal bits");
+        return NULL;
+    }
+    if(error_reporter && error_reporter == Py_None)
+        error_reporter = NULL;
+    if(error_reporter && !PyCallable_Check(error_reporter)){
+        PyErr_SetString(PyExc_TypeError, "error_reporter must be a callable");
+        return NULL;
+    }
+    if(file_cache && file_cache == Py_None)
+        file_cache = NULL;
+    if(file_cache && !PyObject_IsInstance(file_cache, (PyObject*)&DndcPyFileCache_Type)){
+        PyErr_SetString(PyExc_TypeError, "file_cache must be a DndcFileCache");
+        return NULL;
+    }
+    StringView source = pystring_borrow_stringview(text);
+    StringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
+    // flags |= DNDC_DONT_PRINT_ERRORS;
+    // flags |= DNDC_SUPPRESS_WARNINGS;
+    flags |= DNDC_OUTPUT_EXPANDED_DND;
+    flags |= DNDC_ALLOW_BAD_LINKS;
+    LongString output = {};
+    DndcErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
+    PyObject* error_list = func? PyList_New(0) : NULL;
+    PyObject* result = NULL;
+    DndcFileCache* textcache = NULL;
+    DndcFileCache* b64cache = NULL;
+    if(file_cache){
+        DndcPyFileCache* cache = (DndcPyFileCache*)file_cache;
+        textcache = cache->text_cache;
+        b64cache = cache->b64_cache;
+    }
+    StringView outname = output_name?pystring_borrow_stringview(output_name) : SV("this.html");
+    int e = dndc_compile_dnd_file(flags, base_str, source, SV(""), outname, &output, b64cache, textcache, func, error_list, NULL, NULL, NULL);
+    if(PyErr_Occurred()){
+        result = NULL;
+        goto finally;
+    }
+    if(error_reporter){
+        Py_ssize_t length = PyList_Size(error_list);
+        for(Py_ssize_t i = 0; i < length; i++){
+            PyObject* list_item = PyList_GetItem(error_list, i);
+            PyObject* call_result = PyObject_Call(error_reporter, list_item, NULL);
+            if(call_result == NULL)
+                goto finally;
+            Py_XDECREF(call_result);
+        }
+    }
+    if(e){
+        PyErr_SetString(PyExc_ValueError, "html error.");
+        goto finally;
+    }
+    result = Py_BuildValue("s#", output.text, (Py_ssize_t)output.length);
+    finally:
+    Py_XDECREF(error_list);
+    dndc_free_string(output);
     return result;
 }
 
@@ -720,3 +890,7 @@ pydndc_anaylze_syntax_for_highlight(PyObject* mod, PyObject* args, PyObject* kwa
 #elif defined(__GNUC__)
 PopDiagnostic();
 #endif
+
+#define PYTHONMODULE
+#include "dndc.c"
+#include "terminal_logger.c"

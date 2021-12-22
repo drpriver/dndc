@@ -1,8 +1,10 @@
 #ifndef DNDC_FILE_CACHE_C
 #define DNDC_FILE_CACHE_C
+#include <string.h>
 #include "dndc_file_cache.h"
 #include "file_util.h"
 #include "base64.h"
+#include "murmur_hash.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -15,7 +17,39 @@ read_and_base64_bin_file(Allocator scratch, Allocator outallocator, const char* 
 static inline
 void
 FileCache_free_path(FileCache* cache, FileCachePath path){
-    Allocator_free(cache->allocator, path.path.text, path.path.length+1);
+    Allocator_free(cache->allocator, path.text, path.length+1);
+}
+
+
+typedef struct FileCacheLookupKey {
+    uint64_t last_eight_chars;
+    uint32_t length;
+    uint32_t hash;
+    const char* text;
+} FileCacheLookupKey;
+
+static inline
+bool
+FileCache_key_eq(FileCacheLookupKey key, FileCachePath p){
+    if(key.last_eight_chars != p.last_eight_chars)
+        return false;
+    if(key.length != p.length)
+        return false;
+    if(key.hash != p.hash)
+        return false;
+    return memcmp(key.text, p.text, key.length) == 0;
+}
+
+static inline
+FileCacheLookupKey
+FileCache_make_key(StringView sv){
+    FileCacheLookupKey result;
+    result.text = sv.text;
+    result.length = sv.length;
+    result.last_eight_chars = 0;
+    memcpy(&result.last_eight_chars, sv.text, sv.length >= 8? 8 : sv.length);
+    result.hash = murmur3_32((const uint8_t*)sv.text, sv.length, 0xd9d870de);
+    return result;
 }
 
 static inline
@@ -32,10 +66,11 @@ FileCache_clear(FileCache* cache){
 static inline
 int
 FileCache_maybe_remove(FileCache* cache, StringView path){
+    FileCacheLookupKey key = FileCache_make_key(path);
     Allocator al = cache->allocator;
     for(size_t i = 0; i < cache->_files.count; i++){
         LoadedSource src = cache->_files.data[i];
-        if(LS_SV_equals(src.sourcepath.path, path)){
+        if(FileCache_key_eq(key, src.sourcepath)){
             Marray_remove(LoadedSource)(&cache->_files, i);
             FileCache_free_path(cache, src.sourcepath);
             Allocator_free(al, src.sourcetext.text, src.sourcetext.length+1);
@@ -47,9 +82,10 @@ FileCache_maybe_remove(FileCache* cache, StringView path){
 
 static inline
 bool
-FileCache_has_file(FileCache* cache, StringView path){
+FileCache_has_file(const FileCache* cache, StringView path){
+    FileCacheLookupKey key = FileCache_make_key(path);
     MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
-        if(LS_SV_equals(src->sourcepath.path, path))
+        if(FileCache_key_eq(key, src->sourcepath))
             return true;
     }
     return false;
@@ -57,19 +93,21 @@ FileCache_has_file(FileCache* cache, StringView path){
 
 static inline
 FileCachePath
-FileCache_alloc_path(FileCache* cache, StringView spath){
-    char* path = Allocator_strndup(cache->allocator, spath.text, spath.length);
-    return (FileCachePath){{
+FileCache_alloc_path(FileCache* cache, FileCacheLookupKey key){
+    char* path = Allocator_strndup(cache->allocator, key.text, key.length);
+    return (FileCachePath){
             .text = path,
-            .length = spath.length
-        }};
+            .length = key.length,
+            .hash = key.hash,
+            .last_eight_chars = key.last_eight_chars,
+        };
 }
 
 static inline
 warn_unused
 StringResult
 FileCache_read_file_(FileCache* cache, FileCachePath path){
-    TextFileResult fr = read_file(path.path.text, cache->allocator);
+    TextFileResult fr = read_file(path.text, cache->allocator);
     if(!fr.errored){
         LoadedSource* ls = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator);
         ls->sourcepath = path;
@@ -82,8 +120,9 @@ static inline
 warn_unused
 StringResult
 FileCache_read_file(FileCache* cache, StringView spath, bool cached_only){
+    FileCacheLookupKey key = FileCache_make_key(spath);
     MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
-        if(LS_SV_equals(src->sourcepath.path, spath)){
+        if(FileCache_key_eq(key, src->sourcepath)){
             return (StringResult){
                 .result = src->sourcetext,
             };
@@ -92,7 +131,7 @@ FileCache_read_file(FileCache* cache, StringView spath, bool cached_only){
     if(unlikely(cached_only)){
         return (StringResult){.errored = PARSE_ERROR};
     }
-    FileCachePath path = FileCache_alloc_path(cache, spath);
+    FileCachePath path = FileCache_alloc_path(cache, key);
     StringResult result = FileCache_read_file_(cache, path);
     if(result.errored){
         FileCache_free_path(cache, path);
@@ -104,8 +143,9 @@ static inline
 warn_unused
 StringResult
 FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only){
+    FileCacheLookupKey key = FileCache_make_key(spath);
     MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
-        if(LS_SV_equals(src->sourcepath.path, spath)){
+        if(FileCache_key_eq(key, src->sourcepath)){
             return (StringResult){
                 .result = src->sourcetext,
             };
@@ -114,8 +154,8 @@ FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only
     if(unlikely(cached_only)){
         return (StringResult){.errored = PARSE_ERROR};
     }
-    FileCachePath path = FileCache_alloc_path(cache, spath);
-    StringResult base64ed_e = read_and_base64_bin_file(cache->scratch, cache->allocator, path.path.text);
+    FileCachePath path = FileCache_alloc_path(cache, key);
+    StringResult base64ed_e = read_and_base64_bin_file(cache->scratch, cache->allocator, path.text);
     if(unlikely(base64ed_e.errored)){
         FileCache_free_path(cache, path);
         return (StringResult){.errored=base64ed_e.errored};
@@ -136,6 +176,32 @@ FileCache_preload_b64_files(FileCache* cache, StringView* spaths, size_t count){
         StringResult e = FileCache_read_and_b64_file(cache, spath, false);
         (void)e;
     }
+}
+
+static
+size_t
+FileCache_cached_paths(const FileCache* cache, StringView* buff, size_t bufflen, size_t* cookie){
+    if(!cookie) return 0;
+    size_t start = *cookie;
+    if(start >= cache->_files.count)
+        return 0;
+    if(!bufflen) return 0;
+    if(!buff) return 0;
+    size_t n = cache->_files.count - start;
+    if(n > bufflen)
+        n = bufflen;
+    for(size_t i = start; i < start + n; i++){
+        buff[i].text = cache->_files.data[i].sourcepath.text;
+        buff[i].length = cache->_files.data[i].sourcepath.length;
+    }
+    *cookie = start + n;
+    return n;
+}
+
+static inline
+size_t
+FileCache_n_paths(const FileCache* cache){
+    return cache->_files.count;
 }
 
 // TODO: figure out where to put this. It was previously in bb_extensions.

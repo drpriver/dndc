@@ -893,7 +893,6 @@ free_qjs_rt(QJSRuntime*rt, ArenaAllocator*aa){
 #endif
 
 
-#ifndef PYTHONMODULE
 #ifndef WASM
 
 DNDC_API
@@ -914,6 +913,7 @@ dndc_free_string(LongString str){
     const_free(str.text);
 }
 
+#ifndef PYTHONMODULE
 DNDC_API
 void
 dndc_stderr_error_func(Nullable(void*)unused, int type, const char* filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
@@ -1966,7 +1966,7 @@ dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* synt
 }
 
 DNDC_API
-struct DndcFileCache*
+DndcFileCache*
 dndc_create_filecache(void){
     struct DndcFileCache* result = malloc(sizeof(*result));
     Allocator al = get_mallocator();
@@ -1975,27 +1975,40 @@ dndc_create_filecache(void){
 }
 DNDC_API
 void
-dndc_filecache_destroy(struct DndcFileCache* cache){
+dndc_filecache_destroy(DndcFileCache* cache){
+    if(!cache) return;
     FileCache_clear(cache);
     free(cache);
 }
 
 DNDC_API
 int
-dndc_filecache_remove(struct DndcFileCache* cache, StringView path){
+dndc_filecache_remove(DndcFileCache* cache, StringView path){
     return FileCache_maybe_remove(cache, path);
 }
 
 DNDC_API
 void
-dndc_filecache_clear(struct DndcFileCache* cache){
-    FileCache_clear(cache);
+dndc_filecache_clear(DndcFileCache* cache){
+    if(cache) FileCache_clear(cache);
 }
 
 DNDC_API
 int
-dndc_filecache_has_path(struct DndcFileCache* cache, StringView path){
+dndc_filecache_has_path(DndcFileCache* cache, StringView path){
     return FileCache_has_file(cache, path);
+}
+
+DNDC_API
+size_t
+dndc_filecache_n_paths(DndcFileCache* cache){
+    return FileCache_n_paths(cache);
+}
+
+DNDC_API
+size_t
+dndc_filecache_cached_paths(DndcFileCache* cache, DndcStringView* buff, size_t bufflen, size_t* cookie){
+    return FileCache_cached_paths(cache, buff, bufflen, cookie);
 }
 
 DNDC_API
@@ -2031,21 +2044,23 @@ dndc_compile_dnd_file(
         // All the valid flags.
         DNDC_VALID_FLAGS = 0
             | DNDC_FRAGMENT_ONLY
-            | DNDC_ALLOW_BAD_LINKS
-            | DNDC_SUPPRESS_WARNINGS
-            | DNDC_PRINT_STATS
-            | DNDC_NO_COMPILETIME_JS
-            | DNDC_NO_THREADS
             | DNDC_DONT_WRITE
-            | DNDC_NO_CLEANUP
-            | DNDC_DONT_PRINT_ERRORS
+            | DNDC_DONT_READ
+            | DNDC_INPUT_IS_UNTRUSTED
             | DNDC_REFORMAT_ONLY
+            | DNDC_SUPPRESS_WARNINGS
+            | DNDC_DONT_PRINT_ERRORS
+            | DNDC_PRINT_STATS
+            | DNDC_ALLOW_BAD_LINKS
+            | DNDC_NO_COMPILETIME_JS
+            | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+            | DNDC_ENABLE_JS_WRITE
+            | DNDC_NO_THREADS
+            | DNDC_NO_CLEANUP
+            | DNDC_STRIP_WHITESPACE
             | DNDC_DONT_INLINE_IMAGES
             | DNDC_USE_DND_URL_SCHEME
-            | DNDC_INPUT_IS_UNTRUSTED
-            | DNDC_STRIP_WHITESPACE
-            | DNDC_DONT_READ
-            | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+            | DNDC_OUTPUT_EXPANDED_DND
     };
     uint64_t new_flags = flags & DNDC_VALID_FLAGS;
     if(new_flags != flags)
