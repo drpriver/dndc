@@ -8,6 +8,8 @@
 #pragma clang diagnostic ignored "-Wvisibility"
 #endif
 
+#define PY_LIMITED_API
+
 #if defined(_WIN32) && defined(_DEBUG)
 // Windows release of python only ships with release lib, but the _DEBUG macro
 // enables a linker comment to link against the debug lib, which will fail at link time.

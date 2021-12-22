@@ -7,7 +7,6 @@
 #include "common_macros.h"
 #include "allocator.h"
 #include "pyhead.h"
-#include "log_print.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -375,7 +374,6 @@ PyMethodDef pydndc_methods[] = {
         "encountered any syntax errors will not be reported.\n"
         ,
     },
-#if 0
     {
         .ml_name = "expand",
         .ml_meth = (PyCFunction)pydndc_expand,
@@ -444,7 +442,6 @@ PyMethodDef pydndc_methods[] = {
         "Can also throw due to errors in embedded javascript blocks.\n"
         "\n"
     },
-#endif
     {
         .ml_name = "analyze_syntax_for_highlight",
         .ml_meth = (PyCFunction)pydndc_anaylze_syntax_for_highlight,
@@ -485,9 +482,15 @@ PyMethodDef pydndc_methods[] = {
 
 static
 PyModuleDef pydndc = {
-    PyModuleDef_HEAD_INIT,
+    .m_base = PyModuleDef_HEAD_INIT,
     .m_name="pydndc",
-    .m_doc=NULL,
+    .m_doc= ""
+        "dnd is a convenient format for writing plain text documents that can\n"
+        "turn into rich dungeons for roleplaying games. It is not limited to\n"
+        "roleplaying games -- it can be used as a general purpose format that\n"
+        "easily exports to html, while offering powerful in-document scripting\n"
+        "and convenient syntax.\n"
+        ,
     .m_size=-1,
     .m_methods=pydndc_methods,
     .m_slots=NULL,
@@ -499,27 +502,19 @@ PyModuleDef pydndc = {
 
 PyMODINIT_FUNC _Nullable
 PyInit_pydndc(void){
-    HERE();
     PyObject* mod = PyModule_Create(&pydndc);
-        HERE();
     if(!mod){
-        HERE();
         return NULL;
     }
-    HERE();
     if(PyType_Ready(&DndcPyFileCache_Type) != 0)
         return NULL;
-    HERE();
 
     Py_INCREF(&DndcPyFileCache_Type);
-    HERE();
     if(PyModule_AddObject(mod, "FileCache", (PyObject*)&DndcPyFileCache_Type) < 0){
         Py_DECREF(&DndcPyFileCache_Type);
         Py_DECREF(mod);
-        HERE();
         return NULL;
     }
-    HERE();
     PyModule_AddStringConstant(mod, "__version__",     DNDC_VERSION);
     // syntax constants
     PyModule_AddIntConstant(mod, "DOUBLE_COLON",       DNDC_SYNTAX_DOUBLE_COLON);
@@ -559,7 +554,6 @@ PyInit_pydndc(void){
     PyModule_AddIntConstant(mod, "NODELESS_MESSAGE",    DNDC_NODELESS_MESSAGE);
     PyModule_AddIntConstant(mod, "STATISTIC_MESSAGE",   DNDC_STATISTIC_MESSAGE);
     PyModule_AddIntConstant(mod, "DEBUG_MESSAGE",       DNDC_DEBUG_MESSAGE);
-    HERE();
     return mod;
 }
 
@@ -893,4 +887,3 @@ PopDiagnostic();
 
 #define PYTHONMODULE
 #include "dndc.c"
-#include "terminal_logger.c"
