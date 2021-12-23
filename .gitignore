@@ -37,3 +37,4 @@ PyGdndc/dndc_js_api.d.ts
 *.pdb
 *.user
 Generated
+TestResults

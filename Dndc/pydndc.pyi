@@ -23,6 +23,15 @@ def htmlgen(
 ) -> Tuple[str, List[str]]:
     ...
 
+def expand(
+    text:str,
+    base_dir:str='.',
+    error_reporter:Optional[ErrorReporter]=None,
+    file_cache:Optional[FileCache]=None,
+    flags:int=0,
+) -> str:
+    ...
+
 def reformat(text:str, error_reporter:Optional[ErrorReporter]=None) -> str:
     ...
 
@@ -38,9 +47,9 @@ FRAGMENT_ONLY:      int
 DONT_INLINE_IMAGES: int
 NO_THREADS:         int
 USE_DND_URL_SCHEME: int
-PRINT_STATS:        int
 STRIP_WHITESPACE:   int
 DONT_READ:          int
+PRINT_STATS:        int
 DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP: int
 
 # error message types
@@ -56,7 +65,7 @@ DOUBLE_COLON:       int
 HEADER:             int
 NODE_TYPE:          int
 ATTRIBUTE:          int
-HEADER:             int
+DIRECTIVE:          int
 ATTRIBUTE_ARGUMENT: int
 CLASS:              int
 RAW_STRING:         int

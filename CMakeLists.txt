@@ -6,7 +6,7 @@ project(Dndc VERSION 0.10.0)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
-find_package(Python3 3.8 COMPONENTS Development)
+find_package(Python3 3.8 COMPONENTS Development Interpreter)
 find_package(Threads REQUIRED)
 
 include_directories(Utils Dndc Allocators Vendored/quickjs ${CMAKE_SOURCE_DIR})
@@ -150,6 +150,10 @@ add_executable(TestStrUtils Utils/TestStrUtils.c)
 add_test(strutil TestStrUtils)
 add_executable(TestRarray Utils/TestRarray.c)
 add_test(rarray TestRarray)
+add_test(NAME testpydndc
+		COMMAND ${Python3_EXECUTABLE} Dndc/testpydndc.py --extension-directory ${CMAKE_BINARY_DIR}
+		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(testpydndc PROPERTIES DEPENDS pydndc)
 
 add_executable(TestDndc Dndc/TestDndc.c)
 target_compile_definitions(TestDndc PRIVATE QJS_SHARED_LIBRARY)

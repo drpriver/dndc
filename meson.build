@@ -66,7 +66,7 @@ dndc_lib = both_libraries(
   )
 
 
-pyinstall.extension_module(
+pydndc = pyinstall.extension_module(
   'pydndc',
   'Dndc/pydndc.c',
   include_directories: includes,
@@ -105,6 +105,8 @@ test('dndc',
   link_with: quickjs_dylib,
   ),
   args:['-C', meson.source_root()])
+
+test('pydndc', pyinstall, args:['Dndc/testpydndc.py', '--extension-directory', meson.build_root()], workdir:meson.source_root(), depends:pydndc)
 
 qt5 = import('qt5')
 qt5_dep = dependency('qt5', modules: ['Core', 'Gui', 'Widgets', 'WebEngineWidgets'], required:false)
