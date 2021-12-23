@@ -129,7 +129,7 @@ enum DndcErrorMessageType {
 //    The type of the message. See DndcErrorMessageType.
 //
 // filename:
-//    Which file the error occurred in. This pointer is not nul-terminated.
+//    Which file the error occurred in. This pointer is NOT nul-terminated.
 //
 // filename_len:
 //    The length of the character array pointed to by file.

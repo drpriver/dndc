@@ -863,6 +863,7 @@ run_the_dndc(uint64_t flags,
 #pragma clang assume_nonnull begin
 #endif
 
+// Stubs for wasm
 static
 int
 execute_qjs_string(QJSContext*jsctx, DndcContext*ctx, const char* str, size_t length, NodeHandle handle, NodeHandle firstline){
@@ -917,49 +918,48 @@ DNDC_API
 void
 dndc_stderr_error_func(Nullable(void*)unused, int type, const char* filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
     (void)unused;
-    (void)message_len;
     switch((enum DndcErrorMessageType)type){
         case DNDC_NODELESS_MESSAGE:
-            fprintf(stderr, "[ERROR]: %s\n", message);
+            fprintf(stderr, "[ERROR]: %.*s\n", message_len, message);
             return;
         case DNDC_STATISTIC_MESSAGE:
-            fprintf(stderr, "[INFO] %s\n", message);
+            fprintf(stderr, "[INFO] %.*s\n", message_len, message);
             return;
         case DNDC_DEBUG_MESSAGE:
             if(filename_len){
                 if(col >= 0){
-                    fprintf(stderr, "[DEBUG] %.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+                    fprintf(stderr, "[DEBUG] %.*s:%d:%d: %.*s\n", filename_len, filename, line+1, col+1, message_len, message);
                 }
                 else {
-                    fprintf(stderr, "[DEBUG] %.*s:%d: %s\n", filename_len, filename, line+1, message);
+                    fprintf(stderr, "[DEBUG] %.*s:%d: %.*s\n", filename_len, filename, line+1, message_len, message);
                 }
             }
             else
-                fprintf(stderr, "[DEBUG] %s\n", message);
+                fprintf(stderr, "[DEBUG] %.*s\n", message_len, message);
             return;
         case DNDC_ERROR_MESSAGE:
             if(col >= 0){
-                fprintf(stderr, "[ERROR] %.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+                fprintf(stderr, "[ERROR] %.*s:%d:%d: %.*s\n", filename_len, filename, line+1, col+1, message_len, message);
             }
             else {
-                fprintf(stderr, "[ERROR] %.*s:%d: %s\n", filename_len, filename, line+1, message);
+                fprintf(stderr, "[ERROR] %.*s:%d: %.*s\n", filename_len, filename, line+1, message_len, message);
             }
             return;
         case DNDC_WARNING_MESSAGE:
             if(col >= 0){
-                fprintf(stderr, "[WARN] %.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+                fprintf(stderr, "[WARN] %.*s:%d:%d: %.*s\n", filename_len, filename, line+1, col+1, message_len, message);
             }
             else {
-                fprintf(stderr, "[WARN] %.*s:%d: %s\n", filename_len, filename, line+1, message);
+                fprintf(stderr, "[WARN] %.*s:%d: %.*s\n", filename_len, filename, line+1, message_len, message);
             }
             return;
     }
     // default
     if(col >= 0){
-        fprintf(stderr, "%.*s:%d:%d: %s\n", filename_len, filename, line+1, col+1, message);
+        fprintf(stderr, "%.*s:%d:%d: %.*s\n", filename_len, filename, line+1, col+1, message_len, message);
     }
     else {
-        fprintf(stderr, "%.*s:%d: %s\n", filename_len, filename, line+1, message);
+        fprintf(stderr, "%.*s:%d: %.*s\n", filename_len, filename, line+1, message_len, message);
     }
     return;
 }
