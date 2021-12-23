@@ -517,43 +517,47 @@ PyInit_pydndc(void){
     }
     PyModule_AddStringConstant(mod, "__version__",     DNDC_VERSION);
     // syntax constants
-    PyModule_AddIntConstant(mod, "DOUBLE_COLON",       DNDC_SYNTAX_DOUBLE_COLON);
-    PyModule_AddIntConstant(mod, "HEADER",             DNDC_SYNTAX_HEADER);
-    PyModule_AddIntConstant(mod, "NODE_TYPE",          DNDC_SYNTAX_NODE_TYPE);
-    PyModule_AddIntConstant(mod, "ATTRIBUTE",          DNDC_SYNTAX_ATTRIBUTE);
-    PyModule_AddIntConstant(mod, "DIRECTIVE",          DNDC_SYNTAX_DIRECTIVE);
-    PyModule_AddIntConstant(mod, "ATTRIBUTE_ARGUMENT", DNDC_SYNTAX_ATTRIBUTE_ARGUMENT);
-    PyModule_AddIntConstant(mod, "CLASS",              DNDC_SYNTAX_CLASS);
-    PyModule_AddIntConstant(mod, "RAW_STRING",         DNDC_SYNTAX_RAW_STRING);
-    PyModule_AddIntConstant(mod, "JS_COMMENT",         DNDC_SYNTAX_JS_COMMENT);
-    PyModule_AddIntConstant(mod, "JS_STRING",          DNDC_SYNTAX_JS_STRING);
-    PyModule_AddIntConstant(mod, "JS_REGEX",           DNDC_SYNTAX_JS_REGEX);
-    PyModule_AddIntConstant(mod, "JS_NUMBER",          DNDC_SYNTAX_JS_NUMBER);
-    PyModule_AddIntConstant(mod, "JS_KEYWORD",         DNDC_SYNTAX_JS_KEYWORD);
-    PyModule_AddIntConstant(mod, "JS_KEYWORD_VALUE",   DNDC_SYNTAX_JS_KEYWORD_VALUE);
-    PyModule_AddIntConstant(mod, "JS_VAR",             DNDC_SYNTAX_JS_VAR);
-    PyModule_AddIntConstant(mod, "JS_IDENTIFIER",      DNDC_SYNTAX_JS_IDENTIFIER);
-    PyModule_AddIntConstant(mod, "JS_BUILTIN",         DNDC_SYNTAX_JS_BUILTIN);
-    PyModule_AddIntConstant(mod, "JS_NODETYPE",        DNDC_SYNTAX_JS_NODETYPE);
-    PyModule_AddIntConstant(mod, "JS_BRACE",           DNDC_SYNTAX_JS_BRACE);
+    #define ADDSYNTAXCONSTANT(x) PyModule_AddIntConstant(mod, #x, DNDC_SYNTAX_##x)
+    ADDSYNTAXCONSTANT(DOUBLE_COLON);
+    ADDSYNTAXCONSTANT(HEADER);
+    ADDSYNTAXCONSTANT(NODE_TYPE);
+    ADDSYNTAXCONSTANT(ATTRIBUTE);
+    ADDSYNTAXCONSTANT(DIRECTIVE);
+    ADDSYNTAXCONSTANT(ATTRIBUTE_ARGUMENT);
+    ADDSYNTAXCONSTANT(CLASS);
+    ADDSYNTAXCONSTANT(RAW_STRING);
+    ADDSYNTAXCONSTANT(JS_COMMENT);
+    ADDSYNTAXCONSTANT(JS_STRING);
+    ADDSYNTAXCONSTANT(JS_REGEX);
+    ADDSYNTAXCONSTANT(JS_NUMBER);
+    ADDSYNTAXCONSTANT(JS_KEYWORD);
+    ADDSYNTAXCONSTANT(JS_KEYWORD_VALUE);
+    ADDSYNTAXCONSTANT(JS_VAR);
+    ADDSYNTAXCONSTANT(JS_IDENTIFIER);
+    ADDSYNTAXCONSTANT(JS_BUILTIN);
+    ADDSYNTAXCONSTANT(JS_NODETYPE);
+    ADDSYNTAXCONSTANT(JS_BRACE);
+    #undef ADDSYNTAXCONSTANT
 
+    #define ADDCONSTANT(x) PyModule_AddIntConstant(mod, #x, DNDC_##x)
     // flags
-    PyModule_AddIntConstant(mod, "INPUT_IS_UNTRUSTED",  DNDC_INPUT_IS_UNTRUSTED);
-    PyModule_AddIntConstant(mod, "FRAGMENT_ONLY",       DNDC_FRAGMENT_ONLY);
-    PyModule_AddIntConstant(mod, "DONT_INLINE_IMAGES",  DNDC_DONT_INLINE_IMAGES);
-    PyModule_AddIntConstant(mod, "NO_THREADS",          DNDC_NO_THREADS);
-    PyModule_AddIntConstant(mod, "USE_DND_URL_SCHEME",  DNDC_USE_DND_URL_SCHEME);
-    PyModule_AddIntConstant(mod, "STRIP_WHITESPACE",    DNDC_STRIP_WHITESPACE);
-    PyModule_AddIntConstant(mod, "DONT_READ",           DNDC_DONT_READ);
-    PyModule_AddIntConstant(mod, "PRINT_STATS",         DNDC_PRINT_STATS);
-    PyModule_AddIntConstant(mod, "DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP", DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP);
+    ADDCONSTANT(INPUT_IS_UNTRUSTED);
+    ADDCONSTANT(FRAGMENT_ONLY);
+    ADDCONSTANT(DONT_INLINE_IMAGES);
+    ADDCONSTANT(NO_THREADS);
+    ADDCONSTANT(USE_DND_URL_SCHEME);
+    ADDCONSTANT(STRIP_WHITESPACE);
+    ADDCONSTANT(DONT_READ);
+    ADDCONSTANT(PRINT_STATS);
+    ADDCONSTANT(DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP);
 
     // error message types
-    PyModule_AddIntConstant(mod, "ERROR_MESSAGE",       DNDC_ERROR_MESSAGE);
-    PyModule_AddIntConstant(mod, "WARNING_MESSAGE",     DNDC_WARNING_MESSAGE);
-    PyModule_AddIntConstant(mod, "NODELESS_MESSAGE",    DNDC_NODELESS_MESSAGE);
-    PyModule_AddIntConstant(mod, "STATISTIC_MESSAGE",   DNDC_STATISTIC_MESSAGE);
-    PyModule_AddIntConstant(mod, "DEBUG_MESSAGE",       DNDC_DEBUG_MESSAGE);
+    ADDCONSTANT(ERROR_MESSAGE);
+    ADDCONSTANT(WARNING_MESSAGE);
+    ADDCONSTANT(NODELESS_MESSAGE);
+    ADDCONSTANT(STATISTIC_MESSAGE);
+    ADDCONSTANT(DEBUG_MESSAGE);
+    #undef ADDCONSTANT
     return mod;
 }
 
