@@ -889,5 +889,4 @@ pydndc_anaylze_syntax_for_highlight(PyObject* mod, PyObject* args, PyObject* kwa
 PopDiagnostic();
 #endif
 
-#define PYTHONMODULE
 #include "dndc.c"

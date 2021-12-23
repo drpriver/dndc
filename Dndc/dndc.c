@@ -913,7 +913,6 @@ dndc_free_string(LongString str){
     const_free(str.text);
 }
 
-#ifndef PYTHONMODULE
 DNDC_API
 void
 dndc_stderr_error_func(Nullable(void*)unused, int type, const char* filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
@@ -964,7 +963,6 @@ dndc_stderr_error_func(Nullable(void*)unused, int type, const char* filename, in
     }
     return;
 }
-#endif
 #endif
 
 
