@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-PYGDNDC_VERSION = '0.10.0'
+PYGDNDC_VERSION = '0.10.2'
 __version__ = PYGDNDC_VERSION
 import os
 # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
@@ -246,27 +246,28 @@ def byte_index_to_character_index(s:str, index:int) -> int:
 class DndSyntaxHighlighter(QSyntaxHighlighter):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.highlight_regions = {}  # type: Dict[int, List[Tuple[int, int, int, int]]]
+        self.highlight_regions = {}  # type: Dict[int, List[pydndc.SyntaxRegion]]
+        SynType = pydndc.SynType
         self.color_names = {
-            pydndc.ATTRIBUTE: 'lightsteelblue',
-            pydndc.DIRECTIVE: 'lightsteelblue',
-            pydndc.ATTRIBUTE_ARGUMENT: 'darkkhaki',
-            pydndc.CLASS: 'burlywood',
-            pydndc.DOUBLE_COLON: 'darkgray',
-            pydndc.HEADER: 'blue',
-            pydndc.NODE_TYPE: 'lightslategray',
-            # pydndc.RAW_STRING: '#000', # I should really break this up into more types
-            pydndc.JS_COMMENT: 'gray',
-            pydndc.JS_STRING: '#74AB04',
-            pydndc.JS_REGEX: 'darkred',
-            pydndc.JS_NUMBER: '#74AB04',
-            pydndc.JS_KEYWORD: '#0D85CC',
-            pydndc.JS_KEYWORD_VALUE: '#74AB04',
-            pydndc.JS_VAR: '#0D85CC',
-            # pydndc.JS_IDENTIFIER: ''
-            pydndc.JS_BUILTIN: '#AE6000',
-            pydndc.JS_NODETYPE: '#AE6000',
-            # pydndc.JS_BRACE: 'darkteal',
+            SynType.ATTRIBUTE: 'lightsteelblue',
+            SynType.DIRECTIVE: 'lightsteelblue',
+            SynType.ATTRIBUTE_ARGUMENT: 'darkkhaki',
+            SynType.CLASS: 'burlywood',
+            SynType.DOUBLE_COLON: 'darkgray',
+            SynType.HEADER: 'blue',
+            SynType.NODE_TYPE: 'lightslategray',
+            # SynType.RAW_STRING: '#000', # I should really break this up into more types
+            SynType.JS_COMMENT: 'gray',
+            SynType.JS_STRING: '#74AB04',
+            SynType.JS_REGEX: 'darkred',
+            SynType.JS_NUMBER: '#74AB04',
+            SynType.JS_KEYWORD: '#0D85CC',
+            SynType.JS_KEYWORD_VALUE: '#74AB04',
+            SynType.JS_VAR: '#0D85CC',
+            # SynType.JS_IDENTIFIER: ''
+            SynType.JS_BUILTIN: '#AE6000',
+            SynType.JS_NODETYPE: '#AE6000',
+            # SynType.JS_BRACE: 'darkteal',
         }
     def update_regions(self, regions) -> None:
         self.highlight_regions = regions
@@ -801,11 +802,12 @@ class Page(QSplitter):
         self.clear_errors()
         before_paths = set(FILE_CACHE.paths())
         outname = os.path.basename(self.filename)
+        Flags = pydndc.Flags
         try:
-            flags = pydndc.USE_DND_URL_SCHEME
+            flags = Flags.USE_DND_URL_SCHEME
             if PRINT_STATS:
-                flags |= pydndc.PRINT_STATS
-            flags |= pydndc.DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+                flags |= Flags.PRINT_STATS
+            flags |= Flags.DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
             html, depends = pydndc.htmlgen(
                 self.get_text_for_preview(),
                 base_dir=self.dirname,

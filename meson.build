@@ -1,5 +1,5 @@
-project('Dndc', 'c', 'cpp', version: '0.10.0')
-COMPAT_VERSION = '0.10.0'
+project('Dndc', 'c', 'cpp', version: '0.10.2')
+COMPAT_VERSION = '0.10.2'
 thread_dep = dependency('threads')
 pymod = import('python')
 pyinstall = pymod.find_installation()

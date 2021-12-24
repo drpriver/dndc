@@ -73,7 +73,7 @@ class TestHtmlGen(TestCase):
         "<img src=\"SomeImg.png\" width=\"600\" height=\"800\" alt=\"&quot;Hello World!&quot;\">\n"
         "</div>\n"
         )
-        output = pydndc.htmlgen(input, flags=pydndc.FRAGMENT_ONLY)[0]
+        output = pydndc.htmlgen(input, flags=pydndc.Flags.FRAGMENT_ONLY)[0]
         self.assertEqual(output, expected)
     def testfragment2(self) -> None:
         input = (
@@ -103,7 +103,7 @@ class TestHtmlGen(TestCase):
         "</div>\n"
         "hello\n"
         )
-        output = pydndc.htmlgen(input, flags=pydndc.FRAGMENT_ONLY)[0]
+        output = pydndc.htmlgen(input, flags=pydndc.Flags.FRAGMENT_ONLY)[0]
         self.assertEqual(output, expected)
     def test_multiline_table(self) -> None:
         input = (

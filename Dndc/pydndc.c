@@ -277,9 +277,9 @@ PyMethodDef pydndc_methods[] = {
         "    .remove on it.\n"
         "    If you don't pass one in, no caching will be done.\n"
         "\n"
-        "flags: int\n"
+        "flags: Flags\n"
         "    Bit flags controlling some behavior. The allowed flags are\n"
-        "    exported on the module and are as follows:\n"
+        "    exported on the module as Flags are as follows:\n"
         "\n"
         "    INPUT_IS_UNTRUSTED: Input is from an untrusted source and so\n"
         "                        should not be allowed to load files, output\n"
@@ -334,21 +334,21 @@ PyMethodDef pydndc_methods[] = {
         "\n"
         "Error Reporter Arguments:\n"
         "-------------------------\n"
-        "message_type: int\n"
+        "message_type: IntEnum\n"
         "    The values are as follows:\n"
         "\n"
-        "    ERROR_MESSAGE:     An error that caused parsing to fail and cannot\n"
+        "    ERROR:     An error that caused parsing to fail and cannot\n"
         "                       be recovered from.\n"
         "\n"
-        "    WARNING_MESSAGE:   Recoverable error or diagnostic.\n"
+        "    WARNING:   Recoverable error or diagnostic.\n"
         "\n"
-        "    NODELESS_MESSAGE:  An error that cannot be recovered from but\n"
+        "    NODELESS:  An error that cannot be recovered from but\n"
         "                       that does not originate from a node or source\n"
         "                       location.\n"
         "\n"
-        "    STATISTIC_MESSAGE: Not an error, a statistic like timing.\n"
+        "    STATISTIC: Not an error, a statistic like timing.\n"
         "\n"
-        "    DEBUG_MESSAGE:     A debug statement, as requested by a flag.\n"
+        "    DEBUG:     A debug statement, as requested by a flag.\n"
         "                       May or may not have a valid filename, line,\n"
         "                       column.\n"
         "\n"
@@ -379,7 +379,7 @@ PyMethodDef pydndc_methods[] = {
         .ml_meth = (PyCFunction)pydndc_expand,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
-        "expand(text, base_dir='.', error_reporter=None, file_cache=None, flags=0)\n"
+        "expand(text, base_dir='.', error_reporter=None, file_cache=None, flags=0, output_name=None)\n"
         "--\n"
         "\n"
         "Parses and converts the .dnd string into an equivelant .dnd string after\n"
@@ -408,7 +408,7 @@ PyMethodDef pydndc_methods[] = {
         "\n"
         "flags: int\n"
         "    Bit flags controlling some behavior. The allowed flags are\n"
-        "    exported on the module and are as follows:\n"
+        "    exported on the module as Flags and are as follows:\n"
         "\n"
         "    INPUT_IS_UNTRUSTED: Input is from an untrusted source and so\n"
         "                        should not be allowed to load files, output\n"
@@ -430,6 +430,9 @@ PyMethodDef pydndc_methods[] = {
         "    DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP: Attributes and directives are\n"
         "                        in separate namespaces, but that can be confusing.\n"
         "                        Set this flag to disallow that.\n"
+        "\n"
+        "output_name: str\n"
+        "    The final name of the html file. This is used in js scripting.\n"
         "\n"
         "Returns:\n"
         "--------\n"
@@ -463,18 +466,7 @@ PyMethodDef pydndc_methods[] = {
         "The dictionary is a mapping of lines (0-based) as the keys to a tuple of\n"
         "(type, col, byteoffset, length), which is Tuple[int, int, int, int].\n"
         "col, byteoffeset and length are all in bytes of utf-8.\n"
-        "The type is one of the following:\n"
-        "\n"
-        "  DOUBLE_COLON       = 1\n"
-        "  HEADER             = 2\n"
-        "  NODE_TYPE          = 3\n"
-        "  ATTRIBUTE          = 4\n"
-        "  ATTRIBUTE_ARGUMENT = 5\n"
-        "  CLASS              = 6\n"
-        "  RAW_STRING         = 7\n"
-        "\n"
-        "These have been exported as module globals so you can refer to them by\n"
-        "name instead of magic numbers.\n"
+        "The type is one of the Syntax enum members.\n"
         ,
     },
     {NULL, NULL, 0, NULL}
@@ -499,25 +491,86 @@ PyModuleDef pydndc = {
     .m_free=NULL,
 };
 
+static
+PyStructSequence_Field syntax_fields[] = {
+    {"type", "the type of the syntactic region"},
+    {"column", "byte offset from beginning of line"},
+    {"offset", "byte offset from beginning of doc"},
+    {"length", "byte length of region"},
+    {0},
+};
+
+static
+PyStructSequence_Desc syntax_desc = {
+    .name = "SyntaxRegion",
+    .doc = "A syntax region in the document",
+    .fields = syntax_fields,
+    .n_in_sequence = arrlen(syntax_fields)-1,
+};
+
+static PyTypeObject* SyntaxRegion;
+
+
 
 PyMODINIT_FUNC _Nullable
 PyInit_pydndc(void){
     PyObject* mod = PyModule_Create(&pydndc);
-    if(!mod){
-        return NULL;
-    }
+    PyObject* enu_mod = NULL;
+    PyObject* intenum = NULL;
+    PyObject* intflag = NULL;
+    PyObject* synvalues = NULL;
+    PyObject* messagevalues = NULL;
+    PyObject* flagvalues = NULL;
+    PyObject* filecache_type = NULL;
+    PyObject* synenum = NULL;
+    PyObject* messageenum = NULL;
+    PyObject* flagenum = NULL;
+    PyObject* args = NULL;
+    PyObject* kwargs = NULL;
+    PyObject* name = NULL;
+    PyObject* modname = NULL;
+    if(!mod) goto fail;
+    modname = PyModule_GetNameObject(mod); // new ref
+    if(!modname) goto fail;
+    kwargs = PyDict_New();
+    if(!kwargs) goto fail;
+    if(PyDict_SetItemString(kwargs, "module", modname) < 0)
+        goto fail;
     if(PyType_Ready(&DndcPyFileCache_Type) != 0)
-        return NULL;
-
+        goto fail;
     Py_INCREF(&DndcPyFileCache_Type);
-    if(PyModule_AddObject(mod, "FileCache", (PyObject*)&DndcPyFileCache_Type) < 0){
-        Py_DECREF(&DndcPyFileCache_Type);
-        Py_DECREF(mod);
-        return NULL;
+    filecache_type = (PyObject*)&DndcPyFileCache_Type;
+    if(PyModule_AddObjectRef(mod, "FileCache", filecache_type) < 0){
+        goto fail;
     }
     PyModule_AddStringConstant(mod, "__version__",     DNDC_VERSION);
+    SyntaxRegion = PyStructSequence_NewType(&syntax_desc);
+#if 0
+    if(PyModule_AddObjectRef(mod, "SyntaxRegion", (PyObject*)SyntaxRegion) < 0)
+        goto fail;
+#endif
+    enu_mod = PyImport_ImportModule("enum"); //new ref
+    if(!enu_mod) goto fail;
+    intenum = PyObject_GetAttrString(enu_mod, "IntEnum"); // new ref
+    if(!intenum) goto fail;
+    intflag = PyObject_GetAttrString(enu_mod, "IntFlag"); // new ref
+    if(!intflag) goto fail;
+    synvalues = PyDict_New();
+    if(!synvalues) goto fail;
+    messagevalues = PyDict_New();
+    if(!messagevalues) goto fail;
+    flagvalues = PyDict_New();
+    if(!flagvalues) goto fail;
     // syntax constants
-    #define ADDSYNTAXCONSTANT(x) PyModule_AddIntConstant(mod, #x, DNDC_SYNTAX_##x)
+    #define ADDSYNTAXCONSTANT(x) do { \
+        PyObject* v = PyLong_FromLong(DNDC_SYNTAX_##x); \
+        if(!v) goto fail; \
+        if(PyDict_SetItemString(synvalues, #x, v) < 0){ \
+            Py_DECREF(v); \
+            goto fail; \
+        } \
+        Py_DECREF(v); \
+    }while(0)
     ADDSYNTAXCONSTANT(DOUBLE_COLON);
     ADDSYNTAXCONSTANT(HEADER);
     ADDSYNTAXCONSTANT(NODE_TYPE);
@@ -538,26 +591,102 @@ PyInit_pydndc(void){
     ADDSYNTAXCONSTANT(JS_NODETYPE);
     ADDSYNTAXCONSTANT(JS_BRACE);
     #undef ADDSYNTAXCONSTANT
+    name = PyUnicode_FromString("SynType");
+    if(!name) goto fail;
+    args = PyTuple_Pack(2, name, synvalues); // does not steal
+    if(!args) goto fail;
+    Py_DECREF(name); name = NULL;
+    synenum = PyObject_Call(intenum, args, kwargs);
+    Py_DECREF(args); args = NULL;
+    if(!synenum) goto fail;
+    if(PyModule_AddObjectRef(mod, "SynType", synenum) < 0)
+        goto fail;
 
-    #define ADDCONSTANT(x) PyModule_AddIntConstant(mod, #x, DNDC_##x)
+    #define ADDFLAGCONSTANT(x) do {\
+        PyObject* v = PyLong_FromLong(DNDC_##x); \
+        if(!v) goto fail; \
+        if(PyDict_SetItemString(flagvalues, #x, v) < 0){ \
+            Py_DECREF(v); \
+            goto fail; \
+        } \
+        Py_DECREF(v); \
+    }while(0)
     // flags
-    ADDCONSTANT(INPUT_IS_UNTRUSTED);
-    ADDCONSTANT(FRAGMENT_ONLY);
-    ADDCONSTANT(DONT_INLINE_IMAGES);
-    ADDCONSTANT(NO_THREADS);
-    ADDCONSTANT(USE_DND_URL_SCHEME);
-    ADDCONSTANT(STRIP_WHITESPACE);
-    ADDCONSTANT(DONT_READ);
-    ADDCONSTANT(PRINT_STATS);
-    ADDCONSTANT(DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP);
+    ADDFLAGCONSTANT(INPUT_IS_UNTRUSTED);
+    ADDFLAGCONSTANT(FRAGMENT_ONLY);
+    ADDFLAGCONSTANT(DONT_INLINE_IMAGES);
+    ADDFLAGCONSTANT(NO_THREADS);
+    ADDFLAGCONSTANT(USE_DND_URL_SCHEME);
+    ADDFLAGCONSTANT(STRIP_WHITESPACE);
+    ADDFLAGCONSTANT(DONT_READ);
+    ADDFLAGCONSTANT(PRINT_STATS);
+    ADDFLAGCONSTANT(DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP);
+    {
+        PyObject* v = PyLong_FromLong(0);
+        if(!v) goto fail;
+        if(PyDict_SetItemString(flagvalues, "NONE", v) < 0){
+            Py_DECREF(v);
+            goto fail;
+        }
+        Py_DECREF(v);
+    }
+    #undef ADDFLAGCONSTANT
+    name = PyUnicode_FromString("Flags");
+    if(!name) goto fail;
+    args = PyTuple_Pack(2, name, flagvalues); // does not steal
+    if(!args) goto fail;
+    Py_DECREF(name); name = NULL;
+    flagenum = PyObject_Call(intflag, args, kwargs);
+    Py_DECREF(args); args = NULL;
+    if(!flagenum) goto fail;
+    if(PyModule_AddObjectRef(mod, "Flags", flagenum) < 0)
+        goto fail;
 
+    #define ADDMSGCONSTANT(x) do {\
+        PyObject* v = PyLong_FromLong(DNDC_##x##_MESSAGE); \
+        if(!v) goto fail; \
+        if(PyDict_SetItemString(messagevalues, #x, v) < 0){ \
+            Py_DECREF(v); \
+            goto fail; \
+        } \
+        Py_DECREF(v); \
+    }while(0)
     // error message types
-    ADDCONSTANT(ERROR_MESSAGE);
-    ADDCONSTANT(WARNING_MESSAGE);
-    ADDCONSTANT(NODELESS_MESSAGE);
-    ADDCONSTANT(STATISTIC_MESSAGE);
-    ADDCONSTANT(DEBUG_MESSAGE);
-    #undef ADDCONSTANT
+    ADDMSGCONSTANT(ERROR);
+    ADDMSGCONSTANT(WARNING);
+    ADDMSGCONSTANT(NODELESS);
+    ADDMSGCONSTANT(STATISTIC);
+    ADDMSGCONSTANT(DEBUG);
+    #undef ADDMSGCONSTANT
+    name = PyUnicode_FromString("MsgType");
+    if(!name) goto fail;
+    args = PyTuple_Pack(2, name, messagevalues); // does not steal
+    if(!args) goto fail;
+    Py_DECREF(name); name = NULL;
+    synenum = PyObject_Call(intenum, args, kwargs);
+    Py_DECREF(args); args = NULL;
+    if(!synenum) goto fail;
+    if(PyModule_AddObjectRef(mod, "MsgType", synenum) < 0)
+        goto fail;
+    if(0){
+        fail:
+        Py_XDECREF(mod);
+        mod = NULL;
+    }
+    Py_XDECREF(enu_mod);
+    Py_XDECREF(intenum);
+    Py_XDECREF(intflag);
+    Py_XDECREF(synvalues);
+    Py_XDECREF(messagevalues);
+    Py_XDECREF(flagvalues);
+    Py_XDECREF(filecache_type);
+    Py_XDECREF(synenum);
+    Py_XDECREF(messageenum);
+    Py_XDECREF(flagenum);
+    Py_XDECREF(args);
+    Py_XDECREF(kwargs);
+    Py_XDECREF(name);
+    Py_XDECREF(modname);
     return mod;
 }
 
@@ -825,7 +954,12 @@ pydndc_collect_syntax_tokens(Nullable(void*)user_data, int type, int line, int c
     struct CollectData* cd = user_data;
     PyObject* d = cd->dict;
     PyObject* key = PyLong_FromLong(line);
-    PyObject* value = Py_BuildValue("iinn", type, col, (Py_ssize_t)(begin - cd->begin), (Py_ssize_t)length);
+    PyObject* value = PyStructSequence_New(SyntaxRegion);
+    PyStructSequence_SET_ITEM(value, 0, PyLong_FromLong(type));
+    PyStructSequence_SET_ITEM(value, 1, PyLong_FromLong(col));
+    PyStructSequence_SET_ITEM(value, 2, PyLong_FromSsize_t(begin - cd->begin));
+    PyStructSequence_SET_ITEM(value, 3, PyLong_FromSize_t(length));
+    // PyObject* value = Py_BuildValue("iinn", type, col, (Py_ssize_t)(begin - cd->begin), (Py_ssize_t)length);
     if(!key) goto Lfail;
     if(!value) goto Lfail;
     PyObject * list;
