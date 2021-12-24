@@ -42,8 +42,7 @@ $(BINDIR)/pydndc$(PYEXTENSION): Dndc/pydndc.c $(OBJDIR)/libquickjs.o
 	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -O2 $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS) $(OBJDIR)/libquickjs.o
 pydndc: $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pydndc$(PYEXTENSION) PyGdndc/pydndc.pyi PyGdndc/jsdoc.dnd PyGdndc/dndc_js_api.d.ts
 TestResults/testpydndc: $(BINDIR)/pydndc$(PYEXTENSION) Dndc/testpydndc.py
-	$(PYTHON) Dndc/testpydndc.py --extension-directory Bin
-	@$(TOUCH) TestResults/testpydndc
+	$(PYTHON) Dndc/testpydndc.py --extension-directory $(BINDIR) --tee $@
 tests: TestResults/testpydndc
 
 PyGdndc/pydndc.pyi: Dndc/pydndc.pyi

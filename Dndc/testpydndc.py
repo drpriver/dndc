@@ -1,13 +1,16 @@
-from unittest import TestCase, main
+from unittest import TestCase, main, TextTestRunner
 import argparse
 import sys
 import os
 import textwrap
-from textwrap import dedent
-try:
+from typing import Optional, List, TYPE_CHECKING, TextIO
+if TYPE_CHECKING:
     import pydndc
-except ModuleNotFoundError:
-    pydndc = None
+else:
+    try:
+        import pydndc
+    except ModuleNotFoundError:
+        pydndc = None
 
 HEADER ="""
 <!DOCTYPE html>
@@ -232,20 +235,56 @@ class TestFileCache(TestCase):
         self.assertListEqual(output[1], ['Makefile'])
         self.assertListEqual(cache.paths(), ['Makefile'])
 
-
-
-if __name__ == '__main__':
+def mymain() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('-C', '--change-directory')
     parser.add_argument('-e', '--extension-directory')
+    parser.add_argument('-t', '--tee')
     argz = sys.argv[0]
     args, remainder = parser.parse_known_args()
-    if args.change_directory:
-        os.chdir(args.change_directory)
-    if args.extension_directory:
-        sys.path.append(args.extension_directory)
+    argv = [argz] + remainder
+    run(**vars(args), argv=argv)
+
+class Tee:
+    """
+    Simple wrapper class to forward output to multiple file-like objects.
+    """
+    def __init__(self, *fps):
+        self.fps = fps
+    def write(self, text:str, /) -> int:
+        for fp in self.fps:
+            result = fp.write(text)
+        return result
+    def flush(self) -> None:
+        for fp in self.fps:
+            fp.flush()
+    def close(self) -> None:
+        for fp in self.fps:
+            fp.close()
+
+def run(
+    argv:List[str],
+    change_directory:Optional[str] = None,
+    extension_directory:Optional[str]=None,
+    tee:Optional[str]=None,
+) -> None:
+    global pydndc
+    if change_directory:
+        os.chdir(change_directory)
+    if extension_directory:
+        sys.path.append(extension_directory)
         import pydndc
     if pydndc is None:
         print('Unable to find the built pydndc extension. If you have built it, then specify what directory it is in with --extension-directory', file=sys.stderr)
         sys.exit(1)
-    main(argv=[argz] + remainder)
+    if tee:
+        with open(tee, 'w', encoding='utf-8') as fp:
+            # ignore that we don't actually implement all of TextTIO
+            runner = TextTestRunner(Tee(fp, sys.stderr)) # type: ignore
+            main(argv=argv, testRunner=runner)
+    else:
+        main(argv=argv)
+
+
+if __name__ == '__main__':
+    mymain()
