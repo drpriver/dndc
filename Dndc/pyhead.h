@@ -35,4 +35,16 @@
 #error "Only python 3.7 or better is supported"
 #endif
 
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
+static inline
+int
+PyModule_AddObjectRef(PyObject* mod, const char* name, PyObject* value){
+    int result = PyModule_AddObject(mod, name, value);
+    if(result == 0){ // 0 is success, so above call stole our ref
+        Py_INCREF(value);
+    }
+    return result;
+}
+#endif
+
 #endif
