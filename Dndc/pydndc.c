@@ -114,8 +114,8 @@ DndcPyFileCache_paths(PyObject* self){
     DndcFileCache* caches[2] = {cache->b64_cache, cache->text_cache};
     for(size_t c = 0; c < arrlen(caches); c++){
         DndcFileCache* ch = caches[c];
-        for(size_t cookie = 0, n = dndc_filecache_cached_paths(ch, buff, arrlen(buff), &cookie); 
-            n != 0; 
+        for(size_t cookie = 0, n = dndc_filecache_cached_paths(ch, buff, arrlen(buff), &cookie);
+            n != 0;
             n = dndc_filecache_cached_paths(ch, buff, arrlen(buff), &cookie)
         ){
             for(size_t i = 0; i < n; i++){
@@ -334,7 +334,7 @@ PyMethodDef pydndc_methods[] = {
         "\n"
         "Error Reporter Arguments:\n"
         "-------------------------\n"
-        "message_type: IntEnum\n"
+        "message_type: MsgType\n"
         "    The values are as follows:\n"
         "\n"
         "    ERROR:     An error that caused parsing to fail and cannot\n"
@@ -493,10 +493,10 @@ PyModuleDef pydndc = {
 
 static
 PyStructSequence_Field syntax_fields[] = {
-    {"type", "the type of the syntactic region"},
-    {"column", "byte offset from beginning of line"},
-    {"offset", "byte offset from beginning of doc"},
-    {"length", "byte length of region"},
+    {"type",   "SynType. The type of the syntactic region."},
+    {"column", "Byte offset from beginning of line."},
+    {"offset", "Byte offset from beginning of doc."},
+    {"length", "Byte length of region."},
     {0},
 };
 
@@ -511,6 +511,15 @@ PyStructSequence_Desc syntax_desc = {
 static PyTypeObject* SyntaxRegion;
 
 
+static inline
+int
+add_doc(PyObject* obj, const char* text){
+    PyObject* doc = PyUnicode_FromString(text);
+    if(!doc) return 1;
+    PyObject_SetAttrString(obj, "__doc__", doc);
+    Py_DECREF(doc);
+    return 0;
+}
 
 PyMODINIT_FUNC _Nullable
 PyInit_pydndc(void){
@@ -523,7 +532,7 @@ PyInit_pydndc(void){
     PyObject* flagvalues = NULL;
     PyObject* filecache_type = NULL;
     PyObject* synenum = NULL;
-    PyObject* messageenum = NULL;
+    PyObject* msgenum = NULL;
     PyObject* flagenum = NULL;
     PyObject* args = NULL;
     PyObject* kwargs = NULL;
@@ -545,10 +554,10 @@ PyInit_pydndc(void){
     }
     PyModule_AddStringConstant(mod, "__version__",     DNDC_VERSION);
     SyntaxRegion = PyStructSequence_NewType(&syntax_desc);
-#if 0
+    // pydoc basically shits the bed if a class doesn't have a __module__ or a __doc__.
+    PyObject_SetAttrString((PyObject*)SyntaxRegion, "__module__", modname);
     if(PyModule_AddObjectRef(mod, "SyntaxRegion", (PyObject*)SyntaxRegion) < 0)
         goto fail;
-#endif
     enu_mod = PyImport_ImportModule("enum"); //new ref
     if(!enu_mod) goto fail;
     intenum = PyObject_GetAttrString(enu_mod, "IntEnum"); // new ref
@@ -599,6 +608,7 @@ PyInit_pydndc(void){
     synenum = PyObject_Call(intenum, args, kwargs);
     Py_DECREF(args); args = NULL;
     if(!synenum) goto fail;
+    if(add_doc(synenum, "The type of a syntactic region.") != 0) goto fail;
     if(PyModule_AddObjectRef(mod, "SynType", synenum) < 0)
         goto fail;
 
@@ -639,6 +649,8 @@ PyInit_pydndc(void){
     flagenum = PyObject_Call(intflag, args, kwargs);
     Py_DECREF(args); args = NULL;
     if(!flagenum) goto fail;
+    if(add_doc(flagenum, "Flags for controlling the behavior of htmlgen.") != 0)
+        goto fail;
     if(PyModule_AddObjectRef(mod, "Flags", flagenum) < 0)
         goto fail;
 
@@ -663,10 +675,12 @@ PyInit_pydndc(void){
     args = PyTuple_Pack(2, name, messagevalues); // does not steal
     if(!args) goto fail;
     Py_DECREF(name); name = NULL;
-    synenum = PyObject_Call(intenum, args, kwargs);
+    msgenum = PyObject_Call(intenum, args, kwargs);
     Py_DECREF(args); args = NULL;
-    if(!synenum) goto fail;
-    if(PyModule_AddObjectRef(mod, "MsgType", synenum) < 0)
+    if(!msgenum) goto fail;
+    if(add_doc(msgenum, "The type of a message sent to the error reporting function.") != 0)
+        goto fail;
+    if(PyModule_AddObjectRef(mod, "MsgType", msgenum) < 0)
         goto fail;
     if(0){
         fail:
@@ -681,7 +695,7 @@ PyInit_pydndc(void){
     Py_XDECREF(flagvalues);
     Py_XDECREF(filecache_type);
     Py_XDECREF(synenum);
-    Py_XDECREF(messageenum);
+    Py_XDECREF(msgenum);
     Py_XDECREF(flagenum);
     Py_XDECREF(args);
     Py_XDECREF(kwargs);

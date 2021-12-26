@@ -53,33 +53,8 @@ size_t
 FileCache_n_paths(const FileCache* cache);
 
 
-// A cached loaded source file path
-typedef struct FileCachePath {
-    uint64_t last_eight_chars;
-    uint32_t length;
-    uint32_t hash;
-    const char* text;
-} FileCachePath;
-
-
-// A cached loaded file.
-typedef struct LoadedSource {
-    FileCachePath sourcepath; // doesn't have to be a filename
-    LongString sourcetext; // the actual source text
-} LoadedSource;
-
 #ifdef __clang__
 #pragma clang assume_nonnull end
 #endif
-
-#define MARRAY_T LoadedSource
-#include "Marray.h"
-
-struct DndcFileCache {
-    Allocator allocator;
-    Allocator scratch;
-    // TODO: use an adaptive table. Paths can get long and slow.
-    Marray(LoadedSource) _files;
-};
 
 #endif

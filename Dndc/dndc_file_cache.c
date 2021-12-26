@@ -9,6 +9,47 @@
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
+// A cached loaded source file path
+typedef struct FileCachePath {
+    uint64_t last_eight_chars;
+    uint32_t length;
+    uint32_t hash;
+    const char* text;
+} FileCachePath;
+
+// Same as above, but text is a borrowed, not
+// nul-terminated string. This gives a bit of type safety.
+typedef struct FileCacheLookupKey {
+    uint64_t last_eight_chars;
+    uint32_t length;
+    uint32_t hash;
+    const char* text;
+} FileCacheLookupKey;
+
+
+// A cached loaded file.
+typedef struct LoadedSource {
+    FileCachePath sourcepath; // doesn't have to be a filename
+    LongString sourcetext; // the actual source text
+} LoadedSource;
+
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
+#define MARRAY_T LoadedSource
+#include "Marray.h"
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
+struct DndcFileCache {
+    Allocator allocator;
+    Allocator scratch;
+    // TODO: use an adaptive table. Paths can get long and slow.
+    Marray(LoadedSource) _files;
+};
+
 
 static
 StringResult
@@ -21,12 +62,6 @@ FileCache_free_path(FileCache* cache, FileCachePath path){
 }
 
 
-typedef struct FileCacheLookupKey {
-    uint64_t last_eight_chars;
-    uint32_t length;
-    uint32_t hash;
-    const char* text;
-} FileCacheLookupKey;
 
 static inline
 bool

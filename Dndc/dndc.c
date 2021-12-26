@@ -67,11 +67,10 @@ static
 THREADFUNC(binary_worker){
     // Prepopulate the binary cache.
     BinaryJob* jobp = thread_arg;
-    FileCache cache = *jobp->b64cache;
+    FileCache* cache = jobp->b64cache;
     size_t count = jobp->sourcepaths.count;
     StringView* data = jobp->sourcepaths.data;
-    FileCache_preload_b64_files(&cache, data, count);
-    memcpy(jobp->b64cache, &cache, sizeof(cache));
+    FileCache_preload_b64_files(cache, data, count);
     // uint64_t after = get_t();
     // fprintf(stderr, "binary worker: %.3fms\n", (after-before)/1000.);
     return 0;
@@ -186,7 +185,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
     // NOTE: a pointer to this struct is sent to the worker thread, so if
     //       you return before the thread is done, bad things will happen.
     BinaryJob job = {
-        .b64cache = &ctx->b64cache,
+        .b64cache = ctx->b64cache,
     };
     if(! (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME | DNDC_DONT_READ))){
         // Populate a list of filepaths to load up in order
@@ -344,18 +343,10 @@ run_the_dndc(uint64_t flags,
         .base_directory = base_directory,
         // The base64 cache is moved to another thread and then moved back, so
         // it needs an independent allocator so it can run concurrently.
-        .b64cache = external_b64cache? *external_b64cache:
-            (FileCache){
-                .allocator = (flags & DNDC_NO_CLEANUP)?
-                    get_mallocator()
-                    : new_recorded_mallocator(),
-                .scratch = get_mallocator(), // lazy, but we should always clean up from the cache right?
-            },
+        .b64cache = external_b64cache? external_b64cache: dndc_create_filecache(),
         // The text cache only runs on this thread so we can just use the
         // general allocator.
-        .textcache = external_textcache?
-            *external_textcache
-            : (FileCache){.allocator=allocator},
+        .textcache = external_textcache?  external_textcache : dndc_create_filecache(),
         .error_func = error_func,
         .error_user_data = error_user_data,
     };
@@ -814,24 +805,13 @@ run_the_dndc(uint64_t flags,
             uint64_t after = get_t();
             report_time(&ctx, SV("Cleaning allocator: "), after-before);
         }
-        {
-            uint64_t before = get_t();
-            if(!external_b64cache){
-                Allocator_free_all(ctx.b64cache.allocator);
-                shallow_free_recorded_mallocator(ctx.b64cache.allocator);
-                }
-            uint64_t after = get_t();
-            report_time(&ctx, SV("Cleaning b64 cache: "), after-before);
-        }
         uint64_t after = get_t();
         report_time(&ctx, SV("Cleaning up memory took: "), after-before_cleanup);
     }
-    if(!wasm && external_b64cache){
-        memcpy(external_b64cache, &ctx.b64cache, sizeof(ctx.b64cache));
-    }
-    if(!wasm && external_textcache){
-        memcpy(external_textcache, &ctx.textcache, sizeof(ctx.textcache));
-    }
+    if(!external_b64cache)
+        dndc_filecache_destroy(ctx.b64cache);
+    if(!external_textcache)
+        dndc_filecache_destroy(ctx.textcache);
     uint64_t t1 = get_t();
     report_time(&ctx, SV("Execution took: "), t1-t0);
     if(!wasm && !(flags & DNDC_NO_CLEANUP))

@@ -337,7 +337,7 @@ ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
     }
     ctx_note_dependency(ctx, sourcepath);
     uint64_t before = get_t();
-    StringResult cache_result = FileCache_read_file(&ctx->textcache, sourcepath, !!(ctx->flags & DNDC_DONT_READ));
+    StringResult cache_result = FileCache_read_file(ctx->textcache, sourcepath, !!(ctx->flags & DNDC_DONT_READ));
     msb_destroy(&temp_builder);
     if(cache_result.errored){
         return (StringViewResult){.errored = PARSE_ERROR};
@@ -357,7 +357,7 @@ ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath){
         binarypath = msb_borrow_sv(&path_builder);
     }
     ctx_note_dependency(ctx, binarypath);
-    StringResult cache_result = FileCache_read_and_b64_file(&ctx->b64cache, binarypath, !!(ctx->flags & DNDC_DONT_READ));
+    StringResult cache_result = FileCache_read_and_b64_file(ctx->b64cache, binarypath, !!(ctx->flags & DNDC_DONT_READ));
     msb_destroy(&path_builder);
     if(cache_result.errored) return (StringViewResult){.errored=cache_result.errored};
     return (StringViewResult){.result=LS_to_SV(cache_result.result)};

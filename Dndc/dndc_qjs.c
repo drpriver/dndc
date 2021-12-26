@@ -723,7 +723,7 @@ js_load_file_as_base64(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJS
     }
 
     StringView sv = jsstring_make_stringview_js_allocated(jsctx, str);
-    StringResult e = FileCache_read_and_b64_file(&ctx->b64cache, sv, false);
+    StringResult e = FileCache_read_and_b64_file(ctx->b64cache, sv, false);
     JS_FreeCString(jsctx, sv.text);
     if(e.errored){
         return JS_ThrowTypeError(jsctx, "%s: Error when loading file: '%s'", __func__, sv.text);
