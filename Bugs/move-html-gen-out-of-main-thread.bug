@@ -1,0 +1,14 @@
+updated: 2022-01-01T19:23:42.520651
+updated: 2022-01-03T11:52:29.277866
+bugmagic^^^^
+Summary::md.summary
+  All of the gui editors generate the HTML in the main thread, which blocks the UI,
+  additionally on updates and keystrokes. It's fast enough that this mostly works, but
+  it should be designed so that each document has its own worker thread (maybe) for processing.
+
+  The problem is the FileCache is shared, so you'd have to put a lock around it.
+
+Updated Jan 03, 2022, 11:52AM::md.update
+  Another difficulty is that I use file watching to invalidate the cache. When would that run?
+
+  See [filesystem abstraction].

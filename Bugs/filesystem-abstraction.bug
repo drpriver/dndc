@@ -1,1 +1,21 @@
-It'd be nice to consolidate file caching and file loading into a single abstraction (would also help embedding).
+updated: 2022-01-01T19:16:53.726118
+bugmagic^^^^
+Summary::md.summary
+  It'd be nice to consolidate file caching and file loading into a single
+  abstraction (would also help embedding).
+
+  It would also be useful to be able to let people customize the loading
+  of files instead of invoking syscalls directly.
+
+Updated Jan 01, 2022, 07:16PM::md.update
+  So I actually have encapsulated file caching and loading into a single utility,
+  and arguably I should move that utility out of Dndc and into Utils.
+
+  The question is whether I should add a fat function so that loading
+  can be completely customized. The problem with that is I would also
+  have to either expose allocators (which I don't want to), or I would
+  have to take two fat pointers, one for load, one for unload. Oh,
+  also the file loading needs to be thread-safe as we load files in
+  a different thread. Oof.
+
+  That really complicates things.
