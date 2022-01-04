@@ -136,6 +136,8 @@ static inline void print_argparse_help(const ArgParser*, int);
 // Like above, but more compact
 static inline void print_argparse_help_compact(const ArgParser*, int);
 
+static inline void print_argparse_fish_completions(const ArgParser*);
+
 
 //
 // X-macro for the current kinds of args we can parse.
@@ -624,6 +626,7 @@ print_argparse_help(const ArgParser* p, int columns){
     }
     for(size_t i = 0; i < p->early_out.count; i++){
         ArgToParse* early = &p->early_out.args[i];
+        if(early->hidden) continue;
         if(early->altname1.length){
             printf("%s%s%s, %s%s%s:\n", style.pre_argname, early->name.text, style.post_argname, style.pre_argname, early->altname1.text, style.post_argname);
         }
@@ -1505,6 +1508,114 @@ print_argparse_error(ArgParser* parser, enum ArgParseError error){
     }
     fprintf(stderr, "Unknown error when parsing arguments.\n");
     return;
+}
+
+
+static inline
+void
+print_argparse_single_line_help_escaped(const char* help){
+    for(;;help++){
+        switch(*help){
+            case ' ': case '\t': case '\n':
+                continue;
+            case 0:
+                return;
+            default: break;
+        }
+        break;
+    }
+    int i = 0;
+    for(;*help;help++, i++){
+        // if(i > 79) return;
+        switch(*help){
+        case '"':
+            printf("\\\"");
+            break;
+        case '\t':
+        case '\n':
+            return;
+            putchar(' ');
+        default:
+            putchar(*help);
+        }
+    }
+}
+
+static inline
+void
+print_argparse_fish_completions(const ArgParser* p){
+    for(size_t i = 0; i < p->early_out.count; i++){
+        ArgToParse* a = &p->early_out.args[i];
+        printf("complete -c %s", p->name);
+        StringView names[] = {a->name, a->altname1};
+        for(size_t j = 0; j < arrlen(names); j++){
+            StringView name = names[j];
+            if(!name.length) continue;
+            if(name.length > 2 && memcmp(name.text, "--", 2) == 0){
+                printf(" -l %.*s", (int)name.length-2, name.text+2);
+            }
+            else if(name.length == 2 && name.text[0] == '-'){
+                printf(" -s %.*s", (int)name.length-1, name.text+1);
+            }
+            else if(name.length > 1 && name.text[0] == '-'){
+                printf(" -o %.*s", (int)name.length-1, name.text+1);
+            }
+        }
+        if(a->help){
+            printf(" -d \"");
+            print_argparse_single_line_help_escaped(a->help);
+            putchar('"');
+        }
+        putchar('\n');
+    }
+    for(size_t i = 0; i < p->keyword.count; i++){
+        ArgToParse* a = &p->keyword.args[i];
+        printf("complete -c %s", p->name);
+        StringView names[] = {a->name, a->altname1};
+        for(size_t j = 0; j < arrlen(names); j++){
+            StringView name = names[j];
+            if(!name.length) continue;
+            if(name.length > 2 && memcmp(name.text, "--", 2) == 0){
+                printf(" -l %.*s", (int)name.length-2, name.text+2);
+            }
+            else if(name.length == 2 && name.text[0] == '-'){
+                printf(" -s %.*s", (int)name.length-1, name.text+1);
+            }
+            else if(name.length > 1 && name.text[0] == '-'){
+                printf(" -o %.*s", (int)name.length-1, name.text+1);
+            }
+        }
+        switch(a->dest.type){
+            case ARG_FLAG:
+            case ARG_BITFLAG:
+                break;
+            case ARG_FLOAT32:
+            case ARG_FLOAT64:
+            case ARG_STRING:
+            case ARG_CSTRING:
+            case ARG_INTEGER64:
+            case ARG_UINTEGER64:
+            case ARG_USER_DEFINED:
+            case ARG_INT:
+                printf(" -r");
+                break;
+            case ARG_ENUM:
+                printf(" -a \"");
+                for(size_t i = 0; i < a->dest.enum_pointer->enum_count; i++){
+                    if(i != 0)
+                        putchar(' ');
+                    StringView sv = a->dest.enum_pointer->enum_names[i];
+                    printf("%.*s", (int)sv.length, sv.text);
+                }
+                putchar('"');
+        }
+        if(a->help){
+            printf(" -d \"");
+            print_argparse_single_line_help_escaped(a->help);
+            putchar('"');
+        }
+        putchar('\n');
+    }
 }
 
 #ifdef ARGPARSE_EXAMPLE

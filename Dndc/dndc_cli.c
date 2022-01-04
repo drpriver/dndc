@@ -183,16 +183,17 @@ main(int argc, char**argv){
             {
                 .name = SV("--format"),
                 .dest = ArgBitFlagDest(&flags, DNDC_REFORMAT_ONLY),
-                .help = "Instead of rendering to html, render to .dnd with "
-                        "trailing spaces removed, text wrapped to 80 columns "
+                .help = "Instead of rendering to html, render to .dnd\n"
+                        "Trailing spaces are removed, text wrapped to 80 columns "
                         "(if semantically equivalent), etc." ,
             },
             {
                 .name = SV("--expand"),
                 .altname1 = SV("--expand-only"),
                 .dest = ArgBitFlagDest(&flags, DNDC_OUTPUT_EXPANDED_DND),
-                .help = "After resolving imports and executing user scripts, "
-                        "output as a single file .dnd file instead of html.",
+                .help = "Output as a single .dnd file instead of html.\n"
+                        "Expansion is after resolving imports and executing user  "
+                        "scripts.",
                 .hidden = true,
             },
             {
@@ -205,7 +206,8 @@ main(int argc, char**argv){
                 .name = SV("--untrusted-input"),
                 .altname1 = SV("--untrusted"),
                 .dest = ArgBitFlagDest(&flags, DNDC_INPUT_IS_UNTRUSTED),
-                .help = "Input is untrusted and thus should not be allowed to "
+                .help = "Input is untrusted, so disallow some vectors.\n"
+                        "Input thus should not be allowed to "
                         "import files, execute scripts or embed javascript in "
                         "the output.",
                 .hidden = true,
@@ -251,7 +253,7 @@ main(int argc, char**argv){
                 .hidden = true,
             },
         };
-        enum {HELP, VERSION, HIDDEN_HELP, OPEN_SOURCE};
+        enum {HELP, VERSION, HIDDEN_HELP, OPEN_SOURCE, FISH};
         ArgToParse early_args[] = {
             [HELP] = {
                 .name = SV("-h"),
@@ -271,6 +273,11 @@ main(int argc, char**argv){
             [OPEN_SOURCE] = {
                 .name = SV("--open-source-credits"),
                 .help = "Print out attribution of open source libraries used and exit.",
+            },
+            [FISH] = {
+                .name = SV("--fish-completions"),
+                .help = "Print out commands for fish shell completions.",
+                .hidden = true,
             },
         };
         const char* version = "dndc version " DNDC_VERSION ". Compiled " __DATE__ " " __TIME__ ".";
@@ -306,6 +313,10 @@ main(int argc, char**argv){
                 int columns = get_terminal_size().columns;
                 if(columns > 80) columns = 80;
                 print_wrapped(DNDC_OPEN_SOURCE_CREDITS, columns);
+                return 0;
+            }
+            case FISH:{
+                print_argparse_fish_completions(&argparser);
                 return 0;
             }
             default:

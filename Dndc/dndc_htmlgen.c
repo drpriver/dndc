@@ -216,7 +216,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
     Node* root_node = get_node(ctx, root_handle);
     // elide useless wrapper div.
     if(root_node->type == NODE_MD && node_children_count(root_node) == 1){
-        if(!root_node->attributes && !root_node->classes){
+        if(!root_node->attributes && !root_node->classes && !node_get_id(ctx, root_handle).length){
             Node* child = get_node(ctx, node_children(root_node)[0]);
             if(child->type == NODE_DIV || child->type == NODE_MD)
                 root_handle = node_children(root_node)[0];
@@ -1439,6 +1439,12 @@ RENDERFUNC(MD){
     Node* node = get_node(ctx, handle);
     msb_write_literal(sb, "<div");
     write_classes(sb, node);
+    if(!node->header.length){
+        StringView id = node_get_id(ctx, handle);
+        if(id.length){
+            MSB_FORMAT(sb, SV(" id=\""), id, SV("\""));
+        }
+    }
     msb_write_literal(sb, ">\n");
     if(node->header.length){
         header_depth++;
