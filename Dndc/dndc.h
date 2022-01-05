@@ -513,7 +513,7 @@ dndc_filecache_n_paths(DndcFileCache*);
 //
 // buff:
 //   A pointer to an array of DndcStringViews to store the results in.
-// 
+//
 // bufflen:
 //   The length of the array pointed to by buff.
 //
@@ -530,9 +530,9 @@ dndc_filecache_n_paths(DndcFileCache*);
 // --------
 //  enum {EXAMPLE_LENGTH=100};
 //  DndcStringView buff[EXAMPLE_LENGTH];
-//  for(size_t cookie = 0, 
-//             n = dndc_filecache_cached_paths(cache, buff, EXAMPLE_LENGTH, &cookie); 
-//      n != 0; 
+//  for(size_t cookie = 0,
+//             n = dndc_filecache_cached_paths(cache, buff, EXAMPLE_LENGTH, &cookie);
+//      n != 0;
 //      n = dndc_filecache_cached_paths(cache, buff, EXAMPLE_LENGTH, &cookie)
 //  ){
 //      for(size_t i = 0; i < n; i++){

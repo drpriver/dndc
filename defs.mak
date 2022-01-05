@@ -33,6 +33,7 @@ WARNING_FLAGS:=-Wall\
 	-Werror=switch\
 	-Werror=format\
 	-Werror=return-type\
+	-Werror=undefined-internal\
 
 STD:=-std=gnu17
 

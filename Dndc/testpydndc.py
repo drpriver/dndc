@@ -7,10 +7,7 @@ from typing import Optional, List, TYPE_CHECKING, TextIO
 if TYPE_CHECKING:
     import pydndc
 else:
-    try:
-        import pydndc
-    except ModuleNotFoundError:
-        pydndc = None
+    pydndc = None
 
 HEADER ="""
 <!DOCTYPE html>
@@ -272,9 +269,10 @@ def run(
     if change_directory:
         os.chdir(change_directory)
     if extension_directory:
-        sys.path.append(extension_directory)
+        sys.path.insert(0, extension_directory)
+    try:
         import pydndc
-    if pydndc is None:
+    except ModuleNotFoundError:
         print('Unable to find the built pydndc extension. If you have built it, then specify what directory it is in with --extension-directory', file=sys.stderr)
         sys.exit(1)
     if tee:
