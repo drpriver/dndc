@@ -6,7 +6,12 @@
 #if defined(__linux__)
 #include <semaphore.h>
 #elif defined(__APPLE__)
-#include <dispatch/dispatch.h>
+// semaphore_wait, semaphore_signal
+#include <mach/semaphore.h>
+// semaphore_create, destroy
+#include <mach/task.h>
+// mach_task_self
+#include <mach/mach_init.h>
 #endif
 #elif defined(_WIN32)
 #include "windowsheader.h"
@@ -140,7 +145,7 @@ typedef struct WorkerThread {
     pthread_cond_t worker_cond;
     pthread_mutex_t mutex;
 #ifdef __APPLE__
-    dispatch_semaphore_t sem;
+    semaphore_t sem;
 #else
     sem_t sem;
 #endif
@@ -165,7 +170,7 @@ THREADFUNC(worker_thread_main){
         if(job_data){
             job(job_data);
             #ifdef __APPLE__
-            dispatch_semaphore_signal(w->sem);
+            semaphore_signal(w->sem);
             #else
             sem_post(&w->sem);
             #endif
@@ -176,13 +181,11 @@ THREADFUNC(worker_thread_main){
     pthread_mutex_destroy(&w->mutex);
     pthread_cond_destroy(&w->worker_cond);
     #ifdef __APPLE__
-        #if !__has_feature(objc_arc)
-            dispatch_release(w->sem);
-        #else
-            // effectively releases it.
-            w->sem = NULL;
-        #endif
+    semaphore_destroy(mach_task_self(), w->sem);
     #else
+    #ifndef __linux__
+    #error woops
+    #endif
     sem_destroy(&w->sem);
     #endif
     free(w);
@@ -197,7 +200,8 @@ worker_create(thread_func* job){
     pthread_cond_init(&w->worker_cond, NULL);
     pthread_mutex_init(&w->mutex, NULL);
     #ifdef __APPLE__
-    w->sem = dispatch_semaphore_create(0);
+    kern_return_t ret = semaphore_create(mach_task_self(), &w->sem, SYNC_POLICY_FIFO, 0);
+    unhandled_error_condition(ret != 0);
     #else
     sem_init(&w->sem, 0, 0);
     #endif
@@ -228,7 +232,7 @@ static
 void
 worker_wait(WorkerThread* w){
     #ifdef __APPLE__
-    dispatch_semaphore_wait(w->sem, DISPATCH_TIME_FOREVER);
+    semaphore_wait(w->sem);
     #else
     sem_wait(&w->sem);
     #endif
