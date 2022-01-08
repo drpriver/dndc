@@ -1,5 +1,6 @@
 #ifndef DNDC_FORMAT_C
 #define DNDC_FORMAT_C
+#include "MStringBuilder.h"
 #include "dndc_node_types.h"
 #include "dndc_types.h"
 #include "dndc_funcs.h"
@@ -198,7 +199,7 @@ format_tree(DndcContext* ctx, MStringBuilder* sb){
 }
 static inline
 void
-format_header(MStringBuilder* sb, Node* node, int indent){
+format_header(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
     msb_write_nchar(sb, ' ', indent);
     if(node->header.length){
         msb_write_str(sb, node->header.text,node->header.length);
@@ -222,12 +223,24 @@ format_header(MStringBuilder* sb, Node* node, int indent){
             msb_write_char(sb, ')');
         }
     }
+    if(node->flags & NODEFLAG_IMPORT) msb_write_literal(sb, " #import");
+    if(node->flags & NODEFLAG_ID) {
+        // This is super gross, I hate this.
+        // FIXME: use handles in the formatter instead of raw nodes.
+        NodeHandle handle = {._value = (uint32_t)(node - ctx->nodes.data)};
+        StringView idcontent = SV("");
+        node_get_explicit_id(ctx, handle, &idcontent);
+        MSB_FORMAT(sb, SV(" #id("), idcontent, SV(")"));
+    }
+    if(node->flags & NODEFLAG_NOID) msb_write_literal(sb, " #noid");
+    if(node->flags & NODEFLAG_NOINLINE) msb_write_literal(sb, " #noinline");
+    if(node->flags & NODEFLAG_HIDE) msb_write_literal(sb, " #hide");
     msb_write_char(sb, '\n');
 }
 
 
 FORMATFUNC(regular_node){
-    format_header(sb, node, indent);
+    format_header(ctx, sb, node, indent);
     indent += FORMAT_INDENT;
     int result = 0;
     FormatState state = {.lead = indent};
@@ -348,7 +361,7 @@ FORMATFUNC(md_list){
 }
 FORMATFUNC(md_node){
     int result = 0;
-    format_header(sb, node, indent);
+    format_header(ctx, sb, node, indent);
     indent += FORMAT_INDENT;
     NODE_CHILDREN_FOR_EACH(it, node){
         Node* child = get_node(ctx, *it);
@@ -395,7 +408,7 @@ write_str_or_container(DndcContext* ctx, MStringBuilder* sb, Node* node){
 
 FORMATFUNC(table_node){
     int result = 0;
-    format_header(sb, node, indent);
+    format_header(ctx, sb, node, indent);
     indent += FORMAT_INDENT;
     ssize_t n_cells = 0;
     ssize_t widths[100] = {0};
@@ -503,7 +516,7 @@ FORMATFUNC(table_node){
 
 FORMATFUNC(kv_node){
     int result = 0;
-    format_header(sb, node, indent);
+    format_header(ctx, sb, node, indent);
     indent += FORMAT_INDENT;
     size_t key_width = 0;
     NODE_CHILDREN_FOR_EACH(it, node){
@@ -550,7 +563,7 @@ FORMATFUNC(kv_node){
 }
 FORMATFUNC(raw_node){
     int result = 0;
-    format_header(sb, node, indent);
+    format_header(ctx, sb, node, indent);
     indent += FORMAT_INDENT;
     size_t nspace = indent < 80? indent: 80;
     NODE_CHILDREN_FOR_EACH(it, node){

@@ -1,5 +1,6 @@
 Version 0.10.2::md
   * Python API is nicer now.
+  * Fixed an issue where #directives weren't being set by the formatter.
 Version 0.10.1::md
   * Elide the wrapper div on the main content for real this time.
 Version 0.10.0::md

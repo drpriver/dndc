@@ -556,6 +556,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                             return (ErrorableNodeFlags){.errored=PARSE_ERROR};
                         }
                         node_set_id(ctx, node_handle, contents);
+                        result.result |= NODEFLAG_ID;
                         continue;
                     }
                     else {

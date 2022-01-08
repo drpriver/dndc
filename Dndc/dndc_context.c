@@ -74,6 +74,20 @@ node_set_attribute(Node* node, Allocator allocator, StringView attr, StringView 
     return;
 }
 
+// Don't call this function unless you really need what was explicitly set
+// by a #id() directive.
+static inline
+bool
+node_get_explicit_id(DndcContext* ctx, NodeHandle handle, StringView* out){
+    MARRAY_FOR_EACH(IdItem, item, ctx->explicit_node_ids){
+        if(NodeHandle_eq(item->node, handle)){
+            *out = item->text;
+            return true;
+        }
+    }
+    return false;
+}
+
 // Returns a zero-length string if noid
 static inline
 StringView
@@ -81,26 +95,28 @@ node_get_id(DndcContext* ctx, NodeHandle handle){
     Node* node = get_node(ctx, handle);
     if(node->flags & NODEFLAG_NOID)
         return SV("");
-    MARRAY_FOR_EACH(IdItem, item, ctx->explicit_node_ids){
-        if(NodeHandle_eq(item->node, handle)){
-            return item->text;
-        }
-    }
-    return node->header;
+    StringView sv = node->header;
+    if(node->flags & NODEFLAG_ID)
+        node_get_explicit_id(ctx, handle, &sv); // Ok to ignore return value.
+    return sv;
 }
 
 static inline
 void
 node_set_id(DndcContext* ctx, NodeHandle handle, StringView sv){
-    MARRAY_FOR_EACH(IdItem, item, ctx->explicit_node_ids){
-        if(NodeHandle_eq(item->node, handle)){
-            item->text = sv;
-            return;
+    Node* node = get_node(ctx, handle);
+    if(node->flags & NODEFLAG_ID){
+        MARRAY_FOR_EACH(IdItem, item, ctx->explicit_node_ids){
+            if(NodeHandle_eq(item->node, handle)){
+                item->text = sv;
+                return;
+            }
         }
     }
     IdItem* item = Marray_alloc(IdItem)(&ctx->explicit_node_ids, ctx->allocator);
     item->node = handle;
     item->text = sv;
+    node->flags |= NODEFLAG_ID;
 }
 
 static inline
@@ -127,6 +143,9 @@ node_clone(DndcContext* ctx, NodeHandle handle){
     dstnode->filename_idx = srcnode->filename_idx;
     dstnode->row = srcnode->row;
     dstnode->col = srcnode->col;
+    if(srcnode->flags & NODEFLAG_ID){
+        // TODO:
+    }
     return result;
 }
 

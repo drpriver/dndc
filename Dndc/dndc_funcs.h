@@ -305,6 +305,12 @@ static inline
 StringView
 node_get_id(DndcContext*, NodeHandle);
 
+// Don't call this function unless you really need what was explicitly set
+// by a #id() directive.
+static inline
+bool
+node_get_explicit_id(DndcContext* ctx, NodeHandle handle, StringView* out);
+
 //
 // Overrides the id of the node.
 //
