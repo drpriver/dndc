@@ -269,6 +269,8 @@ def run(
     if change_directory:
         os.chdir(change_directory)
     if extension_directory:
+        # Get the realpath as otherwise it throws a win32 error of "The parameter is incorrect" when you go to import.
+        extension_directory = os.path.realpath(extension_directory)
         sys.path.insert(0, extension_directory)
     try:
         import pydndc
