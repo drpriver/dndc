@@ -264,6 +264,26 @@ read_and_base64_bin_file(Allocator scratch, Allocator outallocator, const char* 
     return result;
 }
 
+static inline
+int
+FileCache_store_text_file(FileCache* cache, StringView spath, StringView data, bool overwrite){
+    FileCacheLookupKey key = FileCache_make_key(spath);
+    char* d = Allocator_strndup(cache->allocator, data.text, data.length);
+    LongString ds = {.text=d, .length=data.length};
+    MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
+        if(FileCache_key_eq(key, src->sourcepath)){
+            if(!overwrite) return 1;
+            Allocator_free(cache->allocator, src->sourcetext.text, src->sourcetext.length+1);
+            src->sourcetext = ds;
+            return 0;
+        }
+    }
+    FileCachePath path = FileCache_alloc_path(cache, key);
+    LoadedSource* ls = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator);
+    ls->sourcepath = path;
+    ls->sourcetext = ds;
+    return 0;
+}
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

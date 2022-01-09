@@ -155,12 +155,34 @@ DndcPyFileCache_dealloc(PyObject* self){
 }
 
 static
+Nullable(PyObject*)
+DndcPyFileCache_store(PyObject* self, PyObject* args, PyObject* kwargs){
+    int overwrite = 1;
+    PyObject* opath;
+    PyObject* odata;
+    const char* const keywords[] = { "path", "data", "overwrite", NULL};
+    PushDiagnostic();
+    SuppressCastQual();
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!|p:store", (char**)keywords, &PyUnicode_Type, &opath, &PyUnicode_Type, &odata, &overwrite)){
+        return NULL;
+    }
+    PopDiagnostic();
+    StringView path = pystring_borrow_stringview(opath);
+    StringView data = pystring_borrow_stringview(odata);
+    DndcPyFileCache* cache = (DndcPyFileCache*)self;
+    int result = dndc_filecache_store_text(cache->text_cache, path, data, overwrite);
+    if(!result)
+        Py_RETURN_TRUE;
+    Py_RETURN_FALSE;
+}
+
+static
 PyMethodDef DndcPyFileCache_methods[] = {
     {
         .ml_name = "remove",
         .ml_meth = (PyCFunction)DndcPyFileCache_remove,
         .ml_flags = METH_O,
-        .ml_doc = "remove(filepath)\n"
+        .ml_doc = "remove(self, filepath)\n"
                   "--\n"
                   "\n"
                   "Remove the given filepath (str) from the cache.\n",
@@ -169,7 +191,7 @@ PyMethodDef DndcPyFileCache_methods[] = {
         .ml_name = "clear",
         .ml_meth = (PyCFunction)DndcPyFileCache_clear,
         .ml_flags = METH_NOARGS,
-        .ml_doc = "clear()\n"
+        .ml_doc = "clear(self)\n"
                   "--\n"
                   "\n"
                   "Removes all cached files.\n",
@@ -178,10 +200,20 @@ PyMethodDef DndcPyFileCache_methods[] = {
         .ml_name = "paths",
         .ml_meth = (PyCFunction)DndcPyFileCache_paths,
         .ml_flags = METH_NOARGS,
-        .ml_doc = "paths()\n"
+        .ml_doc = "paths(self)\n"
                   "--\n"
                   "\n"
                   "Returns a list of the paths in the file cache.\n",
+    },
+    {
+        .ml_name = "store",
+        .ml_meth = (PyCFunction)DndcPyFileCache_store,
+        .ml_flags = METH_VARARGS | METH_KEYWORDS,
+        .ml_doc = "store(self, path, data, overwrite=True)\n"
+                   "--\n"
+                   "\n"
+                   "Stores the string at the given path.\n"
+                   "Returns True on success, False on failure.",
     },
     {},
 };

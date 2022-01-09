@@ -545,6 +545,37 @@ DNDC_API
 size_t
 dndc_filecache_cached_paths(DndcFileCache*cache, DndcStringView* buff, size_t bufflen, size_t* cookie);
 
+//
+// dndc_filecache_store_text
+// ---------------------
+//
+// Stores the given text in the file cache under the given path. The path and data
+// are copied out.
+//
+// Args:
+// -----
+// cache:
+//   The cache to store the data in.
+//
+// path:
+//   The path to store the data under. This path is copied.
+//
+// data:
+//   The data to store. This data is copied.
+//
+// overwrite:
+//   If true, if the path is already in the filecache, it is overwritten.
+//   If false, then an error is returned instead.
+//
+// Returns:
+// --------
+// Returns 0 if it successfully stored the path and non-zero if it failed to
+// store the data.
+//
+DNDC_API
+int
+dndc_filecache_store_text(DndcFileCache* cache, DndcStringView path, DndcStringView data, int overwrite);
+
 typedef struct DndcWorkerThread DndcWorkerThread;
 
 DNDC_API

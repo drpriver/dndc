@@ -1990,6 +1990,12 @@ dndc_filecache_cached_paths(DndcFileCache* cache, DndcStringView* buff, size_t b
 }
 
 DNDC_API
+int
+dndc_filecache_store_text(DndcFileCache* cache, DndcStringView path, DndcStringView data, int overwrite){
+    return FileCache_store_text_file(cache, path, data, overwrite);
+}
+
+DNDC_API
 DndcWorkerThread*
 dndc_worker_thread_create(void){
     return (DndcWorkerThread*)worker_create(binary_worker);

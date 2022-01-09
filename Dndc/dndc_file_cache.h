@@ -39,6 +39,17 @@ static
 void // preload only so no error code
 FileCache_preload_b64_files(FileCache* cache, StringView* spath, size_t count);
 
+// Copies the file.
+// WARNING: this will overwrite the previous contents stored at path.
+//
+// Returns 0 on success, non-zero on failure.
+//
+// Args:
+//   overwrite: whether to overwrite previous cached file.
+static inline
+int
+FileCache_store_text_file(FileCache* cache, StringView path, StringView data, bool overwrite);
+
 // 
 // Outputs what paths are cached in this filecache.
 // Returns how many paths were written to buff.
