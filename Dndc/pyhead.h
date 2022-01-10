@@ -35,6 +35,17 @@
 #error "Only python 3.7 or better is supported"
 #endif
 
+// inspect.py doesn't support native functions having type annotations in the
+// docstring yet.
+// If it encounters annotations it just gives you the horrible (...) signature.
+// If I feel like it, I'll submit a patch allowing annotations as it is trivial.
+#if 0
+#define PY_INSPECT_SUPPORTS_ANNOTATIONS 1
+#else
+#define PY_INSPECT_SUPPORTS_ANNOTATIONS 0
+#endif
+
+
 #if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
 static inline
 int

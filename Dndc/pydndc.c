@@ -182,38 +182,58 @@ PyMethodDef DndcPyFileCache_methods[] = {
         .ml_name = "remove",
         .ml_meth = (PyCFunction)DndcPyFileCache_remove,
         .ml_flags = METH_O,
-        .ml_doc = "remove(self, filepath)\n"
-                  "--\n"
-                  "\n"
-                  "Remove the given filepath (str) from the cache.\n",
+        .ml_doc =
+            #if PY_INSPECT_SUPPORTS_ANNOTATIONS
+            "remove(self, filepath:str) -> bool\n"
+            #else
+            "remove(self, filepath)\n"
+            #endif
+            "--\n"
+            "\n"
+            "Remove the given filepath (str) from the cache.\n",
     },
     {
         .ml_name = "clear",
         .ml_meth = (PyCFunction)DndcPyFileCache_clear,
         .ml_flags = METH_NOARGS,
-        .ml_doc = "clear(self)\n"
-                  "--\n"
-                  "\n"
-                  "Removes all cached files.\n",
+        .ml_doc =
+            #if PY_INSPECT_SUPPORTS_ANNOTATIONS
+            "clear(self) -> None\n"
+            #else
+            "clear(self)\n"
+            #endif
+            "--\n"
+            "\n"
+            "Removes all cached files.\n",
     },
     {
         .ml_name = "paths",
         .ml_meth = (PyCFunction)DndcPyFileCache_paths,
         .ml_flags = METH_NOARGS,
-        .ml_doc = "paths(self)\n"
-                  "--\n"
-                  "\n"
-                  "Returns a list of the paths in the file cache.\n",
+        .ml_doc =
+            #if PY_INSPECT_SUPPORTS_ANNOTATIONS
+            "paths(self) -> list[str]\n"
+            #else
+            "paths(self)\n"
+            #endif
+            "--\n"
+            "\n"
+            "Returns a list of the paths in the file cache.\n",
     },
     {
         .ml_name = "store",
         .ml_meth = (PyCFunction)DndcPyFileCache_store,
         .ml_flags = METH_VARARGS | METH_KEYWORDS,
-        .ml_doc = "store(self, path, data, overwrite=True)\n"
-                   "--\n"
-                   "\n"
-                   "Stores the string at the given path.\n"
-                   "Returns True on success, False on failure.",
+        .ml_doc =
+            #if PY_INSPECT_SUPPORTS_ANNOTATIONS
+            "store(self, path:str, data:str, overwrite=True) -> bool\n"
+            #else
+            "store(self, path, data, overwrite=True)\n"
+            #endif
+            "--\n"
+            "\n"
+            "Stores the string at the given path.\n"
+            "Returns True on success, False on failure.",
     },
     {},
 };
@@ -253,7 +273,11 @@ PyMethodDef pydndc_methods[] = {
         .ml_meth = (PyCFunction)pydndc_reformat,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
+        #if PY_INSPECT_SUPPORTS_ANNOTATIONS
+        "reformat(text:str, error_reporter:Callable|None=None) -> str\n"
+        #else
         "reformat(text, error_reporter=None)\n"
+        #endif
         "--\n"
         "\n"
         "Reformat the given .dnd string into a nicely formatted representation.\n"
@@ -282,7 +306,11 @@ PyMethodDef pydndc_methods[] = {
         .ml_meth = (PyCFunction)pydndc_htmlgen,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
+        #if PY_INSPECT_SUPPORTS_ANNOTATIONS
+        "htmlgen(text:str, base_dir:str='.', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0)\n"
+        #else
         "htmlgen(text, base_dir='.', error_reporter=None, file_cache=None, flags=0)\n"
+        #endif
         "--\n"
         "\n"
         "Parses and converts the .dnd string into html, returning as a string.\n"
@@ -411,7 +439,11 @@ PyMethodDef pydndc_methods[] = {
         .ml_meth = (PyCFunction)pydndc_expand,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
+        #if PY_INSPECT_SUPPORTS_ANNOTATIONS
+        "expand(text:str, base_dir:str='.', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, output_name:str=None) -> str\n"
+        #else
         "expand(text, base_dir='.', error_reporter=None, file_cache=None, flags=0, output_name=None)\n"
+        #endif
         "--\n"
         "\n"
         "Parses and converts the .dnd string into an equivelant .dnd string after\n"
@@ -570,6 +602,7 @@ PyInit_pydndc(void){
     PyObject* kwargs = NULL;
     PyObject* name = NULL;
     PyObject* modname = NULL;
+    PyObject* version = NULL;
     if(!mod) goto fail;
     modname = PyModule_GetNameObject(mod); // new ref
     if(!modname) goto fail;
@@ -714,11 +747,16 @@ PyInit_pydndc(void){
         goto fail;
     if(PyModule_AddObjectRef(mod, "MsgType", msgenum) < 0)
         goto fail;
+    PyModule_AddIntConstant(mod, "INT_VERSION", DNDC_NUMERIC_VERSION);
+    version = Py_BuildValue("(iii)", DNDC_MAJOR, DNDC_MINOR, DNDC_MICRO);
+    if(PyModule_AddObjectRef(mod, "version", version) < 0)
+        goto fail;
     if(0){
         fail:
         Py_XDECREF(mod);
         mod = NULL;
     }
+    Py_XDECREF(version);
     Py_XDECREF(enu_mod);
     Py_XDECREF(intenum);
     Py_XDECREF(intflag);
