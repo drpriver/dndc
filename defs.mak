@@ -33,7 +33,6 @@ WARNING_FLAGS:=-Wall\
 	-Werror=switch\
 	-Werror=format\
 	-Werror=return-type\
-	-Werror=undefined-internal\
 
 STD:=-std=gnu17
 
@@ -106,6 +105,7 @@ WARNING_FLAGS+=-Wassign-enum\
 	-Werror=nullability\
 	-Wuninitialized\
 	-Wconditional-uninitialized\
+	-Werror=undefined-internal\
 	-Wcomma
 else ifeq ($(CC),gcc)
 WARNING_FLAGS+=-Wno-missing-braces\

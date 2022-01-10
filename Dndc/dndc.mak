@@ -8,7 +8,7 @@ RPATH:=
 endif
 
 $(BINDIR)/dndc$(EXE): Dndc/dndc_cli.c $(DEPDIR)/dndc.dep  opt.mak $(OBJDIR)/libquickjs.o | $(DIRECTORIES)
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc.dep $< -o $@ $(LINK_FLAGS) $(OBJDIR)/libquickjs.o $(RPATH)
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc.dep $< -o $@ $(OBJDIR)/libquickjs.o $(LINK_FLAGS) $(RPATH)
 .PHONY: dndc
 dndc: $(BINDIR)/dndc$(EXE)
 
@@ -41,7 +41,7 @@ TestDndc: $(TESTDIR)/TestDndc_debug $(TESTDIR)/TestDndc_fast
 .PHONY: TestDndc
 
 $(BINDIR)/pydndc$(PYEXTENSION): Dndc/pydndc.c $(OBJDIR)/libquickjs.o
-	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -O2 $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@ $(LINK_FLAGS) $(PYLDFLAGS) $(OBJDIR)/libquickjs.o
+	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -O2 $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@  $(OBJDIR)/libquickjs.o $(PYLDFLAGS) $(LINK_FLAGS) 
 .PHONY: pydndc
 pydndc: $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pydndc$(PYEXTENSION) PyGdndc/pydndc.pyi PyGdndc/jsdoc.dnd PyGdndc/dndc_js_api.d.ts
 TestResults/testpydndc: $(BINDIR)/pydndc$(PYEXTENSION) Dndc/testpydndc.py

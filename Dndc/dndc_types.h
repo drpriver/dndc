@@ -117,7 +117,11 @@ typedef struct IdItem {
 #define MARRAY_T IdItem
 #include "Marray.h"
 
-typedef enum NodeFlags {
+typedef enum 
+#ifdef __clang__
+__attribute__((flag_enum))
+#endif
+NodeFlags {
     NODEFLAG_NONE = 0,
     // Import children
     NODEFLAG_IMPORT = 0x1,
