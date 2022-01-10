@@ -144,7 +144,14 @@ node_clone(DndcContext* ctx, NodeHandle handle){
     dstnode->row = srcnode->row;
     dstnode->col = srcnode->col;
     if(srcnode->flags & NODEFLAG_ID){
-        // TODO:
+        StringView sv;
+        if(node_get_explicit_id(ctx, handle, &sv))
+            node_set_id(ctx, result, sv);
+        else {
+            // Weird... This shouldn't happen really.
+            // I guess just clear the id bit for destination.
+            dstnode->flags &= ~NODEFLAG_ID;
+        }
     }
     return result;
 }
