@@ -123,6 +123,7 @@
 #define const_free(ptr) do{\
     PushDiagnostic(); \
     SuppressDiscardQualifiers(); \
+    SuppressCastQual(); \
     free(ptr);\
     PopDiagnostic(); \
     }while(0)

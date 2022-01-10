@@ -133,9 +133,6 @@ check_for_early_out_args_longstrings(ArgParser* parser, const LongString* args, 
 //
 static inline void print_argparse_help(const ArgParser*, int);
 
-// Like above, but more compact
-static inline void print_argparse_help_compact(const ArgParser*, int);
-
 static inline void print_argparse_fish_completions(const ArgParser*);
 
 
@@ -1534,7 +1531,7 @@ print_argparse_single_line_help_escaped(const char* help){
         case '\t':
         case '\n':
             return;
-            putchar(' ');
+            // putchar(' ');
         default:
             putchar(*help);
         }
@@ -1601,10 +1598,9 @@ print_argparse_fish_completions(const ArgParser* p){
                 break;
             case ARG_ENUM:
                 printf(" -a \"");
-                for(size_t i = 0; i < a->dest.enum_pointer->enum_count; i++){
-                    if(i != 0)
-                        putchar(' ');
-                    StringView sv = a->dest.enum_pointer->enum_names[i];
+                for(size_t j = 0; j < a->dest.enum_pointer->enum_count; j++){
+                    if(j != 0) putchar(' ');
+                    StringView sv = a->dest.enum_pointer->enum_names[j];
                     printf("%.*s", (int)sv.length, sv.text);
                 }
                 putchar('"');

@@ -33,7 +33,6 @@ WARNING_FLAGS:=-Wall\
 	-Werror=switch\
 	-Werror=format\
 	-Werror=return-type\
-	-Werror=undefined-internal\
 
 STD:=-std=gnu17
 
@@ -53,9 +52,8 @@ DEV_FLAGS=-O0 -g
 # Don't tolerate warnings for tests.
 TEST_FLAGS=-Werror
 
-# Currently this matches opt.mak
 # This will override the local version if the template is changed.
-%: %.template
+opt.mak: opt.mak.template
 	@echo "Creating default $@"
 	@$(CP) $< $@
 
@@ -107,6 +105,7 @@ WARNING_FLAGS+=-Wassign-enum\
 	-Werror=nullability\
 	-Wuninitialized\
 	-Wconditional-uninitialized\
+	-Werror=undefined-internal\
 	-Wcomma
 else ifeq ($(CC),gcc)
 WARNING_FLAGS+=-Wno-missing-braces\

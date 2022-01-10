@@ -33,7 +33,7 @@
 // cut'n'paste from the wikipedia page on murmur hash
 static inline
 force_inline
-nosan
+//nosan
 uint32_t
 murmur_32_scramble(uint32_t k) {
     k *= 0xcc9e2d51;
@@ -44,7 +44,7 @@ murmur_32_scramble(uint32_t k) {
 
 static inline
 force_inline
-nosan
+//nosan
 uint32_t
 murmur3_32(const uint8_t* key, size_t len, uint32_t seed){
 	uint32_t h = seed;

@@ -332,6 +332,16 @@ run_the_dndc(uint64_t flags,
     // just for temporary strings of arbitrary size.
     LinearAllocator la_ = new_linear_storage(1024*1024, "temp storage");
     Allocator la = allocator_from_la(&la_);
+
+    // The base64 cache is moved to another thread and then moved back, so
+    // it needs an independent allocator so it can run concurrently.
+    FileCache* b64cache = external_b64cache;
+    if(!b64cache) b64cache = dndc_create_filecache();
+    // The text cache only runs on this thread so we can just use the
+    // general allocator.
+    FileCache* textcache = external_textcache;
+    if(!textcache) textcache = dndc_create_filecache();
+
     DndcContext ctx = {
         .flags = flags,
         .allocator = allocator,
@@ -341,12 +351,8 @@ run_the_dndc(uint64_t flags,
         .navnode = INVALID_NODE_HANDLE,
         .outputfile = outpath,
         .base_directory = base_directory,
-        // The base64 cache is moved to another thread and then moved back, so
-        // it needs an independent allocator so it can run concurrently.
-        .b64cache = external_b64cache? external_b64cache: dndc_create_filecache(),
-        // The text cache only runs on this thread so we can just use the
-        // general allocator.
-        .textcache = external_textcache?  external_textcache : dndc_create_filecache(),
+        .b64cache = b64cache,
+        .textcache = textcache,
         .error_func = error_func,
         .error_user_data = error_user_data,
     };
