@@ -1601,10 +1601,9 @@ print_argparse_fish_completions(const ArgParser* p){
                 break;
             case ARG_ENUM:
                 printf(" -a \"");
-                for(size_t i = 0; i < a->dest.enum_pointer->enum_count; i++){
-                    if(i != 0)
-                        putchar(' ');
-                    StringView sv = a->dest.enum_pointer->enum_names[i];
+                for(size_t j = 0; j < a->dest.enum_pointer->enum_count; j++){
+                    if(j != 0) putchar(' ');
+                    StringView sv = a->dest.enum_pointer->enum_names[j];
                     printf("%.*s", (int)sv.length, sv.text);
                 }
                 putchar('"');
