@@ -1,3 +1,4 @@
+Version 0.10.3::md
 Version 0.10.2::md
   * Python API is nicer now.
   * Fixed an issue where #directives weren't being set by the formatter.
