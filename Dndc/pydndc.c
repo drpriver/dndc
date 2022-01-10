@@ -514,7 +514,11 @@ PyMethodDef pydndc_methods[] = {
         .ml_meth = (PyCFunction)pydndc_anaylze_syntax_for_highlight,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
+        #if PY_INSPECT_SUPPORTS_ANNOTATIONS
+        "analyze_syntax_for_highlight(text->str) -> dict[0, tuple[SyntaxType, int, int, int]]\n"
+        #else
         "analyze_syntax_for_highlight(text)\n"
+        #endif
         "--\n"
         "\n"
         "Analyzes the .dnd string and returns a dictionary of syntactic regions.\n"
@@ -527,8 +531,9 @@ PyMethodDef pydndc_methods[] = {
         "Returns:\n"
         "--------\n"
         "dict: The dict of syntactic regions.\n"
-        "The dictionary is a mapping of lines (0-based) as the keys to a tuple of\n"
-        "(type, col, byteoffset, length), which is Tuple[int, int, int, int].\n"
+        "The dictionary is a mapping of lines (0-based) as the keys to a list, \n"
+        "containing tuples of (type, col, byteoffset, length), which is \n"
+        "Tuple[int, int, int, int].\n"
         "col, byteoffeset and length are all in bytes of utf-8.\n"
         "The type is one of the Syntax enum members.\n"
         ,
@@ -558,9 +563,9 @@ PyModuleDef pydndc = {
 static
 PyStructSequence_Field syntax_fields[] = {
     {"type",   "SynType. The type of the syntactic region."},
-    {"column", "Byte offset from beginning of line."},
-    {"offset", "Byte offset from beginning of doc."},
-    {"length", "Byte length of region."},
+    {"column", "int: Byte offset from beginning of line."},
+    {"offset", "int: Byte offset from beginning of doc."},
+    {"length", "int: Byte length of region."},
     {0},
 };
 
