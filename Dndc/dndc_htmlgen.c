@@ -173,6 +173,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             msb_write_literal(msb, "</style>\n");
     }
     if(ctx->script_nodes.count){
+        bool strip_ws = !!(ctx->flags & DNDC_STRIP_WHITESPACE);
         MARRAY_FOR_EACH(NodeHandle, s, ctx->script_nodes){
             Node* node = get_node(ctx, *s);
             // script nodes can change node types after they are registered
@@ -200,6 +201,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
                     continue;
                 }
                 StringView header = child->header;
+                if(strip_ws) header = stripped_view(header.text, header.length);
                 if(header.length)
                     msb_write_str(msb, header.text, header.length);
                 msb_write_char(msb, '\n');
