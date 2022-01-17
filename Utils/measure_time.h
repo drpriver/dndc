@@ -20,7 +20,7 @@ get_t(void){
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC_RAW, &t);
     return t.tv_sec * 1000000llu + t.tv_nsec/1000;
-    }
+}
 
 #elif defined(_WIN32)
 
