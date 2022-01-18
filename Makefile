@@ -7,17 +7,25 @@ endif
 
 DNDC:=$(BINDIR)/dndc$(EXE)
 
-%.html: %.dnd | $(DNDC) $(DIRECTORIES)
-	$(DNDC) $< -o $@ -d $(DEPDIR)/$*.dep
+#%.html: %.dnd | $(DNDC) $(DIRECTORIES)
+#	$(DNDC) $< -o $@ -d $(DEPDIR)/$*.dep
 
-$(DOCDIR)/OVERVIEW.html: OVERVIEW.dnd | $(DNDC) $(DIRECTORIES)
+$(DOCDIR)/OVERVIEW.html: Docs/OVERVIEW.dnd
 	$(DNDC) $< -o $@ -d $(DEPDIR)/OVERVIEW.dep
-$(DOCDIR)/REFERENCE.html: REFERENCE.dnd | $(DNDC) $(DIRECTORIES)
+$(DOCDIR)/REFERENCE.html: Docs/REFERENCE.dnd
 	$(DNDC) $< -o $@ -d $(DEPDIR)/REFERENCE.dep
-$(DOCDIR)/jsdoc.html: Dndc/jsdoc.dnd Dndc/dndc_js_api.d.ts | $(DNDC) $(DIRECTORIES)
+$(DOCDIR)/jsdoc.html: Dndc/jsdoc.dnd Dndc/dndc_js_api.d.ts
 	$(DNDC) Dndc/jsdoc.dnd -o $@ -d $(DEPDIR)/jsdoc.dep
+$(DOCDIR)/changelog.html: PyGdndc/changelog.dnd
+	$(DNDC) $< -o $@ -d $(DEPDIR)/changelog.dep
+$(DOCDIR)/gui-manual.html: PyGdndc/Manual.dnd
+	$(DNDC) $< -o $@ -d $(DEPDIR)/gui-manual.dep
+
 .PHONY: docs
-docs: $(DOCDIR)/OVERVIEW.html $(DOCDIR)/REFERENCE.html $(DOCDIR)/jsdoc.html
+DOCS= $(addprefix $(DOCDIR)/,OVERVIEW.html REFERENCE.html jsdoc.html changelog.html gui-manual.html)
+$(DOCS): | $(DNDC) $(DIRECTORIES)
+docs: $(DOCS)
+
 # Assumes libclang is installed.
 tags: $(wildcard *.h *.c **/*.c **/*.h **/*.m) Scripts/tag_and_syntax.py compile_commands.json
 	$(PYTHON) -m Scripts.tag_and_syntax
@@ -72,3 +80,4 @@ list:
 			-e '^$@$$' \
 			-e '.(dnd|dep|[ch])$$'
 endif
+.DEFAULT_GOAL:=all

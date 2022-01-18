@@ -1,4 +1,7 @@
 Version 0.10.3::md
+  * <code><h</code><code>r></code> is now an allowed html
+    tag. The <code>:</code><code>:hr</code> node type
+    is deprecated.
 Version 0.10.2::md
   * Python API is nicer now.
   * Fixed an issue where #directives weren't being set by the formatter.
@@ -171,7 +174,8 @@ Version 0.4.2::md
       the map and you will be prompted to give a name to what you
       are adding. Afterwards, it will append that room to your
       .dnd file, with the appropriate @coord set.
-  * Added an hr block type. It is for adding <hr> elements.
+  * Added an hr block type. It is for adding
+    <code><h</code><code>r></code> elements.
 
 Version 0.4.1::md
   * Implemented file caching so things like images don't have to

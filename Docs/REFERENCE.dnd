@@ -666,8 +666,6 @@
   pre {
     font-size: 12px;
   }
-  
-
 
 ::script
   document.addEventListener('DOMContentLoaded', function(){
