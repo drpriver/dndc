@@ -14,6 +14,8 @@ OVERVIEW.html: OVERVIEW.dnd | $(DNDC) $(DIRECTORIES)
 	$(DNDC) $< -o $@ -d $(DEPDIR)/OVERVIEW.dep
 REFERENCE.html: REFERENCE.dnd | $(DNDC) $(DIRECTORIES)
 	$(DNDC) $< -o $@ -d $(DEPDIR)/REFERENCE.dep
+jsdoc.html: Dndc/jsdoc.dnd Dndc/dndc_js_api.d.ts
+	$(DNDC) Dndc/jsdoc.dnd -o $@ -d $(DEPDIR)/jsdoc.dep
 
 # Assumes libclang is installed.
 tags: $(wildcard *.h *.c **/*.c **/*.h **/*.m) Scripts/tag_and_syntax.py compile_commands.json

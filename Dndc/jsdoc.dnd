@@ -1,5 +1,6 @@
 JS Api Documentation::title
 ::raw @doc
+::md @nav
 ::js
   // This is kind of a beast, but here is an entire js syntax
   // highlighter.
@@ -208,6 +209,9 @@ JS Api Documentation::title
 
   }
 
+  const hierarchy = [];
+  let current_parent = null;
+
   function highlight_js(line, state){
     let result = "";
     function outfunc(s, t){
@@ -267,17 +271,32 @@ JS Api Documentation::title
     let idx = line.indexOf('//');
     let front = line.slice(0, idx+2);
     let remainder = line.slice(idx+2, line.length);
+    let endscolon = line[line.length-1] == ':';
     if(line.includes('--')){
     }
     else if(state.js_example){
       remainder = highlight_js(remainder, state);
     }
-    else if(line[line.length-1] == ':' || (remainder.trim().length && !state.seen_title)){
+    else if(endscolon || (remainder.trim().length && !state.seen_title)){
       if(remainder.trim() == 'Example:'){
         state.js_example = 1;
       }
       state.seen_title = 1;
-      remainder = `<span class="h"><b>${remainder}</b></span>`;
+      if(!endscolon){
+        let id;
+        if(idx == 0){
+          current_parent = remainder;
+          hierarchy.push([remainder, []]);
+          id = ctx.kebab(remainder);
+        }
+        else {
+          hierarchy[hierarchy.length-1][1].push(remainder);
+          id = ctx.kebab(current_parent+'-'+remainder);
+        }
+        remainder = `<span class="h" id="${id}"><b>${remainder}</b></span>`;
+      }
+      else
+        remainder = `<span class="h"><b>${remainder}</b></span>`;
     }
     else if(remainder.match(/\w+:/)){
       let pieces = remainder.split(/(\w+:)/);
@@ -291,6 +310,7 @@ JS Api Documentation::title
   let lines = text.split('\n');
   doc.add_child('<pre>');
   let commentstate = null;
+  let nav = ctx.select_nodes({attributes:['nav']})[0];
   for(let line of lines){
     if(line.includes('//')){
       if(commentstate === null)
@@ -303,8 +323,31 @@ JS Api Documentation::title
     }
   }
   doc.add_child('</pre>');
+  let navstr = '';
+  for(let [parent, children] of hierarchy){
+    navstr += `* [${parent} | ${ctx.kebab(parent)}]\n`;
+    ctx.add_link(parent, '#'+ctx.kebab(parent));
+    for(let child of children){
+      navstr += `  - [${child} | ${ctx.kebab(parent+'-'+child)}]\n`;
+      ctx.add_link(parent+'-'+child, '#'+ctx.kebab(parent+'-'+child));
+    }
+  }
+  nav.parse(navstr);
+  nav.id = 'nav';
   //endjs
 ::css
+  #nav {
+    position: fixed;
+    left: 0;
+    top: 0;
+    overflow-y: auto;
+    width: auto;
+    height: 100%;
+  }
+  a {
+    color: #D2D39A;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, mono;
+  }
   html {
     margin: auto;
     background-color: #272822;
@@ -314,8 +357,8 @@ JS Api Documentation::title
     max-width: 40em;
   }
   pre {
-    font-family: -apple-system-mono, "Cascadia Mono", Consolas, mono;
-    font-size: 12px;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, mono;
+    font-size: 16px;
   }
   body > div {
     margin: auto;

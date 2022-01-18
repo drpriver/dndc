@@ -243,10 +243,15 @@ type CtxType = {
 
     toString(): string;
 }
-
+//
+// ctx
+// ---
 // The actual ctx that you refer to in your scripts.
 export const ctx: CtxType;
 
+//
+// FileSystemT
+// -----------
 type FileSystemT = {
     // Note:
     // All of these file system functions are relative to the
@@ -281,7 +286,7 @@ type FileSystemT = {
     // -------------------
     // Loads the file located at the given path, base64ing the
     // contained bytes.  This is useful for embedding binary data
-    // in the document (like wasm) that is then converting back to
+    // in the document (like wasm) that is then converted back to
     // binary when the document loads.
     //
     // Arguments:
@@ -297,7 +302,7 @@ type FileSystemT = {
     // --------
     //   let wasm = FileSystem.load_file_as_base64('example.wasm');
     //   let script = ctx.make_node(NodeType.SCRIPTS, {attributes:['inline']});
-    //   script.add_child('let wasmb64 = "${wasm}";');
+    //   script.add_child(`let wasmb64 = "${wasm}";`);
     //   ctx.root.add_child(script);
     // --------
     load_file_as_base64(path:string): string;
@@ -410,6 +415,24 @@ type Node = {
     // set.  You can explicitly set this field. The id will always
     // be "kebabed".
     id: string;
+
+    //
+    // noinline
+    // --------
+    // The noinline flag, presented as a boolean
+    noinline: boolean;
+
+    //
+    // noid
+    // ----
+    // If true, the node will not be assigned an id when rendered.
+    noid: boolean;
+
+    //
+    // hide
+    // ----
+    // If true, the node will not be rendered in the output.
+    hide: boolean;
 
     //
     // parse
@@ -605,6 +628,9 @@ type Node = {
 // You can access the containing element via the .parent field.
 export const node: Node;
 
+//
+// Attributes
+// ----------
 type Attributes = {
     //
     // get
@@ -665,6 +691,9 @@ type Attributes = {
     [Symbol.iterator]():Array<[string, string]>;
 }
 
+//
+// Classes
+// -------
 type Classes = {
 
     //
