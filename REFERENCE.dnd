@@ -15,7 +15,7 @@
     this header will be represented in the document as a heading that is a
     child of the tag that contains that node. The node type can be followed by
     classes, which are indicated by a leading dot (.), attributes, which are
-    indiciated by a leading at (@), or a directive, which are indicated by a
+    indicated by a leading at (@), or a directive, which are indicated by a
     leading pound sign (#). Attributes can take a parenthesized argument which
     is stored as a string.
 
@@ -558,7 +558,10 @@
             content: "> ";
           }
   <code>:</code><code>:hr</code>::md .node #id(hr)
-    The <code>:</code><code>:hr</code> inserts an <hr> element.
+    The <code>:</code><code>:hr</code> inserts an <code><h</code><code>r></code> element.
+
+    This node is deprecated as the <code><h</code><code>r></code> element is now allowed
+    in regular text.
 
     ::div .side-by-side
       Input::pre .leftside #noid
@@ -672,7 +675,6 @@
     for(let h2 of h2s){
       h2.style.cursor = 'pointer';
       h2.addEventListener('click', function(){
-        console.log(h2.id);
         window.location.hash = h2.id;
       });
     }

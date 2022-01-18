@@ -409,3 +409,14 @@ JS Api Documentation::title
     color: lightgray;
   }
   /*endcss*/
+::script
+  document.addEventListener('DOMContentLoaded', function(){
+    const headers = document.getElementsByClassName('h');
+    for(let h of headers){
+      if(!h.id) continue;
+      h.style.cursor = 'pointer';
+      h.addEventListener('click', function(){
+        window.location.hash = h.id;
+      });
+    }
+  });
