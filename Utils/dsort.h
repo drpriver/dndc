@@ -74,18 +74,18 @@ DSORT_IMPL(array_sort_insertion)(DSORT_T* data, size_t n_items){
             DSORT_T* a = data + (j-1);
             DSORT_T* b = data + j;
             DSORT_SWAP(*a, *b);
-            }
         }
     }
+}
 static
 void
 DSORT_IMPL(array_sort)(DSORT_T* data, size_t n_items){
     if(n_items*sizeof(DSORT_T) <= 256 || n_items < 4){
         DSORT_IMPL(array_sort_insertion)(data, n_items);
         return;
-        }
-    DSORT_IMPL(array_sort_d)(data, n_items, n_items);
     }
+    DSORT_IMPL(array_sort_d)(data, n_items, n_items);
+}
 
 static inline
 void
@@ -101,7 +101,7 @@ DSORT_IMPL(array_sort_d)(DSORT_T* data, size_t n_items, size_t depth){
             // my heap sort is broken is my conclusion
             DSORT_IMPL(heap_sort)(&r);
             return;
-            }
+        }
         depth /= 3u;
         depth *= 2u;
         // depth = depth >= UINT64_MAX / 2 ? (depth / 3) * 2: (depth * 2) / 3;
@@ -118,11 +118,11 @@ DSORT_IMPL(array_sort_d)(DSORT_T* data, size_t n_items, size_t depth){
                     goto breakouter;
                 if(!(DSORT_CMP(&pivot, r.data+ (--greater_I)) < 0))
                     break;
-                }
+            }
             if(less_I == greater_I)
                 break;
             DSORT_SWAP(r.data[less_I], r.data[greater_I]);
-            }
+        }
         breakouter:;
         DSORT_SWAP(r.data[r.count-1], r.data[less_I]);
         DSORT_SLICE(DSORT_T) left = {r.data, .count = less_I};
@@ -132,10 +132,10 @@ DSORT_IMPL(array_sort_d)(DSORT_T* data, size_t n_items, size_t depth){
             DSORT_SLICE(DSORT_T) temp = left;
             left = right;
             right = temp;
-            }
+        }
         DSORT_IMPL(array_sort_d)(right.data, right.count, depth);
         r = left;
-        }
+    }
     DSORT_IMPL(short_sort)(r.data, r.count);
     }
 
@@ -147,29 +147,29 @@ DSORT_IMPL(short_sort)(DSORT_T* data, size_t n_items){
         case 2:{
             if(DSORT_CMP(data+1, data) < 0)
                 DSORT_SWAP(data[1], data[0]);
-            }return;
+        }return;
         case 3:{
             if(DSORT_CMP(data + 2, data) < 0){
                 if(DSORT_CMP(data, data+1) < 0) {
                     DSORT_SWAP(data[0], data[1]);
                     DSORT_SWAP(data[0], data[2]);
-                    }
+                }
                 else {
                     DSORT_SWAP(data[0], data[2]);
                     if(DSORT_CMP(data + 1, data) < 0)
                         DSORT_SWAP(data[0], data[1]);
-                    }
                 }
+            }
             else {
                 if(DSORT_CMP(data+1, data) < 0) {
                     DSORT_SWAP(data[0], data[1]);
-                    }
+                }
                 else {
                     if(DSORT_CMP(data + 2, data+1) < 0)
                         DSORT_SWAP(data[1], data[2]);
-                    }
                 }
-            }return;
+            }
+        }return;
         case 4:{
             if(DSORT_CMP(data+1, data) < 0)
                 DSORT_SWAP(data[0], data[1]);
@@ -181,7 +181,7 @@ DSORT_IMPL(short_sort)(DSORT_T* data, size_t n_items){
                 DSORT_SWAP(data[1], data[3]);
             if(DSORT_CMP(data+2, data+1) < 0)
                 DSORT_SWAP(data[1], data[2]);
-            }return;
+        }return;
         default:{
             // sort the last 5 elements
             DSORT_T* last5 = data + (n_items-5);
@@ -194,33 +194,33 @@ DSORT_IMPL(short_sort)(DSORT_T* data, size_t n_items){
             if (DSORT_CMP(last5+3, last5+1) < 0) {
                 DSORT_SWAP(last5[0], last5[2]);
                 DSORT_SWAP(last5[1], last5[3]);
-                }
+            }
             // 3. Insert 4 into [0, 1, 3]
             if (DSORT_CMP(last5+4, last5+1) < 0) {
                 DSORT_SWAP(last5[3], last5[4]);
                 DSORT_SWAP(last5[1], last5[3]);
                 if (DSORT_CMP(last5+1, last5+0) < 0) {
                     DSORT_SWAP(last5[0], last5[1]);
-                    }
                 }
+            }
             else if (DSORT_CMP(last5+4, last5+3) < 0) {
                 DSORT_SWAP(last5[3], last5[4]);
-                }
+            }
             // 4. Insert 2 into [0, 1, 3, 4] (note: we already know the last is greater)
             if (DSORT_CMP(last5+2, last5+1) < 0){
                 DSORT_SWAP(last5[1], last5[2]);
                 if (DSORT_CMP(last5+1, last5+0) < 0) {
                     DSORT_SWAP(last5[0], last5[1]);
-                    }
                 }
+            }
             else if (DSORT_CMP(last5+3, last5+2) < 0) {
                 DSORT_SWAP(last5[2], last5[3]);
-                }
+            }
             // 7 comparisons, 0-9 swaps
             if(n_items == 5)
                 return;
-            }break;
-        }
+        }break;
+    }
 
     // The last 5 elements of the range are sorted.
     // Proceed with expanding the sorted portion downward.
@@ -232,13 +232,13 @@ DSORT_IMPL(short_sort)(DSORT_T* data, size_t n_items){
             do {
                 data[j-1] = data[j];
                 j++;
-                } while(j < n_items && (DSORT_CMP(data + j, &temp) < 0));
+            } while(j < n_items && (DSORT_CMP(data + j, &temp) < 0));
             data[j-1] = temp;
-            }
+        }
         if(i == 0)
             break;
-        }
     }
+}
 
 static inline
 size_t
@@ -255,25 +255,25 @@ DSORT_IMPL(get_pivot)(DSORT_SLICE(DSORT_T)* r){
                 if (DSORT_CMP(data+a, data+b) < 0) { // c < a < b
                     DSORT_SWAP(data[a], data[b]);
                     DSORT_SWAP(data[a], data[c]);
-                    }
+                }
                 else { // c < a, b <= a
                     DSORT_SWAP(data[a], data[c]);
                     if (DSORT_CMP(data+b, data+a) < 0)
                         DSORT_SWAP(data[a], data[b]);
-                    }
                 }
+            }
             else { // a <= c
                 if(DSORT_CMP(data+b, data+a) < 0) { // b < a <= c
                     DSORT_SWAP(data[a], data[b]);
-                    }
+                }
                 else { // a <= c, a <= b
                     if(DSORT_CMP(data+c, data+b) < 0)
                         DSORT_SWAP(data[b], data[c]);
-                    }
                 }
             }
-        return mid;
         }
+        return mid;
+    }
     const size_t quarter = r->count / 4;
     const size_t a = 0;
     const size_t b = mid - quarter;
@@ -287,20 +287,20 @@ DSORT_IMPL(get_pivot)(DSORT_SLICE(DSORT_T)* r){
     if(DSORT_CMP(data+d, data+c) < 0) {
         DSORT_SWAP(data[c], data[b]);
         DSORT_SWAP(data[a], data[b]);
-        }
+    }
     if(DSORT_CMP(data+e, data+b) < 0)
         DSORT_SWAP(data[b], data[e]);
     if(DSORT_CMP(data+e, data+c) < 0) {
         DSORT_SWAP(data[c], data[e]);
         if(DSORT_CMP(data+c, data+a) < 0)
             DSORT_SWAP(data[a], data[c]);
-        }
+    }
     else {
         if(DSORT_CMP(data+c, data+b) < 0)
             DSORT_SWAP(data[b], data[c]);
-        }
-    return mid;
     }
+    return mid;
+}
 
 static inline
 void
@@ -311,9 +311,9 @@ DSORT_IMPL(sift_down)(DSORT_SLICE(DSORT_T)* r, size_t parent, size_t end){
         if(child >= end){
             if(child == end && (DSORT_CMP(data+parent, data+(--child)) < 0)){
                 DSORT_SWAP(data[parent], data[child]);
-                }
-            break;
             }
+            break;
+        }
         size_t left_child = child - 1;
         if (DSORT_CMP(data+child, data+left_child) < 0)
             child = left_child;
@@ -321,8 +321,9 @@ DSORT_IMPL(sift_down)(DSORT_SLICE(DSORT_T)* r, size_t parent, size_t end){
             break;
         DSORT_SWAP(data[parent], data[child]);
         parent = child;
-        }
     }
+}
+
 static inline
 bool
 DSORT_IMPL(is_heap)(DSORT_SLICE(DSORT_T)* r){
@@ -331,9 +332,9 @@ DSORT_IMPL(is_heap)(DSORT_SLICE(DSORT_T)* r){
         if(DSORT_CMP(r->data+parent, r->data+child) < 0)
             return false;
         parent += !(child & 1llu);
-        }
-    return true;
     }
+    return true;
+}
 
 static inline
 void
@@ -342,9 +343,9 @@ DSORT_IMPL(build_heap)(DSORT_SLICE(DSORT_T)* r){
     size_t n = r->count;
     for(size_t i = n / 2; i-- > 0; ){
         DSORT_IMPL(sift_down)(r, i, n);
-        }
-    // assert(DSORT_IMPL(is_heap)(r));
     }
+    // assert(DSORT_IMPL(is_heap)(r));
+}
 
 static inline
 void
@@ -358,22 +359,22 @@ DSORT_IMPL(percolate)(DSORT_SLICE(DSORT_T)* r, size_t parent, size_t end){
                 --child;
                 DSORT_SWAP(data[parent], data[child]);
                 parent = child;
-                }
-            break;
             }
+            break;
+        }
         size_t left_child = child - 1;
         if(DSORT_CMP(data+child, data+left_child) < 0)
             child = left_child;
         DSORT_SWAP(data[parent], data[child]);
         parent = child;
-        }
+    }
     for(size_t child = parent; child > root; child = parent){
         parent = (child - 1) / 2;
         if(DSORT_CMP(data+parent, data+child) >= 0)
             break;
         DSORT_SWAP(data[parent], data[child]);
-        }
     }
+}
 
 static inline
 void
@@ -386,9 +387,9 @@ DSORT_IMPL(heap_sort)(DSORT_SLICE(DSORT_T)* r){
     for(size_t i = r->count - 1; i > 0; --i){
         DSORT_SWAP(data[0], data[i]);
         DSORT_IMPL(percolate)(r, 0, i);
-        }
-    // assert(DSORT_IMPL(is_sorted)(r->data, r->count));
     }
+    // assert(DSORT_IMPL(is_sorted)(r->data, r->count));
+}
 
 static inline
 bool
@@ -397,11 +398,11 @@ DSORT_IMPL(is_sorted)(DSORT_T* data, size_t n_items){
     for(size_t i = 0; i < n_items; i++){
         if(DSORT_CMP(data+i, before) < 0){
             return false;
-            }
-        before = data+i;
         }
-    return true;
+        before = data+i;
     }
+    return true;
+}
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

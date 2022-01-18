@@ -11,7 +11,7 @@ int int_cmp(int* a, int* b){
     int left = *a;
     int right = *b;
     return left < right ? -1 : left > right? 1 : 0;
-    }
+}
 
 static inline
 force_inline
@@ -24,7 +24,7 @@ long_cmp(const long*a_, const long*b_){
     if(a > b)
         return 1;
     return 0;
-    }
+}
 
 #ifdef __clang__
 #pragma clang assume_nonnull end
@@ -59,7 +59,7 @@ rng_random32(RngState* rng) {
     uint32_t xorshifted = (uint32_t) ( ((oldstate >> 18u) ^ oldstate) >> 27u);
     uint32_t rot = oldstate >> 59u;
     return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
-    }
+}
 
 static inline
 void
@@ -69,7 +69,7 @@ seed_rng_fixed(RngState* rng, uint64_t initstate, uint64_t initseq) {
     rng_random32(rng);
     rng->state += initstate;
     rng_random32(rng);
-    }
+}
 
 
 TestFunction(TestSorts){
@@ -82,7 +82,7 @@ TestFunction(TestSorts){
     TestExpectTrue(memcmp(arr, sorted, sizeof(sorted))==0);
     TestExpectTrue(int__is_sorted(arr, 4));
     TESTEND();
-    }
+}
 
 TestFunction(TestSortRandoms){
     TESTBEGIN();
@@ -96,20 +96,20 @@ TestFunction(TestSortRandoms){
         RngState before = rng;
         for(int j = 0; j < n; j++){
             array[j] = rng_random32(&rng);
-            }
+        }
         int__array_sort(array, n);
         bool is_sorted = int__is_sorted(array, n);
         if(!is_sorted){
             TestPrintValue("n", n);
             TestPrintValue("before.inc", before.inc);
             TestPrintValue("before.state", before.state);
-            }
-        TestExpectTrue(is_sorted);
         }
+        TestExpectTrue(is_sorted);
+    }
     putchar('\n');
     free(array);
     TESTEND();
-    }
+}
 
 TestFunction(TestStringSorts){
     TESTBEGIN();
@@ -121,11 +121,11 @@ TestFunction(TestStringSorts){
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
-        };
+    };
     StringView__array_sort(svs, arrlen(svs));
     TestExpectTrue(StringView__is_sorted(svs, arrlen(svs)));
     TESTEND();
-    }
+}
 
 TestFunction(TestExample){
     TESTBEGIN();
@@ -134,7 +134,7 @@ TestFunction(TestExample){
     long__array_sort(longs, 10);
     TestExpectTrue(long__is_sorted(longs, 10));
     TESTEND();
-    }
+}
 
 int main(int argc, char** argv){
     RegisterTest(TestSorts);
