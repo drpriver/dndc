@@ -138,18 +138,24 @@ endif()
 
 # tests
 enable_testing()
+# Util testings
 add_executable(TestArgumentParsing Utils/TestArgumentParsing.c)
 add_test(argumentparsing TestArgumentParsing)
 add_executable(TestBase64 Utils/TestBase64.c)
 add_test(base64 TestBase64)
+add_executable(TestDsort Utils/TestDsort.c)
+add_test(dsort TestDsort)
 add_executable(TestMStringBuilder Utils/TestMStringBuilder.c)
 add_test(mstringbuilder TestMStringBuilder)
 add_executable(TestPathUtil Utils/TestPathUtil.c)
 add_test(pathutil TestPathUtil)
-add_executable(TestStrUtils Utils/TestStrUtils.c)
-add_test(strutil TestStrUtils)
 add_executable(TestRarray Utils/TestRarray.c)
 add_test(rarray TestRarray)
+add_executable(TestStrUtils Utils/TestStrUtils.c)
+add_test(strutil TestStrUtils)
+# Dndc tests
+add_executable(TestMsbExtension Dndc/TestMsbExtension.c)
+add_test(msbext TestMsbExtension)
 add_test(NAME testpydndc
 		COMMAND ${Python3_EXECUTABLE} Dndc/testpydndc.py --extension-directory ${CMAKE_BINARY_DIR}
 		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
