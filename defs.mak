@@ -5,6 +5,7 @@ OBJDIR := Objs
 BINDIR := Bin
 TESTDIR := TestResults
 DEPFLAGS = -MT $@ -MMD -MP -MF
+DOCDIR := RenderedDocs
 # Templates require an extra $
 TDEPFLAGS = -MT $$@ -MMD -MP -MF
 $(DEPDIR):  ; @$(MKDIR) -p $@

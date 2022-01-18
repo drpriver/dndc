@@ -38,3 +38,4 @@ PyGdndc/dndc_js_api.d.ts
 *.user
 Generated
 TestResults
+RenderedDocs
