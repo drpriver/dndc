@@ -6,6 +6,7 @@ BINDIR := Bin
 TESTDIR := TestResults
 DEPFLAGS = -MT $@ -MMD -MP -MF
 DOCDIR := RenderedDocs
+EXAMPLEDIR := RenderedExamples
 # Templates require an extra $
 TDEPFLAGS = -MT $$@ -MMD -MP -MF
 $(DEPDIR):  ; @$(MKDIR) -p $@
@@ -13,7 +14,12 @@ $(OBJDIR):  ; @$(MKDIR) -p $@
 $(BINDIR):  ; @$(MKDIR) -p $@
 $(DOCDIR):  ; @$(MKDIR) -p $@
 $(TESTDIR): ; @$(MKDIR) -p $@
-DIRECTORIES= $(DEPDIR) $(OBJDIR) $(BINDIR) $(DOCDIR) $(TESTDIR)
+$(EXAMPLEDIR): 
+	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/Calendar 
+	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/KrugsBasement 
+	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/Rules
+	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/Wiki
+DIRECTORIES= $(DEPDIR) $(OBJDIR) $(BINDIR) $(DOCDIR) $(TESTDIR) $(EXAMPLEDIR)
 %.dep: ;
 DEPFILES:= $(wildcard Depends/*.dep)
 include $(DEPFILES)

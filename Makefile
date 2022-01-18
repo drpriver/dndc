@@ -22,50 +22,73 @@ $(DOCDIR)/gui-manual.html: PyGdndc/Manual.dnd
 	$(DNDC) $< -o $@ -d $(DEPDIR)/gui-manual.dep
 
 .PHONY: docs
-DOCS= $(addprefix $(DOCDIR)/,OVERVIEW.html REFERENCE.html jsdoc.html changelog.html gui-manual.html)
+DOCS=$(addprefix $(DOCDIR)/,OVERVIEW.html REFERENCE.html jsdoc.html changelog.html gui-manual.html)
 $(DOCS): | $(DNDC) $(DIRECTORIES)
 docs: $(DOCS)
+
+$(EXAMPLEDIR)/Examples/%.html : Examples/%.dnd | $(DIRECTORIES)
+	$(DNDC) $< -o $@ -d $(DEPDIR)/$(subst /,-,$*).dep
+.PHONY: example-dnd
+example-dnd: $(addsuffix .html,$(basename $(addprefix $(EXAMPLEDIR)/,$(wildcard Examples/*/*.dnd Examples/*.dnd))))
+
+.PHONY: foo
+foo:
+	echo $(dir /foo/bar/baz)
+	echo $(notdir /foo/bar/baz)
 
 # Assumes libclang is installed.
 tags: $(wildcard *.h *.c **/*.c **/*.h **/*.m) Scripts/tag_and_syntax.py compile_commands.json
 	$(PYTHON) -m Scripts.tag_and_syntax
-
-.PHONY: clean clean-tests clean-depends deep-clean run-tests strip convert directories install compile_commands fuzz
-
 # Assumes compiledb is installed.
 compile_commands.json:
 	$(MAKE) clean
 	$(PYTHON) -m compiledb make
+.PHONY: clean
 clean:
 	@$(RM) -f $(OBJDIR)/*
 	@$(RM) -f $(BINDIR)/*
-
+.PHONY: clean-tests
 clean-tests:
 	@$(RM) -f $(BINDIR)/Test*
-
+.PHONY: clean-depends
 clean-depends:
 	@$(RM) -f $(DEPDIR)/*
-
+.PHONY: deep-clean
 deep-clean: clean clean-tests clean-depends
 	@$(RM) -r $(DIRECTORIES)
+.PHONY: clean-docs
+clean-docs:
+	@$(RM) -r $(DOCDIR)
+.PHONY: clean-examples
+clean-examples:
+	@$(RM) -r $(EXAMPLEDIR)
+.PHONY: clean-all
+clean-all:
 
+.PHONY: directories
 directories: $(DIRECTORIES)
 
 # Strips trailing whitespace from source files.
+.PHONY: strip
 strip:
 	$(PYTHON) -m Scripts.convert --strip_only
 
 # Renames identifiers.
+.PHONY: convert
 convert:
 	$(PYTHON) -m Scripts.convert --extensions .h .c
 
+.PHONY: run-tests
 run-tests: clean-tests tests
 
+.PHONY: all
 all: tests dndc pydndc docs
 
+.PHONY: install
 install: $(DNDC)
 	$(INSTALL) -C $< $(INSTALLDIR)/dndc$(EXE)
 
+.PHONY: fuzz
 fuzz: $(BINDIR)/dndcfuzz$(EXE) | $(FUZZDIR)
 	$< $(FUZZDIR) -fork=4 -only_ascii=1
 
@@ -75,6 +98,7 @@ list:
 	@LC_ALL=C $(MAKE) -npRrq : 2>/dev/null \
 		| awk -v RS= -F: '{if ($$1 !~ "^[#.]") {print $$1}}' \
 		| sort \
+		| uniq \
 		| egrep -v \
 			-e '^[^[:alnum:]]' \
 			-e '^$@$$' \
