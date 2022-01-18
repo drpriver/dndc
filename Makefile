@@ -53,7 +53,7 @@ convert:
 
 run-tests: clean-tests tests
 
-all: tests dndc OVERVIEW.html pydndc REFERENCE.html
+all: tests dndc pydndc docs
 
 install: $(DNDC)
 	$(INSTALL) -C $< $(INSTALLDIR)/dndc$(EXE)
