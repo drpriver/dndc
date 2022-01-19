@@ -2,7 +2,10 @@
   wiki.dnd
 Flat Style::title
 
-This page shows that if your needs are simple, you can use a "flat" style of structuring the document. As the top level node is implicit a md node, you can just write paragraphs of text like this. If you need headings, you can use the h node, like so:
+This page shows that if your needs are simple, you can use a "flat" style of
+structuring the document. As the top level node is implicit a md node, you can
+just write paragraphs of text like this. If you need headings, you can use the
+h node, like so:
 
 This is a heading::h
 

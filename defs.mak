@@ -18,7 +18,7 @@ $(EXAMPLEDIR):
 	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/Calendar 
 	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/KrugsBasement 
 	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/Rules
-	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/Wiki
+	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/Wiki/Inner
 DIRECTORIES= $(DEPDIR) $(OBJDIR) $(BINDIR) $(DOCDIR) $(TESTDIR) $(EXAMPLEDIR)
 %.dep: ;
 DEPFILES:= $(wildcard Depends/*.dep)

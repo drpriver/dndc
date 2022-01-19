@@ -4,12 +4,12 @@
 ::js
   let files = FileSystem.list_dnd_files();
   for(let f of files){
-    ctx.add_link(f.replace('.dnd', ''), f.replace('.dnd', '.html'));
+    ctx.add_link(f.replace(/.dnd$/, ''), f.replace(/.dnd$/, '.html'));
   }
   if(!files.includes('wiki.dnd')){
     files = FileSystem.list_dnd_files('..');
     for(let f of files){
-      ctx.add_link(f.replace('.dnd', ''), '../'+f.replace('.dnd', '.html'));
+      ctx.add_link(f.replace(/.dnd$/, ''), '../'+f.replace(/.dnd$/, '.html'));
     }
   }
   //endjs
@@ -30,7 +30,7 @@
   let index = 'index.dnd';
   for(let i = 0; i < 3; i++){
     if(FileSystem.exists(index)){
-      ctx.add_link('home', index.replace('.dnd', '.html'));
+      ctx.add_link('home', index.replace(/.dnd$/, '.html'));
       break;
     }
     index = '../' + index;

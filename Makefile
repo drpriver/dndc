@@ -10,9 +10,9 @@ DNDC:=$(BINDIR)/dndc$(EXE)
 #%.html: %.dnd | $(DNDC) $(DIRECTORIES)
 #	$(DNDC) $< -o $@ -d $(DEPDIR)/$*.dep
 
-$(DOCDIR)/OVERVIEW.html: Docs/OVERVIEW.dnd
+$(DOCDIR)/OVERVIEW.html: Documentation/OVERVIEW.dnd
 	$(DNDC) $< -o $@ -d $(DEPDIR)/OVERVIEW.dep
-$(DOCDIR)/REFERENCE.html: Docs/REFERENCE.dnd
+$(DOCDIR)/REFERENCE.html: Documentation/REFERENCE.dnd
 	$(DNDC) $< -o $@ -d $(DEPDIR)/REFERENCE.dep
 $(DOCDIR)/jsdoc.html: Dndc/jsdoc.dnd Dndc/dndc_js_api.d.ts
 	$(DNDC) Dndc/jsdoc.dnd -o $@ -d $(DEPDIR)/jsdoc.dep
@@ -20,16 +20,18 @@ $(DOCDIR)/changelog.html: PyGdndc/changelog.dnd
 	$(DNDC) $< -o $@ -d $(DEPDIR)/changelog.dep
 $(DOCDIR)/gui-manual.html: PyGdndc/Manual.dnd
 	$(DNDC) $< -o $@ -d $(DEPDIR)/gui-manual.dep
+$(DOCDIR)/index.html: Documentation/index.dnd
+	$(DNDC) $< -o $@ -d $(DEPDIR)/docs-index.dep
 
 .PHONY: docs
-DOCS=$(addprefix $(DOCDIR)/,OVERVIEW.html REFERENCE.html jsdoc.html changelog.html gui-manual.html)
+DOCS=$(addprefix $(DOCDIR)/,OVERVIEW.html REFERENCE.html jsdoc.html changelog.html gui-manual.html index.html)
 $(DOCS): | $(DNDC) $(DIRECTORIES)
 docs: $(DOCS)
 
 $(EXAMPLEDIR)/Examples/%.html : Examples/%.dnd | $(DIRECTORIES)
 	$(DNDC) $< -o $@ -d $(DEPDIR)/$(subst /,-,$*).dep
 .PHONY: example-dnd
-example-dnd: $(addsuffix .html,$(basename $(addprefix $(EXAMPLEDIR)/,$(wildcard Examples/*/*.dnd Examples/*.dnd))))
+example-dnd: $(addsuffix .html,$(basename $(addprefix $(EXAMPLEDIR)/,$(wildcard Examples/*/*/*.dnd Examples/*/*.dnd Examples/*.dnd))))
 
 .PHONY: foo
 foo:

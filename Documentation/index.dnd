@@ -1,0 +1,28 @@
+::links
+  overview = OVERVIEW.html
+  reference = REFERENCE.html
+  js reference = jsdoc.html
+  changelog = changelog.html
+  gui manual = gui-manual.html
+
+* [Overview]
+* [Reference]
+* [Js Reference]
+* [Changelog]
+* [Gui Manual]
+
+::css
+  body {
+    margin:auto;
+    font-family: -apple-system, BlinkMacSystemFont,
+                  "Segoe UI", Roboto,
+                  Oxygen-Sans, Ubuntu,
+                  Cantarell, "Helvetica Neue", sans-serif;
+    font-size: 18px;
+    max-width: 44em;
+  }
+  a {
+    text-decoration: none;
+    color: black;
+    border-bottom: 1px grey dotted;
+  }
