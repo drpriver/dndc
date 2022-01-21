@@ -3,6 +3,7 @@
 DEPDIR := Depends
 OBJDIR := Objs
 BINDIR := Bin
+VENDOBJDIR:= VendObjs
 TESTDIR := TestResults
 DEPFLAGS = -MT $@ -MMD -MP -MF
 DOCDIR := RenderedDocs
@@ -11,6 +12,7 @@ EXAMPLEDIR := RenderedExamples
 TDEPFLAGS = -MT $$@ -MMD -MP -MF
 $(DEPDIR):  ; @$(MKDIR) -p $@
 $(OBJDIR):  ; @$(MKDIR) -p $@
+$(VENDOBJDIR): ; @$(MKDIR) -p $@
 $(BINDIR):  ; @$(MKDIR) -p $@
 $(DOCDIR):  ; @$(MKDIR) -p $@
 $(TESTDIR): ; @$(MKDIR) -p $@
@@ -19,7 +21,7 @@ $(EXAMPLEDIR):
 	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/KrugsBasement 
 	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/Rules
 	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/Wiki/Inner
-DIRECTORIES= $(DEPDIR) $(OBJDIR) $(BINDIR) $(DOCDIR) $(TESTDIR) $(EXAMPLEDIR)
+DIRECTORIES= $(DEPDIR) $(OBJDIR) $(BINDIR) $(DOCDIR) $(TESTDIR) $(EXAMPLEDIR) $(VENDOBJDIR)
 %.dep: ;
 DEPFILES:= $(wildcard Depends/*.dep)
 include $(DEPFILES)

@@ -52,7 +52,7 @@ $(GENDIR): ; @$(MKDIR) -p $@
 
 $(GENDIR)/moc_%.cpp: QtDndcEdit/%.h | $(GENDIR)
 	$(QTMOC) $< -o $@
-DNDCOBJS=$(OBJDIR)/dndc.o $(OBJDIR)/libquickjs.o
+DNDCOBJS=$(OBJDIR)/dndc.o $(VENDOBJDIR)/libquickjs.o
 
 
 $(BINDIR)/DndcEdit$(EXE): QtDndcEdit/DndcEdit.cpp $(GENDIR)/moc_DndcEdit.cpp $(DNDCOBJS) $(DEPDIR)/DndcEdit.dep | $(GENDIR) $(BINDIR) $(DEPDIR) $(OBJDIR)

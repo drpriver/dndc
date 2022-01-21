@@ -30,14 +30,14 @@ INSTALL=install
 SO=.dylib
 SOLIB=.dylib
 
-$(BINDIR)/gdndc: Platform/MacOS/gdndc.m Platform/MacOS/Info.plist Platform/MacOS/app_icon.png opt.mak $(OBJDIR)/libquickjs.o
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/gdndc.dep $< -o $@ $(LINK_FLAGS) -framework Cocoa -framework WebKit -fobjc-arc -Wl,-sectcreate,__TEXT,__info_plist,Platform/MacOS/Info.plist $(OBJDIR)/libquickjs.o -Wno-sign-compare
+$(BINDIR)/gdndc: Platform/MacOS/gdndc.m Platform/MacOS/Info.plist Platform/MacOS/app_icon.png opt.mak $(VENDOBJDIR)/libquickjs.o
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/gdndc.dep $< -o $@ $(LINK_FLAGS) -framework Cocoa -framework WebKit -fobjc-arc -Wl,-sectcreate,__TEXT,__info_plist,Platform/MacOS/Info.plist $(VENDOBJDIR)/libquickjs.o -Wno-sign-compare
 gdndc: $(BINDIR)/gdndc
 install-gdndc: $(BINDIR)/gdndc
 	$(INSTALL) -C $< $(INSTALLDIR)/gdndc
 $(OBJDIR)/libdndc.a: $(OBJDIR)/dndc.o
 	ar crs $@ $^
-$(BINDIR)/libdndc.dylib: $(OBJDIR)/dndc.o $(OBJDIR)/libquickjs.o
+$(BINDIR)/libdndc.dylib: $(OBJDIR)/dndc.o $(VENDOBJDIR)/libquickjs.o
 	$(CC) $^ -o $@ -Wl,-dead_strip_dylibs -Wl,-headerpad_max_install_names -Wl,-undefined,error -shared -install_name @rpath/libdndc.$(DNDCVERSION).dylib -compatibility_version $(DNDC_COMPAT_VERSION) -current_version $(DNDCVERSION) -g
 
 PYEXTENSION=$(shell python3-config --extension-suffix)

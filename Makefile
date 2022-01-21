@@ -52,6 +52,8 @@ clean:
 .PHONY: clean-tests
 clean-tests:
 	@$(RM) -f $(BINDIR)/Test*
+clean-vendored:
+	@$(RM) -f $(VENDOBJDIR)/*
 .PHONY: clean-depends
 clean-depends:
 	@$(RM) -f $(DEPDIR)/*
@@ -64,8 +66,6 @@ clean-docs:
 .PHONY: clean-examples
 clean-examples:
 	@$(RM) -r $(EXAMPLEDIR)
-.PHONY: clean-all
-clean-all:
 
 .PHONY: directories
 directories: $(DIRECTORIES)
