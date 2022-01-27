@@ -76,6 +76,7 @@ main(int argc, char**argv){
     bool print_depends = false;
     bool cleanup = false;
     int bench_iters = 0;
+    LongString jsvars = LS("");
     {
         ArgToParse pos_args[] = {
             [0] = {
@@ -252,6 +253,14 @@ main(int argc, char**argv){
                 .help = "Allow compiletime javascript to write files.",
                 .hidden = true,
             },
+            {
+                .name = SV("--jsvars"),
+                .altname1 = SV("-J"),
+                .dest = ARGDEST(&jsvars),
+                .help = "A json literal that will be exposed to javascript as "
+                        "VARS.",
+                .hidden = true,
+            }
         };
         enum {HELP, VERSION, HIDDEN_HELP, OPEN_SOURCE, FISH};
         ArgToParse early_args[] = {
@@ -415,7 +424,8 @@ main(int argc, char**argv){
                 dndc_stderr_error_func, NULL,
                 dependency_func, &dependency_user_data,
                 dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
-                worker);
+                worker,
+                jsvars);
             assert(!e);
             dndc_free_string(output);
         }
@@ -436,7 +446,8 @@ main(int argc, char**argv){
             dndc_stderr_error_func, NULL,
             dependency_func, &dependency_user_data,
             dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
-            worker
+            worker,
+            jsvars
             );
         if(e) return e;
         if(flags & DNDC_DONT_WRITE)

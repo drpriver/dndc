@@ -473,6 +473,36 @@ type Node = {
     detach();
 
     //
+    // make_child
+    // ---------
+    // Creates a new node whose parent is this node. This works
+    // like ctx.make_node in all other respects.
+    // Specify the type as one of the predefined constants in
+    // `NodeType`.  Options is, well, optional and allows you
+    // to specify those things without needing to assign them
+    // in separate statements.
+    //
+    // Arguments:
+    // ----------
+    //   type:    The type of the new node, from NodeType.
+    //   options: Optional set of attributes for the new node.
+    //      header:     If given, the header of the new node.
+    //      classes:    If given, the classes of the new node.
+    //      attributes: If given, the attributes of the new node.
+    //                  Each attribute will have an empty string
+    //                  as its key.
+    //
+    // Example:
+    // --------
+    //   let container = ctx.root.make_child(NodeType.DIV,
+    //       {classes:['container'],
+    //        header:'Table of Contents'});
+    //   container.make_child(NodeType.NAV);
+    // --------
+    make_child(type:number, options:{header:string?, classes:Array<string>?,
+              attributes:Array<string>?}): Node;
+
+    //
     // add_child
     // ---------
     // Append the given node to the end of the children.

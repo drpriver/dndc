@@ -79,7 +79,7 @@ THREADFUNC(binary_worker){
 static
 warn_unused
 int
-execute_user_scripts(DndcContext* ctx){
+execute_user_scripts(DndcContext* ctx, LongString jsvars){
     int result = 0;
     uint64_t flags = ctx->flags;
     ArenaAllocator aa = {0};
@@ -131,7 +131,7 @@ execute_user_scripts(DndcContext* ctx){
                 }
                 assert(!jsctx);
                 DndcJsFlags jsflags = DNDC_JS_FLAGS_NONE;
-                jsctx = new_qjs_ctx(rt, ctx, jsflags);
+                jsctx = new_qjs_ctx(rt, ctx, jsflags, jsvars);
                 if(!jsctx){
                     report_system_error(ctx, SV("Failed to initialize javascript context"));
                     result = GENERIC_ERROR;
@@ -178,7 +178,7 @@ execute_user_scripts(DndcContext* ctx){
 static
 warn_unused
 int
-execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) worker){
+execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) worker, LongString jsvars){
     int result = 0;
     uint64_t flags = ctx->flags;
     // Setup the worker thread.
@@ -249,7 +249,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
         }
     }
 
-    result = execute_user_scripts(ctx);
+    result = execute_user_scripts(ctx, jsvars);
 
     if(thread_created){
         uint64_t before = get_t();
@@ -287,7 +287,8 @@ run_the_dndc(uint64_t flags,
         Nullable(void*)dependency_user_data,
         Nullable(DndcPostParseAstFunc*)ast_func,
         Nullable(void*)ast_func_user_data,
-        Nullable(WorkerThread*)worker
+        Nullable(WorkerThread*)worker,
+        LongString jsvars
         ){
     // Some flags imply other flags. Set those to simplify code that
     // needs to check those conditions.
@@ -569,7 +570,7 @@ run_the_dndc(uint64_t flags,
         // the worker has joined before continuing beyond this point.
         // Putting it in its own function with single-point-of-exit style
         // makes that easier to do.
-        int e = execute_user_scripts_and_load_images(&ctx, worker);
+        int e = execute_user_scripts_and_load_images(&ctx, worker, jsvars);
         if(e){
             result = e;
             goto cleanup;
@@ -890,7 +891,7 @@ dndc_format(StringView source_text, LongString* output, Nullable(DndcErrorFunc*)
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_REFORMAT_ONLY
         ;
-    int e = run_the_dndc(flags, SV(""), source_text, SV(""), SV(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL);
+    int e = run_the_dndc(flags, SV(""), source_text, SV(""), SV(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL, LS(""));
     return e;
 }
 
@@ -2028,7 +2029,8 @@ dndc_compile_dnd_file(
     DNDC_NULLABLE(void*) error_user_data,
     DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
     DNDC_NULLABLE(void*) dependency_user_data,
-    DNDC_NULLABLE(DndcWorkerThread*) worker_thread
+    DNDC_NULLABLE(DndcWorkerThread*) worker_thread,
+    DndcLongString jsvars
 ){
     enum {
         // All the valid flags.
@@ -2057,7 +2059,7 @@ dndc_compile_dnd_file(
         return GENERIC_ERROR;
     if(!outstring)
         return GENERIC_ERROR;
-    int err = run_the_dndc(flags, base_directory, source_text, source_path, outpath, outstring, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread);
+    int err = run_the_dndc(flags, base_directory, source_text, source_path, outpath, outstring, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread, jsvars);
     return err;
 }
 

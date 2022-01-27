@@ -189,6 +189,7 @@ JSGETTER(js_dndc_node_get_id);
 JSSETTER(js_dndc_node_set_id);
 JSMETHOD(js_dndc_node_parse);
 JSMETHOD(js_dndc_node_detach);
+JSMETHOD(js_dndc_node_make_child);
 JSMETHOD(js_dndc_node_add_child);
 JSMETHOD(js_dndc_node_replace_child);
 JSMETHOD(js_dndc_node_insert_child);
@@ -212,6 +213,7 @@ JSCFunctionListEntry JS_DNDC_NODE_FUNCS[] = {
     JS_CGETSET_DEF("id", js_dndc_node_get_id, js_dndc_node_set_id),
     JS_CFUNC_DEF("parse", 1, js_dndc_node_parse),
     JS_CFUNC_DEF("detach", 0, js_dndc_node_detach),
+    JS_CFUNC_DEF("make_child", 2, js_dndc_node_make_child),
     JS_CFUNC_DEF("add_child", 1, js_dndc_node_add_child),
     JS_CFUNC_DEF("replace_child", 2, js_dndc_node_replace_child),
     JS_CFUNC_DEF("insert_child", 2, js_dndc_node_insert_child),
@@ -363,7 +365,7 @@ free_qjs_rt(QJSRuntime* rt, ArenaAllocator* arena){
 
 static
 QJSContext*_Nullable
-new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags){
+new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags, LongString jsvars){
     (void)flags;
     QJSContext* jsctx = NULL;
     jsctx = JS_NewContext(rt);
@@ -402,7 +404,7 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags){
 
     // Globals, console
     {
-        QJSValue global_obj, console, dctx, node_types;
+        QJSValue global_obj, console, dctx, node_types, vars;
         global_obj = JS_GetGlobalObject(jsctx); // new ref
         dctx = js_make_dndc_context(jsctx, ctx); // new_ref
         node_types = JS_NewObject(jsctx); // new ref
@@ -427,8 +429,18 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags){
             JS_SetPropertyStr(jsctx, global_obj, "FileSystem", filesystem); // Steals ref
         }
 
+        if(!jsvars.length)
+            jsvars = LS("{}");
+        vars = JS_ParseJSON2(jsctx, jsvars.text, jsvars.length, "jsvars", JS_PARSE_JSON_EXT);
+        if(JS_IsException(vars)){
+            report_system_error(ctx, SV("Failed to parse jsvars as JSON"));
+            goto fail;
+        }
+        JS_SetPropertyStr(jsctx, global_obj, "VARS", vars); // steals ref
         JS_SetPropertyStr(jsctx, global_obj, "ctx", dctx); // steals ref
         JS_FreeValue(jsctx, global_obj); // decref
+
+
     }
 
     return jsctx;
@@ -1048,6 +1060,25 @@ JSMETHOD(js_dndc_node_detach){
     return JS_UNDEFINED;
 }
 
+JSMETHOD(js_dndc_node_make_child){
+    QJSValue child_js = js_dndc_context_make_node(jsctx, thisValue, argc, argv);
+    if(JS_IsException(child_js)) return child_js;
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    NodeHandle child;
+    if(!js_dndc_get_node_handle(jsctx, child_js, &child)){
+        // should never happen
+        return JS_EXCEPTION;
+    }
+    NodeHandle handle;
+    if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
+        return JS_EXCEPTION;
+    assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
+    assert(!NodeHandle_eq(child, INVALID_NODE_HANDLE));
+    append_child(ctx, handle, child);
+    return child_js;
+}
+
 JSMETHOD(js_dndc_node_add_child){
     if(argc != 1)
         return JS_ThrowTypeError(jsctx, "need 1 argument to add_child");
@@ -1515,9 +1546,12 @@ JSMETHOD(js_dndc_context_make_string){
 }
 
 JSMETHOD(js_dndc_context_make_node){
-    DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
-    if(!ctx)
-        return JS_EXCEPTION;
+    (void)thisValue;
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    // DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
+    // if(!ctx)
+        // return JS_EXCEPTION;
     if(argc == 0 || argc > 2)
         return JS_ThrowTypeError(jsctx, "Need type arg and an optional options obj as arguments to make_node");
     QJSValueConst obj = argc == 1? JS_UNDEFINED:argv[1];

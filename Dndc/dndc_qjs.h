@@ -34,7 +34,7 @@ new_qjs_rt(ArenaAllocator*);
 
 static
 QJSContext*_Nullable
-new_qjs_ctx(QJSRuntime*, DndcContext*, DndcJsFlags);
+new_qjs_ctx(QJSRuntime*, DndcContext*, DndcJsFlags, LongString);
 
 static
 void

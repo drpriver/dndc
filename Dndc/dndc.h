@@ -668,6 +668,10 @@ dndc_worker_thread_destroy(DndcWorkerThread*);
 // worker_thread:
 //   A thread created with `dndc_worker_create`.
 //
+// jsvars:
+//   A json string literal that will be available to JS blocks as VARS.
+//   May be the empty string. Should be an object literal.
+//
 // Returns
 // -------
 // Returns 0 on success, a non-zero error code otherwise.
@@ -687,7 +691,8 @@ dndc_compile_dnd_file(
     DNDC_NULLABLE(void*) error_user_data,
     DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
     DNDC_NULLABLE(void*) dependency_user_data,
-    DNDC_NULLABLE(DndcWorkerThread*) worker_thread
+    DNDC_NULLABLE(DndcWorkerThread*) worker_thread,
+    DndcLongString jsvars
 );
 
 //
