@@ -273,7 +273,7 @@ pydndc_anaylze_syntax_for_highlight(PyObject*, PyObject*, PyObject*);
 // returns 0 on success
 static
 int
-pyobj_to_json(PyObject*, MStringBuilder*);
+pyobj_to_json(PyObject*, MStringBuilder*, int);
 
 static
 PyMethodDef pydndc_methods[] = {
@@ -316,9 +316,9 @@ PyMethodDef pydndc_methods[] = {
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
         #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-        "htmlgen(text:str, base_dir:str='.', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, output_name:str=None, jsvars:str=None)\n"
+        "htmlgen(text:str, base_dir:str='.', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, output_name:str=None, jsargs:str=None)\n"
         #else
-        "htmlgen(text, base_dir='.', error_reporter=None, file_cache=None, flags=0, output_name=None, jsvars=None)\n"
+        "htmlgen(text, base_dir='.', error_reporter=None, file_cache=None, flags=0, output_name=None, jsargs=None)\n"
         #endif
         "--\n"
         "\n"
@@ -393,8 +393,8 @@ PyMethodDef pydndc_methods[] = {
         "\n"
         "   This path is *NOT* adjusted by the base_directory argument.\n"
         "\n"
-        "jsvars: dict or str\n"
-        "    A dict or json literal that will be exposed to js blocks as VARS.\n"
+        "jsargs: dict or str\n"
+        "    A dict or json literal that will be exposed to js blocks as Args.\n"
         "\n"
         "Returns:\n"
         "--------\n"
@@ -882,7 +882,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     PyObject* error_reporter = NULL;
     PyObject* file_cache = NULL;
     PyObject* output_name = NULL;
-    PyObject* jsvars = NULL;
+    PyObject* jsargs = NULL;
     unsigned long long flags = 0;
     _Static_assert(sizeof(flags) == sizeof(uint64_t), "");
     enum {WHITELIST = 0
@@ -896,10 +896,10 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
     };
-    const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", "output_name", "jsvars", NULL};
+    const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", "output_name", "jsargs", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOKO!O:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter, &file_cache, &flags, &PyUnicode_Type, &output_name, &jsvars)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOKO!O:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter, &file_cache, &flags, &PyUnicode_Type, &output_name, &jsargs)){
         return NULL;
     }
     PopDiagnostic();
@@ -920,19 +920,19 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         PyErr_SetString(PyExc_TypeError, "file_cache must be a DndcFileCache");
         return NULL;
     }
-    LongString jsvars_ls = LS("");
+    LongString jsargs_ls = LS("");
     MStringBuilder jsbuilder = {.allocator = get_mallocator()};
-    if(jsvars && PyUnicode_Check(jsvars)){
-        jsvars_ls = pystring_borrow_longstring(jsvars);
+    if(jsargs && PyUnicode_Check(jsargs)){
+        jsargs_ls = pystring_borrow_longstring(jsargs);
     }
-    else if(jsvars){
-        if(pyobj_to_json(jsvars, &jsbuilder) != 0){
+    else if(jsargs){
+        if(pyobj_to_json(jsargs, &jsbuilder, 0) != 0){
             if(jsbuilder.capacity){
                 msb_destroy(&jsbuilder);
             }
             return NULL;
         }
-        jsvars_ls = msb_borrow_ls(&jsbuilder);
+        jsargs_ls = msb_borrow_ls(&jsbuilder);
     }
     StringView source = pystring_borrow_stringview(text);
     StringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
@@ -952,7 +952,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         b64cache = cache->b64_cache;
     }
     StringView outname = output_name?pystring_borrow_stringview(output_name) : SV("this.html");
-    int e = dndc_compile_dnd_file(flags, base_str, source, SV(""), outname, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, jsvars_ls);
+    int e = dndc_compile_dnd_file(flags, base_str, source, SV(""), outname, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, jsargs_ls);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
@@ -990,7 +990,7 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
     PyObject* error_reporter = NULL;
     PyObject* file_cache = NULL;
     PyObject* output_name = NULL;
-    PyObject* jsvars = NULL;
+    PyObject* jsargs = NULL;
     unsigned long long flags = 0;
     _Static_assert(sizeof(flags) == sizeof(uint64_t), "");
     enum {WHITELIST = 0
@@ -999,10 +999,10 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
     };
-    const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", "output_name", "jsvars", NULL};
+    const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", "output_name", "jsargs", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOKO!O:expand", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter, &file_cache, &flags, &PyUnicode_Type, &output_name, &jsvars)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOKO!O:expand", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter, &file_cache, &flags, &PyUnicode_Type, &output_name, &jsargs)){
         return NULL;
     }
     PopDiagnostic();
@@ -1023,11 +1023,11 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         PyErr_SetString(PyExc_TypeError, "file_cache must be a DndcFileCache");
         return NULL;
     }
-    if(jsvars && !PyUnicode_Check(jsvars)){
-        PyErr_SetString(PyExc_TypeError, "jsvars must be a str");
+    if(jsargs && !PyUnicode_Check(jsargs)){
+        PyErr_SetString(PyExc_TypeError, "jsargs must be a str");
         return NULL;
     }
-    LongString jsvars_ls = jsvars? pystring_borrow_longstring(jsvars) : LS("");
+    LongString jsargs_ls = jsargs? pystring_borrow_longstring(jsargs) : LS("");
     StringView source = pystring_borrow_stringview(text);
     StringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
     // flags |= DNDC_DONT_PRINT_ERRORS;
@@ -1046,7 +1046,7 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         b64cache = cache->b64_cache;
     }
     StringView outname = output_name?pystring_borrow_stringview(output_name) : SV("this.html");
-    int e = dndc_compile_dnd_file(flags, base_str, source, SV(""), outname, &output, b64cache, textcache, func, error_list, NULL, NULL, NULL, jsvars_ls);
+    int e = dndc_compile_dnd_file(flags, base_str, source, SV(""), outname, &output, b64cache, textcache, func, error_list, NULL, NULL, NULL, jsargs_ls);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
@@ -1152,26 +1152,12 @@ pydndc_anaylze_syntax_for_highlight(PyObject* mod, PyObject* args, PyObject* kwa
 
 static
 int
-pyobj_to_json(PyObject* o, MStringBuilder* msb){
-    int result = 0;
-    if(PySequence_Check(o)){
-        PyObject* seq = PySequence_Fast(o, "Expected a fast sequence"); // new reference
-        if(!seq) return 1;
-        Py_ssize_t length = PySequence_Fast_GET_SIZE(seq);
-        msb_write_char(msb, '[');
-        for(Py_ssize_t i = 0; i < length; i++){
-            if(i != 0) msb_write_char(msb, ',');
-            PyObject* item = PySequence_Fast_GET_ITEM(seq, i); // borrowed ref
-            if(pyobj_to_json(item, msb) != 0){
-                result = 1;
-                goto finish_seq;
-            }
-        }
-        msb_write_char(msb, ']');
-        finish_seq:
-        Py_XDECREF(seq);
-        return result;
+pyobj_to_json(PyObject* o, MStringBuilder* msb, int depth){
+    if(depth > 10){
+        PyErr_SetString(PyExc_ValueError, "Overly nested data structure is not allowed for js vars. Depth exceeds 10");
+        return 1;
     }
+    int result = 0;
     if(PyUnicode_Check(o)){
         msb_write_char(msb, '"');
         StringView sv = pystring_borrow_stringview(o);
@@ -1197,6 +1183,24 @@ pyobj_to_json(PyObject* o, MStringBuilder* msb){
             msb_write_int64(msb, val);
             return 0;
         }
+    }
+    if(PySequence_Check(o)){
+        PyObject* seq = PySequence_Fast(o, "Expected a fast sequence"); // new reference
+        if(!seq) return 1;
+        Py_ssize_t length = PySequence_Fast_GET_SIZE(seq);
+        msb_write_char(msb, '[');
+        for(Py_ssize_t i = 0; i < length; i++){
+            if(i != 0) msb_write_char(msb, ',');
+            PyObject* item = PySequence_Fast_GET_ITEM(seq, i); // borrowed ref
+            if(pyobj_to_json(item, msb, depth+1) != 0){
+                result = 1;
+                goto finish_seq;
+            }
+        }
+        msb_write_char(msb, ']');
+        finish_seq:
+        Py_XDECREF(seq);
+        return result;
     }
     if(PyMapping_Check(o)){
         PyObject* items = PyMapping_Items(o); // new reference
@@ -1224,7 +1228,7 @@ pyobj_to_json(PyObject* o, MStringBuilder* msb){
                 Py_XDECREF(rkey);
             }
             msb_write_literal(msb, "\":");
-            if(pyobj_to_json(value, msb) != 0){
+            if(pyobj_to_json(value, msb, depth+1) != 0){
                 result = 1;
                 goto finish_dict;
             }

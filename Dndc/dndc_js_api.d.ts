@@ -738,6 +738,16 @@ type Classes = {
 }
 
 //
+// Args
+// ----
+// This object is of a type that can be expressed in JSON. It is
+// used to pass arguments from the calling process to js. If
+// no args are given, it will be null. It is usually an array or
+// an object.
+//
+export const Args: unknown;
+
+//
 // NodeType
 // --------
 // These are the possible Node Types in the document.  It is

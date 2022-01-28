@@ -232,6 +232,34 @@ class TestFileCache(TestCase):
         self.assertListEqual(output[1], ['Makefile'])
         self.assertListEqual(cache.paths(), ['Makefile'])
 
+class TestJsVars(TestCase):
+    def test_jsargs(self) -> None:
+        # Have C call our test assertion ;)
+        # A bit fragile, but easiest way to smuggle data back out of js.
+        def testout(kind, file, line, col, mess):
+            expected = [
+                None,
+                '"world"',
+                '"goodbye"',
+                "[1, 2, 3]",
+                "1",
+                "2",
+                "3",
+            ]
+            self.assertEqual(expected[line], mess)
+        input = (
+            "::js\n"
+            "  console.log(Args.hello);\n"
+            "  console.log(Args.goodbye);\n"
+            "  console.log(Args.data);\n"
+            "  console.log(Args.data[0]);\n"
+            "  console.log(Args.data[1]);\n"
+            "  console.log(Args.data[2]);\n"
+        )
+        _ = pydndc.htmlgen(input,
+                jsargs=dict(hello="world", goodbye='goodbye', data=[1,2,3]),
+                error_reporter=testout)
+
 def mymain() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('-C', '--change-directory')

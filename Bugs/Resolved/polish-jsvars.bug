@@ -1,0 +1,17 @@
+bug.py: v0.0.1
+created: 2022-01-26T03:33:12.921839
+updated: 2022-01-28T01:41:50.238582
+resolved: 2022-01-28T04:50:00.570575
+bugmagic^^^^
+Summary::md.summary
+  Better test and document the new jsvars feature.
+
+  Also, should I add command line arguments for dndc_cli?
+
+  Also, they are current in VARS, which is a terrible name.<br>
+  Maybe an Environment object?
+Updated Jan 28, 2022, 01:41AM::md.update
+  I’ve convinced myself that I want to change it to args.
+
+Resolved Jan 28, 2022, 04:50AM::md.update
+  Basically done. There’s an Args object now.

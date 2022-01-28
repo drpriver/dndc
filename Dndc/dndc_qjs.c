@@ -365,7 +365,7 @@ free_qjs_rt(QJSRuntime* rt, ArenaAllocator* arena){
 
 static
 QJSContext*_Nullable
-new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags, LongString jsvars){
+new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags, LongString jsargs){
     (void)flags;
     QJSContext* jsctx = NULL;
     jsctx = JS_NewContext(rt);
@@ -404,7 +404,7 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags, LongString jsva
 
     // Globals, console
     {
-        QJSValue global_obj, console, dctx, node_types, vars;
+        QJSValue global_obj, console, dctx, node_types, args;
         global_obj = JS_GetGlobalObject(jsctx); // new ref
         dctx = js_make_dndc_context(jsctx, ctx); // new_ref
         node_types = JS_NewObject(jsctx); // new ref
@@ -429,14 +429,14 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags, LongString jsva
             JS_SetPropertyStr(jsctx, global_obj, "FileSystem", filesystem); // Steals ref
         }
 
-        if(!jsvars.length)
-            jsvars = LS("{}");
-        vars = JS_ParseJSON2(jsctx, jsvars.text, jsvars.length, "jsvars", JS_PARSE_JSON_EXT);
-        if(JS_IsException(vars)){
-            report_system_error(ctx, SV("Failed to parse jsvars as JSON"));
+        if(!jsargs.length)
+            jsargs = LS("null");
+        args = JS_ParseJSON2(jsctx, jsargs.text, jsargs.length, "jsargs", JS_PARSE_JSON_EXT);
+        if(JS_IsException(args)){
+            report_system_error(ctx, SV("Failed to parse jsargs as JSON"));
             goto fail;
         }
-        JS_SetPropertyStr(jsctx, global_obj, "VARS", vars); // steals ref
+        JS_SetPropertyStr(jsctx, global_obj, "Args", args); // steals ref
         JS_SetPropertyStr(jsctx, global_obj, "ctx", dctx); // steals ref
         JS_FreeValue(jsctx, global_obj); // decref
 

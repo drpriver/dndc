@@ -390,8 +390,11 @@ typedef struct ArgToParse {
     //
     // For user-defined types, we don't call the converter function and instead
     // pass a pointer to the string view as the second argument.
-    // This function should do anything string to value conversion itself if
+    // This function should do any string to value conversion itself if
     // needed.
+    //
+    // NOTE: You still need to set the user_pointer of the ArgParseDestination
+    //       as it is used to lookup the type name for printing the help.
     int (*_Nullable append_proc)(void*, const void*);
 } ArgToParse;
 

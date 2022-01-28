@@ -22,7 +22,7 @@
 #define CASE_0_9 '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9'
 #endif
 
-#ifndef CASE_a_z 
+#ifndef CASE_a_z
 #define CASE_a_z 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g': case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n': case 'o': case 'p': case 'q': case 'r': case 's': case 't': case 'u': case 'v': case 'w': case 'x': case 'y': case 'z'
 #endif
 
@@ -127,17 +127,46 @@ msb_write_title(MStringBuilder* restrict msb, const char* restrict str, size_t l
 
 //
 // Writes the given string into the builder, escaping those characters required
-// by json (kind of, I don't think I handle unicode properly).
+// by json.
 // Does not include the containing quotation marks. Write those yourself if you
 // need them.
 static inline
 void
 msb_write_json_escaped_str(MStringBuilder* restrict sb, const char* restrict str, size_t length){
-    _check_msb_remaining_size(sb, length*2);
+    size_t datalength = length*2;
+    _check_msb_remaining_size(sb, datalength);
     char* data = sb->data;
     size_t cursor = sb->cursor;
+    const char* const hex = "0123456789abcdef";
     for(size_t i = 0; i < length; i++){
         switch(str[i]){
+            // 0x0 through 0x1f (0 through 31) have to all be
+            // escaped with the 6 character sequence of \u00xx
+            // Why on god's green earth did they force utf16 escapes?
+
+            // gnu case ranges are nicer, but nonstandard
+            // just spell them all out.
+            case  0: case  1: case  2: case  3: case  4:
+            // 8 is '\b', 9 is '\t'
+            case  5: case  6: case  7:
+            // 10 is '\n', 12 is '\f', 13 is '\r'
+                     case 11:                   case 14:
+            case 15: case 16: case 17: case 18: case 19:
+            case 20: case 21: case 22: case 23: case 24:
+            case 25: case 26: case 27: case 28: case 29:
+            case 30: case 31:
+                // These are rare, so only reserve more space when we actually hit them.
+                datalength += 4;
+                _check_msb_remaining_size(sb, datalength);
+                // re-acquire the invalidated pointer.
+                data = sb->data;
+                data[cursor++] = '\\';
+                data[cursor++] = 'u';
+                data[cursor++] = '0';
+                data[cursor++] = '0';
+                data[cursor++] = hex[(str[i] & 0xf0)>>4];
+                data[cursor++] = hex[(str[i] & 0xf)];
+                break;
             case '"':
                 data[cursor++] = '\\';
                 data[cursor++] = '"';
@@ -166,6 +195,7 @@ msb_write_json_escaped_str(MStringBuilder* restrict sb, const char* restrict str
                 data[cursor++] = '\\';
                 data[cursor++] = 't';
                 break;
+            // Other characters are allowed through as is
             default:
                 data[cursor++] = str[i];
                 break;

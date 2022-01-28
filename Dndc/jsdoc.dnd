@@ -22,7 +22,7 @@ JS Api Documentation::title
     }
     const lets = " var const let ";
     const builtins = " ctx JSON FileSystem node NodeType "
-    let types = " Array string boolean number Map ";
+    let types = " Array string boolean number Map any unknown ";
     if(is_typescript && extra_types)
       types += extra_types;
     function parse_block_comment(){

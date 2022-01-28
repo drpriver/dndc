@@ -111,8 +111,8 @@ typedef int (DndcPostParseAstFunc)(Nullable(void*)user_data, Nonnull(DndcContext
 // worker_thread:
 //   A worker thread that can be reused for parallel tasks.
 //
-// jsvars:
-//   A json literal that will be exposted to js as VARS.
+// jsargs:
+//   A json literal that will be exposted to js as Args.
 //
 // Returns
 // -------
@@ -138,7 +138,7 @@ run_the_dndc(uint64_t flags,
         Nullable(DndcPostParseAstFunc*)ast_func,
         Nullable(void*)ast_func_user_data,
         Nullable(WorkerThread*) worker_thread,
-        LongString jsvars
+        LongString jsargs
     );
 
 //

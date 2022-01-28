@@ -13,6 +13,7 @@
 #include "file_util.h"
 #include "path_util.h"
 #include "MStringBuilder.h"
+#include "msb_extensions.h"
 #include "mallocator.h"
 #define GET_INPUT_API static inline
 #include "get_input.h"
@@ -62,6 +63,17 @@ enum DndcMainFlags {
 };
 
 int
+append_arg(void* msb_, const void* arg_){
+    MStringBuilder* msb = msb_;
+    const StringView* sv = arg_;
+    msb_write_char(msb, msb->cursor?',':'[');
+    msb_write_char(msb, '"');
+    msb_write_json_escaped_str(msb, sv->text, sv->length);
+    msb_write_char(msb, '"');
+    return 0;
+}
+
+int
 main(int argc, char**argv){
     StringView source_path = {0};
     StringView source_text = {0};
@@ -76,7 +88,8 @@ main(int argc, char**argv){
     bool print_depends = false;
     bool cleanup = false;
     int bench_iters = 0;
-    LongString jsvars = LS("");
+    LongString jsargs = LS("");
+    MStringBuilder argbuilder = {.allocator = get_mallocator()};
     {
         ArgToParse pos_args[] = {
             [0] = {
@@ -254,13 +267,30 @@ main(int argc, char**argv){
                 .hidden = true,
             },
             {
-                .name = SV("--jsvars"),
+                .name = SV("--jsargs"),
                 .altname1 = SV("-J"),
-                .dest = ARGDEST(&jsvars),
+                .dest = ARGDEST(&jsargs),
                 .help = "A json literal that will be exposed to javascript as "
-                        "VARS.",
+                        "Args.",
                 .hidden = true,
-            }
+            },
+            {
+                .name = SV("--args"),
+                .dest = {
+                    .type = ARG_USER_DEFINED,
+                    .pointer = &argbuilder,
+                    // This is safe in C, but not in C++, beware.
+                    .user_pointer = &(ArgParseUserDefinedType){
+                        .type_name = LS("string"),
+                    },
+                },
+                .help = "The following arguments will be appened to a js array that will "
+                        "be available as Args. This overwrites any argument given by --jsargs. "
+                        "Use one or the other.",
+                .hidden = true,
+                .max_num = 0xffff,
+                .append_proc = &append_arg,
+            },
         };
         enum {HELP, VERSION, HIDDEN_HELP, OPEN_SOURCE, FISH};
         ArgToParse early_args[] = {
@@ -390,6 +420,10 @@ main(int argc, char**argv){
             }
             source_text = LS_to_SV(load_err.result);
         }
+        if(argbuilder.cursor){
+            msb_write_char(&argbuilder, ']');
+            jsargs = msb_detach_ls(&argbuilder);
+        }
     }
     if(print_syntax){
         dndc_print_out_syntax(source_text);
@@ -425,7 +459,7 @@ main(int argc, char**argv){
                 dependency_func, &dependency_user_data,
                 dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
                 worker,
-                jsvars);
+                jsargs);
             assert(!e);
             dndc_free_string(output);
         }
@@ -447,7 +481,7 @@ main(int argc, char**argv){
             dependency_func, &dependency_user_data,
             dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
             worker,
-            jsvars
+            jsargs
             );
         if(e) return e;
         if(flags & DNDC_DONT_WRITE)
