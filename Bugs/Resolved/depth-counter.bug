@@ -1,0 +1,8 @@
+bug.py: v0.0.1
+created: 2022-01-28T18:39:07.559753
+resolved: 2022-01-29T01:05:14.831399
+bugmagic^^^^
+Summary::md.summary
+  Remove check_depth, replace with depth counter
+Resolved Jan 29, 2022, 01:05AM::md.update
+  This is done, now all functions that traverse the tree need to track how deep they are. This is more annoying, but is safer as it also guards against accidental loops in the tree, which js blocks can do temporarily.

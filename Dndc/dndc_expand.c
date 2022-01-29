@@ -13,32 +13,32 @@
 static
 warn_unused
 int
-expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
+expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
 
 static
 warn_unused
 int
-expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
+expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
 
 static
 warn_unused
 int
-expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
+expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
 
 static
 warn_unused
 int
-expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
+expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
 
 static
 warn_unused
 int
-expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
+expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
 
 static
 warn_unused
 int
-expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
+expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
 
 static
 warn_unused
@@ -47,13 +47,13 @@ expand_to_dnd(DndcContext*ctx, MStringBuilder* msb){
     int result = 0;
     Node* node = get_node(ctx, ctx->root_handle);
     if(node->type != NODE_MD){
-        result = expand_node(ctx, node, 0, msb);
+        result = expand_node(ctx, node, 0, msb, 0);
 
         // node_set_err_q(ctx, node, SV("Expected md, got "), NODETYPE_TO_NODE_ALIASES[node->type]);
         // return PARSE_ERROR;
     }
     else
-        result = expand_node_body(ctx, node, 0, msb);
+        result = expand_node_body(ctx, node, 0, msb, 0);
     return result;
 }
 
@@ -79,7 +79,11 @@ write_generic_header(Node* n, int indent, MStringBuilder*msb){
 
 static
 int
-expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
+expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
+    if(node_depth > DNDC_MAX_NODE_DEPTH){
+        node_set_err(ctx, n, LS("Max node depth exceeded"));
+        return PARSE_ERROR;
+    }
     int result = 0;
     switch(n->type){
         case NODE_STRING:
@@ -91,7 +95,7 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
         case NODE_STYLESHEETS:
         case NODE_SCRIPTS:
             write_generic_header(n, indent, msb);
-            return expand_node_body(ctx, n, indent+2, msb);
+            return expand_node_body(ctx, n, indent+2, msb, node_depth+1);
         case NODE_TITLE:
         case NODE_HEADING:
             write_generic_header(n, indent, msb);
@@ -123,7 +127,7 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
         case NODE_COMMENT:
         case NODE_QUOTE:
             write_generic_header(n, indent, msb);
-            return expand_node_body(ctx, n, indent+2, msb);
+            return expand_node_body(ctx, n, indent+2, msb, node_depth+1);
         case NODE_DATA:
             node_set_err(ctx, n, LS("DATA_NODE unhandled"));
             return PARSE_ERROR;
@@ -138,7 +142,7 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
         case NODE_IMPORT:
         case NODE_CONTAINER:{
             NODE_CHILDREN_FOR_EACH(child, n){
-                result = expand_node(ctx, get_node(ctx, *child), indent, msb);
+                result = expand_node(ctx, get_node(ctx, *child), indent, msb, node_depth+1);
                 if(result) return result;
             }
             return result;
@@ -152,12 +156,12 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
 
 static
 int
-expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
+expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
     int result = 0;
     switch(n->type){
         case NODE_DETAILS:
         case NODE_MD:
-            result = expand_md_body(ctx, n, indent, msb);
+            result = expand_md_body(ctx, n, indent, msb, node_depth);
             return result;
         case NODE_STYLESHEETS:
         case NODE_SCRIPTS:
@@ -172,14 +176,14 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
         case NODE_META:
             NODE_CHILDREN_FOR_EACH(ch, n){
                 Node* child = get_node(ctx, *ch);
-                result = expand_node(ctx, child, indent, msb);
+                result = expand_node(ctx, child, indent, msb, node_depth+1);
                 if(result) return result;
             }
             return result;
         case NODE_TABLE:
-            return expand_table_body(ctx, n, indent, msb);
+            return expand_table_body(ctx, n, indent, msb, node_depth);
         case NODE_KEYVALUE:
-            return expand_keyvalue_body(ctx, n, indent, msb);
+            return expand_keyvalue_body(ctx, n, indent, msb, node_depth);
         case NODE_INVALID:
         case NODE_HR:
         case NODE_CONTAINER:
@@ -203,13 +207,17 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
 }
 static
 int
-expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
+expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
 static
 int
-expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb);
+expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
 static
 int
-expand_md_bullets(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int depth){
+expand_md_bullets(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int depth, int node_depth){
+    if(node_depth > DNDC_MAX_NODE_DEPTH){
+        node_set_err(ctx, n, LS("Max node depth exceeded"));
+        return PARSE_ERROR;
+    }
     int result = 0;
     NODE_CHILDREN_FOR_EACH(l, n){
         Node* li = get_node(ctx, *l);
@@ -247,11 +255,11 @@ expand_md_bullets(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
                 msb_write_char(msb, '\n');
             }
             else if(sub->type == NODE_BULLETS){
-                result = expand_md_bullets(ctx, sub, indent+2, msb, depth+1);
+                result = expand_md_bullets(ctx, sub, indent+2, msb, depth+1, node_depth+1);
                 if(result) return result;
             }
             else if(sub->type == NODE_LIST){
-                result = expand_md_list(ctx, sub, indent+2, msb);
+                result = expand_md_list(ctx, sub, indent+2, msb, node_depth+1);
                 if(result) return result;
             }
             else {
@@ -265,7 +273,11 @@ expand_md_bullets(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
 }
 static
 int
-expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
+expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
+    if(node_depth > DNDC_MAX_NODE_DEPTH){
+        node_set_err(ctx, n, LS("Max node depth exceeded"));
+        return PARSE_ERROR;
+    }
     int result = 0;
     size_t list_number = 0;
     NODE_CHILDREN_FOR_EACH(l, n){
@@ -301,11 +313,11 @@ expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
                 msb_write_char(msb, '\n');
             }
             else if(sub->type == NODE_BULLETS){
-                result = expand_md_bullets(ctx, sub, indent+2, msb, 0);
+                result = expand_md_bullets(ctx, sub, indent+2, msb, 0, node_depth+1);
                 if(result) return result;
             }
             else if(sub->type == NODE_LIST){
-                result = expand_md_list(ctx, sub, indent+2, msb);
+                result = expand_md_list(ctx, sub, indent+2, msb, node_depth+1);
                 if(result) return result;
             }
             else {
@@ -320,7 +332,11 @@ expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
 }
 static
 int
-expand_md_para(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
+expand_md_para(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
+    if(node_depth > DNDC_MAX_NODE_DEPTH){
+        node_set_err(ctx, n, LS("Max node depth exceeded"));
+        return PARSE_ERROR;
+    }
     int result = 0;
     NODE_CHILDREN_FOR_EACH(c, n){
         Node* child = get_node(ctx, *c);
@@ -337,25 +353,29 @@ expand_md_para(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
 
 static
 int
-expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
+expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
+    if(node_depth > DNDC_MAX_NODE_DEPTH){
+        node_set_err(ctx, n, LS("Max node depth exceeded"));
+        return PARSE_ERROR;
+    }
     int result = 0;
     NODE_CHILDREN_FOR_EACH(c, n){
         Node* child = get_node(ctx, *c);
         switch(child->type){
             case NODE_BULLETS:
-                result = expand_md_bullets(ctx, child, indent, msb, 0);
+                result = expand_md_bullets(ctx, child, indent, msb, 0, node_depth+1);
                 if(result) return result;
                 break;
             case NODE_PARA:
-                result = expand_md_para(ctx, child, indent, msb);
+                result = expand_md_para(ctx, child, indent, msb, node_depth+1);
                 if(result) return result;
                 break;
             case NODE_LIST:
-                result = expand_md_list(ctx, child, indent, msb);
+                result = expand_md_list(ctx, child, indent, msb, node_depth+1);
                 if(result) return result;
                 break;
             default:
-                result = expand_node(ctx, child, indent, msb);
+                result = expand_node(ctx, child, indent, msb, node_depth+1);
                 if(result) return result;
                 break;
         }
@@ -365,7 +385,11 @@ expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
 
 static
 int
-expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
+expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
+    if(node_depth > DNDC_MAX_NODE_DEPTH){
+        node_set_err(ctx, n, LS("Max node depth exceeded"));
+        return PARSE_ERROR;
+    }
     int result = 0;
     NODE_CHILDREN_FOR_EACH(t, n){
         Node* row = get_node(ctx, *t);
@@ -418,12 +442,16 @@ expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
 
 static
 int
-expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb){
+expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
+    if(node_depth > DNDC_MAX_NODE_DEPTH){
+        node_set_err(ctx, n, LS("Max node depth exceeded"));
+        return PARSE_ERROR;
+    }
     int result = 0;
     NODE_CHILDREN_FOR_EACH(c, n){
         Node* child = get_node(ctx, *c);
         if(child->type != NODE_KEYVALUEPAIR){
-            result = expand_node(ctx, child, indent, msb);
+            result = expand_node(ctx, child, indent, msb, node_depth+1);
             if(result) return result;
             continue;
         }

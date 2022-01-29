@@ -136,4 +136,6 @@ NODETYPE_TO_NODE_ALIASES[NODE_INVALID+1] = {
      [NODE_META]        = SV("meta"),
 };
 
+enum {DNDC_MAX_NODE_DEPTH=100};
+
 #endif

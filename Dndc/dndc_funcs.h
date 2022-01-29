@@ -165,23 +165,6 @@ dndc_parse(DndcContext*, NodeHandle root, StringView filename,
            const char* text, size_t length);
 
 //
-// check_depth
-// -----------
-// Call this before any function that traverses the tree.
-// Ensures that the tree is not so deep that there is a danger of exhausting
-// the stack.
-//
-// This is probably a bad idea and we should just have a depth argument to
-// render funcs and error if too deep.
-//
-// Returns 0 on success.
-//
-static
-warn_unused
-int
-check_depth(DndcContext*);
-
-//
 // build_nav_block
 // ---------------
 // Walks the tree to construct the nav block.
@@ -589,7 +572,7 @@ build_nav_block(DndcContext*);
   force_inline
   warn_unused
   int
-  render_node(DndcContext*, MStringBuilder* restrict, NodeHandle, int header_depth);
+  render_node(DndcContext*, MStringBuilder* restrict, NodeHandle, int header_depth, int node_depth);
 
   //
   // format_tree

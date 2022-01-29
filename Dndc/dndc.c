@@ -591,18 +591,6 @@ run_the_dndc(uint64_t flags,
         result = PARSE_ERROR;
         goto cleanup;
     }
-    // Check that the tree is not too deep!
-    if(!wasm){
-        uint64_t before = get_t();
-        int e = check_depth(&ctx);
-        if(e){
-            report_set_error(&ctx);
-            result = e;
-            goto cleanup;
-        }
-        uint64_t after = get_t();
-        report_time(&ctx, SV("Checking depth took "), after-before);
-    }
     // Create links from headers.
     {
         uint64_t before = get_t();
@@ -670,14 +658,9 @@ run_the_dndc(uint64_t flags,
                 if(!child->header.length){
                     node_print_warning(&ctx, child, SV("Missing header from data child?"));
                 }
-                // FIXME:
-                // A maliciously crafted js block could bypass our depth check
-                // up above by detaching the data node and making one too deep,
-                // thus making us vulnerable to stack exhaustion during this
-                // recursive call.
                 {
                     msb_reset(&sb);
-                    int e = render_node(&ctx, &sb, *it, 1);
+                    int e = render_node(&ctx, &sb, *it, 1, 0);
                     if(e){
                         report_set_error(&ctx);
                         result = e;

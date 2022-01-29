@@ -32,14 +32,16 @@
 
 /* Rendering */
 
+// For the node depth argument, the generic render_node function handles the depth incrementing and error handling.
+
 #define RENDERFUNCNAME(nt) render_##nt
-#define RENDERFUNC(nt) static warn_unused int RENDERFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, NodeHandle handle, int header_depth)
+#define RENDERFUNC(nt) static warn_unused int RENDERFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, NodeHandle handle, int header_depth, int node_depth)
 
 #define X(a, b) RENDERFUNC(a);
 NODETYPES(X)
 #undef X
 
-typedef int(renderfunc)(DndcContext*, MStringBuilder*, NodeHandle, int);
+typedef int(renderfunc)(DndcContext*, MStringBuilder*, NodeHandle, int, int);
 
 static
 renderfunc*_Nonnull const RENDERFUNCS[] = {
@@ -52,7 +54,8 @@ static inline
 force_inline
 warn_unused
 int
-render_node(DndcContext* ctx, MStringBuilder* restrict sb, NodeHandle handle, int header_depth){
+render_node(DndcContext* ctx, MStringBuilder* restrict sb, NodeHandle handle, int header_depth, int node_depth){
+    if(node_depth > DNDC_MAX_NODE_DEPTH) return 1;
     Node* node = get_node(ctx, handle);
     bool hide = !!(node->flags & NODEFLAG_HIDE);
     if(hide) return 0;
@@ -63,7 +66,7 @@ render_node(DndcContext* ctx, MStringBuilder* restrict sb, NodeHandle handle, in
 #undef X
         }
 #else
-    return RENDERFUNCS[node->type](ctx, sb, handle, header_depth);
+    return RENDERFUNCS[node->type](ctx, sb, handle, header_depth, node_depth+1);
 #endif
 }
 
@@ -231,7 +234,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             root_node->type = NODE_CONTAINER;
         }
     }
-    int e = render_node(ctx, msb, root_handle, 1);
+    int e = render_node(ctx, msb, root_handle, 1, 0);
     root_node = get_node(ctx, root_handle);
     root_node->type = oldtype;
     if(e) return e;
@@ -726,7 +729,7 @@ RENDERFUNC(DIV){
         msb_write_char(sb, '\n');
     }
     NODE_CHILDREN_FOR_EACH(it, node){
-        int e = render_node(ctx, sb, *it, header_depth);
+        int e = render_node(ctx, sb, *it, header_depth, node_depth);
         if(e) return e;
     }
     msb_write_literal(sb, "</div>\n");
@@ -763,7 +766,7 @@ RENDERFUNC(PARA){
     }
     msb_write_literal(sb, "<p>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
-        int e = render_node(ctx, sb, *it, header_depth);
+        int e = render_node(ctx, sb, *it, header_depth, node_depth);
         if(e) return e;
     }
     msb_write_literal(sb, "</p>\n");
@@ -831,7 +834,7 @@ RENDERFUNC(TABLE){
         msb_write_literal(sb, "<tr>\n");
         NODE_CHILDREN_FOR_EACH(it, child){
             msb_write_literal(sb, "<th>");
-            int e = render_node(ctx, sb, *it, header_depth);
+            int e = render_node(ctx, sb, *it, header_depth, node_depth);
             if(e) return e;
             msb_write_literal(sb, "</th>\n");
         }
@@ -839,7 +842,7 @@ RENDERFUNC(TABLE){
     }
     msb_write_literal(sb, "</thead>\n<tbody>\n");
     for(size_t i = 1; i < count; i++){
-        int e = render_node(ctx, sb, children[i], header_depth);
+        int e = render_node(ctx, sb, children[i], header_depth, node_depth);
         if(e) return e;
     }
     msb_write_literal(sb, "</tbody></table>\n</div>\n");
@@ -850,7 +853,7 @@ RENDERFUNC(TABLE_ROW){
     msb_write_literal(sb, "<tr>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
         msb_write_literal(sb, "<td>");
-        int e = render_node(ctx, sb, *it, header_depth);
+        int e = render_node(ctx, sb, *it, header_depth, node_depth);
         if(e) return e;
         msb_write_literal(sb, "</td>\n");
     }
@@ -890,7 +893,7 @@ RENDERFUNC(IMPORT){
         node_print_warning(ctx, node, SV("Ignoring import header"));
     }
     NODE_CHILDREN_FOR_EACH(it, node){
-        int e = render_node(ctx, sb, *it, header_depth);
+        int e = render_node(ctx, sb, *it, header_depth, node_depth);
         if(e) return e;
     }
     return 0;
@@ -993,7 +996,7 @@ RENDERFUNC(IMAGE){
                 }
             }
         }
-        int e = render_node(ctx, sb, children[i], header_depth);
+        int e = render_node(ctx, sb, children[i], header_depth, node_depth);
         if(e) return e;
     }
     msb_write_literal(sb, ">\n");
@@ -1012,7 +1015,7 @@ RENDERFUNC(QUOTE){
     }
     msb_write_literal(sb, "<blockquote>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
-        int e = render_node(ctx, sb, *it, header_depth);
+        int e = render_node(ctx, sb, *it, header_depth, node_depth);
         if(e) return e;
     }
     msb_write_literal(sb, "</blockquote>\n</div>\n");
@@ -1082,7 +1085,7 @@ RENDERFUNC(BULLETS){
         node_print_warning(ctx, node, SV("Ignoring classes on bullet list"));
     msb_write_literal(sb, "<ul>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
-        int e = render_node(ctx, sb, *it, header_depth);
+        int e = render_node(ctx, sb, *it, header_depth, node_depth);
         if(e) return e;
     }
     msb_write_literal(sb, "</ul>\n");
@@ -1096,7 +1099,7 @@ RENDERFUNC(LIST){
         node_print_warning(ctx, node, SV("Ignoring classes on list"));
     msb_write_literal(sb, "<ol>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
-        int e = render_node(ctx, sb, *it, header_depth);
+        int e = render_node(ctx, sb, *it, header_depth, node_depth);
         if(e) return e;
     }
     msb_write_literal(sb, "</ol>\n");
@@ -1114,7 +1117,7 @@ RENDERFUNC(LIST_ITEM){
     for(size_t i = 0; i < count; i++){
         if(i != 0)
             msb_write_char(sb, ' ');
-        int e = render_node(ctx, sb, children[i], header_depth);
+        int e = render_node(ctx, sb, children[i], header_depth, node_depth);
         if(e) return e;
     }
     msb_write_literal(sb, "</li>\n");
@@ -1132,7 +1135,7 @@ RENDERFUNC(KEYVALUE){
     }
     msb_write_literal(sb, "<table><tbody>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
-        int e = render_node(ctx, sb, *it, header_depth);
+        int e = render_node(ctx, sb, *it, header_depth, node_depth);
         if(e) return e;
     }
     msb_write_literal(sb, "</tbody></table>\n</div>\n");
@@ -1143,7 +1146,7 @@ RENDERFUNC(KEYVALUEPAIR){
     msb_write_literal(sb, "<tr>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
         msb_write_literal(sb, "<td>");
-        int e = render_node(ctx, sb, *it, header_depth);
+        int e = render_node(ctx, sb, *it, header_depth, node_depth);
         if(e) return e;
         // This is sort of hacky, but we need the td to not
         // have a trailing newline so that css content stuff
@@ -1430,7 +1433,7 @@ RENDERFUNC(MD){
         msb_write_char(sb, '\n');
     }
     NODE_CHILDREN_FOR_EACH(it, node){
-        int e = render_node(ctx, sb, *it, header_depth);
+        int e = render_node(ctx, sb, *it, header_depth, node_depth);
         if(e) return e;
     }
     msb_write_literal(sb, "</div>\n");
@@ -1442,7 +1445,7 @@ RENDERFUNC(CONTAINER){
         node_print_warning(ctx, node, SV("Ignoring container header."));
     }
     NODE_CHILDREN_FOR_EACH(it, node){
-        int e = render_node(ctx, sb, *it, header_depth);
+        int e = render_node(ctx, sb, *it, header_depth, node_depth);
         if(e) return e;
     }
     return 0;
@@ -1472,7 +1475,7 @@ RENDERFUNC(DETAILS){
     msb_write_literal(sb, "</summary>\n");
     msb_write_literal(sb, "<div>\n");
     NODE_CHILDREN_FOR_EACH(it, node){
-        int e = render_node(ctx, sb, *it, header_depth);
+        int e = render_node(ctx, sb, *it, header_depth, node_depth);
         if(e) return e;
     }
     msb_write_literal(sb, "</div>\n</details>\n");

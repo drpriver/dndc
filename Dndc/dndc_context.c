@@ -562,42 +562,19 @@ node_insert_child(DndcContext* ctx, NodeHandle parent, size_t i, NodeHandle chil
     data[i] = child;
 }
 
-static int check_node_depth(DndcContext* ctx, NodeHandle handle, int depth);
-
-static
-int
-check_depth(DndcContext* ctx){
-    return check_node_depth(ctx, ctx->root_handle, 0);
-}
-
-static
-int
-check_node_depth(DndcContext* ctx, NodeHandle handle, int depth){
-    Node* node = get_node(ctx, handle);
-    enum {MAX_DEPTH=64};
-    if(unlikely(depth > MAX_DEPTH)){
-        node_set_err(ctx, node, LS("Tree depth exceeded: greater than 64"));
-        return PARSE_ERROR;
-    }
-    NODE_CHILDREN_FOR_EACH(it, node){
-        int e = check_node_depth(ctx, *it, depth+1);
-        if(e) return e;
-    }
-    return 0;
-}
-
-static void gather_anchor(DndcContext* ctx, NodeHandle handle);
+static void gather_anchor(DndcContext* ctx, NodeHandle handle, int node_depth);
 
 static
 void
 gather_anchors(DndcContext* ctx){
     NodeHandle root = ctx->root_handle;
-    gather_anchor(ctx, root);
+    gather_anchor(ctx, root, 0);
 }
 
 static
 void
-gather_anchor(DndcContext* ctx, NodeHandle handle){
+gather_anchor(DndcContext* ctx, NodeHandle handle, int node_depth){
+    if(node_depth > DNDC_MAX_NODE_DEPTH) return;
     Node* node = get_node(ctx, handle);
     switch(node->type){
         case NODE_BULLETS:
@@ -625,7 +602,7 @@ gather_anchor(DndcContext* ctx, NodeHandle handle){
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:{
             NODE_CHILDREN_FOR_EACH(it, node){
-                gather_anchor(ctx, *it);
+                gather_anchor(ctx, *it, node_depth+1);
             }
         }break;
         case NODE_META:
