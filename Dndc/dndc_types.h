@@ -8,6 +8,8 @@
 #include "dndc_file_cache.h"
 
 //
+// dndc_types.h
+// ------------
 // Type definitions for dndc, shared across components.
 //
 
@@ -54,6 +56,8 @@ typedef struct LinkItem {
 #include "Marray.h"
 
 //
+// DataItem
+// --------
 // For things that will go in the generated js data_blob.
 //
 typedef struct DataItem {
@@ -71,6 +75,8 @@ typedef struct Attribute {
 #include "Rarray.h"
 
 //
+// NodeHandle
+// ----------
 // Opaque handle to a node
 // Provides strong typing instead of using raw indexes.
 // Possibly we can do some trickery with generations and multi-threading the parser,
@@ -89,10 +95,10 @@ typedef union NodeHandle {
     uint32_t _value;
 } NodeHandle;
 
-//
 // As 0 is the root node, we use this as the invalid value instead.
-//
 enum {INVALID_NODE_HANDLE_VALUE = -1};
+// INVALID_NODE_HANDLE
+// -------------------
 // NOTE: not static so it is visible in the debugger.
 const NodeHandle INVALID_NODE_HANDLE = {._value=INVALID_NODE_HANDLE_VALUE};
 // Shadow the above symbol intentionally.
@@ -117,7 +123,7 @@ typedef struct IdItem {
 #define MARRAY_T IdItem
 #include "Marray.h"
 
-typedef enum 
+typedef enum
 #ifdef __clang__
 __attribute__((flag_enum))
 #endif
@@ -136,6 +142,8 @@ NodeFlags {
     NODEFLAG_ID = 0x10,
 } NodeFlags;
 
+// Node
+// ----
 typedef struct Node {
     // The type of the node
     NodeType type;                // 4 bytes
@@ -218,8 +226,17 @@ node_remove_child(Node* node, size_t i, const Allocator a){
 }
 
 
-#define NODE_CHILDREN_FOR_EACH(iter, n) for(NodeHandle *iter = node_children(n), *iter##end__=node_children(n)+node_children_count(n);iter != iter##end__;++iter)
+// NODE_CHILDREN_FOR_EACH
+// ----------------------
+#define NODE_CHILDREN_FOR_EACH(iter, n) \
+    for(\
+        NodeHandle *iter = node_children(n), \
+        *iter##end__=node_children(n)+node_children_count(n);\
+        iter != iter##end__;\
+        ++iter)
 
+// DndcContext
+// -----------
 typedef struct DndcContext {
     // The actual storage for all the nodes.
     Marray(Node) nodes;

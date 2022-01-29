@@ -161,6 +161,29 @@ type CtxType = {
     // --------
     kebab(s:string): string;
 
+    // html_escape
+    // -----
+    // Escapes the special characters for html. This is needed
+    // for procedurally generating raw nodes as they are not
+    // escaped. Regular nodes are escaped as part of the html
+    // generation process.
+    //
+    // Arguments:
+    // ----------
+    //   s: The string to escape
+    //
+    // Returns:
+    // --------
+    // The escaped version of s.
+    //
+    // Example:
+    // --------
+    //   let escaped = ctx.html_escape('<script>alert("hello")</script>');
+    //   let raw = ctx.root.make_child(NodeType.RAW);
+    //   raw.add_child(escaped);
+    // --------
+    html_escape(s:string): string;
+
     //
     // set_data
     // --------

@@ -168,7 +168,7 @@ parse_set_err(DndcContext* ctx, NullUnspec(const char*) errchar, LongString msg)
 
 static
 void
-parse_set_err_q(DndcContext* ctx, NullUnspec(const char*) errchar, StringView msg, StringView quoted){
+parse_set_err_q(DndcContext* ctx, const char* errchar, StringView msg, StringView quoted){
     int col = (int)(errchar - ctx->linestart);
     ctx->error.filename = ctx->filename;
     ctx->error.line = ctx->lineno;

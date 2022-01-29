@@ -1,4 +1,8 @@
 JS Api Documentation::title
+::js
+  if(Args && Array.isArray(Args) && Args.length > 1){
+    ctx.select_nodes({type:NodeType.TITLE})[0].header = Args[1];
+  }
 ::raw @doc
 ::md @nav
 ::js
@@ -228,10 +232,10 @@ JS Api Documentation::title
         case 'enum':
         case 'field':
         // case 'function':
-          result += `<span class="${t}">${s}</span>`;
+          result += `<span class="${t}">${ctx.html_escape(s)}</span>`;
           break;
         default:
-          result += s;
+          result += ctx.html_escape(s);
           break;
       }
     }
@@ -257,10 +261,10 @@ JS Api Documentation::title
       case 'type':
       case 'function':
       case 'field':
-        result += `<span class="${t}">${s}</span>`;
+        result += `<span class="${t}">${ctx.html_escape(s)}</span>`;
         break;
       default:
-        result += s;
+        result += ctx.html_escape(s);
         break;
       }
     }
@@ -290,29 +294,38 @@ JS Api Documentation::title
           id = ctx.kebab(remainder);
         }
         else {
+          if(hierarchy.length)
           hierarchy[hierarchy.length-1][1].push(remainder);
           id = ctx.kebab(current_parent+'-'+remainder);
         }
-        remainder = `<span class="h" id="${id}"><b>${remainder}</b></span>`;
+        remainder = `<span class="h" id="${id}"><b>${ctx.html_escape(remainder)}</b></span>`;
       }
       else
-        remainder = `<span class="h"><b>${remainder}</b></span>`;
+        remainder = `<span class="h"><b>${ctx.html_escape(remainder)}</b></span>`;
     }
     else if(remainder.match(/\w+:/)){
       let pieces = remainder.split(/(\w+:)/);
-      remainder = pieces[0] + `<span class="param"><b>${pieces[1]}</b></span>` + pieces[2];
+      remainder = pieces[0] + `<span class="param"><b>${ctx.html_escape(pieces[1])}</b></span>` + ctx.html_escape(pieces[2]);
+    }
+    else {
+      remainder = ctx.html_escape(remainder);
     }
     let result = front + remainder;
+    // look for backtics
+    result = result.replace(/`(.*?)`/g, function(match, p1){
+      return `<a href="#${ctx.kebab(p1)}">${p1}</a>`;
+    });
+    //`
     return `<span class="comment">${result}</span>`
   }
   let doc = ctx.select_nodes({attributes:['doc']})[0];
-  let text = FileSystem.load_file('dndc_js_api.d.ts');
+  let text = FileSystem.load_file(Args?Args[0]:'dndc_js_api.d.ts');
   let lines = text.split('\n');
   doc.add_child('<pre>');
   let commentstate = null;
   let nav = ctx.select_nodes({attributes:['nav']})[0];
   for(let line of lines){
-    if(line.includes('//')){
+    if(line.match(/^\s*\/\//)){
       if(commentstate === null)
         commentstate = {};
       doc.add_child(process_comment(line, commentstate));
@@ -391,13 +404,13 @@ JS Api Documentation::title
     color: #74AB04;
   }
   .function {
-    color: #5AC1E5;
+    color: #FAC185;
   }
   .let {
-    color: #5AC1E5;
+    color: #5AB1FF;
   }
   .keyword {
-    color: #5AC1E5;
+    color: #5AB1FF;
   }
   .builtin {
     color: #87FFAF;

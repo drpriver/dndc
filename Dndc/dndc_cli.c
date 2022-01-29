@@ -643,8 +643,8 @@ dndc_syntax_func(void* _Nullable data, int type, int line, int col, const char* 
     const char* italic  = "\033[3m";
     const char* brightgreen = "\033[38;5;121m";
     switch((enum DndcSyntax)type){
-        // case DNDC_SYNTAX_NONE:
-            // break;
+        case DNDC_SYNTAX_NONE:
+            break;
         case DNDC_SYNTAX_DOUBLE_COLON:
             fputs(gray, stdout);
             break;
