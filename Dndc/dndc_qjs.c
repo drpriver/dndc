@@ -140,6 +140,7 @@ JSMETHOD(js_dndc_context_make_string);
 JSMETHOD(js_dndc_context_make_node);
 JSMETHOD(js_dndc_context_add_dependency);
 JSMETHOD(js_dndc_context_kebab);
+JSMETHOD(js_dndc_context_html_escape);
 JSMETHOD(js_dndc_context_set_data);
 JSMETHOD(js_dndc_context_select_nodes);
 JSMETHOD(js_dndc_context_to_string);
@@ -159,6 +160,7 @@ JSCFunctionListEntry JS_DNDC_CONTEXT_FUNCS[] = {
     JS_CFUNC_DEF("make_node", 2, js_dndc_context_make_node),
     JS_CFUNC_DEF("add_dependency", 1, js_dndc_context_add_dependency),
     JS_CFUNC_DEF("kebab", 1, js_dndc_context_kebab),
+    JS_CFUNC_DEF("html_escape", 1, js_dndc_context_html_escape),
     JS_CFUNC_DEF("set_data", 2, js_dndc_context_set_data),
     JS_CFUNC_DEF("select_nodes", 1, js_dndc_context_select_nodes),
     JS_CFUNC_DEF("toString", 0, js_dndc_context_to_string),
@@ -1507,7 +1509,7 @@ JSMETHOD(js_dndc_node_has_class){
     if(!msg.text)
         return JS_EXCEPTION;
     bool has_it = node_has_class(node, msg);
-    Allocator_free(ctx->temp_allocator, msg.text, msg.length);
+    Allocator_free(ctx->temp_allocator, msg.text, msg.length+1);
     return has_it? JS_TRUE : JS_FALSE;
 }
 JSMETHOD(js_dndc_node_clone){
@@ -1699,7 +1701,25 @@ JSMETHOD(js_dndc_context_kebab){
     StringView keb = msb_borrow_sv(&msb);
     QJSValue result = JS_NewStringLen(jsctx, keb.text, keb.length);
     msb_destroy(&msb);
-    Allocator_free(ctx->temp_allocator, sv.text, sv.length);
+    Allocator_free(ctx->temp_allocator, sv.text, sv.length+1);
+    return result;
+}
+
+JSMETHOD(js_dndc_context_html_escape){
+    DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
+    if(!ctx)
+        return JS_EXCEPTION;
+    if(argc != 1)
+        return JS_ThrowTypeError(jsctx, "Need 1 string argument to html_escape");
+    StringView sv = jsstring_to_stringview(jsctx, argv[0], ctx->temp_allocator);
+    if(!sv.text)
+        return JS_EXCEPTION;
+    MStringBuilder msb = {.allocator = ctx->temp_allocator};
+    msb_write_tag_escaped_str(&msb, sv.text, sv.length);
+    StringView esc = msb_borrow_sv(&msb);
+    QJSValue result = JS_NewStringLen(jsctx, esc.text, esc.length);
+    msb_destroy(&msb);
+    Allocator_free(ctx->temp_allocator, sv.text, sv.length+1);
     return result;
 }
 

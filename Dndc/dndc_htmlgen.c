@@ -341,42 +341,6 @@ build_nav_block_children(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb
 }
 
 static inline
-void
-write_tag_escaped_str(MStringBuilder* sb, NullUnspec(const char*)text, size_t length){
-    for(size_t i = 0; i < length; i++){
-        char c = text[i];
-        switch(c){
-            case '&':
-                msb_write_literal(sb, "&amp;");
-                break;
-            case '<':
-                msb_write_literal(sb, "&lt;");
-                break;
-            case '>':
-                msb_write_literal(sb, "&gt;");
-                break;
-            case '\r':
-            case '\f':
-                msb_write_char(sb, ' ');
-                break;
-            // Don't print control characters.
-            case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7: case 8:
-            case 10: case 11:
-            // This would've been so much nicer!
-            // case 14 ... 31:
-            case 14: case 15: case 16: case 17: case 18: case 19: case 20: 
-            case 21: case 22: case 23: case 24: case 25: case 26: case 27: 
-            case 28: case 29: case 30: case 31:
-
-                break;
-            default:
-                msb_write_char(sb, c);
-                break;
-        }
-    }
-}
-
-static inline
 int
 write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const Node* node){
     for(size_t i = 0; i < length; i++){
@@ -1066,12 +1030,14 @@ RENDERFUNC(RAW){
     Node* node = get_node(ctx, handle);
     // Don't let people smuggle <script> tags in!
     // Changes the semantics a bit, but oh well.
+    //
+    // FIXME: Why not just ban raw nodes for untrusted input???
     if(unlikely(ctx->flags & DNDC_INPUT_IS_UNTRUSTED)){
         NODE_CHILDREN_FOR_EACH(it, node){
             Node* child = get_node(ctx, *it);
             if(unlikely(child->type != NODE_STRING))
                 node_print_warning(ctx, child, SV("Raw node with a non-string child"));
-            write_tag_escaped_str(sb, child->header.text, child->header.length);
+            msb_write_tag_escaped_str(sb, child->header.text, child->header.length);
             msb_write_char(sb, '\n');
         }
         return 0;
@@ -1102,7 +1068,7 @@ RENDERFUNC(PRE){
         Node* child = get_node(ctx, *it);
         if(unlikely(child->type != NODE_STRING))
             node_print_warning(ctx, child, SV("pre node with a non-string child"));
-        write_tag_escaped_str(sb, child->header.text, child->header.length);
+        msb_write_tag_escaped_str(sb, child->header.text, child->header.length);
         msb_write_char(sb, '\n');
     }
     msb_write_literal(sb, "</pre>\n</div>\n");

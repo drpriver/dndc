@@ -287,6 +287,45 @@ msb_append_path(MStringBuilder* sb, const char* restrict path, size_t length){
     sb->cursor += length;
 }
 
+//
+// Escapes the special characters for html
+// TODO: This could be sped up with SIMD.
+static inline
+void
+msb_write_tag_escaped_str(MStringBuilder* sb, const char* text, size_t length){
+    for(size_t i = 0; i < length; i++){
+        char c = text[i];
+        switch(c){
+            case '&':
+                msb_write_literal(sb, "&amp;");
+                break;
+            case '<':
+                msb_write_literal(sb, "&lt;");
+                break;
+            case '>':
+                msb_write_literal(sb, "&gt;");
+                break;
+            case '\r':
+            case '\f':
+                msb_write_char(sb, ' ');
+                break;
+            // Don't print control characters.
+            case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7: case 8:
+            case 10: case 11:
+            // This would've been so much nicer!
+            // case 14 ... 31:
+            case 14: case 15: case 16: case 17: case 18: case 19: case 20:
+            case 21: case 22: case 23: case 24: case 25: case 26: case 27:
+            case 28: case 29: case 30: case 31:
+
+                break;
+            default:
+                msb_write_char(sb, c);
+                break;
+        }
+    }
+}
+
 #ifdef __clang__
 #pragma clang assume_nonnull end
 #endif
