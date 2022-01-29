@@ -1032,18 +1032,9 @@ RENDERFUNC(JS){
 RENDERFUNC(RAW){
     Node* node = get_node(ctx, handle);
     // Don't let people smuggle <script> tags in!
-    // Changes the semantics a bit, but oh well.
-    //
-    // FIXME: Why not just ban raw nodes for untrusted input???
     if(unlikely(ctx->flags & DNDC_INPUT_IS_UNTRUSTED)){
-        NODE_CHILDREN_FOR_EACH(it, node){
-            Node* child = get_node(ctx, *it);
-            if(unlikely(child->type != NODE_STRING))
-                node_print_warning(ctx, child, SV("Raw node with a non-string child"));
-            msb_write_tag_escaped_str(sb, child->header.text, child->header.length);
-            msb_write_char(sb, '\n');
-        }
-        return 0;
+        node_set_err(ctx, node, LS("Raw nodes are not allowed for untrusted input"));
+        return PARSE_ERROR;
     }
     // ignoring the header for now. Idk what the semantics are supposed to be.
     NODE_CHILDREN_FOR_EACH(it, node){

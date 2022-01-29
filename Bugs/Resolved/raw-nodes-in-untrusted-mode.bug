@@ -1,0 +1,8 @@
+bug.py: v0.0.1
+created: 2022-01-28T15:10:50.789356
+resolved: 2022-01-29T03:37:13.161381
+bugmagic^^^^
+Summary::md.summary
+  Why do I allow raw nodes with untrusted input?
+Resolved Jan 29, 2022, 03:37AM::md.update
+  I ban them now. Maybe it was left over from not being able to set an error during render or something? idk.
