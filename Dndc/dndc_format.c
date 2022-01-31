@@ -225,6 +225,7 @@ format_header(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
     }
     if(node->flags & NODEFLAG_IMPORT) msb_write_literal(sb, " #import");
     if(node->flags & NODEFLAG_ID) {
+        // #uggh
         // This is super gross, I hate this.
         // FIXME: use handles in the formatter instead of raw nodes.
         NodeHandle handle = {._value = (uint32_t)(node - ctx->nodes.data)};

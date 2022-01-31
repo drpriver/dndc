@@ -59,12 +59,29 @@ expand_to_dnd(DndcContext*ctx, MStringBuilder* msb){
 
 static 
 void
-write_generic_header(Node* n, int indent, MStringBuilder*msb){
+write_generic_header(DndcContext* ctx, Node* n, int indent, MStringBuilder*msb){
     msb_write_nchar(msb, ' ', indent);
     if(n->header.length)
         msb_write_str(msb, n->header.text, n->header.length);
     const StringView* hd = &NODETYPE_TO_NODE_ALIASES[n->type];
     MSB_FORMAT(msb, "::", *hd);
+    if(n->flags & NODEFLAG_ID){
+        // #uggh
+        // This is super gross, I hate this.
+        // FIXME: use handles in the expaned instead of raw nodes.
+        NodeHandle handle = {._value = (uint32_t)(n - ctx->nodes.data)};
+        StringView id = node_get_id(ctx, handle);
+        MSB_FORMAT(msb, " #id(", id, ")");
+    }
+    if(n->flags & NODEFLAG_HIDE){
+        msb_write_literal(msb, " #hide");
+    }
+    if(n->flags & NODEFLAG_NOID){
+        msb_write_literal(msb, " #noid");
+    }
+    if(n->flags & NODEFLAG_NOINLINE){
+        msb_write_literal(msb, " #noinline");
+    }
     RARRAY_FOR_EACH(Attribute, at, n->attributes){
         MSB_FORMAT(msb, " @", at->key);
         if(at->value.length){
@@ -94,11 +111,11 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
             return result;
         case NODE_STYLESHEETS:
         case NODE_SCRIPTS:
-            write_generic_header(n, indent, msb);
+            write_generic_header(ctx, n, indent, msb);
             return expand_node_body(ctx, n, indent+2, msb, node_depth+1);
         case NODE_TITLE:
         case NODE_HEADING:
-            write_generic_header(n, indent, msb);
+            write_generic_header(ctx, n, indent, msb);
             if(node_children_count(n)){
                 node_set_err(ctx, n, LS("TITLE or HEADING has children"));
                 return PARSE_ERROR;
@@ -126,14 +143,14 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
         case NODE_IMGLINKS:
         case NODE_COMMENT:
         case NODE_QUOTE:
-            write_generic_header(n, indent, msb);
+            write_generic_header(ctx, n, indent, msb);
             return expand_node_body(ctx, n, indent+2, msb, node_depth+1);
         case NODE_DATA:
             node_set_err(ctx, n, LS("DATA_NODE unhandled"));
             return PARSE_ERROR;
         case NODE_HR:
         case NODE_NAV:
-            write_generic_header(n, indent, msb);
+            write_generic_header(ctx, n, indent, msb);
             if(node_children_count(n)){
                 node_set_err(ctx, n, LS("NAV or HR has children"));
                 return PARSE_ERROR;
