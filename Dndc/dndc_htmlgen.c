@@ -34,8 +34,14 @@
 
 // For the node depth argument, the generic render_node function handles the depth incrementing and error handling.
 
+#ifdef __GNUC__
+#define unused_param __attribute__((unused))
+#else
+#define unused_param
+#endif
+
 #define RENDERFUNCNAME(nt) render_##nt
-#define RENDERFUNC(nt) static warn_unused int RENDERFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, NodeHandle handle, int header_depth, int node_depth)
+#define RENDERFUNC(nt) static warn_unused int RENDERFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, NodeHandle handle, int header_depth, int unused_param node_depth)
 
 #define X(a, b) RENDERFUNC(a);
 NODETYPES(X)
