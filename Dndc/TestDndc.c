@@ -21,6 +21,7 @@ static TestFunc TestSpecialChars;
 static TestFunc TestImgAttributes;
 static TestFunc TestJs;
 static TestFunc TestFileCache;
+static TestFunc TestExpand;
 
 int main(int argc, char** argv){
     RegisterTest(TestDndc1);
@@ -39,6 +40,7 @@ int main(int argc, char** argv){
     RegisterTest(TestImgAttributes);
     RegisterTest(TestJs);
     RegisterTest(TestFileCache);
+    RegisterTest(TestExpand);
     int ret = test_main(argc, argv);
     return ret;
 }
@@ -655,8 +657,7 @@ TestFunction(TestSpecialChars){
     TESTEND();
 }
 
-
-int 
+int
 post_js_ast_func(void* user_data, DndcContext*ctx){
     struct TestStats* ts = user_data;
     struct TestStats TEST_stats = *ts;
@@ -726,4 +727,35 @@ TestFunction(TestFileCache){
     TESTEND();
 }
 
+TestFunction(TestExpand){
+    TESTBEGIN();
+    StringView input = SV(
+            "Hello::md #id(3)\n"
+            "  world\n"
+            "* It is good to see you\n"
+            "* This is a document\n"
+            "::js\n"
+            "  let div = ctx.root.make_child(NodeType.DIV)\n"
+            "  div.id = 'div';\n"
+            "::script #noinline\n"
+            "  somescript.js\n"
+            );
+    LongString expected = LS(
+            "Hello::md #id(3)\n"
+            "  world\n"
+            "\n"
+            "* It is good to see you\n"
+            "* This is a document\n"
+            "::script #noinline\n"
+            "  somescript.js\n"
+            "::div #id(div)\n"
+            );
+    LongString output;
+    uint64_t flags = DNDC_OUTPUT_EXPANDED_DND;
+    int e = run_the_dndc(flags, SV(""), input, SV(""), SV(""), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    TestAssertFalse(e);
+    TestExpectEquals2(LS_equals, expected, output);
+    dndc_free_string(output);
+    TESTEND();
+}
 
