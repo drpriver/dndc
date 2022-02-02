@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Dict, Tuple, List, NamedTuple
+from typing import Callable, Optional, Dict, Tuple, List, NamedTuple, Union
 from enum import IntEnum, IntFlag
 
 class FileCache:
@@ -66,6 +66,7 @@ def htmlgen(
     file_cache:Optional[FileCache]=None,
     flags:Flags=Flags.NONE,
     output_name:Optional[str] = None,
+    jsargs:Optional[Union[dict, list, str]] = None,
 ) -> Tuple[str, List[str]]:
     ...
 
@@ -75,6 +76,8 @@ def expand(
     error_reporter:Optional[ErrorReporter]=None,
     file_cache:Optional[FileCache]=None,
     flags:Flags=Flags.NONE,
+    output_name:Optional[str] = None,
+    jsargs:Optional[Union[dict, list, str]] = None
 ) -> str:
     ...
 

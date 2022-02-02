@@ -459,7 +459,7 @@ PyMethodDef pydndc_methods[] = {
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
         #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-        "expand(text:str, base_dir:str='.', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, output_name:str=None) -> str\n"
+        "expand(text:str, base_dir:str='.', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, output_name:str=None, jsargs=None) -> str\n"
         #else
         "expand(text, base_dir='.', error_reporter=None, file_cache=None, flags=0, output_name=None)\n"
         #endif
@@ -516,6 +516,9 @@ PyMethodDef pydndc_methods[] = {
         "\n"
         "output_name: str\n"
         "    The final name of the html file. This is used in js scripting.\n"
+        "\n"
+        "jsargs: dict or str\n"
+        "    A dict or json literal that will be exposed to js blocks as Args.\n"
         "\n"
         "Returns:\n"
         "--------\n"
