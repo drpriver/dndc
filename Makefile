@@ -35,11 +35,6 @@ $(EXAMPLEDIR)/Examples/%.html : Examples/%.dnd | $(DIRECTORIES)
 .PHONY: example-dnd
 example-dnd: $(addsuffix .html,$(basename $(addprefix $(EXAMPLEDIR)/,$(wildcard Examples/*/*/*.dnd Examples/*/*.dnd Examples/*.dnd))))
 
-.PHONY: foo
-foo:
-	echo $(dir /foo/bar/baz)
-	echo $(notdir /foo/bar/baz)
-
 # Assumes libclang is installed.
 tags: $(wildcard *.h *.c **/*.c **/*.h **/*.m) Scripts/tag_and_syntax.py compile_commands.json
 	$(PYTHON) -m Scripts.tag_and_syntax
