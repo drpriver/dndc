@@ -312,10 +312,11 @@ JS Api Documentation::title
     }
     let result = front + remainder;
     // look for backtics
-    result = result.replace(/`(.*?)`/g, function(match, p1){
-      return `<a href="#${ctx.kebab(p1)}">${p1}</a>`;
-    });
-    //`
+    if(!state.js_example){
+      result = result.replace(/`(.*?)`/g, function(match, p1){
+        return `<a href="#${ctx.kebab(p1)}">${p1}</a>`;
+      });
+    }
     return `<span class="comment">${result}</span>`
   }
   let doc = ctx.select_nodes({attributes:['doc']})[0];
