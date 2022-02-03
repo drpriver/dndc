@@ -22,6 +22,7 @@ static TestFunc TestImgAttributes;
 static TestFunc TestJs;
 static TestFunc TestFileCache;
 static TestFunc TestExpand;
+static TestFunc TestMd;
 
 int main(int argc, char** argv){
     RegisterTest(TestDndc1);
@@ -41,6 +42,7 @@ int main(int argc, char** argv){
     RegisterTest(TestJs);
     RegisterTest(TestFileCache);
     RegisterTest(TestExpand);
+    RegisterTest(TestMd);
     int ret = test_main(argc, argv);
     return ret;
 }
@@ -753,6 +755,52 @@ TestFunction(TestExpand){
     LongString output;
     uint64_t flags = DNDC_OUTPUT_EXPANDED_DND;
     int e = run_the_dndc(flags, SV(""), input, SV(""), SV(""), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    TestAssertFalse(e);
+    TestExpectEquals2(LS_equals, expected, output);
+    dndc_free_string(output);
+    TESTEND();
+}
+
+TestFunction(TestMd){
+    TESTBEGIN();
+    StringView input = SV(
+            "Go to campaign:\n"
+            "* Hello\n"
+            "* World\n"
+            );
+    LongString expected = LS(
+            "<p>\n"
+            "Go to campaign:\n"
+            "</p>\n"
+            "<ul>\n"
+            "<li>\n"
+            "Hello\n"
+            "</li>\n"
+            "<li>\n"
+            "World\n"
+            "</li>\n"
+            "</ul>\n"
+            );
+    LongString output;
+    uint64_t flags = DNDC_FRAGMENT_ONLY;
+    int e = run_the_dndc(flags, SV(""), input, SV(""), SV(""), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    TestAssertFalse(e);
+    TestExpectEquals2(LS_equals, expected, output);
+    dndc_free_string(output);
+
+    input = SV(
+            "::js\n"
+            "  let s = 'Go to campaign:\\n* Hello\\n* World\\n';\n"
+            "  node.parent.parse(s)\n"
+            // This was for debugging the order of the nodes
+            // "  function ltree(n, pref){\n"
+            // "       console.log(pref, n); \n"
+            // "       for(let child of n.children) \n"
+            // "           ltree(child, pref+ '  '); \n"
+            // "  }\n"
+            // " ltree(node.parent);\n"
+            );
+    e = run_the_dndc(flags, SV(""), input, SV(""), SV(""), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestAssertFalse(e);
     TestExpectEquals2(LS_equals, expected, output);
     dndc_free_string(output);

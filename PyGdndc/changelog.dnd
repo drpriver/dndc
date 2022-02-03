@@ -4,6 +4,8 @@ Version 0.10.3::md
     is deprecated.
   * Added a new function `html_escape` to the js api for when you need to
     procedurally build raw nodes with content that could contain tags.
+  * Fixed a bug for the order of nodes with a smaller number of children,
+    one of which is a js block.
 Version 0.10.2::md
   * Python API is nicer now.
   * Fixed an issue where #directives weren't being set by the formatter.

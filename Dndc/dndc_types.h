@@ -219,24 +219,20 @@ node_remove_child(Node* node, size_t i, const Allocator a){
     }
     else {
         node->children.count--;
+        // early out for last one.
         if(i == node->children.count)
             return;
-        node->inline_children[i]= node->inline_children[node->children.count];
+        // Need to preserve order of children.
+        size_t n_moved = node->children.count - i;
+        size_t size_moved = sizeof(node->inline_children[0]) * n_moved;
+        NodeHandle* hole = &node->inline_children[i];
+        memmove(hole, hole+1, size_moved);
     }
 }
 
 
-// NODE_CHILDREN_FOR_EACH
-// ----------------------
-#define NODE_CHILDREN_FOR_EACH(iter, n) \
-    for(\
-        NodeHandle *iter = node_children(n), \
-        *iter##end__=node_children(n)+node_children_count(n);\
-        iter != iter##end__;\
-        ++iter)
+#define NODE_CHILDREN_FOR_EACH(iter, n) for(NodeHandle *iter = node_children(n), *iter##end__=node_children(n)+node_children_count(n);iter != iter##end__;++iter)
 
-// DndcContext
-// -----------
 typedef struct DndcContext {
     // The actual storage for all the nodes.
     Marray(Node) nodes;

@@ -1127,10 +1127,10 @@ PARSEFUNC(parse_bullet_node){
 }
 
 PARSEFUNC(parse_md_node){
-    // This was originally for debugging, but `dndc_parse` will parse set the
+    // This was originally for debugging, but `dndc_parse` will set the
     // parse mode to NODE_MD, which means we get to this assertion, which is no
     // longer useful (will go off if parent is a DIV or whatever.  Now, it is
-    // possible that I want a whitelist of what paret nodes are allowed, but
+    // possible that I want a whitelist of what parent nodes are allowed, but
     // idk if that is worth limiting the power of scripts and we can just
     // accept sloppy trees when we output anyway. I think we properly error
     // instead of asserting in htmlgen.
