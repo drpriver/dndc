@@ -26,7 +26,7 @@ JS Api Documentation::title
     }
     const lets = " var const let ";
     const builtins = " ctx JSON FileSystem node NodeType "
-    let types = " Array string boolean number Map any unknown ";
+    let types = " Array string boolean number Map any unknown void ";
     if(is_typescript && extra_types)
       types += extra_types;
     function parse_block_comment(){
@@ -355,8 +355,9 @@ JS Api Documentation::title
     left: 0;
     top: 0;
     overflow-y: auto;
-    width: auto;
+    width: max-content;
     height: 100%;
+    font-size: 14px;
   }
   a {
     color: #D2D39A;
@@ -372,7 +373,7 @@ JS Api Documentation::title
   }
   pre {
     font-family: ui-monospace, "Cascadia Mono", Consolas, mono;
-    font-size: 16px;
+    font-size: 14px;
   }
   body > div {
     margin: auto;
@@ -396,7 +397,8 @@ JS Api Documentation::title
     color: #D2D39A;
   }
   .string {
-    color: #FE4D4D;
+    color: #ca62d4;
+    /*color: #FE4D4D;*/
   }
   .param {
     color: #73AA04;

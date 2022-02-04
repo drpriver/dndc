@@ -123,193 +123,6 @@ extern "C" {
   #define DNDC_LONGSTRING_DEFINED 1
 
 #endif
-
-//
-// DndcErrorMessageType
-// --------------------
-// The type of the error message.
-//
-enum DndcErrorMessageType {
-    //
-    // DNDC_ERROR_MESSAGE
-    // ------------------
-    // An error that is not possible to recover from.
-    DNDC_ERROR_MESSAGE = 0,
-    //
-    // DNDC_WARNING_MESSAGE
-    // ------------------
-    // A warning that valid output can still be produced for.
-    DNDC_WARNING_MESSAGE = 1,
-    //
-    // DNDC_NODELESS_MESSAGE
-    // ---------------------
-    // The error did not originate from any specific node. Rather, it ocurred
-    // for another reason.
-    //
-    // Filename will be "", line, col, etc will be 0, etc.
-    DNDC_NODELESS_MESSAGE = 2,
-    //
-    // DNDC_STATISTIC_MESSAGE
-    // ----------------------
-    // The message is just a report of some statistic. It does not originate
-    // from the source text.
-    //
-    // Filename will be "", line, col, etc will be 0, etc.
-    DNDC_STATISTIC_MESSAGE = 3,
-    //
-    // DNDC_DEBUG_MESSAGE
-    // ------------------
-    // Message is a debugging message, as requested by the user.
-    // May or may not have a valid filename, line, col.
-    DNDC_DEBUG_MESSAGE = 4,
-};
-
-//
-// DndcErrorFunc
-// -------------
-//
-// A function type for reporting errors. For use with one of the dndc entry
-// point functions, as declared in this file.
-//
-// Arguments:
-// ----------
-// error_user_data:
-//    A pointer to user-defined data. The pointer will be the same one
-//    provided to one of the dndc entry point functions.
-//
-// type:
-//    The type of the message. See `DndcErrorMessageType`.
-//
-// filename:
-//    Which file the error occurred in. This pointer is NOT nul-terminated.
-//
-// filename_len:
-//    The length of the character array pointed to by file.
-//
-// line:
-//    Which line of the file the error originated from. This is 0-based.
-//    Newlines increment the line count.
-//
-// col:
-//    The column the error occurred in, on the line specified by line.
-//    This is 0-based and is a byte-offset from the beginning of the line.
-//
-// message:
-//    The error message. This string is nul-terminated, but a length is
-//    provided for convenience.
-//
-// message_len:
-//    The length of the error message (excluding the terminating nul character)
-//
-typedef void DndcErrorFunc(DNDC_NULLABLE(void*) error_user_data, int type,
-        const char* filename, int filename_len, int line,
-        int col, const char* message, int message_len);
-
-//
-// dndc_stderr_error_func
-// ----------------------
-//
-// An error reporting function that prints to stderr. For use with the
-// `dndc_compile_dnd_file`.
-//
-DNDC_API void dndc_stderr_error_func(DNDC_NULLABLE(void*) error_user_data,
-        int type, const char* filename, int filename_len,
-        int line, int col, const char* message, int message_len);
-
-//
-// DndcDependencyFunc
-// ------------------
-//
-// A function type for reporting dependencies. For use with
-// `dndc_compile_dnd_file`.
-//
-// Arguments:
-// ----------
-// dependency_user_data:
-//    A pointer to user-defined data. The pointer will be the same one provided
-//    to `dndc_compile_dnd_file`.
-//
-// dependency_paths_count:
-//    The length of the array dependency_paths points to.
-//
-// dependency_paths:
-//    A pointer to an array of string views of the paths to the files that the
-//    file depends on. Note these are string views and so not guaranteed to be
-//    nul-terminated. Files that were loaded in the usual way will have the
-//    base dir prepended, but javascript blocks can introduce arbitrary strings
-//    as dependencies, which may or may not be absolute paths, or valid paths
-//    at all.
-//
-// Returns:
-// --------
-// 0 on success and non-zero on failure. The value you return will be returned
-// from dndc_compile_dnd_file if non-zero.
-//
-typedef int DndcDependencyFunc(DNDC_NULLABLE(void*) dependency_user_data,
-        size_t dependency_paths_count,
-        DndcStringView* dependency_paths);
-
-//
-// dndc_format
-// -----------
-//
-// Turns the given .dnd string into another .dnd string, but formatted such
-// that lines do not exceed 79 characters if it is possible to semantically do
-// so, lines are right-stripped, redundant blank lines are merged, etc.  The
-// resulting string is stored in output.
-//
-// This function does not execute any javascript blocks and does not read any
-// files.
-//
-// The output is allocated by malloc. You take ownership of the result.  If on
-// Windows and if loaded from a dll, you should use `dndc_free_string`.
-//
-// Arguments:
-// ----------
-// source_text:
-//    The actual source .dnd string. This string does need to be
-//    nul-terminated. No references to this are retained afterwards.
-//
-// output:
-//    A pointer to a string to store the formatted string into. The output is
-//    allocated by malloc. You take ownership of the result. Must be non-null.
-//    If there is an error, the output is not written to.
-//
-// error_func:
-//    A function for reporting errors. See `DndcErrorFunc` above. If NULL,
-//    errors will not be printed. Use `dndc_stderr_error_func` for a function
-//    that just prints to stderr.
-//
-// error_user_data:
-//    A pointer that will be passed to the error_func. For
-//    `dndc_stderr_error_func`, this should be NULL. For a function you've
-//    defined, pass an appropriate pointer!
-//
-// Returns:
-// --------
-// Returns 0 on success, a non-zero error code otherwise.
-// If non-zero, output will not be written to.
-//
-DNDC_API
-int
-dndc_format(DndcStringView source_text,
-        DndcLongString* output,
-        DNDC_NULLABLE(DndcErrorFunc*) error_func,
-        DNDC_NULLABLE(void*) error_user_data);
-
-//
-// dndc_free_string
-// ----------------
-//
-// On windows, if you load a dll, it will have its own crt and thus its own
-// heap. This function is provided so you can free the returned string with the
-// right heap. On Linux or MacOS this is unnecessary as dynamic linking works
-// differently.
-//
-DNDC_API
-void
-dndc_free_string(DndcLongString);
-
 //
 // Syntax Analysis
 // ---------------
@@ -471,6 +284,136 @@ dndc_free_string(DndcLongString);
   dndc_analyze_syntax_utf16(DndcStringViewUtf16 source_text,
           DndcSyntaxFuncUtf16* syntax_func,
           DNDC_NULLABLE(void*) syntax_data);
+
+
+//
+// Error Reporting
+// ---------------
+
+  //
+  // DndcErrorMessageType
+  // --------------------
+  // The type of the error message.
+  //
+  enum DndcErrorMessageType {
+      //
+      // DNDC_ERROR_MESSAGE
+      // ------------------
+      // An error that is not possible to recover from.
+      DNDC_ERROR_MESSAGE = 0,
+      //
+      // DNDC_WARNING_MESSAGE
+      // ------------------
+      // A warning that valid output can still be produced for.
+      DNDC_WARNING_MESSAGE = 1,
+      //
+      // DNDC_NODELESS_MESSAGE
+      // ---------------------
+      // The error did not originate from any specific node. Rather, it ocurred
+      // for another reason.
+      //
+      // Filename will be "", line, col, etc will be 0, etc.
+      DNDC_NODELESS_MESSAGE = 2,
+      //
+      // DNDC_STATISTIC_MESSAGE
+      // ----------------------
+      // The message is just a report of some statistic. It does not originate
+      // from the source text.
+      //
+      // Filename will be "", line, col, etc will be 0, etc.
+      DNDC_STATISTIC_MESSAGE = 3,
+      //
+      // DNDC_DEBUG_MESSAGE
+      // ------------------
+      // Message is a debugging message, as requested by the user.
+      // May or may not have a valid filename, line, col.
+      DNDC_DEBUG_MESSAGE = 4,
+  };
+
+  //
+  // DndcErrorFunc
+  // -------------
+  //
+  // A function type for reporting errors. For use with one of the dndc entry
+  // point functions, as declared in this file.
+  //
+  // Arguments:
+  // ----------
+  // error_user_data:
+  //    A pointer to user-defined data. The pointer will be the same one
+  //    provided to one of the dndc entry point functions.
+  //
+  // type:
+  //    The type of the message. See `DndcErrorMessageType`.
+  //
+  // filename:
+  //    Which file the error occurred in. This pointer is NOT nul-terminated.
+  //
+  // filename_len:
+  //    The length of the character array pointed to by file.
+  //
+  // line:
+  //    Which line of the file the error originated from. This is 0-based.
+  //    Newlines increment the line count.
+  //
+  // col:
+  //    The column the error occurred in, on the line specified by line.
+  //    This is 0-based and is a byte-offset from the beginning of the line.
+  //
+  // message:
+  //    The error message. This string is nul-terminated, but a length is
+  //    provided for convenience.
+  //
+  // message_len:
+  //    The length of the error message (excluding the terminating nul character)
+  //
+  typedef void DndcErrorFunc(DNDC_NULLABLE(void*) error_user_data, int type,
+          const char* filename, int filename_len, int line,
+          int col, const char* message, int message_len);
+
+  //
+  // dndc_stderr_error_func
+  // ----------------------
+  //
+  // An error reporting function that prints to stderr. For use with the
+  // `dndc_compile_dnd_file`.
+  //
+  DNDC_API void dndc_stderr_error_func(DNDC_NULLABLE(void*) error_user_data,
+          int type, const char* filename, int filename_len,
+          int line, int col, const char* message, int message_len);
+
+//
+// DndcDependencyFunc
+// ------------------
+//
+// A function type for reporting dependencies. For use with
+// `dndc_compile_dnd_file`.
+//
+// Arguments:
+// ----------
+// dependency_user_data:
+//    A pointer to user-defined data. The pointer will be the same one provided
+//    to `dndc_compile_dnd_file`.
+//
+// dependency_paths_count:
+//    The length of the array dependency_paths points to.
+//
+// dependency_paths:
+//    A pointer to an array of string views of the paths to the files that the
+//    file depends on. Note these are string views and so not guaranteed to be
+//    nul-terminated. Files that were loaded in the usual way will have the
+//    base dir prepended, but javascript blocks can introduce arbitrary strings
+//    as dependencies, which may or may not be absolute paths, or valid paths
+//    at all.
+//
+// Returns:
+// --------
+// 0 on success and non-zero on failure. The value you return will be returned
+// from dndc_compile_dnd_file if non-zero.
+//
+typedef int DndcDependencyFunc(DNDC_NULLABLE(void*) dependency_user_data,
+        size_t dependency_paths_count,
+        DndcStringView* dependency_paths);
 
 //
 // DndcFileCache
@@ -634,125 +577,25 @@ typedef struct DndcFileCache DndcFileCache;
   int
   dndc_filecache_store_text(DndcFileCache* cache, DndcStringView path, DndcStringView data, int overwrite);
 
+// DndcWorkerThread
+// ----------------
 typedef struct DndcWorkerThread DndcWorkerThread;
 
-DNDC_API
-DndcWorkerThread*
-dndc_worker_thread_create(void);
+  // 
+  // dndc_worker_thread_create
+  // -------------------------
+  // Creates a new worker thread that can be passed to `dndc_compile_dnd_file`, 
+  // to avoid creating an excessive number of threads on repeated invocation.
+  DNDC_API
+  DndcWorkerThread*
+  dndc_worker_thread_create(void);
 
-DNDC_API
-void
-dndc_worker_thread_destroy(DndcWorkerThread*);
-
-//
-// dndc_compile_dnd_file
-// ---------------------
-//
-// Low-level function to compile a dnd source file. The behavior of this
-// function is complex and is greatly controlled by the flags argument. See
-// `DndcFlags` for details on the exact meaning of the flags.
-//
-// In its default mode, this function will parse the given source text, resolve
-// imports, execute javascript blocks, spawn a thread to base64 referenced
-// images, load referenced files such as js files and css files, and render the
-// result into an html file at the given location.
-//
-// Args:
-// ----
-//
-// flags:
-//    A bitwise-or combination of `DndcFlags`.
-//
-// base_directory:
-//    May be a zero-length string. For relative filepaths referenced in the
-//    document, what those paths are relative to. Defaults to the current
-//    directory for a zero length string view.
-//
-//    Specifically, this string plus a directory separator will be prepended to
-//    all paths for the purposes of opening those paths.
-//
-// source_text:
-//    The string to be parsed and compiled.
-//
-// source_path:
-//    The filepath that the source path was loaded from. This is mostly used
-//    for reporting errors.
-//
-// outpath:
-//    Several features depend on knowing what the ultimate name of the file
-//    will be. APIs such as ctx.outpath etc. in js blocks for example. Note
-//    that we do not actually write to this path.
-//
-//    This path is *NOT* adjusted by the base_directory argument.
-//
-// outstring:
-//    A pointer to a string structure to write the data to. The text will be
-//    allocated via malloc. You can call `dndc_free_string` on the text if you
-//    are on a platform where each dynamic library has its own heap (aka
-//    Windows).
-//
-// base64filecache:
-//    A pointer to a filecache (created with dndc_create_filecache) that is
-//    used to cache files across invocations of this function. This may be
-//    null, in which case no caching is done.
-//
-//    This cache is used to cache the results of loading and base64-ing binary
-//    files.
-//
-// textfilecache:
-//    A pointer to a filecache (created with dndc_create_filecache) that is
-//    used to cache files across invocations of this function. This may be
-//    null, in which case no caching is done.
-//
-//    This cache is used to cache the results of loading text files.
-//
-// error_func:
-//    A function for reporting errors. See `DndcErrorFunc` above. If NULL,
-//    errors will not be printed. Use `dndc_stderr_error_func` for a function
-//    that just prints to stderr.
-//
-// error_user_data:
-//    A pointer that will be passed to the error_func. For
-//    `dndc_stderr_error_func`, this should be NULL. For a function you've
-//    defined, pass an appropriate pointer!
-//
-// dependency_func:
-//    A function for reporting the dependencies of the generated file. See
-//    `DndcDependencyFunc` above.
-//
-// dependency_user_data:
-//   A pointer that will be passed to the dependency_func.
-//
-// worker_thread:
-//   A thread created with `dndc_worker_create`.
-//
-// jsargs:
-//   A json string literal that will be available to JS blocks as Args. May be
-//   the empty string. Should be an object literal or an array literal. An
-//   empty string will be treated as "null".
-//
-// Returns:
-// --------
-// Returns 0 on success, a non-zero error code otherwise.
-//
-DNDC_API
-int
-dndc_compile_dnd_file(
-    unsigned long long flags,
-    DndcStringView base_directory,
-    DndcStringView source_text,
-    DndcStringView source_path,
-    DndcStringView outpath,
-    DndcLongString* outstring,
-    DNDC_NULLABLE(DndcFileCache*) base64cache,
-    DNDC_NULLABLE(DndcFileCache*) textcache,
-    DNDC_NULLABLE(DndcErrorFunc*) error_func,
-    DNDC_NULLABLE(void*) error_user_data,
-    DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
-    DNDC_NULLABLE(void*) dependency_user_data,
-    DNDC_NULLABLE(DndcWorkerThread*) worker_thread,
-    DndcLongString jsargs
-);
+  //
+  // dndc_worker_thread_destroy
+  // --------------------------
+  DNDC_API
+  void
+  dndc_worker_thread_destroy(DndcWorkerThread*);
 
 //
 // DndcFlags
@@ -877,6 +720,186 @@ enum DndcFlags {
     // ------------
     // Flags currently uses 19 bits, 2 of those are unused.
 };
+
+//
+// DndcCompilation
+// ---------------
+
+
+  //
+  // dndc_compile_dnd_file
+  // ---------------------
+  //
+  // Low-level function to compile a dnd source file. The behavior of this
+  // function is complex and is greatly controlled by the flags argument. See
+  // `DndcFlags` for details on the exact meaning of the flags.
+  //
+  // In its default mode, this function will parse the given source text, resolve
+  // imports, execute javascript blocks, spawn a thread to base64 referenced
+  // images, load referenced files such as js files and css files, and render the
+  // result into an html file at the given location.
+  //
+  // Args:
+  // ----
+  //
+  // flags:
+  //    A bitwise-or combination of `DndcFlags`.
+  //
+  // base_directory:
+  //    May be a zero-length string. For relative filepaths referenced in the
+  //    document, what those paths are relative to. Defaults to the current
+  //    directory for a zero length string view.
+  //
+  //    Specifically, this string plus a directory separator will be prepended to
+  //    all paths for the purposes of opening those paths.
+  //
+  // source_text:
+  //    The string to be parsed and compiled.
+  //
+  // source_path:
+  //    The filepath that the source path was loaded from. This is mostly used
+  //    for reporting errors.
+  //
+  // outpath:
+  //    Several features depend on knowing what the ultimate name of the file
+  //    will be. APIs such as ctx.outpath etc. in js blocks for example. Note
+  //    that we do not actually write to this path.
+  //
+  //    This path is *NOT* adjusted by the base_directory argument.
+  //
+  // outstring:
+  //    A pointer to a string structure to write the data to. The text will be
+  //    allocated via malloc. You can call `dndc_free_string` on the text if you
+  //    are on a platform where each dynamic library has its own heap (aka
+  //    Windows).
+  //
+  // base64filecache:
+  //    A pointer to a filecache (created with dndc_create_filecache) that is
+  //    used to cache files across invocations of this function. This may be
+  //    null, in which case no caching is done.
+  //
+  //    This cache is used to cache the results of loading and base64-ing binary
+  //    files.
+  //
+  // textfilecache:
+  //    A pointer to a filecache (created with dndc_create_filecache) that is
+  //    used to cache files across invocations of this function. This may be
+  //    null, in which case no caching is done.
+  //
+  //    This cache is used to cache the results of loading text files.
+  //
+  // error_func:
+  //    A function for reporting errors. See `DndcErrorFunc` above. If NULL,
+  //    errors will not be printed. Use `dndc_stderr_error_func` for a function
+  //    that just prints to stderr.
+  //
+  // error_user_data:
+  //    A pointer that will be passed to the error_func. For
+  //    `dndc_stderr_error_func`, this should be NULL. For a function you've
+  //    defined, pass an appropriate pointer!
+  //
+  // dependency_func:
+  //    A function for reporting the dependencies of the generated file. See
+  //    `DndcDependencyFunc` above.
+  //
+  // dependency_user_data:
+  //   A pointer that will be passed to the dependency_func.
+  //
+  // worker_thread:
+  //   A thread created with `dndc_worker_create`.
+  //
+  // jsargs:
+  //   A json string literal that will be available to JS blocks as Args. May be
+  //   the empty string. Should be an object literal or an array literal. An
+  //   empty string will be treated as "null".
+  //
+  // Returns:
+  // --------
+  // Returns 0 on success, a non-zero error code otherwise.
+  //
+  DNDC_API
+  int
+  dndc_compile_dnd_file(
+      unsigned long long flags,
+      DndcStringView base_directory,
+      DndcStringView source_text,
+      DndcStringView source_path,
+      DndcStringView outpath,
+      DndcLongString* outstring,
+      DNDC_NULLABLE(DndcFileCache*) base64cache,
+      DNDC_NULLABLE(DndcFileCache*) textcache,
+      DNDC_NULLABLE(DndcErrorFunc*) error_func,
+      DNDC_NULLABLE(void*) error_user_data,
+      DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
+      DNDC_NULLABLE(void*) dependency_user_data,
+      DNDC_NULLABLE(DndcWorkerThread*) worker_thread,
+      DndcLongString jsargs
+  );
+
+
+  //
+  // dndc_format
+  // -----------
+  //
+  // Turns the given .dnd string into another .dnd string, but formatted such
+  // that lines do not exceed 79 characters if it is possible to semantically do
+  // so, lines are right-stripped, redundant blank lines are merged, etc.  The
+  // resulting string is stored in output.
+  //
+  // This function does not execute any javascript blocks and does not read any
+  // files.
+  //
+  // The output is allocated by malloc. You take ownership of the result.  If on
+  // Windows and if loaded from a dll, you should use `dndc_free_string`.
+  //
+  // Arguments:
+  // ----------
+  // source_text:
+  //    The actual source .dnd string. This string does need to be
+  //    nul-terminated. No references to this are retained afterwards.
+  //
+  // output:
+  //    A pointer to a string to store the formatted string into. The output is
+  //    allocated by malloc. You take ownership of the result. Must be non-null.
+  //    If there is an error, the output is not written to.
+  //
+  // error_func:
+  //    A function for reporting errors. See `DndcErrorFunc` above. If NULL,
+  //    errors will not be printed. Use `dndc_stderr_error_func` for a function
+  //    that just prints to stderr.
+  //
+  // error_user_data:
+  //    A pointer that will be passed to the error_func. For
+  //    `dndc_stderr_error_func`, this should be NULL. For a function you've
+  //    defined, pass an appropriate pointer!
+  //
+  // Returns:
+  // --------
+  // Returns 0 on success, a non-zero error code otherwise.
+  // If non-zero, output will not be written to.
+  //
+  DNDC_API
+  int
+  dndc_format(DndcStringView source_text,
+          DndcLongString* output,
+          DNDC_NULLABLE(DndcErrorFunc*) error_func,
+          DNDC_NULLABLE(void*) error_user_data);
+
+  //
+  // dndc_free_string
+  // ----------------
+  //
+  // On windows, if you load a dll, it will have its own crt and thus its own
+  // heap. This function is provided so you can free the returned string with the
+  // right heap. On Linux or MacOS this is unnecessary as dynamic linking works
+  // differently.
+  //
+  DNDC_API
+  void
+  dndc_free_string(DndcLongString);
+
+
+
 
 #ifdef __cplusplus
 }
