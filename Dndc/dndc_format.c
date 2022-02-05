@@ -201,9 +201,8 @@ static inline
 void
 format_header(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
     msb_write_nchar(sb, ' ', indent);
-    if(node->header.length){
+    if(node->header.length)
         msb_write_str(sb, node->header.text,node->header.length);
-    }
     msb_write_char(sb, ':');
     msb_write_char(sb, ':');
     const StringView* alias = &NODETYPE_TO_NODE_ALIASES[node->type];
@@ -223,19 +222,21 @@ format_header(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
             msb_write_char(sb, ')');
         }
     }
-    if(node->flags & NODEFLAG_IMPORT) msb_write_literal(sb, " #import");
-    if(node->flags & NODEFLAG_ID) {
+    NodeFlags flags = node->flags;
+    if(node->type != NODE_IMPORT && (flags & NODEFLAG_IMPORT))
+        msb_write_literal(sb, " #import");
+    if(flags & NODEFLAG_ID){
         // #uggh
         // This is super gross, I hate this.
-        // FIXME: use handles in the formatter instead of raw nodes.
+        // FIXME: use handles in the formatter instead of pointers.
         NodeHandle handle = {._value = (uint32_t)(node - ctx->nodes.data)};
         StringView idcontent = SV("");
         node_get_explicit_id(ctx, handle, &idcontent);
         MSB_FORMAT(sb, SV(" #id("), idcontent, SV(")"));
     }
-    if(node->flags & NODEFLAG_NOID) msb_write_literal(sb, " #noid");
-    if(node->flags & NODEFLAG_NOINLINE) msb_write_literal(sb, " #noinline");
-    if(node->flags & NODEFLAG_HIDE) msb_write_literal(sb, " #hide");
+    if(flags & NODEFLAG_NOID) msb_write_literal(sb, " #noid");
+    if(flags & NODEFLAG_NOINLINE) msb_write_literal(sb, " #noinline");
+    if(flags & NODEFLAG_HIDE) msb_write_literal(sb, " #hide");
     msb_write_char(sb, '\n');
 }
 

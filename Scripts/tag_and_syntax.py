@@ -327,7 +327,11 @@ def get_proj_dirs() -> List[str]:
     Get the list of relevant folders by scanning the project.
     """
     # this is project specific.
-    EXCLUDED = {'Bin', 'Objs', 'Depends', 'venv', 'vendored', 'TestCases', 'Release'}
+    EXCLUDED = {
+        'Bin', 'Objs', 'Depends', 'venv', 'vendored', 'TestCases', 'Release',
+        'Generated', 'TestResults', 'RenderedDocs', 'Timings', 'RenderedExamples',
+        'VendObjs',
+        }
     dirs = [d for d in os.listdir('.') if os.path.isdir(d) and d not in EXCLUDED and not d.startswith(('.', '_')) and not 'build' in d.lower() and '.app' not in d]
     subdirs = []
     for d in dirs:

@@ -57,7 +57,7 @@ expand_to_dnd(DndcContext*ctx, MStringBuilder* msb){
     return result;
 }
 
-static 
+static
 void
 write_generic_header(DndcContext* ctx, Node* n, int indent, MStringBuilder*msb){
     msb_write_nchar(msb, ' ', indent);
