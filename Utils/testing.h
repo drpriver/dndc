@@ -547,6 +547,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     const char* filename = argv[0];
     _Bool no_colors = 0;
     _Bool force_colors = 0;
+    _Bool run_all = 0;
     LongString directory = {0};
     size_t tests_to_run[arrlen(test_funcs)] = {0};
     struct ArgParseEnumType targets = {
@@ -557,6 +558,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     LongString outfile = {0};
     LongString extrafiles[8] = {0};
     _Bool append = 0;
+    enum {TEE_INDEX=6, TARGET_INDEX=3};
     ArgToParse kw_args[] = {
         {
             .name = SV("-C"),
@@ -576,13 +578,18 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
             .help = "Always use ANSI escape codes to print colors in reporting, "
                     "even if output is not a tty.",
         },
-        {
+        [TARGET_INDEX] = {
             .name = SV("-t"),
             .altname1 = SV("--target"),
             .max_num = test_funcs_count,
             .dest = ArgEnumDest(tests_to_run, &targets),
             .help = "If given, only run the named test function. If not given, "
                     "all tests will be run. Specify by name or by number.",
+        },
+        {
+            .name = SV("--all"),
+            .dest = ARGDEST(&run_all),
+            .help = "Run all tests, including those which are disabled by default.",
         },
         {
             .name = SV("-o"),
@@ -592,7 +599,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
                     "stderr. Implies --no-colors. If you want to output to stderr and "
                     "also to file, use --tee instead.",
         },
-        {
+        [TEE_INDEX] = {
             .name = SV("--tee"),
             .max_num = arrlen(extrafiles),
             .dest = ARGDEST(extrafiles),
@@ -654,6 +661,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
         fprintf(stderr, "Use --help to see usage.\n");
         return (int)e;
     }
+    // Register primary output file
     if(outfile.length){
         no_colors = true;
         FILE* fp = fopen(outfile.text, append?"ab":"wb");
@@ -666,7 +674,8 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     else {
         TestRegisterOutFile(stderr);
     }
-    for(int i = 0; i < kw_args[5].num_parsed; i++){
+    // Register extras
+    for(int i = 0; i < kw_args[TEE_INDEX].num_parsed; i++){
         FILE* fp = fopen(extrafiles[i].text, append?"ab":"wb");
         if(!fp){
             fprintf(stderr, "Unable to open '%s': %s\n", extrafiles[i].text, strerror(errno));
@@ -681,6 +690,10 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
                     directory.text, strerror(errno));
             return changed;
         }
+    }
+    if(run_all){
+        for(size_t i = 0; i < arrlen(tests_to_run); i++)
+            tests_to_run[i] = i;
     }
 
     filename = strrchr(filename, '/')? strrchr(filename, '/')+1 : filename;
@@ -698,8 +711,10 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     _test_color_red = red;
 #endif
 
-    assert(SV_equals(kw_args[3].name, SV("-t")));
-    struct TestStats result = run_the_tests(tests_to_run, kw_args[3].num_parsed);
+    size_t num_to_run = run_all? arrlen(tests_to_run) : kw_args[TARGET_INDEX].num_parsed;
+
+    assert(SV_equals(kw_args[TARGET_INDEX].name, SV("-t")));
+    struct TestStats result = run_the_tests(tests_to_run, num_to_run);
 
     const char* text = result.funcs_executed == 1?
         "test function executed"
