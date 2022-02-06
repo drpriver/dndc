@@ -7,6 +7,7 @@
 #include "dndc_types.h"
 #include "msb_format.h"
 #include "str_util.h"
+#include "file_util.h"
 #include <sys/stat.h>
 #if defined(__APPLE__) || defined(__linux__)
 #include <fts.h>
@@ -795,8 +796,21 @@ js_write_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCons
     Allocator_free(ctx->temp_allocator, filepath.text, filepath.length+1);
     JS_FreeCString(jsctx, data.text);
     if(err.errored){
-        // this is the wrong way to report this error.
-        return JS_ThrowTypeError(jsctx, "Error writing file");
+        // Throwing a type error is the wrong way to report this error, but
+        // I don't see a better way?
+        #if !defined(_WIN32)
+        return JS_ThrowTypeError(jsctx, "Error writing file '%s': %s", filepath.text, strerror(err.native_error));
+        #else
+        char errbuff[4192];
+        DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM
+                       // "when you are not in control of the message, you
+                       // had better pass the FORMAT_MESSAGE_IGNORE_INSERTS
+                       // flag"  - Raymond Chen
+                       | FORMAT_MESSAGE_IGNORE_INSERTS
+                       ;
+        FormatMessageA(flags, NULL, err.native_error, 0, errbuff, sizeof errbuff, NULL);
+        return JS_ThrowTypeError(jsctx, "Error writing file '%s': %s", filepath.text, errbuff);
+        #endif
     }
     else
         return JS_UNDEFINED;

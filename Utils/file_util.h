@@ -333,7 +333,7 @@ FileWriteResult
 write_file(const char* filename, const void* data, size_t data_length){
     int fd = open(
             filename,
-            O_WRONLY | O_NOFOLLOW | O_CREAT | O_TRUNC,
+            O_WRONLY | O_CREAT | O_TRUNC,
             S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if(fd < 0)
         return (FileWriteResult){.errored=FILE_NOT_OPENED, .native_error=errno};
