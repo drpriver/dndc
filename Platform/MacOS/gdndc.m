@@ -1282,6 +1282,7 @@ BOOL show_stats;
             JSRAW(
             document.addEventListener("DOMContentLoaded", function(){
               const svgs = document.getElementsByTagName("svg");
+              let moving = false;
               for(let i = 0; i < svgs.length; i++){
                 const svg = svgs[i];
                 const texts = svg.getElementsByTagName("text");
@@ -1297,6 +1298,8 @@ BOOL show_stats;
                     anchor.addEventListener("pointerdown", function(e){
                         e.stopPropagation();
                         e.preventDefault();
+                        if(moving) return;
+                        moving = true;
                         let org_x = anchor.transform.baseVal[0].matrix.e | 0;
                         let org_y = anchor.transform.baseVal[0].matrix.f | 0;
                         let start_x = e.offsetX;
@@ -1311,6 +1314,7 @@ BOOL show_stats;
                         }
                         svg.addEventListener("pointermove", move);
                         function remove(e){
+                            moving = false;
                             e.stopPropagation();
                             e.preventDefault();
                             svg.removeEventListener('pointermove', move);
@@ -1454,11 +1458,12 @@ BOOL show_stats;
 }
 -(void) toggle_editor:(id)sender{
     editor_container.hidden = !self->editor_container.hidden;
+    NSRect f = webview.frame;
     if(editor_container.hidden){
-        webview.frame = NSMakeRect(webview.frame.origin.x, webview.frame.origin.y, webview.frame.size.width + scrollview.frame.size.width, webview.frame.size.height);
+        webview.frame = NSMakeRect(f.origin.x, f.origin.y, f.size.width + scrollview.frame.size.width, f.size.height);
     }
     else{
-        webview.frame = NSMakeRect(webview.frame.origin.x, webview.frame.origin.y, webview.frame.size.width - scrollview.frame.size.width, webview.frame.size.height);
+        webview.frame = NSMakeRect(f.origin.x, f.origin.y, f.size.width - scrollview.frame.size.width, f.size.height);
     }
 }
 

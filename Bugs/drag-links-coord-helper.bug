@@ -1,5 +1,10 @@
 bug.py: v0.0.1
 created: 2022-02-04T15:18:40.909945
+updated: 2022-02-06T13:15:51.540113
 bugmagic^^^^
 Summary::md.summary
   Coord Helper should support dragging the links around.
+Updated Feb 06, 2022, 01:15PM::md.update
+  There is a buggy version of this now.
+
+  Leaving this open as it really needs the gui editors to be able to edit the AST and then perfectly roundtrip that back to the text format.
