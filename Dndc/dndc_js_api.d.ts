@@ -382,6 +382,31 @@ type FileSystemT = {
     //   }
     // --------
     exists(path:string): boolean;
+
+    //
+    // write_file
+    // ----------
+    // Writes out a new file to the given path with the given
+    // content.
+    //
+    // NOTE: This method is normally disabled and must be explictly
+    //       enabled by the host.
+    //
+    // Arguments:
+    // ----------
+    //   path:    Path to file to write. If this is a relative
+    //            path, it is relative to ctx.base.
+    //   content: The text to write into the file.
+    // Example:
+    // --------
+    //   // Create an interface file for linking.
+    //   let to_link = ctx.select_nodes({attributes:['linkme']});
+    //   let s  = '::links\n';
+    //   for(let tl of to_link)
+    //     s += `  ${tl.header} = ${ctx.outfile}#${tl.id}\n`;
+    //   FileSystem.write_file(Args[0], s);
+    // --------
+    write_file(path:string, content:string);
 };
 
 //
