@@ -244,11 +244,13 @@ typedef enum GdndInsertTag{
 @public DndUrlHandler* handler;
 @public NSString* scroll_resto_string;
 @public NSString* doc_title;
+@public BOOL dont_update;
 }
 -(NSString*)get_text;
 -(void)recalc_html:(NSString*)text;
 -(void)flop_editor:(id _Nullable)sender;
 -(NSURL*) this_dnd_url;
+-(void)update_coord:(NSString*)text;
 @end
 
 //
@@ -317,9 +319,9 @@ NSString* APPNAME = @"Gdndc";
 
     NSWindow* window = [[NSWindow alloc]
         initWithContentRect: rect
-        styleMask: NSWindowStyleMaskTitled 
+        styleMask: NSWindowStyleMaskTitled
                  | NSWindowStyleMaskClosable
-                 | NSWindowStyleMaskResizable 
+                 | NSWindowStyleMaskResizable
         backing: NSBackingStoreBuffered
         defer: NO];
     window.title = @"Dndc";
@@ -815,6 +817,18 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         [self.controller->text insertText:body replacementRange:NSMakeRange([[self.controller->text textStorage] length], 0)];
         return;
     }
+    if([method isEqualToString:@"POST"] && [url isEqual:[NSURL URLWithString:@"dnd:///roommove"]]){
+        auto response = [[NSURLResponse alloc]
+            initWithURL:request.mainDocumentURL
+            MIMEType:@"text/plain"
+            expectedContentLength:0
+            textEncodingName:nil];
+        [urlSchemeTask didReceiveResponse:response];
+        NSString* body = [[NSString alloc] initWithData:(NSData*)[request HTTPBody] encoding:NSUTF8StringEncoding];
+        [urlSchemeTask didFinish];
+        [self.controller update_coord:body];
+        return;
+    }
     if([method isEqualToString:@"GET"]){
         if([[url scheme] isEqualToString:DND_SCHEME] && [[url path] isEqualToString:@"/scrollresto"]){
         auto response = [[NSHTTPURLResponse alloc]
@@ -1196,36 +1210,40 @@ BOOL show_stats;
     // Inject javascript that will restore the scroll position in the window.
     string = [string stringByAppendingString:
         @"\n"
-        "::script\n  "
-        // Internal anchors are broken in webkit. Inject this function
-        // to recreate the wanted behavior.
-        JSRAW(document.addEventListener("DOMContentLoaded", function(){
-            const anchors = document.getElementsByTagName('a');
-            function add_interceptor(a){
-                a.onclick = function(e){
-                    let href = a.href;
-                    if(href.baseVal) href = href.baseVal;
-                    let split = href.split('#');
-                    if(split.length > 1){
-                        let target = split[1];
-                        let t = document.getElementById(target);
-                        if(t){
-                            t.scrollIntoView();
-                            e.preventDefault();
-                            e.stopPropagation();
-                            return false;
+        "::script\n"];
+    if(!coord_helper)
+        string = [string stringByAppendingString:
+            @"\n"
+            "::script\n  "
+            // Internal anchors are broken in some versions of webkit. Inject
+            // this function to recreate the wanted behavior.
+            JSRAW(document.addEventListener("DOMContentLoaded", function(){
+                const anchors = document.getElementsByTagName('a');
+                function add_interceptor(a){
+                    a.onclick = function(e){
+                        let href = a.href;
+                        if(href.baseVal) href = href.baseVal;
+                        let split = href.split('#');
+                        if(split.length > 1){
+                            let target = split[1];
+                            let t = document.getElementById(target);
+                            if(t){
+                                t.scrollIntoView();
+                                e.preventDefault();
+                                e.stopPropagation();
+                                return false;
+                            }
                         }
-                    }
-                    a.setAttribute('target', '_blank');
-                };
-            }
-            for(let a of anchors){
-                add_interceptor(a);
+                        a.setAttribute('target', '_blank');
+                    };
                 }
-            });
-        )
-        "\n"
-    ];
+                for(let a of anchors){
+                    add_interceptor(a);
+                    }
+                });
+            )
+            "\n"
+        ];
     string = [string stringByAppendingString:
         @"  "
         JSRAW(document.addEventListener("DOMContentLoaded", function(){
@@ -1267,35 +1285,77 @@ BOOL show_stats;
               for(let i = 0; i < svgs.length; i++){
                 const svg = svgs[i];
                 const texts = svg.getElementsByTagName("text");
+                const aa = document.querySelectorAll("svg a");
+                for(let text of texts){
+                    text.parentNode.addEventListener("click", function(e){
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
+                }
+                for(let i = 0; i < texts.length; i++){
+                    let anchor = texts[i];
+                    anchor.addEventListener("pointerdown", function(e){
+                        e.stopPropagation();
+                        e.preventDefault();
+                        let org_x = anchor.transform.baseVal[0].matrix.e | 0;
+                        let org_y = anchor.transform.baseVal[0].matrix.f | 0;
+                        let start_x = e.offsetX;
+                        let start_y = e.offsetY;
+                        function move(e){
+                            let diffx = e.offsetX - start_x;
+                            let diffy = e.offsetY - start_y;
+                            start_x = e.offsetX;
+                            start_y = e.offsetY;
+                            anchor.transform.baseVal[0].matrix.e += diffx;
+                            anchor.transform.baseVal[0].matrix.f += diffy;
+                        }
+                        svg.addEventListener("pointermove", move);
+                        function remove(e){
+                            e.stopPropagation();
+                            e.preventDefault();
+                            svg.removeEventListener('pointermove', move);
+                            let request = new XMLHttpRequest();
+                            let new_x = anchor.transform.baseVal[0].matrix.e | 0;
+                            let new_y = anchor.transform.baseVal[0].matrix.f | 0;
+                            const combo = ""+org_x+","+org_y+":"+new_x+","+new_y;
+                            request.open("POST", "dnd:///roommove", true);
+                            request.send(combo);
+                        }
+                        window.addEventListener("pointerup", remove, {once:true});
+                    });
+                }
                 let text_height = 0;
                 if(texts.length){
                   const first_text = texts[0];
                   text_height = first_text.getBBox().height || 0;
                 }
                 svg.addEventListener("click", function(e){
-                let name = prompt('Enter Room Name');
-                if(name){
-                  const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;
-                  const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height;
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const true_x = ((e.clientX - rect.x)/ x_scale) | 0;
-                  const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;
-                  let request = new XMLHttpRequest();
-                  if(!name.includes('.')){
-                    name += '.';
+                  let name = prompt('Enter Room Name');
+                  if(name){
+                    const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;
+                    const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height;
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const true_x = ((e.clientX - rect.x)/ x_scale) | 0;
+                    const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;
+                    let request = new XMLHttpRequest();
+                    if(!name.includes(".")){
+                      name += ".";
                     }
-                  const combined = '\n'+name+':'+":md .room @coord("+true_x+','+true_y+")\n";
-                  request.open("POST", "dnd:///roomclick", true);
-                  request.send(combined);
+                    const combined = "\n"+name+":"+":md .room @coord("+true_x+","+true_y+")\n";
+                    request.open("POST", "dnd:///roomclick", true);
+                    request.send(combined);
                   }
                 });
               }
             });
-        )];
+        )
+        ];
     }
     return string;
 }
 -(void)recalc_html:(NSString*)string{
+    if(dont_update)
+        return;
     const char* source_text = [string UTF8String];
     LongString source = {
         .text = source_text,
@@ -1425,6 +1485,20 @@ completionHandler:(void (^)(NSString *result))completionHandler{
         completionHandler(@"");
     }
 }
+-(void)update_coord:(NSString*)coord_text{
+    // This is very hacky. The proper way to do this
+    // would be to have an ast that we could edit, but
+    // instead we'll just do a string replace.
+    BOOL before = dont_update;
+    dont_update = YES;
+    // coord_text is of the format {imglinksindex},{x},{y}
+    NSArray<NSString*>* parts = [coord_text componentsSeparatedByString:@":"];
+    NSRange rng = [[self->text string] rangeOfString:parts[0]];
+    [self->text insertText:parts[1] replacementRange:rng];
+    [self->text scrollToBeginningOfDocument:self];
+    dont_update = before;
+    // self->scrollview.lineScroll = 0;
+}
 
 @end
 
@@ -1501,7 +1575,7 @@ completionHandler:(void (^)(NSString *result))completionHandler{
     auto mgr = [NSFontManager sharedFontManager];
     [mgr setTarget:fontdel];
     // [mgr setAction:@selector(change_font)];
-    
+
     NSRect rect = NSMakeRect(600, 600, 600, 600);
     licenses_window = [[NSWindow alloc]
         initWithContentRect: rect
@@ -1523,7 +1597,7 @@ completionHandler:(void (^)(NSString *result))completionHandler{
     credits.documentView = creditstext;
     licenses_window.contentView = credits;
     licenses_window.title = @"Open Source Licenses";
-    
+
 }
 -(void)show_licenses:(nullable id) sender{
     [licenses_window makeKeyAndOrderFront:self];
