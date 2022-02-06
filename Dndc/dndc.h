@@ -676,11 +676,12 @@ enum DndcFlags {
     // Allow JavaScript to write files.
     DNDC_ENABLE_JS_WRITE = 0x800,
 
-    // DNDC_UNUSED_VALUE_0x1000
-    // ------------------------
-    // These flags are unused (used to be for controlling python, but no
-    // longer). They will be used in the future.
-    DNDC_UNUSED_VALUE_0x1000 = 0x1000,
+    // DNDC_DONT_IMPORT
+    // ----------------
+    // Don't import files (via #import or from import nodes), instead leaving
+    // them as is in the document. This is useful for breaking circular
+    // dependencies when bootstrapping a document that relies on introspection.
+    DNDC_DONT_IMPORT = 0x1000,
 
     // DNDC_NO_THREADS
     // ---------------

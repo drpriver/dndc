@@ -181,6 +181,15 @@ main(int argc, char**argv){
                 .hidden = true,
             },
             {
+                .name = SV("--dont-import"),
+                .dest = ArgBitFlagDest(&flags, DNDC_DONT_IMPORT),
+                .help = "Don't import files (via #import or from import nodes), "
+                        "instead leaving them as-is in the document. "
+                        "Useful for breaking circular dependencies during bootstrapping. "
+                        "Can also speed up introspection-only runs.",
+                .hidden = true,
+            },
+            {
                 .name = SV("--single-threaded"),
                 .dest = ArgBitFlagDest(&flags, DNDC_NO_THREADS),
                 .help = "Do not create worker threads, do everything in the "

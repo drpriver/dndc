@@ -1,0 +1,14 @@
+bug.py: v0.0.1
+created: 2022-02-06T15:10:47.911421
+resolved: 2022-02-06T18:44:56.819695
+bugmagic^^^^
+Summary::md.summary
+  Don’t import flag.
+
+  Sometimes it is useful to be able to introspect a document and create a generated file that is then imported. However, sometimes you will end up with a circular dependency where the file depends on its own introspection. The introspection itself doesn’t depend on it, so that is a false dependency.
+
+  This can be resolved via a don’t import flag, which would leave the import nodes in the document instead of replacing them.
+
+  One question is whether htmlgen should fail with unresolved Import nodes, or if it should just skip those nodes. Probably skip those nodes.
+Resolved Feb 06, 2022, 06:44PM::md.update
+  Implemented this, just ignore the htmlgen and expand use cases as they are silly use cases.

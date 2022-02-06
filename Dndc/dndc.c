@@ -439,6 +439,9 @@ run_the_dndc(uint64_t flags,
             goto cleanup;
         }
     }
+    else if(flags & DNDC_DONT_IMPORT){
+        // don't do imports
+    }
     else {
         // Handle imports. Imports can import more imports, so don't use a FOR_EACH.
         uint64_t before_imports = get_t();
@@ -2020,6 +2023,7 @@ dndc_compile_dnd_file(
         DNDC_VALID_FLAGS = 0
             | DNDC_FRAGMENT_ONLY
             | DNDC_DONT_WRITE
+            | DNDC_DONT_IMPORT
             | DNDC_DONT_READ
             | DNDC_INPUT_IS_UNTRUSTED
             | DNDC_REFORMAT_ONLY
