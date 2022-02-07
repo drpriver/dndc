@@ -1091,7 +1091,8 @@ Page::set_scroll_pos(QString&& x){
             b64cache, textcache,
             errfunc, this,
             depfunc, this,
-            dndc_worker);
+            dndc_worker,
+            {0, ""});
     // qDebug() << "err:" << err;
     if(err) {
         return;
@@ -1132,7 +1133,7 @@ Page::format(void){
             nullptr, nullptr,
             errfunc, this,
             nullptr, nullptr,
-            nullptr);
+            nullptr,{0, ""});
     if(err) return;
     textedit->setPlainText(QString::fromUtf8(outstring.text, outstring.length));
     dndc_free_string(outstring);
@@ -1270,7 +1271,7 @@ Page::export_as_html(void){
             b64cache, textcache,
             errfunc, this,
             nullptr, nullptr,
-            dndc_worker);
+            dndc_worker, {0, ""});
     if(err) {
         QMessageBox mbox;
         mbox.critical(
