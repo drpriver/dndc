@@ -24,13 +24,16 @@ static inline TermSize get_terminal_size(void);
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
 static inline
-int fileno(FILE* stream){
+int
+fileno(FILE* stream){
     return _fileno(stream);
-    }
+}
+
 static inline
-int isatty(int fd){
+int
+isatty(int fd){
     return _isatty(fd);
-    }
+}
 
 #include "windowsheader.h"
 static inline
@@ -42,15 +45,15 @@ get_terminal_size(void){
         int columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
         int rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
         return (TermSize){columns, rows};
-        }
-    return (TermSize){80, 24};
     }
+    return (TermSize){80, 24};
+}
 #elif defined(WASM)
 static inline
 TermSize
 get_terminal_size(void){
     return (TermSize){80, 24};
-    }
+}
 #else
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -75,15 +78,15 @@ get_terminal_size(void){
         if(!rows)
             goto err;
         result = (TermSize){cols, rows};
-        }
+    }
     else {
         if(!w.ws_col || !w.ws_row)
             goto err;
         result = (TermSize){w.ws_col, w.ws_row};
-        }
+    }
     err:
     return result;
-    }
+}
 #endif
 
 

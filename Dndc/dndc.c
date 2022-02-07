@@ -25,6 +25,9 @@
 #include "arena_allocator.h"
 #include "measure_time.h"
 #include "thread_utils.h"
+#ifndef WASM
+#include "term_util.h"
+#endif
 
 #define DSORT_T LinkItem
 #define DSORT_CMP StringView_cmp
@@ -891,39 +894,62 @@ DNDC_API
 void
 dndc_stderr_error_func(Nullable(void*)unused, int type, const char* filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
     (void)unused;
+    static int interactive = -1;
+    if(interactive == -1){
+        interactive = isatty(fileno(stderr));
+    }
+    const char* Error = "ERROR";
+    const char* Info = "INFO";
+    const char* Debug = "DEBUG";
+    const char* Warn = "WARN";
+    if(interactive){
+        #define RED "\033[31m"
+        #define PURPLE "\033[35m"
+        #define GREEN "\033[32m"
+        #define RESET "\033[0m"
+        #define CYAN "\033[36m"
+        Error = RED "ERROR" RESET;
+        Info = GREEN "INFO" RESET;
+        Debug = CYAN "DEBUG" RESET;
+        Warn = PURPLE "WARN" RESET;
+        #undef RED
+        #undef PURPLE
+        #undef GREEN
+        #undef RESET
+    }
     switch((enum DndcErrorMessageType)type){
         case DNDC_NODELESS_MESSAGE:
-            fprintf(stderr, "[ERROR]: %.*s\n", message_len, message);
+            fprintf(stderr, "[%s]: %.*s\n", Error, message_len, message);
             return;
         case DNDC_STATISTIC_MESSAGE:
-            fprintf(stderr, "[INFO] %.*s\n", message_len, message);
+            fprintf(stderr, "[%s] %.*s\n", Info, message_len, message);
             return;
         case DNDC_DEBUG_MESSAGE:
             if(filename_len){
                 if(col >= 0){
-                    fprintf(stderr, "[DEBUG] %.*s:%d:%d: %.*s\n", filename_len, filename, line+1, col+1, message_len, message);
+                    fprintf(stderr, "[%s] %.*s:%d:%d: %.*s\n", Debug, filename_len, filename, line+1, col+1, message_len, message);
                 }
                 else {
-                    fprintf(stderr, "[DEBUG] %.*s:%d: %.*s\n", filename_len, filename, line+1, message_len, message);
+                    fprintf(stderr, "[%s] %.*s:%d: %.*s\n", Debug, filename_len, filename, line+1, message_len, message);
                 }
             }
             else
-                fprintf(stderr, "[DEBUG] %.*s\n", message_len, message);
+                fprintf(stderr, "[%s] %.*s\n", Debug, message_len, message);
             return;
         case DNDC_ERROR_MESSAGE:
             if(col >= 0){
-                fprintf(stderr, "[ERROR] %.*s:%d:%d: %.*s\n", filename_len, filename, line+1, col+1, message_len, message);
+                fprintf(stderr, "[%s] %.*s:%d:%d: %.*s\n", Error, filename_len, filename, line+1, col+1, message_len, message);
             }
             else {
-                fprintf(stderr, "[ERROR] %.*s:%d: %.*s\n", filename_len, filename, line+1, message_len, message);
+                fprintf(stderr, "[%s] %.*s:%d: %.*s\n", Error, filename_len, filename, line+1, message_len, message);
             }
             return;
         case DNDC_WARNING_MESSAGE:
             if(col >= 0){
-                fprintf(stderr, "[WARN] %.*s:%d:%d: %.*s\n", filename_len, filename, line+1, col+1, message_len, message);
+                fprintf(stderr, "[%s] %.*s:%d:%d: %.*s\n", Warn, filename_len, filename, line+1, col+1, message_len, message);
             }
             else {
-                fprintf(stderr, "[WARN] %.*s:%d: %.*s\n", filename_len, filename, line+1, message_len, message);
+                fprintf(stderr, "[%s] %.*s:%d: %.*s\n", Warn, filename_len, filename, line+1, message_len, message);
             }
             return;
     }
