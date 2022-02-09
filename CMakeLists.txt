@@ -68,6 +68,7 @@ add_library(dndc-dylib
     SHARED
     Dndc/dndc.c
 )
+target_link_libraries(dndc-dylib Threads::Threads ${LIBM_LIBRARIES})
 if(WIN32)
 set_target_properties(dndc-lib
     PROPERTIES OUTPUT_NAME dndc-static

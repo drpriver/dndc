@@ -5,7 +5,7 @@ PYCFLAGS?=-I/usr/include/python3.8
 PYLDFLAGS?=-L/usr/lib/python3.8/config-3.8-x64_64-linux-gnu -lpython3.8
 
 # I think there is a bug with clang and _FORTIFY_SOURCE
-PLATFORM_FLAGS=-U_FORTIFY_SOURCE
+PLATFORM_FLAGS=-U_FORTIFY_SOURCE -fPIC
 DEBUG_FLAGS=-DDEBUG\
 	 -DLOG_LEVEL=4\
 	 -fsanitize=undefined\
@@ -33,3 +33,5 @@ PYEXTENSION=.cpython-38-x86_64-linux-gnu.so
 PYEXTFLAGS=-shared -fPIC
 $(OBJDIR)/libdndc.a: $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o
 	ar crs $@ $^
+$(BINDIR)/libdndc.so: $(OBJDIR)/dndc.o $(VENDOBJDIR)/libquickjs.o
+	$(CC) $^ -o $@ -Wl,-undefined,error -shared -g

@@ -20,6 +20,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
 #endif
 
 //
@@ -35,6 +36,10 @@
 #ifndef _Nullable
 #define _Nullable
 #endif
+#endif
+
+#if defined(__linux__)
+void*_Nullable memmem(const void*_, size_t, const void*, size_t);
 #endif
 
 static
@@ -296,13 +301,17 @@ dnd_server_create(int* port){
         error("setsockopt for SO_REUSEADDR failed: %s", strerror(errno));
         return NULL;
     }
+    #if defined(__APPLE__)
     sso_err = setsockopt(sd, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof opt);
     if(sso_err < 0){
         error("setsockopt for SO_NOSIGPIPE failed: %s", strerror(errno));
         return NULL;
     }
+    #endif
     struct sockaddr_in addr = {
+        #if defined(__APPLE__)
         .sin_len = sizeof(addr),
+        #endif
         .sin_family = AF_INET,
         .sin_addr = {htonl(INADDR_LOOPBACK)},
         .sin_port = htons(*port),

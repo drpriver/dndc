@@ -127,7 +127,8 @@ main(int argc, char** argv){
             opencmd = "start";
         #endif
         snprintf(openbuff, sizeof openbuff, "%s %s:%d", opencmd, url, port);
-        system(openbuff);
+        int s = system(openbuff);
+        (void)s;
     }
     if(!server) return 1;
     int err = dnd_server_serve(server, flags, directory);
