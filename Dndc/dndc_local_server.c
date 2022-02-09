@@ -13,6 +13,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
+// Move to header?
+typedef long long ssize_t;
 
 #else
 
@@ -40,6 +42,37 @@
 
 #if defined(__linux__)
 void*_Nullable memmem(const void*_, size_t, const void*, size_t);
+#endif
+#if defined(_WIN32)
+static
+const void*_Nullable
+memmem(const void* hay_, size_t haysz, const void* needle_, size_t needlesz){
+    if(!hay_ || !haysz || !needle_ || !needlesz) return NULL;
+    const char* hay = hay_;
+    const char* needle = needle_;
+    char first = *needle;
+    const char* hayend = hay+haysz;
+    for(;;){
+        const char* c = memchr(hay, first, hayend-hay);
+        if(!c) return NULL;
+        if(hayend - c < (ssize_t)needlesz) return NULL;
+        if(memcmp(c, needle, needlesz) == 0)
+            return c;
+        hay = c+1;
+    }
+}
+
+// Hacky helper for stringifying error codes
+// Leaks the error message, but whatever
+const char* wsaerror(void){
+    DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ALLOCATE_BUFFER;
+    int err = WSAGetLastError();
+    char* result = NULL;
+    DWORD ret = FormatMessageA(flags, NULL, err, 0, (void*)&result, 0, NULL);
+    if(!result) return "Error when formatting error";
+    result[ret-1] = 0;
+    return result;
+}
 #endif
 
 static
@@ -107,9 +140,9 @@ handle_request(uint64_t flags, LongString directory, SOCKET accsd, LongString re
 
 struct DndServer{
     SOCKET sd;
-}
+};
 
-int
+DndServer*_Nullable
 dnd_server_create(int* port){
     WSADATA wsadata;
     int err = WSAStartup(MAKEWORD(2,2), &wsadata);
@@ -125,32 +158,32 @@ dnd_server_create(int* port){
     BOOL opt = 1;
     err = setsockopt(listensocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof opt);
     if(err){
-        error("setsockopt for SO_REUSEADDR failed");
+        error("setsockopt for SO_REUSEADDR failed: %s (%d)", wsaerror(), WSAGetLastError());
         goto cleanup;
     }
     struct sockaddr_in addr = {
-        .sin_len = sizeof(addr),
         .sin_family = AF_INET,
-        .sin_addr = {htonl(INADDR_LOOPBACK)},
+        .sin_addr.S_un.S_addr=htonl(INADDR_LOOPBACK),
         .sin_port = htons(*port),
     };
 
     err = bind(listensocket, (struct sockaddr*)&addr, sizeof addr);
     if(err){
-        error("bind error");
+        error("bind error (%d): %s", WSAGetLastError(), wsaerror());
+        error("port was: %d", *port);
         goto cleanup;
     }
 
     int addrlen = sizeof addr;
-    err = getsockname(sd, (struct sockaddr*)&addr, &addrlen);
+    err = getsockname(listensocket, (struct sockaddr*)&addr, &addrlen);
     if(err){
-        error("getsockname error");
+        error("getsockname error: %s (%d)", wsaerror(), WSAGetLastError());
         goto cleanup;
     }
 
     err = listen(listensocket, SOMAXCONN);
     if(err){
-        error("listen error");
+        error("listen error: %s (%d)", wsaerror(), WSAGetLastError());
         goto cleanup;
     }
     info("Serving at http://localhost:%d", (int)ntohs(addr.sin_port));
@@ -172,6 +205,7 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
     char buff[10000];
     struct sockaddr_in clientaddr = {0};
     for(;;){
+        int shutdown = 0;
         int clientlen = sizeof(clientaddr);
         // debug("Waiting for accept...");
         SOCKET accsd = accept(sd, (struct sockaddr*)&clientaddr, &clientlen);
@@ -184,7 +218,7 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
         }
         ssize_t n = recv(accsd, buff, (sizeof buff)-1, 0);
         if(n < 0){
-            error("recv failed: %s: %zd", n));
+            error("recv failed: %s: %zd", n);
             goto Close;
         }
         if(n == 0){
@@ -192,7 +226,7 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
             goto Close;
         }
         buff[n] = 0;
-        int shutdown = handle_request(flags, directory, accsd, (LongString){n, buff});
+        shutdown = handle_request(flags, directory, accsd, (LongString){n, buff});
         Close:
         closesocket(accsd);
         if(shutdown) break;
