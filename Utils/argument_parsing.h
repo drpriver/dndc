@@ -14,6 +14,10 @@
 #include "long_string.h"
 #include "parse_numbers.h"
 
+#ifndef arrlen
+#define arrlen(arr) (sizeof(arr)/sizeof((arr)[0]))
+#endif
+
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #else
@@ -1673,7 +1677,6 @@ main(int argc, const char*_Null_unspecified*_Null_unspecified argv){
             .help = "Print the version and exit.",
         },
     };
-#define arrlen(arr) (sizeof(arr)/sizeof((arr)[0]))
     ArgParser parser = {
         .name = argc?argv[0]:"argparse_example",
         .description = "An example of how to use the argparser.",

@@ -136,6 +136,13 @@ target_compile_options(quickjs-lib PUBLIC "-mrdseed")
 target_compile_options(quickjs-dylib PUBLIC "-mrdseed")
 endif()
 
+add_executable(dndc-browse
+    Dndc/dndc_browse.c
+)
+target_link_libraries(dndc-browse
+    dndc-dylib
+)
+
 # tests
 enable_testing()
 # Util testings
@@ -178,6 +185,13 @@ install(TARGETS dndc-dylib
     LIBRARY DESTINATION lib
     PUBLIC_HEADER DESTINATION include/Dndc
 )
+install(TARGETS dndc-browse DESTINATION bin)
+if(UNIX)
+set_target_properties(dndc-browse PROPERTIES
+    INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib
+    BUILD_WITH_INSTALL_RPATH 0
+)
+endif()
 
 # Qt
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets WebEngineWidgets)

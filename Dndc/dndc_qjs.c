@@ -725,11 +725,11 @@ QJSValue
 js_load_file_as_base64(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst *argv){
     (void)thisValue;
     if(argc != 1){
-        return JS_ThrowTypeError(jsctx, "%s: Must be given a single path argument", __func__);
+        return JS_ThrowTypeError(jsctx, "Must be given a single path argument");
     }
     QJSValueConst str = argv[0];
     if(!JS_IsString(str)){
-        return JS_ThrowTypeError(jsctx, "%s: must be given a single string argument", __func__);
+        return JS_ThrowTypeError(jsctx, "Must be given a single string argument");
     }
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
@@ -741,7 +741,7 @@ js_load_file_as_base64(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJS
     StringResult e = FileCache_read_and_b64_file(ctx->b64cache, sv, false);
     JS_FreeCString(jsctx, sv.text);
     if(e.errored){
-        return JS_ThrowTypeError(jsctx, "%s: Error when loading file: '%s'", __func__, sv.text);
+        return JS_ThrowTypeError(jsctx, "Error when loading file: '%s'", sv.text);
     }
     QJSValue result = JS_NewString(jsctx, e.result.text);
     return result;
@@ -767,7 +767,7 @@ js_load_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst
     StringViewResult e = ctx_load_source_file(ctx, sv);
     JS_FreeCString(jsctx, sv.text);
     if(e.errored){
-        return JS_ThrowTypeError(jsctx, "load_file: Error when loading file");
+        return JS_ThrowTypeError(jsctx, "load_file: Error when loading '%.*s'", (int)sv.length, sv.text);
     }
     QJSValue result = JS_NewString(jsctx, e.result.text);
     return result;

@@ -103,4 +103,3 @@ list:
 			-e '^$@$$' \
 			-e '.(dnd|dep|[ch])$$'
 endif
-.DEFAULT_GOAL:=all

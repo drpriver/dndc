@@ -64,6 +64,13 @@ dndc_lib = both_libraries(
   darwin_versions: [COMPAT_VERSION, meson.project_version()],
   link_with: quickjs_static,
   )
+executable(
+  'dndc-browse',
+  'Dndc/dndc_browse.c',
+  include_directories: includes,
+  install: true,
+  link_with: dndc_lib,
+  )
 
 
 pydndc = pyinstall.extension_module(

@@ -75,3 +75,7 @@ $(OBJDIR)/dndc.wasm: Platform/Wasm/dndc_wasm.c Dndc/dndc.mak Platform/Wasm/wasm.
 
 $(BINDIR)/demo.html: Platform/Wasm/demo.dnd $(OBJDIR)/dndc.wasm | $(DIRECTORIES) $(BINDIR)/dndc
 	$(BINDIR)/dndc $< -o $@ -d $(DEPDIR)/demo.html.dep
+
+
+$(BINDIR)/dndc-browse$(EXE): Bin/libdndc$(SO) Dndc/dndc_browse.c
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc_browse.dep Dndc/dndc_browse.c -o $@ Bin/libdndc$(SOLIB) $(LINK_FLAGS) $(RPATH)
