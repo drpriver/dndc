@@ -1,7 +1,13 @@
+#include "common_macros.h"
 #include "dndc_local_server.h"
 #include "argument_parsing.h"
 #include "term_util.h"
 #include "murmur_hash.h"
+#include "thread_utils.h"
+#include "get_input.h"
+#include "str_util.h"
+#include "allocator.h"
+#include "mallocator.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -10,6 +16,38 @@
 #else
 #include <unistd.h>
 #endif
+
+#if defined(__APPLE__) || defined(__linux__)
+#include <fts.h>
+#elif defined(_WIN32)
+#endif
+
+
+struct JobData {
+    DndServer* server;
+    LongString directory;
+    uint64_t flags;
+};
+
+static
+THREADFUNC(serve){
+    struct JobData* data = thread_arg;
+    dnd_server_serve(data->server, data->flags, data->directory);
+    return 0;
+}
+
+static
+void
+get_entries(LongString directory, StringView** entries, size_t* nentries);
+
+static
+void
+print_entries(StringView* entries, size_t nentries);
+
+static
+void null_report(void* ud, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
+}
+
 
 int
 main(int argc, char** argv){
@@ -114,26 +152,181 @@ main(int argc, char** argv){
         fprintf(stderr, "Use --help to see usage.\n");
         return e;
     }
-    DndServer* server = dnd_server_create(dndc_stderr_error_func, NULL, &port);
-    {
-        const char* opencmd = "open";
-        char openbuff[1024];
-        const char* url = "http://localhost";
-        #if defined(__APPLE__)
-            opencmd = "open";
-        #elif defined(__linux__)
-            opencmd = "xdg-open";
-        #elif defined(_WIN32)
-            opencmd = "start";
-        #endif
-        snprintf(openbuff, sizeof openbuff, "%s %s:%d", opencmd, url, port);
+    DndServer* server = dnd_server_create(null_report, NULL, &port);
+    if(!server) return 1;
+
+    struct JobData data = {
+        .directory = directory,
+        .flags = flags,
+        .server = server,
+    };
+
+    ThreadHandle thrd;
+    create_thread(&thrd, &serve, &data);
+    struct LineHistory history = {0};
+    // int err = dnd_server_serve(server, flags, directory);
+    StringView* entries = NULL;
+    size_t nentries = 0;
+    get_entries(directory, &entries, &nentries);
+    if(!nentries) return 1;
+    print_entries(entries, nentries);
+    char buff[4092];
+    const char* opencmd = "open";
+    char openbuff[1024];
+    const char* url = "http://localhost";
+    #if defined(__APPLE__)
+        opencmd = "open";
+    #elif defined(__linux__)
+        opencmd = "xdg-open";
+    #elif defined(_WIN32)
+        opencmd = "start";
+    #endif
+    for(;;){
+        ssize_t len = get_input_line(&history, SV("> "), buff, sizeof buff);
+        if(len < 0) break;
+        if(len == 0) continue;
+        StringView b = stripped_view(buff, len);
+        if(SV_equals(b, SV("l")) || SV_equals(b, SV("list"))){
+            print_entries(entries, nentries);
+            add_line_to_history_len(&history, b.text, b.length);
+            continue;
+        }
+        if(SV_equals(b, SV("q")) || SV_equals(b, SV("quit"))){
+            break;
+        }
+        Int64Result ir = parse_int64(b.text, b.length);
+        if(ir.errored) continue;
+        int64_t idx = ir.result;
+        if(idx < 0) continue;
+        if(idx >= nentries) continue;
+        add_line_to_history_len(&history, b.text, b.length);
+        StringView entry = entries[idx];
+        snprintf(openbuff, sizeof openbuff, "%s %s:%d/%.*s", opencmd, url, port, (int)entry.length, entry.text);
         int s = system(openbuff);
         (void)s;
-    }
-    if(!server) return 1;
-    int err = dnd_server_serve(server, flags, directory);
 
-    return err;
+    }
+    puts("\r");
+    return 0;
+}
+
+#if defined(_WIN32)
+// This code is totally untested, but is basically a copy of how the dndc_qjs
+// does it. Too lazy to boot up windows right now.
+//
+// Maybe I should add a recursive glob utility function? Trouble is that
+// you would want it iterator style, which is annoying to make nice in C.
+#include "MStringBuilder.h"
+static
+void
+get_entries_inner(StringView directory, StringView** buff, size_t* count, size_t* cap){
+    MStringBuilder sb = {.allocator = get_mallocator()};
+    msb_write_str(&sb, directory.text, directory.length);
+    msb_write_literal(&sb, "/*.dnd");
+    msb_nul_terminate(&sb);
+    LongString dndwildcard = msb_borrow_ls(&sb);
+    WIN32_FIND_DATAA findd;
+    HANDLE handle = FindFirstFileExA(dndwildcard.text, FindExInfoBasic, &findd, FindExSearchNameMatch, NULL, FIND_FIRST_EX_LARGE_FETCH);
+    msb_erase(&sb, sizeof("/*.dnd")-1);
+    if(handle == INVALID_HANDLE_VALUE){
+    }
+    else{
+        do {
+            size_t cursor = sb.cursor;
+            msb_write_char(&sb, '/');
+            msb_write_str(&sb, findd.cFileName, strlen(findd.cFileName));
+            StringView text = msb_borrow_sv(&sb);
+            char* s = Allocator_strndup(get_mallocator(), text.text, text.length);
+            if(*count >= *cap){
+                *cap = *cap? *cap*2 : 8;
+                *buff = realloc(*buff, cap*sizeof **buff);
+            }
+            *buff[(*count)++] = (StringView){.text=s, .length=text.length};
+            sb.cursor = cursor;
+        }while(FindNextFileA(handle, &findd));
+        FindClose(handle);
+    }
+    msb_write_literal(&sb, "/*");
+    msb_nul_terminate(&sb);
+    LongString thisdir = msb_borrow_ls(&sb);
+    handle = FindFirstFileExA(thisdir.text, FindExInfoBasic, &findd, FindExSearchNameMatch, NULL, FIND_FIRST_EX_LARGE_FETCH);
+    if(handle == INVALID_HANDLE_VALUE){
+        // fprintf(stderr, "Invalid handle: '%s'\n", thisdir.text);
+        goto end;
+    }
+    msb_erase(&sb, sizeof("/*")-1);
+    do {
+        if(findd.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN){
+            continue;
+        }
+        if(!(findd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)){
+            continue;
+        }
+        StringView fn = {.text = findd.cFileName, .length = strlen(findd.cFileName)};
+        if(fn.text[0] == '.'){
+            continue;
+        }
+        msb_write_char(&sb, '/');
+        msb_write_str(&sb, fn.text, fn.length);
+        msb_nul_terminate(&sb);
+        StringView nextdir = msb_borrow_sv(&sb);
+        get_entries_inner(nextdir, buff, count, cap);
+        msb_erase(&sb, 1+fn.length);
+    }while(FindNextFileA(handle, &findd));
+    end:
+    msb_destroy(&sb);
+}
+#endif
+
+static
+void
+get_entries(LongString directory, StringView** entries, size_t* nentries){
+    StringView* buff = NULL;
+    size_t count = 0;
+    size_t cap = 0;
+#if defined(__APPLE__) || defined(__linux__)
+    const char* dirs[] = {directory.text, NULL};
+    FTS* handle = fts_open((char**)dirs, FTS_LOGICAL | FTS_NOCHDIR | FTS_NOSTAT, NULL);
+    if(!handle) return;
+    for(;;){
+        FTSENT* ent = fts_read(handle);
+        if(!ent) break;
+        if(ent->fts_namelen > 1 && ent->fts_name[0] == '.'){
+            fts_set(handle, ent, FTS_SKIP);
+            continue;
+        }
+        if(ent->fts_info & (FTS_F | FTS_NSOK)){
+            StringView name = {.text = ent->fts_name, .length=ent->fts_namelen};
+            if(!endswith(name, SV(".dnd")))
+                continue;
+            char* p = ent->fts_path + directory.length+1;
+            size_t len = strlen(p);
+            char* t = Allocator_strndup(get_mallocator(), p, len);
+            if(count >= cap){
+                cap = cap? cap*2 : 8;
+                buff = realloc(buff, cap*sizeof *buff);
+            }
+            buff[count++] = (StringView){.length = len, .text = t};
+        }
+    }
+    fts_close(handle);
+#elif defined(_WIN32)
+    get_entries_inner(LS_to_SV(directory), &buff, &count, &cap);
+#endif
+    *entries = buff;
+    *nentries = count;
+}
+
+static
+void
+print_entries(StringView* entries, size_t nentries){
+    putchar('\r');
+    qsort(entries, nentries, sizeof *entries, StringView_cmp);
+    for(size_t i = 0; i < nentries; i++){
+        StringView entry = entries[i];
+        fprintf(stdout, "[%2zu] %.*s\n", i, (int)entry.length, entry.text);
+    }
 }
 
 #include "dndc_local_server.c"
+#include "get_input.c"
