@@ -8,6 +8,7 @@
 #include "str_util.h"
 #include "allocator.h"
 #include "mallocator.h"
+#include "string_distances.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -198,8 +199,23 @@ main(int argc, char** argv){
             break;
         }
         Int64Result ir = parse_int64(b.text, b.length);
-        if(ir.errored) continue;
-        int64_t idx = ir.result;
+        int64_t idx = -1;
+        if(ir.errored) {
+            ssize_t best = 1LL<<32;
+            int strip_dnd = !endswith(b, SV(".dnd"));
+            for(size_t i = 0; i < nentries; i++){
+                // calculate expand distance, but without .dnd if we don't have .dnd in buffer
+                ssize_t dist = byte_expansion_distance(entries[i].text, entries[i].length-4*strip_dnd, b.text, b.length);
+                if(dist < 0) continue;
+                if(dist < best){
+                    best = dist;
+                    idx = i;
+                    if(dist == 0) break;
+                }
+            }
+        }
+        else
+            idx = ir.result;
         if(idx < 0) continue;
         if(idx >= nentries) continue;
         add_line_to_history_len(&history, b.text, b.length);

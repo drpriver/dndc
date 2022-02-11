@@ -255,10 +255,12 @@ handle_request(DndcErrorFunc*func, void*_Nullable p, uint64_t flags, LongString 
         const char* space = strchr(rest.text, ' ');
         if(space && space != rest.text){
             path = (StringView){.text=rest.text, .length=space-rest.text};
-            info(func, p, "Serving: %.*s", (int)path.length+1, path.text-1);
+            func(p, DNDC_STATISTIC_MESSAGE, path.text-1, path.length+1, -1, -1, "Serving", sizeof("Serving")-1);
+            // info(func, p, "Serving: %.*s", (int)path.length+1, path.text-1);
         }
         else {
-            info(func, p, "Serving: %.*s", (int)path.length, path.text);
+            func(p, DNDC_STATISTIC_MESSAGE, path.text, path.length, -1, -1, "Serving", sizeof("Serving")-1);
+            // info(func, p, "Serving: %.*s", (int)path.length, path.text);
         }
     }
     if(SV_equals(path, SV("shutdown"))){
@@ -442,10 +444,12 @@ handle_request(DndcErrorFunc* func, void*_Nullable p, uint64_t flags, LongString
         const char* space = strchr(rest.text, ' ');
         if(space && space != rest.text){
             path = (StringView){.text=rest.text, .length=space-rest.text};
-            info(func, p, "Serving: %.*s", (int)path.length+1, path.text-1);
+            func(p, DNDC_STATISTIC_MESSAGE, path.text, path.length, -1, -1, "Serving", sizeof("Serving")-1);
+            // info(func, p, "Serving: %.*s", (int)path.length+1, path.text-1);
         }
         else {
-            info(func, p, "Serving: %.*s", (int)path.length, path.text);
+            func(p, DNDC_STATISTIC_MESSAGE, path.text, path.length, -1, -1, "Serving", sizeof("Serving")-1);
+            // info(func, p, "Serving: %.*s", (int)path.length, path.text);
         }
     }
     if(endswith(path, SV(".html"))){
