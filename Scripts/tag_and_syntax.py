@@ -374,7 +374,7 @@ def write_vim(funcs:List[str], enums:List[str], types:List[str], globs:List[str]
         fp.write('hi cFunction ctermfg=109 guifg=#664499\n')
         fp.write('hi cEnum cterm=bold gui=bold\n')
         fp.write('hi cPreProc ctermfg=5\n')
-        fp.write('hi cGLOBAL ctermfg=7 cterm=bold gui=underline\n')
+        fp.write('hi cGLOBAL ctermfg=7 cterm=bold gui=bold\n')
         fp.write('hi cCONSTGLOBAL cterm=bold gui=bold\n')
         # using BufEnter as I never learned the proper way to do this.
         if funcs:

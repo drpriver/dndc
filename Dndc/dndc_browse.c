@@ -79,7 +79,7 @@ main(int argc, char** argv){
             .hidden = true,
         },
     };
-    const char* version = "dndc-browse 0.0.1. Compiled" __DATE__ " " __TIME__ ".";
+    const char* version = "dndc-browse 0.0.1. Compiled " __DATE__ " " __TIME__ ".";
     ArgParser argparser = {
         .name = argc? argv[0]: "dndc-browse",
         .description = "A local dnd web server.",
@@ -114,7 +114,7 @@ main(int argc, char** argv){
         fprintf(stderr, "Use --help to see usage.\n");
         return e;
     }
-    DndServer* server = dnd_server_create(&port);
+    DndServer* server = dnd_server_create(dndc_stderr_error_func, NULL, &port);
     {
         const char* opencmd = "open";
         char openbuff[1024];

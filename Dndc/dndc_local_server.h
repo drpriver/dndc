@@ -10,7 +10,7 @@
 #endif
 typedef struct DndServer DndServer;
 
-DndServer*_Nullable dnd_server_create(int* port);
+DndServer*_Nullable dnd_server_create(DndcErrorFunc*logfunc, void*_Nullable logdata, int* port);
 
 int dnd_server_serve(DndServer* server, uint64_t flags, LongString directory);
 
