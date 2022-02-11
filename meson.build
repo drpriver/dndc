@@ -93,6 +93,18 @@ if host_machine.system() == 'darwin'
     link_with: quickjs_static,
     install: true,
     )
+  executable(
+    'dndbr',
+    'Platform/MacOS/dndbr.m',
+    'Dndc/dndc_local_server.c',
+    dependencies:[dependency('appleframeworks', modules:'Cocoa')],
+    include_directories: includes,
+    objc_args: ['-fobjc-arc'],
+    link_args: '-Wl,-sectcreate,__TEXT,__info_plist,'+meson.source_root() + '/Platform/MacOS/DndBrInfo.plist',
+    link_with: dndc_lib,
+    install: true,
+    )
+
 endif
 
 # tests
