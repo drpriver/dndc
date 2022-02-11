@@ -125,10 +125,14 @@ compile_file(DndcErrorFunc* func, void*_Nullable logdata, LongString directory, 
     StringView base = LS_to_SV(directory);
     if(slash){
         int n = snprintf(buff, sizeof buff, "%s/%.*s", directory.text, (int)(slash-path.text), path.text);
+        if(n < 0){
+            *error = 1;
+            return (LongString){0};
+        }
         base = (StringView){.length = n, .text = buff};
     }
-    LongString result;
-    *error = dndc_compile_dnd_file(flags, base, LS_to_SV(text), SV(""), SV(""), &result, NULL, NULL, func, logdata, NULL, NULL, NULL, LS(""));
+    LongString result = {0};
+    *error = dndc_compile_dnd_file(flags, base, LS_to_SV(text), path, SV(""), &result, NULL, NULL, func, logdata, NULL, NULL, NULL, LS(""));
     return result;
 }
 
