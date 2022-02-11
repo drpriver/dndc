@@ -152,6 +152,9 @@ main(int argc, char** argv){
         fprintf(stderr, "Use --help to see usage.\n");
         return e;
     }
+    while(directory.length > 1 && directory.text[directory.length-1] == '/')
+        ((char*)directory.text)[--directory.length] = 0;
+
     DndServer* server = dnd_server_create(null_report, NULL, &port);
     if(!server) return 1;
 
