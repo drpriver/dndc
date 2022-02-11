@@ -32,9 +32,17 @@ SOLIB=.dylib
 
 $(BINDIR)/gdndc: Platform/MacOS/gdndc.m Platform/MacOS/Info.plist Platform/MacOS/app_icon.png opt.mak $(VENDOBJDIR)/libquickjs.o
 	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/gdndc.dep $< -o $@ $(LINK_FLAGS) -framework Cocoa -framework WebKit -fobjc-arc -Wl,-sectcreate,__TEXT,__info_plist,Platform/MacOS/Info.plist $(VENDOBJDIR)/libquickjs.o -Wno-sign-compare
+.PHONY: gdndc
 gdndc: $(BINDIR)/gdndc
+.PHONY: install-gdndc
 install-gdndc: $(BINDIR)/gdndc
 	$(INSTALL) -C $< $(INSTALLDIR)/gdndc
+
+$(BINDIR)/dndbr: Platform/MacOS/dndbr.m Platform/MacOS/dndbr_app_icon.png Platform/MacOS/DndBrInfo.plist opt.mak
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/gdndc.dep $< Dndc/dndc_local_server.c -o $@ $(LINK_FLAGS) -framework Cocoa -fobjc-arc -Wl,-sectcreate,__TEXT,__info_plist,Platform/MacOS/DndBrInfo.plist $(BINDIR)/libdndc.dylib $(RPATH)
+.PHONY: dndbr
+dndbr: $(BINDIR)/dndbr
+
 $(OBJDIR)/libdndc.a: $(OBJDIR)/dndc.o
 	ar crs $@ $^
 $(BINDIR)/libdndc.dylib: $(OBJDIR)/dndc.o $(VENDOBJDIR)/libquickjs.o
@@ -44,3 +52,4 @@ PYEXTENSION=$(shell python3-config --extension-suffix)
 PYEXTFLAGS=-bundle -bundle_loader /Library/Frameworks/Python.framework/Versions/3.10/bin/python3 -arch arm64
 
 all: gdndc $(OBJDIR)/libdndc.a $(BINDIR)/libdndc.dylib
+all: dndbr
