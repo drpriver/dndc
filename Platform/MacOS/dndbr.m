@@ -198,7 +198,7 @@ static void do_menus(void);
 static NSImage* appimage;
 static NSWindow* the_window;
 // Name of the app
-static NSString* APPNAME = @"Gdndc";
+static NSString* APPNAME = @"Dnd Browse";
 extern char _app_icon[];
 extern char _app_icon_end[];
 asm(".global __app_icon\n"
