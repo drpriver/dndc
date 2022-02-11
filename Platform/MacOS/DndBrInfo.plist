@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>Dnd Browse</string>
+    <string>dndbr</string>
 
     <key>CFBundleName</key>
     <string>Dnd Browse</string>

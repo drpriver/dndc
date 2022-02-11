@@ -106,7 +106,7 @@ if(APPLE)
     )
     set_target_properties(gdndc PROPERTIES
         MACOSX_BUNDLE YES
-        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Platform/Macos/Info.plist)
+		MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Platform/MacOS/Info.plist)
     # this is kind of weird
     target_compile_definitions(gdndc PRIVATE APP_ICON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/Platform/MacOS/app_icon.png")
 
@@ -119,6 +119,24 @@ if(APPLE)
 	#target_compile_definitions(gdndc PRIVATE QJS_SHARED_LIBRARY)
     target_compile_options(gdndc PUBLIC "-fobjc-arc")
     target_include_directories(gdndc PRIVATE Dndc)
+
+	add_executable(dndbr
+		MACOSX_BUNDLE
+		Platform/MacOS/dndbr.m
+		Dndc/dndc_local_server.c
+	)
+	set_target_properties(dndbr PROPERTIES
+			MACOSX_BUNDLE YES
+			MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Platform/MacOS/DndBrInfo.plist)
+	target_compile_definitions(dndbr PRIVATE
+			APP_ICON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/Platform/MacOS/dndbr_app_icon.png")
+	target_link_libraries(dndbr
+			dndc-dylib
+			"-framework Cocoa"
+			)
+    target_compile_options(dndbr PUBLIC "-fobjc-arc")
+    target_include_directories(dndbr PRIVATE Dndc)
+
 endif()
 
 if(WIN32)
