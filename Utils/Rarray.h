@@ -5,6 +5,25 @@
 #include <assert.h> // assert
 #include "Allocators/allocator.h" // Allocator functions
 
+//
+// Rarrays
+// -------
+// Rarrays are dynamically resizable arrays where the length and capacity are
+// stored inline with the data. They can only be referred via pointer as they
+// are dynamically sized (data is stored continguously after the
+// length/capacity).
+//
+// This is useful for dynamically sized arrays that are usually empty (as you
+// can just store a pointer and have NULL be the same as a length 0 array) and
+// when you need to access anything about the array you need all of it (so
+// paying the cost of a pointer indirection to look up the size doesn't matter
+// as you need to read the data anyway.
+//
+// We use this to slim down the ast nodes as they have some fields which are
+// dynamically sized, but usually empty (attributes, classes).
+//
+
+
 #define Rarray(type) RarrayI(type)
 #define RarrayI(type) Rarray__##type
 #define RARRAYIMPL(meth, type) Rarray##_##meth##__##type
@@ -26,24 +45,6 @@ for(type *iter=((rarray)?(rarray)->data:NULL), \
     iter!=iter##end__;\
     ++iter)
 #endif
-
-//
-// Rarrays
-// -------
-// Rarrays are dynamically resizable arrays where the length and capacity are
-// stored inline with the data. They can only be referred via pointer as they
-// are dynamically sized (data is stored continguously after the
-// length/capacity).
-//
-// This is useful for dynamically sized arrays that are usually empty (as you
-// can just store a pointer and have NULL be the same as a length 0 array) and
-// when you need to access anything about the array you need all of it (so
-// paying the cost of a pointer indirection to look up the size doesn't matter
-// as you need to read the data anyway.
-//
-// We use this to slim down the ast nodes as they have some fields which are
-// dynamically sized, but usually empty (attributes, classes).
-//
 
 #ifndef RARRAY_T
 #error "Must define RARRAY_T"
