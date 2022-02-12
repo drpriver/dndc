@@ -277,21 +277,21 @@ Marray_ensure_additional(MARRAY_T)(MARRAY* marray, Allocator a, size_t n_additio
         new_capacity = marray_resize_to_some_weird_number(marray->capacity);
         while(new_capacity < required_capacity) {
             new_capacity = marray_resize_to_some_weird_number(new_capacity);
-            }
         }
+    }
     size_t old_size = marray->capacity*sizeof(MARRAY_T);
     size_t new_size = new_capacity*sizeof(MARRAY_T);
     marray->data = Allocator_realloc(a, marray->data, old_size, new_size);
     unhandled_error_condition(!marray->data);
     marray->capacity = new_capacity;
-    }
+}
 
 MARRAY_LINKAGE
 void
 Marray_push(MARRAY_T)(MARRAY* marray, Allocator a, MARRAY_T value){
     Marray_ensure_additional(MARRAY_T)(marray, a, 1);
     marray->data[marray->count++] = value;
-    }
+}
 
 MARRAY_LINKAGE
 MARRAY_T*
@@ -299,14 +299,14 @@ Marray_alloc(MARRAY_T)(MARRAY* marray, Allocator a){
     Marray_ensure_additional(MARRAY_T)(marray, a, 1);
     MARRAY_T* result = &marray->data[marray->count++];
     return result;
-    }
+}
 
 MARRAY_LINKAGE
 size_t
 Marray_alloc_index(MARRAY_T)(MARRAY* marray, Allocator a){
     Marray_ensure_additional(MARRAY_T)(marray, a, 1);
     return marray->count++;
-    }
+}
 
 MARRAY_LINKAGE
 void
@@ -315,13 +315,13 @@ Marray_insert(MARRAY_T)(MARRAY* marray, Allocator a, size_t index, MARRAY_T valu
     if(index == marray->count){
         Marray_push(MARRAY_T)(marray, a, value);
         return;
-        }
+    }
     Marray_ensure_additional(MARRAY_T)(marray, a, 1);
     size_t n_move = marray->count - index;
     (memmove)(marray->data+index+1, marray->data+index, n_move*sizeof(marray->data[0]));
     marray->data[index] = value;
     marray->count++;
-    }
+}
 
 MARRAY_LINKAGE
 void
@@ -330,11 +330,11 @@ Marray_remove(MARRAY_T)(MARRAY* marray, size_t index){
     if(index == marray->count-1){
         marray->count--;
         return;
-        }
+    }
     size_t n_move = marray->count - index - 1;
     (memmove)(marray->data+index, marray->data+index+1, n_move*(sizeof(marray->data[0])));
     marray->count--;
-    }
+}
 
 MARRAY_LINKAGE
 void
@@ -342,7 +342,7 @@ Marray_extend(MARRAY_T)(MARRAY* marray, Allocator a, const MARRAY_T* values, siz
     Marray_ensure_additional(MARRAY_T)(marray, a, n_values);
     (memcpy)(marray->data+marray->count, values, n_values*(sizeof(MARRAY_T)));
     marray->count+=n_values;
-    }
+}
 
 MARRAY_LINKAGE
 void
@@ -355,7 +355,7 @@ Marray_ensure_total(MARRAY_T)(MARRAY* marray, Allocator a, size_t total_capacity
     marray->capacity = total_capacity;
     // I should really return success or failure or something here.
     unhandled_error_condition(!marray->data);
-    }
+}
 
 MARRAY_LINKAGE
 void
@@ -364,7 +364,7 @@ Marray_cleanup(MARRAY_T)(MARRAY* marray, Allocator a){
     marray->data = NULL;
     marray->count = 0;
     marray->capacity = 0;
-    }
+}
 
 #ifdef __clang__
 #pragma clang diagnostic pop

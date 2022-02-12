@@ -29,7 +29,7 @@
 #define MARRAY_T StringView
 #include "Marray.h"
 
-typedef Marray(StringView) Entries;
+typedef Marray__StringView Entries;
 
 
 struct JobData {
@@ -294,7 +294,7 @@ get_entries_inner(StringView directory, Entries* entries){
             msb_write_str(&sb, findd.cFileName, strlen(findd.cFileName));
             StringView text = msb_borrow_sv(&sb);
             char* s = Allocator_strndup(get_mallocator(), text.text, text.length);
-            StringView* it = Marray_alloc(StringView)(entries, get_mallocator());
+            StringView* it = Marray_alloc__StringView(entries, get_mallocator());
             *it = (StringView){.text=s, .length=text.length};
             sb.cursor = cursor;
         }while(FindNextFileA(handle, &findd));
@@ -356,7 +356,7 @@ get_entries(LongString directory, Entries* entries){
             char* p = ent->fts_path + directory.length+1;
             size_t len = strlen(p);
             char* t = Allocator_strndup(get_mallocator(), p, len);
-            StringView* it = Marray_alloc(StringView)(entries, get_mallocator());
+            StringView* it = Marray_alloc__StringView(entries, get_mallocator());
             *it = (StringView){.length = len, .text = t};
         }
     }
@@ -411,7 +411,7 @@ entry_completer(GetInputCtx* ctx, size_t original_cursor, size_t original_count,
         }
         qsort(distances, n, sizeof *distances, distance_cmp);
         for(size_t i = 0; i < n; i++){
-            StringView* sv = Marray_alloc(StringView)(&tctx->ordered, get_mallocator());
+            StringView* sv = Marray_alloc__StringView(&tctx->ordered, get_mallocator());
             *sv = tctx->original->data[distances[i].idx];
         }
         free(distances);
