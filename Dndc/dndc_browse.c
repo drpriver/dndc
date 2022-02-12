@@ -167,7 +167,7 @@ main(int argc, char** argv){
 
     ThreadHandle thrd;
     create_thread(&thrd, &serve, &data);
-    struct LineHistory history = {0};
+    GetInputCtx input = {.prompt = SV("> ")};
     // int err = dnd_server_serve(server, flags, directory);
     StringView* entries = NULL;
     size_t nentries = 0;
@@ -186,13 +186,13 @@ main(int argc, char** argv){
         opencmd = "start";
     #endif
     for(;;){
-        ssize_t len = get_input_line(&history, SV("> "), buff, sizeof buff);
+        ssize_t len = gi_get_input(&input);
         if(len < 0) break;
         if(len == 0) continue;
-        StringView b = stripped_view(buff, len);
+        StringView b = stripped_view(input.buff, len);
         if(SV_equals(b, SV("l")) || SV_equals(b, SV("list"))){
             print_entries(entries, nentries);
-            add_line_to_history_len(&history, b.text, b.length);
+            gi_add_line_to_history_len(&input, b.text, b.length);
             continue;
         }
         if(SV_equals(b, SV("q")) || SV_equals(b, SV("quit"))){
@@ -218,7 +218,7 @@ main(int argc, char** argv){
             idx = ir.result;
         if(idx < 0) continue;
         if(idx >= nentries) continue;
-        add_line_to_history_len(&history, b.text, b.length);
+        gi_add_line_to_history_len(&input, b.text, b.length);
         StringView entry = entries[idx];
         snprintf(openbuff, sizeof openbuff, "%s %s:%d/%.*s", opencmd, url, port, (int)entry.length, entry.text);
         int s = system(openbuff);

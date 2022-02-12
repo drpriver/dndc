@@ -393,14 +393,13 @@ main(int argc, char**argv){
             // read from stdin
             MStringBuilder sb = {.allocator=get_mallocator()};
             if(isatty(fileno(stdin))){
-                char buff[4096];
-                struct LineHistory history = {0};
+                GetInputCtx history = {.prompt = SV("> ")};
                 for(;;){
-                    ssize_t len = get_input_line(&history, SV("> "), buff, sizeof(buff));
+                    ssize_t len = gi_get_input(&history);
                     if(len < 0)
                         break;
-                    add_line_to_history_len(&history, buff, len);
-                    msb_write_str(&sb, buff, len);
+                    gi_add_line_to_history_len(&history, history.buff, len);
+                    msb_write_str(&sb, history.buff, len);
                     msb_write_char(&sb, '\n');
                 }
                 puts("^D");

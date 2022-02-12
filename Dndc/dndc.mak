@@ -81,3 +81,4 @@ $(BINDIR)/dndc-browse$(EXE): Bin/libdndc$(SO) Dndc/dndc_browse.c
 	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc_browse.dep Dndc/dndc_browse.c -o $@ Bin/libdndc$(SOLIB) $(LINK_FLAGS) $(RPATH)
 .PHONY: dndc-browse
 dndc-browse: $(BINDIR)/dndc-browse$(EXE)
+all: dndc-browse
