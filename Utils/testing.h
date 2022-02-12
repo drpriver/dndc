@@ -558,6 +558,8 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     LongString outfile = {0};
     LongString extrafiles[8] = {0};
     _Bool append = 0;
+    _Bool print_pid = 0;
+    _Bool should_wait = 0;
     enum {TEE_INDEX=6, TARGET_INDEX=3};
     ArgToParse kw_args[] = {
         {
@@ -610,6 +612,18 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
             .name = SV("--append"),
             .dest = ARGDEST(&append),
             .help = "Open the files indicated by --outfile or --tee in append mode.",
+        },
+        {
+            .name = SV("-p"),
+            .altname1 = SV("--print-pid"),
+            .help = "Print the pid of this process",
+            .dest = ARGDEST(&print_pid),
+        },
+        {
+            .name = SV("-w"),
+            .altname1 = SV("--wait"),
+            .help = "Do a getchar() before running the tests to give time to attach or whatever",
+            .dest = ARGDEST(&should_wait),
         },
     };
     enum {HELP=0, LIST=1};
@@ -714,6 +728,17 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     size_t num_to_run = run_all? arrlen(tests_to_run) : kw_args[TARGET_INDEX].num_parsed;
 
     assert(SV_equals(kw_args[TARGET_INDEX].name, SV("-t")));
+
+    if(print_pid){
+        #ifdef _WIN32
+        fprintf(stderr, "pid: %d\n", (int)GetCurrentProcessId());
+        #else
+        fprintf(stderr, "pid: %d\n", getpid());
+        #endif
+    }
+    if(should_wait){
+        getchar();
+    }
     struct TestStats result = run_the_tests(tests_to_run, num_to_run);
 
     const char* text = result.funcs_executed == 1?
