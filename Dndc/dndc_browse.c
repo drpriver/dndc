@@ -9,6 +9,9 @@
 #include "allocator.h"
 #include "mallocator.h"
 #include "string_distances.h"
+#include "MStringBuilder.h"
+#include "msb_extensions.h"
+#include "msb_format.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -22,6 +25,11 @@
 #include <fts.h>
 #elif defined(_WIN32)
 #endif
+
+#define MARRAY_T StringView
+#include "Marray.h"
+
+typedef Marray(StringView) Entries;
 
 
 struct JobData {
@@ -37,16 +45,30 @@ THREADFUNC(serve){
     return 0;
 }
 
-static
-void
-get_entries(LongString directory, StringView** entries, size_t* nentries);
+struct TabContext {
+    const Entries* original;
+    Entries ordered;
+};
+static GiTabCompletionFunc entry_completer;
 
 static
 void
-print_entries(StringView* entries, size_t nentries);
+get_entries(LongString directory, Entries*entries);
+
+static
+void
+print_entries(Entries);
 
 static
 void null_report(void* ud, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
+    (void)ud;
+    (void)type;
+    (void)filename;
+    (void)filename_len;
+    (void)line;
+    (void)col;
+    (void)message;
+    (void)message_len;
 }
 
 
@@ -79,6 +101,7 @@ main(int argc, char** argv){
             .show_default = true,
         },
     };
+    _Bool should_log = false;
     ArgToParse kw_args[] = {
         {
             .name = SV("-p"),
@@ -98,6 +121,12 @@ main(int argc, char** argv){
             .name = SV("--link-imgs"),
             .dest = ArgBitFlagDest(&flags, DNDC_DONT_INLINE_IMAGES),
             .help = "Use links instead of inlining images",
+        },
+        {
+            .name = SV("--log"),
+            .dest = ARGDEST(&should_log),
+            .help = "log requests etc. (can be chatty)",
+
         },
     };
     enum {HELP, VERSION, FISH};
@@ -153,10 +182,14 @@ main(int argc, char** argv){
         fprintf(stderr, "Use --help to see usage.\n");
         return e;
     }
-    while(directory.length > 1 && directory.text[directory.length-1] == '/')
+    while(directory.length > 1 && directory.text[directory.length-1] == '/'){
+        PushDiagnostic();
+        SuppressCastQual();
         ((char*)directory.text)[--directory.length] = 0;
+        PopDiagnostic();
+    }
 
-    DndServer* server = dnd_server_create(null_report, NULL, &port);
+    DndServer* server = dnd_server_create(should_log?dndc_stderr_error_func:null_report, NULL, &port);
     if(!server) return 1;
 
     struct JobData data = {
@@ -167,16 +200,16 @@ main(int argc, char** argv){
 
     ThreadHandle thrd;
     create_thread(&thrd, &serve, &data);
-    GetInputCtx input = {.prompt = SV("> ")};
     // int err = dnd_server_serve(server, flags, directory);
-    StringView* entries = NULL;
-    size_t nentries = 0;
-    get_entries(directory, &entries, &nentries);
-    if(!nentries) return 1;
-    print_entries(entries, nentries);
-    char buff[4092];
+    Entries entries = {0};
+    get_entries(directory, &entries);
+    if(!entries.count) return 1;
+    print_entries(entries);
+    struct TabContext tabctx = {
+        .original = &entries,
+    };
+    GetInputCtx input = {.prompt = SV("> "), .tab_completion_func = entry_completer, .tab_completion_user_data=&tabctx};
     const char* opencmd = "open";
-    char openbuff[1024];
     const char* url = "http://localhost";
     #if defined(__APPLE__)
         opencmd = "open";
@@ -185,13 +218,16 @@ main(int argc, char** argv){
     #elif defined(_WIN32)
         opencmd = "start";
     #endif
+    MStringBuilder opensb = {.allocator = get_mallocator()};
+    MSB_FORMAT(&opensb, opencmd, " ", url, ":", port, "/");
+    size_t before_entry = opensb.cursor;
     for(;;){
         ssize_t len = gi_get_input(&input);
         if(len < 0) break;
         if(len == 0) continue;
         StringView b = stripped_view(input.buff, len);
         if(SV_equals(b, SV("l")) || SV_equals(b, SV("list"))){
-            print_entries(entries, nentries);
+            print_entries(entries);
             gi_add_line_to_history_len(&input, b.text, b.length);
             continue;
         }
@@ -203,9 +239,9 @@ main(int argc, char** argv){
         if(ir.errored) {
             ssize_t best = 1LL<<32;
             int strip_dnd = !endswith(b, SV(".dnd"));
-            for(size_t i = 0; i < nentries; i++){
+            for(size_t i = 0; i < entries.count; i++){
                 // calculate expand distance, but without .dnd if we don't have .dnd in buffer
-                ssize_t dist = byte_expansion_distance(entries[i].text, entries[i].length-4*strip_dnd, b.text, b.length);
+                ssize_t dist = byte_expansion_distance(entries.data[i].text, entries.data[i].length-4*strip_dnd, b.text, b.length);
                 if(dist < 0) continue;
                 if(dist < best){
                     best = dist;
@@ -217,13 +253,14 @@ main(int argc, char** argv){
         else
             idx = ir.result;
         if(idx < 0) continue;
-        if(idx >= nentries) continue;
+        if((size_t)idx >= entries.count) continue;
         gi_add_line_to_history_len(&input, b.text, b.length);
-        StringView entry = entries[idx];
-        snprintf(openbuff, sizeof openbuff, "%s %s:%d/%.*s", opencmd, url, port, (int)entry.length, entry.text);
-        int s = system(openbuff);
+        StringView entry = entries.data[idx];
+        opensb.cursor = before_entry;
+        msb_shell_quote_arg(&opensb, entry.text, entry.length);
+        LongString op = msb_borrow_ls(&opensb);
+        int s = system(op.text);
         (void)s;
-
     }
     puts("\r");
     return 0;
@@ -238,7 +275,7 @@ main(int argc, char** argv){
 #include "MStringBuilder.h"
 static
 void
-get_entries_inner(StringView directory, StringView** buff, size_t* count, size_t* cap){
+get_entries_inner(StringView directory, Entries* entries){
     MStringBuilder sb = {.allocator = get_mallocator()};
     msb_write_str(&sb, directory.text, directory.length);
     msb_write_literal(&sb, "/*.dnd");
@@ -256,11 +293,8 @@ get_entries_inner(StringView directory, StringView** buff, size_t* count, size_t
             msb_write_str(&sb, findd.cFileName, strlen(findd.cFileName));
             StringView text = msb_borrow_sv(&sb);
             char* s = Allocator_strndup(get_mallocator(), text.text, text.length);
-            if(*count >= *cap){
-                *cap = *cap? *cap*2 : 8;
-                *buff = realloc(*buff, cap*sizeof **buff);
-            }
-            *buff[(*count)++] = (StringView){.text=s, .length=text.length};
+            StringView* it = Marray_alloc(StringView)(entries, get_mallocator());
+            *it = (StringView){.text=s, .length=text.length};
             sb.cursor = cursor;
         }while(FindNextFileA(handle, &findd));
         FindClose(handle);
@@ -299,13 +333,13 @@ get_entries_inner(StringView directory, StringView** buff, size_t* count, size_t
 
 static
 void
-get_entries(LongString directory, StringView** entries, size_t* nentries){
-    StringView* buff = NULL;
-    size_t count = 0;
-    size_t cap = 0;
+get_entries(LongString directory, Entries* entries){
 #if defined(__APPLE__) || defined(__linux__)
     const char* dirs[] = {directory.text, NULL};
+    PushDiagnostic();
+    SuppressCastQual();
     FTS* handle = fts_open((char**)dirs, FTS_LOGICAL | FTS_NOCHDIR | FTS_NOSTAT, NULL);
+    PopDiagnostic();
     if(!handle) return;
     for(;;){
         FTSENT* ent = fts_read(handle);
@@ -321,30 +355,83 @@ get_entries(LongString directory, StringView** entries, size_t* nentries){
             char* p = ent->fts_path + directory.length+1;
             size_t len = strlen(p);
             char* t = Allocator_strndup(get_mallocator(), p, len);
-            if(count >= cap){
-                cap = cap? cap*2 : 8;
-                buff = realloc(buff, cap*sizeof *buff);
-            }
-            buff[count++] = (StringView){.length = len, .text = t};
+            StringView* it = Marray_alloc(StringView)(entries, get_mallocator());
+            *it = (StringView){.length = len, .text = t};
         }
     }
     fts_close(handle);
 #elif defined(_WIN32)
-    get_entries_inner(LS_to_SV(directory), &buff, &count, &cap);
+    get_entries_inner(LS_to_SV(directory), entries);
 #endif
-    *entries = buff;
-    *nentries = count;
 }
 
 static
 void
-print_entries(StringView* entries, size_t nentries){
+print_entries(Entries entries){
     putchar('\r');
-    qsort(entries, nentries, sizeof *entries, StringView_cmp);
-    for(size_t i = 0; i < nentries; i++){
-        StringView entry = entries[i];
+    qsort(entries.data, entries.count, sizeof entries.data[0], StringView_cmp);
+    for(size_t i = 0; i < entries.count; i++){
+        StringView entry = entries.data[i];
         fprintf(stdout, "[%2zu] %.*s\n", i, (int)entry.length, entry.text);
     }
+}
+
+struct Pair {
+    size_t idx;
+    ssize_t distance;
+};
+static
+int
+distance_cmp(const void* a, const void* b){
+    const struct Pair* pa = a;
+    const struct Pair* pb = b;
+    if(pa->distance < pb->distance) return -1;
+    if(pa->distance > pb->distance) return 1;
+    return 0;
+}
+
+static
+int
+entry_completer(GetInputCtx* ctx, size_t original_cursor, size_t original_count, int n_tabs){
+    struct TabContext* tctx = ctx->tab_completion_user_data;
+    if(n_tabs == 1){
+        StringView original = {.length=original_count, .text=ctx->altbuff};
+        int strip_dnd = !endswith(original, SV(".dnd"));
+        tctx->ordered.count = 0;
+        struct Pair* distances = malloc(tctx->original->count * sizeof*distances);
+        size_t n = 0;
+        for(size_t i = 0; i < tctx->original->count; i++){
+            StringView hay = tctx->original->data[i];
+            ssize_t distance = byte_expansion_distance(hay.text, hay.length-4*strip_dnd, ctx->altbuff, original_count);
+            if(distance < 0) continue;
+            distances[n].idx = i;
+            distances[n].distance = distance;
+            n++;
+        }
+        qsort(distances, n, sizeof *distances, distance_cmp);
+        for(size_t i = 0; i < n; i++){
+            StringView* sv = Marray_alloc(StringView)(&tctx->ordered, get_mallocator());
+            *sv = tctx->original->data[distances[i].idx];
+        }
+        free(distances);
+        // initialize
+    }
+    if(ctx->tab_completion_cookie >= tctx->ordered.count){
+        memcpy(ctx->buff, ctx->altbuff, original_count);
+        ctx->buff_count = original_count;
+        ctx->buff_cursor = original_cursor;
+        ctx->buff[original_count] = 0;
+        ctx->tab_completion_cookie = 0;
+        return 0;
+    }
+    StringView completion = tctx->ordered.data[ctx->tab_completion_cookie++];
+    if(completion.length >= GI_BUFF_SIZE-1)
+        return 1;
+    memcpy(ctx->buff, completion.text, completion.length);
+    ctx->buff[completion.length] = 0;
+    ctx->buff_count = completion.length;
+    ctx->buff_cursor = completion.length;
+    return 0;
 }
 
 #include "dndc_local_server.c"

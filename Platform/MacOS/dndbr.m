@@ -376,6 +376,7 @@ asm(".global __app_icon\n"
 -(void)log_mess:(int)type fn:(NSString*)filename line:(int)l column:(int)col mess:(NSString*)message{
     NSString* type_str = @"?????";
     NSColor* color = [NSColor textColor];
+    Class nc = [NSColor class];
     switch((enum DndcErrorMessageType)type){
         case DNDC_ERROR_MESSAGE:
             type_str = @"ERROR";
@@ -391,15 +392,31 @@ asm(".global __app_icon\n"
             break;
         case DNDC_STATISTIC_MESSAGE:
             type_str = @"INFO ";
-            color = [NSColor systemCyanColor];
+            if([nc respondsToSelector:@selector(systemCyanColor)])
+                color = [nc performSelector:@selector(systemCyanColor)];
+            else
+                color = [NSColor systemTealColor];
             break;
         case DNDC_DEBUG_MESSAGE:
             type_str = @"DEBUG";
-            color = [NSColor systemMintColor];
+            if([nc respondsToSelector:@selector(systemMintColor)])
+                color = [nc performSelector:@selector(systemMintColor)];
+            else
+                color = [NSColor systemIndigoColor];
             break;
     }
-    NSMutableAttributedString* m = [NSMutableAttributedString localizedAttributedStringWithFormat:[[NSAttributedString alloc] initWithString:@"[%@] %@: %@\n"], type_str, filename, message];
+    NSMutableAttributedString* m = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"[%@]", type_str]];
     [m addAttribute:NSForegroundColorAttributeName value:color range: NSMakeRange(1, 5)];
+    if(filename.length){
+        [m appendAttributedString: [[NSAttributedString alloc] initWithString:@" "]];
+        NSString* link = [NSString stringWithFormat:@"http://localhost:%d/%@", self->port, filename];
+        NSMutableAttributedString* fn = [[NSMutableAttributedString alloc] initWithString:filename];
+        [fn addAttribute:NSLinkAttributeName value:link range:NSMakeRange(0, fn.length)];
+        [m appendAttributedString:fn];
+    }
+    [m appendAttributedString: [[NSAttributedString alloc] initWithString:[NSString stringWithFormat:@": %@\n", message]]];
+    // NSMutableAttributedString* m = [NSMutableAttributedString localizedAttributedStringWithFormat:[[NSAttributedString alloc] initWithString:@"[%@] %@: %@\n"], type_str, filename, message];
+    // [m addAttribute:NSForegroundColorAttributeName value:color range: NSMakeRange(1, 5)];
     [m addAttribute:NSFontAttributeName value: [NSFont fontWithName:@"SF Mono" size:14] range:NSMakeRange(0, [m length])];
     [self->log.textStorage appendAttributedString:m];
     [self->log scrollToEndOfDocument:self];
