@@ -1,10 +1,14 @@
 #ifndef MARRAY_H
 #define MARRAY_H
 //
+// Marray.h
+// --------
 // Usage:
-// #define MARRAY_T int
-// #include "Marray.h"
+// ------
+//   #define MARRAY_T int
+//   #include "Marray.h"
 //
+// ------
 // Will generate a resizable dynamically allocated array type, using allocators
 // and corresponding functions to go along with it.
 //
@@ -25,16 +29,11 @@
 // Define it to extern, extern inline, dllimport, whatever you need if you want.
 //
 
-// size_t
-#include <stddef.h>
-// memmove, memcpy
-#include <string.h>
-// for, well, assert
-#include <assert.h>
-// Allocator
-#include "Allocators/allocator.h"
+#include <stddef.h> // size_t
+#include <string.h> // memmove, memcpy
+#include <assert.h> // assert
+#include "Allocators/allocator.h" // Allocator
 
-// Not really sure about this function tbh.
 static inline
 size_t
 marray_resize_to_some_weird_number(size_t x){
@@ -58,11 +57,11 @@ marray_resize_to_some_weird_number(size_t x){
     size_t result;
     if(cnt == 1){
         result =  x | (x >> 1);
-        }
+    }
     else {
         int clz = __builtin_clzll(x);
         result = 1ull << (64 - clz);
-        }
+    }
     return result;
 #else
     _Static_assert(sizeof(size_t) == sizeof(unsigned), "fuu");
@@ -78,18 +77,16 @@ marray_resize_to_some_weird_number(size_t x){
     size_t result;
     if(cnt == 1){
         result =  x | (x >> 1);
-        }
+    }
     else {
         int clz = __builtin_clz(x);
         result = 1u << (32 - clz);
-        }
+    }
     return result;
 #endif
-    }
+}
 
-// Level of indirection is necessary for it to work properly
-// with macros.
-#define MARRAYIMPL(meth, type) Marray##_##meth##__##type
+#define MARRAYIMPL(meth, type) Marray##_##meth##__##type // Macros require level of indirection
 #define Marray(type) MarrayI(type)
 #define MarrayI(type) Marray__##type
 #define Marray_push(type) MARRAYIMPL(push, type)
@@ -103,6 +100,8 @@ marray_resize_to_some_weird_number(size_t x){
 #define Marray_alloc_index(type) MARRAYIMPL(alloc_index, type)
 
 //
+// MARRAY_FOR_EACH
+// ----------------
 // Convenience macro to loop over an marray. Only use if you will not resize
 // the marray.
 //
@@ -126,16 +125,14 @@ for(type \
   iter != iter##end__; \
   ++iter)
 
-// Above requires typeof as this is expanded in user code, after MARRAY_T is
-// undefed. auto would be nicer, but gcc and clang disagree on how __auto_type
-// works in the multiple declaration case. We could require you to specify the
-// type to get around that...  I am hopeful that C23 will have auto and typeof
-// though, so using extensions for now doesn't bother me.
 //
+// NULL UB note
+// ------------
 // The above looks like it could be simplified, but note that in C it is
 // stupidly undefined behavior to add 0 to NULL, so you have to use a ternary
 // to check for NULL instead of just having `iterend = marray.data+marray.count`.
 // That is legal in C++ though, but you would use range-based-for there.
+//
 #endif
 
 #ifdef __clang__
@@ -158,14 +155,11 @@ for(type \
 #error "Must define MARRAY_T"
 #endif
 
-// slightly less typing in the function signature
-#define MARRAY Marray(MARRAY_T)
+#define MARRAY Marray(MARRAY_T) // slightly less typing in the function signature
 
 #ifndef MARRAY_IMPL_ONLY
 typedef struct Marray(MARRAY_T) {
-    // The count being first means you can pun this structure with small
-    // buffers.
-    size_t count;
+    size_t count; // First so you can pun this structure with small buffers.
     size_t capacity;
     // This will be NULL if capacity is 0, otherwise it is a valid pointer.
     // Labeling that as nullable is too annoying though.
@@ -173,6 +167,8 @@ typedef struct Marray(MARRAY_T) {
 } Marray(MARRAY_T);
 
 //
+// Allocation Note
+// ---------------
 // Note: it is easy to tell which functions might allocate - they take an
 // allocator as an argument.
 //
@@ -190,29 +186,40 @@ typedef struct Marray(MARRAY_T) {
 //
 
 //
+// Marray_push
+// -----------
 // Appends to the end of the marray, reallocating if necessary.
 MARRAY_LINKAGE
 void
 Marray_push(MARRAY_T)(MARRAY*, Allocator, MARRAY_T);
 
 //
+// Marray_cleanup
+// --------------
 // Frees the array and zeros out the members. The marray can then be re-used.
 MARRAY_LINKAGE
 void
 Marray_cleanup(MARRAY_T)(MARRAY*, Allocator);
 
 //
+// Marray_ensure_total
+// -------------------
 // Makes the marray at least this capacity.
 MARRAY_LINKAGE
 void
 Marray_ensure_total(MARRAY_T)(MARRAY*, Allocator, size_t);
 
 //
+// Marray_ensure_additional
+// ------------------------
 // Ensures space for n additional items.
 MARRAY_LINKAGE
 void
 Marray_ensure_additional(MARRAY_T)(MARRAY*, Allocator, size_t);
+
 //
+// Marray_extend
+// -------------
 // Appends the n items at the given pointer to the end of the marray,
 // reallocing if necessary.
 MARRAY_LINKAGE
@@ -220,6 +227,8 @@ void
 Marray_extend(MARRAY_T)(MARRAY*, Allocator, const MARRAY_T*, size_t);
 
 //
+// Marray_insert
+// --------------
 // Inserts the element at the given index, shifting the remaining elements
 // backwards.
 MARRAY_LINKAGE
@@ -227,12 +236,16 @@ void
 Marray_insert(MARRAY_T)(MARRAY*, Allocator, size_t, MARRAY_T);
 
 //
+// Marray_remove
+// -------------
 // Removes an element by index and shifts the remaining elements forward.
 MARRAY_LINKAGE
 void
 Marray_remove(MARRAY_T)(MARRAY*, size_t);
 
 //
+// Marray_alloc
+// ------------
 // Returns a pointer to an uninitialized element at the end of the marray,
 // reallocing if space is needed.
 // Conceptually similar to push.
@@ -242,6 +255,8 @@ MARRAY_T*
 Marray_alloc(MARRAY_T)(MARRAY*, Allocator);
 
 //
+// Marray_alloc_index
+// ------------------
 // Returns an index to an uninitialized element at the end of the marray,
 // reallocing if space is needed.
 // Conceptually similar to push.

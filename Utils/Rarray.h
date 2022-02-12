@@ -69,11 +69,14 @@ typedef struct Rarray(RARRAY_T){
 #define RARRAY Rarray(RARRAY_T)
 
 //
+// Rarray_check_size
+// -----------------
 // Ensures there is enough space for one more element.
 // Returns the new rarray. The old pointer is now invalid (even if it happens
 // to be the same)!
 //
 // Example:
+// --------
 //   Allocator al = get_my_allocator();
 //   Rarray(int)* myarray = NULL;
 //   myarray = Rarray_check_size(int)(myarray, al);
@@ -88,7 +91,7 @@ Rarray_check_size(RARRAY_T)(RARRAY*_Nullable rarray, Allocator a){
         rarray = Allocator_alloc(a, INITIAL_SIZE);
         rarray->count = 0;
         rarray->capacity = INITIAL_CAPACITY;
-        }
+    }
     if(rarray->count == rarray->capacity){
         size_t datasize = rarray->capacity*sizeof(RARRAY_T);
         size_t old_size = datasize + sizeof(RARRAY);
@@ -96,17 +99,19 @@ Rarray_check_size(RARRAY_T)(RARRAY*_Nullable rarray, Allocator a){
         void* new_array = Allocator_realloc(a, rarray, old_size, new_size);
         rarray = new_array;
         rarray->capacity *= 2;
-        }
-    return (Rarray(RARRAY_T)*)rarray;
     }
+    return (Rarray(RARRAY_T)*)rarray;
+}
 
 //
+// Rarray_push
+// -----------
 // Pushes one more element onto the end of the rarray.
 // Returns the new rarray. The old pointer is now invalid (even if it happens
 // to be the same)!
 //
 // Example:
-//
+// --------
 //   Allocator al = get_my_allocator();
 //   Rarray(int)* myarray = NULL;
 //   myarray = Rarray_push(int)(myarray, al, 1);
@@ -123,9 +128,11 @@ Rarray_push(RARRAY_T)(RARRAY*_Nullable rarray, Allocator a, RARRAY_T item){
     rarray = Rarray_check_size(RARRAY_T)(rarray,a);
     rarray->data[rarray->count++] = item;
     return (RARRAY*)rarray; // cast away nullability
-    }
+}
 
 //
+// Rarray_alloc
+// ------------
 // Allocates space for one item in the rarray and returns it.
 // The item is uninitialized. The pointer is unstable as any subsequent usage
 // of the rarray can invalidate it.
@@ -134,7 +141,7 @@ Rarray_push(RARRAY_T)(RARRAY*_Nullable rarray, Allocator a, RARRAY_T item){
 // this rewrite it or you need to manually update the other pointers.
 //
 // Example:
-//
+// --------
 //   Allocator al = get_my_allocator();
 //   Rarray(int)* myarray = NULL;
 //   // Use a block to scope the allocation as the returned pointer is unstable
@@ -155,13 +162,15 @@ RARRAY_T*
 Rarray_alloc(RARRAY_T)(RARRAY*_Nullable*_Nonnull rarray, Allocator a){
     *rarray = Rarray_check_size(RARRAY_T)(*rarray, a);
     return &(*rarray)->data[(*rarray)->count++];
-    }
+}
 
 //
+// Rarray_remove
+// -------------
 // Removes an item by index. All items after it are shifted forward one.
 //
 // Example:
-//
+// --------
 //   Allocator al = get_my_allocator();
 //   Rarray(int)* myarray = NULL;
 //   myarray = Rarray_push(int)(myarray, al, 1);
@@ -179,11 +188,11 @@ Rarray_remove(RARRAY_T)(RARRAY* rarray, size_t i){
     if(i == rarray->count-1){
         rarray->count--;
         return;
-        }
+    }
     size_t n_move = rarray->count - i - 1;
     (memmove)(rarray->data+i, rarray->data+i+1, n_move*(sizeof(RARRAY_T)));
     rarray->count--;
-    }
+}
 
 #undef RARRAY
 #undef RARRAY_T
