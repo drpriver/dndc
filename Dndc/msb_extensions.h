@@ -326,32 +326,6 @@ msb_write_tag_escaped_str(MStringBuilder* sb, const char* text, size_t length){
     }
 }
 
-// TODO: speed up with SIMD
-static inline
-void
-msb_url_percent_encode(MStringBuilder* sb, const char* text, size_t length){
-    static const char* hex = "0123456789ABCDEF";
-    for(size_t i = 0; i < length; i++){
-        unsigned c = (unsigned char)text[i];
-        if(i <= 32 || i >= 127){
-            msb_write_char(sb, hex[(c & 0xf0)>>4]);
-            msb_write_char(sb, hex[c & 0xf]);
-            continue;
-        }
-        switch(c){
-            case ':': case '/': case '?': case '#': case '[':
-            case ']': case '@': case '!': case '$': case '&':
-            case '\'': case '(': case ')': case '*': case '+':
-            case ',': case ';': case '=': case '%':
-                msb_write_char(sb, hex[(c & 0xf0)>>4]);
-                msb_write_char(sb, hex[c & 0xf]);
-                continue;
-            default:
-                msb_write_char(sb, c);
-        }
-    }
-}
-
 static inline
 void
 msb_shell_quote_arg(MStringBuilder* sb, const char* text, size_t length){
@@ -370,7 +344,6 @@ msb_shell_quote_arg(MStringBuilder* sb, const char* text, size_t length){
     }
     msb_write_char(sb, '\'');
 }
-
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

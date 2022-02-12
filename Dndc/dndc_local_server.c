@@ -4,6 +4,7 @@
 #include "str_util.h"
 #include "allocator.h"
 #include "mallocator.h"
+#include "msb_url_helpers.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -248,6 +249,7 @@ static
 int
 handle_request(DndcErrorFunc*func, void*_Nullable p, uint64_t flags, LongString directory, SOCKET accsd, LongString request){
     // just assume everything is a GET, lol.
+    MStringBuilder urlsb = {.allocator=get_mallocator()};
     StringView path = SV("index.dnd");
     StringView suffix = SV("");
     if(request.length > 6){
@@ -255,6 +257,12 @@ handle_request(DndcErrorFunc*func, void*_Nullable p, uint64_t flags, LongString 
         const char* space = strchr(rest.text, ' ');
         if(space && space != rest.text){
             path = (StringView){.text=rest.text, .length=space-rest.text};
+            int decoderr = msb_url_percent_decode(&urlsb, path.text, path.length);
+            if(decoderr){
+                func(p, DNDC_NODELESS_MESSAGE, "", 0, -1, -1, "Bad percent decode", sizeof("Bad percent decode")-1);
+                goto LNotFound;
+            }
+            path = msb_borrow_sv(&urlsb);
             func(p, DNDC_STATISTIC_MESSAGE, path.text-1, path.length+1, -1, -1, "Serving", sizeof("Serving")-1);
             // info(func, p, "Serving: %.*s", (int)path.length+1, path.text-1);
         }
@@ -263,27 +271,25 @@ handle_request(DndcErrorFunc*func, void*_Nullable p, uint64_t flags, LongString 
             // info(func, p, "Serving: %.*s", (int)path.length, path.text);
         }
     }
-    if(SV_equals(path, SV("shutdown"))){
-        #define MESS "HTTP/1.1 200 OK\r\n"
-        send(accsd, MESS, (sizeof MESS)-1, 0);
-        #undef MESS
-        return 1;
-    }
     if(endswith(path, SV(".html"))){
         path.length -= 5;
         suffix = SV(".dnd");
     }
+    if(SV_equals(path, SV("shutdown"))){
+        #define MESS "HTTP/1.1 200 OK\r\n"
+        send(accsd, MESS, (sizeof MESS)-1, 0);
+        #undef MESS
+        goto LShutdown;
+    }
     if(memmem(path.text, path.length, "..", 2)){
         error(func, p, ".. not allowed: '%.*s'", (int)path.length, path.text);
-        goto LErr;
+        goto LNotFound;
     }
-    // debug("path: %.*s", (int)path.length, path.text);
-    // debug("suffix: %.*s", (int)suffix.length, suffix.text);
     if(endswith(path, SV(".dnd")) || SV_equals(suffix, SV(".dnd"))){
         TextFileResult tfr = read_relative_file_with_suffix_conversion(directory, path, suffix);
         if(tfr.errored){
             error(func, p, "Error reading '%.*s': %d", (int)path.length, path.text, tfr.native_error);
-            goto LErr;
+            goto LNotFound;
         }
         int err = 0;
         LongString html = compile_file(func, p, directory, flags, path, tfr.result, &err);
@@ -295,7 +301,7 @@ handle_request(DndcErrorFunc*func, void*_Nullable p, uint64_t flags, LongString 
             "\r\n"
             send(accsd, MESS, (sizeof MESS)-1, 0);
             #undef MESS
-            return 0;
+            goto LOk;
         }
         char buff[1024];
         int n = snprintf(buff, sizeof buff, "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\n\r\n", html.length);
@@ -303,22 +309,22 @@ handle_request(DndcErrorFunc*func, void*_Nullable p, uint64_t flags, LongString 
         send(accsd, html.text, html.length, 0);
         dndc_free_string(tfr.result);
         dndc_free_string(html);
-        return 0;
+        goto LOk;
     }
     else {
         TextFileResult tfr = read_relative_file_with_suffix_conversion(directory, path, suffix);
         if(tfr.errored){
             error(func, p, "Error reading '%.*s': %d", (int)path.length, path.text, tfr.native_error);
-            goto LErr;
+            goto LNotFound;
         }
         char buff[1024];
         int n = snprintf(buff, sizeof buff, "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\n\r\n", tfr.result.length);
         send(accsd, buff, n, 0);
         send(accsd, tfr.result.text, tfr.result.length, 0);
         dndc_free_string(tfr.result);
-        return 0;
+        goto LOk;
     }
-    LErr:
+    LNotFound:
     #define MESS "HTTP/1.1 404 Not-Found\r\n\r\n" \
         "<div align=center style=\"margin-top:10%; font-family: sans-serif;\">" \
         "<h1><span style=\"color:red;\">404</span>'ed! Not Found!</h1>" \
@@ -326,9 +332,15 @@ handle_request(DndcErrorFunc*func, void*_Nullable p, uint64_t flags, LongString 
         "\r\n"
     send(accsd, MESS, (sizeof MESS)-1, 0);
     #undef MESS
+    msb_destroy(&urlsb);
     return 0;
+    LOk:
+    msb_destroy(&urlsb);
+    return 0;
+    LShutdown:
+    msb_destroy(&urlsb);
+    return 1;
 }
-
 
 #else
 
@@ -444,6 +456,7 @@ static
 int
 handle_request(DndcErrorFunc* func, void*_Nullable p, uint64_t flags, LongString directory, int accsd, LongString request){
     // just assume everything is a GET, lol.
+    MStringBuilder urlsb = {.allocator=get_mallocator()};
     StringView path = SV("index.dnd");
     StringView suffix = SV("");
     if(request.length > 6){
@@ -451,12 +464,16 @@ handle_request(DndcErrorFunc* func, void*_Nullable p, uint64_t flags, LongString
         const char* space = strchr(rest.text, ' ');
         if(space && space != rest.text){
             path = (StringView){.text=rest.text, .length=space-rest.text};
+            int decoderr = msb_url_percent_decode(&urlsb, path.text, path.length);
+            if(decoderr){
+                func(p, DNDC_NODELESS_MESSAGE, "", 0, -1, -1, "Bad percent decode", sizeof("Bad percent decode")-1);
+                goto LNotFound;
+            }
+            path = msb_borrow_sv(&urlsb);
             func(p, DNDC_STATISTIC_MESSAGE, path.text, path.length, -1, -1, "Serving", sizeof("Serving")-1);
-            // info(func, p, "Serving: %.*s", (int)path.length+1, path.text-1);
         }
         else {
             func(p, DNDC_STATISTIC_MESSAGE, path.text, path.length, -1, -1, "Serving", sizeof("Serving")-1);
-            // info(func, p, "Serving: %.*s", (int)path.length, path.text);
         }
     }
     if(endswith(path, SV(".html"))){
@@ -467,19 +484,18 @@ handle_request(DndcErrorFunc* func, void*_Nullable p, uint64_t flags, LongString
         #define MESS "HTTP/1.1 200 OK\r\n"
         send(accsd, MESS, (sizeof MESS)-1, 0);
         #undef MESS
-        return 1;
+        msb_destroy(&urlsb);
+        goto LShutdown;
     }
     if(memmem(path.text, path.length, "..", 2)){
         error(func, p, ".. not allowed: '%.*s'", (int)path.length, path.text);
-        goto LErr;
+        goto LNotFound;
     }
-    // debug("path: %.*s", (int)path.length, path.text);
-    // debug("suffix: %.*s", (int)suffix.length, suffix.text);
     if(endswith(path, SV(".dnd")) || SV_equals(suffix, SV(".dnd"))){
         TextFileResult tfr = read_relative_file_with_suffix_conversion(directory, path, suffix);
         if(tfr.errored){
             error(func, p, "Error reading '%.*s': %s", (int)path.length, path.text, strerror(tfr.native_error));
-            goto LErr;
+            goto LNotFound;
         }
         int err = 0;
         LongString html = compile_file(func, p, directory, flags, path, tfr.result, &err);
@@ -491,7 +507,7 @@ handle_request(DndcErrorFunc* func, void*_Nullable p, uint64_t flags, LongString
             "\r\n"
             send(accsd, MESS, (sizeof MESS)-1, 0);
             #undef MESS
-            return 0;
+            goto LOk;
         }
         char buff[1024];
         int n = snprintf(buff, sizeof buff, "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\n\r\n", html.length);
@@ -499,29 +515,37 @@ handle_request(DndcErrorFunc* func, void*_Nullable p, uint64_t flags, LongString
         send(accsd, html.text, html.length, 0);
         dndc_free_string(tfr.result);
         dndc_free_string(html);
-        return 0;
+        goto LOk;
     }
     else {
         TextFileResult tfr = read_relative_file_with_suffix_conversion(directory, path, suffix);
         if(tfr.errored){
             error(func, p, "Error reading '%.*s': %s", (int)path.length, path.text, strerror(tfr.native_error));
-            goto LErr;
+            goto LNotFound;
         }
         char buff[1024];
         int n = snprintf(buff, sizeof buff, "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\n\r\n", tfr.result.length);
         send(accsd, buff, n, 0);
         send(accsd, tfr.result.text, tfr.result.length, 0);
         dndc_free_string(tfr.result);
-        return 0;
+        goto LOk;
     }
-    LErr:
+    LNotFound:
     #define MESS "HTTP/1.1 404 Not-Found\r\n\r\n" \
         "<div align=center style=\"margin-top:10%; font-family: sans-serif;\">" \
         "<h1><span style=\"color:red;\">404</span>'ed! Not Found!</h1>" \
         "</div>" \
         "\r\n"
     send(accsd, MESS, (sizeof MESS)-1, 0);
+    #undef MESS
+    msb_destroy(&urlsb);
     return 0;
+    LOk:
+    msb_destroy(&urlsb);
+    return 0;
+    LShutdown:
+    msb_destroy(&urlsb);
+    return 1;
 }
 #endif
 

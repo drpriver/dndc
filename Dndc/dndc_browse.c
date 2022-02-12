@@ -10,7 +10,7 @@
 #include "mallocator.h"
 #include "string_distances.h"
 #include "MStringBuilder.h"
-#include "msb_extensions.h"
+#include "msb_url_helpers.h"
 #include "msb_format.h"
 #include <stdio.h>
 #include <string.h>
@@ -257,7 +257,8 @@ main(int argc, char** argv){
         gi_add_line_to_history_len(&input, b.text, b.length);
         StringView entry = entries.data[idx];
         opensb.cursor = before_entry;
-        msb_shell_quote_arg(&opensb, entry.text, entry.length);
+        // percent encoding takes care of bad shell characters.
+        msb_url_percent_encode_filepath(&opensb, entry.text, entry.length);
         LongString op = msb_borrow_ls(&opensb);
         int s = system(op.text);
         (void)s;

@@ -505,9 +505,12 @@ asm(".global __app_icon\n"
         // LOGIT(path);
         path = [path substringFromIndex:self->text.stringValue.length];
         // LOGIT(path);
+        path = [path stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet characterSetWithCharactersInString:@"/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-"]];
+        // LOGIT(path);
         NSString* s = [NSString stringWithFormat:@"http://localhost:%d%@", self->port, path];
         // LOGIT(s);
         NSURL* u = [NSURL URLWithString:s];
+        // LOGIT(u);
         [[NSWorkspace sharedWorkspace] openURL:u];
         return;
     }
