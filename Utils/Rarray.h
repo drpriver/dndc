@@ -1,13 +1,9 @@
 #ifndef RARRAY_H
 #define RARRAY_H
-// size_t
-#include <stddef.h>
-// memmove
-#include <string.h>
-// assert
-#include <assert.h>
-// Allocator functions
-#include "Allocators/allocator.h"
+#include <stddef.h> // size_t
+#include <string.h> // memmove
+#include <assert.h> // assert
+#include "Allocators/allocator.h" // Allocator functions
 
 #define Rarray(type) RarrayI(type)
 #define RarrayI(type) Rarray__##type
@@ -18,6 +14,8 @@
 #define Rarray_remove(type) RARRAYIMPL(remove, type)
 
 //
+// RARRAY_FOR_EACH
+// ---------------
 // Convenience macro for correctly iterating over an rarray, handling the
 // case where it is NULL. Note that `rarray` should be an RARRAY* and that
 // `rarray` is evaluated multiple times.
@@ -30,6 +28,8 @@ for(type *iter=((rarray)?(rarray)->data:NULL), \
 #endif
 
 //
+// Rarrays
+// -------
 // Rarrays are dynamically resizable arrays where the length and capacity are
 // stored inline with the data. They can only be referred via pointer as they
 // are dynamically sized (data is stored continguously after the
