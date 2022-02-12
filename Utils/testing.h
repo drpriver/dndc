@@ -6,8 +6,7 @@
 #include <errno.h>
 #include <stdarg.h>
 #ifdef _WIN32
-// for chdir
-#include <direct.h>
+#include <direct.h> // for chdir
 #define chdir _chdir
 #else
 #include <unistd.h>
@@ -26,7 +25,8 @@
 #endif
 
 
-// BUG:
+// BUGS
+// ----
 // We use __auto_type in the testing macros, so this will only compile
 // with gcc and clang.
 // Maybe one day C will standardize auto.
@@ -34,20 +34,29 @@
 // We also use statement expressions. In theory capturing lambdas
 // could replace that if those are added to C23.
 
+// color defs
+// ----------
 // Internal use color definitions. They will be set to escape codes if
 // stderr is detected to be interactive.
 static const char* _test_color_gray  = "";
 static const char* _test_color_reset = "";
-#if 0
-// Currently these are unused.
+#if 0 // Currently these are unused.
 static const char* _test_color_blue  = ""
 static const char* _test_color_green = ""
 static const char* _test_color_red   = ""
 #endif
 
+// TestOutFiles
+// ------------
+// The files that will be printed to. Don't use this directly, use
+// `TestRegisterOutFile`
 static FILE*_Null_unspecified TestOutFiles[9] = {0};
 static size_t TestOutFileCount = 0;
 
+// TestRegisterOutFile
+// -------------------
+// This is intended for internal use, but you can use it to register an output
+// file that any printing will print to.
 static void
 TestRegisterOutFile(FILE* fp){
     if(TestOutFileCount >= arrlen(TestOutFiles))
@@ -56,6 +65,10 @@ TestRegisterOutFile(FILE* fp){
 }
 
 
+// TestPrintf
+// ----------
+// Provides a printf-style interface. Prints to all of the registered
+// `TestOutFiles`.
 #ifdef __GNUC__
 __attribute__((__format__(__printf__, 1, 2)))
 #endif
@@ -70,7 +83,7 @@ TestPrintf(const char* fmt, ...){
         if(fp == stderr || fp == stdout)
             vfprintf(fp, fmt, arg);
         else {
-            // janky control code stripper.
+            // janky control code stripper:
             // FIXME:
             // This is too late to strip control codes
             // since the test output could have control codes and thus
@@ -142,6 +155,8 @@ TestPrintFuncs(TestPrintImpl_)
 
 
 
+// TestFunction, TESTBEGIN, TESTEND
+// --------------------------------
 //
 // Macros for defining a test function.
 // TESTBEGIN must be paired with TESTEND().
@@ -161,6 +176,8 @@ TestPrintFuncs(TestPrintImpl_)
 #define TESTEND() } return TEST_stats
 
 //
+// SUPPRESS_TEST_MAIN
+// ------------------
 // If this macro is defined, suppresses generating a test_main function. You will
 // be responsible for calling run_the_tests yourself and reporting the results.
 
@@ -168,6 +185,8 @@ TestPrintFuncs(TestPrintImpl_)
 
 
 //
+// TestStats
+// ---------
 // Internal use struct to keep track of the number of tests executed, failed,
 // etc.
 struct TestStats {
@@ -177,18 +196,27 @@ struct TestStats {
     unsigned long long assert_failures;
 };
 
+// TestFunc
+// --------
 // The type of a test function.
 typedef struct TestStats (TestFunc)(void);
 
+// TestCaseFlags
+// -------------
+// Flags that can be used to control the behavior of tests, used with `RegisterTestFlags`
 enum TestCaseFlags {
-    // No flags
-    TEST_CASE_FLAGS_NONE = 0x0,
+    TEST_CASE_FLAGS_NONE = 0x0, // No flags
+
+    // TEST_CASE_FLAGS_SKIP_UNLESS_NAMED
+    // ---------------------------------
     // Skip this test unless specifically named on the command line.
     // This is useful for slow or exhaustive tests that don't need to be run
     // on every change, but you want to keep them compiling and in tree.
     TEST_CASE_FLAGS_SKIP_UNLESS_NAMED = 0x1,
 };
 
+// TestCase
+// --------
 // Internal use.
 typedef struct TestCase {
     StringView test_name;
@@ -196,36 +224,49 @@ typedef struct TestCase {
     enum TestCaseFlags flags;
 } TestCase;
 
+
+// RegsterTest
+// -----------
 //
 // Register a test for execution.
 // Use this before calling test_main
-//
-// static inline void RegisterTest(TestFunc*);
-//
-// Example use:
-//
-// int main(int argc, char**argv){
-//     RegisterTest(TestFooIsTwo);
-//     RegisterTest(TestBarIsNotBaz);
-//     return test_main(argc, argv);
-// }
-
 // Implemented as a macro to capture the name of the test
+//
+// Example:
+// --------
+//   int main(int argc, char**argv){
+//       RegisterTest(TestFooIsTwo);
+//       RegisterTest(TestBarIsNotBaz);
+//       return test_main(argc, argv);
+//   }
+//
 #define RegisterTest(tf) register_test(SV(#tf), tf, TEST_CASE_FLAGS_NONE)
+// RegisterTestFlags
+// -----------------
 // Ditto, but allows specifying flags.
 #define RegisterTestFlags(tf, flags) register_test(SV(#tf), tf, flags)
+
 static inline
 void
 register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags);
 
+// test_names
+// ----------
 // Internal use, use the RegisterTest function to register a test.
 // This array is where registered tests are located.
 // A single test program can not directly register more than 1000 tests.
 static StringView test_names[1000];
 static TestCase test_funcs[1000];
+// test_funcs_count
+// ----------------
 // How many were registered. Internal use.
 static size_t test_funcs_count;
 
+// register_test
+// -------------
+// The "raw" version of `RegisterTest`. Generally you should use `RegisterTest`
+// or `RegisterTestFlags`, but you might need to dynamically register a test
+// and so can use this function instead.
 static inline
 void
 register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
@@ -240,6 +281,8 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 
 
 //
+// TestReport
+// ----------
 // Internal use macro to report test results within a failed condition.
 // You can use it if you want in your test functions if you need more reporting.
 // It's an fprintf wrapper (appends a newline though).
@@ -250,6 +293,8 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
         _test_color_reset, ##__VA_ARGS__);
 
 //
+// Test Conditions
+// --------------
 // These macros are for expressing the test conditions.
 // They only work within a test function.
 //
@@ -258,146 +303,187 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 // This means you can use these as expressions to do conditional
 // printing or extra testing or whatever.
 //
+// See:
+// ----
+// * `TestExpectEquals`
+// * `TestExpectEquals2`
+// * `TestExpectNotEquals`
+// * `TestExpectNotEqual2`
+// * `TestExpectTrue`
+// * `TestExpectFalse`
+// * `TestExpectSuccess`
+// * `TestExpectFailure`
+//
 
-//
-// Expects lhs == rhs, using the == operator
-//
-#define TestExpectEquals(lhs, rhs) ({\
-        __auto_type _lhs = lhs; \
-        typeof(lhs) _rhs = rhs; \
-        TEST_stats.executed++;\
-        int equal__ = 1; \
-        if (!(_lhs == _rhs)) {\
-            equal__ = 0; \
-            TEST_stats.failures++; \
-            TestReport("Test condition failed");\
-            TestReport("%s == %s", #lhs, #rhs); \
-            TestPrintValue(#lhs, _lhs);\
-            TestPrintValue(#rhs, _rhs);\
-            }\
-        equal__; \
-        })
-//
-// Expects lhs == rhs, using the passed in binary function instead of == operator
-//
-#define TestExpectEquals2(func, lhs, rhs) ({\
-        __auto_type _lhs = lhs; \
-        __auto_type _rhs = rhs; \
-        TEST_stats.executed++;\
-        int equal__ = 1; \
-        if (!(func(_lhs, _rhs))) {\
-            equal__ = 0; \
-            TEST_stats.failures++; \
-            TestReport("Test condition failed");\
-            TestReport("!%s(%s, %s)", #func, #lhs, #rhs); \
-            TestPrintValue(#lhs, _lhs);\
-            TestPrintValue(#rhs, _rhs);\
-        }\
-        equal__;\
-    })
+  //
+  // TestExpectEquals
+  // ----------------
+  // Expects lhs == rhs, using the == operator
+  //
+  #define TestExpectEquals(lhs, rhs) ({\
+          __auto_type _lhs = lhs; \
+          typeof(lhs) _rhs = rhs; \
+          TEST_stats.executed++;\
+          int equal__ = 1; \
+          if (!(_lhs == _rhs)) {\
+              equal__ = 0; \
+              TEST_stats.failures++; \
+              TestReport("Test condition failed");\
+              TestReport("%s == %s", #lhs, #rhs); \
+              TestPrintValue(#lhs, _lhs);\
+              TestPrintValue(#rhs, _rhs);\
+              }\
+          equal__; \
+          })
+  //
+  // TestExpectEquals2
+  // -----------------
+  // Expects lhs == rhs, using the passed in binary function instead of == operator
+  //
+  #define TestExpectEquals2(func, lhs, rhs) ({\
+          __auto_type _lhs = lhs; \
+          __auto_type _rhs = rhs; \
+          TEST_stats.executed++;\
+          int equal__ = 1; \
+          if (!(func(_lhs, _rhs))) {\
+              equal__ = 0; \
+              TEST_stats.failures++; \
+              TestReport("Test condition failed");\
+              TestReport("!%s(%s, %s)", #func, #lhs, #rhs); \
+              TestPrintValue(#lhs, _lhs);\
+              TestPrintValue(#rhs, _rhs);\
+          }\
+          equal__;\
+      })
 
-//
-// Expects lhs != rhs, using the != operator
-//
-#define TestExpectNotEquals(lhs, rhs) ({\
-        __auto_type _lhs = lhs; \
-        typeof(lhs) _rhs = rhs; \
-        TEST_stats.executed++;\
-        int neq = 1; \
-        if (!(_lhs != _rhs)) {\
-            neq = 0; \
-            TEST_stats.failures++; \
-            TestReport("Test condition failed");\
-            TestReport("%s != %s", #lhs, #rhs); \
-            TestPrintValue(#lhs, _lhs);\
-            TestPrintValue(#rhs, _rhs);\
-        }\
-        neq ;\
-    })
+  //
+  // TestExpectNotEquals
+  // -------------------
+  // Expects lhs != rhs, using the != operator
+  //
+  #define TestExpectNotEquals(lhs, rhs) ({\
+          __auto_type _lhs = lhs; \
+          typeof(lhs) _rhs = rhs; \
+          TEST_stats.executed++;\
+          int neq = 1; \
+          if (!(_lhs != _rhs)) {\
+              neq = 0; \
+              TEST_stats.failures++; \
+              TestReport("Test condition failed");\
+              TestReport("%s != %s", #lhs, #rhs); \
+              TestPrintValue(#lhs, _lhs);\
+              TestPrintValue(#rhs, _rhs);\
+          }\
+          neq ;\
+      })
 
-#define TestExpectNotEqual2(func, lhs, rhs) ({\
-        __auto_type _lhs = lhs; \
-        __auto_type _rhs = rhs; \
-        TEST_stats.executed++;\
-        int notequal__ = 1; \
-        if (func(_lhs, _rhs)) {\
-            notequal__ = 0; \
-            TEST_stats.failures++; \
-            TestReport("Test condition failed");\
-            TestReport("%s(%s, %s)", #func, #lhs, #rhs); \
-            TestPrintValue(#lhs, _lhs);\
-            TestPrintValue(#rhs, _rhs);\
-            }\
-        notequal__; \
-        })
+  //
+  // TestExpectNotEqual2
+  // -------------------
+  // Checks for func(lhs, rhs) == 0
+  //
+  #define TestExpectNotEqual2(func, lhs, rhs) ({\
+          __auto_type _lhs = lhs; \
+          __auto_type _rhs = rhs; \
+          TEST_stats.executed++;\
+          int notequal__ = 1; \
+          if (func(_lhs, _rhs)) {\
+              notequal__ = 0; \
+              TEST_stats.failures++; \
+              TestReport("Test condition failed");\
+              TestReport("%s(%s, %s)", #func, #lhs, #rhs); \
+              TestPrintValue(#lhs, _lhs);\
+              TestPrintValue(#rhs, _rhs);\
+              }\
+          notequal__; \
+          })
 
-//
-// Expects the condition is truthy (for the usual C definition of truth).
-//
-#define TestExpectTrue(cond) ({\
-        TEST_stats.executed++;\
-        _Bool cond_ = !!(cond); \
-        if (! (cond_)){ \
-            TEST_stats.failures++; \
-            TestReport("Test condition failed");\
-            TestReport("%s", #cond);\
-        }\
-        cond_; \
-    })
+  //
+  // TestExpectTrue
+  // --------------
+  // Expects the condition is truthy (for the usual C definition of truth).
+  //
+  #define TestExpectTrue(cond) ({\
+          TEST_stats.executed++;\
+          _Bool cond_ = !!(cond); \
+          if (! (cond_)){ \
+              TEST_stats.failures++; \
+              TestReport("Test condition failed");\
+              TestReport("%s", #cond);\
+          }\
+          cond_; \
+      })
 
-//
-// Expects the condition is falsey (for the usual C definition of truth).
-//
-#define TestExpectFalse(cond) ({\
-        _Bool cond_ = !!(cond); \
-        TEST_stats.executed++;\
-        if (cond_){ \
-            TEST_stats.failures++; \
-            TestReport("Test condition failed (expected falsey)");\
-            TestPrintValue(#cond, cond);\
-        }\
-        !cond_; \
-    })
+  //
+  // TestExpectFalse
+  // ---------------
+  // Expects the condition is falsey (for the usual C definition of truth).
+  //
+  #define TestExpectFalse(cond) ({\
+          _Bool cond_ = !!(cond); \
+          TEST_stats.executed++;\
+          if (cond_){ \
+              TEST_stats.failures++; \
+              TestReport("Test condition failed (expected falsey)");\
+              TestPrintValue(#cond, cond);\
+          }\
+          !cond_; \
+      })
 
-//
-// For an errorable (struct with .errored field), expects .errored is 0
-//
-#define TestExpectSuccess(cond) ({\
-        TEST_stats.executed++;\
-        _Bool succeeded = 1; \
-        if ((cond).errored){ \
-            succeeded = 0; \
-            TEST_stats.failures++; \
-            TestReport("Test condition failed");\
-            TestReport("%s = %d", #cond, (cond).errored);\
-        }\
-        succeeded; \
-    })
+  //
+  // TestExpectSuccess
+  // -----------------
+  // For an errorable (struct with .errored field), expects .errored is 0
+  //
+  #define TestExpectSuccess(cond) ({\
+          TEST_stats.executed++;\
+          _Bool succeeded = 1; \
+          if ((cond).errored){ \
+              succeeded = 0; \
+              TEST_stats.failures++; \
+              TestReport("Test condition failed");\
+              TestReport("%s = %d", #cond, (cond).errored);\
+          }\
+          succeeded; \
+      })
 
-//
-// For an errorable (struct with .errored field), expects .errored is not 0
-//
-#define TestExpectFailure(cond) ({\
-        TEST_stats.executed++;\
-        _Bool did_fail = 1; \
-        if (!(cond).errored){ \
-            did_fail = 0; \
-            TEST_stats.failures++; \
-            TestReport("Test condition failed");\
-            TestReport("%s = %d", #cond, (cond).errored);\
-            }\
-        did_fail; \
-        })
+  //
+  // TestExpectFailure
+  // -----------------
+  // For an errorable (struct with .errored field), expects .errored is not 0
+  //
+  #define TestExpectFailure(cond) ({\
+          TEST_stats.executed++;\
+          _Bool did_fail = 1; \
+          if (!(cond).errored){ \
+              did_fail = 0; \
+              TEST_stats.failures++; \
+              TestReport("Test condition failed");\
+              TestReport("%s = %d", #cond, (cond).errored);\
+              }\
+          did_fail; \
+          })
 
-//
+// TestAsserts
+// -----------
 // Unlike the TestExpect* family of macros, TestAssert* macros immediately end
 // execution of the test function.
 // The program is not halted, just the test function immediately returns.
 // You will need to cleanup any state. In the future we might have a
 // cleanup section in test functions.
 //
+// See:
+// ----
+// * `TestAssert`
+// * `TestAssertFalse`
+// * `TestAssertEquals`
+// * `TestAssertSuccess`
+// * `TestAssertFailure`
+// * `EndTest`
 
 //
+// TestAssert
+// ----------
 // Asserts the condition is truthy.
 //
 #define TestAssert(cond) do{\
@@ -412,6 +498,9 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
         }\
     }while(0)
 
+//
+// TestAssertFalse
+// ---------------
 // Ditto, but for falsey
 #define TestAssertFalse(cond) do{\
         TEST_stats.executed++;\
@@ -424,7 +513,10 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
             return TEST_stats;\
         }\
     }while(0)
+
 //
+// TestAssertEquals
+// ----------------
 // Asserts lhs is equal to rhs, using ==
 //
 #define TestAssertEquals(lhs, rhs) do{\
@@ -444,6 +536,8 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
     }while(0)
 
 //
+// TestAssertSuccess
+// -----------------
 // For an errorable (struct with .errored field), asserts .errored is 0
 //
 #define TestAssertSuccess(cond) do{\
@@ -459,6 +553,8 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
     }while(0)
 
 //
+// TestAssertFailure
+// -----------------
 // For an errorable (struct with .errored field), asserts .errored is not 0
 //
 #define TestAssertFailure(cond) do{\
@@ -474,6 +570,8 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
     }while(0)
 
 //
+// EndTest
+// -------
 // Immediately ends the test function, counting as an early termination of
 // the test and reports the message given by reason.
 //
@@ -485,14 +583,25 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
     }while(0)
 
 //
+// run_the_tests
+// -------------
 // The actual test runner.
 // You can call this in your own test_main or other function.
 // Otherwise, don't call this directly.
 //
-// which_tests is a pointer to an array of indexes into the
-// registered tests table.
-// test_count is the length of that array.
-// As a special case, 0 means to run all the tests.
+// Arguments:
+// ----------
+//   which_tests:
+//     A pointer to an array of indexes into the registered `test_funcs` table.
+//   test_count:
+//     The length of the array pointed to by which_tests
+//
+//     As a special case, 0 means to run all the tests.
+//
+// Returns:
+// --------
+// A `TestStats` structure with the number of passess, fails, etc.
+//
 static
 struct TestStats
 run_the_tests(size_t*_Nullable which_tests, int test_count){
@@ -528,15 +637,21 @@ run_the_tests(size_t*_Nullable which_tests, int test_count){
 #pragma clang assume_nonnull end
 #endif
 
-//
-// The default test_main implementation if you don't suppress it.
-// Executes run_the_tests and pretty prints the results to the terminal.
-// NOTE: you will need to register a file pointer for TestPrintf if you
-// don't use this function.
-//
+// SUPPRESS_TEST_MAIN
+// ------------------
+// If you define this, `test_main` will not be defined and you will need to
+// implement your own test_main.
 #ifndef SUPPRESS_TEST_MAIN
 #include "argument_parsing.h"
 #include "term_util.h"
+//
+// test_main
+// ------------------
+// The default test_main implementation if you don't suppress it.
+// Executes `run_the_tests` and pretty prints the results to the terminal.
+// NOTE: you will need to register at least one file pointer for TestPrintf if you
+// don't use this function.
+//
 static
 int
 test_main(int argc, char*_Nonnull *_Nonnull argv){
@@ -655,8 +770,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
             if(columns > 80)
                 columns = 80;
             print_argparse_help(&argparser, columns);
-            return 1;
-        }
+        } return 1;
         case LIST:
             for(size_t i = 0; i < test_funcs_count; i++){
                 fprintf(stdout, "%s\t", test_funcs[i].test_name.text);
@@ -668,7 +782,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
             return 1;
         default:
             break;
-        }
+    }
     enum ArgParseError e = parse_args(&argparser, &args, ARGPARSE_FLAGS_NONE);
     if(e){
         print_argparse_error(&argparser, e);
