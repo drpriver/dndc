@@ -208,7 +208,7 @@ main(int argc, char** argv){
     struct TabContext tabctx = {
         .original = &entries,
     };
-    GetInputCtx input = {.prompt = SV("> "), .tab_completion_func = entry_completer, .tab_completion_user_data=&tabctx};
+    GetInputCtx input = {.prompt = SV("> "), .prompt_display_length=2, .tab_completion_func = entry_completer, .tab_completion_user_data=&tabctx};
     const char* opencmd = "open";
     const char* url = "http://localhost";
     #if defined(__APPLE__)

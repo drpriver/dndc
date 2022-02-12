@@ -288,7 +288,14 @@ handle_request(DndcErrorFunc*func, void*_Nullable p, uint64_t flags, LongString 
         int err = 0;
         LongString html = compile_file(func, p, directory, flags, path, tfr.result, &err);
         if(err){
-            goto LErr;
+            #define MESS "HTTP/1.1 500 Compiler-Error\r\n\r\n" \
+            "<div align=center style=\"margin-top:10%; font-family: sans-serif;\">" \
+            "<h1><span style=\"color:red;\">Error</span>Error compiling file.</h1>" \
+            "</div>" \
+            "\r\n"
+            send(accsd, MESS, (sizeof MESS)-1, 0);
+            #undef MESS
+            return 0;
         }
         char buff[1024];
         int n = snprintf(buff, sizeof buff, "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\n\r\n", html.length);
@@ -477,7 +484,14 @@ handle_request(DndcErrorFunc* func, void*_Nullable p, uint64_t flags, LongString
         int err = 0;
         LongString html = compile_file(func, p, directory, flags, path, tfr.result, &err);
         if(err){
-            goto LErr;
+            #define MESS "HTTP/1.1 500 Compiler-Error\r\n\r\n" \
+            "<div align=center style=\"margin-top:10%; font-family: sans-serif;\">" \
+            "<h1><span style=\"color:red;\">Error</span>Error compiling file.</h1>" \
+            "</div>" \
+            "\r\n"
+            send(accsd, MESS, (sizeof MESS)-1, 0);
+            #undef MESS
+            return 0;
         }
         char buff[1024];
         int n = snprintf(buff, sizeof buff, "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\n\r\n", html.length);
