@@ -34,8 +34,8 @@
 
 // For the node depth argument, the generic render_node function handles the depth incrementing and error handling.
 
-#ifdef __GNUC__
-#define unused_param __attribute__((unused))
+#if defined(__GNUC__) || defined(__clang__)
+#define unused_param __attribute__((__unused__))
 #else
 #define unused_param
 #endif

@@ -338,7 +338,7 @@ get_entries_inner(StringView directory, Entries* entries){
         msb_write_str(&sb, fn.text, fn.length);
         msb_nul_terminate(&sb);
         StringView nextdir = msb_borrow_sv(&sb);
-        get_entries_inner(nextdir, buff, count, cap);
+        get_entries_inner(nextdir, entries);
         msb_erase(&sb, 1+fn.length);
     }while(FindNextFileA(handle, &findd));
     end:

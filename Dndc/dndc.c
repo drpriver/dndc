@@ -50,7 +50,7 @@ memmem(const void* hay_, size_t haysz, const void* needle_, size_t needlesz){
     for(;;){
         const char* c = memchr(hay, first, hayend-hay);
         if(!c) return NULL;
-        if(hayend - c < needlesz) return NULL;
+        if(hayend - c < (ssize_t)needlesz) return NULL;
         if(memcmp(c, needle, needlesz) == 0)
             return c;
         hay = c+1;

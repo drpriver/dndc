@@ -88,17 +88,17 @@ compile_file(DndcErrorFunc*func, void*_Nullable p, LongString directory, uint64_
 
 static void vlogit(DndcErrorFunc*, void*_Nullable, int lvl, const char* msg, va_list args);
 
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 3, 4)))
 #endif
 static void info(DndcErrorFunc*, void*_Nullable, const char* msg, ...);
 
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 3, 4)))
 #endif
 static void debug(DndcErrorFunc*, void*_Nullable, const char* msg, ...);
 
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 3, 4)))
 #endif
 static void error(DndcErrorFunc*, void*_Nullable, const char* msg, ...);
@@ -151,7 +151,7 @@ struct DndServer{
 };
 
 DndServer*_Nullable
-dnd_server_create(int* port, DndcErrorFunc* func, void*_Nullable p){
+dnd_server_create(DndcErrorFunc* func, void*_Nullable p, int* port){
     WSADATA wsadata;
     int err = WSAStartup(MAKEWORD(2,2), &wsadata);
     if(err){
@@ -221,14 +221,14 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
         SOCKET accsd = accept(sd, (struct sockaddr*)&clientaddr, &clientlen);
         // debug("Accepted...");
         if(accsd < 0){
-            error(server->func, server->p, "accept failed: %s: %d", (int)accsd);
+            error(server->func, server->p, "accept failed: %s: %d", wsaerror(), (int)accsd);
             closesocket(sd);
             WSACleanup();
             return 1;
         }
         ssize_t n = recv(accsd, buff, (sizeof buff)-1, 0);
         if(n < 0){
-            error(server->func, server->p, "recv failed: %s: %zd", n);
+            error(server->func, server->p, "recv failed: %s: %zd", wsaerror(), n);
             goto Close;
         }
         if(n == 0){
@@ -580,7 +580,7 @@ vlogit(DndcErrorFunc* func, void*_Nullable p, int lvl, const char* msg, va_list 
     func(p, lvl, "", 0, -1, -1, buff, len);
 }
 
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 3, 4)))
 #endif
 static
@@ -592,7 +592,7 @@ info(DndcErrorFunc* func, void*_Nullable p, const char* msg, ...){
     va_end(args);
 }
 
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 3, 4)))
 #endif
 static
@@ -604,7 +604,7 @@ debug(DndcErrorFunc* func, void*_Nullable p, const char* msg, ...){
     va_end(args);
 }
 
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 3, 4)))
 #endif
 static

@@ -56,7 +56,7 @@ byte_expansion_distance(const char* haystack, size_t haystack_len, const char* n
             }
             if(!haystack_len) return -1;
             if(*haystack == *needle){
-                haystack++, needle++, haystack_len--, needle_len--;
+                haystack++; needle++; haystack_len--; needle_len--;
                 continue;
             }
             break;
@@ -65,7 +65,7 @@ byte_expansion_distance(const char* haystack, size_t haystack_len, const char* n
         for(;;){
             if(!haystack_len) return -1;
             if(*haystack == *needle) break;
-            difference++, haystack++, haystack_len--;
+            difference++; haystack++; haystack_len--;
         }
         // First character now matches. back to top
     }

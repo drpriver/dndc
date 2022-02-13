@@ -523,7 +523,9 @@ get_line_internal_loop(GetInputCtx* ctx){
             case CTRL_Z:{
                 DBG("CTRL_Z\n");
                 write_data("^Z\r\n", 4);
+                #if !defined(_WIN32)
                 raise(SIGTSTP);
+                #endif
                 DBG("resume\n");
                 redisplay(ctx);
             }break;

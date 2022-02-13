@@ -2,7 +2,7 @@
 #define MSB_URL_HELPERS_H
 
 #ifdef _WIN32
-typedef long long ssize_t
+typedef long long ssize_t;
 #else
 #include <sys/types.h> // ssize_t
 #endif

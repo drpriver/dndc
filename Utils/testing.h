@@ -69,7 +69,7 @@ TestRegisterOutFile(FILE* fp){
 // ----------
 // Provides a printf-style interface. Prints to all of the registered
 // `TestOutFiles`.
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 1, 2)))
 #endif
 static
