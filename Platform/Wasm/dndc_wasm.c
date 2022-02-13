@@ -59,7 +59,8 @@ make_html(PString* source){
             dndc_error_func, NULL, // error func
             NULL, NULL,            // dependency funcs
             NULL, NULL,            // ast funcs
-            NULL                   // worker
+            NULL,                  // worker
+            LS("")                 // args
             );
     if(e) return NULL;
     PString* result = LongString_to_new_PString(output);
@@ -125,7 +126,8 @@ format_dnd(PString* source){
             dndc_error_func, NULL, // error func
             NULL, NULL,            // dependency funcs
             NULL, NULL,            // ast funcs
-            NULL                   // worker
+            NULL,                  // worker
+            LS("")                 // jsargs
             );
     if(e) return NULL;
     PString* result = LongString_to_new_PString(output);

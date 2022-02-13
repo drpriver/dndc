@@ -81,7 +81,7 @@ convert:
 run-tests: clean-tests tests
 
 .PHONY: all
-all: tests dndc pydndc docs
+all: tests dndc pydndc docs dndc-browse
 
 .PHONY: install
 install: $(DNDC)
