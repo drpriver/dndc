@@ -39,7 +39,7 @@ quickjs_static = static_library(
   c_args: qjs_extra_args+ignore_bogus_deprecations,
   install: true,
   dependencies:[m_dep],
-  )
+)
 quickjs_dylib = shared_library(
   'quickjs',
   'Vendored/libquickjs.c',
@@ -50,7 +50,7 @@ quickjs_dylib = shared_library(
   soversion: meson.project_version(),
   darwin_versions: [COMPAT_VERSION, meson.project_version()],
   dependencies:[m_dep],
-  )
+)
 
 executable(
   'dndc',
@@ -60,7 +60,7 @@ executable(
   install: true,
   link_with: quickjs_static,
   c_args:ignore_bogus_deprecations,
-  )
+)
 dndc_lib = both_libraries(
   'dndc',
   'Dndc/dndc.c',
@@ -80,7 +80,7 @@ executable(
   install: true,
   link_with: dndc_lib,
   c_args:ignore_bogus_deprecations,
-  )
+)
 
 
 pydndc = pyinstall.extension_module(
@@ -90,7 +90,7 @@ pydndc = pyinstall.extension_module(
   link_with: quickjs_static,
   dependencies:pyinstall.dependency(),
   c_args:ignore_bogus_deprecations + py_extra_args,
-  )
+)
 
 if host_machine.system() == 'darwin'
   add_languages('objc')
@@ -103,7 +103,7 @@ if host_machine.system() == 'darwin'
     link_args: '-Wl,-sectcreate,__TEXT,__info_plist,'+meson.source_root() + '/Platform/MacOS/Info.plist',
     link_with: quickjs_static,
     install: true,
-    )
+  )
   executable(
     'dndbr',
     'Platform/MacOS/dndbr.m',
@@ -114,7 +114,7 @@ if host_machine.system() == 'darwin'
     link_args: '-Wl,-sectcreate,__TEXT,__info_plist,'+meson.source_root() + '/Platform/MacOS/DndBrInfo.plist',
     link_with: dndc_lib,
     install: true,
-    )
+  )
 
 endif
 
@@ -130,13 +130,14 @@ test('strutil', executable('TestStrUtils', 'Utils/TestStrUtils.c', kwargs:testkw
 test('msbext', executable('TestMsbExtension', 'Dndc/TestMsbExtension.c', kwargs:testkw, c_args:ignore_bogus_deprecations))
 test('dndc',
   executable('TestDndc',
-  'Dndc/TestDndc.c',
-  include_directories:includes,
-  dependencies:[thread_dep],
-  c_args: ['-DQJS_SHARED_LIBRARY']+ignore_bogus_deprecations,
-  link_with: quickjs_dylib,
+    'Dndc/TestDndc.c',
+    include_directories:includes,
+    dependencies:[thread_dep],
+    c_args: ['-DQJS_SHARED_LIBRARY']+ignore_bogus_deprecations,
+    link_with: quickjs_dylib,
   ),
-  args:['-C', meson.source_root()])
+  args:['-C', meson.source_root()]
+)
 
 test('pydndc', pyinstall, args:['Dndc/testpydndc.py', '--extension-directory', meson.build_root()], workdir:meson.source_root(), depends:pydndc)
 

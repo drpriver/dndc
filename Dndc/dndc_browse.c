@@ -282,9 +282,6 @@ main(int argc, char** argv){
 }
 
 #if defined(_WIN32)
-// This code is totally untested, but is basically a copy of how the dndc_qjs
-// does it. Too lazy to boot up windows right now.
-//
 // Maybe I should add a recursive glob utility function? Trouble is that
 // you would want it iterator style, which is annoying to make nice in C.
 #include "MStringBuilder.h"
