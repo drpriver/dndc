@@ -430,6 +430,7 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
     DndcErrorFunc* func = server->func;
     void*_Nullable p = server->p;
     for(;;){
+        int shutdown = 0;
         socklen_t clientlen = sizeof(clientaddr);
         // debug("Waiting for accept...");
         int accsd = accept(sd, (struct sockaddr*)&clientaddr, &clientlen);
@@ -449,7 +450,7 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
             goto Close;
         }
         buff[n] = 0;
-        int shutdown = handle_request(server->func, server->p, flags, directory, accsd, (LongString){n, buff});
+        shutdown = handle_request(server->func, server->p, flags, directory, accsd, (LongString){n, buff});
         Close:
         close(accsd);
         if(shutdown){
