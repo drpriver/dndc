@@ -20,8 +20,15 @@ install_headers('Dndc/dndc.h', subdir:'Dndc')
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m', required : false)
 if host_machine.system() == 'windows'
+  # python header on windows has a bad timeval decl
+  if cc.get_id() == 'clang'
+    py_extra_args = ['-Wno-visibility']
+  else
+    py_extra_args = []
+  endif
   qjs_extra_args = ['-mrdseed']
 else
+  py_extra_args = []
   qjs_extra_args = []
 endif
 
@@ -52,6 +59,7 @@ executable(
   dependencies:[thread_dep],
   install: true,
   link_with: quickjs_static,
+  c_args:ignore_bogus_deprecations,
   )
 dndc_lib = both_libraries(
   'dndc',
@@ -63,6 +71,7 @@ dndc_lib = both_libraries(
   soversion: meson.project_version(),
   darwin_versions: [COMPAT_VERSION, meson.project_version()],
   link_with: quickjs_static,
+  c_args:ignore_bogus_deprecations,
   )
 executable(
   'dndc-browse',
@@ -70,6 +79,7 @@ executable(
   include_directories: includes,
   install: true,
   link_with: dndc_lib,
+  c_args:ignore_bogus_deprecations,
   )
 
 
@@ -79,6 +89,7 @@ pydndc = pyinstall.extension_module(
   include_directories: includes,
   link_with: quickjs_static,
   dependencies:pyinstall.dependency(),
+  c_args:ignore_bogus_deprecations + py_extra_args,
   )
 
 if host_machine.system() == 'darwin'

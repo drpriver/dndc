@@ -76,6 +76,16 @@ const char* wsaerror(void){
     result[ret-1] = 0;
     return result;
 }
+
+const char*
+leak_error_mess(DWORD err){
+    DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ALLOCATE_BUFFER;
+    char* result = NULL;
+    DWORD ret = FormatMessageA(flags, NULL, err, 0, (void*)&result, 0, NULL);
+    if(!result) return "Error when formatting error";
+    result[ret-1] = 0;
+    return result;
+}
 #endif
 
 static
@@ -88,17 +98,17 @@ compile_file(DndcErrorFunc*func, void*_Nullable p, LongString directory, uint64_
 
 static void vlogit(DndcErrorFunc*, void*_Nullable, int lvl, const char* msg, va_list args);
 
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 3, 4)))
 #endif
 static void info(DndcErrorFunc*, void*_Nullable, const char* msg, ...);
 
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 3, 4)))
 #endif
 static void debug(DndcErrorFunc*, void*_Nullable, const char* msg, ...);
 
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 3, 4)))
 #endif
 static void error(DndcErrorFunc*, void*_Nullable, const char* msg, ...);
@@ -151,7 +161,7 @@ struct DndServer{
 };
 
 DndServer*_Nullable
-dnd_server_create(int* port, DndcErrorFunc* func, void*_Nullable p){
+dnd_server_create(DndcErrorFunc* func, void*_Nullable p, int* port){
     WSADATA wsadata;
     int err = WSAStartup(MAKEWORD(2,2), &wsadata);
     if(err){
@@ -221,14 +231,14 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
         SOCKET accsd = accept(sd, (struct sockaddr*)&clientaddr, &clientlen);
         // debug("Accepted...");
         if(accsd < 0){
-            error(server->func, server->p, "accept failed: %s: %d", (int)accsd);
+            error(server->func, server->p, "accept failed: %s: %d", wsaerror(), (int)accsd);
             closesocket(sd);
             WSACleanup();
             return 1;
         }
         ssize_t n = recv(accsd, buff, (sizeof buff)-1, 0);
         if(n < 0){
-            error(server->func, server->p, "recv failed: %s: %zd", n);
+            error(server->func, server->p, "recv failed: %s: %zd", wsaerror(), n);
             goto Close;
         }
         if(n == 0){
@@ -288,7 +298,7 @@ handle_request(DndcErrorFunc*func, void*_Nullable p, uint64_t flags, LongString 
     if(endswith(path, SV(".dnd")) || SV_equals(suffix, SV(".dnd"))){
         TextFileResult tfr = read_relative_file_with_suffix_conversion(directory, path, suffix);
         if(tfr.errored){
-            error(func, p, "Error reading '%.*s': %d", (int)path.length, path.text, tfr.native_error);
+            error(func, p, "Error reading '%.*s': %s", (int)path.length, path.text, leak_error_mess(tfr.native_error));
             goto LNotFound;
         }
         int err = 0;
@@ -314,7 +324,7 @@ handle_request(DndcErrorFunc*func, void*_Nullable p, uint64_t flags, LongString 
     else {
         TextFileResult tfr = read_relative_file_with_suffix_conversion(directory, path, suffix);
         if(tfr.errored){
-            error(func, p, "Error reading '%.*s': %d", (int)path.length, path.text, tfr.native_error);
+            error(func, p, "Error reading '%.*s': %s", (int)path.length, path.text, leak_error_mess(tfr.native_error));
             goto LNotFound;
         }
         char buff[1024];
@@ -580,7 +590,7 @@ vlogit(DndcErrorFunc* func, void*_Nullable p, int lvl, const char* msg, va_list 
     func(p, lvl, "", 0, -1, -1, buff, len);
 }
 
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 3, 4)))
 #endif
 static
@@ -592,7 +602,7 @@ info(DndcErrorFunc* func, void*_Nullable p, const char* msg, ...){
     va_end(args);
 }
 
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 3, 4)))
 #endif
 static
@@ -604,7 +614,7 @@ debug(DndcErrorFunc* func, void*_Nullable p, const char* msg, ...){
     va_end(args);
 }
 
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 3, 4)))
 #endif
 static

@@ -18,7 +18,6 @@ INSTALLDIR?=/usr/local/bin
 # See windows.mak for what these are.
 # PYCFLAGS=
 # PYLDFLAGS=
-# PYDLL=
 #
 # set to true to enable building the qt-based gui editor.
 QTGUI=false

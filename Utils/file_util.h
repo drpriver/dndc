@@ -379,6 +379,7 @@ read_file(const char* filepath, Allocator a){
             );
     if(handle == INVALID_HANDLE_VALUE){
         result.errored = FILE_NOT_OPENED;
+        result.native_error = GetLastError();
         return result;
     }
     LARGE_INTEGER size;
@@ -397,6 +398,7 @@ read_file(const char* filepath, Allocator a){
     if(!read_success){
         Allocator_free(a, text, nbytes+1);
         result.errored = FILE_ERROR;
+        result.native_error = GetLastError();
         goto finally;
     }
     assert(nread == nbytes);

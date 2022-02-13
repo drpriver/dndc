@@ -25,13 +25,9 @@ INSTALL=$(PYTHON) -m Scripts.win_utils install
 ifeq ($(PYCFLAGS), )
 PYCFLAGS=-I$(LOCALAPPDATA)\Programs\Python\Python39\include -Wno-visibility
 PYLDFLAGS=$(LOCALAPPDATA)\Programs\Python\Python39\libs\python39.lib
-PYDLL=$(LOCALAPPDATA)\Programs\Python\Python39\python39.dll
+#PYDLL=$(LOCALAPPDATA)\Programs\Python\Python39\python39.dll
 endif
 
-$(BINDIR)\python39.dll: $(PYDLL)
-	$(CP) $< $@
-$(BINDIR)/dndc.exe: $(BINDIR)\python39.dll
-TestDndc: | $(BINDIR)\python39.dll
 # idk
 PYEXTENSION=.pyd
 PYEXTFLAGS=-shared
