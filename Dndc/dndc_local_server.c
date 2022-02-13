@@ -493,12 +493,35 @@ handle_request(DndcErrorFunc* func, void*_Nullable p, uint64_t flags, LongString
     }
     if(endswith(path, SV(".dnd")) || SV_equals(suffix, SV(".dnd"))){
         TextFileResult tfr = read_relative_file_with_suffix_conversion(directory, path, suffix);
+        LongString text = LS("");
         if(tfr.errored){
-            error(func, p, "Error reading '%.*s': %s", (int)path.length, path.text, strerror(tfr.native_error));
-            goto LNotFound;
+            if(SV_equals(path, SV("index")) || SV_equals(path, SV("index.dnd"))){
+                text = LS(
+                "Index::title\n"
+                "::js\n"
+                "  let paths = FileSystem.list_dnd_files();\n"
+                "  let s = '';\n"
+                "  for(let path of paths){\n"
+                "     s += `* [${path}]\\n`\n"
+                "     ctx.add_link(path, encodeURI(path));\n"
+                "   }\n"
+                "   ctx.root.parse(s);\n"
+                "::css\n"
+                "  body > * {\n"
+                "    margin: auto;\n"
+                "    width: max-content;\n"
+                "  }\n"
+                );
+            }
+            else {
+                error(func, p, "Error reading '%.*s': %s", (int)path.length, path.text, strerror(tfr.native_error));
+                goto LNotFound;
+            }
         }
+        else
+            text = tfr.result;
         int err = 0;
-        LongString html = compile_file(func, p, directory, flags, path, tfr.result, &err);
+        LongString html = compile_file(func, p, directory, flags, path, text, &err);
         if(err){
             #define MESS "HTTP/1.1 500 Compiler-Error\r\n\r\n" \
             "<div align=center style=\"margin-top:10%; font-family: sans-serif;\">" \

@@ -29,7 +29,7 @@ msb_url_percent_encode(MStringBuilder* sb, const char* text, size_t length){
             case ':': case '/': case '?': case '#': case '[':
             case ']': case '@': case '!': case '$': case '&':
             case '\'': case '(': case ')': case '*': case '+':
-            case ',': case ';': case '=': case '%':
+            case ',': case ';': case '=': case '%': case '"':
                 msb_write_char(sb, '%');
                 msb_write_char(sb, hex[(c & 0xf0)>>4]);
                 msb_write_char(sb, hex[c & 0xf]);
@@ -58,7 +58,7 @@ msb_url_percent_encode_filepath(MStringBuilder* sb, const char* text, size_t len
             case ':':           case '?': case '#': case '[':
             case ']': case '@': case '!': case '$': case '&':
             case '\'': case '(': case ')': case '*': case '+':
-            case ',': case ';': case '=': case '%':
+            case ',': case ';': case '=': case '%': case '"':
                 msb_write_char(sb, '%');
                 msb_write_char(sb, hex[(c & 0xf0)>>4]);
                 msb_write_char(sb, hex[c & 0xf]);

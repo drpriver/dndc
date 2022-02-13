@@ -70,6 +70,15 @@ void null_report(void* ud, int type, const char* filename, int filename_len, int
     (void)message;
     (void)message_len;
 }
+static
+void wrap_report(void* ud, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
+    if(filename_len)
+        fprintf(stderr, "\r%.*s: ", filename_len, filename);
+    else
+        fprintf(stderr, "\r");
+    dndc_stderr_error_func(ud, type, filename, filename_len, line, col, message, message_len);
+    fprintf(stderr, "\r> ");
+}
 
 
 int
@@ -189,7 +198,7 @@ main(int argc, char** argv){
         PopDiagnostic();
     }
 
-    DndServer* server = dnd_server_create(should_log?dndc_stderr_error_func:null_report, NULL, &port);
+    DndServer* server = dnd_server_create(should_log?wrap_report:null_report, NULL, &port);
     if(!server) return 1;
 
     struct JobData data = {
@@ -204,6 +213,11 @@ main(int argc, char** argv){
     Entries entries = {0};
     get_entries(directory, &entries);
     if(!entries.count) return 1;
+    for(size_t i = 0; i < entries.count; i++){
+        if(SV_equals(entries.data[i], SV("index.dnd"))) goto LHasIndex;
+    }
+    Marray_push__StringView(&entries, get_mallocator(), SV("index.dnd"));
+    LHasIndex:
     print_entries(entries);
     struct TabContext tabctx = {
         .original = &entries,
