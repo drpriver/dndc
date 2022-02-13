@@ -290,7 +290,7 @@ main(int argc, char** argv){
 #include "MStringBuilder.h"
 static
 void
-get_entries_inner(StringView directory, Entries* entries){
+get_entries_inner(StringView original, StringView directory, Entries* entries){
     MStringBuilder sb = {.allocator = get_mallocator()};
     msb_write_str(&sb, directory.text, directory.length);
     msb_write_literal(&sb, "/*.dnd");
@@ -307,9 +307,9 @@ get_entries_inner(StringView directory, Entries* entries){
             msb_write_char(&sb, '/');
             msb_write_str(&sb, findd.cFileName, strlen(findd.cFileName));
             StringView text = msb_borrow_sv(&sb);
-            char* s = Allocator_strndup(get_mallocator(), text.text, text.length);
+            char* s = Allocator_strndup(get_mallocator(), text.text+original.length+1, text.length-original.length-1);
             StringView* it = Marray_alloc__StringView(entries, get_mallocator());
-            *it = (StringView){.text=s, .length=text.length};
+            *it = (StringView){.text=s, .length=text.length-original.length-1};
             sb.cursor = cursor;
         }while(FindNextFileA(handle, &findd));
         FindClose(handle);
@@ -338,7 +338,7 @@ get_entries_inner(StringView directory, Entries* entries){
         msb_write_str(&sb, fn.text, fn.length);
         msb_nul_terminate(&sb);
         StringView nextdir = msb_borrow_sv(&sb);
-        get_entries_inner(nextdir, entries);
+        get_entries_inner(original, nextdir, entries);
         msb_erase(&sb, 1+fn.length);
     }while(FindNextFileA(handle, &findd));
     end:
@@ -376,7 +376,7 @@ get_entries(LongString directory, Entries* entries){
     }
     fts_close(handle);
 #elif defined(_WIN32)
-    get_entries_inner(LS_to_SV(directory), entries);
+    get_entries_inner(LS_to_SV(directory), LS_to_SV(directory), entries);
 #endif
 }
 
