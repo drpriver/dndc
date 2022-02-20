@@ -196,6 +196,20 @@ struct TestStats {
     unsigned long long assert_failures;
 };
 
+enum {MAX_TEST_NUM = 1000};
+
+// TestResults
+// ----------
+// Internal use struct.
+struct TestResults {
+    unsigned long long funcs_executed;
+    unsigned long long failures;
+    unsigned long long executed;
+    unsigned long long assert_failures;
+    size_t failed_tests[MAX_TEST_NUM];
+    size_t n_failed_tests;
+};
+
 // TestFunc
 // --------
 // The type of a test function.
@@ -255,8 +269,8 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags);
 // Internal use, use the RegisterTest function to register a test.
 // This array is where registered tests are located.
 // A single test program can not directly register more than 1000 tests.
-static StringView test_names[1000];
-static TestCase test_funcs[1000];
+static StringView test_names[MAX_TEST_NUM];
+static TestCase test_funcs[MAX_TEST_NUM];
 // test_funcs_count
 // ----------------
 // How many were registered. Internal use.
@@ -600,21 +614,24 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 //
 // Returns:
 // --------
-// A `TestStats` structure with the number of passess, fails, etc.
+// A `TestResults` structure with the number of passess, fails, etc.
 //
 static
-struct TestStats
+struct TestResults
 run_the_tests(size_t*_Nullable which_tests, int test_count){
-    struct TestStats result = {};
+    struct TestResults result = {0};
     if(test_count){
         for(int i = 0; i < test_count; i++){
-            TestFunc* func = test_funcs[which_tests[i]].test_func;
+            size_t idx = which_tests[i];
+            TestFunc* func = test_funcs[idx].test_func;
             assert(func);
             struct TestStats func_result = func();
             result.funcs_executed++;
             result.failures += func_result.failures;
             result.executed += func_result.executed;
             result.assert_failures += func_result.assert_failures;
+            if(func_result.assert_failures || func_result.failures)
+                result.failed_tests[result.n_failed_tests++] = idx;
         }
     }
     else {
@@ -628,6 +645,8 @@ run_the_tests(size_t*_Nullable which_tests, int test_count){
             result.failures += func_result.failures;
             result.executed += func_result.executed;
             result.assert_failures += func_result.assert_failures;
+            if(func_result.assert_failures || func_result.failures)
+                result.failed_tests[result.n_failed_tests++] = i;
         }
     }
     return result;
@@ -820,7 +839,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
         }
     }
     if(run_all){
-        for(size_t i = 0; i < arrlen(tests_to_run); i++)
+        for(size_t i = 0; i < test_funcs_count; i++)
             tests_to_run[i] = i;
     }
 
@@ -831,6 +850,8 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     const char* green = use_colors? "\033[92m"    : "";
     const char* red   = use_colors? "\033[91m"    : "";
     const char* reset = use_colors? "\033[39;49m" : "";
+    const char* bold  = use_colors? "\033[1m"     : "";
+    const char* nobold  = use_colors? "\033[0m"   : "";
     _test_color_gray = gray;
     _test_color_reset = reset;
 #if 0
@@ -839,7 +860,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     _test_color_red = red;
 #endif
 
-    size_t num_to_run = run_all? arrlen(tests_to_run) : kw_args[TARGET_INDEX].num_parsed;
+    size_t num_to_run = run_all? test_funcs_count : kw_args[TARGET_INDEX].num_parsed;
 
     assert(SV_equals(kw_args[TARGET_INDEX].name, SV("-t")));
 
@@ -853,7 +874,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     if(should_wait){
         getchar();
     }
-    struct TestStats result = run_the_tests(tests_to_run, num_to_run);
+    struct TestResults result = run_the_tests(tests_to_run, num_to_run);
 
     const char* text = result.funcs_executed == 1?
         "test function executed"
@@ -887,6 +908,18 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     for(size_t i = 0 ; i < TestOutFileCount; i++){
         if(TestOutFiles[i] != stderr)
             fclose(TestOutFiles[i]);
+    }
+    for(size_t i = 0; i < result.n_failed_tests; i++){
+        StringView name = test_funcs[result.failed_tests[i]].test_name;
+        TestPrintf("%s%.*s%s %sfailed%s.\n", bold, (int)name.length, name.text, nobold, red, reset);
+    }
+    if(result.n_failed_tests && argc){
+        fprintf(stderr, "To rerun the failed test%s, run:\n", result.n_failed_tests==1?"":"s");
+        fprintf(stdout, "'%s' -t", argv[0]);
+        for(size_t i = 0; i < result.n_failed_tests; i++){
+            fprintf(stdout, " %zu", result.failed_tests[i]);
+        }
+        fprintf(stdout, "\n");
     }
     return result.failures + result.assert_failures == 0? 0 : 1;
 }
