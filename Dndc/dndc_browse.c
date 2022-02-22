@@ -22,12 +22,7 @@
 #include <unistd.h>
 #include <fts.h>
 #else
-
 #error "Unhandled platform"
-
-#endif
-
-#elif defined(_WIN32)
 #endif
 
 #define MARRAY_T StringView
