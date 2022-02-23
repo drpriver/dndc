@@ -85,7 +85,7 @@ void wrap_report(void* ud, int type, const char* filename, int filename_len, int
 
 int
 main(int argc, char** argv){
-    LongString directory = LS(".");
+    LongString directory = {0};
     int port = 0;
     {
         char* cwd;
@@ -196,6 +196,7 @@ main(int argc, char** argv){
     if(!directory.length){
         int err = native_gui_pick_directory(&directory);
         if(err) return err;
+        assert(directory.length);
     }
     while(directory.length > 1 && directory.text[directory.length-1] == '/'){
         PushDiagnostic();
@@ -205,7 +206,10 @@ main(int argc, char** argv){
     }
 
     DndServer* server = dnd_server_create(should_log?wrap_report:null_report, NULL, &port);
-    if(!server) return 1;
+    if(!server) {
+        fprintf(stderr, "No server\n");
+        return 1;
+    }
 
     struct JobData data = {
         .directory = directory,
@@ -322,7 +326,6 @@ get_entries_inner(StringView original, StringView directory, Entries* entries){
     LongString thisdir = msb_borrow_ls(&sb);
     handle = FindFirstFileExA(thisdir.text, FindExInfoBasic, &findd, FindExSearchNameMatch, NULL, FIND_FIRST_EX_LARGE_FETCH);
     if(handle == INVALID_HANDLE_VALUE){
-        // fprintf(stderr, "Invalid handle: '%s'\n", thisdir.text);
         goto end;
     }
     msb_erase(&sb, sizeof("/*")-1);
@@ -455,62 +458,70 @@ entry_completer(GetInputCtx* ctx, size_t original_cursor, size_t original_count,
 static int
 native_gui_pick_directory(LongString* directory){
     // TODO: actual file picker
+    // The annoyance is you'd have to tell the linker to link against Cocoa or
+    // gtk or whatever, which complicates the build system. Windows let's you just
+    // slam some `pragam comments` in.
     *directory = LS(".");
     return 0;
 }
 #elif defined(_WIN32)
+#pragma comment(lib, "ole32.lib")
+#pragma comment(lib, "user32.lib")
 static int
 native_gui_pick_directory(LongString* directory){
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     DWORD dwOptions = 0;
     CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
     // Create dialog
     IFileOpenDialog* filedialog = NULL;
-    HRESULT result = CoCreateInstance(CLSID_FileOpenDialog, NULL, &CLSCTX_ALL, (void**)&fileDialog);
+    HRESULT result = CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_ALL, &IID_IFileOpenDialog, (void**)&filedialog);
     if(!filedialog) {
         CoUninitialize(); return 1;
     }
-    filedialog->vtbl->GetOptions(filedialog, &dwOptions);
+    filedialog->lpVtbl->GetOptions(filedialog, &dwOptions);
     // Add in FOS_PICKFOLDERS which hides files and only allows selection of folders
-    filedialog->vtbl->SetOptions(filedialog, dwOptions | FOS_PICKFOLDERS);
+    filedialog->lpVtbl->SetOptions(filedialog, dwOptions | FOS_PICKFOLDERS);
     // Show the dialog to the user
-    result = filedialog->vtbl->Show(filedialog, NULL);
+    result = filedialog->lpVtbl->Show(filedialog, NULL);
     if(!SUCCEEDED(result))
-        goto LBad;
+        goto Lbad;
     // Get the folder name
     IShellItem* shellitem = NULL;
 
-    result = filedialog->vtbl->GetResult(filedialog, &shellitem);
-    if(!SUCCEEDED(result))
-        goto LShellitemerror;
-
-    wchar_t *path = NULL;
-    result = shellitem->vtbl->GetDisplayName(shellitem, SIGDN_DESKTOPABSOLUTEPARSING, &path);
+    result = filedialog->lpVtbl->GetResult(filedialog, &shellitem);
     if(!SUCCEEDED(result))
         goto Lshellitemerror;
 
-    size_t bytes_needed = WideCharToMultiByte(CP_UTF8, 0, path, -1, NULL, 0, NULL, NULL )+1;
-    directory->text = malloc(bytes_needed);
-    directory->text[bytes_needed-1] = 0;
+    wchar_t *path = NULL;
+    result = shellitem->lpVtbl->GetDisplayName(shellitem, SIGDN_DESKTOPABSOLUTEPARSING, &path);
+    if(!SUCCEEDED(result))
+        goto Lshellitemerror;
+
+    size_t bytes_needed = WideCharToMultiByte(CP_UTF8, 0, path, -1, NULL, 0, NULL, NULL );
+    char* d = malloc(bytes_needed);
+    directory->text = d;
+    // d[bytes_needed] = 0;
     directory->length = bytes_needed-1;
-    WideCharToMultiByte(CP_UTF8, 0, path, -1, directory->text, bytes_needed, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, path, -1, d, bytes_needed, NULL, NULL);
+    assert(d[bytes_needed-1] == 0);
     CoTaskMemFree(path);
-    shellitem->vtbl->Release(shellitem);
+    shellitem->lpVtbl->Release(shellitem);
 
     if(0){
         Lshellitemerror:
-        shellitem->vtbl->Release(shellitem);
+        shellitem->lpVtbl->Release(shellitem);
         goto Lbad;
     }
 
-    filedialog->vtbl->Release(filedialog);
+    filedialog->lpVtbl->Release(filedialog);
 
     CoUninitialize();
 
     return 0;
 
     Lbad:
-    filedialog->vtbl->Release(filedialog);
+    filedialog->lpVtbl->Release(filedialog);
     CoUninitialize();
     return 1;
 }
