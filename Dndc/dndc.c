@@ -856,8 +856,8 @@ new_qjs_rt(ArenaAllocator*aa){
 
 static
 QJSContext*_Nullable
-new_qjs_ctx(QJSRuntime*rt, DndcContext*ctx, DndcJsFlags flags){
-    (void)rt, (void)ctx, (void)flags;
+new_qjs_ctx(QJSRuntime*rt, DndcContext*ctx, DndcJsFlags flags, LongString args){
+    (void)rt, (void)ctx, (void)flags, (void)args;
     return NULL;
 }
 

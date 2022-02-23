@@ -6,7 +6,9 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #if !defined(_WIN32) || defined(USE_C_STDIO)
+#if !defined(WASM)
 #include <errno.h>
+#endif
 #endif
 #include "long_string.h"
 #include "ByteBuffer.h"

@@ -15,15 +15,14 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef _WIN32
+#if defined(_WIN32)
 #include <direct.h>
-#else
+#include <shobjidl.h>
+#elif defined(__APPLE__) || defined(__linux__)
 #include <unistd.h>
-#endif
-
-#if defined(__APPLE__) || defined(__linux__)
 #include <fts.h>
-#elif defined(_WIN32)
+#else
+#error "Unhandled platform"
 #endif
 
 #define MARRAY_T StringView
@@ -58,6 +57,9 @@ get_entries(LongString directory, Entries*entries);
 static
 void
 print_entries(Entries);
+
+static int
+native_gui_pick_directory(LongString* directory);
 
 static
 void null_report(void* ud, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
@@ -190,6 +192,10 @@ main(int argc, char** argv){
         print_argparse_error(&argparser, e);
         fprintf(stderr, "Use --help to see usage.\n");
         return e;
+    }
+    if(!directory.length){
+        int err = native_gui_pick_directory(&directory);
+        if(err) return err;
     }
     while(directory.length > 1 && directory.text[directory.length-1] == '/'){
         PushDiagnostic();
@@ -445,6 +451,70 @@ entry_completer(GetInputCtx* ctx, size_t original_cursor, size_t original_count,
     ctx->buff_cursor = completion.length;
     return 0;
 }
+#if defined(__APPLE__) || defined(__linux__)
+static int
+native_gui_pick_directory(LongString* directory){
+    // TODO: actual file picker
+    *directory = LS(".");
+    return 0;
+}
+#elif defined(_WIN32)
+static int
+native_gui_pick_directory(LongString* directory){
+    DWORD dwOptions = 0;
+    CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+
+    // Create dialog
+    IFileOpenDialog* filedialog = NULL;
+    HRESULT result = CoCreateInstance(CLSID_FileOpenDialog, NULL, &CLSCTX_ALL, (void**)&fileDialog);
+    if(!filedialog) {
+        CoUninitialize(); return 1;
+    }
+    filedialog->vtbl->GetOptions(filedialog, &dwOptions);
+    // Add in FOS_PICKFOLDERS which hides files and only allows selection of folders
+    filedialog->vtbl->SetOptions(filedialog, dwOptions | FOS_PICKFOLDERS);
+    // Show the dialog to the user
+    result = filedialog->vtbl->Show(filedialog, NULL);
+    if(!SUCCEEDED(result))
+        goto LBad;
+    // Get the folder name
+    IShellItem* shellitem = NULL;
+
+    result = filedialog->vtbl->GetResult(filedialog, &shellitem);
+    if(!SUCCEEDED(result))
+        goto LShellitemerror;
+
+    wchar_t *path = NULL;
+    result = shellitem->vtbl->GetDisplayName(shellitem, SIGDN_DESKTOPABSOLUTEPARSING, &path);
+    if(!SUCCEEDED(result))
+        goto Lshellitemerror;
+
+    size_t bytes_needed = WideCharToMultiByte(CP_UTF8, 0, path, -1, NULL, 0, NULL, NULL )+1;
+    directory->text = malloc(bytes_needed);
+    directory->text[bytes_needed-1] = 0;
+    directory->length = bytes_needed-1;
+    WideCharToMultiByte(CP_UTF8, 0, path, -1, directory->text, bytes_needed, NULL, NULL);
+    CoTaskMemFree(path);
+    shellitem->vtbl->Release(shellitem);
+
+    if(0){
+        Lshellitemerror:
+        shellitem->vtbl->Release(shellitem);
+        goto Lbad;
+    }
+
+    filedialog->vtbl->Release(filedialog);
+
+    CoUninitialize();
+
+    return 0;
+
+    Lbad:
+    filedialog->vtbl->Release(filedialog);
+    CoUninitialize();
+    return 1;
+}
+#endif
 
 #include "dndc_local_server.c"
 #include "get_input.c"
