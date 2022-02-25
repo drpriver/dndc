@@ -28,6 +28,8 @@
 #define MARRAY_T StringView
 #include "Marray.h"
 
+#include "gi_byte_distance_completer.h"
+
 typedef Marray__StringView Entries;
 
 
@@ -44,11 +46,6 @@ THREADFUNC(serve){
     return 0;
 }
 
-struct TabContext {
-    const Entries* original;
-    Entries ordered;
-};
-static GiTabCompletionFunc entry_completer;
 
 static
 void
@@ -229,10 +226,11 @@ main(int argc, char** argv){
     Marray_push__StringView(&entries, get_mallocator(), SV("index.dnd"));
     LHasIndex:
     print_entries(entries);
-    struct TabContext tabctx = {
+    struct ByteDistanceCompleterContext tabctx = {
         .original = &entries,
+        .strip_suff = SV(".dnd"),
     };
-    GetInputCtx input = {.prompt = SV("> "), .prompt_display_length=2, .tab_completion_func = entry_completer, .tab_completion_user_data=&tabctx};
+    GetInputCtx input = {.prompt = SV("> "), .prompt_display_length=2, .tab_completion_func=byte_distance_completer, .tab_completion_user_data=&tabctx};
     const char* opencmd = "open";
     const char* url = "http://localhost";
     #if defined(__APPLE__)
@@ -294,7 +292,6 @@ main(int argc, char** argv){
 #if defined(_WIN32)
 // Maybe I should add a recursive glob utility function? Trouble is that
 // you would want it iterator style, which is annoying to make nice in C.
-#include "MStringBuilder.h"
 static
 void
 get_entries_inner(StringView original, StringView directory, Entries* entries){
@@ -397,63 +394,6 @@ print_entries(Entries entries){
     }
 }
 
-struct Pair {
-    size_t idx;
-    ssize_t distance;
-};
-static
-int
-distance_cmp(const void* a, const void* b){
-    const struct Pair* pa = a;
-    const struct Pair* pb = b;
-    if(pa->distance < pb->distance) return -1;
-    if(pa->distance > pb->distance) return 1;
-    return 0;
-}
-
-static
-int
-entry_completer(GetInputCtx* ctx, size_t original_cursor, size_t original_count, int n_tabs){
-    struct TabContext* tctx = ctx->tab_completion_user_data;
-    if(n_tabs == 1){
-        StringView original = {.length=original_count, .text=ctx->altbuff};
-        int strip_dnd = !endswith(original, SV(".dnd"));
-        tctx->ordered.count = 0;
-        struct Pair* distances = malloc(tctx->original->count * sizeof*distances);
-        size_t n = 0;
-        for(size_t i = 0; i < tctx->original->count; i++){
-            StringView hay = tctx->original->data[i];
-            ssize_t distance = byte_expansion_distance(hay.text, hay.length-4*strip_dnd, ctx->altbuff, original_count);
-            if(distance < 0) continue;
-            distances[n].idx = i;
-            distances[n].distance = distance;
-            n++;
-        }
-        qsort(distances, n, sizeof *distances, distance_cmp);
-        for(size_t i = 0; i < n; i++){
-            StringView* sv = Marray_alloc__StringView(&tctx->ordered, get_mallocator());
-            *sv = tctx->original->data[distances[i].idx];
-        }
-        free(distances);
-        // initialize
-    }
-    if(ctx->tab_completion_cookie >= tctx->ordered.count){
-        memcpy(ctx->buff, ctx->altbuff, original_count);
-        ctx->buff_count = original_count;
-        ctx->buff_cursor = original_cursor;
-        ctx->buff[original_count] = 0;
-        ctx->tab_completion_cookie = 0;
-        return 0;
-    }
-    StringView completion = tctx->ordered.data[ctx->tab_completion_cookie++];
-    if(completion.length >= GI_BUFF_SIZE-1)
-        return 1;
-    memcpy(ctx->buff, completion.text, completion.length);
-    ctx->buff[completion.length] = 0;
-    ctx->buff_count = completion.length;
-    ctx->buff_cursor = completion.length;
-    return 0;
-}
 #if defined(__APPLE__) || defined(__linux__)
 static int
 native_gui_pick_directory(LongString* directory){
@@ -470,18 +410,19 @@ native_gui_pick_directory(LongString* directory){
 static int
 native_gui_pick_directory(LongString* directory){
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-    DWORD dwOptions = 0;
+    DWORD options = 0;
     CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
     // Create dialog
     IFileOpenDialog* filedialog = NULL;
     HRESULT result = CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_ALL, &IID_IFileOpenDialog, (void**)&filedialog);
     if(!filedialog) {
-        CoUninitialize(); return 1;
+        CoUninitialize();
+        return 1;
     }
-    filedialog->lpVtbl->GetOptions(filedialog, &dwOptions);
+    filedialog->lpVtbl->GetOptions(filedialog, &options);
     // Add in FOS_PICKFOLDERS which hides files and only allows selection of folders
-    filedialog->lpVtbl->SetOptions(filedialog, dwOptions | FOS_PICKFOLDERS);
+    filedialog->lpVtbl->SetOptions(filedialog, options | FOS_PICKFOLDERS);
     // Show the dialog to the user
     result = filedialog->lpVtbl->Show(filedialog, NULL);
     if(!SUCCEEDED(result))
@@ -498,7 +439,7 @@ native_gui_pick_directory(LongString* directory){
     if(!SUCCEEDED(result))
         goto Lshellitemerror;
 
-    size_t bytes_needed = WideCharToMultiByte(CP_UTF8, 0, path, -1, NULL, 0, NULL, NULL );
+    size_t bytes_needed = WideCharToMultiByte(CP_UTF8, 0, path, -1, NULL, 0, NULL, NULL);
     char* d = malloc(bytes_needed);
     directory->text = d;
     // d[bytes_needed] = 0;
@@ -529,3 +470,4 @@ native_gui_pick_directory(LongString* directory){
 
 #include "dndc_local_server.c"
 #include "get_input.c"
+#include "gi_byte_distance_completer.c"

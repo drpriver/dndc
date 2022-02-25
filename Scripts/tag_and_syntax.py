@@ -369,8 +369,8 @@ def write_vim(funcs:List[str], enums:List[str], types:List[str], globs:List[str]
         fp.write('set path=.,,{}\n'.format(','.join(dirs)))
         # these are my preferences.
         fp.write('hi Error ctermfg=none ctermbg=none guifg=fg guibg=bg\n')
-        fp.write('hi cConstant ctermfg=2 guifg=DarkGreen\n')
-        fp.write('hi Constant ctermfg=2 guifg=DarkGreen\n')
+        # fp.write('hi cConstant ctermfg=2 guifg=DarkGreen\n')
+        # fp.write('hi Constant ctermfg=2 guifg=DarkGreen\n')
         fp.write('hi cFunction ctermfg=109 guifg=#664499\n')
         fp.write('hi cEnum cterm=bold gui=bold\n')
         fp.write('hi cPreProc ctermfg=5\n')
