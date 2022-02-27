@@ -45,4 +45,4 @@ $(BINDIR)/gdndc.exe: Platform/Windows/gdndc.cpp $(OBJDIR)/dndc.o  Platform/Windo
 $(OBJDIR)/dndc.lib: $(OBJDIR)/dndc.o
 	llvm-ar crs $@ $^
 $(BINDIR)/libdndc.dll: $(OBJDIR)/dndc.o $(VENDOBJDIR)/libquickjs.o
-	$(CC) $^ -o $@ -shared
+	$(CC) $^ -o $@ -shared $(OPT_FLAGS)
