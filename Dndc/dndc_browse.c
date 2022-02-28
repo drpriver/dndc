@@ -28,6 +28,8 @@
 #define MARRAY_T StringView
 #include "Marray.h"
 
+#include "recursive_glob.h"
+
 #include "gi_byte_distance_completer.h"
 
 typedef Marray__StringView Entries;
@@ -45,11 +47,6 @@ THREADFUNC(serve){
     dnd_server_serve(data->server, data->flags, data->directory);
     return 0;
 }
-
-
-static
-void
-get_entries(LongString directory, Entries*entries);
 
 static
 void
@@ -218,7 +215,7 @@ main(int argc, char** argv){
     create_thread(&thrd, &serve, &data);
     // int err = dnd_server_serve(server, flags, directory);
     Entries entries = {0};
-    get_entries(directory, &entries);
+    recursive_glob_suffix(directory, SV(".dnd"), &entries);
     if(!entries.count) return 1;
     for(size_t i = 0; i < entries.count; i++){
         if(SV_equals(entries.data[i], SV("index.dnd"))) goto LHasIndex;
@@ -287,100 +284,6 @@ main(int argc, char** argv){
     }
     puts("\r");
     return 0;
-}
-
-#if defined(_WIN32)
-// Maybe I should add a recursive glob utility function? Trouble is that
-// you would want it iterator style, which is annoying to make nice in C.
-static
-void
-get_entries_inner(StringView original, StringView directory, Entries* entries){
-    MStringBuilder sb = {.allocator = get_mallocator()};
-    msb_write_str(&sb, directory.text, directory.length);
-    msb_write_literal(&sb, "/*.dnd");
-    msb_nul_terminate(&sb);
-    LongString dndwildcard = msb_borrow_ls(&sb);
-    WIN32_FIND_DATAA findd;
-    HANDLE handle = FindFirstFileExA(dndwildcard.text, FindExInfoBasic, &findd, FindExSearchNameMatch, NULL, FIND_FIRST_EX_LARGE_FETCH);
-    msb_erase(&sb, sizeof("/*.dnd")-1);
-    if(handle == INVALID_HANDLE_VALUE){
-    }
-    else{
-        do {
-            size_t cursor = sb.cursor;
-            msb_write_char(&sb, '/');
-            msb_write_str(&sb, findd.cFileName, strlen(findd.cFileName));
-            StringView text = msb_borrow_sv(&sb);
-            char* s = Allocator_strndup(get_mallocator(), text.text+original.length+1, text.length-original.length-1);
-            StringView* it = Marray_alloc__StringView(entries, get_mallocator());
-            *it = (StringView){.text=s, .length=text.length-original.length-1};
-            sb.cursor = cursor;
-        }while(FindNextFileA(handle, &findd));
-        FindClose(handle);
-    }
-    msb_write_literal(&sb, "/*");
-    msb_nul_terminate(&sb);
-    LongString thisdir = msb_borrow_ls(&sb);
-    handle = FindFirstFileExA(thisdir.text, FindExInfoBasic, &findd, FindExSearchNameMatch, NULL, FIND_FIRST_EX_LARGE_FETCH);
-    if(handle == INVALID_HANDLE_VALUE){
-        goto end;
-    }
-    msb_erase(&sb, sizeof("/*")-1);
-    do {
-        if(findd.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN){
-            continue;
-        }
-        if(!(findd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)){
-            continue;
-        }
-        StringView fn = {.text = findd.cFileName, .length = strlen(findd.cFileName)};
-        if(fn.text[0] == '.'){
-            continue;
-        }
-        msb_write_char(&sb, '/');
-        msb_write_str(&sb, fn.text, fn.length);
-        msb_nul_terminate(&sb);
-        StringView nextdir = msb_borrow_sv(&sb);
-        get_entries_inner(original, nextdir, entries);
-        msb_erase(&sb, 1+fn.length);
-    }while(FindNextFileA(handle, &findd));
-    end:
-    msb_destroy(&sb);
-}
-#endif
-
-static
-void
-get_entries(LongString directory, Entries* entries){
-#if defined(__APPLE__) || defined(__linux__)
-    const char* dirs[] = {directory.text, NULL};
-    PushDiagnostic();
-    SuppressCastQual();
-    FTS* handle = fts_open((char**)dirs, FTS_LOGICAL | FTS_NOCHDIR | FTS_NOSTAT, NULL);
-    PopDiagnostic();
-    if(!handle) return;
-    for(;;){
-        FTSENT* ent = fts_read(handle);
-        if(!ent) break;
-        if(ent->fts_namelen > 1 && ent->fts_name[0] == '.'){
-            fts_set(handle, ent, FTS_SKIP);
-            continue;
-        }
-        if(ent->fts_info & (FTS_F | FTS_NSOK)){
-            StringView name = {.text = ent->fts_name, .length=ent->fts_namelen};
-            if(!endswith(name, SV(".dnd")))
-                continue;
-            char* p = ent->fts_path + directory.length+1;
-            size_t len = strlen(p);
-            char* t = Allocator_strndup(get_mallocator(), p, len);
-            StringView* it = Marray_alloc__StringView(entries, get_mallocator());
-            *it = (StringView){.length = len, .text = t};
-        }
-    }
-    fts_close(handle);
-#elif defined(_WIN32)
-    get_entries_inner(LS_to_SV(directory), LS_to_SV(directory), entries);
-#endif
 }
 
 static
@@ -471,3 +374,4 @@ native_gui_pick_directory(LongString* directory){
 #include "dndc_local_server.c"
 #include "get_input.c"
 #include "gi_byte_distance_completer.c"
+#include "recursive_glob.c"
