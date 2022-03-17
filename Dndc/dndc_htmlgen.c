@@ -1419,7 +1419,9 @@ RENDERFUNC(MD){
     if(!node->header.length){
         StringView id = node_get_id(ctx, handle);
         if(id.length){
-            MSB_FORMAT(sb, SV(" id=\""), id, SV("\""));
+            MSB_FORMAT(sb, SV(" id=\""));
+            msb_write_kebab(sb, id.text, id.length);
+            msb_write_literal(sb, "\"");
         }
     }
     msb_write_literal(sb, ">\n");
@@ -1462,7 +1464,9 @@ RENDERFUNC(DETAILS){
     write_classes(sb, node);
     StringView id = node_get_id(ctx, handle);
     if(id.length){
-        MSB_FORMAT(sb, SV(" id=\""), id, SV("\""));
+        MSB_FORMAT(sb, SV(" id=\""));
+        msb_write_kebab(sb, id.text, id.length);
+        msb_write_literal(sb, "\"");
     }
     msb_write_literal(sb, ">\n");
     msb_write_literal(sb, "<summary style=\"cursor:pointer\">\n");
