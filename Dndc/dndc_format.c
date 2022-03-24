@@ -105,6 +105,13 @@ format_write_wrapped_string(MStringBuilder* sb, FormatState* state, StringView s
     }
 }
 
+static inline
+void
+remove_blank_line(MStringBuilder* sb){
+    if(sb->cursor >=2 && sb->data[sb->cursor-1] == '\n' && sb->data[sb->cursor-2] == '\n')
+        msb_erase(sb, 1);
+}
+
 #define FORMATFUNCNAME(nt) format_##nt
 #define FORMATFUNC(nt) static warn_unused int FORMATFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent)
 
@@ -518,6 +525,7 @@ FORMATFUNC(table_node){
 
 FORMATFUNC(kv_node){
     int result = 0;
+    remove_blank_line(sb);
     format_header(ctx, sb, node, indent);
     indent += FORMAT_INDENT;
     size_t key_width = 0;
