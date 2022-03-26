@@ -68,7 +68,7 @@ write_generic_header(DndcContext* ctx, Node* n, int indent, MStringBuilder*msb){
     if(n->flags & NODEFLAG_ID){
         // #uggh
         // This is super gross, I hate this.
-        // FIXME: use handles in the expaned instead of raw nodes.
+        // FIXME: use handles in the expand instead of raw nodes.
         NodeHandle handle = {._value = (uint32_t)(n - ctx->nodes.data)};
         StringView id = node_get_id(ctx, handle);
         MSB_FORMAT(msb, " #id(", id, ")");

@@ -185,6 +185,7 @@ JSGETTER(js_dndc_node_get_type);
 JSMAGICSETTER(js_dndc_node_flag_setter);
 JSMAGICGETTER(js_dndc_node_flag_getter);
 JSGETTER(js_dndc_node_get_children);
+JSGETTER(js_dndc_node_get_location);
 JSMETHOD(js_dndc_node_to_string);
 JSGETTER(js_dndc_node_get_header);
 JSSETTER(js_dndc_node_set_header);
@@ -201,6 +202,8 @@ JSGETTER(js_dndc_node_get_classes);
 JSMETHOD(js_dndc_node_err);
 JSMETHOD(js_dndc_node_has_class);
 JSMETHOD(js_dndc_node_clone);
+JSMETHOD(js_dndc_node_set);
+JSMETHOD(js_dndc_node_get);
 
 static
 const
@@ -211,6 +214,7 @@ JSCFunctionListEntry JS_DNDC_NODE_FUNCS[] = {
     JS_CGETSET_MAGIC_DEF("noid", js_dndc_node_flag_getter, js_dndc_node_flag_setter, NODEFLAG_NOID),
     JS_CGETSET_MAGIC_DEF("hide", js_dndc_node_flag_getter, js_dndc_node_flag_setter, NODEFLAG_HIDE),
     JS_CGETSET_DEF("children", js_dndc_node_get_children, NULL),
+    JS_CGETSET_DEF("location", js_dndc_node_get_location, NULL),
     JS_CFUNC_DEF("toString", 0, js_dndc_node_to_string),
     JS_CGETSET_DEF("header", js_dndc_node_get_header, js_dndc_node_set_header),
     JS_CGETSET_DEF("id", js_dndc_node_get_id, js_dndc_node_set_id),
@@ -225,6 +229,8 @@ JSCFunctionListEntry JS_DNDC_NODE_FUNCS[] = {
     JS_CFUNC_DEF("err", 1, js_dndc_node_err),
     JS_CFUNC_DEF("has_class", 1, js_dndc_node_has_class),
     JS_CFUNC_DEF("clone", 0, js_dndc_node_clone),
+    JS_CFUNC_DEF("set", 2, js_dndc_node_set),
+    JS_CFUNC_DEF("get", 1, js_dndc_node_get),
 };
 
 //
@@ -911,8 +917,8 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
 }
 
 #if defined(_WIN32)
-static 
-QJSValue 
+static
+QJSValue
 js_list_dnd_files_inner(QJSContext* jsctx, DndcContext* ctx, QJSValue array, StringView directory, size_t base_length, int depth){
     if(depth > 8){
         JS_FreeValue(jsctx, array);
@@ -1356,6 +1362,53 @@ js_dndc_node_get_children(QJSContext* jsctx, QJSValueConst thisValue){
     }
     return array;
 }
+static
+QJSValue
+js_dndc_node_get_location(QJSContext* jsctx, QJSValueConst thisValue){
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    NodeHandle handle;
+    if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
+        return JS_EXCEPTION;
+    assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
+    Node* node = get_node(ctx, handle);
+    QJSValue obj = JS_NewObject(jsctx);
+    QJSValue v = JS_NULL;
+    int err = 0;
+    if(JS_IsException(obj))
+        return JS_EXCEPTION;
+    StringView filename = ctx->filenames.data[node->filename_idx];
+
+    v = JS_NewStringLen(jsctx, filename.text, filename.length);
+    if(JS_IsException(v)) goto fail;
+    err = JS_SetPropertyStr(jsctx, obj, "filename", v);
+    if(err) goto fail;
+    JS_FreeValue(jsctx, v);
+    v = JS_NULL;
+
+    v = JS_NewInt32(jsctx, node->row);
+    if(JS_IsException(v)) goto fail;
+    err = JS_SetPropertyStr(jsctx, obj, "row", v);
+    if(err) goto fail;
+    JS_FreeValue(jsctx, v);
+    v = JS_NULL;
+
+    v = JS_NewInt32(jsctx, node->col);
+    if(JS_IsException(v)) goto fail;
+    err = JS_SetPropertyStr(jsctx, obj, "column", v);
+    if(err) goto fail;
+    JS_FreeValue(jsctx, v);
+    v = JS_NULL;
+
+    return obj;
+
+    fail:
+    JS_FreeValue(jsctx, obj);
+    if(!JS_IsNull(v))
+        JS_FreeValue(jsctx, v);
+
+    return JS_EXCEPTION;
+}
 
 JSGETTER(js_dndc_node_get_header){
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
@@ -1537,6 +1590,88 @@ JSMETHOD(js_dndc_node_clone){
     assert(ctx);
     NodeHandle newnode = node_clone(ctx, handle);
     return js_make_dndc_node(jsctx, newnode);
+}
+JSMETHOD(js_dndc_node_get){
+    if(argc != 1)
+        return JS_ThrowTypeError(jsctx, "get must be called with 1 string argument");
+    NodeHandle handle;
+    if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
+        return JS_EXCEPTION;
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    Node* node = get_node(ctx, handle);
+    StringView key_arg = jsstring_to_stringview(jsctx, argv[0], ctx->temp_allocator);
+    if(!key_arg.text)
+        return JS_EXCEPTION;
+    if(node->type != NODE_KEYVALUE)
+        return JS_ThrowTypeError(jsctx, "Node is not a KEYVALUE node");
+    NODE_CHILDREN_FOR_EACH(h, node){
+        Node* ch = get_node(ctx, *h);
+        if(ch->type != NODE_KEYVALUEPAIR) continue;
+        if(node_children_count(ch) != 2) continue;
+        NodeHandle* kv = node_children(ch);
+        Node* k = get_node(ctx, kv[0]);
+        if(k->type != NODE_STRING) continue;
+        if(!SV_equals(k->header, key_arg)) continue;
+        Node* v = get_node(ctx, kv[1]);
+        if(v->type != NODE_STRING) continue;
+        QJSValue result = JS_NewStringLen(jsctx, v->header.text, v->header.length);
+        return result;
+    }
+    return JS_UNDEFINED;
+}
+JSMETHOD(js_dndc_node_set){
+    if(argc != 2)
+        return JS_ThrowTypeError(jsctx, "set must be called with 1 string argument");
+    NodeHandle handle;
+    if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
+        return JS_EXCEPTION;
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    Node* node = get_node(ctx, handle);
+    if(node->type != NODE_KEYVALUE)
+        return JS_ThrowTypeError(jsctx, "Node is not a KEYVALUE node");
+    StringView key_arg = jsstring_to_stringview(jsctx, argv[0], ctx->temp_allocator);
+    if(!key_arg.text)
+        return JS_EXCEPTION;
+    StringView value_arg = jsstring_to_stringview(jsctx, argv[1], ctx->string_allocator);
+    if(!value_arg.text)
+        return JS_EXCEPTION;
+    NODE_CHILDREN_FOR_EACH(h, node){
+        Node* ch = get_node(ctx, *h);
+        if(ch->type != NODE_KEYVALUEPAIR) continue;
+        if(node_children_count(ch) != 2) continue;
+        NodeHandle* kv = node_children(ch);
+        Node* k = get_node(ctx, kv[0]);
+        if(k->type != NODE_STRING) continue;
+        if(!SV_equals(k->header, key_arg)) continue;
+        Node* v = get_node(ctx, kv[1]);
+        if(v->type != NODE_STRING) continue;
+        v->header = value_arg;
+        return JS_UNDEFINED;
+    }
+    NodeHandle kvh = alloc_handle(ctx);
+    {
+        append_child(ctx, handle, kvh);
+        Node* n = get_node(ctx, kvh);
+        n->type = NODE_KEYVALUEPAIR;
+    }
+    {
+        NodeHandle kh = alloc_handle(ctx);
+        append_child(ctx, kvh, kh);
+        Node* n = get_node(ctx, kh);
+        n->type = NODE_STRING;
+        StringView key_s = {.text=Allocator_strndup(ctx->string_allocator, key_arg.text, key_arg.length), .length=key_arg.length};
+        n->header = key_s;
+    }
+    {
+        NodeHandle vh = alloc_handle(ctx);
+        append_child(ctx, kvh, vh);
+        Node* n = get_node(ctx, vh);
+        n->type = NODE_STRING;
+        n->header = value_arg;
+    }
+    return JS_UNDEFINED;
 }
 
 //
@@ -1769,6 +1904,7 @@ JSMETHOD(js_dndc_context_select_nodes){
     int32_t type = -1;
     Marray(StringView) attributes_array = {0};
     Marray(StringView) classes_array = {0};
+    StringView node_id = {0};
     {
         QJSValue jstype_ = JS_GetPropertyStr(jsctx, arg, "type");
         if(JS_IsException(jstype_))
@@ -1785,8 +1921,17 @@ JSMETHOD(js_dndc_context_select_nodes){
     QJSValue classes = JS_UNDEFINED;
     QJSValue attributes = JS_UNDEFINED;
     QJSValue failure = JS_UNDEFINED;
+    QJSValue id = JS_UNDEFINED;
     classes = JS_GetPropertyStr(jsctx, arg, "classes");
     attributes = JS_GetPropertyStr(jsctx, arg, "attributes");
+    id = JS_GetPropertyStr(jsctx, arg, "id");
+    if(!JS_IsUndefined(id)){
+        if(!JS_IsString(id)){
+            failure = JS_ThrowTypeError(jsctx, "id should be a string");
+            goto fail;
+        }
+        node_id = jsstring_to_stringview(jsctx, id, tmp);
+    }
     if(!JS_IsUndefined(classes)){
         if(!JS_IsArray(jsctx, classes)){
             failure = JS_ThrowTypeError(jsctx, "classes should be an array");
@@ -1838,7 +1983,24 @@ JSMETHOD(js_dndc_context_select_nodes){
         }
     }
     QJSValue result = JS_NewArray(jsctx);
-    if(!classes_array.count && !attributes_array.count && type < 0){
+    if(node_id.text){
+        for(size_t i = 0; i < ctx->nodes.count; i++){
+            Node* node = &ctx->nodes.data[i];
+            if(node->type == NODE_INVALID) continue;
+            NodeHandle handle = {.index = i};
+            StringView this_id = node_get_id(ctx, handle);
+            if(SV_equals(this_id, node_id)){
+                QJSValue nh = js_make_dndc_node(jsctx, handle);
+                QJSValue v = JS_ArrayPush(jsctx, result, 1, &nh);
+                JS_FreeValue(jsctx, v);
+                JS_FreeValue(jsctx, nh);
+                goto done;
+            }
+
+        }
+    }
+    // put them all in
+    else if(!classes_array.count && !attributes_array.count && type < 0){
         for(size_t i = 0; i < ctx->nodes.count; i++){
             if(ctx->nodes.data[i].type == NODE_INVALID)
                 continue;
@@ -1869,6 +2031,7 @@ JSMETHOD(js_dndc_context_select_nodes){
             Continue:;
         }
     }
+    done:
     destroy_linear_storage(&la);
     JS_FreeValue(jsctx, classes);
     JS_FreeValue(jsctx, attributes);

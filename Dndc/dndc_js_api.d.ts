@@ -222,6 +222,7 @@ type CtxType = {
     //               have all of these classes.
     //   attributes: Array of attribute keys. All nodes returned
     //               will have all of these attributes.
+    //   id:         String id of the node.
     //
     // Returns:
     // --------
@@ -235,7 +236,7 @@ type CtxType = {
     //     room.classes.append('dungeon');
     // -------
     select_nodes(args:{type:number?, classes:Array<string>?,
-                       attributes:Array<string>?}): Array<Node>;
+                       attributes:Array<string>?, id:string?}): Array<Node>;
 
     //
     // add_link
@@ -415,6 +416,16 @@ type FileSystemT = {
 // The actual FileSystem that you refer to in your scripts
 export const FileSystem: FileSystemT;
 
+//
+// NodeLocation
+// ------------
+// Where the node is in the document
+type NodeLocation = {
+    readonly file: string;
+    readonly line: number;
+    readonly column: number;
+}
+
 
 //
 // Node
@@ -481,6 +492,13 @@ type Node = {
     // ----
     // If true, the node will not be rendered in the output.
     hide: boolean;
+
+
+    //
+    // location
+    // --------
+    // Where in the document the node is.
+    readonly location: NodeLocation;
 
     //
     // parse
@@ -698,6 +716,24 @@ type Node = {
     clone(): Node;
 
     toString(): string;
+
+    //
+    // get
+    // ---
+    // If this is a KEYVALUE node, returns the first value associated with the
+    // given key.
+    //
+    // If not a KEYVALUE node, throws a type error.
+    get(key:string):string?;
+
+    //
+    // set
+    // ---
+    // If this is a KEYVALUE node, sets the first key that matches to the given
+    // value. If the key can not be found, appends this as a key value pair.
+    //
+    // If not a KEYVALUE node, throws a type error.
+    set(key:string, value:string);
 }
 //
 // node
