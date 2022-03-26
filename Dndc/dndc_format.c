@@ -107,8 +107,8 @@ format_write_wrapped_string(MStringBuilder* sb, FormatState* state, StringView s
 
 static inline
 void
-remove_blank_line(MStringBuilder* sb){
-    if(sb->cursor >=2 && sb->data[sb->cursor-1] == '\n' && sb->data[sb->cursor-2] == '\n')
+remove_trailing_blank_lines(MStringBuilder* sb){
+    while(sb->cursor >=2 && sb->data[sb->cursor-1] == '\n' && sb->data[sb->cursor-2] == '\n')
         msb_erase(sb, 1);
 }
 
@@ -202,6 +202,7 @@ format_tree(DndcContext* ctx, MStringBuilder* sb){
     }
     if(sb->cursor && sb->data[sb->cursor-1] != '\n')
         msb_write_char(sb, '\n');
+    remove_trailing_blank_lines(sb);
     return 0;
 }
 static inline
@@ -525,7 +526,7 @@ FORMATFUNC(table_node){
 
 FORMATFUNC(kv_node){
     int result = 0;
-    remove_blank_line(sb);
+    remove_trailing_blank_lines(sb);
     format_header(ctx, sb, node, indent);
     indent += FORMAT_INDENT;
     size_t key_width = 0;
