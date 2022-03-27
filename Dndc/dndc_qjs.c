@@ -234,6 +234,29 @@ JSCFunctionListEntry JS_DNDC_NODE_FUNCS[] = {
 };
 
 //
+// DndcNodeLocation
+//
+//
+static JSClassID JS_DNDC_LOCATION_CLASS_ID;
+
+static
+JSClassDef JS_DNDC_LOCATION_CLASS = {
+    .class_name = "DndcNodeLocation",
+};
+
+JSMAGICGETTER(js_dndc_node_location_getter);
+JSMETHOD(js_dndc_node_location_to_string);
+
+static
+const
+JSCFunctionListEntry JS_DNDC_LOCATION_FUNCS[] = {
+    JS_CGETSET_MAGIC_DEF("filename", js_dndc_node_location_getter, NULL, 0),
+    JS_CGETSET_MAGIC_DEF("row", js_dndc_node_location_getter, NULL, 1),
+    JS_CGETSET_MAGIC_DEF("column", js_dndc_node_location_getter, NULL, 2),
+    JS_CFUNC_DEF("toString", 0, js_dndc_node_location_to_string),
+};
+
+//
 // DndcNodeAttributes
 //
 static JSClassID JS_DNDC_ATTRIBUTES_CLASS_ID;
@@ -338,6 +361,10 @@ new_qjs_rt(ArenaAllocator* aa){
     if(JS_NewClass(rt, JS_DNDC_CONTEXT_CLASS_ID, &JS_DNDC_CONTEXT_CLASS) < 0){
         goto fail;
     }
+    JS_NewClassID(&JS_DNDC_LOCATION_CLASS_ID);
+    if(JS_NewClass(rt, JS_DNDC_LOCATION_CLASS_ID, &JS_DNDC_LOCATION_CLASS) < 0){
+        goto fail;
+    }
     JS_NewClassID(&JS_DNDC_ATTRIBUTES_CLASS_ID);
     if(JS_NewClass(rt, JS_DNDC_ATTRIBUTES_CLASS_ID, &JS_DNDC_ATTRIBUTES_CLASS) < 0){
         goto fail;
@@ -387,6 +414,12 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, DndcJsFlags flags, LongString jsar
         JS_SetClassProto(jsctx, JS_DNDC_CONTEXT_CLASS_ID, proto); // steals ref
     }
 
+    // setup DndcNodeLocation class
+    {
+        QJSValue proto = JS_NewObject(jsctx); // new ref
+        JS_SetPropertyFunctionList(jsctx, proto, JS_DNDC_LOCATION_FUNCS, arrlen(JS_DNDC_LOCATION_FUNCS));
+        JS_SetClassProto(jsctx, JS_DNDC_LOCATION_CLASS_ID, proto); // steals ref
+    }
     // setup DndcAttributes class
     {
         QJSValue proto = JS_NewObject(jsctx); // new ref
@@ -1365,49 +1398,14 @@ js_dndc_node_get_children(QJSContext* jsctx, QJSValueConst thisValue){
 static
 QJSValue
 js_dndc_node_get_location(QJSContext* jsctx, QJSValueConst thisValue){
-    DndcContext* ctx = JS_GetContextOpaque(jsctx);
-    assert(ctx);
     NodeHandle handle;
     if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
         return JS_EXCEPTION;
-    assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
-    Node* node = get_node(ctx, handle);
-    QJSValue obj = JS_NewObject(jsctx);
-    QJSValue v = JS_NULL;
-    int err = 0;
+    QJSValue obj = JS_NewObjectClass(jsctx, JS_DNDC_LOCATION_CLASS_ID);
     if(JS_IsException(obj))
-        return JS_EXCEPTION;
-    StringView filename = ctx->filenames.data[node->filename_idx];
-
-    v = JS_NewStringLen(jsctx, filename.text, filename.length);
-    if(JS_IsException(v)) goto fail;
-    err = JS_SetPropertyStr(jsctx, obj, "filename", v);
-    if(err) goto fail;
-    JS_FreeValue(jsctx, v);
-    v = JS_NULL;
-
-    v = JS_NewInt32(jsctx, node->row);
-    if(JS_IsException(v)) goto fail;
-    err = JS_SetPropertyStr(jsctx, obj, "row", v);
-    if(err) goto fail;
-    JS_FreeValue(jsctx, v);
-    v = JS_NULL;
-
-    v = JS_NewInt32(jsctx, node->col);
-    if(JS_IsException(v)) goto fail;
-    err = JS_SetPropertyStr(jsctx, obj, "column", v);
-    if(err) goto fail;
-    JS_FreeValue(jsctx, v);
-    v = JS_NULL;
-
+        return obj;
+    JS_SetOpaque(obj, NodeHandle_to_opaque(handle));
     return obj;
-
-    fail:
-    JS_FreeValue(jsctx, obj);
-    if(!JS_IsNull(v))
-        JS_FreeValue(jsctx, v);
-
-    return JS_EXCEPTION;
 }
 
 JSGETTER(js_dndc_node_get_header){
@@ -2186,6 +2184,58 @@ JSGETTER(js_dndc_context_get_all_nodes){
         JS_FreeValue(jsctx, v);
         JS_FreeValue(jsctx, n);
     }
+    return result;
+}
+//
+// DndcNodeLocation
+//
+JSMAGICGETTER(js_dndc_node_location_getter){
+    void* pointer = JS_GetOpaque2(jsctx, thisValue, JS_DNDC_LOCATION_CLASS_ID);
+    uintptr_t p = (uintptr_t)pointer;
+    if(!p){
+        return JS_ThrowTypeError(jsctx, "Invalid NodeLocation");
+    }
+    NodeHandle handle;
+    if(p == (uintptr_t)ZERO_NODE_VALUE)
+        handle._value = 0;
+    else
+        handle._value = p;
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    Node* node = get_node(ctx, handle);
+    switch(magic){
+        case 0:{
+            StringView filename = ctx->filenames.data[node->filename_idx];
+            return JS_NewStringLen(jsctx, filename.text, filename.length);
+        }
+        case 1:
+            return JS_NewInt32(jsctx, node->row);
+        case 2:
+            return JS_NewInt32(jsctx, node->col);
+        default:
+            return JS_ThrowTypeError(jsctx, "wtf");
+    }
+}
+JSMETHOD(js_dndc_node_location_to_string){
+    void* pointer = JS_GetOpaque2(jsctx, thisValue, JS_DNDC_LOCATION_CLASS_ID);
+    uintptr_t p = (uintptr_t)pointer;
+    if(!p){
+        return JS_ThrowTypeError(jsctx, "Invalid NodeLocation");
+    }
+    NodeHandle handle;
+    if(p == (uintptr_t)ZERO_NODE_VALUE)
+        handle._value = 0;
+    else
+        handle._value = p;
+    DndcContext* ctx = JS_GetContextOpaque(jsctx);
+    assert(ctx);
+    Node* node = get_node(ctx, handle);
+    MStringBuilder msb = {.allocator=ctx->temp_allocator};
+    StringView filename = ctx->filenames.data[node->filename_idx];
+    MSB_FORMAT(&msb, "{filename:'", filename, "', row:", node->row, ", column:", node->col, "}");
+    StringView text = msb_borrow_sv(&msb);
+    QJSValue result = JS_NewStringLen(jsctx, text.text, text.length);
+    msb_destroy(&msb);
     return result;
 }
 
