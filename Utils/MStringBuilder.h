@@ -219,6 +219,7 @@ msb_write_nchar(MStringBuilder* msb, char c, size_t n){
 static inline
 void
 msb_erase(MStringBuilder* msb, size_t len){
+    if(!msb->cursor) return;
     if(len > msb->cursor){
         msb->cursor = 0;
         msb->data[0] = '\0';

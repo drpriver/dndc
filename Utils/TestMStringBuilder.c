@@ -80,11 +80,21 @@ TestFunction(TestMStringBuilder3){
         TestExpectEquals2(SV_equals, s, SV("I have 2 apples!\nYou owe me 97 apples!"));
     }
     msb_destroy(&sb);
+
+    {
+        MStringBuilder x = {.allocator = a};
+        TestExpectEquals(msb_peek(&x), 0);
+        msb_erase(&x, 1);
+        TestExpectEquals(msb_peek(&x), 0);
+        msb_write_char(&x, 'a');
+        msb_erase(&x, 5);
+        TestExpectEquals(msb_peek(&x), 0);
+    }
     shallow_free_recorded_mallocator(a);
     TESTEND();
 }
 
-int 
+int
 main(int argc, char** argv){
     RegisterTest(TestMStringBuilder1);
     RegisterTest(TestMStringBuilder2);
