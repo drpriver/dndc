@@ -256,9 +256,9 @@ TextFileResult
 read_file(const char* filepath, Allocator a){
     TextFileResult result = {0};
     enum { flags = O_RDONLY
-        #ifdef __linux__
-            | O_NOATIME
-        #endif
+        // #ifdef __linux__
+            // | O_NOATIME
+        // #endif
     };
     int fd = open(filepath, flags);
     if(fd < 0){
