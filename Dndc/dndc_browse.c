@@ -256,7 +256,7 @@ main(int argc, char** argv){
         Int64Result ir = parse_int64(b.text, b.length);
         int64_t idx = -1;
         if(ir.errored) {
-            ssize_t best = 1LL<<32;
+            ssize_t best = 1LL<<30;
             int strip_dnd = !endswith(b, SV(".dnd"));
             for(size_t i = 0; i < entries.count; i++){
                 // calculate expand distance, but without .dnd if we don't have .dnd in buffer
