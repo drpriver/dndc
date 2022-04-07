@@ -79,6 +79,7 @@ executable(
   include_directories: includes,
   install: true,
   link_with: dndc_lib,
+  dependencies:[thread_dep],
   c_args:ignore_bogus_deprecations,
 )
 
