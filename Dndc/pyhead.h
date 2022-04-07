@@ -31,8 +31,12 @@
 #if PY_MAJOR_VERSION < 3
 #error "Only python3 or better is supported"
 #endif
-#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7
-#error "Only python 3.7 or better is supported"
+// Python 3.7 has a bug in PyStructSequence_NewType and isn't worth supporting
+// at this point:
+//   https://bugs.python.org/issue28709
+// So, just support 3.8 or better
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 8
+#error "Only python 3.8 or better is supported"
 #endif
 
 // inspect.py doesn't support native functions having type annotations in the
@@ -47,6 +51,7 @@
 
 
 #if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
+// Shim for older pythons.
 static inline
 int
 PyModule_AddObjectRef(PyObject* mod, const char* name, PyObject* value){
