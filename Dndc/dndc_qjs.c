@@ -533,6 +533,10 @@ execute_qjs_string(QJSContext* jsctx, DndcContext* ctx, const char* str, size_t 
             }
             result = GENERIC_ERROR;
         }
+        else if(ctx->error.message.length){
+            Allocator_free(ctx->string_allocator, ctx->error.message.text, ctx->error.message.length);
+            ctx->error.message = (LongString){0};
+        }
         JS_FreeValue(jsctx, err);
     }
 
@@ -1558,6 +1562,9 @@ JSMETHOD(js_dndc_node_err){
     LongString msg = jsstring_to_longstring(jsctx, argv[0], ctx->string_allocator);
     if(!msg.text)
         return JS_EXCEPTION;
+    if(ctx->error.message.length){
+        Allocator_free(ctx->string_allocator, ctx->error.message.text, ctx->error.message.length);
+    }
     node_set_err(ctx, node, msg);
     return JS_ThrowTypeError(jsctx, "placeholder");
 }

@@ -299,6 +299,7 @@ class TestJsVars(TestCase):
         # Have C call our test assertion ;)
         # A bit fragile, but easiest way to smuggle data back out of js.
         def testout(kind, file, line, col, mess):
+            # print(kind, file, line, col, mess)
             expected = [
                 None,
                 '"world"',
@@ -306,6 +307,8 @@ class TestJsVars(TestCase):
                 "[1, 2, 3]",
                 "1",
                 "2",
+                "3",
+                "[object Object]",
                 "3",
             ]
             self.assertEqual(expected[line], mess)
@@ -317,9 +320,17 @@ class TestJsVars(TestCase):
             "  console.log(Args.data[0]);\n"
             "  console.log(Args.data[1]);\n"
             "  console.log(Args.data[2]);\n"
+            "  console.log(Args.y);\n"
+            "  console.log(Args['3']);\n"
         )
+        d = dict(hello="world", goodbye='goodbye', data=[1,2,3], y={})
+        d[3] = 3
         _ = pydndc.htmlgen(input,
-                jsargs=dict(hello="world", goodbye='goodbye', data=[1,2,3]),
+                jsargs=d,
+                error_reporter=testout)
+        d = '{hello:"world", goodbye:"goodbye", data:[1, 2, 3], y:{}, "3":3}'
+        _ = pydndc.htmlgen(input,
+                jsargs=d,
                 error_reporter=testout)
 
 def mymain() -> None:

@@ -143,6 +143,7 @@ node_clone(DndcContext* ctx, NodeHandle handle){
     dstnode->filename_idx = srcnode->filename_idx;
     dstnode->row = srcnode->row;
     dstnode->col = srcnode->col;
+    dstnode->flags = srcnode->flags;
     if(srcnode->flags & NODEFLAG_ID){
         StringView sv;
         if(node_get_explicit_id(ctx, handle, &sv))

@@ -23,6 +23,7 @@ static TestFunc TestJs;
 static TestFunc TestFileCache;
 static TestFunc TestExpand;
 static TestFunc TestMd;
+static TestFunc TestUtf16Syntax;
 
 int main(int argc, char** argv){
     RegisterTest(TestDndc1);
@@ -43,6 +44,7 @@ int main(int argc, char** argv){
     RegisterTest(TestFileCache);
     RegisterTest(TestExpand);
     RegisterTest(TestMd);
+    RegisterTest(TestUtf16Syntax);
     int ret = test_main(argc, argv);
     return ret;
 }
@@ -397,8 +399,7 @@ TestFunction(TestFormatList){
         ;
     LongString outdata = {};
     int e = run_the_dndc(flags, SV(""), source, SV(""), SV("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
-    TestExpectFalse(e);
-    if(!e){
+    if(!TestExpectFalse(e)){
         // A bit brittle of a test, but it shows that the outparam works.
         LongString expected = LS(
             "Hello\n"
@@ -689,6 +690,182 @@ TestFunction(TestSpecialChars){
     TESTEND();
 }
 
+struct TestToken {
+    int type, line, col;
+    StringViewUtf16 msg;
+};
+
+struct test_utf16_data {
+    struct TestStats* ts;
+    size_t idx;
+};
+
+static const struct TestToken tokens[] = {
+    [ 0] = {DNDC_SYNTAX_HEADER,              0,  0, SV16("This is a node")},
+    [ 1] = {DNDC_SYNTAX_DOUBLE_COLON,        0, 14, SV16("::")},
+    [ 2] = {DNDC_SYNTAX_NODE_TYPE,           0, 16, SV16("md")},
+    [ 3] = {DNDC_SYNTAX_ATTRIBUTE,           0, 19, SV16("@hello")},
+    [ 4] = {DNDC_SYNTAX_DIRECTIVE,           0, 26, SV16("#id")},
+    [ 5] = {DNDC_SYNTAX_ATTRIBUTE_ARGUMENT,  0, 30, SV16("hi")},
+    [ 6] = {DNDC_SYNTAX_CLASS,               0, 34, SV16(".a")},
+    [ 7] = {DNDC_SYNTAX_CLASS,               0, 37, SV16(".b")},
+    [ 8] = {DNDC_SYNTAX_HEADER,              1,  2, SV16("This is a table")},
+    [ 9] = {DNDC_SYNTAX_DOUBLE_COLON,        1, 17, SV16("::")},
+    [10] = {DNDC_SYNTAX_NODE_TYPE,           1, 19, SV16("table")},
+    [11] = {DNDC_SYNTAX_ATTRIBUTE,           1, 25, SV16("@ok")},
+    [12] = {DNDC_SYNTAX_ATTRIBUTE_ARGUMENT,  1, 29, SV16("((1))")},
+    [13] = {DNDC_SYNTAX_DOUBLE_COLON,        4,  0, SV16("::")},
+    [14] = {DNDC_SYNTAX_NODE_TYPE,           4,  2, SV16("import")},
+    [15] = {DNDC_SYNTAX_DOUBLE_COLON,        6,  0, SV16("::")},
+    [16] = {DNDC_SYNTAX_NODE_TYPE,           6,  2, SV16("css")},
+    [17] = {DNDC_SYNTAX_DIRECTIVE,           6,  6, SV16("#import")},
+    [18] = {DNDC_SYNTAX_DOUBLE_COLON,        8,  0, SV16("::")},
+    [19] = {DNDC_SYNTAX_NODE_TYPE,           8,  2, SV16("raw")},
+    [20] = {DNDC_SYNTAX_RAW_STRING,          9,  2, SV16("<div>Spooky!</div>")},
+    [21] = {DNDC_SYNTAX_DOUBLE_COLON,       10,  0, SV16("::")},
+    [22] = {DNDC_SYNTAX_NODE_TYPE,          10,  2, SV16("js")},
+    [23] = {DNDC_SYNTAX_JS_KEYWORD,         11,  2, SV16("for")},
+    [24] = {DNDC_SYNTAX_JS_VAR,             11,  6, SV16("let")},
+    [25] = {DNDC_SYNTAX_JS_IDENTIFIER,      11, 10, SV16("n")},
+    [26] = {DNDC_SYNTAX_JS_IDENTIFIER,      11, 12, SV16("of")},
+    [27] = {DNDC_SYNTAX_JS_BUILTIN,         11, 15, SV16("ctx")},
+    [28] = {DNDC_SYNTAX_JS_IDENTIFIER,      11, 19, SV16("select_nodes")},
+    [29] = {DNDC_SYNTAX_JS_BRACE,           11, 32, SV16("{")},
+    [30] = {DNDC_SYNTAX_JS_IDENTIFIER,      11, 33, SV16("type")},
+    [31] = {DNDC_SYNTAX_JS_BUILTIN,         11, 38, SV16("NodeType")},
+    [32] = {DNDC_SYNTAX_JS_NODETYPE,        11, 47, SV16("DIV")},
+    [33] = {DNDC_SYNTAX_JS_IDENTIFIER,      11, 52, SV16("classes")},
+    [34] = {DNDC_SYNTAX_JS_STRING,          11, 61, SV16("'hi'")},
+    [35] = {DNDC_SYNTAX_JS_BRACE,           11, 65, SV16("}")},
+    [36] = {DNDC_SYNTAX_JS_BRACE,           11, 68, SV16("{")},
+    [37] = {DNDC_SYNTAX_JS_BUILTIN,         12,  4, SV16("console")},
+    [38] = {DNDC_SYNTAX_JS_IDENTIFIER,      12, 12, SV16("log")},
+    [39] = {DNDC_SYNTAX_JS_STRING,          12, 16, SV16("`hi ${n}\\n`")},
+    [40] = {DNDC_SYNTAX_JS_KEYWORD,         13,  4, SV16("if")},
+    [41] = {DNDC_SYNTAX_JS_STRING,          13,  7, SV16("'foo bar'")},
+    [42] = {DNDC_SYNTAX_JS_IDENTIFIER,      13, 17, SV16("matches")},
+    [43] = {DNDC_SYNTAX_JS_REGEX,           13, 25, SV16("/foo\\sbar/g")},
+    [44] = {DNDC_SYNTAX_JS_IDENTIFIER,      13, 38, SV16("length")},
+    [45] = {DNDC_SYNTAX_JS_KEYWORD,         14,  4, SV16("for")},
+    [46] = {DNDC_SYNTAX_JS_VAR,             14,  8, SV16("let")},
+    [47] = {DNDC_SYNTAX_JS_IDENTIFIER,      14, 12, SV16("i")},
+    [48] = {DNDC_SYNTAX_JS_NUMBER,          14, 16, SV16("0")},
+    [49] = {DNDC_SYNTAX_JS_IDENTIFIER,      14, 19, SV16("i")},
+    [50] = {DNDC_SYNTAX_JS_NUMBER,          14, 23, SV16("10")},
+    [51] = {DNDC_SYNTAX_JS_IDENTIFIER,      14, 27, SV16("i")},
+    [52] = {DNDC_SYNTAX_JS_BUILTIN,         14, 32, SV16("console")},
+    [53] = {DNDC_SYNTAX_JS_IDENTIFIER,      14, 40, SV16("log")},
+    [54] = {DNDC_SYNTAX_JS_IDENTIFIER,      14, 44, SV16("i")},
+    [55] = {DNDC_SYNTAX_JS_VAR,             15,  4, SV16("let")},
+    [56] = {DNDC_SYNTAX_JS_IDENTIFIER,      15,  8, SV16("x")},
+    [57] = {DNDC_SYNTAX_JS_NUMBER,          15, 13, SV16("1")},
+    [58] = {DNDC_SYNTAX_JS_VAR,             16,  4, SV16("let")},
+    [59] = {DNDC_SYNTAX_JS_IDENTIFIER,      16,  8, SV16("m")},
+    [60] = {DNDC_SYNTAX_JS_KEYWORD,         16, 12, SV16("new")},
+    [61] = {DNDC_SYNTAX_JS_IDENTIFIER,      16, 16, SV16("Map")},
+    [62] = {DNDC_SYNTAX_JS_COMMENT,         18,  4, SV16("/* This is a ")},
+    [63] = {DNDC_SYNTAX_JS_COMMENT,         19,  5, SV16("* block")},
+    [64] = {DNDC_SYNTAX_JS_COMMENT,         20,  5, SV16("* comment */")},
+    [65] = {DNDC_SYNTAX_JS_COMMENT,         21,  4, SV16("// this is a line comment")},
+    [66] = {DNDC_SYNTAX_JS_BRACE,           22,  2, SV16("}")},
+    [67] = {DNDC_SYNTAX_JS_KEYWORD,         23,  2, SV16("for")},
+    [68] = {DNDC_SYNTAX_JS_VAR,             23,  6, SV16("let")},
+    [69] = {DNDC_SYNTAX_JS_IDENTIFIER,      23, 10, SV16("i")},
+    [70] = {DNDC_SYNTAX_JS_NUMBER,          23, 14, SV16("0")},
+    [71] = {DNDC_SYNTAX_JS_IDENTIFIER,      23, 17, SV16("i")},
+    [72] = {DNDC_SYNTAX_JS_NUMBER,          23, 21, SV16("10")},
+    [73] = {DNDC_SYNTAX_JS_IDENTIFIER,      23, 27, SV16("i")},
+    [74] = {DNDC_SYNTAX_JS_BRACE,           23, 29, SV16("{")},
+    [75] = {DNDC_SYNTAX_JS_VAR,             24,  5, SV16("const")},
+    [76] = {DNDC_SYNTAX_JS_IDENTIFIER,      24, 11, SV16("x")},
+    [77] = {DNDC_SYNTAX_JS_BRACE,           24, 15, SV16("{")},
+    [78] = {DNDC_SYNTAX_JS_IDENTIFIER,      24, 16, SV16("a")},
+    [79] = {DNDC_SYNTAX_JS_NUMBER,          24, 18, SV16("1")},
+    [80] = {DNDC_SYNTAX_JS_STRING,          24, 21, SV16("'b'")},
+    [81] = {DNDC_SYNTAX_JS_NUMBER,          24, 26, SV16("1")},
+    [82] = {DNDC_SYNTAX_JS_NUMBER,          24, 28, SV16("2")},
+    [83] = {DNDC_SYNTAX_JS_NUMBER,          24, 30, SV16("3")},
+    [84] = {DNDC_SYNTAX_JS_BRACE,           24, 32, SV16("}")},
+    [85] = {DNDC_SYNTAX_JS_IDENTIFIER,      25,  7, SV16("x")},
+    [86] = {DNDC_SYNTAX_JS_STRING,          25,  9, SV16("'a'")},
+    [87] = {DNDC_SYNTAX_JS_BRACE,           26,  2, SV16("}")},
+};
+
+void
+test_syntax_func(void* ud_, int type, int line, int col, const unsigned short* begin, size_t length){
+    struct test_utf16_data* ud = ud_;
+    struct TestStats* ts = ud->ts;
+    struct TestStats TEST_stats = *ts;
+    if(ud->idx >= arrlen(tokens)){
+        ts->failures++;
+        return;
+    }
+    struct TestToken token = tokens[ud->idx++];
+    int fail1 = !TestExpectEquals(token.type, type);
+    int fail2 = !TestExpectEquals(token.line, line);
+    int fail3 = !TestExpectEquals(token.col, col);
+    int fail4 = !TestExpectEquals(token.msg.length, length);
+    StringViewUtf16 msg = {.text=begin, .length=length};
+    int equals = SV_utf16_equals(token.msg, msg);
+    int fail5 = !TestExpectTrue(equals);
+    if(fail1 || fail2 || fail3 || fail4 || fail5){
+        TestPrintf("Failed for token: %d:%d\n", token.line, token.col);
+        fprintf(stderr, "[%zu] = {%d,%d,%d, SV16(\"", ud->idx++, type, line, col);
+        for(int i = 0; i < length; i++){
+            fputc((char)begin[i], stderr);
+        }
+        fprintf(stderr, "\")},\n");
+        fprintf(stderr, "vs {%d,%d,%d, SV16(\"", token.type, token.line, token.col);
+        for(int i = 0; i < token.msg.length; i++){
+            fputc((char)token.msg.text[i], stderr);
+        }
+        fprintf(stderr, "\")},\n");
+    }
+    *ts = TEST_stats;
+#if 1
+    // ts->failures++;
+#endif
+}
+
+
+TestFunction(TestUtf16Syntax){
+    TESTBEGIN();
+
+    StringViewUtf16 source = SV16(
+            "This is a node::md @hello #id(hi) .a .b\n"
+            "  This is a table::table @ok(((1)))\n"
+            "  a | b\n"
+            "  1 | 2\n"
+            "::import\n"
+            "  somefile.dnd\n"
+            "::css #import\n"
+            "  somecss.css\n"
+            "::raw\n"
+            "  <div>Spooky!</div>\n"
+            "::js\n"
+            "  for(let n of ctx.select_nodes({type:NodeType.DIV, classes:['hi'})){\n"
+            "    console.log(`hi ${n}\\n`);\n"
+            "    if('foo bar'.matches(/foo\\sbar/g).length);\n"
+            "    for(let i = 0; i < 10; i++) console.log(i);\n"
+            "    let x = [1];\n"
+            "    let m = new Map();\n"
+            "\n"
+            "    /* This is a \n"
+            "     * block\n"
+            "     * comment */\n"
+            "    // this is a line comment\n"
+            "  }\n"
+            "  for(let i = 0; i < 10; --i){\n"
+            "     const x = {a:1, 'b':[1,2,3]};\n"
+            "     ++x['a'];\n"
+            "  }\n"
+            );
+    struct test_utf16_data ud = {&TEST_stats};
+    dndc_analyze_syntax_utf16(source, test_syntax_func, &ud);
+    TestExpectEquals(ud.idx, arrlen(tokens));
+    TESTEND();
+}
+
 int
 post_js_ast_func(void* user_data, DndcContext*ctx){
     struct TestStats* ts = user_data;
@@ -702,9 +879,28 @@ post_js_ast_func(void* user_data, DndcContext*ctx){
             TestExpectTrue(node->flags & NODEFLAG_NOID);
             TestExpectTrue(node->flags & NODEFLAG_HIDE);
             TestExpectTrue(node->flags & NODEFLAG_NOINLINE);
+            if(TestExpectTrue(node->attributes)){
+                TestExpectEquals(node->attributes->count, 1);
+                RARRAY_FOR_EACH(Attribute, attr, node->attributes){
+                    TestExpectEquals2(SV_equals, attr->key, SV("1"));
+                    TestExpectEquals2(SV_equals, attr->value, SV("1"));
+                }
+            }
+            if(TestExpectTrue(node->classes)){
+                TestExpectEquals(node->classes->count, 1);
+                RARRAY_FOR_EACH(StringView, cls, node->classes){
+                    TestExpectEquals2(SV_equals, *cls, SV("hello"));
+                }
+            }
+        }
+        if(node->type == NODE_KEYVALUE){
+            TestExpectEquals(node_children_count(node), 1);
+        }
+        if(node->type == NODE_STRING && NodeHandle_eq(node->parent, ctx->root_handle)){
+            TestExpectEquals2(SV_equals, node->header, SV("hi"));
         }
     }
-    TestExpectEquals(n_md, 2);
+    TestExpectEquals(n_md, 4);
 
     *ts = TEST_stats;
     return 0;
@@ -720,8 +916,30 @@ TestFunction(TestJs){
             "  for(let m of md){\n"
             "    m.header += '12345';\n"
             "    m.hide = true;\n"
+            "    m.id = 'hello';\n"
+            "    m.id = 'world';\n"
             "    m.noid = true;\n"
             "    m.noinline = true;\n"
+            "    if(m.noinline){\n"
+            "        m.attributes.set('1', '1');\n"
+            "        m.attributes.set('1', '1');\n"
+            "        m.attributes.get('2');\n"
+            "        m.classes.append('hello');\n"
+            "    }\n"
+            "    if(!m.has_class('hello')) m.err('oh noes');\n"
+            "    m.clone();\n"
+            "  }\n"
+            "  const kv = ctx.root.make_child(NodeType.KEYVALUE);\n"
+            "  kv.set('a', 'b');\n"
+            "  kv.set('a', 'b');\n"
+            "  if(kv.get('a') != 'b') kv.err();\n"
+            "  ctx.root.add_child(ctx.make_string('hi'));\n"
+            "  ctx.root.insert_child(0, ctx.make_string('hello'));\n"
+            "  ctx.root.replace_child(ctx.root.children[0], ctx.make_string('hi'));\n"
+            "  const d = ctx.root.make_child(NodeType.DIV, {header:""+ctx.root+ctx+ctx.outdir+ctx.outpath+ctx.base+ctx.nodes});\n"
+            "  try {\n"
+            "    ctx.root.err('lmao');\n"
+            "  }catch(e){"
             "  }\n"
             "");
     uint64_t flags = 0
