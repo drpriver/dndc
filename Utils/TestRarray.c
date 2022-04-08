@@ -13,7 +13,7 @@ TestFunction(TestCheckSizeExample){
     Allocator_free(al, myarray, sizeof(*myarray)+sizeof(*myarray->data)*myarray->capacity);
     shallow_free_recorded_mallocator(al);
     TESTEND();
-    }
+}
 
 TestFunction(TestPushExample){
     TESTBEGIN();
@@ -32,7 +32,7 @@ TestFunction(TestPushExample){
     Allocator_free(al, myarray, sizeof(*myarray)+sizeof(*myarray->data)*myarray->capacity);
     shallow_free_recorded_mallocator(al);
     TESTEND();
-    }
+}
 
 TestFunction(TestAllocExample){
     TESTBEGIN();
@@ -57,26 +57,33 @@ TestFunction(TestAllocExample){
     Allocator_free_all(al);
     shallow_free_recorded_mallocator(al);
     TESTEND();
-    }
+}
 
 TestFunction(TestRemoveExample){
     TESTBEGIN();
     Allocator al = new_recorded_mallocator();
     Rarray(int)* myarray = NULL;
-    myarray = Rarray_push(int)(myarray, al, 1);
+    myarray = Rarray_push(int)(myarray,al, 1);
     TestAssert(myarray);
     myarray = Rarray_push(int)(myarray, al, 2);
     TestAssert(myarray);
     myarray = Rarray_push(int)(myarray, al, 3);
     TestAssert(myarray);
+    myarray = Rarray_push(int)(myarray, al, 4);
+    TestAssert(myarray);
+    // the 5th one is important to trigger a reallocation.
+    myarray = Rarray_push(int)(myarray, al, 5);
+    TestAssert(myarray);
     Rarray_remove(int)(myarray, 1);
-    TestAssertEquals(myarray->count, 2);
+    TestAssertEquals(myarray->count, 4);
     TestAssertEquals(myarray->data[0], 1);
     TestAssertEquals(myarray->data[1], 3);
+    TestAssertEquals(myarray->data[2], 4);
+    TestAssertEquals(myarray->data[3], 5);
     Allocator_free_all(al);
     shallow_free_recorded_mallocator(al);
     TESTEND();
-    }
+}
 
 
 int main(int argc, char** argv){

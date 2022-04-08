@@ -220,6 +220,11 @@ class TestExamples(TestCase):
             with open(example, 'r', encoding='utf-8') as fp:
                 text = fp.read()
             _ = pydndc.htmlgen(text, base_dir=os.path.dirname(example))
+            if 'calendar.dnd' in example: continue
+            if 'OVERVIEW' in example: continue
+            _ = pydndc.expand(text, base_dir=os.path.dirname(example), error_reporter=lambda *args:(print(example),print(*args)))
+            _ = pydndc.reformat(text)
+            _ = pydndc.analyze_syntax_for_highlight(text)
 
 class TestFileCache(TestCase):
     def test_contents(self) -> None:
@@ -231,6 +236,63 @@ class TestFileCache(TestCase):
         output = pydndc.htmlgen(input, file_cache=cache)
         self.assertListEqual(output[1], ['Makefile'])
         self.assertListEqual(cache.paths(), ['Makefile'])
+    def test_store(self) -> None:
+        cache = pydndc.FileCache()
+        stored = cache.store('hello', 'hi')
+        self.assertEqual(stored, True)
+        self.assertListEqual(cache.paths(), ['hello'])
+        input = (
+            "::import\n"
+            "  hello\n"
+        )
+        expected = (
+            "<p>\n"
+            "hi\n"
+            "</p>\n"
+        )
+        output = pydndc.htmlgen(input, flags=pydndc.Flags.FRAGMENT_ONLY, file_cache=cache)
+        self.assertEqual(output[0], expected)
+        cache.remove('hello')
+        self.assertListEqual(cache.paths(), [])
+        with self.assertRaises(Exception):
+            output = pydndc.htmlgen(input, flags=pydndc.Flags.FRAGMENT_ONLY, file_cache=cache)
+        cache.store('1', '1')
+        cache.store('2', '2')
+        self.assertListEqual(cache.paths(), ['1', '2'])
+        cache.clear()
+        self.assertListEqual(cache.paths(), [])
+
+class TestExpand(TestCase):
+    def test_dummy(self) -> None:
+        input = (
+        "::table\n"
+        "  d8 | thing\n"
+        "  1 | this is a multiline table\n"
+        "  2 | This is a singleline cell\n"
+        "  3 | This is another multiline table\n"
+        "  4 | This is a really long text table. As you can see, it is much longer than\n"
+        "      it really needs to be. But whatever. Long things are long. Long live the\n"
+        "      long thing! So why not. Be long!\n"
+        "\n"
+        )
+        output = pydndc.expand(input, error_reporter=print)
+        self.assertEqual(input, output)
+    def test_actual(self) -> None:
+        input = (
+        "::js #import\n"
+        "  script\n"
+        )
+        cache = pydndc.FileCache()
+        cache.store('script',
+                "ctx.root.add_child('hello');\n"
+                "console.log('hi')\n")
+        def testout(kind, file, line, col, mess):
+            self.assertEqual('"hi"', mess)
+        expected = "hello\n"
+        output = pydndc.expand(input, error_reporter=testout, file_cache=cache)
+        self.assertEqual(output, expected)
+
+
 
 class TestJsVars(TestCase):
     def test_jsargs(self) -> None:

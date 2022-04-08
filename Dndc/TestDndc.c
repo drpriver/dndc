@@ -432,7 +432,7 @@ TestFunction(TestFormatList){
 TestFunction(TestFormatKV){
     TESTBEGIN();
     StringView source = SV(
-        "::kv\n"
+        "::kv.a.b.c.d.e.f\n"
         "  AC: 13\n"
         "  Attacks: +3 claws (2)\n"
         "    +5 bite\n"
@@ -453,7 +453,7 @@ TestFunction(TestFormatKV){
     if(!e){
         // A bit brittle of a test, but it shows that the outparam works.
         LongString expected = LS(
-            "::kv\n"
+            "::kv .a .b .c .d .e .f\n"
             "  AC:      13\n"
             "  Attacks: +3 claws (2) +5 bite\n"
             "  HP:      22\n"
@@ -556,6 +556,7 @@ TestFunction(TestExamplesWork){
         SV(""),
     };
     _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
+    DndcWorkerThread* worker = dndc_worker_thread_create();
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString output = {};
         Allocator allocator = get_mallocator();
@@ -564,14 +565,25 @@ TestFunction(TestExamplesWork){
             TestPrintValue("Unable to open: examples[i]", examples[i]);
         }
         TestAssertSuccess(data);
-        int e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
-        TestExpectFalse(output.text);
-        if(!TestExpectFalse(e)){
-            TestPrintValue("Example failed:", examples[i]);
-            TestPrintValue("Base dir:", base_dirs[i]);
+        {
+            int e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+            TestExpectFalse(output.text);
+            if(!TestExpectFalse(e)){
+                TestPrintValue("Example failed:", examples[i]);
+                TestPrintValue("Base dir:", base_dirs[i]);
+            }
+        }
+        {
+            int e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, (WorkerThread*)worker, LS(""));
+            TestExpectFalse(output.text);
+            if(!TestExpectFalse(e)){
+                TestPrintValue("Example failed:", examples[i]);
+                TestPrintValue("Base dir:", base_dirs[i]);
+            }
         }
         Allocator_free(allocator, data.result.text, data.result.length+1);
     }
+    dndc_worker_thread_destroy(worker);
     TESTEND();
 }
 TestFunction(TestUntrusted){
@@ -614,7 +626,25 @@ TestFunction(TestUntrusted){
             TestPrintValue("source file", examples[i]);
         }
         Allocator_free(allocator, data.result.text, data.result.length+1);
-
+    }
+    StringView inline_examples[] = {
+        SV(""
+           "::script\n"
+           "  foo.js\n"
+        ),
+        SV(""
+           "::js\n"
+           "  console.log(Args)\n"
+        ),
+    };
+    for(size_t i = 0; i < arrlen(inline_examples); i++){
+        LongString output = {};
+        StringView data = inline_examples[i];
+        int e = run_the_dndc(flags, base_dirs[i], data, SV("(string input"), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        TestExpectFalse(output.text);
+        if(!TestExpectTrue(e)){
+            TestPrintValue("source file", examples[i]);
+        }
     }
     TESTEND();
 }
