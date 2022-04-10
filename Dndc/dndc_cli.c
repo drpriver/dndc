@@ -15,6 +15,7 @@
 #include "MStringBuilder.h"
 #include "msb_extensions.h"
 #include "mallocator.h"
+#include "gi_indent_completer.h"
 #define GET_INPUT_API static inline
 #include "get_input.h"
 
@@ -394,6 +395,7 @@ main(int argc, char**argv){
             MStringBuilder sb = {.allocator=get_mallocator()};
             if(isatty(fileno(stdin))){
                 GetInputCtx history = {.prompt = SV("> ")};
+                history.tab_completion_func = indent_completer;
                 for(;;){
                     ssize_t len = gi_get_input(&history);
                     if(len < 0)

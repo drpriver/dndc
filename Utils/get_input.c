@@ -26,6 +26,7 @@
 #endif
 
 #include "get_input.h"
+#include "mem_util.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -337,9 +338,11 @@ get_line_internal_loop(GetInputCtx* ctx){
             case BACKSPACE: case CTRL_H:
                 DBG("BACKSPACE\n");
                 if(ctx->buff_cursor > 0 && ctx->buff_count > 0){
-                    memmove(ctx->buff+ctx->buff_count-1, ctx->buff+ctx->buff_count, ctx->buff_count-ctx->buff_cursor);
+                    memremove(ctx->buff_cursor, ctx->buff, ctx->buff_count+1, 1);
+                    // memmove(ctx->buff+ctx->buff_count-1, ctx->buff+ctx->buff_count, ctx->buff_count-ctx->buff_cursor);
                     ctx->buff_cursor--;
-                    ctx->buff[--ctx->buff_count] = '\0';
+                    ctx->buff_count--;
+                    // ctx->buff[--ctx->buff_count] = '\0';
                     redisplay(ctx);
                 }
                 break;
