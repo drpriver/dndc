@@ -1323,6 +1323,7 @@ BOOL show_stats;
                             let new_y = anchor.transform.baseVal[0].matrix.f | 0;
                             const combo = ""+org_x+","+org_y+":"+new_x+","+new_y;
                             request.open("POST", "dnd:///roommove", true);
+                            console.log(combo);
                             request.send(combo);
                         }
                         window.addEventListener("pointerup", remove, {once:true});

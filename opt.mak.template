@@ -25,10 +25,10 @@ QTGUI=false
 # qt is installed.
 # Or you can just build it using cmake or meson, a bit easier.
 
+QTINCLUDEDIR=
 QTMOC=
 # MacOS
 QTFRAMEWORKDIR=
 # Others
-QTINCLUDEDIR=
 QTLIBDIR=
 QTVERSION?=6
