@@ -29,6 +29,7 @@
 #define RARRAYIMPL(meth, type) Rarray##_##meth##__##type
 #define Rarray_push(type) RARRAYIMPL(push, type)
 #define Rarray_check_size(type) RARRAYIMPL(check_size, type)
+#define Rarray_clone(type) RARRAYIMPL(clone, type)
 #define Rarray_alloc(type) RARRAYIMPL(alloc, type)
 #define Rarray_remove(type) RARRAYIMPL(remove, type)
 
@@ -102,6 +103,20 @@ Rarray_check_size(RARRAY_T)(RARRAY*_Nullable rarray, Allocator a){
         rarray->capacity *= 2;
     }
     return (Rarray(RARRAY_T)*)rarray;
+}
+
+static inline
+RARRAY*_Null_unspecified
+Rarray_clone(RARRAY_T)(RARRAY*_Nullable rarray, Allocator a){
+    if(!rarray) return NULL;
+    size_t count = rarray->count;
+    if(!count) return NULL;
+
+    RARRAY* new_rarray = Allocator_alloc(a, sizeof(RARRAY)+sizeof(RARRAY_T)*count);
+    new_rarray->count = count;
+    new_rarray->capacity = count;
+    memcpy(new_rarray->data, rarray->data, sizeof(RARRAY_T)*count);
+    return new_rarray;
 }
 
 //

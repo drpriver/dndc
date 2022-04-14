@@ -6,6 +6,9 @@
 #include "common_macros.h"
 #include "dndc_node_types.h"
 #include "dndc_file_cache.h"
+#include "allocator.h"
+#include "arena_allocator.h"
+#include "linear_allocator.h"
 
 //
 // dndc_types.h
@@ -236,13 +239,17 @@ node_remove_child(Node* node, size_t i, const Allocator a){
 typedef struct DndcContext {
     // The actual storage for all the nodes.
     Marray(Node) nodes;
-    // Handle to the root node. Python blocks can change this.
+    // Handle to the root node. Scripts can change this.
     NodeHandle root_handle;
     // General purpose allocator.
-    const Allocator  allocator;
+    ArenaAllocator main_arena;
+    Allocator allocator;
+    // Allocator for strings (strings are almost never freed)
+    ArenaAllocator string_arena;
+    Allocator string_allocator;
     // Allocator for scratch allocations
-    const Allocator  temp_allocator;
-    const Allocator  string_allocator;
+    LinearAllocator temp;
+    Allocator temp_allocator;
     // current parsing location
     struct {
         const char*_Nonnull cursor;
@@ -316,6 +323,14 @@ typedef struct DndcContext {
         int col; // 0-based
         LongString message;
     } error;
+
+    // book keeping info for the ast api
+    // -----
+
+    // Whether the context and such are heap allocated.
+    unsigned long heap_allocated: 1;
+    unsigned long textcache_allocated: 1;
+    unsigned long b64cache_allocated: 1;
 } DndcContext;
 
 typedef union DndcDependsArg DependsArg;

@@ -7,7 +7,7 @@
 // 0 on success, 1 on failure
 // Inserts a buffer into an array at the given position.
 static inline
-int 
+int
 meminsert(size_t whence, void* restrict dst, size_t capacity, size_t used, const void* restrict src, size_t length){
     if(capacity - used < length) return 1;
     if(whence > used) return 1;

@@ -21,7 +21,7 @@ typedef int native_error_type;
 #pragma clang assume_nonnull begin
 #endif
 
-native_error_type 
+native_error_type
 get_last_system_error(void){
     #if defined(_WIN32)
         return GetLastError();
@@ -43,7 +43,7 @@ msb_write_native_error(MStringBuilder*msb, native_error_type error){
     enum {bufflen=4092};
     msb_ensure_additional(msb, bufflen);
     char* buff = msb->data + msb->cursor;
-    DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM 
+    DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM
                 // "when you are not in control of the message, you
                 // had better pass the FORMAT_MESSAGE_IGNORE_INSERTS
                 // flag"  - Raymond Chen
@@ -60,7 +60,7 @@ msb_write_native_error(MStringBuilder*msb, native_error_type error){
     }
 #elif defined(WASM)
     msb_write_literal(msb, "System Error");
-#else 
+#else
     // posix
     char* mess = strerror(error);
     msb_write_str(msb, mess, strlen(mess));

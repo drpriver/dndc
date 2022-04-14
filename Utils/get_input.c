@@ -64,7 +64,7 @@ void dbg(const char*fmt, ...){
 #define DBG(...) (void)0
 #endif
 
-// Whether we have done any global initialization code.  
+// Whether we have done any global initialization code.
 // Currently this is just whether or not we have put the terminal in VT
 // Processing mode on Windows.
 static int get_line_is_init;

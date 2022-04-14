@@ -35,7 +35,7 @@ warn_unused
 StringResult
 FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only);
 
-static 
+static
 void // preload only so no error code
 FileCache_preload_b64_files(FileCache* cache, StringView* spath, size_t count);
 
@@ -50,7 +50,7 @@ static inline
 int
 FileCache_store_text_file(FileCache* cache, StringView path, StringView data, bool overwrite);
 
-// 
+//
 // Outputs what paths are cached in this filecache.
 // Returns how many paths were written to buff.
 // Cookie is a pointer to integer for tracking the iterator state.

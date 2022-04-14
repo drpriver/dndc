@@ -6,6 +6,7 @@
 #import "common_macros.h"
 #import "measure_time.h"
 #import "dndc.h"
+#import "dndc_ast.h"
 #import "MStringBuilder.h"
 #import "mallocator.h"
 #import "msb_format.h"
@@ -38,6 +39,24 @@ msb_detach_as_ns_string(MStringBuilder*sb){
     PopDiagnostic();
     NSString* str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     return str;
+}
+
+static inline
+NSString*
+ns_consume_ls(LongString ls){
+    PushDiagnostic();
+    SuppressCastQual();
+    NSData* data = [NSData dataWithBytesNoCopy:(void*)ls.text length:ls.length freeWhenDone:YES];
+    PopDiagnostic();
+    return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+}
+
+static
+StringView
+ns_borrow_sv(NSString* str){
+    const char* text = [str UTF8String];
+    size_t len = strlen(text);
+    return (StringView){.text=text, .length=len};
 }
 
 static DndcFileCache*_Nonnull BASE64CACHE;
@@ -818,6 +837,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         return;
     }
     if([method isEqualToString:@"POST"] && [url isEqual:[NSURL URLWithString:@"dnd:///roommove"]]){
+        // LOGIT(url);
         auto response = [[NSURLResponse alloc]
             initWithURL:request.mainDocumentURL
             MIMEType:@"text/plain"
@@ -825,6 +845,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
             textEncodingName:nil];
         [urlSchemeTask didReceiveResponse:response];
         NSString* body = [[NSString alloc] initWithData:(NSData*)[request HTTPBody] encoding:NSUTF8StringEncoding];
+        // LOGIT(body);
         [urlSchemeTask didFinish];
         [self.controller update_coord:body];
         return;
@@ -1300,15 +1321,18 @@ BOOL show_stats;
                         e.preventDefault();
                         if(moving) return;
                         moving = true;
+                        let svg = anchor.parentElement.parentElement;
+                        let sx = svg.width.baseVal.value / svg.viewBox.baseVal.width;
+                        let sy = svg.height.baseVal.value / svg.viewBox.baseVal.height;
                         let org_x = anchor.transform.baseVal[0].matrix.e | 0;
                         let org_y = anchor.transform.baseVal[0].matrix.f | 0;
-                        let start_x = e.offsetX;
-                        let start_y = e.offsetY;
+                        let start_x = e.screenX;
+                        let start_y = e.screenY;
                         function move(e){
-                            let diffx = e.offsetX - start_x;
-                            let diffy = e.offsetY - start_y;
-                            start_x = e.offsetX;
-                            start_y = e.offsetY;
+                            let diffx = 1/sx*(e.screenX - start_x);
+                            let diffy = 1/sy*(e.screenY - start_y);
+                            start_x = e.screenX;
+                            start_y = e.screenY;
                             anchor.transform.baseVal[0].matrix.e += diffx;
                             anchor.transform.baseVal[0].matrix.f += diffy;
                         }
@@ -1318,13 +1342,28 @@ BOOL show_stats;
                             e.stopPropagation();
                             e.preventDefault();
                             svg.removeEventListener('pointermove', move);
+                            let a = anchor.parentElement;
+                            let href = a.href.baseVal;
+                            let internal_id = 0;
+                            let sp = href.split('#');
+                            if(sp.length > 1)
+                                internal_id = _coords[sp[1]];
+                            if(!internal_id)
+                                internal_id = _coords2[href];
+                            if(!internal_id){
+                                let t = anchor.childNodes[0].textContent.trim();
+                                console.log('t', t);
+                                internal_id = _coords2[t];
+                            }
+                            console.log(internal_id);
+                            console.log(href);
+                            if(!internal_id) return;
                             let request = new XMLHttpRequest();
                             let new_x = anchor.transform.baseVal[0].matrix.e | 0;
                             let new_y = anchor.transform.baseVal[0].matrix.f | 0;
-                            const combo = ""+org_x+","+org_y+":"+new_x+","+new_y;
-                            request.open("POST", "dnd:///roommove", true);
+                            const combo = `${internal_id}:${new_x},${new_y}`;
                             console.log(combo);
-                            request.send(combo);
+                            fetch("dnd:///roommove", {method:"POST", body:combo});
                         }
                         window.addEventListener("pointerup", remove, {once:true});
                     });
@@ -1353,7 +1392,28 @@ BOOL show_stats;
                 });
               }
             });
-        )
+            )
+            "\n"
+            "::js\n  "
+            JSRAW(
+                let coords = ctx.select_nodes({attributes:["coord"]});
+                let s = ctx.root.make_child(NodeType.SCRIPTS);
+                let o = {};
+                for(let co of coords){
+                    o[co.id] = co.internal_id;
+                }
+                s.make_child(NodeType.STRING, {header:`let _coords = ${JSON.stringify(o)};`});
+                let imglinks = ctx.select_nodes({type:NodeType.IMGLINKS});
+                let o2 = {};
+                for(let il of imglinks){
+                    for(let ch of il.children){
+                        if(ch.type != NodeType.STRING) continue;
+                        let lead = ch.header.split('=')[0].trim();
+                        o2[lead] = ch.internal_id;
+                    }
+                }
+                s.make_child(NodeType.STRING, {header:`let _coords2 = ${JSON.stringify(o2)};`});
+            )
         ];
     }
     return string;
@@ -1492,18 +1552,52 @@ completionHandler:(void (^)(NSString *result))completionHandler{
     }
 }
 -(void)update_coord:(NSString*)coord_text{
-    // This is very hacky. The proper way to do this
-    // would be to have an ast that we could edit, but
-    // instead we'll just do a string replace.
     BOOL before = dont_update;
     dont_update = YES;
-    // coord_text is of the format {imglinksindex},{x},{y}
+    // LOGIT(coord_text);
+    // coord_text is of the format {internal_id}:{new x},{new y}
     NSArray<NSString*>* parts = [coord_text componentsSeparatedByString:@":"];
-    NSRange rng = [[self->text string] rangeOfString:parts[0]];
-    [self->text insertText:parts[1] replacementRange:rng];
+    if([parts count] != 2) return;
+    int internal_id = [parts[0] intValue];
+    NSString* doc_string = self->text.string;
+    DndcContext* ctx = dndc_create_ctx(0, dndc_stderr_error_func, NULL, NULL, NULL, SV(""), SV(""), 0);
+    DndcNodeHandle root = dndc_ctx_make_root(ctx, SV(""));
+    int err;
+    err = dndc_ctx_parse_string(ctx, root, SV(""), ns_borrow_sv(doc_string));
+    if(err) goto fail;
+    StringView c = ns_borrow_sv(parts[1]);
+    err = dndc_node_set_attribute(ctx, internal_id, SV("coord"), c);
+    if(err) goto fail;
+    {
+        StringView header;
+        err = dndc_node_get_header(ctx, internal_id, &header);
+        if(err) goto fail;
+        {
+            const char* at;
+            if(header.length < 256 && (at = memchr(header.text, '@', header.length))){
+                char buffer[512];
+                int length = snprintf(buffer, sizeof buffer, "%.*s@ %.*s", (int)(at - header.text), header.text, (int)c.length, c.text);
+                StringView h = {.text=buffer, .length=length};
+
+                dndc_node_set_header(ctx, internal_id, dndc_dup_sv(ctx, h));
+            }
+        }
+    }
+    {
+        LongString expanded;
+        err = dndc_format_tree(ctx, &expanded);
+        if(err) goto fail;
+        self->text.string = ns_consume_ls(expanded);
+    }
     [self->text scrollToBeginningOfDocument:self];
     dont_update = before;
-    // self->scrollview.lineScroll = 0;
+    dndc_ctx_destroy(ctx);
+    return;
+
+    fail:
+    // LOGIT(@"Failed");
+    dndc_ctx_destroy(ctx);
+    return;
 }
 
 @end

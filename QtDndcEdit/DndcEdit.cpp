@@ -1,5 +1,6 @@
 #include "DndcEdit.h"
 #include <Dndc/dndc.h>
+#include <Dndc/dndc_ast.h>
 #include <QtCore/QFileSystemWatcher>
 #include <QtCore/QRegularExpressionMatch>
 #include <QtCore/QSettings>
@@ -40,7 +41,6 @@ QTextStream* LOGSTREAM;
 
 void
 DNDC_LOGIT(QtMsgType type, const QMessageLogContext& context, const QString& msg){
-
     static const QString Unknown =  QS("[UNKNOWN]");
     static const QString Debug =    QS("[DEBUG]");
     static const QString Info =     QS("[INFO]");
@@ -54,40 +54,123 @@ DNDC_LOGIT(QtMsgType type, const QMessageLogContext& context, const QString& msg
         case QtWarningMsg:  type_string = &Warn;     break;
         case QtCriticalMsg: type_string = &Critical; break;
         case QtFatalMsg:    type_string = &Fatal;    break;
-        }
+    }
 
     LOGFILE->write(QS("%1 %2 %3:%4: %5\n").arg(QDateTime::currentDateTime().toString(), *type_string, QUrl(context.file).fileName()).arg(context.line).arg(msg).toUtf8());
-    }
+}
 
 
 QString COORD_HELPER_SCRIPT = QS(
     "::script\n"
     "  document.addEventListener('DOMContentLoaded', function(){\n"
     "    const svgs = document.getElementsByTagName('svg');\n"
+    "    let moving = false;\n"
     "    for(let i = 0; i < svgs.length; i++){\n"
     "      const svg = svgs[i];\n"
     "      const texts = svg.getElementsByTagName('text');\n"
-    "      var text_height = 0;\n"
+    "      const aa = document.querySelectorAll('svg a');\n"
+    "      for(let text of texts){\n"
+    "          text.parentNode.addEventListener('click', function(e){\n"
+    "              e.preventDefault();\n"
+    "              e.stopPropagation();\n"
+    "          });\n"
+    "      }\n"
+    "      for(let i = 0; i < texts.length; i++){\n"
+    "          let anchor = texts[i];\n"
+    "          anchor.addEventListener('pointerdown', function(e){\n"
+    "              e.stopPropagation();\n"
+    "              e.preventDefault();\n"
+    "              if(moving) return;\n"
+    "              moving = true;\n"
+    "              let svg = anchor.parentElement.parentElement;\n"
+    "              let sx = svg.width.baseVal.value / svg.viewBox.baseVal.width;\n"
+    "              let sy = svg.height.baseVal.value / svg.viewBox.baseVal.height;\n"
+    "              let org_x = anchor.transform.baseVal[0].matrix.e | 0;\n"
+    "              let org_y = anchor.transform.baseVal[0].matrix.f | 0;\n"
+    "              let start_x = e.screenX;\n"
+    "              let start_y = e.screenY;\n"
+    "              function move(e){\n"
+    "                  let diffx = 1/sx*(e.screenX - start_x);\n"
+    "                  let diffy = 1/sy*(e.screenY - start_y);\n"
+    "                  start_x = e.screenX;\n"
+    "                  start_y = e.screenY;\n"
+    "                  anchor.transform.baseVal[0].matrix.e += diffx;\n"
+    "                  anchor.transform.baseVal[0].matrix.f += diffy;\n"
+    "              }\n"
+    "              svg.addEventListener('pointermove', move);\n"
+    "              function remove(e){\n"
+    "                  moving = false;\n"
+    "                  e.stopPropagation();\n"
+    "                  e.preventDefault();\n"
+    "                  svg.removeEventListener('pointermove', move);\n"
+    "                  let a = anchor.parentElement;\n"
+    "                  let href = a.href.baseVal;\n"
+    "                  let internal_id = 0;\n"
+    "                  let sp = href.split('#');\n"
+    "                  if(sp.length > 1)\n"
+    "                      internal_id = _coords[sp[1]];\n"
+    "                  if(!internal_id)\n"
+    "                      internal_id = _coords2[href];\n"
+    "                  if(!internal_id){\n"
+    "                      let t = anchor.childNodes[0].textContent.trim();\n"
+    "                      console.log('t', t);\n"
+    "                      internal_id = _coords2[t];\n"
+    "                  }\n"
+    "                  console.log(internal_id);\n"
+    "                  console.log(href);\n"
+    "                  if(!internal_id) return;\n"
+    "                  let new_x = anchor.transform.baseVal[0].matrix.e | 0;\n"
+    "                  let new_y = anchor.transform.baseVal[0].matrix.f | 0;\n"
+    "                  const combo = `${internal_id}.${new_x}.${new_y}`;\n"
+    "                  console.log(combo);\n"
+    "                  let request = new XMLHttpRequest();\n"
+    "                  request.open('PUT', 'dnd:///roommove/'+combo, true);\n"
+    "                  request.send();\n"
+    "              }\n"
+    "              window.addEventListener('pointerup', remove, {once:true});\n"
+    "          });\n"
+    "      }\n"
+    "      let text_height = 0;\n"
     "      if(texts.length){\n"
-    "          const first_text = texts[0];\n"
-    "          const text_height = first_text.getBBox().height || 0;\n"
-    "          }\n"
+    "        const first_text = texts[0];\n"
+    "        text_height = first_text.getBBox().height || 0;\n"
+    "      }\n"
     "      svg.addEventListener('click', function(e){\n"
-    "        const number = prompt('Enter Room Name');\n"
-    "        if(number){\n"
+    "        let name = prompt('Enter Room Name');\n"
+    "        if(name){\n"
     "          const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;\n"
     "          const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height;\n"
     "          const rect = e.currentTarget.getBoundingClientRect();\n"
     "          const true_x = ((e.clientX - rect.x)/ x_scale) | 0;\n"
     "          const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;\n"
     "          let request = new XMLHttpRequest();\n"
-    "          const combined = number + ',' + true_x + ',' + true_y;\n"
-    "          request.open('PUT', 'dnd:///'+combined, true);\n"
+    "          if(!name.includes('.')){\n"
+    "            name += '.';\n"
+    "          }\n"
+    "          request.open('PUT', 'dnd:///roomclick/'+name+'/'+true_x+'.'+true_y, true);\n"
     "          request.send();\n"
     "        }\n"
     "      });\n"
     "    }\n"
     "  });\n"
+    "::js\n"
+    "  let coords = ctx.select_nodes({attributes:['coord']});\n"
+    "  let s = ctx.root.make_child(NodeType.SCRIPTS);\n"
+    "  let o = {};\n"
+    "  for(let co of coords){\n"
+    "      o[co.id] = co.internal_id;\n"
+    "  }\n"
+    "  s.make_child(NodeType.STRING, {header:`let _coords = ${JSON.stringify(o)};`});\n"
+    "  let imglinks = ctx.select_nodes({type:NodeType.IMGLINKS});\n"
+    "  let o2 = {};\n"
+    "  for(let il of imglinks){\n"
+    "      for(let ch of il.children){\n"
+    "          if(ch.type != NodeType.STRING) continue;\n"
+    "          let lead = ch.header.split('=')[0].trim();\n"
+    "          o2[lead] = ch.internal_id;\n"
+    "      }\n"
+    "  }\n"
+    "  s.make_child(NodeType.STRING, {header:`let _coords2 = ${JSON.stringify(o2)};`});\n"
     );
 
 QString SCROLL_RESTO_SCRIPT = QS(
@@ -149,10 +232,10 @@ QString GET_SCROLL_POSITION_SCRIPT = QS(
 
 QSize LineNumberArea::sizeHint() const{
     return QSize(qobject_cast<DndEditor*>(codeEditor)->lineNumberAreaWidth(), 0);
-    }
+}
 void LineNumberArea::paintEvent(QPaintEvent* event){
     qobject_cast<DndEditor*>(codeEditor)->lineNumberAreaPaintEvent(event);
-    }
+}
 
 Page*
 get_current_page(void){
@@ -160,7 +243,7 @@ get_current_page(void){
     if(!page_) return nullptr;
     auto page = qobject_cast<Page*>(page_);
     return page;
-    }
+}
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -179,7 +262,7 @@ void MainWindow::closeEvent(QCloseEvent* e){
     for(auto page: qAsConst(ALL_WINDOWS))
         page->save();
     e->accept();
-    }
+}
 
 void
 MainWindow::restore_everything(){
@@ -199,15 +282,15 @@ MainWindow::restore_everything(){
             if(!info.exists())
                 continue;
             add_tab(filename);
-            }
         }
+    }
     else if(vfiles.canConvert<QString>()){
         QString filename = vfiles.toString();
         auto info = QFileInfo(filename);
         if(info.exists())
             add_tab(filename);
-        }
     }
+}
 
 void
 MainWindow::open_file(void){
@@ -337,8 +420,8 @@ MainWindow::add_menus(void){
         for(auto page: qAsConst(ALL_WINDOWS)){
             if(!checked){
                 checked = true;
-                first_is_hidden = page->isHidden();
-                }
+                first_is_hidden = page->editor_holder->isHidden();
+            }
             if(first_is_hidden)
                 page->show_editor();
             else
@@ -704,6 +787,7 @@ DndEditor::contextMenuEvent(QContextMenuEvent* event){
 }
 
 void append_room_with_name_at(const QString& name, int x, int y);
+void change_coord(int id, int x, int y);
 
 
 QWebEngineUrlScheme* DndScheme;
@@ -711,19 +795,33 @@ class DndcSchemeHandler: public QWebEngineUrlSchemeHandler {
     virtual void requestStarted(QWebEngineUrlRequestJob* request) override {
         if(request->requestMethod() == QS("PUT")){
             auto path = request->requestUrl().path();
-            auto parts = path.split(',');
-            auto length = parts.length();
-            if(length < 3)
+            auto components = path.split('/');
+            if(components[1] == QS("roommove")){
+                auto parts = components[components.length()-1].split('.');
+                if(parts.length() != 3) return;
+                auto id = parts[0].toInt();
+                auto x = parts[1].toInt();
+                auto y = parts[2].toInt();
+                QTimer::singleShot(0, this, [=](){
+                    change_coord(id, x, y);
+                });
                 return;
-            auto x = parts[length-2].toInt();
-            auto y = parts[length-1].toInt();
-            parts.removeLast();
-            parts.removeLast();
-            auto name = parts.join(',');
-            QTimer::singleShot(0, this, [=](){
+            }
+            else if(components[1] == QS("roomclick")){
+                if(components.length() != 4) return;
+                auto name = components[2];
+                auto parts = components[3].split('.');
+                if(parts.length() != 2) return;
+                auto x = parts[0].toInt();
+                auto y = parts[1].toInt();
+                QTimer::singleShot(0, this, [=](){
                     append_room_with_name_at(name, x, y);
-                    });
-            return;
+                });
+                return;
+            }
+            else {
+                return;
+            }
         }
         if(request->requestMethod() != QS("GET")){
             request->fail(QWebEngineUrlRequestJob::Error::RequestDenied);
@@ -749,9 +847,9 @@ create_scheme(void){
     DndScheme->setFlags(
         QWebEngineUrlScheme::Flag::SecureScheme
         | QWebEngineUrlScheme::Flag::LocalAccessAllowed
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+        #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
         | QWebEngineUrlScheme::Flag::CorsEnabled
-#endif
+        #endif
         );
     DndScheme->setSyntax(QWebEngineUrlScheme::Syntax::Path);
     QWebEngineUrlScheme::registerScheme(*DndScheme);
@@ -760,7 +858,7 @@ create_scheme(void){
 
 DndWebPage::~DndWebPage(){
     // qDebug("DndWebPage dtor");
-    }
+}
 
 bool
 DndWebPage::acceptNavigationRequest(const QUrl& url, QWebEnginePage::NavigationType navtype, bool isMainFrame){
@@ -836,6 +934,34 @@ create_caches(void){
 }
 
 
+void
+change_coord(int id, int x, int y){
+    struct CtxWrapper {
+        DndcContext* ctx;
+        ~CtxWrapper(){ if(ctx) dndc_ctx_destroy(ctx); }
+    };
+
+    auto page = get_current_page();
+    if(!page) return;
+    if(page->textedit->isReadOnly()) return;
+    auto text = page->textedit->toPlainText() + QS("\n");
+    auto textbytes = text.toUtf8();
+    DndcStringView textsv = {(size_t)textbytes.size(), textbytes.data()};
+    CtxWrapper ctx = {dndc_create_ctx(0, NULL, NULL, NULL, NULL, {}, {}, 0)};
+    DndcNodeHandle root = dndc_ctx_make_root(ctx.ctx, {});
+    int err = dndc_ctx_parse_string(ctx.ctx, root, {}, textsv);
+    if(err) return;
+    char buff[128];
+    int nchars = snprintf(buff, sizeof buff, "%d,%d", x, y);
+    DndcStringView sv = {(size_t)nchars, buff};
+    err = dndc_node_set_attribute(ctx.ctx, id, {sizeof("coord")-1, "coord"}, sv);
+    if(err) return;
+    DndcLongString outstring;
+    err = dndc_format_tree(ctx.ctx, &outstring);
+    if(err) return;
+    page->textedit->setPlainText(QString::fromUtf8(outstring.text, outstring.length));
+    dndc_free_string(outstring);
+}
 
 void
 append_room_with_name_at(const QString& name, int x, int y){
@@ -1084,7 +1210,7 @@ Page::set_scroll_pos(QString&& x){
 
     int err = dndc_compile_dnd_file(
             flags,
-            basedir, textsv, 
+            basedir, textsv,
             outpath,
             outpath,
             &outstring,
@@ -1125,9 +1251,9 @@ Page::format(void){
         flags |= DNDC_PRINT_STATS;
     int err = dndc_compile_dnd_file(
             flags,
-            DndcStringView{}, 
             DndcStringView{},
-            textsv, 
+            DndcStringView{},
+            textsv,
             DndcStringView{},
             &outstring,
             nullptr, nullptr,
@@ -1137,26 +1263,26 @@ Page::format(void){
     if(err) return;
     textedit->setPlainText(QString::fromUtf8(outstring.text, outstring.length));
     dndc_free_string(outstring);
-    }
+}
 void
 Page::hide_editor(void){
     editor_holder->hide();
-    }
+}
 void
 Page::show_editor(void){
     editor_holder->show();
-    }
+}
 void
 Page::show_error(void){
     error_display->show();
     show_errors = true;
-    }
+}
 void
 Page::hide_error(void){
     clear_errors();
     error_display->hide();
     show_errors = false;
-    }
+}
 void
 Page::put_editor_right(void){
     editor_holder->setParent(nullptr);
@@ -1164,7 +1290,7 @@ Page::put_editor_right(void){
     addWidget(web);
     addWidget(editor_holder);
     editor_is_on_left = false;
-    }
+}
 void
 Page::put_editor_left(void){
     editor_holder->setParent(nullptr);
@@ -1172,7 +1298,7 @@ Page::put_editor_left(void){
     addWidget(editor_holder);
     addWidget(web);
     editor_is_on_left = true;
-    }
+}
 void
 Page::save(void){
     if(!filename.length())
@@ -1263,8 +1389,8 @@ Page::export_as_html(void){
 
     int err = dndc_compile_dnd_file(
             flags,
-            basedir, 
-            textsv, 
+            basedir,
+            textsv,
             DndcStringView{},
             outpath,
             &outstring,

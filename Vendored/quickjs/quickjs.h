@@ -1084,13 +1084,13 @@ QJS_API int JS_SetModuleExportList(QJSContext *ctx, JSModuleDef *m,
 // I added it so I could implement logging
 //
 // returns -1 on error, without setting exception.
-QJS_API 
+QJS_API
 int
 JS_get_caller_location(QJSContext* ctx, const char** filename, const char** funcname, int* line_num);
 
 //
 // NOTE(dpriver): This not being exposed was super annoying.
-QJS_API 
+QJS_API
 QJSValue
 JS_ArrayPush(QJSContext *ctx, QJSValueConst this_val, int argc, QJSValueConst *argv);
 

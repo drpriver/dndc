@@ -227,6 +227,28 @@ node_print_err(DndcContext* ctx, const Node* node, LongString msg){
     ctx->error_func(ctx->error_user_data, DNDC_ERROR_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
 }
 
+#if 0
+static
+void
+node_print_err_q(DndcContext* ctx, const Node* node, StringView msg, StringView quoted){
+    if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
+        return;
+    if(!ctx->error_func)
+        return;
+    StringView filename = ctx->filenames.data[node->filename_idx];
+    int lineno = node->row;
+    int col = node->col;
+    MStringBuilder msb = {.allocator = ctx->temp_allocator};
+    msb_write_str(&msb, msg.text, msg.length);
+    msb_write_char(&msb, '\'');
+    msb_write_str(&msb, quoted.text, quoted.length);
+    msb_write_char(&msb, '\'');
+    LongString errmsg = msb_borrow_ls(&msb);
+    ctx->error_func(ctx->error_user_data, DNDC_ERROR_MESSAGE, filename.text, filename.length, lineno, col, errmsg.text, errmsg.length);
+    msb_destroy(&msb);
+}
+#endif
+
 static
 void
 node_print_warning(DndcContext* ctx, const Node* node, StringView msg){
@@ -644,35 +666,6 @@ convert_node_to_container_containing_clone_of_former_self(DndcContext* ctx, Node
     old_node->type = NODE_CONTAINER;
     if(old_node->attributes)
         old_node->attributes->count = 0;
-}
-
-static inline
-void
-ctx_add_builtins(DndcContext* ctx){
-#define JSRAW(...) #__VA_ARGS__
-    ctx_store_builtin_file(ctx, SV("builtins/coords.js"), SV(JSRAW(
-        document.addEventListener("DOMContentLoaded", function(){
-            const svgs = document.getElementsByTagName("svg");
-            for(let i = 0; i < svgs.length; i++){
-                const svg = svgs[i];
-                const first_text = svg.getElementsByTagName("text")[0];
-                const text_height = first_text.getBBox().height || 0;
-                const parent = svg.parentElement;
-                const p = document.createElement('p');
-                p.style = "text-align:center";
-                parent.insertBefore(p, p.nextSibling);
-                svg.addEventListener("mousemove", function(e){
-                    const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;
-                    const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height;
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const true_x = ((e.clientX - rect.x)/ x_scale) | 0;
-                    const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;
-                    p.innerHTML = "coord(" + true_x + ',' + true_y+ ')';
-                });
-            }
-        });
-    )));
-#undef JSRAW
 }
 
 #ifdef __clang__

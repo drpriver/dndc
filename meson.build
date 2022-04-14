@@ -1,5 +1,5 @@
-project('Dndc', 'c', 'cpp', version: '0.10.3')
-COMPAT_VERSION = '0.10.2'
+project('Dndc', 'c', 'cpp', version: '0.11.0', default_options:['c_std=gnu17', 'cpp_std=gnu++17'])
+COMPAT_VERSION = '0.11.0'
 thread_dep = dependency('threads')
 pymod = import('python')
 pyinstall = pymod.find_installation()
@@ -15,7 +15,7 @@ else
 includes = include_directories('Allocators', 'Utils', 'Dndc', 'Vendored/quickjs')
 endif
 
-install_headers('Dndc/dndc.h', subdir:'Dndc')
+install_headers('Dndc/dndc.h', 'Dndc/dndc_ast.h', subdir:'Dndc')
 
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m', required : false)
@@ -142,9 +142,16 @@ test('dndc',
 
 test('pydndc', pyinstall, args:['Dndc/testpydndc.py', '--extension-directory', meson.build_root()], workdir:meson.source_root(), depends:pydndc)
 
-qt5 = import('qt5')
-qt5_dep = dependency('qt5', modules: ['Core', 'Gui', 'Widgets', 'WebEngineWidgets'], required:false)
-if qt5_dep.found()
-  moc_files = qt5.compile_moc(headers: 'QtDndcEdit/DndcEdit.h', dependencies: qt5_dep)
-  executable('DndcEdit', 'QtDndcEdit/DndcEdit.cpp', moc_files, dependencies: qt5_dep, link_with:dndc_lib)
+qt6 = import('qt6')
+qt6_dep = dependency('qt6', modules: ['Core', 'Gui', 'Widgets', 'WebEngineWidgets'], required:false)
+if qt6_dep.found()
+  moc_files = qt6.compile_moc(headers: 'QtDndcEdit/DndcEdit.h', dependencies: qt6_dep)
+  executable('DndcEdit', 'QtDndcEdit/DndcEdit.cpp', moc_files, dependencies: qt6_dep, link_with:dndc_lib)
+else
+  qt5 = import('qt5')
+  qt5_dep = dependency('qt5', modules: ['Core', 'Gui', 'Widgets', 'WebEngineWidgets'], required:false)
+  if qt5_dep.found()
+    moc_files = qt5.compile_moc(headers: 'QtDndcEdit/DndcEdit.h', dependencies: qt5_dep)
+    executable('DndcEdit', 'QtDndcEdit/DndcEdit.cpp', moc_files, dependencies: qt5_dep, link_with:dndc_lib)
+  endif
 endif

@@ -9,7 +9,7 @@ endif
 ifeq ($(UNAME),Darwin)
 # MacOS
 QTFLAGS=-fPIC
-QTINCLUDE=-F$(QTFRAMEWORKDIR)
+QTINCLUDE=-F$(QTFRAMEWORKDIR) -isystem $(QTINCLUDEDIR)
 QTFRAMEWORKS=-framework QtCore \
 	     -framework QtGui  \
 	     -framework QtWidgets \
@@ -68,6 +68,6 @@ $(BINDIR)/DndcEdit$(EXE): QtDndcEdit/DndcEdit.cpp $(GENDIR)/moc_DndcEdit.cpp $(D
 		-std=gnu++17 \
 		$(DNDCLINK) \
 		$(QTLINK)
-		
+
 .PHONY: DndcEdit
 DndcEdit: $(BINDIR)/DndcEdit

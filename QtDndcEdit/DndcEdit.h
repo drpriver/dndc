@@ -160,7 +160,6 @@ class Page: public QSplitter
     Q_OBJECT
     QWebEngineView* web;
     QPlainTextEdit* error_display;
-    QSplitter* editor_holder;
     bool inflight = false;
     bool auto_apply = true;
     QList<QCheckBox*> checks;
@@ -173,6 +172,7 @@ class Page: public QSplitter
     bool coord_helper = false;
 
 public:
+    QSplitter* editor_holder;
     DndWebPage* webpage;
     DndEditor* textedit;
     QString filename;

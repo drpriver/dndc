@@ -38,6 +38,13 @@ typedef struct ArenaAllocator {
     struct BigAllocation*_Nullable big_allocations;
 } ArenaAllocator;
 
+static inline
+force_inline
+Allocator
+allocator_from_arena(ArenaAllocator* aa){
+    return (Allocator){.type=ALLOCATOR_ARENA, ._data=aa};
+}
+
 //
 // TODO: Currently we back the arena allocator with malloc, but we could just
 // call the OS apis (mmap, VirtualAlloc, etc.) ourselves. Would need to see how

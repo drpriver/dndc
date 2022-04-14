@@ -125,7 +125,7 @@ class SingleJobPage(QWidget):
                 fname += '.html'
             self.out_ed.setText(fname)
         self.out_button.clicked.connect(pick_output)
-            
+
 
         self.layout.addWidget(self.out_lab, 2, 0, Qt.AlignTop)
         self.layout.addWidget(self.out_ed, 2, 1, Qt.AlignTop)
@@ -271,7 +271,7 @@ class FolderJobPage(QWidget):
             self.out_ed.setText(dirname)
 
         self.out_button.clicked.connect(pick_output)
-            
+
 
         self.layout.addWidget(self.out_lab, 1, 0, Qt.AlignTop)
         self.layout.addWidget(self.out_ed, 1, 1, Qt.AlignTop)
@@ -566,7 +566,7 @@ class ProjectJobPage(QWidget):
         return result
     def save(self) -> bool:
         js = self.to_json()
-        
+
         outfile = self.file_ed.text()
         if not outfile:
             if not js:

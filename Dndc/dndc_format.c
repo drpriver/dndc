@@ -8,10 +8,10 @@
 #include "msb_format.h"
 #include "error_handling.h"
 
-// NOTE: Formatting can only be applied to freshly parsed syntax
-//       trees. The code makes assertions about what kinds of nodes
-//       can be children of other nodes, which won't necessarily hold
-//       true if javascript blocks start inserting nodes willy-nilly.
+// NOTE: Formatting assumes a certain structure of the input tree
+//       which may not necessarily hold if user scripts or the ast api
+//       messes with the tree. It should always work on a freshly imported
+//       tree though.
 
 #ifdef _WIN32
 // Move to header?
@@ -168,7 +168,8 @@ format_node(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
         case NODE_KEYVALUEPAIR:
         case NODE_INVALID:
             // Error cond
-            unreachable();
+            // unreachable();
+            return 1;
     }
     unreachable();
 }
@@ -178,6 +179,8 @@ static
 int
 format_tree(DndcContext* ctx, MStringBuilder* sb){
     Node* root = get_node(ctx, ctx->root_handle);
+    if(root->type != NODE_MD && root->type != NODE_DIV && root->type != NODE_CONTAINER)
+        return 1;
     int result = 0;
     NODE_CHILDREN_FOR_EACH(it, root){
         Node* child = get_node(ctx, *it);
@@ -278,7 +281,9 @@ FORMATFUNC(para_node){
     FormatState state = {.lead = indent};
     NODE_CHILDREN_FOR_EACH(it, node){
         Node* child = get_node(ctx, *it);
-        assert(child->type == NODE_STRING);
+        // assert(child->type == NODE_STRING);
+        if(child->type != NODE_STRING)
+            return 1;
         format_write_wrapped_string(sb, &state, child->header);
     }
     if(state.col)
@@ -293,7 +298,9 @@ format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, 
     int result = 0;
     NODE_CHILDREN_FOR_EACH(it, node){
         Node* child = get_node(ctx, *it);
-        assert(child->type == NODE_LIST_ITEM);
+        // assert(child->type == NODE_LIST_ITEM);
+        if(child->type != NODE_LIST_ITEM)
+            return 1;
         msb_write_nchar(sb, ' ', indent);
         switch(bullet_depth){
             case 0:
@@ -346,7 +353,9 @@ FORMATFUNC(md_list){
     numwidth += count > 9999;
     for(size_t i = 0; i < node_children_count(node); i++){
         Node* child = get_node(ctx, node_children(node)[i]);
-        assert(child->type == NODE_LIST_ITEM);
+        // assert(child->type == NODE_LIST_ITEM);
+        if(child->type != NODE_LIST_ITEM)
+            return 1;
         msb_write_nchar(sb, ' ', indent);
         MSB_FORMAT(sb, int_fmt(i+1), ". ");
         FormatState state = {.lead = indent+numwidth+2, .col=indent+numwidth+2};
@@ -441,10 +450,14 @@ FORMATFUNC(table_node){
             }
             else {
                 assert(cell->type == NODE_CONTAINER);
+                if(cell->type != NODE_CONTAINER)
+                    return 1;
                 size_t this_width = 0;
                 NODE_CHILDREN_FOR_EACH(str_iter, cell){
                     Node* str = get_node(ctx, *str_iter);
-                    assert(str->type == NODE_STRING);
+                    // assert(str->type == NODE_STRING);
+                    if(str->type != NODE_STRING)
+                        return 1;
                     this_width += 1 + str->header.length;
                 }
                 this_width -= 1;
@@ -547,7 +560,9 @@ FORMATFUNC(kv_node){
             continue;
         }
         msb_write_nchar(sb, ' ', indent);
-        assert(node_children_count(child) == 2);
+        // assert(node_children_count(child) == 2);
+        if(node_children_count(child) != 2)
+            return 1;
         StringView key = get_node(ctx, node_children(child)[0])->header;
         Node* value_node = get_node(ctx, node_children(child)[1]);
         msb_write_str(sb, key.text, key.length);
@@ -560,10 +575,14 @@ FORMATFUNC(kv_node){
             format_write_wrapped_string(sb, &state, value);
         }
         else {
-            assert(value_node->type == NODE_CONTAINER);
+            // assert(value_node->type == NODE_CONTAINER);
+            if(value_node->type != NODE_CONTAINER)
+                return 1;
             NODE_CHILDREN_FOR_EACH(c, value_node){
                 Node* n = get_node(ctx, *c);
-                assert(n->type == NODE_STRING);
+                // assert(n->type == NODE_STRING);
+                if(n->type != NODE_STRING)
+                    return 1;
                 format_write_wrapped_string(sb, &state, n->header);
             }
         }
@@ -584,7 +603,9 @@ FORMATFUNC(raw_node){
             if(result) return result;
             continue;
         }
-        assert(child->type == NODE_STRING);
+        // assert(child->type == NODE_STRING);
+        if(child->type != NODE_STRING)
+            return 1;
         if(child->header.length){
             msb_write_nchar(sb, ' ', nspace);
             msb_write_str(sb, child->header.text, child->header.length);

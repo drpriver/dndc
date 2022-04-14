@@ -38,8 +38,8 @@ gdndc: $(BINDIR)/gdndc
 install-gdndc: $(BINDIR)/gdndc
 	$(INSTALL) -C $< $(INSTALLDIR)/gdndc
 
-$(BINDIR)/dndbr: Platform/MacOS/dndbr.m Platform/MacOS/dndbr_app_icon.png Platform/MacOS/DndBrInfo.plist opt.mak
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(DEPFLAGS) $(DEPDIR)/gdndc.dep $< Dndc/dndc_local_server.c -o $@ $(LINK_FLAGS) -framework Cocoa -fobjc-arc -Wl,-sectcreate,__TEXT,__info_plist,Platform/MacOS/DndBrInfo.plist $(BINDIR)/libdndc.dylib $(RPATH)
+$(BINDIR)/dndbr: Platform/MacOS/dndbr.m Platform/MacOS/dndbr_app_icon.png Platform/MacOS/DndBrInfo.plist opt.mak $(BINDIR)/libdndc.dylib
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndbr.dep $< Dndc/dndc_local_server.c -o $@ $(LINK_FLAGS) -framework Cocoa -fobjc-arc -Wl,-sectcreate,__TEXT,__info_plist,Platform/MacOS/DndBrInfo.plist $(BINDIR)/libdndc.dylib $(RPATH)
 .PHONY: dndbr
 dndbr: $(BINDIR)/dndbr
 

@@ -9,11 +9,11 @@ have_deps = install_deps.ensure_deps(False)
 import sys
 if not have_deps:
     sys.exit(1)
-from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox, QToolButton
-from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
-from PySide2.QtWebEngineCore import QWebEngineUrlScheme, QWebEngineUrlSchemeHandler, QWebEngineUrlRequestJob
-from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices, QCloseEvent
-from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher, QFile, QThread, QTimer
+from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox, QToolButton
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWebEngineCore import QWebEngineUrlScheme, QWebEngineUrlSchemeHandler, QWebEngineUrlRequestJob, QWebEnginePage, QWebEngineProfile
+from PySide6.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices, QCloseEvent, QAction
+from PySide6.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher, QFile, QThread, QTimer
 import pydndc
 from typing import Optional, List, Dict, Optional, Callable, Tuple, Set
 import time
@@ -58,23 +58,46 @@ def append_room_with_name_at(name:str, x:int, y:int) -> None:
     page.textedit.appendPlainText(f'\n{name} ::md .room @coord({x}, {y})\n')
     page.textedit.setFocus(Qt.FocusReason.NoFocusReason)
 
+def change_coord(id:int, x:int, y:int) -> None:
+    page: Optional[Page] = TABWIDGET.currentWidget()
+    if not page: return
+    if page.textedit.isReadOnly(): return
+    text = page.textedit.toPlainText()
+    try:
+        ctx = pydndc.Context()
+        ctx.root.parse(text)
+        ctx.node_from_int(id).set_attribute('coord', f'{x},{y}')
+        text = ctx.format_tree()
+        page.textedit.setPlainText(text)
+    except:
+        LOGGER.exception('Problem while doing change coord')
 
 class SCHEME_Handler(QWebEngineUrlSchemeHandler):
     def requestStarted(self, request:QWebEngineUrlRequestJob) -> None:
         if request.requestMethod() == b'PUT':
-            path = request.requestUrl().path()[1:]
+            path = request.requestUrl().path()
+            components = path.split('/')
             try:
-                *name_, x_, y_ = path.split(',')
-                x = int(x_)
-                y = int(y_)
-                name = ','.join(name_)
+                if components[1] == 'roommove':
+                    parts = components[-1].split('.')
+                    if len(parts) != 3: return
+                    id = int(parts[0])
+                    x = int(parts[1])
+                    y = int(parts[2])
+                    QTimer.singleShot(0, lambda: change_coord(id, x, y))
+                    return
+                elif components[1] == 'roomclick':
+                    if len(components) != 4:
+                        return
+                    name = components[2]
+                    parts = components[3].split('.')
+                    if len(parts) != 2: return
+                    x = int(parts[0])
+                    y = int(parts(1))
+                    QTimer.singleShot(0, lambda: append_room_with_name_at(name, x, y))
+                    return
             except:
-                LOGGER.exception('Unable to parse room name from PUT: {path=}')
-                return
-            # I'm not sure if this is necessary, but I didn't want to trigger
-            # any requests from within the scheme handler, so I wanted to add text
-            # later.
-            QTimer.singleShot(0, lambda: append_room_with_name_at(name, x, y))
+                LOGGER.exception('Unable to handle PUT from: %r', path)
             return
         if request.requestMethod() != b'GET':
             LOGGER.debug(f'Not GET: {request.requestMethod()=}')
@@ -309,35 +332,119 @@ class LineNumberArea(QWidget):
     def paintEvent(self, event) -> None:
         self.codeEditor.lineNumberAreaPaintEvent(event)
 
-COORD_HELPER_SCRIPT='''
-::script
-  document.addEventListener('DOMContentLoaded', function(){
-    const svgs = document.getElementsByTagName('svg');
-    for(let i = 0; i < svgs.length; i++){
-      const svg = svgs[i];
-      const texts = svg.getElementsByTagName('text');
-      var text_height = 0;
-      if(texts.length){
-          const first_text = texts[0];
-          const text_height = first_text.getBBox().height || 0;
-          }
-      svg.addEventListener('click', function(e){
-        const number = prompt('Enter Room Name');
-        if(number){
-          const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;
-          const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height;
-          const rect = e.currentTarget.getBoundingClientRect();
-          const true_x = ((e.clientX - rect.x)/ x_scale) | 0;
-          const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;
-          let request = new XMLHttpRequest();
-          const combined = number + ',' + true_x + ',' + true_y;
-          request.open('PUT', 'dnd:///'+combined, true);
-          request.send();
-        }
-      });
-    }
-  });
-'''
+COORD_HELPER_SCRIPT= (
+    "\n"
+    "::script\n"
+    "  document.addEventListener('DOMContentLoaded', function(){\n"
+    "    const svgs = document.getElementsByTagName('svg');\n"
+    "    let moving = false;\n"
+    "    for(let i = 0; i < svgs.length; i++){\n"
+    "      const svg = svgs[i];\n"
+    "      const texts = svg.getElementsByTagName('text');\n"
+    "      const aa = document.querySelectorAll('svg a');\n"
+    "      for(let text of texts){\n"
+    "          text.parentNode.addEventListener('click', function(e){\n"
+    "              e.preventDefault();\n"
+    "              e.stopPropagation();\n"
+    "          });\n"
+    "      }\n"
+    "      for(let i = 0; i < texts.length; i++){\n"
+    "          let anchor = texts[i];\n"
+    "          anchor.addEventListener('pointerdown', function(e){\n"
+    "              e.stopPropagation();\n"
+    "              e.preventDefault();\n"
+    "              if(moving) return;\n"
+    "              moving = true;\n"
+    "              let svg = anchor.parentElement.parentElement;\n"
+    "              let sx = svg.width.baseVal.value / svg.viewBox.baseVal.width;\n"
+    "              let sy = svg.height.baseVal.value / svg.viewBox.baseVal.height;\n"
+    "              let org_x = anchor.transform.baseVal[0].matrix.e | 0;\n"
+    "              let org_y = anchor.transform.baseVal[0].matrix.f | 0;\n"
+    "              let start_x = e.screenX;\n"
+    "              let start_y = e.screenY;\n"
+    "              function move(e){\n"
+    "                  let diffx = 1/sx*(e.screenX - start_x);\n"
+    "                  let diffy = 1/sy*(e.screenY - start_y);\n"
+    "                  start_x = e.screenX;\n"
+    "                  start_y = e.screenY;\n"
+    "                  anchor.transform.baseVal[0].matrix.e += diffx;\n"
+    "                  anchor.transform.baseVal[0].matrix.f += diffy;\n"
+    "              }\n"
+    "              svg.addEventListener('pointermove', move);\n"
+    "              function remove(e){\n"
+    "                  moving = false;\n"
+    "                  e.stopPropagation();\n"
+    "                  e.preventDefault();\n"
+    "                  svg.removeEventListener('pointermove', move);\n"
+    "                  let a = anchor.parentElement;\n"
+    "                  let href = a.href.baseVal;\n"
+    "                  let internal_id = 0;\n"
+    "                  let sp = href.split('#');\n"
+    "                  if(sp.length > 1)\n"
+    "                      internal_id = _coords[sp[1]];\n"
+    "                  if(!internal_id)\n"
+    "                      internal_id = _coords2[href];\n"
+    "                  if(!internal_id){\n"
+    "                      let t = anchor.childNodes[0].textContent.trim();\n"
+    "                      console.log('t', t);\n"
+    "                      internal_id = _coords2[t];\n"
+    "                  }\n"
+    "                  console.log(internal_id);\n"
+    "                  console.log(href);\n"
+    "                  if(!internal_id) return;\n"
+    "                  let new_x = anchor.transform.baseVal[0].matrix.e | 0;\n"
+    "                  let new_y = anchor.transform.baseVal[0].matrix.f | 0;\n"
+    "                  const combo = `${internal_id}.${new_x}.${new_y}`;\n"
+    "                  console.log(combo);\n"
+    "                  let request = new XMLHttpRequest();\n"
+    "                  request.open('PUT', 'dnd:///roommove/'+combo, true);\n"
+    "                  request.send();\n"
+    "              }\n"
+    "              window.addEventListener('pointerup', remove, {once:true});\n"
+    "          });\n"
+    "      }\n"
+    "      let text_height = 0;\n"
+    "      if(texts.length){\n"
+    "        const first_text = texts[0];\n"
+    "        text_height = first_text.getBBox().height || 0;\n"
+    "      }\n"
+    "      svg.addEventListener('click', function(e){\n"
+    "        let name = prompt('Enter Room Name');\n"
+    "        if(name){\n"
+    "          const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;\n"
+    "          const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height;\n"
+    "          const rect = e.currentTarget.getBoundingClientRect();\n"
+    "          const true_x = ((e.clientX - rect.x)/ x_scale) | 0;\n"
+    "          const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;\n"
+    "          let request = new XMLHttpRequest();\n"
+    "          if(!name.includes('.')){\n"
+    "            name += '.';\n"
+    "          }\n"
+    "          request.open('PUT', 'dnd:///roomclick/'+name+'/'+true_x+'.'+true_y, true);\n"
+    "          request.send();\n"
+    "        }\n"
+    "      });\n"
+    "    }\n"
+    "  });\n"
+    "::js\n"
+    "  let coords = ctx.select_nodes({attributes:['coord']});\n"
+    "  let s = ctx.root.make_child(NodeType.SCRIPTS);\n"
+    "  let o = {};\n"
+    "  for(let co of coords){\n"
+    "      o[co.id] = co.internal_id;\n"
+    "  }\n"
+    "  s.make_child(NodeType.STRING, {header:`let _coords = ${JSON.stringify(o)};`});\n"
+    "  let imglinks = ctx.select_nodes({type:NodeType.IMGLINKS});\n"
+    "  let o2 = {};\n"
+    "  for(let il of imglinks){\n"
+    "      for(let ch of il.children){\n"
+    "          if(ch.type != NodeType.STRING) continue;\n"
+    "          let lead = ch.header.split('=')[0].trim();\n"
+    "          o2[lead] = ch.internal_id;\n"
+    "      }\n"
+    "  }\n"
+    "  s.make_child(NodeType.STRING, {header:`let _coords2 = ${JSON.stringify(o2)};`});\n"
+    )
 SCROLL_RESTO_SCRIPT='''
 ::script
     document.addEventListener('DOMContentLoaded', function(){

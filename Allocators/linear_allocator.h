@@ -105,6 +105,7 @@ destroy_linear_storage(LinearAllocator* s){
         free(oa);
         oa = next;
     }
+    s->overflow = NULL;
     s->name = NULL;
     s->_data = NULL;
     s->_capacity = 0;

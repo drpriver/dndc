@@ -506,15 +506,6 @@ build_nav_block(DndcContext*);
   ctx_store_builtin_file(DndcContext* ctx, StringView sourcepath, StringView text);
 
   //
-  // ctx_add_builtins
-  // ----------------
-  // Adds special builtin-scripts and stylesheets to the source cache.
-  //
-  static inline
-  void
-  ctx_add_builtins(DndcContext* ctx);
-
-  //
   // ctx_note_dependency
   // -------------------
   // Marks a file as being a dependency of the document. Deduplicates.
@@ -582,10 +573,29 @@ build_nav_block(DndcContext*);
   //
   // Returns 0 on success.
   //
+  // TODO: maybe this should take a node argument so you can format
+  // starting from nodes other than the root node, but there is not
+  // a use case for that yet.
+  //
   static
   warn_unused
   int
   format_tree(DndcContext*, MStringBuilder*);
+
+
+  //
+  // format_node
+  // -----------
+  // Writes the document from the given node. Note that it does
+  // not elide the header or indent for the topmost level node.
+  // That is reserved for the root.
+  //
+  // Returns 0 on success.
+
+  static inline
+  warn_unused
+  int
+  format_node(DndcContext* ctx, MStringBuilder*, Node*, int indent);
 
 // Link Functions
 // --------------

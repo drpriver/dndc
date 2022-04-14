@@ -191,6 +191,7 @@ JSGETTER(js_dndc_node_get_header);
 JSSETTER(js_dndc_node_set_header);
 JSGETTER(js_dndc_node_get_id);
 JSSETTER(js_dndc_node_set_id);
+JSGETTER(js_dndc_node_get_internal_id);
 JSMETHOD(js_dndc_node_parse);
 JSMETHOD(js_dndc_node_detach);
 JSMETHOD(js_dndc_node_make_child);
@@ -231,6 +232,7 @@ JSCFunctionListEntry JS_DNDC_NODE_FUNCS[] = {
     JS_CFUNC_DEF("clone", 0, js_dndc_node_clone),
     JS_CFUNC_DEF("set", 2, js_dndc_node_set),
     JS_CFUNC_DEF("get", 1, js_dndc_node_get),
+    JS_CGETSET_DEF("internal_id", js_dndc_node_get_internal_id, NULL),
 };
 
 //
@@ -1399,6 +1401,17 @@ js_dndc_node_get_children(QJSContext* jsctx, QJSValueConst thisValue){
     }
     return array;
 }
+
+static
+QJSValue
+js_dndc_node_get_internal_id(QJSContext* jsctx, QJSValueConst thisValue){
+    NodeHandle handle;
+    if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
+        return JS_EXCEPTION;
+    assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
+    return JS_NewUint32(jsctx, handle._value);
+}
+
 static
 QJSValue
 js_dndc_node_get_location(QJSContext* jsctx, QJSValueConst thisValue){
@@ -2224,6 +2237,7 @@ JSMAGICGETTER(js_dndc_node_location_getter){
     }
 }
 JSMETHOD(js_dndc_node_location_to_string){
+    (void)argv; (void)argc;
     void* pointer = JS_GetOpaque2(jsctx, thisValue, JS_DNDC_LOCATION_CLASS_ID);
     uintptr_t p = (uintptr_t)pointer;
     if(!p){

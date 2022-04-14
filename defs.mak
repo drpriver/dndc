@@ -16,9 +16,9 @@ $(VENDOBJDIR): ; @$(MKDIR) -p $@
 $(BINDIR):  ; @$(MKDIR) -p $@
 $(DOCDIR):  ; @$(MKDIR) -p $@
 $(TESTDIR): ; @$(MKDIR) -p $@
-$(EXAMPLEDIR): 
-	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/Calendar 
-	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/KrugsBasement 
+$(EXAMPLEDIR):
+	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/Calendar
+	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/KrugsBasement
 	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/Rules
 	@$(MKDIR) -p $(EXAMPLEDIR)/Examples/Wiki/Inner
 DIRECTORIES= $(DEPDIR) $(OBJDIR) $(BINDIR) $(DOCDIR) $(TESTDIR) $(EXAMPLEDIR) $(VENDOBJDIR)
@@ -144,7 +144,7 @@ FLAGS=$(INCLUDE_FLAGS) $(WARNING_FLAGS) $(PLATFORM_FLAGS)
 
 
 # TestDndc needs special link arguments, so define it manually.
-TESTS:=$(filter-out Dndc/TestDndc.c, $(wildcard **/Test*.c))
+TESTS:=$(filter-out Dndc/TestDndc.c Dndc/TestDndcAst.c, $(wildcard **/Test*.c))
 
 # This template defines how to build and run a test. Tests are automatically
 # discovered by convention: a test program is a C file starting with 'Test'.

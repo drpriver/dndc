@@ -297,7 +297,7 @@ point_parse(void* _Null_unspecified ud, const char*s, size_t length, void* dest)
 }
 
 static
-void 
+void
 point_print(void*vp){
     Point*p = vp;
     printf(" = %d,%d", p->x, p->y);
@@ -655,7 +655,7 @@ struct ShortContext {
 };
 
 static
-int 
+int
 append_short(void* dest, const void* arg){
     struct ShortContext* ctx = dest;
     Marray(short)* marray = ctx->marray;

@@ -6,6 +6,7 @@
 // define DNDC_API before including dndc.h
 #include "dndc_api_def.h"
 #include "dndc.h"
+#include "dndc_ast.h"
 #include "dndc_long_string.h"
 #include "dndc_node_types.h"
 #include "dndc_format.c"
@@ -322,20 +323,6 @@ run_the_dndc(uint64_t flags,
     int result = 0;
     if(!source_path.length)
         source_path = SV("(string input)");
-    // Strings live for the entire duration of this function, so the linear
-    // arena allocator is appropriate.
-    ArenaAllocator arena_allocator = {0};
-    const Allocator string_allocator = {.type=ALLOCATOR_ARENA, ._data=&arena_allocator};
-    // General purpose allocation (nodes, attributes, etc.).
-    ArenaAllocator main_arena = {0};
-    const Allocator allocator = {.type=ALLOCATOR_ARENA, ._data=&main_arena};
-    // The linear allocator is very useful for temporary allocations, like
-    // when we need to turn a string into its kebabed form and then look it up
-    // in the link map. We do this a lot and throw away the temporary string
-    // constantly - this means we don't have to keep hitting malloc
-    // just for temporary strings of arbitrary size.
-    LinearAllocator la_ = new_linear_storage(1024*1024, "temp storage");
-    Allocator la = allocator_from_la(&la_);
 
     // The base64 cache is moved to another thread and then moved back, so
     // it needs an independent allocator so it can run concurrently.
@@ -348,9 +335,7 @@ run_the_dndc(uint64_t flags,
 
     DndcContext ctx = {
         .flags = flags,
-        .allocator = allocator,
-        .temp_allocator = la,
-        .string_allocator = string_allocator,
+        .temp = new_linear_storage(1024*1024, "temp storage"),
         .titlenode = INVALID_NODE_HANDLE,
         .navnode = INVALID_NODE_HANDLE,
         .outputfile = outpath,
@@ -360,7 +345,9 @@ run_the_dndc(uint64_t flags,
         .error_func = error_func,
         .error_user_data = error_user_data,
     };
-    ctx_add_builtins(&ctx);
+    ctx.allocator = allocator_from_arena(&ctx.main_arena);
+    ctx.string_allocator = allocator_from_arena(&ctx.string_arena);
+    ctx.temp_allocator = allocator_from_la(&ctx.temp);
     if(!source_text.text){
         report_system_error(&ctx, SV("String with no data given as input"));
         result = UNEXPECTED_END;
@@ -451,9 +438,12 @@ run_the_dndc(uint64_t flags,
         // for(size_t i = 0; i < ctx.imports.count; progbar("Imports", &i, ctx.imports.count)){
         for(size_t i = 0; i < ctx.imports.count; i++){
             NodeHandle handle = ctx.imports.data[i];
+            if(!(get_node(&ctx, handle)->flags & NODEFLAG_IMPORT))
+                continue;
             // We parse into a different node and then swap the two.
             NodeHandle newhandle = alloc_handle(&ctx);
             Node* node = get_node(&ctx, handle);
+            node->flags &= ~NODEFLAG_IMPORT;
             bool was_import = false;
             {
                 Node* newnode = get_node(&ctx, newhandle);
@@ -463,11 +453,7 @@ run_the_dndc(uint64_t flags,
                     newnode->type = NODE_MD;
                     was_import = true;
                 }
-                newnode->attributes = NULL;
-                RARRAY_FOR_EACH(Attribute, attr, node->attributes){
-                    if(!SV_equals(attr->key, SV("import")))
-                        node_set_attribute(newnode, ctx.allocator, attr->key, attr->value);
-                }
+                newnode->attributes = Rarray_clone(Attribute)(node->attributes, ctx.allocator);
             }
             if(ctx.imports.count > 1000){
                 node_print_err(&ctx, node, LS("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)"));
@@ -756,7 +742,7 @@ run_the_dndc(uint64_t flags,
     success:;
     cleanup:;
     report_size(&ctx, SV("source_text.length = "), source_text.length);
-    report_size(&ctx, SV("la_.high_water = "), la_.high_water);
+    report_size(&ctx, SV("la_.high_water = "), ctx.temp.high_water);
     if(!wasm && !(flags & DNDC_NO_CLEANUP)){
         uint64_t before_cleanup = get_t();
         if(ctx.flags & DNDC_PRINT_STATS){
@@ -774,12 +760,12 @@ run_the_dndc(uint64_t flags,
             report_size(&ctx, SV("N existing allocations: "), alloced);
             report_size(&ctx, SV("Allocations outstanding total (bytes): "), total);
             #else
-            Arena* arena = main_arena.arena;
+            Arena* arena = ctx.main_arena.arena;
             while(arena){
                 report_size(&ctx, SV("Arena used: "), arena->used);
                 arena = arena->prev;
             }
-            BigAllocation* ba = main_arena.big_allocations;
+            BigAllocation* ba = ctx.main_arena.big_allocations;
             while(ba){
                 report_size(&ctx, SV("Big allocation: "), ba->size);
                 ba = ba->next;
@@ -790,13 +776,13 @@ run_the_dndc(uint64_t flags,
         }
         {
             uint64_t before = get_t();
-            Allocator_free_all(string_allocator);
+            Allocator_free_all(ctx.string_allocator);
             uint64_t after = get_t();
             report_time(&ctx, SV("Cleaning string allocator: "), after-before);
         }
         {
             uint64_t before = get_t();
-            Allocator_free_all(allocator);
+            Allocator_free_all(ctx.allocator);
             // shallow_free_recorded_mallocator(allocator);
             uint64_t after = get_t();
             report_time(&ctx, SV("Cleaning allocator: "), after-before);
@@ -811,7 +797,7 @@ run_the_dndc(uint64_t flags,
     uint64_t t1 = get_t();
     report_time(&ctx, SV("Execution took: "), t1-t0);
     if(!wasm && !(flags & DNDC_NO_CLEANUP))
-        destroy_linear_storage(&la_);
+        destroy_linear_storage(&ctx.temp);
     return result;
 }
 
@@ -2075,6 +2061,640 @@ dndc_compile_dnd_file(
     int err = run_the_dndc(flags, base_directory, source_text, source_path, outpath, outstring, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread, jsargs);
     return err;
 }
+
+
+#if defined(WASM) && !defined(NO_DNDC_AST_API)
+#define NO_DNDC_AST_API
+#endif
+
+// ast API
+#ifndef NO_DNDC_AST_API
+DNDC_API
+DndcStringView
+dndc_dup_sv(DndcContext* ctx, DndcStringView text){
+    return (DndcStringView){
+        .text = Allocator_dupe(ctx->string_allocator, text.text, text.length),
+        .length = text.length,
+    };
+}
+
+DNDC_API
+DndcContext*
+dndc_create_ctx(unsigned long long flags, DndcErrorFunc*_Nullable error_func, void*_Nullable error_func_data, DndcFileCache*_Nullable base64cache, DndcFileCache*_Nullable textcache, DndcStringView base_directory, DndcStringView outpath, int copy_paths){
+    DndcContext* ctx = calloc(1, sizeof *ctx);
+    ctx->flags = flags;
+    ctx->error_func = error_func;
+    ctx->error_user_data = error_func_data;
+    if(base64cache)
+        ctx->b64cache = base64cache;
+    else {
+        ctx->b64cache = dndc_create_filecache();
+        ctx->b64cache_allocated = 1;
+    }
+    if(textcache)
+        ctx->textcache = textcache;
+    else {
+        ctx->textcache = dndc_create_filecache();
+        ctx->textcache_allocated = 1;
+    }
+    ctx->titlenode = INVALID_NODE_HANDLE;
+    ctx->navnode = INVALID_NODE_HANDLE;
+    ctx->root_handle = INVALID_NODE_HANDLE;
+    ctx->temp = new_linear_storage(1024*1024, "temporary storage");
+    ctx->temp_allocator = allocator_from_la(&ctx->temp);
+    ctx->allocator = allocator_from_arena(&ctx->main_arena);
+    ctx->string_allocator = allocator_from_arena(&ctx->string_arena);
+    if(base_directory.length){
+        if(copy_paths)
+            ctx->base_directory = dndc_dup_sv(ctx, base_directory);
+        else
+            ctx->base_directory = base_directory;
+    }
+    else
+        ctx->base_directory = SV("");
+    if(outpath.length){
+        if(copy_paths)
+            ctx->outputfile = dndc_dup_sv(ctx, outpath);
+        else
+            ctx->outputfile = outpath;
+    }
+    else
+        ctx->outputfile = SV("");
+    return ctx;
+}
+
+
+DNDC_API
+void
+dndc_ctx_destroy(DndcContext* ctx){
+    if(ctx->textcache_allocated)
+        dndc_filecache_destroy(ctx->textcache);
+    if(ctx->b64cache_allocated)
+        dndc_filecache_destroy(ctx->b64cache);
+    Allocator_free_all(ctx->temp_allocator);
+    Allocator_free_all(ctx->allocator);
+    Allocator_free_all(ctx->string_allocator);
+    destroy_linear_storage(&ctx->temp);
+    free(ctx);
+}
+
+DNDC_API
+int
+dndc_ctx_store_builtin_file(DndcContext* ctx, DndcStringView filename, DndcStringView contents){
+    ctx_store_builtin_file(ctx, filename, contents);
+    return 0;
+}
+
+static inline
+NodeHandle
+check_api_handle(DndcContext* ctx, DndcNodeHandle handle){
+    if(handle >= ctx->nodes.count)
+        return INVALID_NODE_HANDLE;
+    return (NodeHandle){._value=handle};
+}
+
+DNDC_API
+int
+dndc_ctx_parse_string(DndcContext* ctx, DndcNodeHandle root, DndcStringView filename, DndcStringView contents){
+    NodeHandle handle = check_api_handle(ctx, root);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE)) return 1;
+    int e = dndc_parse(ctx, handle, filename, contents.text, contents.length);
+    if(e){
+        report_set_error(ctx);
+        memset(&ctx->error, 0, sizeof(ctx->error));
+    }
+    return e;
+}
+
+DNDC_API
+DndcNodeHandle
+dndc_ctx_make_root(DndcContext* ctx, DndcStringView filename){
+    if(!NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)){
+        return DNDC_NODE_HANDLE_INVALID;
+    }
+    NodeHandle root_handle = alloc_handle(ctx);
+    ctx->root_handle = root_handle;
+    Node* root = get_node(ctx, root_handle);
+    root->col = 0;
+    root->row = 0;
+    Marray_push(StringView)(&ctx->filenames, ctx->allocator, filename);
+    root->filename_idx = ctx->filenames.count-1;
+    root->type = NODE_MD;
+    root->parent = root_handle;
+    return root_handle._value;
+}
+
+DNDC_API
+DndcNodeHandle
+dndc_ctx_get_root(DndcContext* ctx){
+    return ctx->root_handle._value;
+}
+
+DNDC_API
+int
+dndc_ctx_set_root(DndcContext* ctx, DndcNodeHandle handle){
+    if(handle != DNDC_NODE_HANDLE_INVALID && handle >= ctx->nodes.count) return 1;
+    if(!NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)){
+        Node* root = get_node(ctx, ctx->root_handle);
+        root->parent = INVALID_NODE_HANDLE;
+    }
+    ctx->root_handle._value = handle;
+    return 0;
+}
+
+DNDC_API
+int
+dndc_node_set_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView key, DndcStringView value){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    Node* node = get_node(ctx, handle);
+    node_set_attribute(node, ctx->allocator, key, value);
+    return 0;
+}
+
+DNDC_API
+DndcNodeHandle
+dndc_node_get_parent(DndcContext* ctx, DndcNodeHandle dnh){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return DNDC_NODE_HANDLE_INVALID;
+    return get_node(ctx, handle)->parent._value;
+}
+
+DNDC_API
+int
+dndc_node_get_type(DndcContext* ctx, DndcNodeHandle dnh){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return NODE_INVALID;
+    return get_node(ctx, handle)->type;
+}
+
+DNDC_API
+int
+dndc_node_set_type(DndcContext* ctx, DndcNodeHandle dnh, int type){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    if(type < 0 || type > NODE_INVALID)
+        return 1;
+    get_node(ctx, handle)->type = type;
+    Marray(NodeHandle)* node_store = NULL;
+    switch(type){
+        case NODE_IMPORT:
+            node_store = &ctx->imports;
+            get_node(ctx, handle)->flags |= NODEFLAG_IMPORT;
+            break;
+        case NODE_STYLESHEETS:
+            node_store = &ctx->stylesheets_nodes;
+            break;
+        case NODE_LINKS:
+            node_store = &ctx->link_nodes;
+            break;
+        case NODE_SCRIPTS:
+            node_store = &ctx->script_nodes;
+            break;
+        case NODE_JS:
+            node_store = &ctx->user_script_nodes;
+            break;
+        case NODE_DATA:
+            node_store = &ctx->data_nodes;
+            break;
+        case NODE_META:
+            node_store = &ctx->meta_nodes;
+            break;
+        case NODE_TITLE:
+            ctx->titlenode = handle;
+            break;
+        case NODE_NAV:
+            ctx->navnode = handle;
+            break;
+        default:
+            break;
+    }
+    if(node_store)
+        Marray_push(NodeHandle)(node_store, ctx->allocator, handle);
+    return 0;
+}
+
+DNDC_API
+int
+dndc_node_get_flags(DndcContext* ctx, DndcNodeHandle dnh){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 0;
+    return get_node(ctx, handle)->flags;
+}
+
+DNDC_API
+int
+dndc_node_get_header(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView* sv){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    *sv = get_node(ctx, handle)->header;
+    return 0;
+}
+
+DNDC_API
+int
+dndc_node_set_header(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sv){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    get_node(ctx, handle)->header = sv;
+    return 0;
+}
+
+DNDC_API
+int
+dndc_expand_to_dnd(DndcContext* ctx, DndcLongString* ls){
+    if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return 1;
+    MStringBuilder output_sb = {.allocator = get_mallocator()};
+    int e = expand_to_dnd(ctx, &output_sb);
+    if(e){
+        report_set_error(ctx);
+        memset(&ctx->error, 0, sizeof ctx->error);
+        return e;
+    }
+    *ls = msb_detach_ls(&output_sb);
+    return 0;
+}
+DNDC_API
+int
+dndc_render_to_html(DndcContext* ctx, DndcLongString* ls){
+    MStringBuilder output_sb = {.allocator = get_mallocator()};
+    if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return 1;
+    int e = render_tree(ctx, &output_sb);
+    if(e) {msb_destroy(&output_sb); return e;}
+    *ls = msb_detach_ls(&output_sb);
+    return 0;
+}
+
+DNDC_API
+int
+dndc_format_tree(DndcContext* ctx, DndcLongString* ls){
+    if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return 1;
+    MStringBuilder output_sb = {.allocator = get_mallocator()};
+    int e = format_tree(ctx, &output_sb);
+    if(e) {
+        msb_destroy(&output_sb);
+        return e;
+    }
+    *ls = msb_detach_ls(&output_sb);
+    return 0;
+}
+
+DNDC_API
+int
+dndc_format_node(DndcContext* ctx, DndcNodeHandle dnh, int indent, DndcLongString* ls){
+    if(indent < 0 || indent > 50) return 1;
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    Node* node = get_node(ctx, handle);
+    MStringBuilder output_sb = {.allocator = get_mallocator()};
+    int e = format_node(ctx, &output_sb, node, indent);
+    if(e){
+        msb_destroy(&output_sb);
+        return e;
+    }
+    *ls = msb_detach_ls(&output_sb);
+    return 0;
+}
+
+DNDC_API
+DndcNodeHandle
+dndc_node_by_id(DndcContext* ctx, DndcStringView sv){
+    if(sv.length > 256) return DNDC_NODE_HANDLE_INVALID;
+    MStringBuilder msb = {.allocator = ctx->temp_allocator};
+    MStringBuilder msb2 = {.allocator = ctx->temp_allocator};
+    msb_write_kebab(&msb, sv.text, sv.length);
+    if(!msb.cursor)
+        return DNDC_NODE_HANDLE_INVALID;
+    DndcNodeHandle result = DNDC_NODE_HANDLE_INVALID;
+    sv = msb_borrow_sv(&msb);
+    // OPTIMIZE ME
+    for(size_t i = 0; i < ctx->nodes.count; i++){
+        NodeHandle handle = {.index=i};
+        StringView id = node_get_id(ctx, handle);
+        if(!id.length) continue;
+        msb_write_kebab(&msb2, id.text, id.length);
+        StringView k = msb_borrow_sv(&msb2);
+        if(SV_equals(sv, k)){
+            result = handle._value;
+            goto done;
+        }
+    }
+    msb_destroy(&msb2);
+    msb_destroy(&msb);
+    done:
+    return result;
+}
+
+DNDC_API
+int
+dndc_node_get_id(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView* outsv){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    *outsv = node_get_id(ctx, handle);
+    return 0;
+}
+
+DNDC_API
+int
+dndc_node_set_id(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sv){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    node_set_id(ctx, handle, sv);
+    return 0;
+}
+
+DNDC_API
+int
+dndc_node_append_child(DndcContext* ctx, DndcNodeHandle parent_, DndcNodeHandle child_){
+    NodeHandle child = check_api_handle(ctx, child_);
+    NodeHandle parent = check_api_handle(ctx, parent_);
+    if(NodeHandle_eq(child, INVALID_NODE_HANDLE) || NodeHandle_eq(parent, INVALID_NODE_HANDLE))
+        return 1;
+    Node* ch = get_node(ctx, child);
+    if(!NodeHandle_eq(ch->parent, INVALID_NODE_HANDLE)) // must be orphan
+        return 1;
+    if(NodeHandle_eq(child, parent)) // can't append to itself
+        return 1;
+    append_child(ctx, parent, child);
+    return 0;
+}
+
+DNDC_API
+int
+dndc_node_insert_child(DndcContext* ctx, DndcNodeHandle parent_, size_t i, DndcNodeHandle child_){
+    NodeHandle child = check_api_handle(ctx, child_);
+    NodeHandle parent = check_api_handle(ctx, parent_);
+    if(NodeHandle_eq(child, INVALID_NODE_HANDLE) || NodeHandle_eq(parent, INVALID_NODE_HANDLE))
+        return 1;
+    Node* ch = get_node(ctx, child);
+    if(!NodeHandle_eq(ch->parent, INVALID_NODE_HANDLE)) // must be orphan
+        return 1;
+    if(NodeHandle_eq(child, parent)) // can't append to itself
+        return 1;
+    node_insert_child(ctx, parent, i, child);
+    return 0;
+}
+
+DNDC_API
+int
+dndc_node_remove_child(DndcContext* ctx, DndcNodeHandle parent_, size_t i){
+    NodeHandle parent = check_api_handle(ctx, parent_);
+    if(NodeHandle_eq(parent, INVALID_NODE_HANDLE))
+        return 1;
+    node_remove_child(get_node(ctx, parent), i, ctx->allocator);
+    return 0;
+}
+
+DNDC_API
+int
+dndc_node_has_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sv){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 0;
+    return node_has_class(get_node(ctx, handle), sv);
+}
+
+DNDC_API
+int
+dndc_node_has_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sv){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 0;
+    return node_has_attribute(get_node(ctx, handle), sv);
+}
+
+DNDC_API
+int
+dndc_ctx_node_invalid(DndcContext* ctx, DndcNodeHandle dnh){
+    return NodeHandle_eq(check_api_handle(ctx, dnh), INVALID_NODE_HANDLE);
+}
+
+DNDC_API
+void
+dndc_node_detach(DndcContext* ctx, DndcNodeHandle dnh){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return;
+    Node* node = get_node(ctx, handle);
+    if(NodeHandle_eq(node->parent, INVALID_NODE_HANDLE))
+        return;
+    Node* parent = get_node(ctx, node->parent);
+    node->parent = INVALID_NODE_HANDLE;
+    for(size_t i = 0; i < node_children_count(parent); i++){
+        if(NodeHandle_eq(handle, node_children(parent)[i])){
+            node_remove_child(parent, i, ctx->allocator);
+            return;
+        }
+    }
+    // Shouldn't get here...
+}
+
+DNDC_API
+DndcNodeHandle
+dndc_make_node(DndcContext* ctx, int type, DndcStringView header, DndcNodeHandle parent_){
+    if(type < 0 || type > DNDC_NODE_TYPE_INVALID) return DNDC_NODE_HANDLE_INVALID;
+    NodeHandle handle = alloc_handle(ctx);
+    Node* node = get_node(ctx, handle);
+    node->type = type;
+    NodeHandle parent = check_api_handle(ctx, parent_);
+    node->parent = parent;
+    node->header = header;
+    if(!NodeHandle_eq(parent, INVALID_NODE_HANDLE))
+        append_child(ctx, parent, handle);
+    Marray(NodeHandle)* node_store = NULL;
+    switch(type){
+        case NODE_IMPORT:
+            node_store = &ctx->imports;
+            node->flags |= NODEFLAG_IMPORT;
+            break;
+        case NODE_STYLESHEETS:
+            node_store = &ctx->stylesheets_nodes;
+            break;
+        case NODE_LINKS:
+            node_store = &ctx->link_nodes;
+            break;
+        case NODE_SCRIPTS:
+            node_store = &ctx->script_nodes;
+            break;
+        case NODE_JS:
+            node_store = &ctx->user_script_nodes;
+            break;
+        case NODE_DATA:
+            node_store = &ctx->data_nodes;
+            break;
+        case NODE_META:
+            node_store = &ctx->meta_nodes;
+            break;
+        case NODE_TITLE:
+            ctx->titlenode = handle;
+            break;
+        case NODE_NAV:
+            ctx->navnode = handle;
+            break;
+        default:
+            break;
+    }
+    if(node_store)
+        Marray_push(NodeHandle)(node_store, ctx->allocator, handle);
+    return handle._value;
+}
+
+DNDC_API
+int
+dndc_resolve_imports(DndcContext* ctx){
+    for(size_t i = 0; i < ctx->imports.count; i++){
+        NodeHandle handle = ctx->imports.data[i];
+        if(!(get_node(ctx, handle)->flags & NODEFLAG_IMPORT))
+            continue;
+        // We parse into a different node and then swap the two.
+        NodeHandle newhandle = alloc_handle(ctx);
+        Node* node = get_node(ctx, handle);
+        node->flags &= ~NODEFLAG_IMPORT;
+        bool was_import = false;
+        {
+            Node* newnode = get_node(ctx, newhandle);
+            *newnode = *node;
+            newnode->children.count = 0;
+            if(newnode->type == NODE_IMPORT){
+                newnode->type = NODE_MD;
+                was_import = true;
+            }
+            newnode->attributes = Rarray_clone(Attribute)(node->attributes, ctx->allocator);
+        }
+        if(ctx->imports.count > 1000){
+            node_print_err(ctx, node, LS("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)"));
+            goto cleanup;
+        }
+        // NOTE: re-get the node every loop as the pointer is invalidated.
+        for(size_t j = 0; j < node_children_count(node); j++, node=get_node(ctx, handle)){
+            NodeHandle child_handle = node_children(node)[j];
+            Node* child = get_node(ctx, child_handle);
+            if(child->type != NODE_STRING){
+                node_print_err(ctx, child, LS("import child is not a string"));
+                goto cleanup;
+            }
+            StringView filename = child->header;
+            StringViewResult imp_e = ctx_load_source_file(ctx, filename);
+            if(imp_e.errored){
+                MStringBuilder err_builder = {.allocator = ctx->temp_allocator};
+                if(ctx->base_directory.length){
+                    MSB_FORMAT(&err_builder, "Unable to open '", ctx->base_directory, "/", filename, "'");
+                }
+                else{
+                    MSB_FORMAT(&err_builder, "Unable to open '", filename, "'");
+                }
+                node_print_err(ctx, child, msb_borrow_ls(&err_builder));
+                msb_destroy(&err_builder);
+                goto cleanup;
+            }
+            StringView imp_text = imp_e.result;
+            int parse_e = dndc_parse(ctx, newhandle, filename, imp_text.text, imp_text.length);
+            if(parse_e){
+                report_set_error(ctx);
+                goto cleanup;
+            }
+        }
+        Node* newnode = get_node(ctx, newhandle);
+        if(was_import){
+            // change to container
+            newnode->type = NODE_CONTAINER;
+        }
+        Node* parent = get_node(ctx, newnode->parent);
+        NodeHandle* parentchildren = node_children(parent);
+        for(size_t j = 0; j < node_children_count(parent); j++){
+            if(NodeHandle_eq(parentchildren[j], handle)){
+                parentchildren[j] = newhandle;
+                break;
+            }
+        }
+        {
+            node = get_node(ctx, handle);
+            node->type = NODE_INVALID;
+            node->parent = INVALID_NODE_HANDLE;
+            node->children.count = 0;
+        }
+        Marray(NodeHandle*) handles = NULL;
+        switch(newnode->type){
+            case NODE_JS:
+                handles = &ctx->user_script_nodes;
+                break;
+            case NODE_STYLESHEETS:
+                handles = &ctx->stylesheets_nodes;
+                break;
+            case NODE_DATA:
+                handles = &ctx->data_nodes;
+                break;
+            case NODE_LINKS:
+                handles = &ctx->link_nodes;
+                break;
+            case NODE_SCRIPTS:
+                handles = &ctx->script_nodes;
+                break;
+            case NODE_IMAGE:
+                handles = &ctx->img_nodes;
+                break;
+            case NODE_IMGLINKS:
+                handles = &ctx->imglinks_nodes;
+                break;
+            default:
+                break;
+        }
+        if(handles){
+            for(size_t j = 0; j < handles->count; j++){
+                if(NodeHandle_eq(handles->data[j], handle)){
+                    handles->data[j] = newhandle;
+                    goto foundit;
+                }
+            }
+            // I don't think this can happen.
+            Marray_push(NodeHandle)(handles, ctx->allocator, newhandle);
+            foundit:;
+        }
+    }
+    return 0;
+
+    cleanup:
+    return 1;
+}
+DNDC_API
+size_t
+dndc_node_children_count(DndcContext* ctx, DndcNodeHandle dnh){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 0;
+    Node* n = get_node(ctx, handle);
+    return node_children_count(n);
+}
+
+DNDC_API
+size_t
+dndc_node_get_children(DndcContext* ctx, DndcNodeHandle dnh, DndcNodeHandle* buff, size_t buff_len, size_t* cookie){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 0;
+    Node* node = get_node(ctx, handle);
+    size_t start = *cookie;
+    size_t count = node_children_count(node);
+    if(start >= count)
+        return 0;
+    NodeHandle* children = node_children(node);
+    size_t n = count - start;
+    if(n > buff_len) n = buff_len;
+    memcpy(buff, children+start, n*sizeof(*children));
+    *cookie += n;
+    return n;
+}
+#endif
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

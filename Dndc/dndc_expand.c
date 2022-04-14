@@ -49,7 +49,7 @@ expand_to_dnd(DndcContext*ctx, MStringBuilder* msb){
     if(node->type != NODE_MD){
         result = expand_node(ctx, node, 0, msb, 0);
 
-        // node_set_err_q(ctx, node, SV("Expected md, got "), NODETYPE_TO_NODE_ALIASES[node->type]);
+        // node_set_err_q(ctx, node, SV("Expected md, got "), LS_to_SV(NODENAMES[node->type]));
         // return PARSE_ERROR;
     }
     else
@@ -128,7 +128,7 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
         case NODE_BULLETS:
         case NODE_TABLE_ROW:
         case NODE_PARA:
-            node_set_err_q(ctx, n, SV("Node escaped to top level: "), NODETYPE_TO_NODE_ALIASES[n->type]);
+            node_set_err_q(ctx, n, SV("Node escaped to top level: "), LS_to_SV(NODENAMES[n->type]));
             return PARSE_ERROR;
         case NODE_META:
         case NODE_DETAILS:
@@ -217,7 +217,7 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int n
         case NODE_TITLE:
         case NODE_PARA:
         case NODE_STRING:
-            node_set_err_q(ctx, n, SV("Node can't be expanded into text format: "), NODETYPE_TO_NODE_ALIASES[n->type]);
+            node_set_err_q(ctx, n, SV("Node can't be expanded into text format: "), LS_to_SV(NODENAMES[n->type]));
             return PARSE_ERROR;
     }
     unreachable();
@@ -391,6 +391,10 @@ expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int nod
                 result = expand_md_list(ctx, child, indent, msb, node_depth+1);
                 if(result) return result;
                 break;
+            case NODE_CONTAINER:
+                result = expand_md_body(ctx, child, indent, msb, node_depth+1);
+                if(result) return result;
+                break;
             default:
                 result = expand_node(ctx, child, indent, msb, node_depth+1);
                 if(result) return result;
@@ -411,7 +415,7 @@ expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
     NODE_CHILDREN_FOR_EACH(t, n){
         Node* row = get_node(ctx, *t);
         if(row->type != NODE_TABLE_ROW){
-            node_set_err_q(ctx, row, SV("Expected table row, got "), NODETYPE_TO_NODE_ALIASES[row->type]);
+            node_set_err_q(ctx, row, SV("Expected table row, got "), LS_to_SV(NODENAMES[row->type]));
             return PARSE_ERROR;
         }
         msb_write_nchar(msb, ' ', indent);
@@ -440,7 +444,7 @@ expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
                     first = false;
                     Node* container_item = get_node(ctx, *s);
                     if(container_item->type != NODE_STRING){
-                        node_set_err_q(ctx, row, SV("Expected string, got "), NODETYPE_TO_NODE_ALIASES[row->type]);
+                        node_set_err_q(ctx, row, SV("Expected string, got "), LS_to_SV(NODENAMES[row->type]));
                         return PARSE_ERROR;
                     }
                     msb_write_str(msb, container_item->header.text, container_item->header.length);
@@ -448,7 +452,7 @@ expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
                 }
             }
             else {
-                node_set_err_q(ctx, row, SV("Expected string or container, got "), NODETYPE_TO_NODE_ALIASES[row->type]);
+                node_set_err_q(ctx, row, SV("Expected string or container, got "), LS_to_SV(NODENAMES[row->type]));
                 return PARSE_ERROR;
             }
         }
@@ -480,7 +484,7 @@ expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, i
         Node* key = get_node(ctx, handles[0]);
         Node* value = get_node(ctx, handles[1]);
         if(key->type != NODE_STRING){
-            node_set_err_q(ctx, key, SV("Expected string for key, got "), NODETYPE_TO_NODE_ALIASES[key->type]);
+            node_set_err_q(ctx, key, SV("Expected string for key, got "), LS_to_SV(NODENAMES[key->type]));
             return PARSE_ERROR;
         }
         msb_write_nchar(msb, ' ', indent);
@@ -494,7 +498,7 @@ expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, i
             NODE_CHILDREN_FOR_EACH(v, value){
                 Node* vchild = get_node(ctx, *v);
                 if(vchild->type != NODE_STRING){
-                    node_set_err_q(ctx, vchild, SV("Expected string for value, got "), NODETYPE_TO_NODE_ALIASES[key->type]);
+                    node_set_err_q(ctx, vchild, SV("Expected string for value, got "), LS_to_SV(NODENAMES[key->type]));
                 }
                 if(!first){
                     if(vchild->col > indent){
@@ -510,7 +514,7 @@ expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, i
             }
         }
         else {
-            node_set_err_q(ctx, value, SV("Expected string or container for value, got "), NODETYPE_TO_NODE_ALIASES[value->type]);
+            node_set_err_q(ctx, value, SV("Expected string or container for value, got "), LS_to_SV(NODENAMES[value->type]));
             return PARSE_ERROR;
         }
     }

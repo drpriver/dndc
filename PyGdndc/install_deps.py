@@ -45,7 +45,7 @@ def win_install_qt() -> bool:
             DispatchMessageW(pmsg)
 
     pb = ProgressBar()
-    command = [sys.executable, '-m', 'pip', 'install', 'PySide2==5.15.2']
+    command = [sys.executable, '-m', 'pip', 'install', 'PySide6==6.2.4']
     process = subprocess.Popen(command)
     while process.poll() is None:
         time.sleep(0.01)
@@ -74,7 +74,7 @@ def unix_install_qt() -> bool:
         return False
     if not response.strip().startswith('y'):
         return False
-    command = [sys.executable, '-m', 'pip', 'install', 'PySide2==5.15.2', '--user']
+    command = [sys.executable, '-m', 'pip', 'install', 'PySide6==6.2.4', '--user']
     process = subprocess.run(command, check=True)
     return True
 
@@ -85,7 +85,7 @@ def unix_already_installed() -> None:
 def ensure_deps(report_installed:bool=False) -> bool:
     import sys
     try:
-        import PySide2
+        import PySide6
     except ImportError:
         if sys.platform == 'win32':
             return win_install_qt()

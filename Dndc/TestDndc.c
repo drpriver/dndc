@@ -811,12 +811,12 @@ test_syntax_func(void* ud_, int type, int line, int col, const unsigned short* b
     if(fail1 || fail2 || fail3 || fail4 || fail5){
         TestPrintf("Failed for token: %d:%d\n", token.line, token.col);
         fprintf(stderr, "[%zu] = {%d,%d,%d, SV16(\"", ud->idx++, type, line, col);
-        for(int i = 0; i < length; i++){
+        for(size_t i = 0; i < length; i++){
             fputc((char)begin[i], stderr);
         }
         fprintf(stderr, "\")},\n");
         fprintf(stderr, "vs {%d,%d,%d, SV16(\"", token.type, token.line, token.col);
-        for(int i = 0; i < token.msg.length; i++){
+        for(size_t i = 0; i < token.msg.length; i++){
             fputc((char)token.msg.text[i], stderr);
         }
         fprintf(stderr, "\")},\n");
@@ -860,7 +860,7 @@ TestFunction(TestUtf16Syntax){
             "     ++x['a'];\n"
             "  }\n"
             );
-    struct test_utf16_data ud = {&TEST_stats};
+    struct test_utf16_data ud = {&TEST_stats, 0};
     dndc_analyze_syntax_utf16(source, test_syntax_func, &ud);
     TestExpectEquals(ud.idx, arrlen(tokens));
     TESTEND();

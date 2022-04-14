@@ -13,8 +13,8 @@
 #define DNDC_VERSION DNDC_STRINGIFY(DNDC_MAJOR) "." DNDC_STRINGIFY(DNDC_MINOR) "." DNDC_STRINGIFY(DNDC_MICRO)
 
 #define DNDC_MAJOR 0
-#define DNDC_MINOR 10
-#define DNDC_MICRO 3
+#define DNDC_MINOR 11
+#define DNDC_MICRO 0
 #define DNDC_STRINGIFY_IMPL(x) #x
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
 //
@@ -581,10 +581,10 @@ typedef struct DndcFileCache DndcFileCache;
 // ----------------
 typedef struct DndcWorkerThread DndcWorkerThread;
 
-  // 
+  //
   // dndc_worker_thread_create
   // -------------------------
-  // Creates a new worker thread that can be passed to `dndc_compile_dnd_file`, 
+  // Creates a new worker thread that can be passed to `dndc_compile_dnd_file`,
   // to avoid creating an excessive number of threads on repeated invocation.
   DNDC_API
   DndcWorkerThread*

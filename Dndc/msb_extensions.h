@@ -329,7 +329,7 @@ msb_write_tag_escaped_str(MStringBuilder* sb, const char* text, size_t length){
 static inline
 void
 msb_shell_quote_arg(MStringBuilder* sb, const char* text, size_t length){
-    // STRATEGY: surround arg by single quotes. 
+    // STRATEGY: surround arg by single quotes.
     // Single quotes themselves need to be escaped, which can be achieved by string
     // concatenation
     msb_write_char(sb, '\'');

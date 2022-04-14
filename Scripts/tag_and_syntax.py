@@ -192,7 +192,7 @@ def fix_args(args:List[str], source_file:str) -> List[str]:
             if head in set():
                 a = '{}="{}"'.format(head, tail)
         fixed.append(a)
-    if 'clang' in fixed: 
+    if 'clang' in fixed:
         fixed.remove('clang')
     if 'clang++' in fixed:
         fixed.remove('clang++')

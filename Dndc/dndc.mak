@@ -1,5 +1,5 @@
-DNDCVERSION=0.10.3
-DNDC_COMPAT_VERSION=0.10.2
+DNDCVERSION=0.11.0
+DNDC_COMPAT_VERSION=0.11.0
 
 ifeq ($(UNAME),Darwin)
 RPATH:=-rpath @executable_path
@@ -40,8 +40,23 @@ tests: $(TESTDIR)/TestDndc_fast
 TestDndc: $(TESTDIR)/TestDndc_debug $(TESTDIR)/TestDndc_fast
 .PHONY: TestDndc
 
+$(BINDIR)/TestDndcAst_fast$(EXE): Dndc/TestDndcAst.c $(DEPDIR)/TestDndcAst_fast.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
+	$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndcAst_fast.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
+$(BINDIR)/TestDndcAst_debug$(EXE): Dndc/TestDndcAst.c $(DEPDIR)/TestDndcAst_debug.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
+	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndcAst_debug.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
+
+$(TESTDIR)/TestDndcAst_debug: $(BINDIR)/TestDndcAst_debug$(EXE)
+	$< --tee $@
+tests: $(TESTDIR)/TestDndcAst_debug
+$(TESTDIR)/TestDndcAst_fast: $(BINDIR)/TestDndcAst_fast$(EXE)
+	$< --tee $@
+tests: $(TESTDIR)/TestDndcAst_fast
+
+TestDndcAst: $(TESTDIR)/TestDndcAst_debug $(TESTDIR)/TestDndcAst_fast
+.PHONY: TestDndcAst
+
 $(BINDIR)/pydndc$(PYEXTENSION): Dndc/pydndc.c $(VENDOBJDIR)/libquickjs.o
-	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -O2 $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@  $(VENDOBJDIR)/libquickjs.o $(PYLDFLAGS) $(LINK_FLAGS)
+	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -O0 -g $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@  $(VENDOBJDIR)/libquickjs.o $(PYLDFLAGS) $(LINK_FLAGS)
 .PHONY: pydndc
 pydndc: $(BINDIR)/pydndc$(PYEXTENSION) PyGdndc/pydndc$(PYEXTENSION) PyGdndc/pydndc.pyi PyGdndc/jsdoc.dnd PyGdndc/dndc_js_api.d.ts
 TestResults/testpydndc: $(BINDIR)/pydndc$(PYEXTENSION) Dndc/testpydndc.py
