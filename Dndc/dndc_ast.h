@@ -50,11 +50,9 @@ DNDC_API
 int
 dndc_ctx_store_builtin_file(DndcContext*, DndcStringView, DndcStringView);
 
-#if 0
 DNDC_API
 int
-dndc_ctx_parse_file(DndcContext*, DndcNodeHandle, DndcLongString);
-#endif
+dndc_ctx_parse_file(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sourcepath);
 
 DNDC_API
 int

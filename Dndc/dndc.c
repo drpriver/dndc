@@ -2170,6 +2170,21 @@ dndc_ctx_parse_string(DndcContext* ctx, DndcNodeHandle root, DndcStringView file
 }
 
 DNDC_API
+int
+dndc_ctx_parse_file(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sourcepath){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE)) return 1;
+    StringViewResult svr = ctx_load_source_file(ctx, sourcepath);
+    if(svr.errored) return 1;
+    int e = dndc_parse(ctx, handle, sourcepath, svr.result.text, svr.result.length);
+    if(e){
+        report_set_error(ctx);
+        memset(&ctx->error, 0, sizeof(ctx->error));
+    }
+    return e;
+}
+
+DNDC_API
 DndcNodeHandle
 dndc_ctx_make_root(DndcContext* ctx, DndcStringView filename){
     if(!NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)){

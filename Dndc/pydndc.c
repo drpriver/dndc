@@ -1798,6 +1798,26 @@ DndcNodePy_parse(PyObject* s, PyObject* args, PyObject* kwargs){
 }
 static
 PyObject* _Nullable
+DndcNodePy_parse_file(PyObject* s, PyObject* args, PyObject* kwargs){
+    PyObject* path;
+    const char* const keywords[] = { "path", NULL};
+    PushDiagnostic();
+    SuppressCastQual();
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|:parse", (char**)keywords, &PyUnicode_Type, &path)){
+        return NULL;
+    }
+    PopDiagnostic();
+    DndcNodePy* self = (DndcNodePy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    PyList_SetSlice(self->pyctx->errors, 0, PyList_Size(self->pyctx->errors), NULL);
+    int err = dndc_ctx_parse_file(ctx, self->handle, dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(path)));
+    if(err){
+        return PyErr_Format(PyExc_ValueError, "Error while parsing (check the Context's errors for details)");
+    }
+    Py_RETURN_NONE;
+}
+static
+PyObject* _Nullable
 DndcNodePy_make_child(PyObject* s, PyObject* args, PyObject* kwargs){
     PyObject* type;
     PyObject *header = NULL;
@@ -2020,6 +2040,7 @@ static PyMemberDef DndcNodePy_members[] = {
 static PyMethodDef DndcNodePy_methods[] = {
     {"set_attribute", (PyCFunction)DndcNodePy_set_attribute, METH_VARARGS|METH_KEYWORDS, "set an attribute"},
     {"parse", (PyCFunction)DndcNodePy_parse, METH_VARARGS|METH_KEYWORDS, "parse a dnd string"},
+    {"parse_file", (PyCFunction)DndcNodePy_parse_file, METH_VARARGS|METH_KEYWORDS, "parse a dnd file"},
     {"format", DndcNodePy_format, METH_O, "format a node"},
     {"append_child", DndcNodePy_append_child, METH_O, "append a node as a child of another node"},
     {"detach", DndcNodePy_detach, METH_NOARGS, "detach"},
