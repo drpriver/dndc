@@ -957,7 +957,7 @@ change_coord(int id, int x, int y){
     err = dndc_node_set_attribute(ctx.ctx, id, {sizeof("coord")-1, "coord"}, sv);
     if(err) return;
     DndcLongString outstring;
-    err = dndc_format_tree(ctx.ctx, &outstring);
+    err = dndc_ctx_format_tree(ctx.ctx, &outstring);
     if(err) return;
     page->textedit->setPlainText(QString::fromUtf8(outstring.text, outstring.length));
     dndc_free_string(outstring);
@@ -1252,8 +1252,8 @@ Page::format(void){
     int err = dndc_compile_dnd_file(
             flags,
             DndcStringView{},
-            DndcStringView{},
             textsv,
+            DndcStringView{},
             DndcStringView{},
             &outstring,
             nullptr, nullptr,

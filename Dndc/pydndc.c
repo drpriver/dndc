@@ -1973,6 +1973,14 @@ DndcNodePy_format(PyObject* s, PyObject* arg){
 static
 PyObject* _Nullable
 DndcNodePy_append_child(PyObject* s, PyObject* arg){
+    if(PyUnicode_Check(arg)){
+        // special case for strings
+        DndcNodePy* self = (DndcNodePy*)s;
+        DndcStringView content = dndc_ctx_dup_sv(self->pyctx->ctx, pystring_borrow_stringview(arg));
+        DndcNodeHandle child = dndc_ctx_make_node(self->pyctx->ctx, DNDC_NODE_TYPE_STRING, content, self->handle);
+        (void)child;
+        Py_RETURN_NONE;
+    }
     if(!Py_IS_TYPE(arg, &DndcNodePyType)) return PyErr_Format(PyExc_TypeError, "Need a node argument for append");
     DndcNodePy* self = (DndcNodePy*)s;
     DndcNodePy* child = (DndcNodePy*)arg;
@@ -2026,7 +2034,8 @@ DndcNodePy_repr(PyObject* s){
     DndcContext* ctx = self->pyctx->ctx;
     DndcNodeHandle handle = self->handle;
     StringView sv;
-    dndc_node_get_header(ctx, handle, &sv);
+    int err = dndc_node_get_header(ctx, handle, &sv);
+    if(err) return PyErr_Format(PyExc_ValueError, "Repr of invalid node");
     int type = dndc_node_get_type(ctx, handle);
     const char* typename = "";
     switch(type){
@@ -2037,7 +2046,7 @@ DndcNodePy_repr(PyObject* s){
     PyObject* h = PyUnicode_FromStringAndSize(sv.text, sv.length);
     size_t n_children = dndc_node_children_count(ctx, handle);
 
-    PyObject* result = PyUnicode_FromFormat("Node(%s, %R, [%zu children], internal_id=%u)", typename, h, n_children, self->handle);
+    PyObject* result = PyUnicode_FromFormat("Node(%s, %R, [%zu children], int_id=%u)", typename, h, n_children, self->handle);
     Py_DECREF(h);
     return result;
 }

@@ -1,6 +1,7 @@
 #if !defined(_WIN32)
 #include <errno.h> // For reporting write file erors
 #endif
+#define NO_DNDC_AST_API
 #define DNDC_API static inline
 #include "dndc.h"
 #include "dndc_long_string.h"
@@ -770,6 +771,5 @@ print_file_writing_error(const char* filename, FileWriteResult err){
     #endif
 }
 
-#define NO_DNDC_AST_API
 #include "dndc.c"
 #include "get_input.c"

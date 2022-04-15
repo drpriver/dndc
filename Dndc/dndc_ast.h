@@ -1,5 +1,6 @@
 #ifndef DNDC_AST_H
 #define DNDC_AST_H
+#ifndef NO_DNDC_AST_API
 #include "dndc.h"
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -39,7 +40,7 @@ dndc_ctx_dup_sv(DndcContext* ctx, DndcStringView text);
 
 DNDC_API
 DndcContext*
-dndc_create_ctx(unsigned long long flags, DndcErrorFunc*_Nullable error_func, void*_Nullable error_func_data, DndcFileCache*_Nullable base64cache, DndcFileCache*_Nullable textcache, DndcStringView base_directory, DndcStringView outpath, int copy_paths);
+dndc_create_ctx(unsigned long long flags, DNDC_NULLABLE(DndcErrorFunc*) error_func, DNDC_NULLABLE(void*) error_func_data, DNDC_NULLABLE(DndcFileCache*) base64cache, DNDC_NULLABLE(DndcFileCache*) textcache, DndcStringView base_directory, DndcStringView outpath, int copy_paths);
 
 DNDC_API
 void
@@ -304,7 +305,7 @@ dndc_ctx_resolve_data_blocks(DndcContext*);
 
 DNDC_API
 size_t
-dndc_ctx_select_nodes(DndcContext* ctx, size_t* cookie, int type, DndcStringView*_Nullable attributes, size_t attribute_count, DndcStringView*_Nullable classes, size_t class_count,  DndcNodeHandle* outbuf, size_t buflen);
+dndc_ctx_select_nodes(DndcContext* ctx, size_t* cookie, int type, DNDC_NULLABLE(DndcStringView*) attributes, size_t attribute_count, DNDC_NULLABLE(DndcStringView*) classes, size_t class_count,  DndcNodeHandle* outbuf, size_t buflen);
 
 #ifdef __cplusplus
 }
@@ -420,4 +421,5 @@ compile_dnd_to_html_with_extra_script(DndcStringView basedir,DndcStringView file
 #pragma clang assume_nonnull end
 #endif
 
+#endif
 #endif

@@ -62,5 +62,23 @@ PyModule_AddObjectRef(PyObject* mod, const char* name, PyObject* value){
     return result;
 }
 #endif
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9
+// shim
+static inline
+PyObject*
+PyObject_CallOneArg(PyObject* callable, PyObject* arg){
+    PyObject* tup = PyTuple_Pack(1, arg); // new ref
+    if(!tup) return NULL;
+    PyObject* result = PyObject_CallObject(callable, tup);
+    Py_DECREF(tup);
+    return result;
+}
+
+static inline
+int
+Py_IS_TYPE(const PyObject* o, const PyTypeObject* type){
+    return o->ob_type == type;
+}
+#endif
 
 #endif
