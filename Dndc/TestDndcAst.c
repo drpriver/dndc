@@ -1,13 +1,18 @@
 #include "dndc_api_def.h"
 #include "dndc.h"
 #include "dndc_long_string.h"
+#define DNDC_AST_EXAMPLE
 #include "dndc_ast.h"
 #include "testing.h"
+#include "file_util.h"
+#include "mallocator.h"
 
 static TestFunc TestDndcAst;
+static TestFunc TestAstExample;
 
 int main(int argc, char** argv){
     RegisterTest(TestDndcAst);
+    RegisterTest(TestAstExample);
     int ret = test_main(argc, argv);
     return ret;
 }
@@ -26,6 +31,95 @@ TestFunction(TestDndcAst){
     e = dndc_ctx_parse_string(ctx, root, SV("yolo"), SV("::import\n  hello\n"));
     TestExpectFalse(e);
     dndc_ctx_destroy(ctx);
+    TESTEND();
+}
+
+TestFunction(TestAstExample){
+    TESTBEGIN();
+    // Verify that the output of doing the ast funcs manually matches the output of
+    // the integrated function.
+
+    // Copy paste from TestDndc.TestExamplesWork
+    // Possibly should put in common header.
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+        ;
+    LongString examples[] = {
+        LS("Examples/Calendar/calendar.dnd"),
+        LS("Examples/KrugsBasement/krugs-basement.dnd"),
+        LS("Examples/Rules/characters.dnd"),
+        LS("Examples/Rules/index.dnd"),
+        LS("Examples/Rules/mechanics.dnd"),
+        LS("Examples/Rules/religion.dnd"),
+        LS("Examples/Rules/rules.dnd"),
+        LS("Examples/Wiki/Inner/hello.dnd"),
+        LS("Examples/Wiki/flat.dnd"),
+        LS("Examples/Wiki/index.dnd"),
+        LS("Examples/Wiki/lorem.dnd"),
+        LS("Examples/Wiki/wiki.dnd"),
+        LS("Examples/index.dnd"),
+        LS("Documentation/OVERVIEW.dnd"),
+        LS("Documentation/REFERENCE.dnd"),
+        LS("PyGdndc/jsdoc.dnd"),
+        LS("PyGdndc/changelog.dnd"),
+        LS("PyGdndc/Manual.dnd"),
+    };
+    StringView base_dirs[] = {
+        SV("Examples/Calendar"),
+        SV("Examples/KrugsBasement"),
+        SV("Examples/Rules"),
+        SV("Examples/Rules"),
+        SV("Examples/Rules"),
+        SV("Examples/Rules"),
+        SV("Examples/Rules"),
+        SV("Examples/Wiki/Inner"),
+        SV("Examples/Wiki"),
+        SV("Examples/Wiki"),
+        SV("Examples/Wiki"),
+        SV("Examples/Wiki"),
+        SV("Examples"),
+        SV(""),
+        SV(""),
+        SV("PyGdndc"),
+        SV(""),
+        SV(""),
+    };
+    _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
+    for(size_t i = 0; i < arrlen(examples); i++){
+        LongString ast_output = {0};
+        LongString dnd_output = {0};
+        Allocator allocator = get_mallocator();
+        TextFileResult data = read_file(examples[i].text, allocator);
+        if(data.errored){
+            TestPrintValue("Unable to open: examples[i]", examples[i]);
+        }
+        TestAssertSuccess(data);
+        {
+            int e;
+            e = dndc_compile_dnd_file(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), SV("example.html"), &dnd_output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, LS(""));
+            if(e){
+                TestPrintValue("dndc_compile_dnd failed, example:", examples[i]);
+                TestPrintValue("Base dir:", base_dirs[i]);
+            }
+            TestAssertFalse(e);
+            e = compile_dnd_to_html(base_dirs[i], LS_to_SV(examples[i]), LS_to_SV(data.result), &ast_output);
+            if(e){
+                TestPrintValue("compile_dnd_to_html failed, example:", examples[i]);
+                TestPrintValue("Base dir:", base_dirs[i]);
+            }
+            TestAssertFalse(e);
+            if(!TestExpectEquals2(LS_equals, ast_output, dnd_output)){
+                TestPrintValue("Example failed:", examples[i]);
+                TestPrintValue("Base dir:", base_dirs[i]);
+                TEST_stats.assert_failures++;
+                return TEST_stats;
+            }
+            dndc_free_string(ast_output);
+            dndc_free_string(dnd_output);
+        }
+        Allocator_free(allocator, data.result.text, data.result.length+1);
+    }
     TESTEND();
 }
 

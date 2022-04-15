@@ -35,7 +35,7 @@ typedef struct DndcNodeLocation {
 // as the ctx.
 DNDC_API
 DndcStringView
-dndc_dup_sv(DndcContext* ctx, DndcStringView text);
+dndc_ctx_dup_sv(DndcContext* ctx, DndcStringView text);
 
 DNDC_API
 DndcContext*
@@ -161,6 +161,15 @@ DNDC_API
 size_t
 dndc_node_children_count(DndcContext*, DndcNodeHandle);
 
+//
+// Convenience function. Iterates over the children of a node and concatenates
+// their strings together.
+// This could be useful for executing custom scripting languages.
+//
+DNDC_API
+int
+dndc_node_cat_string_children(DndcContext*, DndcNodeHandle, DndcLongString* out);
+
 #if 0
 DNDC_API
 int
@@ -182,35 +191,38 @@ dndc_node_remove_class(DndcContext*, DndcNodeHandle, DndcStringView);
 
 DNDC_API
 int
-dndc_expand_to_dnd(DndcContext*, DndcLongString*);
+dndc_ctx_expand_to_dnd(DndcContext*, DndcLongString*);
 
 DNDC_API
 int
-dndc_render_to_html(DndcContext*, DndcLongString*);
+dndc_ctx_render_to_html(DndcContext*, DndcLongString*);
 
 #if 0
 DNDC_API
 int
-dndc_render_node(DndcContext*, DndcNodeHandle, DndcLongString*);
+dndc_node_render_to_html(DndcContext*, DndcNodeHandle, DndcLongString*);
 
 #endif
 DNDC_API
 int
-dndc_format_tree(DndcContext*, DndcLongString*);
+dndc_ctx_format_tree(DndcContext*, DndcLongString*);
 
 DNDC_API
 int
-dndc_format_node(DndcContext*, DndcNodeHandle, int indent, DndcLongString*);
+dndc_node_format(DndcContext*, DndcNodeHandle, int indent, DndcLongString*);
 #if 0
 
 DNDC_API
 int
-dndc_execute_js_in_node(DndcContext*, DndcNodeHandle, DndcLongString);
+dndc_node_execute_js(DndcContext*, DndcNodeHandle, DndcLongString);
+
+#endif
 
 DNDC_API
 int
-dndc_execute_js_blocks(DndcContext*, LongString jsargs);
+dndc_ctx_execute_js(DndcContext*, DndcLongString jsargs);
 
+#if 0
 DNDC_API
 DndcNodeLocation
 dndc_node_location(DndcContext*, DndcNodeHandle);
@@ -219,7 +231,7 @@ dndc_node_location(DndcContext*, DndcNodeHandle);
 
 DNDC_API
 DndcNodeHandle
-dndc_node_by_id(DndcContext*, DndcStringView);
+dndc_ctx_node_by_id(DndcContext*, DndcStringView);
 
 DNDC_API
 int
@@ -268,16 +280,141 @@ enum DndcNodeType {
 // header may be empty and parent may be DNDC_NODE_HANDLE_INVALID
 DNDC_API
 DndcNodeHandle
-dndc_make_node(DndcContext*, int type, DndcStringView header, DndcNodeHandle parent);
+dndc_ctx_make_node(DndcContext*, int type, DndcStringView header, DndcNodeHandle parent);
 
 DNDC_API
 int
-dndc_resolve_imports(DndcContext*);
+dndc_ctx_resolve_imports(DndcContext*);
+
+DNDC_API
+int
+dndc_ctx_gather_links(DndcContext*);
+
+DNDC_API
+int
+dndc_ctx_build_nav(DndcContext*);
+
+DNDC_API
+int
+dndc_ctx_resolve_links(DndcContext*);
+
+DNDC_API
+int
+dndc_ctx_resolve_data_blocks(DndcContext*);
+
+DNDC_API
+size_t
+dndc_ctx_select_nodes(DndcContext* ctx, size_t* cookie, int type, DndcStringView*_Nullable attributes, size_t attribute_count, DndcStringView*_Nullable classes, size_t class_count,  DndcNodeHandle* outbuf, size_t buflen);
 
 #ifdef __cplusplus
 }
 #endif
 
+
+#ifdef DNDC_AST_EXAMPLE
+//
+// This is an example of how to recreate compiling a dnd string. You can insert
+// custom manipulations between these steps (which is the entire point of the
+// ast api over just calling `dndc_compile_dnd_file`).
+//
+static inline
+int
+compile_dnd_to_html(DndcStringView basedir, DndcStringView filename, DndcStringView text, DndcLongString* outhtml){
+    unsigned long long flags = 0;
+    DndcFileCache* b64cache = NULL;
+    DndcFileCache* textcache = NULL;
+    DndcErrorFunc* errfunc = dndc_stderr_error_func;
+    void* errarg = NULL;
+    int copy_paths = 0;
+    DndcStringView outpath = {.length=sizeof("example.html")-1, "example.html"};
+    DndcContext* ctx = dndc_create_ctx(flags, errfunc, errarg, b64cache, textcache, basedir, outpath, copy_paths);
+    DndcNodeHandle root = dndc_ctx_make_root(ctx, filename);
+    int err = 0;
+    err = dndc_ctx_parse_string(ctx, root, filename, text);
+    if(err) goto fail;
+
+    err = dndc_ctx_resolve_imports(ctx);
+    if(err) goto fail;
+
+    {
+        DndcLongString jsargs = {4, "null"};
+        err = dndc_ctx_execute_js(ctx, jsargs);
+    }
+    if(err) goto fail;
+
+    err = dndc_ctx_gather_links(ctx);
+    if(err) goto fail;
+
+    err = dndc_ctx_resolve_links(ctx);
+    if(err) goto fail;
+
+    err = dndc_ctx_build_nav(ctx);
+    if(err) goto fail;
+
+    err = dndc_ctx_resolve_data_blocks(ctx);
+    if(err) goto fail;
+
+    err = dndc_ctx_render_to_html(ctx, outhtml);
+    if(err) goto fail;
+
+    fail:
+    dndc_ctx_destroy(ctx);
+    return err;
+}
+
+
+// This is the same as above, but it additionally injects some javascript
+static inline
+int
+compile_dnd_to_html_with_extra_script(DndcStringView basedir,DndcStringView filename, DndcStringView text, DndcLongString* outhtml){
+    unsigned long long flags = 0;
+    DndcFileCache* b64cache = NULL;
+    DndcFileCache* textcache = NULL;
+    DndcErrorFunc* errfunc = dndc_stderr_error_func;
+    void* errarg = NULL;
+    int copy_paths = 0;
+    DndcStringView outpath = {.length=sizeof("example.html")-1, "example.html"};
+    DndcContext* ctx = dndc_create_ctx(flags, errfunc, errarg, b64cache, textcache, basedir, outpath, copy_paths);
+    DndcNodeHandle root = dndc_ctx_make_root(ctx, filename);
+    int err = 0;
+    err = dndc_ctx_parse_string(ctx, root, filename, text);
+    if(err) goto fail;
+
+    err = dndc_ctx_resolve_imports(ctx);
+    if(err) goto fail;
+
+    // inject a script
+    DndcNodeHandle jsnode = dndc_ctx_make_node(ctx, DNDC_NODE_TYPE_SCRIPTS, (DndcStringView){0}, root);
+#define MYSCRIPT "window.alert('pwned');"
+    dndc_ctx_make_node(ctx, DNDC_NODE_TYPE_STRING, (DndcStringView){sizeof(MYSCRIPT)-1, MYSCRIPT}, jsnode);
+#undef MYSCRIPT
+
+    {
+        DndcLongString jsargs = {4, "null"};
+        err = dndc_ctx_execute_js(ctx, jsargs);
+    }
+    if(err) goto fail;
+
+    err = dndc_ctx_gather_links(ctx);
+    if(err) goto fail;
+
+    err = dndc_ctx_resolve_links(ctx);
+    if(err) goto fail;
+
+    err = dndc_ctx_build_nav(ctx);
+    if(err) goto fail;
+
+    err = dndc_ctx_resolve_data_blocks(ctx);
+    if(err) goto fail;
+
+    err = dndc_ctx_render_to_html(ctx, outhtml);
+    if(err) goto fail;
+
+    fail:
+    dndc_ctx_destroy(ctx);
+    return err;
+}
+#endif
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

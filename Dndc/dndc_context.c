@@ -327,10 +327,13 @@ static
 void
 report_set_error(DndcContext* ctx){
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
-        return;
+        goto clear;
     if(! ctx->error_func)
-        return;
+        goto clear;
     ctx->error_func(ctx->error_user_data, DNDC_ERROR_MESSAGE, ctx->error.filename.text, ctx->error.filename.length, ctx->error.line, ctx->error.col, ctx->error.message.text, ctx->error.message.length);
+    clear:
+    Allocator_free(ctx->string_allocator, ctx->error.message.text, ctx->error.message.length+1);
+    memset(&ctx->error, 0, sizeof ctx->error);
 }
 
 static

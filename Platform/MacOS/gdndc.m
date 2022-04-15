@@ -1579,13 +1579,13 @@ completionHandler:(void (^)(NSString *result))completionHandler{
                 int length = snprintf(buffer, sizeof buffer, "%.*s@ %.*s", (int)(at - header.text), header.text, (int)c.length, c.text);
                 StringView h = {.text=buffer, .length=length};
 
-                dndc_node_set_header(ctx, internal_id, dndc_dup_sv(ctx, h));
+                dndc_node_set_header(ctx, internal_id, dndc_ctx_dup_sv(ctx, h));
             }
         }
     }
     {
         LongString expanded;
-        err = dndc_format_tree(ctx, &expanded);
+        err = dndc_ctx_format_tree(ctx, &expanded);
         if(err) goto fail;
         self->text.string = ns_consume_ls(expanded);
     }

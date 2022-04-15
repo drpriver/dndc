@@ -318,9 +318,9 @@ PyMethodDef pydndc_methods[] = {
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
         #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-        "htmlgen(text:str, base_dir:str='.', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, output_name:str=None, jsargs:str=None)\n"
+        "htmlgen(text:str, base_dir:str='.', filename:str='(string input)', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, output_name:str=None, jsargs:str=None)\n"
         #else
-        "htmlgen(text, base_dir='.', error_reporter=None, file_cache=None, flags=0, output_name=None, jsargs=None)\n"
+        "htmlgen(text, base_dir='.', filename:str='(string input)', error_reporter=None, file_cache=None, flags=0, output_name=None, jsargs=None)\n"
         #endif
         "--\n"
         "\n"
@@ -337,6 +337,9 @@ PyMethodDef pydndc_methods[] = {
         "base_dir: str\n"
         "    For relative filepaths referenced in the document, what those paths\n"
         "    are relative to. Defaults to the current directory.\n"
+        "\n"
+        "filename: str\n"
+        "    The filename that the text came from.\n"
         "\n"
         "error_reporter: Callable(int, str, int, int, str)\n"
         "    A callable for reporting errors. See the extended discussion below.\n"
@@ -434,7 +437,7 @@ PyMethodDef pydndc_methods[] = {
         "                       column.\n"
         "\n"
         "filename: str\n"
-        "    This will be '(string input)' for the primary text.\n"
+        "    From the given filename.\n"
         "\n"
         "line: int\n"
         "    0-based. For SystemError and Info this will be 0.\n"
@@ -944,6 +947,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     PyObject* file_cache = NULL;
     PyObject* output_name = NULL;
     PyObject* jsargs = NULL;
+    PyObject* filename = NULL;
     unsigned long long flags = 0;
     _Static_assert(sizeof(flags) == sizeof(uint64_t), "");
     enum {WHITELIST = 0
@@ -957,10 +961,10 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
     };
-    const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", "output_name", "jsargs", NULL};
+    const char* const keywords[] = {"text", "base_dir", "filename", "error_reporter", "file_cache", "flags", "output_name", "jsargs", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOKO!O:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter, &file_cache, &flags, &PyUnicode_Type, &output_name, &jsargs)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O!OOKO!O:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &error_reporter, &file_cache, &flags, &PyUnicode_Type, &output_name, &jsargs)){
         return NULL;
     }
     PopDiagnostic();
@@ -1013,7 +1017,8 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         b64cache = cache->b64_cache;
     }
     StringView outname = output_name?pystring_borrow_stringview(output_name) : SV("this.html");
-    int e = dndc_compile_dnd_file(flags, base_str, source, SV(""), outname, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, jsargs_ls);
+    StringView source_path = filename?pystring_borrow_stringview(filename): SV("(string input)");
+    int e = dndc_compile_dnd_file(flags, base_str, source, source_path, outname, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, jsargs_ls);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
@@ -1312,17 +1317,19 @@ typedef struct {
     PyObject_HEAD
     PyObject* errors;
     DndcContext* ctx;
+    PyObject* _Nullable filename;
 } DndcContextPy;
 
 static
 PyObject* _Nullable
 DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
     PyObject* base_dir = NULL, * outpath=NULL;
+    PyObject* filename = NULL;
     DndcPyFileCache * cache=NULL;
-    const char* const keywords[] = { "base_dir", "outpath", "filecache", NULL};
+    const char* const keywords[] = { "base_dir", "filename", "outpath", "filecache", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "|O!O!O!O!:Context", (char**)keywords, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &outpath, &DndcPyFileCache_Type, &cache)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "|O!O!O!O!O!:Context", (char**)keywords, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &PyUnicode_Type, &outpath, &DndcPyFileCache_Type, &cache)){
         return NULL;
     }
     PopDiagnostic();
@@ -1333,14 +1340,16 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
             pydndc_collect_errors, self->errors,
             cache?cache->b64_cache:NULL, cache?cache->text_cache:NULL,
             base_dir?pystring_borrow_stringview(base_dir):SV(""),
-            outpath?pystring_borrow_stringview(outpath):SV(""),
+            outpath?pystring_borrow_stringview(outpath):SV("this.html"),
             1);
+    self->filename = filename;
+    if(filename) Py_INCREF(filename);
     return (PyObject*)self;
 }
 
 static PyMemberDef DndcContextPy_members[] = {
-    {"errors", T_OBJECT, offsetof(DndcContextPy, errors), READONLY,
-     "error list"},
+    {"errors", T_OBJECT, offsetof(DndcContextPy, errors), READONLY, "error list"},
+    {"filename", T_OBJECT, offsetof(DndcContextPy, filename), READONLY, "filename"},
     {}  /* Sentinel */
 };
 
@@ -1366,7 +1375,7 @@ DndcContextPy_node_by_id(PyObject* s, PyObject* arg){
         return PyErr_Format(PyExc_TypeError, "node_by_id takes a str");
     DndcStringView sv = pystring_borrow_stringview(arg);
     DndcContextPy* self = (DndcContextPy*)s;
-    DndcNodeHandle id = dndc_node_by_id(self->ctx, sv);
+    DndcNodeHandle id = dndc_ctx_node_by_id(self->ctx, sv);
     if(id == DNDC_NODE_HANDLE_INVALID)
         Py_RETURN_NONE;
     return DndcNode_make(self, id);
@@ -1378,7 +1387,7 @@ DndcContextPy_format_tree(PyObject* s, PyObject*_Nullable args){
     (void)args;
     DndcContextPy* self = (DndcContextPy*)s;
     DndcLongString ls;
-    int err = dndc_format_tree(self->ctx, &ls);
+    int err = dndc_ctx_format_tree(self->ctx, &ls);
     if(err)
         return PyErr_Format(PyExc_ValueError, "Tree can't be formatted");
     PyObject* result = PyUnicode_FromStringAndSize(ls.text, ls.length);
@@ -1392,7 +1401,7 @@ DndcContextPy_expand(PyObject* s, PyObject*_Nullable args){
     (void)args;
     DndcContextPy* self = (DndcContextPy*)s;
     DndcLongString ls;
-    int err = dndc_expand_to_dnd(self->ctx, &ls);
+    int err = dndc_ctx_expand_to_dnd(self->ctx, &ls);
     if(err)
         return PyErr_Format(PyExc_ValueError, "Tree can't be expanded");
     PyObject* result = PyUnicode_FromStringAndSize(ls.text, ls.length);
@@ -1406,7 +1415,7 @@ DndcContextPy_render(PyObject* s, PyObject*_Nullable args){
     (void)args;
     DndcContextPy* self = (DndcContextPy*)s;
     DndcLongString ls;
-    int err = dndc_render_to_html(self->ctx, &ls);
+    int err = dndc_ctx_render_to_html(self->ctx, &ls);
     if(err)
         return PyErr_Format(PyExc_ValueError, "Tree can't be rendered");
     PyObject* result = PyUnicode_FromStringAndSize(ls.text, ls.length);
@@ -1427,8 +1436,8 @@ DndcContextPy_store_builtin_file(PyObject* s, PyObject* args, PyObject* kwargs){
     }
     PopDiagnostic();
     int err = dndc_ctx_store_builtin_file(self->ctx,
-            dndc_dup_sv(self->ctx, pystring_borrow_stringview(key)),
-            dndc_dup_sv(self->ctx, pystring_borrow_stringview(value)));
+            dndc_ctx_dup_sv(self->ctx, pystring_borrow_stringview(key)),
+            dndc_ctx_dup_sv(self->ctx, pystring_borrow_stringview(value)));
     if(err){
         return PyErr_Format(PyExc_ValueError, "Unable to store builtin file");
     }
@@ -1450,8 +1459,8 @@ DndcContextPy_make_node(PyObject* s, PyObject* args, PyObject* kwargs){
     PopDiagnostic();
     if(!PyLong_Check(type))
         return PyErr_Format(PyExc_TypeError, "Type must be integral");
-    StringView h = header?dndc_dup_sv(self->ctx, pystring_borrow_stringview(header)): SV("");
-    DndcNodeHandle n = dndc_make_node(self->ctx, PyLong_AsLong(type), h, DNDC_NODE_HANDLE_INVALID);
+    StringView h = header?dndc_ctx_dup_sv(self->ctx, pystring_borrow_stringview(header)): SV("");
+    DndcNodeHandle n = dndc_ctx_make_node(self->ctx, PyLong_AsLong(type), h, DNDC_NODE_HANDLE_INVALID);
     if(n == DNDC_NODE_HANDLE_INVALID)
         return header?PyErr_Format(PyExc_ValueError, "Unable to make a node with type: %R, header: %R", type, header):PyErr_Format(PyExc_ValueError, "Unable to make a node with type: %R", type);
 
@@ -1464,10 +1473,190 @@ DndcContextPy_resolve_imports(PyObject* s, PyObject* arg){
     (void)arg;
     DndcContextPy* self = (DndcContextPy*)s;
     PyList_SetSlice(self->errors, 0, PyList_Size(self->errors), NULL);
-    int err = dndc_resolve_imports(self->ctx);
+    int err = dndc_ctx_resolve_imports(self->ctx);
     if(err)
-        return PyErr_Format(PyExc_RuntimeError, "Bad imports (Check the errors");
+        return PyErr_Format(PyExc_RuntimeError, "Bad imports (Check the errors).");
     Py_RETURN_NONE;
+}
+
+static
+PyObject* _Nullable
+DndcContextPy_execute_js(PyObject* s, PyObject* args, PyObject* kwargs){
+    PyObject *jsargs = NULL;
+    DndcContextPy* self = (DndcContextPy*)s;
+    const char* const keywords[] = {"jsargs", NULL};
+    PushDiagnostic();
+    SuppressCastQual();
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:execute_js", (char**)keywords, &jsargs)){
+        return NULL;
+    }
+    PopDiagnostic();
+    DndcLongString jsargs_ls = LS("");
+
+    MStringBuilder jsbuilder = {.allocator=get_mallocator()};
+
+    if(jsargs && PyUnicode_Check(jsargs)){
+        jsargs_ls = pystring_borrow_longstring(jsargs);
+    }
+    else if(jsargs){
+        if(pyobj_to_json(jsargs, &jsbuilder, 0) != 0){
+            if(jsbuilder.capacity){
+                msb_destroy(&jsbuilder);
+            }
+            return NULL;
+        }
+        jsargs_ls = msb_borrow_ls(&jsbuilder);
+    }
+    PyList_SetSlice(self->errors, 0, PyList_Size(self->errors), NULL);
+    int err = dndc_ctx_execute_js(self->ctx, jsargs_ls);
+    msb_destroy(&jsbuilder);
+    if(err) return PyErr_Format(PyExc_RuntimeError, "Bad js block execution (Check the errors).");
+    Py_RETURN_NONE;
+}
+
+static
+PyObject* _Nullable
+DndcContextPy_gather_links(PyObject* s, PyObject* arg){
+    (void)arg;
+    DndcContextPy* self = (DndcContextPy*)s;
+    PyList_SetSlice(self->errors, 0, PyList_Size(self->errors), NULL);
+    int err = dndc_ctx_gather_links(self->ctx);
+    if(err)
+        return PyErr_Format(PyExc_RuntimeError, "Bad imports (Check the errors).");
+    Py_RETURN_NONE;
+}
+
+static
+PyObject* _Nullable
+DndcContextPy_resolve_links(PyObject* s, PyObject* arg){
+    (void)arg;
+    DndcContextPy* self = (DndcContextPy*)s;
+    PyList_SetSlice(self->errors, 0, PyList_Size(self->errors), NULL);
+    int err = dndc_ctx_resolve_links(self->ctx);
+    if(err)
+        return PyErr_Format(PyExc_RuntimeError, "Bad imports (Check the errors).");
+    Py_RETURN_NONE;
+}
+
+static
+PyObject* _Nullable
+DndcContextPy_build_nav(PyObject* s, PyObject* arg){
+    (void)arg;
+    DndcContextPy* self = (DndcContextPy*)s;
+    PyList_SetSlice(self->errors, 0, PyList_Size(self->errors), NULL);
+    int err = dndc_ctx_build_nav(self->ctx);
+    if(err)
+        return PyErr_Format(PyExc_RuntimeError, "Bad imports (Check the errors).");
+    Py_RETURN_NONE;
+}
+
+static
+PyObject* _Nullable
+DndcContextPy_resolve_data_blocks(PyObject* s, PyObject* arg){
+    (void)arg;
+    DndcContextPy* self = (DndcContextPy*)s;
+    PyList_SetSlice(self->errors, 0, PyList_Size(self->errors), NULL);
+    int err = dndc_ctx_resolve_data_blocks(self->ctx);
+    if(err)
+        return PyErr_Format(PyExc_RuntimeError, "Bad imports (Check the errors).");
+    Py_RETURN_NONE;
+}
+
+static
+PyObject*_Nullable
+DndcContextPy_select_nodes(PyObject* s, PyObject* args, PyObject* kwargs){
+    DndcContextPy* self = (DndcContextPy*)s;
+    DndcContext* ctx = self->ctx;
+    PyObject *nt=NULL, *attrs=NULL, *klasses=NULL;
+    PyObject* fastklasses=NULL, *fastattrs=NULL;
+    PyObject* result = NULL;
+    size_t cls_count = 0;
+    size_t attr_count = 0;
+    DndcStringView *classes = NULL, *attributes = NULL;
+    Allocator allocator = get_mallocator();
+    const char* const keywords[] = {"type", "attributes", "classes", NULL};
+    PushDiagnostic();
+    SuppressCastQual();
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOO:select_nodes", (char**)keywords, &nt, &attrs, &klasses)){
+        return NULL;
+    }
+    PopDiagnostic();
+    if(attrs == Py_None)
+        attrs = NULL;
+    if(attrs){
+        fastattrs = PySequence_Fast(attrs, "attributes must be a sequence of strings"); // new ref
+        if(!fastattrs) goto fail;
+    }
+    if(klasses == Py_None)
+        klasses = NULL;
+    if(klasses){
+        fastklasses = PySequence_Fast(klasses, "classes must be a sequence of strings"); // new ref
+        if(!fastklasses) goto fail;
+    }
+    if(nt == Py_None)
+        nt = NULL;
+    if(nt && !PyLong_Check(nt)) {
+        result = PyErr_Format(PyExc_TypeError, "type must be a NodeType, got %R", nt);
+        goto fail;
+    }
+    long type = DNDC_NODE_TYPE_INVALID;
+    if(nt)
+        type = PyLong_AsLong(nt);
+    if(type < 0 || type > DNDC_NODE_TYPE_INVALID){
+        result = PyErr_Format(PyExc_ValueError, "value of type must fit within the range of NodeType, got %R", nt);
+        goto fail;
+    }
+    if(fastklasses) cls_count = PySequence_Size(fastklasses);
+    if(fastattrs) attr_count = PySequence_Size(fastattrs);
+    if(cls_count)
+        classes = Allocator_alloc(allocator, sizeof(*classes)*cls_count);
+    if(attr_count)
+        attributes = Allocator_alloc(allocator, sizeof(*attributes)*attr_count);
+    for(size_t i = 0; i < cls_count; i++){
+        PyObject* item = PySequence_GetItem(fastklasses, i); // new ref
+        if(!PyUnicode_Check(item)){
+            result = PyErr_Format(PyExc_TypeError, "classes must be strings, got %R", item);
+            Py_DECREF(item);
+            goto fail;
+        }
+        classes[i] = pystring_borrow_stringview(item);
+        Py_DECREF(item);
+    }
+    for(size_t i = 0; i < attr_count; i++){
+        PyObject* item = PySequence_GetItem(fastattrs, i); // new ref
+        if(!PyUnicode_Check(item)){
+            result = PyErr_Format(PyExc_TypeError, "attributes must be strings, got %R", item);
+            Py_DECREF(item);
+            goto fail;
+        }
+        attributes[i] = pystring_borrow_stringview(item);
+        Py_DECREF(item);
+    }
+    result = PyList_New(0);
+    DndcNodeHandle buff[1024];
+    size_t cookie = 0;
+    size_t n_nodes;
+    while((n_nodes = dndc_ctx_select_nodes(ctx, &cookie, type, attributes, attr_count, classes, cls_count, buff, arrlen(buff)))){
+        for(size_t i = 0; i < n_nodes; i++){
+            PyObject* n = DndcNode_make(self, buff[i]); // new ref
+            int err = PyList_Append(result, n);
+            Py_XDECREF(n);
+            if(err){
+                Py_XDECREF(result);
+                result = NULL;
+                goto fail;
+            }
+        }
+    }
+
+    fail:
+    Py_XDECREF(fastklasses);
+    Py_XDECREF(fastattrs);
+    if(classes)
+        Allocator_free(allocator, classes, sizeof(*classes)*cls_count);
+    if(attributes)
+        Allocator_free(allocator, attributes, sizeof(*attributes)*attr_count);
+    return result;
 }
 
 
@@ -1480,6 +1669,12 @@ static PyMethodDef DndcContextPy_methods[] = {
     {"render", DndcContextPy_render, METH_NOARGS, "render"},
     {"make_node", (PyCFunction)DndcContextPy_make_node, METH_VARARGS|METH_KEYWORDS, "make_node"},
     {"resolve_imports", DndcContextPy_resolve_imports, METH_NOARGS, "resolve imports"},
+    {"execute_js", (PyCFunction)DndcContextPy_execute_js, METH_VARARGS|METH_KEYWORDS, "execute_js"},
+    {"gather_links", DndcContextPy_gather_links, METH_NOARGS, "gather_links"},
+    {"resolve_links", DndcContextPy_resolve_links, METH_NOARGS, "resolve_links"},
+    {"build_nav", DndcContextPy_build_nav, METH_NOARGS, "build_nav"},
+    {"resolve_data_blocks", DndcContextPy_resolve_data_blocks, METH_NOARGS, "resolve_data_blocks"},
+    {"select_nodes", (PyCFunction)DndcContextPy_select_nodes, METH_VARARGS|METH_KEYWORDS, "select_nodes"},
     {} /* Sentinel */
 };
 
@@ -1492,11 +1687,11 @@ DndcContextPy_get_root(PyObject *s, void *_Nullable p){
     DndcContext* ctx = self->ctx;
     DndcNodeHandle handle = dndc_ctx_get_root(ctx);
     if(handle == DNDC_NODE_HANDLE_INVALID){
-        handle = dndc_ctx_make_root(ctx, SV(""));
+        handle = dndc_ctx_make_root(ctx, self->filename?pystring_borrow_stringview(self->filename):SV("(string input)"));
     }
     return DndcNode_make(self, handle);
-
 }
+
 static
 int
 DndcContextPy_set_root(PyObject * s, PyObject * o, void * p){
@@ -1524,6 +1719,7 @@ DndcContextPy_dealloc(PyObject* o){
     // fprintf(stderr, "Deallocing ctx: %p\n", o);
     DndcContextPy* self = (DndcContextPy*)o;
     Py_XDECREF(self->errors);
+    Py_XDECREF(self->filename);
     self->errors = NULL;
     dndc_ctx_destroy(self->ctx);
     self->ctx = NULL;
@@ -1575,8 +1771,8 @@ DndcNodePy_set_attribute(PyObject* s, PyObject* args, PyObject* kwargs){
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
     dndc_node_set_attribute(ctx, self->handle,
-            dndc_dup_sv(ctx, pystring_borrow_stringview(key)),
-            value?dndc_dup_sv(ctx, pystring_borrow_stringview(value)):SV(""));
+            dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(key)),
+            value?dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(value)):SV(""));
     Py_RETURN_NONE;
 }
 
@@ -1594,7 +1790,7 @@ DndcNodePy_parse(PyObject* s, PyObject* args, PyObject* kwargs){
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
     PyList_SetSlice(self->pyctx->errors, 0, PyList_Size(self->pyctx->errors), NULL);
-    int err = dndc_ctx_parse_string(ctx, self->handle, filename?dndc_dup_sv(ctx, pystring_borrow_stringview(filename)):SV(""), dndc_dup_sv(ctx, pystring_borrow_stringview(text)));
+    int err = dndc_ctx_parse_string(ctx, self->handle, filename?dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(filename)):SV("(string input)"), dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(text)));
     if(err){
         return PyErr_Format(PyExc_ValueError, "Error while parsing (check the Context's errors for details)");
     }
@@ -1616,8 +1812,8 @@ DndcNodePy_make_child(PyObject* s, PyObject* args, PyObject* kwargs){
     if(!PyLong_Check(type))
         return PyErr_Format(PyExc_TypeError, "Type must be integral");
     DndcContext* ctx = self->pyctx->ctx;
-    StringView h = header?dndc_dup_sv(ctx, pystring_borrow_stringview(header)): SV("");
-    DndcNodeHandle n = dndc_make_node(ctx, PyLong_AsLong(type), h, self->handle);
+    StringView h = header?dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(header)): SV("");
+    DndcNodeHandle n = dndc_ctx_make_node(ctx, PyLong_AsLong(type), h, self->handle);
     if(n == DNDC_NODE_HANDLE_INVALID)
         return header?PyErr_Format(PyExc_ValueError, "Unable to make a node with type: %R, header: %R", type, header):PyErr_Format(PyExc_ValueError, "Unable to make a node with type: %R", type);
 
@@ -1647,7 +1843,7 @@ DndcNodePy_set_header(PyObject * s, PyObject * o, void * p){
         return 0;
     }
     if(!PyUnicode_Check(o)) return 0;
-    dndc_node_set_header(ctx, self->handle, dndc_dup_sv(ctx, pystring_borrow_stringview(o)));
+    dndc_node_set_header(ctx, self->handle, dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(o)));
     return 0;
 }
 
@@ -1713,7 +1909,7 @@ DndcNodePy_set_id(PyObject * s, PyObject * o, void * p){
         return 0;
     }
     if(!PyUnicode_Check(o)) return 0;
-    dndc_node_set_id(ctx, self->handle, dndc_dup_sv(ctx, pystring_borrow_stringview(o)));
+    dndc_node_set_id(ctx, self->handle, dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(o)));
     return 0;
 }
 
@@ -1765,7 +1961,7 @@ DndcNodePy_format(PyObject* s, PyObject* arg){
     if(indent < 0 || indent > 50) return PyErr_Format(PyExc_ValueError, "Indent value invalid: %R", arg);
     LongString ls;
     DndcNodePy* self = (DndcNodePy*)s;
-    int err = dndc_format_node(self->pyctx->ctx, self->handle, indent, &ls);
+    int err = dndc_node_format(self->pyctx->ctx, self->handle, indent, &ls);
     if(err){
         return PyErr_Format(PyExc_ValueError, "Node can't be formatted");
     }

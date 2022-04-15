@@ -330,7 +330,7 @@ def get_proj_dirs() -> List[str]:
     EXCLUDED = {
         'Bin', 'Objs', 'Depends', 'venv', 'vendored', 'TestCases', 'Release',
         'Generated', 'TestResults', 'RenderedDocs', 'Timings', 'RenderedExamples',
-        'VendObjs',
+        'VendObjs', 'covdir',
         }
     dirs = [d for d in os.listdir('.') if os.path.isdir(d) and d not in EXCLUDED and not d.startswith(('.', '_')) and not 'build' in d.lower() and '.app' not in d]
     subdirs = []
@@ -339,6 +339,8 @@ def get_proj_dirs() -> List[str]:
             if subdir in EXCLUDED:
                 continue
             if subdir.startswith(('.', '_')):
+                continue
+            if subdir.endswith(('.p', '.app')):
                 continue
             subdir = os.path.join(d, subdir)
             if os.path.isdir(subdir):

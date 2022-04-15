@@ -770,5 +770,6 @@ print_file_writing_error(const char* filename, FileWriteResult err){
     #endif
 }
 
+#define NO_DNDC_AST_API
 #include "dndc.c"
 #include "get_input.c"

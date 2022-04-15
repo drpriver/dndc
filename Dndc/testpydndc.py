@@ -193,30 +193,30 @@ class TestReformat(TestCase):
         )
         output = pydndc.reformat(input)
         self.assertEqual(output, expected)
+EXAMPLE_FILES = [
+    "Examples/Calendar/calendar.dnd",
+    "Examples/KrugsBasement/krugs-basement.dnd",
+    "Examples/Rules/characters.dnd",
+    "Examples/Rules/index.dnd",
+    "Examples/Rules/mechanics.dnd",
+    "Examples/Rules/religion.dnd",
+    "Examples/Rules/rules.dnd",
+    "Examples/Wiki/Inner/hello.dnd",
+    "Examples/Wiki/flat.dnd",
+    "Examples/Wiki/index.dnd",
+    "Examples/Wiki/lorem.dnd",
+    "Examples/Wiki/wiki.dnd",
+    "Examples/index.dnd",
+    "Documentation/OVERVIEW.dnd",
+    "Documentation/REFERENCE.dnd",
+    "PyGdndc/jsdoc.dnd",
+    "PyGdndc/changelog.dnd",
+    "PyGdndc/Manual.dnd",
+]
 
 class TestExamples(TestCase):
     def test_no_errors(self) -> None:
-        examples = [
-        "Examples/Calendar/calendar.dnd",
-        "Examples/KrugsBasement/krugs-basement.dnd",
-        "Examples/Rules/characters.dnd",
-        "Examples/Rules/index.dnd",
-        "Examples/Rules/mechanics.dnd",
-        "Examples/Rules/religion.dnd",
-        "Examples/Rules/rules.dnd",
-        "Examples/Wiki/Inner/hello.dnd",
-        "Examples/Wiki/flat.dnd",
-        "Examples/Wiki/index.dnd",
-        "Examples/Wiki/lorem.dnd",
-        "Examples/Wiki/wiki.dnd",
-        "Examples/index.dnd",
-        "Documentation/OVERVIEW.dnd",
-        "Documentation/REFERENCE.dnd",
-        "PyGdndc/jsdoc.dnd",
-        "PyGdndc/changelog.dnd",
-        "PyGdndc/Manual.dnd",
-        ]
-        for example in examples:
+        for example in EXAMPLE_FILES:
             with open(example, 'r', encoding='utf-8') as fp:
                 text = fp.read()
             _ = pydndc.htmlgen(text, base_dir=os.path.dirname(example))
@@ -225,6 +225,39 @@ class TestExamples(TestCase):
             _ = pydndc.expand(text, base_dir=os.path.dirname(example), error_reporter=lambda *args:(print(example),print(*args)))
             _ = pydndc.reformat(text)
             _ = pydndc.analyze_syntax_for_highlight(text)
+    def test_ast_api(self) -> None:
+        self.maxDiff = None
+        for example in EXAMPLE_FILES:
+            with open(example, 'r', encoding='utf-8') as fp:
+                text = fp.read()
+            html1 = pydndc.htmlgen(text, base_dir=os.path.dirname(example))[0]
+            ctx = pydndc.Context(base_dir=os.path.dirname(example))
+            ctx.root.parse(text)
+            ctx.resolve_imports()
+            ctx.execute_js()
+            ctx.gather_links()
+            ctx.resolve_links()
+            ctx.build_nav()
+            ctx.resolve_data_blocks()
+            html2 = ctx.render()
+            self.assertEqual(html1, html2)
+class TestAst(TestCase):
+    def test_select(self) -> None:
+        ctx = pydndc.Context()
+        ctx.root.parse('''
+        Hello::raw .hi @english
+        Bonjour::raw .hi @french
+        Hola::raw .hi @spanish
+        Aloha::div .hi @hawaiian
+        ''')
+        self.assertEqual(len(ctx.select_nodes(type=pydndc.NodeType.RAW)), 3)
+        self.assertEqual(len(ctx.select_nodes(classes=['hi'])), 4)
+        self.assertEqual(len(ctx.select_nodes(attributes=('english',))), 1)
+        # no args selects all
+        self.assertEqual(len(ctx.select_nodes()), 5) # 4 + 1 for root
+        self.assertEqual(len(ctx.select_nodes(classes={'hi', 'hello'})), 0) # is an AND
+
+
 
 class TestFileCache(TestCase):
     def test_contents(self) -> None:

@@ -96,6 +96,8 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
     // can be added by scripts.
     for(size_t i = 0; i < ctx->user_script_nodes.count; i++){
         NodeHandle handle = ctx->user_script_nodes.data[i];
+        if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+            continue;
         NodeType type;
         NodeHandle firstchild;
         MStringBuilder msb = (MStringBuilder){.allocator=ctx->string_allocator};
@@ -165,6 +167,7 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
             // don't both warning here, but leave the scaffolding in case I want to.
             after:;
         }
+        ctx->user_script_nodes.data[i] = INVALID_NODE_HANDLE;
     }
     uint64_t after_scripts = get_t();
     report_time(ctx, SV("user scripts took: "), after_scripts-before);
@@ -2071,7 +2074,7 @@ dndc_compile_dnd_file(
 #ifndef NO_DNDC_AST_API
 DNDC_API
 DndcStringView
-dndc_dup_sv(DndcContext* ctx, DndcStringView text){
+dndc_ctx_dup_sv(DndcContext* ctx, DndcStringView text){
     return (DndcStringView){
         .text = Allocator_dupe(ctx->string_allocator, text.text, text.length),
         .length = text.length,
@@ -2106,7 +2109,7 @@ dndc_create_ctx(unsigned long long flags, DndcErrorFunc*_Nullable error_func, vo
     ctx->string_allocator = allocator_from_arena(&ctx->string_arena);
     if(base_directory.length){
         if(copy_paths)
-            ctx->base_directory = dndc_dup_sv(ctx, base_directory);
+            ctx->base_directory = dndc_ctx_dup_sv(ctx, base_directory);
         else
             ctx->base_directory = base_directory;
     }
@@ -2114,7 +2117,7 @@ dndc_create_ctx(unsigned long long flags, DndcErrorFunc*_Nullable error_func, vo
         ctx->base_directory = SV("");
     if(outpath.length){
         if(copy_paths)
-            ctx->outputfile = dndc_dup_sv(ctx, outpath);
+            ctx->outputfile = dndc_ctx_dup_sv(ctx, outpath);
         else
             ctx->outputfile = outpath;
     }
@@ -2309,7 +2312,7 @@ dndc_node_set_header(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sv){
 
 DNDC_API
 int
-dndc_expand_to_dnd(DndcContext* ctx, DndcLongString* ls){
+dndc_ctx_expand_to_dnd(DndcContext* ctx, DndcLongString* ls){
     if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return 1;
     MStringBuilder output_sb = {.allocator = get_mallocator()};
     int e = expand_to_dnd(ctx, &output_sb);
@@ -2323,7 +2326,7 @@ dndc_expand_to_dnd(DndcContext* ctx, DndcLongString* ls){
 }
 DNDC_API
 int
-dndc_render_to_html(DndcContext* ctx, DndcLongString* ls){
+dndc_ctx_render_to_html(DndcContext* ctx, DndcLongString* ls){
     MStringBuilder output_sb = {.allocator = get_mallocator()};
     if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return 1;
     int e = render_tree(ctx, &output_sb);
@@ -2334,7 +2337,7 @@ dndc_render_to_html(DndcContext* ctx, DndcLongString* ls){
 
 DNDC_API
 int
-dndc_format_tree(DndcContext* ctx, DndcLongString* ls){
+dndc_ctx_format_tree(DndcContext* ctx, DndcLongString* ls){
     if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return 1;
     MStringBuilder output_sb = {.allocator = get_mallocator()};
     int e = format_tree(ctx, &output_sb);
@@ -2348,7 +2351,7 @@ dndc_format_tree(DndcContext* ctx, DndcLongString* ls){
 
 DNDC_API
 int
-dndc_format_node(DndcContext* ctx, DndcNodeHandle dnh, int indent, DndcLongString* ls){
+dndc_node_format(DndcContext* ctx, DndcNodeHandle dnh, int indent, DndcLongString* ls){
     if(indent < 0 || indent > 50) return 1;
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
@@ -2366,7 +2369,7 @@ dndc_format_node(DndcContext* ctx, DndcNodeHandle dnh, int indent, DndcLongStrin
 
 DNDC_API
 DndcNodeHandle
-dndc_node_by_id(DndcContext* ctx, DndcStringView sv){
+dndc_ctx_node_by_id(DndcContext* ctx, DndcStringView sv){
     if(sv.length > 256) return DNDC_NODE_HANDLE_INVALID;
     MStringBuilder msb = {.allocator = ctx->temp_allocator};
     MStringBuilder msb2 = {.allocator = ctx->temp_allocator};
@@ -2501,7 +2504,7 @@ dndc_node_detach(DndcContext* ctx, DndcNodeHandle dnh){
 
 DNDC_API
 DndcNodeHandle
-dndc_make_node(DndcContext* ctx, int type, DndcStringView header, DndcNodeHandle parent_){
+dndc_ctx_make_node(DndcContext* ctx, int type, DndcStringView header, DndcNodeHandle parent_){
     if(type < 0 || type > DNDC_NODE_TYPE_INVALID) return DNDC_NODE_HANDLE_INVALID;
     NodeHandle handle = alloc_handle(ctx);
     Node* node = get_node(ctx, handle);
@@ -2551,7 +2554,7 @@ dndc_make_node(DndcContext* ctx, int type, DndcStringView header, DndcNodeHandle
 
 DNDC_API
 int
-dndc_resolve_imports(DndcContext* ctx){
+dndc_ctx_resolve_imports(DndcContext* ctx){
     for(size_t i = 0; i < ctx->imports.count; i++){
         NodeHandle handle = ctx->imports.data[i];
         if(!(get_node(ctx, handle)->flags & NODEFLAG_IMPORT))
@@ -2677,6 +2680,26 @@ dndc_node_children_count(DndcContext* ctx, DndcNodeHandle dnh){
 }
 
 DNDC_API
+int
+dndc_node_cat_string_children(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString* out){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    MStringBuilder msb = {.allocator=get_mallocator()};
+    Node* n = get_node(ctx, handle);
+    NODE_CHILDREN_FOR_EACH(c, n){
+        Node* child = get_node(ctx, *c);
+        if(child->type != NODE_STRING) continue;
+        StringView h = child->header;
+        if(h.length)
+            msb_write_str(&msb, h.text, h.length);
+        msb_write_char(&msb, '\n');
+    }
+    *out = msb_detach_ls(&msb);
+    return 0;
+}
+
+DNDC_API
 size_t
 dndc_node_get_children(DndcContext* ctx, DndcNodeHandle dnh, DndcNodeHandle* buff, size_t buff_len, size_t* cookie){
     NodeHandle handle = check_api_handle(ctx, dnh);
@@ -2694,6 +2717,137 @@ dndc_node_get_children(DndcContext* ctx, DndcNodeHandle dnh, DndcNodeHandle* buf
     *cookie += n;
     return n;
 }
+
+DNDC_API
+int
+dndc_ctx_execute_js(DndcContext* ctx, DndcLongString jsargs){
+    int ret = execute_user_scripts(ctx, jsargs);
+    return ret;
+}
+
+DNDC_API
+int
+dndc_ctx_gather_links(DndcContext* ctx){
+    if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE))
+        return 1;
+    gather_anchors(ctx);
+    // FIXME: if an error can be set while gathering anchors, we should
+    // return an error!
+    if(ctx->error.message.length){
+        report_set_error(ctx);
+        return 1;
+    }
+    return 0;
+}
+
+DNDC_API
+int
+dndc_ctx_build_nav(DndcContext* ctx){
+    if(NodeHandle_eq(ctx->navnode, INVALID_NODE_HANDLE))
+        return 0;
+    build_nav_block(ctx);
+    return 0;
+}
+
+DNDC_API
+int
+dndc_ctx_resolve_links(DndcContext* ctx){
+    // Add in the links from explicit link blocks.
+    MARRAY_FOR_EACH(NodeHandle, link_handle, ctx->link_nodes){
+        Node* link_node = get_node(ctx, *link_handle);
+        NODE_CHILDREN_FOR_EACH(it, link_node){
+            Node* link_str_node = get_node(ctx, *it);
+            if(link_str_node->type != NODE_STRING)
+                continue;
+            int e = add_link_from_sv(ctx, link_str_node);
+            if(e){
+                return 1;
+            }
+        }
+    }
+    // Sort so we can do a binary search.
+    if(ctx->links.count){
+        #if defined(WASM) || 1
+            LinkItem__array_sort(ctx->links.data, ctx->links.count);
+        #else
+            qsort(ctx->links.data, ctx->links.count, sizeof(ctx->links.data[0]), StringView_cmp);
+        #endif
+    }
+    return 0;
+}
+
+DNDC_API
+int
+dndc_ctx_resolve_data_blocks(DndcContext* ctx){
+    MStringBuilder sb = {.allocator=ctx->allocator};
+    MARRAY_FOR_EACH(NodeHandle, handle, ctx->data_nodes){
+        if(NodeHandle_eq(*handle, INVALID_NODE_HANDLE)) continue;
+        Node* data_node = get_node(ctx, *handle);
+        *handle = INVALID_NODE_HANDLE;
+        // Node could've been mutated after being registered.
+        if(data_node->type != NODE_DATA)
+            continue;
+        NODE_CHILDREN_FOR_EACH(it, data_node){
+            Node* child = get_node(ctx, *it);
+            if(!child->header.length){
+                node_print_warning(ctx, child, SV("Missing header from data child?"));
+            }
+            {
+                msb_reset(&sb);
+                int e = render_node(ctx, &sb, *it, 1, 0);
+                if(e){
+                    report_set_error(ctx);
+                    msb_destroy(&sb);
+                    return 1;
+                }
+            }
+            if(!sb.cursor){
+                node_print_warning(ctx, child, SV("Rendered a data node with no data. Not outputting it."));
+                continue;
+            }
+            LongString text = msb_detach_ls(&sb);
+            DataItem* di = Marray_alloc(DataItem)(&ctx->rendered_data, ctx->allocator);
+            di->key = child->header;
+            di->value = text;
+        }
+    }
+    return 0;
+}
+
+DNDC_API
+size_t
+dndc_ctx_select_nodes(DndcContext* ctx, size_t* cookie, int type_, DndcStringView*_Nullable attributes, size_t attribute_count, DndcStringView*_Nullable classes, size_t class_count, DndcNodeHandle* outbuf, size_t buflen){
+    if(type_ < 0 || type_ > NODE_INVALID) return 0;
+    NodeType type = type_;
+    size_t n_writ = 0;
+    size_t start = *cookie;
+    size_t node_count = ctx->nodes.count;
+    if(start >= node_count)
+        return 0;
+    const Node* nodes = ctx->nodes.data;
+    size_t idx = start;
+    for(; idx < node_count && buflen > n_writ; idx++){
+        const Node* node = &nodes[idx];
+        if(node->type == NODE_INVALID) continue;
+        if(type != NODE_INVALID && node->type != type) continue;
+        if(attribute_count){
+            for(size_t i = 0; i < attribute_count; i++){
+                if(!node_has_attribute(node, attributes[i])) goto LContinue;
+            }
+        }
+        if(class_count){
+            for(size_t i = 0; i < class_count; i++){
+                if(!node_has_class(node, classes[i])) goto LContinue;
+            }
+        }
+        outbuf[n_writ++] = (DndcNodeHandle)idx;
+        LContinue:;
+    }
+    *cookie = idx;
+
+    return n_writ;
+}
+
 #endif
 
 #ifdef __clang__
