@@ -231,7 +231,9 @@ class TestExamples(TestCase):
             with open(example, 'r', encoding='utf-8') as fp:
                 text = fp.read()
             html1 = pydndc.htmlgen(text, base_dir=os.path.dirname(example))[0]
-            ctx = pydndc.Context(base_dir=os.path.dirname(example))
+            ctx = pydndc.Context()
+            ctx.base_dir = os.path.dirname(example)
+            ctx.outpath = 'this.html'
             ctx.root.parse(text)
             ctx.resolve_imports()
             ctx.execute_js()

@@ -35,7 +35,7 @@ dndc_ctx_dup_sv(DndcContext* ctx, DndcStringView text);
 
 DNDC_API
 DndcContext*
-dndc_create_ctx(unsigned long long flags, DNDC_NULLABLE(DndcErrorFunc*) error_func, DNDC_NULLABLE(void*) error_func_data, DNDC_NULLABLE(DndcFileCache*) base64cache, DNDC_NULLABLE(DndcFileCache*) textcache, DndcStringView base_directory, DndcStringView outpath, int copy_paths);
+dndc_create_ctx(unsigned long long flags, DNDC_NULLABLE(DndcErrorFunc*) error_func, DNDC_NULLABLE(void*) error_func_data, DNDC_NULLABLE(DndcFileCache*) base64cache, DNDC_NULLABLE(DndcFileCache*) textcache);
 
 DNDC_API
 void
@@ -44,6 +44,22 @@ dndc_ctx_destroy(DndcContext*);
 DNDC_API
 DndcContext*
 dndc_ctx_clone(DndcContext*);
+
+DNDC_API
+int
+dndc_ctx_set_base(DndcContext*, DndcStringView);
+
+DNDC_API
+int
+dndc_ctx_get_base(DndcContext*, DndcStringView*);
+
+DNDC_API
+int
+dndc_ctx_set_outpath(DndcContext*, DndcStringView);
+
+DNDC_API
+int
+dndc_ctx_get_outpath(DndcContext*, DndcStringView*);
 
 DNDC_API
 int
@@ -142,16 +158,28 @@ DNDC_API
 int
 dndc_node_set_type(DndcContext*, DndcNodeHandle, int);
 
+
+#ifdef __clang__
+enum __attribute__((flag_enum)) {
+#else
+enum {
+#endif
+    DNDC_NODEFLAG_NONE     = 0x0,
+    DNDC_NODEFLAG_IMPORT   = 0x1,
+    DNDC_NODEFLAG_NOID     = 0x2,
+    DNDC_NODEFLAG_HIDE     = 0x4,
+    DNDC_NODEFLAG_NOINLINE = 0x8,
+};
+
+
 DNDC_API
 int
 dndc_node_get_flags(DndcContext*, DndcNodeHandle);
 
 
-#if 0
 DNDC_API
 int
 dndc_node_set_flags(DndcContext*, DndcNodeHandle, int);
-#endif
 
 DNDC_API
 int
@@ -203,12 +231,10 @@ DNDC_API
 int
 dndc_ctx_render_to_html(DndcContext*, DndcLongString*);
 
-#if 0
 DNDC_API
 int
 dndc_node_render_to_html(DndcContext*, DndcNodeHandle, DndcLongString*);
 
-#endif
 DNDC_API
 int
 dndc_ctx_format_tree(DndcContext*, DndcLongString*);
@@ -216,13 +242,10 @@ dndc_ctx_format_tree(DndcContext*, DndcLongString*);
 DNDC_API
 int
 dndc_node_format(DndcContext*, DndcNodeHandle, int indent, DndcLongString*);
-#if 0
 
 DNDC_API
 int
 dndc_node_execute_js(DndcContext*, DndcNodeHandle, DndcLongString);
-
-#endif
 
 DNDC_API
 int
@@ -340,7 +363,9 @@ compile_dnd_to_html(DndcStringView basedir, DndcStringView filename, DndcStringV
     void* errarg = NULL;
     int copy_paths = 0;
     DndcStringView outpath = {.length=sizeof("example.html")-1, "example.html"};
-    DndcContext* ctx = dndc_create_ctx(flags, errfunc, errarg, b64cache, textcache, basedir, outpath, copy_paths);
+    DndcContext* ctx = dndc_create_ctx(flags, errfunc, errarg, b64cache, textcache);
+    dndc_ctx_set_base(ctx, basedir);
+    dndc_ctx_set_outpath(ctx, outpath);
     DndcNodeHandle root = dndc_ctx_make_root(ctx, filename);
     int err = 0;
     err = dndc_ctx_parse_string(ctx, root, filename, text);
@@ -387,7 +412,9 @@ compile_dnd_to_html_with_extra_script(DndcStringView basedir,DndcStringView file
     void* errarg = NULL;
     int copy_paths = 0;
     DndcStringView outpath = {.length=sizeof("example.html")-1, "example.html"};
-    DndcContext* ctx = dndc_create_ctx(flags, errfunc, errarg, b64cache, textcache, basedir, outpath, copy_paths);
+    DndcContext* ctx = dndc_create_ctx(flags, errfunc, errarg, b64cache, textcache);
+    dndc_ctx_set_base(ctx, basedir);
+    dndc_ctx_set_outpath(ctx, outpath);
     DndcNodeHandle root = dndc_ctx_make_root(ctx, filename);
     int err = 0;
     err = dndc_ctx_parse_string(ctx, root, filename, text);

@@ -1347,10 +1347,10 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
     PyObject* base_dir = NULL, * outpath=NULL;
     PyObject* filename = NULL;
     DndcPyFileCache * cache=NULL;
-    const char* const keywords[] = { "base_dir", "filename", "outpath", "filecache", NULL};
+    const char* const keywords[] = {"filename", "filecache", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "|O!O!O!O!O!:Context", (char**)keywords, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &PyUnicode_Type, &outpath, &DndcPyFileCache_Type, &cache)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "|O!O!:Context", (char**)keywords, &PyUnicode_Type, &filename, &DndcPyFileCache_Type, &cache)){
         return NULL;
     }
     PopDiagnostic();
@@ -1359,10 +1359,7 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
     self->errors = PyList_New(0);
     self->ctx = dndc_create_ctx(0,
             pydndc_collect_errors, self->errors,
-            cache?cache->b64_cache:NULL, cache?cache->text_cache:NULL,
-            base_dir?pystring_borrow_stringview(base_dir):SV(""),
-            outpath?pystring_borrow_stringview(outpath):SV("this.html"),
-            1);
+            cache?cache->b64_cache:NULL, cache?cache->text_cache:NULL);
     self->filename = filename;
     if(filename) Py_INCREF(filename);
     return (PyObject*)self;
@@ -1747,8 +1744,72 @@ DndcContextPy_set_root(PyObject * s, PyObject * o, void * p){
     return 0;
 }
 
+static
+PyObject* _Nullable
+DndcContextPy_get_base(PyObject* s, void*_Nullable p){
+    (void)p;
+    DndcContextPy* self = (DndcContextPy*)s;
+    DndcContext* ctx = self->ctx;
+    StringView base;
+    int err = dndc_ctx_get_base(ctx, &base);
+    if(err){
+        return PyErr_Format(PyExc_RuntimeError, "wtf");
+    }
+    return PyUnicode_FromStringAndSize(base.text, base.length);
+}
+
+static
+int
+DndcContextPy_set_base(PyObject* s, PyObject*_Nullable args, void*_Nullable p){
+    if(!args)
+        return PyErr_Format(PyExc_AttributeError, "Deletion of base_dir unsupported"), -1;
+    if(!PyUnicode_Check(args))
+        return PyErr_Format(PyExc_TypeError, "base_dir must be a string"), -1;
+    DndcContextPy* self = (DndcContextPy*)s;
+    DndcContext* ctx = self->ctx;
+    StringView sv = pystring_borrow_stringview(args);
+    sv = dndc_ctx_dup_sv(ctx, sv);
+    int err = dndc_ctx_set_base(ctx, sv);
+    if(err)
+        return PyErr_Format(PyExc_RuntimeError, "wtf"), -1;
+    return 0;
+}
+
+static
+PyObject* _Nullable
+DndcContextPy_get_outpath(PyObject* s, void*_Nullable p){
+    (void)p;
+    DndcContextPy* self = (DndcContextPy*)s;
+    DndcContext* ctx = self->ctx;
+    StringView base;
+    int err = dndc_ctx_get_outpath(ctx, &base);
+    if(err){
+        return PyErr_Format(PyExc_RuntimeError, "wtf");
+    }
+    return PyUnicode_FromStringAndSize(base.text, base.length);
+}
+
+static
+int
+DndcContextPy_set_outpath(PyObject* s, PyObject*_Nullable args, void*_Nullable p){
+    if(!args)
+        return PyErr_Format(PyExc_AttributeError, "Deletion of outpath unsupported"), -1;
+    if(!PyUnicode_Check(args))
+        return PyErr_Format(PyExc_TypeError, "outpath must be a string"), -1;
+    DndcContextPy* self = (DndcContextPy*)s;
+    DndcContext* ctx = self->ctx;
+    StringView sv = pystring_borrow_stringview(args);
+    sv = dndc_ctx_dup_sv(ctx, sv);
+    int err = dndc_ctx_set_outpath(ctx, sv);
+    if(err)
+        return PyErr_Format(PyExc_RuntimeError, "wtf"), -1;
+    return 0;
+}
+
 static PyGetSetDef DndcContextPy_getset[] = {
     {"root", DndcContextPy_get_root, DndcContextPy_set_root, "root", NULL},
+    {"base_dir", DndcContextPy_get_base, DndcContextPy_set_base, "base_dir", NULL},
+    {"outpath", DndcContextPy_get_outpath, DndcContextPy_set_outpath, "outpath", NULL},
     {} /* Sentinel */
 };
 
@@ -1858,7 +1919,7 @@ DndcNodePy_has_attribute(PyObject* s, PyObject* args, PyObject* kwargs){
 }
 static
 PyObject* _Nullable
-DndcNodePy_attributes(PyObject* s, PyObject* args){
+DndcNodePy_attributes(PyObject* s, void* args){
     (void)args;
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
@@ -1898,7 +1959,7 @@ DndcNodePy_attributes(PyObject* s, PyObject* args){
 
 static
 PyObject*_Nullable
-DndcNodePy_classes(PyObject* s, PyObject* args){
+DndcNodePy_classes(PyObject* s, void* args){
     (void)args;
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
@@ -1952,6 +2013,22 @@ DndcNodePy_remove_class(PyObject* s, PyObject* args){
     int err = dndc_node_remove_class(ctx, handle, dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(args)));
     if(err)
         return PyErr_Format(PyExc_RuntimeError, "Problem removing %R", args);
+    Py_RETURN_NONE;
+}
+
+static
+PyObject*_Nullable
+DndcNodePy_execute_js(PyObject* s, PyObject* args){
+    if(!PyUnicode_Check(args)) return PyErr_Format(PyExc_TypeError, "js script must be a string");
+    LongString script = pystring_borrow_longstring(args);
+    DndcNodePy* self = (DndcNodePy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    PyList_SetSlice(self->pyctx->errors, 0, PyList_Size(self->pyctx->errors), NULL);
+    int err = dndc_node_execute_js(ctx, handle, script);
+    if(err){
+        return PyErr_Format(PyExc_RuntimeError, "Problem while executing javascript (check .errors)");
+    }
     Py_RETURN_NONE;
 }
 
@@ -2166,6 +2243,40 @@ DndcNodePy_get_location(PyObject* s, void*_Nullable p){
     return result;
 }
 
+static 
+PyObject* _Nullable
+DndcNodePy_getflag(PyObject* s, void*_Nullable p){
+    DndcNodePy* self = (DndcNodePy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    int flag = (int)(intptr_t)p;
+    if(dndc_node_get_flags(ctx, handle) & flag)
+        Py_RETURN_TRUE;
+    else
+        Py_RETURN_FALSE;
+}
+
+static
+int
+DndcNodePy_setflag(PyObject* s, PyObject*_Nullable a, void*_Nullable p){
+    if(!a){
+        PyErr_Format(PyExc_AttributeError, "Deletion of flags is not supported");
+        return -1;
+    }
+    int flag = (int)(intptr_t)p;
+    DndcNodePy* self = (DndcNodePy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    int flags = dndc_node_get_flags(ctx, handle);
+    if(PyObject_IsTrue(a))
+        flags |= flag;
+    else
+        flags &= ~flag;
+    int err = dndc_node_set_flags(ctx, handle, flags);
+    (void)err;
+    return 0;
+}
+
 
 // ---
 
@@ -2183,6 +2294,21 @@ DndcNodePy_format(PyObject* s, PyObject* arg){
     }
     PyObject* result = PyUnicode_FromStringAndSize(ls.text, ls.length);
     dndc_free_string(ls);
+    return result;
+}
+static
+PyObject* _Nullable
+DndcNodePy_render(PyObject* s, PyObject* arg){
+    (void)arg;
+    DndcNodePy* self = (DndcNodePy*)s;
+    LongString html;
+    int e = dndc_node_render_to_html(self->pyctx->ctx, self->handle, &html);
+    // TODO: check the error logging strategy of this function.
+    if(e){
+        return PyErr_Format(PyExc_ValueError, "Unable to render node to html.");
+    }
+    PyObject* result = PyUnicode_FromStringAndSize(html.text, html.length);
+    dndc_free_string(html);
     return result;
 }
 
@@ -2239,6 +2365,12 @@ static PyGetSetDef DndcNodePy_getset[] = {
     {"parent", DndcNodePy_get_parent, NULL, "parent", NULL},
     {"children", DndcNodePy_get_children, NULL, "children", NULL},
     {"location", DndcNodePy_get_location, NULL, "location", NULL},
+    {"classes", DndcNodePy_classes, NULL, "classes", NULL},
+    {"attributes", DndcNodePy_attributes, NULL, "attributes", NULL},
+    {"import_", DndcNodePy_getflag, DndcNodePy_setflag, "import_", (void*)DNDC_NODEFLAG_IMPORT},
+    {"noid", DndcNodePy_getflag, DndcNodePy_setflag, "noid", (void*)DNDC_NODEFLAG_NOID},
+    {"hide", DndcNodePy_getflag, DndcNodePy_setflag, "hide", (void*)DNDC_NODEFLAG_HIDE},
+    {"noinline", DndcNodePy_getflag, DndcNodePy_setflag, "noinline", (void*)DNDC_NODEFLAG_NOINLINE},
     {} /* Sentinel */
 };
 static PyMemberDef DndcNodePy_members[] = {
@@ -2251,13 +2383,13 @@ static PyMethodDef DndcNodePy_methods[] = {
     {"set_attribute", (PyCFunction)DndcNodePy_set_attribute, METH_VARARGS|METH_KEYWORDS, "set an attribute"},
     {"get_attribute", (PyCFunction)DndcNodePy_get_attribute, METH_VARARGS|METH_KEYWORDS, "get an attribute"},
     {"has_attribute", (PyCFunction)DndcNodePy_has_attribute, METH_VARARGS|METH_KEYWORDS, "if it has an attribute"},
-    {"attributes", DndcNodePy_attributes, METH_NOARGS, "returns a tuple of key-value tuples"},
-    {"classes", DndcNodePy_classes, METH_NOARGS, "returns a tuple of strings"},
     {"remove_class", DndcNodePy_remove_class, METH_O, "removes a class from the class list"},
     {"add_class", DndcNodePy_add_class, METH_O, "adds a class to the class list"},
+    {"execute_js", DndcNodePy_execute_js, METH_O, "executes javascript in the context of this node."},
     {"parse", (PyCFunction)DndcNodePy_parse, METH_VARARGS|METH_KEYWORDS, "parse a dnd string"},
     {"parse_file", (PyCFunction)DndcNodePy_parse_file, METH_VARARGS|METH_KEYWORDS, "parse a dnd file"},
     {"format", DndcNodePy_format, METH_O, "format a node"},
+    {"render", DndcNodePy_render, METH_NOARGS, "render node to html fragment"},
     {"append_child", DndcNodePy_append_child, METH_O, "append a node as a child of another node"},
     {"detach", DndcNodePy_detach, METH_NOARGS, "detach"},
     {"make_child", (PyCFunction)DndcNodePy_make_child, METH_VARARGS|METH_KEYWORDS, "make_child"},

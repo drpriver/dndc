@@ -164,7 +164,7 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
                     goto after;
                 }
             }
-            // don't both warning here, but leave the scaffolding in case I want to.
+            // don't bother warning here, but leave the scaffolding in case I want to.
             after:;
         }
         ctx->user_script_nodes.data[i] = INVALID_NODE_HANDLE;
@@ -2092,7 +2092,7 @@ ctx_dup_ls(DndcContext* ctx, LongString text){
 
 DNDC_API
 DndcContext*
-dndc_create_ctx(unsigned long long flags, DndcErrorFunc*_Nullable error_func, void*_Nullable error_func_data, DndcFileCache*_Nullable base64cache, DndcFileCache*_Nullable textcache, DndcStringView base_directory, DndcStringView outpath, int copy_paths){
+dndc_create_ctx(unsigned long long flags, DndcErrorFunc*_Nullable error_func, void*_Nullable error_func_data, DndcFileCache*_Nullable base64cache, DndcFileCache*_Nullable textcache){
     DndcContext* ctx = calloc(1, sizeof *ctx);
     ctx->flags = flags;
     ctx->error_func = error_func;
@@ -2116,22 +2116,6 @@ dndc_create_ctx(unsigned long long flags, DndcErrorFunc*_Nullable error_func, vo
     ctx->temp_allocator = allocator_from_la(&ctx->temp);
     ctx->allocator = allocator_from_arena(&ctx->main_arena);
     ctx->string_allocator = allocator_from_arena(&ctx->string_arena);
-    if(base_directory.length){
-        if(copy_paths)
-            ctx->base_directory = dndc_ctx_dup_sv(ctx, base_directory);
-        else
-            ctx->base_directory = base_directory;
-    }
-    else
-        ctx->base_directory = SV("");
-    if(outpath.length){
-        if(copy_paths)
-            ctx->outputfile = dndc_ctx_dup_sv(ctx, outpath);
-        else
-            ctx->outputfile = outpath;
-    }
-    else
-        ctx->outputfile = SV("");
     return ctx;
 }
 
@@ -2158,12 +2142,16 @@ dndc_ctx_clone(DndcContext* ctx){
             ctx->error_func,
             ctx->error_user_data,
             !ctx->b64cache_allocated?ctx->b64cache:NULL,
-            !ctx->textcache_allocated?ctx->textcache:NULL,
-            ctx->base_directory, ctx->outputfile, 1);
+            !ctx->textcache_allocated?ctx->textcache:NULL);
     MARRAY_FOR_EACH(StringView, fn, ctx->filenames)
         Marray_push(StringView)(&result->filenames, result->allocator, dndc_ctx_dup_sv(result, *fn));
     #define cp(x) \
         Marray_extend(NodeHandle)(&result->x, result->allocator, ctx->x.data, ctx->x.count)
+    if(ctx->outputfile.length)
+        result->outputfile = dndc_ctx_dup_sv(result, ctx->outputfile);
+    if(ctx->base_directory.length)
+        result->base_directory = dndc_ctx_dup_sv(result, ctx->base_directory);
+
     cp(user_script_nodes);
     cp(imports);
     cp(stylesheets_nodes);
@@ -2222,6 +2210,35 @@ dndc_ctx_clone(DndcContext* ctx){
     }
     return result;
 }
+
+DNDC_API
+int
+dndc_ctx_set_base(DndcContext* ctx, DndcStringView sv){
+    ctx->base_directory = sv;
+    return 0;
+}
+
+DNDC_API
+int
+dndc_ctx_get_base(DndcContext* ctx, DndcStringView* sv){
+    *sv = ctx->base_directory;
+    return 0;
+}
+
+DNDC_API
+int
+dndc_ctx_set_outpath(DndcContext* ctx, DndcStringView sv){
+    ctx->outputfile = sv;
+    return 0;
+}
+
+DNDC_API
+int
+dndc_ctx_get_outpath(DndcContext* ctx, DndcStringView* sv){
+    *sv = ctx->outputfile;
+    return 0;
+}
+
 
 DNDC_API
 int
@@ -2495,13 +2512,33 @@ dndc_node_set_type(DndcContext* ctx, DndcNodeHandle dnh, int type){
     return 0;
 }
 
+#define CHECKNF(x) _Static_assert(NODEFLAG_##x == DNDC_NODEFLAG_##x, #x)
+CHECKNF(IMPORT);
+CHECKNF(NOID);
+CHECKNF(HIDE);
+CHECKNF(NOINLINE);
+#undef CHECKNF
+
 DNDC_API
 int
 dndc_node_get_flags(DndcContext* ctx, DndcNodeHandle dnh){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return 0;
-    return get_node(ctx, handle)->flags;
+    return get_node(ctx, handle)->flags & PUBLIC_NODE_FLAGS;
+}
+
+DNDC_API
+int
+dndc_node_set_flags(DndcContext* ctx, DndcNodeHandle dnh, int flags){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    if((flags & PUBLIC_NODE_FLAGS) != flags) return 1;
+    int old_flags = get_node(ctx, handle)->flags;
+    int private_flags = old_flags & ~PUBLIC_NODE_FLAGS;
+    get_node(ctx, handle) -> flags = flags | private_flags;
+    return 0;
 }
 
 DNDC_API
@@ -2545,6 +2582,19 @@ dndc_ctx_render_to_html(DndcContext* ctx, DndcLongString* ls){
     if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return 1;
     int e = render_tree(ctx, &output_sb);
     if(e) {msb_destroy(&output_sb); return e;}
+    *ls = msb_detach_ls(&output_sb);
+    return 0;
+}
+
+DNDC_API
+int
+dndc_node_render_to_html(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString* ls){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    MStringBuilder output_sb = {.allocator = get_mallocator()};
+    int e = render_node(ctx, &output_sb, handle, 1, 0);
+    if(e) {msb_destroy(&output_sb); return 1;}
     *ls = msb_detach_ls(&output_sb);
     return 0;
 }
@@ -3119,6 +3169,16 @@ dndc_node_tree_repr_inner(DndcContext* ctx, NodeHandle handle, int depth, MStrin
                 else
                     msb_write_char(sb, ' ');
             }
+            if(node->flags & NODEFLAG_IMPORT)
+                msb_write_literal(sb, "#import ");
+            if(node->flags & NODEFLAG_NOID)
+                msb_write_literal(sb, "#noid ");
+            if(node->flags & NODEFLAG_HIDE)
+                msb_write_literal(sb, "#hide ");
+            if(node->flags & NODEFLAG_NOINLINE)
+                msb_write_literal(sb, "#noinline ");
+            if(node->flags & NODEFLAG_ID)
+                MSB_FORMAT(sb, "#id(", node_get_id(ctx, handle), ") ");
         }break;
         case NODE_STRING:{
             MSB_FORMAT(sb, " '", node->header, "'");
@@ -3139,6 +3199,29 @@ dndc_node_tree_repr(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString* outstr
     dndc_node_tree_repr_inner(ctx, handle, 0, &msb);
     *outstring = msb_detach_ls(&msb);
     return 0;
+}
+
+DNDC_API
+int
+dndc_node_execute_js(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString js){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    ArenaAllocator aa = {0};
+    QJSRuntime* rt = new_qjs_rt(&aa);
+    if(!rt) return 1;
+    QJSContext* jsctx = new_qjs_ctx(rt, ctx, DNDC_JS_FLAGS_NONE, LS("null"));
+    if(!jsctx){
+        free_qjs_rt(rt, &aa);
+        return 1;
+    }
+    int err = execute_qjs_string(jsctx, ctx, js.text, js.length, handle, handle);
+    if(err){
+        report_set_error(ctx);
+    }
+    free_qjs_rt(rt, &aa);
+    ArenaAllocator_free_all(&aa);
+    return !!err;
 }
 
 #endif

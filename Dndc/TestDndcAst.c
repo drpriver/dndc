@@ -20,7 +20,7 @@ int main(int argc, char** argv){
 TestFunction(TestDndcAst){
     TESTBEGIN();
     unsigned long long flags = DNDC_ALLOW_BAD_LINKS;
-    DndcContext* ctx = dndc_create_ctx(flags, dndc_stderr_error_func, NULL, NULL, NULL, SV(""), SV(""), 0);
+    DndcContext* ctx = dndc_create_ctx(flags, dndc_stderr_error_func, NULL, NULL, NULL);
     int e = dndc_ctx_store_builtin_file(ctx, SV("hello"), SV("hello world"));
     TestExpectFalse(e);
     e = dndc_ctx_parse_string(ctx, DNDC_NODE_HANDLE_INVALID, SV("yolo"), SV("::import\n  hello\n"));
