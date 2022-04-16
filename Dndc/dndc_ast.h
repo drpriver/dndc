@@ -25,11 +25,6 @@ enum {DNDC_NODE_HANDLE_INVALID = -1};
 #endif
 typedef struct DndcContext DndcContext;
 
-typedef struct DndcNodeLocation {
-    DndcStringView filename;
-    int row, column;
-} DndcNodeLocation;
-
 // Functions taking string views generally hold onto them for
 // the lifetime of ctx. If you can't guarantee they last that long,
 // then call this function to get a copy that will last as long
@@ -45,6 +40,10 @@ dndc_create_ctx(unsigned long long flags, DNDC_NULLABLE(DndcErrorFunc*) error_fu
 DNDC_API
 void
 dndc_ctx_destroy(DndcContext*);
+
+DNDC_API
+DndcContext*
+dndc_ctx_clone(DndcContext*);
 
 DNDC_API
 int
@@ -72,20 +71,30 @@ int
 dndc_ctx_set_root(DndcContext*, DndcNodeHandle);
 
 
-#if 0
 DNDC_API
 int
-dndc_node_get_attribute(DndcContext*, DndcNodeHandle, DndcStringView, DndcStringView*_Nonnull*_Nonnull);
+dndc_node_get_attribute(DndcContext*, DndcNodeHandle, DndcStringView, DndcStringView*);
 
 DNDC_API
 int
 dndc_node_has_attribute(DndcContext*, DndcNodeHandle, DndcStringView);
 
-#endif
-
 DNDC_API
 int
 dndc_node_set_attribute(DndcContext*, DndcNodeHandle, DndcStringView, DndcStringView);
+
+DNDC_API
+size_t
+dndc_node_attributes_count(DndcContext*, DndcNodeHandle);
+
+typedef struct DndcAttributePair {
+    DndcStringView key;
+    DndcStringView value;
+} DndcAttributePair;
+
+DNDC_API
+size_t
+dndc_node_attributes(DndcContext*, DndcNodeHandle, size_t* cookie, DndcAttributePair* buff, size_t bufflen);
 
 DNDC_API
 int
@@ -169,10 +178,9 @@ DNDC_API
 int
 dndc_node_cat_string_children(DndcContext*, DndcNodeHandle, DndcLongString* out);
 
-#if 0
 DNDC_API
-int
-dndc_node_get_classes(DndcContext*, DndcNodeHandle, DndcStringView* buff, size_t buff_len, size_t* cookie);
+size_t
+dndc_node_classes(DndcContext*, DndcNodeHandle, size_t* cookie, DndcStringView* buff, size_t buff_len);
 
 DNDC_API
 size_t
@@ -186,7 +194,6 @@ DNDC_API
 int
 dndc_node_remove_class(DndcContext*, DndcNodeHandle, DndcStringView);
 
-#endif
 
 DNDC_API
 int
@@ -221,12 +228,15 @@ DNDC_API
 int
 dndc_ctx_execute_js(DndcContext*, DndcLongString jsargs);
 
-#if 0
-DNDC_API
-DndcNodeLocation
-dndc_node_location(DndcContext*, DndcNodeHandle);
+typedef struct DndcNodeLocation {
+    DndcStringView filename;
+    int row, column;
+} DndcNodeLocation;
 
-#endif
+DNDC_API
+int
+dndc_node_location(DndcContext*, DndcNodeHandle, DndcNodeLocation*);
+
 
 DNDC_API
 DndcNodeHandle
@@ -304,6 +314,10 @@ dndc_ctx_resolve_data_blocks(DndcContext*);
 DNDC_API
 size_t
 dndc_ctx_select_nodes(DndcContext* ctx, size_t* cookie, int type, DNDC_NULLABLE(DndcStringView*) attributes, size_t attribute_count, DNDC_NULLABLE(DndcStringView*) classes, size_t class_count,  DndcNodeHandle* outbuf, size_t buflen);
+
+DNDC_API
+int
+dndc_node_tree_repr(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString*);
 
 #ifdef __cplusplus
 }

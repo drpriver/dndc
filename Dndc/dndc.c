@@ -2081,6 +2081,15 @@ dndc_ctx_dup_sv(DndcContext* ctx, DndcStringView text){
     };
 }
 
+static inline
+LongString
+ctx_dup_ls(DndcContext* ctx, LongString text){
+    return (LongString){
+        .text = Allocator_strndup(ctx->string_allocator, text.text, text.length),
+        .length = text.length,
+    };
+}
+
 DNDC_API
 DndcContext*
 dndc_create_ctx(unsigned long long flags, DndcErrorFunc*_Nullable error_func, void*_Nullable error_func_data, DndcFileCache*_Nullable base64cache, DndcFileCache*_Nullable textcache, DndcStringView base_directory, DndcStringView outpath, int copy_paths){
@@ -2139,6 +2148,79 @@ dndc_ctx_destroy(DndcContext* ctx){
     Allocator_free_all(ctx->string_allocator);
     destroy_linear_storage(&ctx->temp);
     free(ctx);
+}
+
+DNDC_API
+DndcContext*
+dndc_ctx_clone(DndcContext* ctx){
+    DndcContext* result = dndc_create_ctx(
+            ctx->flags,
+            ctx->error_func,
+            ctx->error_user_data,
+            !ctx->b64cache_allocated?ctx->b64cache:NULL,
+            !ctx->textcache_allocated?ctx->textcache:NULL,
+            ctx->base_directory, ctx->outputfile, 1);
+    MARRAY_FOR_EACH(StringView, fn, ctx->filenames)
+        Marray_push(StringView)(&result->filenames, result->allocator, dndc_ctx_dup_sv(result, *fn));
+    #define cp(x) \
+        Marray_extend(NodeHandle)(&result->x, result->allocator, ctx->x.data, ctx->x.count)
+    cp(user_script_nodes);
+    cp(imports);
+    cp(stylesheets_nodes);
+    cp(link_nodes);
+    cp(script_nodes);
+    cp(data_nodes);
+    cp(meta_nodes);
+    cp(img_nodes);
+    cp(imglinks_nodes);
+    #undef cp
+    result->titlenode = ctx->titlenode;
+    result->navnode = ctx->navnode;
+    result->root_handle = ctx->root_handle;
+
+    MARRAY_FOR_EACH(StringView, s, ctx->dependencies)
+        Marray_push(StringView)(&result->dependencies, result->allocator, dndc_ctx_dup_sv(result, *s));
+    MARRAY_FOR_EACH(LinkItem, s, ctx->links)
+        Marray_push(LinkItem)(&result->links, result->allocator,
+            (LinkItem){
+                .key = dndc_ctx_dup_sv(result, s->key),
+                .value = dndc_ctx_dup_sv(result, s->value),
+            });
+    MARRAY_FOR_EACH(DataItem, s, ctx->rendered_data)
+        Marray_push(DataItem)(&result->rendered_data, result->allocator,
+            (DataItem){
+                .key = dndc_ctx_dup_sv(result, s->key),
+                .value = ctx_dup_ls(result, s->value),
+            });
+    MARRAY_FOR_EACH(IdItem, s, ctx->explicit_node_ids)
+        Marray_push(IdItem)(&result->explicit_node_ids, result->allocator,
+            (IdItem){
+                .node = s->node,
+                .text = dndc_ctx_dup_sv(result, s->text),
+            });
+    if(ctx->renderednav.text)
+        result->renderednav = ctx_dup_ls(result, ctx->renderednav);
+    MARRAY_FOR_EACH(Node, node, ctx->nodes){
+        Node* newnode = Marray_alloc(Node)(&result->nodes, result->allocator);
+        *newnode = *node;
+        if(node->header.length)
+            newnode->header = dndc_ctx_dup_sv(result, newnode->header);
+        if(node_children_count(node) > 4)
+            Marray_extend(NodeHandle)(&newnode->children, ctx->allocator, node->children.data, node->children.count);
+        if(node->attributes){
+            newnode->attributes = Rarray_clone(Attribute)(node->attributes, ctx->allocator);
+            RARRAY_FOR_EACH(Attribute, attr, newnode->attributes){
+                attr->key = dndc_ctx_dup_sv(result, attr->key);
+                attr->value = dndc_ctx_dup_sv(result, attr->value);
+            }
+        }
+        if(node->classes){
+            newnode->classes = Rarray_clone(StringView)(node->classes, result->allocator);
+            RARRAY_FOR_EACH(StringView, cls, newnode->classes)
+                *cls = dndc_ctx_dup_sv(result, *cls);
+        }
+    }
+    return result;
 }
 
 DNDC_API
@@ -2228,6 +2310,123 @@ dndc_node_set_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView key
         return 1;
     Node* node = get_node(ctx, handle);
     node_set_attribute(node, ctx->allocator, key, value);
+    return 0;
+}
+
+DNDC_API
+int
+dndc_node_get_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView key, DndcStringView* outvalue){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    Node* node = get_node(ctx, handle);
+    StringView* value = node_get_attribute(node, key);
+    if(!value) return 1;
+    *outvalue = *value;
+    return 0;
+}
+
+DNDC_API
+int
+dndc_node_has_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView key){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    // ambiguous - error or does it not have one?
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 0;
+    Node* node = get_node(ctx, handle);
+    return node_has_attribute(node, key);
+}
+
+DNDC_API
+size_t
+dndc_node_attributes_count(DndcContext* ctx, DndcNodeHandle dnh){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    // ambiguous - error or does it not have one?
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 0;
+    Node* node = get_node(ctx, handle);
+    return node->attributes? node->attributes->count:0;
+}
+
+DNDC_API
+size_t
+dndc_node_attributes(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, DndcAttributePair* buff, size_t bufflen){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    // ambiguous - error or does it not have one?
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 0;
+    Node* node = get_node(ctx, handle);
+    const Rarray(Attribute)* attributes = node->attributes;
+    size_t n = attributes?attributes->count: 0;
+    size_t start = *cookie;
+    if(start >= n) return 0;
+    assert(attributes);
+    const Attribute* data = attributes->data;
+    _Static_assert(sizeof(Attribute) == sizeof(DndcAttributePair), "");
+    size_t n_copy = n - start;
+    if(n_copy > bufflen)
+        n_copy = bufflen;
+    memcpy(buff, data+start, sizeof(*buff)*n_copy);
+    *cookie = start + n_copy;
+    return n_copy;
+}
+
+DNDC_API
+size_t
+dndc_node_classes(DndcContext*ctx, DndcNodeHandle dnh, size_t * cookie, DndcStringView* buff, size_t buff_len){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    // ambiguous - error or does it not have one?
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 0;
+    Node* node = get_node(ctx, handle);
+    const Rarray(StringView)* classes = node->classes;
+    size_t n = classes?classes->count: 0;
+    size_t start = *cookie;
+    if(start >= n) return 0;
+    assert(classes);
+    const StringView* data = classes->data;
+    size_t n_copy = n - start;
+    if(n_copy > buff_len)
+        n_copy = buff_len;
+    memcpy(buff, data+start, n_copy*sizeof(*buff));
+    return n_copy;
+}
+
+DNDC_API
+size_t
+dndc_node_classes_count(DndcContext* ctx, DndcNodeHandle dnh){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    // ambiguous - error or does it not have one?
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 0;
+    Node* node = get_node(ctx, handle);
+    return node->classes? node->classes->count : 0;
+}
+
+DNDC_API
+int
+dndc_node_add_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView cls){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    Node* node = get_node(ctx, handle);
+    node->classes = Rarray_push(StringView)(node->classes, ctx->allocator, cls);
+    return 0;
+}
+
+DNDC_API
+int
+dndc_node_remove_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView cls){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    Node* node = get_node(ctx, handle);
+    RARRAY_FOR_EACH(StringView, c, node->classes){
+        if(SV_equals(*c, cls)){
+            Rarray_remove(StringView)(node->classes, c-node->classes->data);
+            break;
+        }
+    }
     return 0;
 }
 
@@ -2398,6 +2597,7 @@ dndc_ctx_node_by_id(DndcContext* ctx, DndcStringView sv){
         NodeHandle handle = {.index=i};
         StringView id = node_get_id(ctx, handle);
         if(!id.length) continue;
+        msb_reset(&msb2);
         msb_write_kebab(&msb2, id.text, id.length);
         StringView k = msb_borrow_sv(&msb2);
         if(SV_equals(sv, k)){
@@ -2480,15 +2680,6 @@ dndc_node_has_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sv){
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return 0;
     return node_has_class(get_node(ctx, handle), sv);
-}
-
-DNDC_API
-int
-dndc_node_has_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sv){
-    NodeHandle handle = check_api_handle(ctx, dnh);
-    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 0;
-    return node_has_attribute(get_node(ctx, handle), sv);
 }
 
 DNDC_API
@@ -2735,6 +2926,20 @@ dndc_node_get_children(DndcContext* ctx, DndcNodeHandle dnh, DndcNodeHandle* buf
 
 DNDC_API
 int
+dndc_node_location(DndcContext* ctx, DndcNodeHandle dnh, DndcNodeLocation* loc){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    Node* node = get_node(ctx, handle);
+    loc->filename = ctx->filenames.data[node->filename_idx];
+    loc->row = node->row+1;
+    loc->column = node->col+1;
+    return 0;
+}
+
+
+DNDC_API
+int
 dndc_ctx_execute_js(DndcContext* ctx, DndcLongString jsargs){
     int ret = execute_user_scripts(ctx, jsargs);
     return ret;
@@ -2861,6 +3066,79 @@ dndc_ctx_select_nodes(DndcContext* ctx, size_t* cookie, int type_, DndcStringVie
     *cookie = idx;
 
     return n_writ;
+}
+
+
+static inline
+void
+dndc_node_tree_repr_inner(DndcContext* ctx, NodeHandle handle, int depth, MStringBuilder* sb){
+    Node* node = get_node(ctx, handle);
+    msb_write_nchar(sb, ' ', depth*2);
+    LongString nodename = NODENAMES[node->type];
+    MSB_FORMAT(sb, "[", nodename, "]");
+    switch((NodeType)node->type){
+        case NODE_PARA:
+        case NODE_TABLE_ROW:
+        case NODE_LIST_ITEM:
+        case NODE_KEYVALUEPAIR:
+            break;
+        case NODE_META:
+        case NODE_RAW:
+        case NODE_PRE:
+        case NODE_JS:
+        case NODE_BULLETS:
+        case NODE_STYLESHEETS:
+        case NODE_LINKS:
+        case NODE_SCRIPTS:
+        case NODE_IMPORT:
+        case NODE_IMAGE:
+        case NODE_TABLE:
+        case NODE_TITLE:
+        case NODE_HEADING:
+        case NODE_LIST:
+        case NODE_COMMENT:
+        case NODE_DATA:
+        case NODE_NAV:
+        case NODE_KEYVALUE:
+        case NODE_IMGLINKS:
+        case NODE_DETAILS:
+        case NODE_MD:
+        case NODE_CONTAINER:
+        case NODE_INVALID:
+        case NODE_QUOTE:
+        case NODE_HR:
+        case NODE_DIV:{
+            MSB_FORMAT(sb, " '", node->header, "' ");
+            RARRAY_FOR_EACH(StringView, c, node->classes){
+                MSB_FORMAT(sb, ".", *c, " ");
+            }
+            RARRAY_FOR_EACH(Attribute, a, node->attributes){
+                MSB_FORMAT(sb, "@", a->key);
+                if(a->value.length)
+                    MSB_FORMAT(sb, "(", a->value, ") ");
+                else
+                    msb_write_char(sb, ' ');
+            }
+        }break;
+        case NODE_STRING:{
+            MSB_FORMAT(sb, " '", node->header, "'");
+        }break;
+    }
+    msb_write_char(sb, '\n');
+    NODE_CHILDREN_FOR_EACH(it, node){
+        dndc_node_tree_repr_inner(ctx, *it, depth+1, sb);
+    }
+}
+DNDC_API
+int
+dndc_node_tree_repr(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString* outstring){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    MStringBuilder msb = {.allocator = get_mallocator()};
+    dndc_node_tree_repr_inner(ctx, handle, 0, &msb);
+    *outstring = msb_detach_ls(&msb);
+    return 0;
 }
 
 #endif

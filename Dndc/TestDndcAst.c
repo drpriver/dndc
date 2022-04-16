@@ -1,4 +1,3 @@
-#include "dndc_api_def.h"
 #include "dndc.h"
 #include "dndc_long_string.h"
 #define DNDC_AST_EXAMPLE
@@ -123,4 +122,5 @@ TestFunction(TestAstExample){
     TESTEND();
 }
 
+// include at end so we don't accidentally use private API
 #include "dndc.c"
