@@ -664,7 +664,7 @@ class DndEditor(QPlainTextEdit):
             r"    for(let c of coord_nodes){",
             r"      let lead = c.header;",
             r"      let position = c.attributes.get('coord');",
-            r"      imglinks.add_child(`${lead} = ${ctx.outfile}#${c.id} @${position}`);",
+            r"      imglinks.add_child(`${lead} = #${c.id} @${position}`);",
             r"    }"
             )))
     def alter_indent(self, indent:bool) -> None:
@@ -908,7 +908,6 @@ class Page(QSplitter):
         # print(f'{t1=}')
         self.clear_errors()
         before_paths = set(FILE_CACHE.paths())
-        outname = os.path.basename(self.filename)
         Flags = pydndc.Flags
         try:
             flags = Flags.USE_DND_URL_SCHEME
@@ -921,7 +920,6 @@ class Page(QSplitter):
                 error_reporter=self.display_dndc_error,
                 file_cache=FILE_CACHE,
                 flags=flags,
-                output_name=outname,
                 )
         except ValueError:
             # On error, the file cache can have loaded things, but we don't get those

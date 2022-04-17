@@ -43,12 +43,11 @@
     viewBox = 0 0 800 600
     ::js
       let imglinks = node.parent;
-      let outfile = ctx.outfile
       let coords = ctx.select_nodes({attributes:['coord'], classes:['room']})
       for(let node of coords){
         let lead = node.header.slice(0, node.header.indexOf('.'));
         let position = node.attributes.get('coord');
-        imglinks.add_child(`${lead} = ${outfile}#${node.id} @${position}`);
+        imglinks.add_child(`${lead} = #${node.id} @${position}`);
       }
   Wandering Monsters::table
     d6 | Monster

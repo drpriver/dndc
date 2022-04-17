@@ -37,7 +37,6 @@ class TestHtmlGen(TestCase):
         expected = (
             HEADER
             +dedent('''
-            <title>This</title>
             </head>
             <body>
             <div>
@@ -121,7 +120,6 @@ class TestHtmlGen(TestCase):
         "<head>\n"
         "<meta charset=\"UTF-8\">\n"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=yes\">\n"
-        "<title>This</title>\n"
         "</head>\n"
         "<body>\n"
         "<div>\n"
@@ -233,7 +231,6 @@ class TestExamples(TestCase):
             html1 = pydndc.htmlgen(text, base_dir=os.path.dirname(example))[0]
             ctx = pydndc.Context()
             ctx.base_dir = os.path.dirname(example)
-            ctx.outpath = 'this.html'
             ctx.root.parse(text)
             ctx.resolve_imports()
             ctx.execute_js()

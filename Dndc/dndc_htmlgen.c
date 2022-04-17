@@ -134,12 +134,6 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             Node* n = get_node(ctx, ctx->titlenode);
             MSB_FORMAT(msb, "<title>", n->header, "</title>\n");
         }
-        else {
-            StringView filename = path_basename(path_strip_extension(ctx->outputfile));
-            msb_write_literal(msb, "<title>");
-            msb_write_title(msb, filename.text, filename.length);
-            msb_write_literal(msb, "</title>\n");
-        }
     }
     if(ctx->stylesheets_nodes.count){
         msb_write_literal(msb, "<style>\n");

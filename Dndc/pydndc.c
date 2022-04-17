@@ -318,9 +318,9 @@ PyMethodDef pydndc_methods[] = {
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
         #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-        "htmlgen(text:str, base_dir:str='.', filename:str='(string input)', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, output_name:str=None, jsargs:str=None)\n"
+        "htmlgen(text:str, base_dir:str='.', filename:str='(string input)', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs:str=None)\n"
         #else
-        "htmlgen(text, base_dir='.', filename:str='(string input)', error_reporter=None, file_cache=None, flags=0, output_name=None, jsargs=None)\n"
+        "htmlgen(text, base_dir='.', filename:str='(string input)', error_reporter=None, file_cache=None, flags=0, jsargs=None)\n"
         #endif
         "--\n"
         "\n"
@@ -391,13 +391,6 @@ PyMethodDef pydndc_methods[] = {
         "                        in separate namespaces, but that can be confusing.\n"
         "                        Set this flag to disallow that.\n"
         "\n"
-        "output_name: str\n"
-        "   Several features depend on knowing what the ultimate name of the file will be.\n"
-        "   APIs such as ctx.outpath etc. in js blocks for example.\n"
-        "   Note that we do not actually write to this path.\n"
-        "\n"
-        "   This path is *NOT* adjusted by the base_directory argument.\n"
-        "\n"
         "jsargs: dict or str\n"
         "    A dict or json literal that will be exposed to js blocks as Args.\n"
         "\n"
@@ -464,9 +457,9 @@ PyMethodDef pydndc_methods[] = {
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
         #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-        "expand(text:str, base_dir:str='.', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, output_name:str=None, jsargs=None) -> str\n"
+        "expand(text:str, base_dir:str='.', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs=None) -> str\n"
         #else
-        "expand(text, base_dir='.', error_reporter=None, file_cache=None, flags=0, output_name=None)\n"
+        "expand(text, base_dir='.', error_reporter=None, file_cache=None, flags=0, jsargs=None)\n"
         #endif
         "--\n"
         "\n"
@@ -518,9 +511,6 @@ PyMethodDef pydndc_methods[] = {
         "    DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP: Attributes and directives are\n"
         "                        in separate namespaces, but that can be confusing.\n"
         "                        Set this flag to disallow that.\n"
-        "\n"
-        "output_name: str\n"
-        "    The final name of the html file. This is used in js scripting.\n"
         "\n"
         "jsargs: dict or str\n"
         "    A dict or json literal that will be exposed to js blocks as Args.\n"
@@ -966,7 +956,6 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     PyObject* base_dir = NULL;
     PyObject* error_reporter = NULL;
     PyObject* file_cache = NULL;
-    PyObject* output_name = NULL;
     PyObject* jsargs = NULL;
     PyObject* filename = NULL;
     unsigned long long flags = 0;
@@ -982,10 +971,10 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
     };
-    const char* const keywords[] = {"text", "base_dir", "filename", "error_reporter", "file_cache", "flags", "output_name", "jsargs", NULL};
+    const char* const keywords[] = {"text", "base_dir", "filename", "error_reporter", "file_cache", "flags", "jsargs", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O!OOKO!O:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &error_reporter, &file_cache, &flags, &PyUnicode_Type, &output_name, &jsargs)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O!OOKO:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &error_reporter, &file_cache, &flags, &jsargs)){
         return NULL;
     }
     PopDiagnostic();
@@ -1037,9 +1026,8 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         textcache = cache->text_cache;
         b64cache = cache->b64_cache;
     }
-    StringView outname = output_name?pystring_borrow_stringview(output_name) : SV("this.html");
     StringView source_path = filename?pystring_borrow_stringview(filename): SV("(string input)");
-    int e = dndc_compile_dnd_file(flags, base_str, source, source_path, outname, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, jsargs_ls);
+    int e = dndc_compile_dnd_file(flags, base_str, source, source_path, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, jsargs_ls);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
@@ -1076,7 +1064,6 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
     PyObject* base_dir = NULL;
     PyObject* error_reporter = NULL;
     PyObject* file_cache = NULL;
-    PyObject* output_name = NULL;
     PyObject* jsargs = NULL;
     unsigned long long flags = 0;
     _Static_assert(sizeof(flags) == sizeof(uint64_t), "");
@@ -1086,10 +1073,10 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
     };
-    const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", "output_name", "jsargs", NULL};
+    const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", "jsargs", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOKO!O:expand", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter, &file_cache, &flags, &PyUnicode_Type, &output_name, &jsargs)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOKO:expand", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter, &file_cache, &flags, &jsargs)){
         return NULL;
     }
     PopDiagnostic();
@@ -1132,8 +1119,7 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         textcache = cache->text_cache;
         b64cache = cache->b64_cache;
     }
-    StringView outname = output_name?pystring_borrow_stringview(output_name) : SV("this.html");
-    int e = dndc_compile_dnd_file(flags, base_str, source, SV(""), outname, &output, b64cache, textcache, func, error_list, NULL, NULL, NULL, jsargs_ls);
+    int e = dndc_compile_dnd_file(flags, base_str, source, SV(""), &output, b64cache, textcache, func, error_list, NULL, NULL, NULL, jsargs_ls);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
@@ -1344,7 +1330,6 @@ typedef struct {
 static
 PyObject* _Nullable
 DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
-    PyObject* base_dir = NULL, * outpath=NULL;
     PyObject* filename = NULL;
     DndcPyFileCache * cache=NULL;
     const char* const keywords[] = {"filename", "filecache", NULL};
@@ -1775,41 +1760,10 @@ DndcContextPy_set_base(PyObject* s, PyObject*_Nullable args, void*_Nullable p){
     return 0;
 }
 
-static
-PyObject* _Nullable
-DndcContextPy_get_outpath(PyObject* s, void*_Nullable p){
-    (void)p;
-    DndcContextPy* self = (DndcContextPy*)s;
-    DndcContext* ctx = self->ctx;
-    StringView base;
-    int err = dndc_ctx_get_outpath(ctx, &base);
-    if(err){
-        return PyErr_Format(PyExc_RuntimeError, "wtf");
-    }
-    return PyUnicode_FromStringAndSize(base.text, base.length);
-}
-
-static
-int
-DndcContextPy_set_outpath(PyObject* s, PyObject*_Nullable args, void*_Nullable p){
-    if(!args)
-        return PyErr_Format(PyExc_AttributeError, "Deletion of outpath unsupported"), -1;
-    if(!PyUnicode_Check(args))
-        return PyErr_Format(PyExc_TypeError, "outpath must be a string"), -1;
-    DndcContextPy* self = (DndcContextPy*)s;
-    DndcContext* ctx = self->ctx;
-    StringView sv = pystring_borrow_stringview(args);
-    sv = dndc_ctx_dup_sv(ctx, sv);
-    int err = dndc_ctx_set_outpath(ctx, sv);
-    if(err)
-        return PyErr_Format(PyExc_RuntimeError, "wtf"), -1;
-    return 0;
-}
 
 static PyGetSetDef DndcContextPy_getset[] = {
     {"root", DndcContextPy_get_root, DndcContextPy_set_root, "root", NULL},
     {"base_dir", DndcContextPy_get_base, DndcContextPy_set_base, "base_dir", NULL},
-    {"outpath", DndcContextPy_get_outpath, DndcContextPy_set_outpath, "outpath", NULL},
     {} /* Sentinel */
 };
 
@@ -1910,7 +1864,6 @@ DndcNodePy_has_attribute(PyObject* s, PyObject* args, PyObject* kwargs){
     PopDiagnostic();
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
-    DndcStringView attr = {0};
     int has_it = dndc_node_has_attribute(ctx, self->handle, pystring_borrow_stringview(key));
     if(has_it)
         Py_RETURN_TRUE;

@@ -143,7 +143,7 @@ compile_file(DndcErrorFunc* func, void*_Nullable logdata, LongString directory, 
         base = (StringView){.length = n, .text = buff};
     }
     LongString result = {0};
-    *error = dndc_compile_dnd_file(flags, base, LS_to_SV(text), path, SV(""), &result, NULL, NULL, func, logdata, NULL, NULL, NULL, LS(""));
+    *error = dndc_compile_dnd_file(flags, base, LS_to_SV(text), path, &result, NULL, NULL, func, logdata, NULL, NULL, NULL, LS(""));
     return result;
 }
 

@@ -284,7 +284,6 @@ run_the_dndc(uint64_t flags,
         StringView base_directory,
         StringView source_text,
         StringView source_path,
-        StringView outpath,
         Nonnull(LongString*) outstring,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,
@@ -341,7 +340,6 @@ run_the_dndc(uint64_t flags,
         .temp = new_linear_storage(1024*1024, "temp storage"),
         .titlenode = INVALID_NODE_HANDLE,
         .navnode = INVALID_NODE_HANDLE,
-        .outputfile = outpath,
         .base_directory = base_directory,
         .b64cache = b64cache,
         .textcache = textcache,
@@ -869,7 +867,7 @@ dndc_format(StringView source_text, LongString* output, Nullable(DndcErrorFunc*)
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_REFORMAT_ONLY
         ;
-    int e = run_the_dndc(flags, SV(""), source_text, SV(""), SV(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""), source_text, SV(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL, LS(""));
     return e;
 }
 
@@ -2022,7 +2020,6 @@ dndc_compile_dnd_file(
     DndcStringView base_directory,
     DndcStringView source_text,
     DndcStringView source_path,
-    DndcStringView outpath,
     DndcLongString* outstring,
     DNDC_NULLABLE(DndcFileCache*) base64cache,
     DNDC_NULLABLE(DndcFileCache*) textcache,
@@ -2061,7 +2058,7 @@ dndc_compile_dnd_file(
         return GENERIC_ERROR;
     if(!outstring)
         return GENERIC_ERROR;
-    int err = run_the_dndc(flags, base_directory, source_text, source_path, outpath, outstring, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread, jsargs);
+    int err = run_the_dndc(flags, base_directory, source_text, source_path, outstring, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread, jsargs);
     return err;
 }
 
@@ -2147,8 +2144,6 @@ dndc_ctx_clone(DndcContext* ctx){
         Marray_push(StringView)(&result->filenames, result->allocator, dndc_ctx_dup_sv(result, *fn));
     #define cp(x) \
         Marray_extend(NodeHandle)(&result->x, result->allocator, ctx->x.data, ctx->x.count)
-    if(ctx->outputfile.length)
-        result->outputfile = dndc_ctx_dup_sv(result, ctx->outputfile);
     if(ctx->base_directory.length)
         result->base_directory = dndc_ctx_dup_sv(result, ctx->base_directory);
 
@@ -2222,20 +2217,6 @@ DNDC_API
 int
 dndc_ctx_get_base(DndcContext* ctx, DndcStringView* sv){
     *sv = ctx->base_directory;
-    return 0;
-}
-
-DNDC_API
-int
-dndc_ctx_set_outpath(DndcContext* ctx, DndcStringView sv){
-    ctx->outputfile = sv;
-    return 0;
-}
-
-DNDC_API
-int
-dndc_ctx_get_outpath(DndcContext* ctx, DndcStringView* sv){
-    *sv = ctx->outputfile;
     return 0;
 }
 

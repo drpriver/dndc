@@ -131,9 +131,6 @@ js_get_dndc_context(QJSContext*, QJSValueConst);
 //
 JSGETTER(js_dndc_context_get_root);
 JSSETTER(js_dndc_context_set_root);
-JSGETTER(js_dndc_context_get_outfile);
-JSGETTER(js_dndc_context_get_outdir);
-JSGETTER(js_dndc_context_get_outpath);
 JSGETTER(js_dndc_context_get_sourcepath);
 JSGETTER(js_dndc_context_get_base);
 JSGETTER(js_dndc_context_get_all_nodes);
@@ -151,9 +148,6 @@ static
 const
 JSCFunctionListEntry JS_DNDC_CONTEXT_FUNCS[] = {
     JS_CGETSET_DEF("root", js_dndc_context_get_root, js_dndc_context_set_root),
-    JS_CGETSET_DEF("outfile", js_dndc_context_get_outfile, NULL),
-    JS_CGETSET_DEF("outdir", js_dndc_context_get_outdir, NULL),
-    JS_CGETSET_DEF("outpath", js_dndc_context_get_outpath, NULL),
     JS_CGETSET_DEF("sourcepath", js_dndc_context_get_sourcepath, NULL),
     JS_CGETSET_DEF("base", js_dndc_context_get_base, NULL),
     JS_CGETSET_DEF("all_nodes", js_dndc_context_get_all_nodes, NULL),
@@ -2074,7 +2068,6 @@ JSMETHOD(js_dndc_context_to_string){
     MSB_FORMAT(&msb, "  nodes: [", ctx->nodes.count, " nodes],\n");
     MSB_FORMAT(&msb, "  filename: \"", ctx->filename, "\",\n");
     MSB_FORMAT(&msb, "  base: \"", ctx->base_directory, "\",\n");
-    MSB_FORMAT(&msb, "  outputfile: \"", ctx->outputfile, "\",\n");
     MSB_FORMAT(&msb, "  dependencies: [", ctx->dependencies.count, " dependencies],\n");
     // TODO: hex format
     MSB_FORMAT(&msb, "  flags: ", ctx->flags, ",\n");
@@ -2147,31 +2140,6 @@ js_dndc_context_set_root(QJSContext* jsctx, QJSValueConst thisValue, QJSValueCon
         return JS_NULL;
     ctx->root_handle = handle;
     return JS_UNDEFINED;
-}
-
-JSGETTER(js_dndc_context_get_outfile){
-    DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
-    if(!ctx)
-        return JS_EXCEPTION;
-    StringView filename = ctx->outputfile.length?path_basename(ctx->outputfile):SV("");
-    return JS_NewStringLen(jsctx, filename.text, filename.length);
-}
-JSGETTER(js_dndc_context_get_outdir){
-    DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
-    if(!ctx)
-        return JS_EXCEPTION;
-    StringView outdir = path_dirname(ctx->outputfile);
-    if(!outdir.length)
-        outdir = SV(".");
-    return JS_NewStringLen(jsctx, outdir.text, outdir.length);
-}
-
-JSGETTER(js_dndc_context_get_outpath){
-    DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
-    if(!ctx)
-        return JS_EXCEPTION;
-    StringView filename = ctx->outputfile;
-    return JS_NewStringLen(jsctx, filename.text, filename.length);
 }
 
 JSGETTER(js_dndc_context_get_sourcepath){

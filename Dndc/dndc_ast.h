@@ -55,14 +55,6 @@ dndc_ctx_get_base(DndcContext*, DndcStringView*);
 
 DNDC_API
 int
-dndc_ctx_set_outpath(DndcContext*, DndcStringView);
-
-DNDC_API
-int
-dndc_ctx_get_outpath(DndcContext*, DndcStringView*);
-
-DNDC_API
-int
 dndc_ctx_store_builtin_file(DndcContext*, DndcStringView, DndcStringView);
 
 DNDC_API
@@ -362,10 +354,8 @@ compile_dnd_to_html(DndcStringView basedir, DndcStringView filename, DndcStringV
     DndcErrorFunc* errfunc = dndc_stderr_error_func;
     void* errarg = NULL;
     int copy_paths = 0;
-    DndcStringView outpath = {.length=sizeof("example.html")-1, "example.html"};
     DndcContext* ctx = dndc_create_ctx(flags, errfunc, errarg, b64cache, textcache);
     dndc_ctx_set_base(ctx, basedir);
-    dndc_ctx_set_outpath(ctx, outpath);
     DndcNodeHandle root = dndc_ctx_make_root(ctx, filename);
     int err = 0;
     err = dndc_ctx_parse_string(ctx, root, filename, text);
@@ -411,10 +401,8 @@ compile_dnd_to_html_with_extra_script(DndcStringView basedir,DndcStringView file
     DndcErrorFunc* errfunc = dndc_stderr_error_func;
     void* errarg = NULL;
     int copy_paths = 0;
-    DndcStringView outpath = {.length=sizeof("example.html")-1, "example.html"};
     DndcContext* ctx = dndc_create_ctx(flags, errfunc, errarg, b64cache, textcache);
     dndc_ctx_set_base(ctx, basedir);
-    dndc_ctx_set_outpath(ctx, outpath);
     DndcNodeHandle root = dndc_ctx_make_root(ctx, filename);
     int err = 0;
     err = dndc_ctx_parse_string(ctx, root, filename, text);

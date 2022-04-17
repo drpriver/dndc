@@ -13,7 +13,7 @@
 #define DNDC_VERSION DNDC_STRINGIFY(DNDC_MAJOR) "." DNDC_STRINGIFY(DNDC_MINOR) "." DNDC_STRINGIFY(DNDC_MICRO)
 
 #define DNDC_MAJOR 0
-#define DNDC_MINOR 11
+#define DNDC_MINOR 12
 #define DNDC_MICRO 0
 #define DNDC_STRINGIFY_IMPL(x) #x
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
@@ -761,13 +761,6 @@ enum DndcFlags {
   //    The filepath that the source path was loaded from. This is mostly used
   //    for reporting errors.
   //
-  // outpath:
-  //    Several features depend on knowing what the ultimate name of the file
-  //    will be. APIs such as ctx.outpath etc. in js blocks for example. Note
-  //    that we do not actually write to this path.
-  //
-  //    This path is *NOT* adjusted by the base_directory argument.
-  //
   // outstring:
   //    A pointer to a string structure to write the data to. The text will be
   //    allocated via malloc. You can call `dndc_free_string` on the text if you
@@ -825,7 +818,6 @@ enum DndcFlags {
       DndcStringView base_directory,
       DndcStringView source_text,
       DndcStringView source_path,
-      DndcStringView outpath,
       DndcLongString* outstring,
       DNDC_NULLABLE(DndcFileCache*) base64cache,
       DNDC_NULLABLE(DndcFileCache*) textcache,

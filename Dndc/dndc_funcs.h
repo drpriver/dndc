@@ -66,13 +66,6 @@ typedef int(DndcPostParseAstFunc)(Nullable(void*)user_data, DndcContext*);
 //    The filepath that the source path was loaded from. This is mostly
 //    used for reporting errors.
 //
-// outpath:
-//    Several features depend on knowing what the ultimate name of the file
-//    will be.  APIs such as ctx.outpath etc. in js blocks for example.  Note
-//    that we do not actually write to this path.
-//
-//    This path is *NOT* adjusted by the base_directory argument.
-//
 // outstring:
 //    A pointer to a string structure to write the data to. The text will be
 //    allocated via malloc. You can call `dndc_free_string` on the text if you
@@ -135,7 +128,6 @@ run_the_dndc(uint64_t flags,
         StringView base_directory,
         StringView source_text,
         StringView source_path,
-        StringView outpath,
         LongString* outstring,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,

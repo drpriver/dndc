@@ -65,7 +65,7 @@ TestFunction(TestDndc1){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString output = {};
-    int e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""), source, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(output.text);
     TestExpectFalse(e);
     TESTEND();
@@ -87,7 +87,7 @@ TestFunction(TestDndc2){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString output = {};
-    int e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""), source, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(output.text);
     TestExpectFalse(e);
     TESTEND();
@@ -108,7 +108,7 @@ TestFunction(TestDndc3){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString output = {};
-    int e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""), source, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(output.text);
     TestExpectTrue(e);
     TESTEND();
@@ -136,7 +136,7 @@ TestFunction(TestImgAttributes){
         | DNDC_FRAGMENT_ONLY
         ;
     LongString output = {0};
-    int e = run_the_dndc(flags, SV(""), source, SV(""), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""), source, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(e);
     TestExpectEquals2(LS_equals, output, expected);
     dndc_free_string(output);
@@ -158,7 +158,7 @@ TestFunction(TestDndcOutParam){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
-    int e = run_the_dndc(flags, SV(""), source, SV(""), SV("hello.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(e);
     if(!e){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -210,7 +210,7 @@ TestFunction(TestDndcFragment){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
-    int e = run_the_dndc(flags, SV(""), source, SV(""), SV("hello.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(e);
     if(!e){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -257,7 +257,7 @@ TestFunction(TestDndcTableMultiline){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
-    int e = run_the_dndc(flags, SV(""), source, SV(""), SV("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(e);
     if(!e){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -267,7 +267,6 @@ TestFunction(TestDndcTableMultiline){
             "<head>\n"
             "<meta charset=\"UTF-8\">\n"
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=yes\">\n"
-            "<title>This</title>\n"
             "</head>\n"
             "<body>\n"
             "<div>\n"
@@ -337,7 +336,7 @@ TestFunction(TestFormatTable){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
-    int e = run_the_dndc(flags, SV(""), source, SV(""), SV("this.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(e);
     if(!e){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -361,7 +360,7 @@ TestFunction(TestFormatTable){
             "  b\n"
             );
     outdata = (LongString){};
-    e = run_the_dndc(flags, SV(""), source, SV(""), SV("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    e = run_the_dndc(flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(e);
     if(!e){
         LongString expected = LS(
@@ -398,7 +397,7 @@ TestFunction(TestFormatList){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
-    int e = run_the_dndc(flags, SV(""), source, SV(""), SV("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     if(!TestExpectFalse(e)){
         // A bit brittle of a test, but it shows that the outparam works.
         LongString expected = LS(
@@ -422,7 +421,7 @@ TestFunction(TestFormatList){
         {
             // check it parses after format
             LongString output = {};
-            int e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""), LS_to_SV(outdata),  SV(""), SV("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+            int e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""), LS_to_SV(outdata),  SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
             TestExpectFalse(output.text);
             TestExpectFalse(e2);
         }
@@ -449,7 +448,7 @@ TestFunction(TestFormatKV){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString outdata = {};
-    int e = run_the_dndc(flags, SV(""), source, SV(""), SV("test.html"), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(e);
     if(!e){
         // A bit brittle of a test, but it shows that the outparam works.
@@ -467,7 +466,7 @@ TestFunction(TestFormatKV){
         {
             // check it parses after format
             LongString output = {};
-            int e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""),  LS_to_SV(outdata), SV(""), SV("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+            int e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""),  LS_to_SV(outdata), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
             TestExpectFalse(output.text);
             TestExpectFalse(e2);
         }
@@ -496,7 +495,7 @@ TestFunction(TestCrashesFixed){
         Allocator allocator = get_mallocator();
         TextFileResult data = read_file(cases[i].name.text, allocator);
         TestAssertSuccess(data);
-        int e = run_the_dndc(flags, SV("TestCases"), LS_to_SV(data.result), LS_to_SV(cases[i].name), SV("test.html"), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        int e = run_the_dndc(flags, SV("TestCases"), LS_to_SV(data.result), LS_to_SV(cases[i].name), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
         TestExpectFalse(output.text);
         if(cases[i].error){
             TestExpectTrue(e);
@@ -567,7 +566,7 @@ TestFunction(TestExamplesWork){
         }
         TestAssertSuccess(data);
         {
-            int e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+            int e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
             TestExpectFalse(output.text);
             if(!TestExpectFalse(e)){
                 TestPrintValue("Example failed:", examples[i]);
@@ -575,7 +574,7 @@ TestFunction(TestExamplesWork){
             }
         }
         {
-            int e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, (WorkerThread*)worker, LS(""));
+            int e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, (WorkerThread*)worker, LS(""));
             TestExpectFalse(output.text);
             if(!TestExpectFalse(e)){
                 TestPrintValue("Example failed:", examples[i]);
@@ -621,7 +620,7 @@ TestFunction(TestUntrusted){
         Allocator allocator = get_mallocator();
         TextFileResult data = read_file(examples[i].text, allocator);
         TestAssertSuccess(data);
-        int e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        int e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
         TestExpectFalse(output.text);
         if(!TestExpectTrue(e)){
             TestPrintValue("source file", examples[i]);
@@ -641,7 +640,7 @@ TestFunction(TestUntrusted){
     for(size_t i = 0; i < arrlen(inline_examples); i++){
         LongString output = {};
         StringView data = inline_examples[i];
-        int e = run_the_dndc(flags, base_dirs[i], data, SV("(string input"), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        int e = run_the_dndc(flags, base_dirs[i], data, SV("(string input"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
         TestExpectFalse(output.text);
         if(!TestExpectTrue(e)){
             TestPrintValue("source file", examples[i]);
@@ -678,11 +677,12 @@ TestFunction(TestSpecialChars){
         {SV("1234567890123456 \r 1234567890123456"), SV("1234567890123456   1234567890123456")},
         {SV("hi \r\n"), SV("hi")},
     };
+
     for(size_t i = 0; i < arrlen(testcases); i++){
         LongString output = {};
-        int e = run_the_dndc(flags, SV(""), testcases[i].source, SV(""), SV("test.html"), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        int e = run_the_dndc(flags, SV(""), testcases[i].source, SV(""), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
         TestAssertFalse(e);
-        if(!TestExpectEquals2(SV_equals, sv_slice(LS_to_SV(output), 192, testcases[i].result.length), testcases[i].result)){
+        if(!TestExpectEquals2(SV_equals, sv_slice(LS_to_SV(output), 172, testcases[i].result.length), testcases[i].result)){
             TestPrintValue("output", output);
         }
         dndc_free_string(output);
@@ -936,7 +936,7 @@ TestFunction(TestJs){
             "  ctx.root.add_child(ctx.make_string('hi'));\n"
             "  ctx.root.insert_child(0, ctx.make_string('hello'));\n"
             "  ctx.root.replace_child(ctx.root.children[0], ctx.make_string('hi'));\n"
-            "  const d = ctx.root.make_child(NodeType.DIV, {header:""+ctx.root+ctx+ctx.outdir+ctx.outpath+ctx.base+ctx.nodes});\n"
+            "  const d = ctx.root.make_child(NodeType.DIV, {header:""+ctx.root+ctx+ctx.base+ctx.nodes});\n"
             "  try {\n"
             "    ctx.root.err('lmao');\n"
             "  }catch(e){"
@@ -945,7 +945,7 @@ TestFunction(TestJs){
     uint64_t flags = 0
         | DNDC_DONT_WRITE;
     DndcLongString output;
-    int e = run_the_dndc(flags, SV(""),input, SV(""), SV(""), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, post_js_ast_func, &TEST_stats, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""),input, SV(""), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, post_js_ast_func, &TEST_stats, NULL, LS(""));
     TestAssertFalse(e);
     TESTEND();
 }
@@ -967,7 +967,7 @@ TestFunction(TestFileCache){
             );
     uint64_t flags = DNDC_DONT_WRITE;
     DndcLongString output;
-    int e = run_the_dndc(flags, SV(""), input, SV(""), SV(""), &output, &cache, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""), input, SV(""), &output, &cache, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     FileCache_clear(&cache);
     for(size_t i = 0; i < ra->count; i++){
         TestExpectEquals((void*)ra->allocations[i], NULL);
@@ -1002,7 +1002,7 @@ TestFunction(TestExpand){
             );
     LongString output;
     uint64_t flags = DNDC_OUTPUT_EXPANDED_DND;
-    int e = run_the_dndc(flags, SV(""), input, SV(""), SV(""), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""), input, SV(""), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestAssertFalse(e);
     TestExpectEquals2(LS_equals, expected, output);
     dndc_free_string(output);
@@ -1031,7 +1031,7 @@ TestFunction(TestMd){
             );
     LongString output;
     uint64_t flags = DNDC_FRAGMENT_ONLY;
-    int e = run_the_dndc(flags, SV(""), input, SV(""), SV(""), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""), input, SV(""), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestAssertFalse(e);
     TestExpectEquals2(LS_equals, expected, output);
     dndc_free_string(output);
@@ -1048,7 +1048,7 @@ TestFunction(TestMd){
             // "  }\n"
             // " ltree(node.parent);\n"
             );
-    e = run_the_dndc(flags, SV(""), input, SV(""), SV(""), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    e = run_the_dndc(flags, SV(""), input, SV(""), &output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestAssertFalse(e);
     TestExpectEquals2(LS_equals, expected, output);
     dndc_free_string(output);

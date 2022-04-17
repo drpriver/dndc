@@ -714,7 +714,7 @@ DndEditor::insert_image_links(const QString& fullname, const QString& fname){
             "    for(let c of coord_nodes){\n"
             "      let lead = c.header;\n"
             "      let position = c.attributes.get('coord');\n"
-            "      imglinks.add_child(`${lead} = ${ctx.outfile}#${c.id} @${position}`);\n"
+            "      imglinks.add_child(`${lead} = #${c.id} @${position}`);\n"
             "    }\n"
           )
         .arg(fname)
@@ -947,7 +947,7 @@ change_coord(int id, int x, int y){
     auto text = page->textedit->toPlainText() + QS("\n");
     auto textbytes = text.toUtf8();
     DndcStringView textsv = {(size_t)textbytes.size(), textbytes.data()};
-    CtxWrapper ctx = {dndc_create_ctx(0, NULL, NULL, NULL, NULL, {}, {}, 0)};
+    CtxWrapper ctx = {dndc_create_ctx(0, NULL, NULL, NULL, NULL)};
     DndcNodeHandle root = dndc_ctx_make_root(ctx.ctx, {});
     int err = dndc_ctx_parse_string(ctx.ctx, root, {}, textsv);
     if(err) return;
@@ -1183,8 +1183,7 @@ Page::set_scroll_pos(QString&& x){
     auto dirbytes = dirname.toUtf8();
     DndcStringView basedir = {(size_t)dirbytes.size(), dirbytes.data()};
     auto fnbytes = filename.toUtf8();
-    DndcStringView outpath = {(size_t)fnbytes.size(), fnbytes.data()};
-    // DndcLongString outpath = {sizeof("this.html")-1, "this.html"};
+    DndcStringView srcpath = {(size_t)fnbytes.size(), fnbytes.data()};
     DndcLongString outstring;
     DndcErrorFunc* errfunc = [](
             void* user_data,
@@ -1210,9 +1209,9 @@ Page::set_scroll_pos(QString&& x){
 
     int err = dndc_compile_dnd_file(
             flags,
-            basedir, textsv,
-            outpath,
-            outpath,
+            basedir,
+            textsv,
+            srcpath,
             &outstring,
             b64cache, textcache,
             errfunc, this,
@@ -1253,7 +1252,6 @@ Page::format(void){
             flags,
             DndcStringView{},
             textsv,
-            DndcStringView{},
             DndcStringView{},
             &outstring,
             nullptr, nullptr,
@@ -1374,7 +1372,6 @@ Page::export_as_html(void){
     auto dirbytes = dirname.toUtf8();
     DndcStringView basedir = {(size_t)dirbytes.size(), dirbytes.data()};
     // TODO: change to where it is going
-    DndcStringView outpath = {sizeof("this.html")-1, "this.html"};
     DndcLongString outstring;
     DndcErrorFunc* errfunc = [](
             void* user_data,
@@ -1392,7 +1389,6 @@ Page::export_as_html(void){
             basedir,
             textsv,
             DndcStringView{},
-            outpath,
             &outstring,
             b64cache, textcache,
             errfunc, this,

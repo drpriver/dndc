@@ -400,11 +400,13 @@ type FileSystemT = {
     //   content: The text to write into the file.
     // Example:
     // --------
+    //   // FIXME: this example doesn't make sense
+    //
     //   // Create an interface file for linking.
     //   let to_link = ctx.select_nodes({attributes:['linkme']});
     //   let s  = '::links\n';
     //   for(let tl of to_link)
-    //     s += `  ${tl.header} = ${ctx.outfile}#${tl.id}\n`;
+    //     s += `  ${tl.header} = #${tl.id}\n`;
     //   FileSystem.write_file(Args[0], s);
     // --------
     write_file(path:string, content:string);

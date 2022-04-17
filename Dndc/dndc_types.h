@@ -326,9 +326,6 @@ typedef struct DndcContext {
     // that is the nav.
     // TODO: make this a string view?
     LongString renderednav;
-    // Where the output will go to.
-    // Python gets read-only access to this.
-    StringView outputfile;
     // See DndcFlags.
     uint64_t flags;
     // See dndc.h

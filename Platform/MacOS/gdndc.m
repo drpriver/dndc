@@ -627,7 +627,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         SV("  for(let c of coord_nodes){\n"),
         SV("    let lead = c.header;\n"),
         SV("    let position = c.attributes.get('coord');\n"),
-        SV("    imglinks.add_child(`${lead} = ${ctx.outfile}#${c.id} @${position}`);\n"),
+        SV("    imglinks.add_child(`${lead} = #${c.id} @${position}`);\n"),
         SV("  }\n"),
     };
     for(int i = 0; i < arrlen(script); i++){
@@ -1435,13 +1435,6 @@ BOOL show_stats;
         return;
     LongString html = {};
     NSString* dir = [[self->file_url URLByDeletingLastPathComponent] path];
-    NSString* final = [[self->file_url path] lastPathComponent];
-    // NSString* final = [self->file_url path];
-    StringView outputpath = SV("");
-    if(final){
-        outputpath.text = [final UTF8String];
-        outputpath.length = outputpath.text?strlen(outputpath.text):0;
-    }
     StringView base_dir = SV("");
     if(dir){
         const char* dir_text = [dir UTF8String];
@@ -1460,7 +1453,7 @@ BOOL show_stats;
     // flags |= DNDC_USE_DND_URL_SCHEME;
     error_text.editable = YES;
     [[error_text textStorage].mutableString setString:@""];
-    auto err = run_the_dndc(flags, base_dir, LS_to_SV(source), SV(""), outputpath, &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL, gdndc_ast_func, (__bridge void*)self, (WorkerThread*)B64WORKER, LS(""));
+    auto err = run_the_dndc(flags, base_dir, LS_to_SV(source), SV(""), &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL, gdndc_ast_func, (__bridge void*)self, (WorkerThread*)B64WORKER, LS(""));
     // auto err = dndc_compile_dnd_file(flags, base_dir, source, &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL);
     error_text.editable = NO;
     // auto t1 = get_t();
