@@ -2296,6 +2296,7 @@ dndc_ctx_set_root(DndcContext* ctx, DndcNodeHandle handle){
         Node* root = get_node(ctx, ctx->root_handle);
         root->parent = INVALID_NODE_HANDLE;
     }
+    // FIXME: should fail if this node is not an orphan.
     ctx->root_handle._value = handle;
     return 0;
 }
@@ -3067,7 +3068,13 @@ dndc_ctx_resolve_data_blocks(DndcContext* ctx){
 
 DNDC_API
 size_t
-dndc_ctx_select_nodes(DndcContext* ctx, size_t* cookie, int type_, DndcStringView*_Nullable attributes, size_t attribute_count, DndcStringView*_Nullable classes, size_t class_count, DndcNodeHandle* outbuf, size_t buflen){
+dndc_ctx_select_nodes(
+        DndcContext* ctx, size_t* cookie,
+        int type_,
+        DndcStringView*_Nullable attributes, size_t attribute_count,
+        DndcStringView*_Nullable classes, size_t class_count,
+        DndcNodeHandle* outbuf, size_t buflen
+        ){
     if(type_ < 0 || type_ > NODE_INVALID) return 0;
     NodeType type = type_;
     size_t n_writ = 0;

@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "dndc.h"
 #include "dndc_long_string.h"
 #define DNDC_AST_EXAMPLE

@@ -768,7 +768,7 @@ enum DndcFlags {
   //    Windows).
   //
   // base64filecache:
-  //    A pointer to a filecache (created with dndc_create_filecache) that is
+  //    A pointer to a filecache (created with `dndc_create_filecache`) that is
   //    used to cache files across invocations of this function. This may be
   //    null, in which case no caching is done.
   //
@@ -776,7 +776,7 @@ enum DndcFlags {
   //    files.
   //
   // textfilecache:
-  //    A pointer to a filecache (created with dndc_create_filecache) that is
+  //    A pointer to a filecache (created with `dndc_create_filecache`) that is
   //    used to cache files across invocations of this function. This may be
   //    null, in which case no caching is done.
   //
