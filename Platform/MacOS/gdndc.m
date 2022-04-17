@@ -1560,7 +1560,7 @@ completionHandler:(void (^)(NSString *result))completionHandler{
     if([parts count] != 2) return;
     int internal_id = [parts[0] intValue];
     NSString* doc_string = self->text.string;
-    DndcContext* ctx = dndc_create_ctx(0, dndc_stderr_error_func, NULL, NULL, NULL, SV(""), SV(""), 0);
+    DndcContext* ctx = dndc_create_ctx(0, dndc_stderr_error_func, NULL, NULL, NULL);
     DndcNodeHandle root = dndc_ctx_make_root(ctx, SV(""));
     int err;
     err = dndc_ctx_parse_string(ctx, root, SV(""), ns_borrow_sv(doc_string));
