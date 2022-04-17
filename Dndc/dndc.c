@@ -2493,7 +2493,7 @@ dndc_node_set_type(DndcContext* ctx, DndcNodeHandle dnh, int type){
     return 0;
 }
 
-#define CHECKNF(x) _Static_assert(NODEFLAG_##x == DNDC_NODEFLAG_##x, #x)
+#define CHECKNF(x) _Static_assert((int)NODEFLAG_##x == (int)DNDC_NODEFLAG_##x, #x)
 CHECKNF(IMPORT);
 CHECKNF(NOID);
 CHECKNF(HIDE);
