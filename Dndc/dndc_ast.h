@@ -353,7 +353,6 @@ compile_dnd_to_html(DndcStringView basedir, DndcStringView filename, DndcStringV
     DndcFileCache* textcache = NULL;
     DndcErrorFunc* errfunc = dndc_stderr_error_func;
     void* errarg = NULL;
-    int copy_paths = 0;
     DndcContext* ctx = dndc_create_ctx(flags, errfunc, errarg, b64cache, textcache);
     dndc_ctx_set_base(ctx, basedir);
     DndcNodeHandle root = dndc_ctx_make_root(ctx, filename);
@@ -400,7 +399,6 @@ compile_dnd_to_html_with_extra_script(DndcStringView basedir,DndcStringView file
     DndcFileCache* textcache = NULL;
     DndcErrorFunc* errfunc = dndc_stderr_error_func;
     void* errarg = NULL;
-    int copy_paths = 0;
     DndcContext* ctx = dndc_create_ctx(flags, errfunc, errarg, b64cache, textcache);
     dndc_ctx_set_base(ctx, basedir);
     DndcNodeHandle root = dndc_ctx_make_root(ctx, filename);

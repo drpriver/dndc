@@ -1746,6 +1746,7 @@ DndcContextPy_get_base(PyObject* s, void*_Nullable p){
 static
 int
 DndcContextPy_set_base(PyObject* s, PyObject*_Nullable args, void*_Nullable p){
+    (void)p;
     if(!args)
         return PyErr_Format(PyExc_AttributeError, "Deletion of base_dir unsupported"), -1;
     if(!PyUnicode_Check(args))
