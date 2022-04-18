@@ -30,10 +30,6 @@
 #include "term_util.h"
 #endif
 
-#define DSORT_T LinkItem
-#define DSORT_CMP StringView_cmp
-#include "dsort.h"
-
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
@@ -347,6 +343,7 @@ run_the_dndc(uint64_t flags,
         .error_user_data = error_user_data,
     };
     ctx.allocator = allocator_from_arena(&ctx.main_arena);
+    ctx.links.allocator = ctx.allocator;
     ctx.string_allocator = allocator_from_arena(&ctx.string_arena);
     ctx.temp_allocator = allocator_from_la(&ctx.temp);
     if(!source_text.text){
@@ -624,17 +621,7 @@ run_the_dndc(uint64_t flags,
             }
         }
         // Sort so we can do a binary search.
-        if(ctx.links.count){
-            uint64_t before_sort = get_t();
-            #if defined(WASM) || 1
-                LinkItem__array_sort(ctx.links.data, ctx.links.count);
-            #else
-                qsort(ctx.links.data, ctx.links.count, sizeof(ctx.links.data[0]), StringView_cmp);
-            #endif
-            uint64_t after_sort = get_t();
-            report_time(&ctx, SV("Sorting links took: "), (after_sort-before_sort));
-        }
-        report_size(&ctx, SV("ctx.links.count = "), ctx.links.count);
+        report_size(&ctx, SV("ctx.links.count = "), ctx.links.count_);
     }
 
     // Render data nodes into the data blob.
@@ -2113,6 +2100,7 @@ dndc_create_ctx(unsigned long long flags, DndcErrorFunc*_Nullable error_func, vo
     ctx->temp_allocator = allocator_from_la(&ctx->temp);
     ctx->allocator = allocator_from_arena(&ctx->main_arena);
     ctx->string_allocator = allocator_from_arena(&ctx->string_arena);
+    ctx->links.allocator = ctx->allocator;
     return ctx;
 }
 
@@ -2163,12 +2151,18 @@ dndc_ctx_clone(DndcContext* ctx){
 
     MARRAY_FOR_EACH(StringView, s, ctx->dependencies)
         Marray_push(StringView)(&result->dependencies, result->allocator, dndc_ctx_dup_sv(result, *s));
-    MARRAY_FOR_EACH(LinkItem, s, ctx->links)
-        Marray_push(LinkItem)(&result->links, result->allocator,
-            (LinkItem){
-                .key = dndc_ctx_dup_sv(result, s->key),
-                .value = dndc_ctx_dup_sv(result, s->value),
-            });
+    if(ctx->links.count_){
+        size_t cap = ctx->links.capacity_;
+        result->links.capacity_ = cap;
+        result->links.count_ = result->links.count_;
+        result->links.keys = Allocator_zalloc(result->links.allocator, sizeof(*result->links.keys)*cap*2);
+        for(size_t i = 0; i < cap; i++){
+            if(ctx->links.keys[i].length){
+                result->links.keys[i] = dndc_ctx_dup_sv(result, ctx->links.keys[i]);
+                result->links.keys[i+cap] = dndc_ctx_dup_sv(result, ctx->links.keys[i+cap]);
+            }
+        }
+    }
     MARRAY_FOR_EACH(DataItem, s, ctx->rendered_data)
         Marray_push(DataItem)(&result->rendered_data, result->allocator,
             (DataItem){
@@ -3019,14 +3013,6 @@ dndc_ctx_resolve_links(DndcContext* ctx){
                 return 1;
             }
         }
-    }
-    // Sort so we can do a binary search.
-    if(ctx->links.count){
-        #if defined(WASM) || 1
-            LinkItem__array_sort(ctx->links.data, ctx->links.count);
-        #else
-            qsort(ctx->links.data, ctx->links.count, sizeof(ctx->links.data[0]), StringView_cmp);
-        #endif
     }
     return 0;
 }

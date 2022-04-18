@@ -611,7 +611,7 @@ build_nav_block(DndcContext*);
   // Can return NULL if the link can't be resolved.
   //
   static inline
-  Nullable(StringView*)
+  Nullable(const StringView*)
   find_link_target(DndcContext* ctx, StringView kebabed);
 
   //

@@ -416,39 +416,9 @@ ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath){
 }
 
 static inline
-Nullable(StringView*)
+Nullable(const StringView*)
 find_link_target(DndcContext* ctx, StringView kebabed){
-    if(!ctx->links.count)
-        return NULL;
-#if 1
-    LinkItem* data = ctx->links.data;
-    size_t low = 0, high = ctx->links.count-1;
-    size_t mid;
-    if(SV_equals(data[low].key, kebabed))
-        return &data[low].value;
-    if(SV_equals(data[high].key, kebabed))
-        return &data[high].value;
-    while(low < high){
-        // This can't realistically overflow.
-        mid = (low+high)/2;
-        int c = StringView_cmp(&data[mid].key, &kebabed);
-        if(c == 0)
-            return &data[mid].value;
-        if(c > 0){
-            high = mid;
-            continue;
-        }
-        // c < 0
-        low = mid + 1;
-    }
-    return NULL;
-#else
-    for(size_t i = 0; i < ctx->links.count; i++){
-        if(SV_equals(ctx->links.data[i].key, kebabed))
-            return &ctx->links.data[i].value;
-    }
-    return NULL;
-#endif
+    return string_table_get(&ctx->links, kebabed);
 }
 
 static inline
@@ -478,18 +448,16 @@ add_link_from_sv(DndcContext* ctx, Node* node){
             node_print_err(ctx, node, LS("link target is empty after the '#'"));
             return PARSE_ERROR;
         }
-        // TODO: keep a binary tree or something?
-        MARRAY_FOR_EACH(LinkItem, li, ctx->links){
-            if(SV_equals(li->value, value))
+        const StringView* values = ctx->links.keys + ctx->links.capacity_;
+        for(size_t i = 0; i < ctx->links.capacity_; i++){
+            if(SV_equals(values[i], value))
                 goto foundit;
         }
         node_print_err(ctx, node, LS("Anchor does not correspond to any link"));
         return PARSE_ERROR;
         foundit:;
     }
-    LinkItem* li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
-    li->key = key;
-    li->value = value;
+    string_table_set(&ctx->links, key, value);
     return 0;
 }
 
@@ -505,18 +473,14 @@ add_link_from_header(DndcContext* ctx, StringView str){
     }
     LongString anchor = msb_detach_ls(&sb);
     StringView kebabed = {.text = anchor.text+1, .length=anchor.length-1};
-    LinkItem* li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
-    li->key = kebabed;
-    li->value = LS_to_SV(anchor);
+    string_table_set(&ctx->links, kebabed, LS_to_SV(anchor));
     return;
 }
 
 static inline
 void
 add_link_from_pair(DndcContext* ctx, StringView kebabed, StringView value){
-    LinkItem* li = Marray_alloc(LinkItem)(&ctx->links, ctx->allocator);
-    li->key = kebabed;
-    li->value = value;
+    string_table_set(&ctx->links, kebabed, value);
 }
 
 static inline

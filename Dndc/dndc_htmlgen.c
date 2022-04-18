@@ -373,7 +373,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                     MStringBuilder temp = {.allocator=ctx->temp_allocator};
                     msb_write_kebab(&temp, alias, alias_length);
                     StringView temp_str = msb_borrow_sv(&temp);
-                    StringView* value = find_link_target(ctx, temp_str);
+                    const StringView* value = find_link_target(ctx, temp_str);
                     if(unlikely(!value)){
                         if(ctx->flags & DNDC_ALLOW_BAD_LINKS){
                             node_print_warning2(ctx, node, SV("Unable to resolve link: "), temp_str);
@@ -386,7 +386,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                         }
                     }
                     else {
-                        StringView* val = value;
+                        const StringView* val = value;
                         msb_write_str(sb, val->text, val->length);
                     }
                     msb_destroy(&temp);

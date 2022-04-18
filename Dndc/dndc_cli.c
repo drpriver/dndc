@@ -559,9 +559,12 @@ dndc_main_ast_func(void*_Nullable user_data, DndcContext*_Nonnull ctx){
         print_node_and_children(ctx, ctx->root_handle, 0);
     }
     if(flags & DNDC_MAIN_PRINT_LINKS){
-        for(size_t i = 0; i < ctx->links.count; i++){
-            LinkItem* li = &ctx->links.data[i];
-            fprintf(stderr, "[%zu] key: '%.*s', value: '%.*s'\n", i, (int)li->key.length, li->key.text, (int)li->value.length, li->value.text);
+        size_t print_idx = 0;
+        for(size_t i = 0; i < ctx->links.capacity_; i++){
+            StringView k = ctx->links.keys[i];
+            if(!k.length) continue;
+            StringView v = ctx->links.keys[i+ctx->links.capacity_];
+            fprintf(stderr, "[%zu] key: '%.*s', value: '%.*s'\n", print_idx++, (int)k.length, k.text, (int)v.length, v.text);
         }
     }
     return 0;

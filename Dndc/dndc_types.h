@@ -9,6 +9,7 @@
 #include "allocator.h"
 #include "arena_allocator.h"
 #include "linear_allocator.h"
+#include "string_table.h"
 
 //
 // dndc_types.h
@@ -50,13 +51,6 @@ typedef struct BuiltinLoadedSource {
 #define MARRAY_T BuiltinLoadedSource
 #include "Marray.h"
 
-
-typedef struct LinkItem {
-    StringView key;
-    StringView value;
-} LinkItem;
-#define MARRAY_T LinkItem
-#include "Marray.h"
 
 //
 // DataItem
@@ -313,10 +307,7 @@ typedef struct DndcContext {
     };
     Marray(StringView) dependencies;
     // Mapping of shorthand for a link to its actual link.
-    // Actually an array of pairs, we sort this and then do binary searches
-    // for lookup.
-    // TODO: use an adaptive table.
-    Marray(LinkItem) links;
+    StringTable links;
     // Mapping of key to string (will be outputted as "data_blob").
     Marray(DataItem) rendered_data;
     // TODO: use an adaptive table (linear at small N, hashmap
