@@ -1,5 +1,0 @@
-created: 2022-03-11T01:00:00Z
-bugmagic^^^^
-Created Mar 10, 2022, 08:00PM::md.update
-Summary::md.summary
-  There’s a nutso bananas protocol that you can put <code>javascript:alert(1)</code> in hrefs and it will execute when clicked! This is so ridiculous!
