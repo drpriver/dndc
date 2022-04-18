@@ -1,3 +1,5 @@
+#define DNDC_EXAMPLE
+#include <stdio.h>
 #include "dndc.h"
 #include "dndc_long_string.h"
 #include "testing.h"
