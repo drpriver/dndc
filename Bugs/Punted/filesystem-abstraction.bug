@@ -1,4 +1,5 @@
 updated: 2022-01-01T19:16:53.726118
+punt: 2022-04-18T16:55:29Z
 bugmagic^^^^
 Summary::md.summary
   It'd be nice to consolidate file caching and file loading into a single
@@ -19,3 +20,5 @@ Updated Jan 01, 2022, 07:16PM::md.update
   a different thread. Oof.
 
   That really complicates things.
+Punted Apr 18, 2022, 12:55PM::md.update
+  This doesn’t seem that important.

@@ -1,4 +1,5 @@
 updated: 2022-01-01T19:21:27.013619
+punt: 2022-04-18T16:54:23Z
 bugmagic^^^^
 Summary::md.summary
   Windows' version of gdndc is implemented with Qt, one version in
@@ -6,3 +7,5 @@ Summary::md.summary
   using Python subjects you to the pain of packaging python. It should
   be possible to use native windows controls and webview2 or whatever
   for the rendering. Win32 is misery though, so meh.
+Punted Apr 18, 2022, 12:54PM::md.update
+  I don’t care about windows enough to learn how to do this.

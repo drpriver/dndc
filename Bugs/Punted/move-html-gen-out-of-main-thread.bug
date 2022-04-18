@@ -1,5 +1,6 @@
 updated: 2022-01-01T19:23:42.520651
 updated: 2022-01-03T11:52:29.277866
+punt: 2022-04-18T16:54:08Z
 bugmagic^^^^
 Summary::md.summary
   All of the gui editors generate the HTML in the main thread, which blocks the UI,
@@ -12,3 +13,5 @@ Updated Jan 03, 2022, 11:52AM::md.update
   Another difficulty is that I use file watching to invalidate the cache. When would that run?
 
   See [filesystem abstraction].
+Punted Apr 18, 2022, 12:54PM::md.update
+  The tools are there, so this a editor-specific issue. I’m not going to fix this any time soon/
