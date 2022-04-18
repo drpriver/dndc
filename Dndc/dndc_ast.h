@@ -13,9 +13,9 @@ extern "C" {
 //
 // DndcAst API
 // ---------------
-// This is the api for creating and intereacting with an ast directly.
-// The functions provided in dndc.h are easier to use and have
-// a stable API. This API is unstable by necessity.
+// This is the api for creating and intereacting with an ast directly.  The
+// functions provided in dndc.h are easier to use and have a stable API. This
+// API is unstable by necessity.
 
 typedef unsigned DndcNodeHandle;
 // --------------
@@ -42,10 +42,9 @@ DNDC_API
 DndcStringView
 dndc_ctx_dup_sv(DndcContext* ctx, DndcStringView text);
 // ------------
-// Functions taking string views potentially hold onto them for
-// the lifetime of ctx. If you can't guarantee they last that long,
-// then call this function to get a copy that will last as long
-// as the ctx.
+// Functions taking string views potentially hold onto them for the lifetime of
+// ctx. If you can't guarantee they last that long, then call this function to
+// get a copy that will last as long as the ctx.
 //
 
 DNDC_API
@@ -63,9 +62,9 @@ dndc_create_ctx(unsigned long long flags,
 //     flags won't make sense.
 //
 // error_func:
-//    A function for reporting errors. See `DndcErrorFunc`. If NULL,
-//    errors will not be printed. Use `dndc_stderr_error_func` for a function
-//    that just prints to stderr.
+//    A function for reporting errors. See `DndcErrorFunc`. If NULL, errors
+//    will not be printed. Use `dndc_stderr_error_func` for a function that
+//    just prints to stderr.
 //
 // error_user_data:
 //    A pointer that will be passed to the error_func. For
@@ -103,9 +102,9 @@ DndcContext*
 dndc_ctx_clone(DndcContext*);
 // --------------
 // Performs a deep copy of the given context. This copies everything, including
-// strings that may have been borrowed from calls to this ast api. The one thing that
-// is not deep copied are the file caches if you passed your own file caches into
-// `dndc_create_ctx` instead of passing NULL.
+// strings that may have been borrowed from calls to this ast api. The one
+// thing that is not deep copied are the file caches if you passed your own
+// file caches into `dndc_create_ctx` instead of passing NULL.
 //
 
 DNDC_API
@@ -130,10 +129,10 @@ dndc_ctx_get_base(DndcContext*, DndcStringView*);
 // 0 on success, non-zero on error.
 //
 
-// DELETEME
 DNDC_API
 int
 dndc_ctx_store_builtin_file(DndcContext* ctx, DndcStringView filename, DndcStringView contents);
+// DELETEME
 
 DNDC_API
 int
@@ -191,11 +190,11 @@ DNDC_API
 DndcNodeHandle
 dndc_ctx_make_root(DndcContext* ctx, DndcStringView filename);
 // ------------------
-// Creates the root node of the context, with the given filename.
-// The root node will be a MD node.
+// Creates the root node of the context, with the given filename.  The root
+// node will be a MD node.
 //
-// If the root already exists, returns DNDC_NODE_HANDLE_INVALID.
-// Otherwise, returns a handle to the new node.
+// If the root already exists, returns DNDC_NODE_HANDLE_INVALID.  Otherwise,
+// returns a handle to the new node.
 //
 
 DNDC_API
@@ -210,9 +209,8 @@ DNDC_API
 int
 dndc_ctx_set_root(DndcContext*, DndcNodeHandle);
 // -----------------
-// Sets the given node as the new root of the context.
-// If there already is a root node, it detaches that node first then attaches
-// this one.
+// Sets the given node as the new root of the context.  If there already is a
+// root node, it detaches that node first then attaches this one.
 //
 // The given node must be an orphan.
 //
@@ -226,9 +224,9 @@ dndc_node_get_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView key
 // -----------------------
 // Retrieves the value of an attribute for a given node.
 //
-// If the attribute is not set on the node or the handle is invalid, non-zero is returned.
-// Otherwise, 0 is returned and value is filled with the value of the given attribute.
-// NOTE: this may be an empty string view.
+// If the attribute is not set on the node or the handle is invalid, non-zero
+// is returned.  Otherwise, 0 is returned and value is filled with the value of
+// the given attribute.  NOTE: this may be an empty string view.
 //
 // Returns 0 on success, non-zero on error.
 //
@@ -251,8 +249,8 @@ dndc_node_set_attribute(DndcContext*, DndcNodeHandle, DndcStringView key, DndcSt
 // -----------------------
 // Sets a specific attribute for a given node.
 //
-// Note that in this API, each attribute has a value, even if it is the empty string.
-// The empty string represents the lack of a value for that attribute.
+// Note that in this API, each attribute has a value, even if it is the empty
+// string.  The empty string represents the lack of a value for that attribute.
 //
 // Returns 0 on success, non-zero on error.
 //
@@ -263,7 +261,8 @@ dndc_node_attributes_count(DndcContext*, DndcNodeHandle);
 // --------------------------
 // Returns the number of attributes set on a given node.
 //
-// This function does not distinguish between a node with no attributes and an error.
+// This function does not distinguish between a node with no attributes and an
+// error.
 //
 
 typedef struct DndcAttributePair {
@@ -290,8 +289,9 @@ dndc_node_attributes(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, DndcA
 //     Must be a valid handle.
 //
 // cookie:
-//     A pointer to an opaque value used for remembering where in the attributes map
-//     this function is. Initialize the cookie to 0 before calling this function.
+//     A pointer to an opaque value used for remembering where in the
+//     attributes map this function is. Initialize the cookie to 0 before
+//     calling this function.
 //
 // buff:
 //     The buffer to copy pairs into.
@@ -310,7 +310,7 @@ dndc_node_attributes(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, DndcA
 // Example:
 // --------
 #ifdef DNDC_AST_EXAMPLE
-void print_attributes(DndcContext* ctx, DndcNodeHandle dnh){
+void print_attributes(FILE* fp, DndcContext* ctx, DndcNodeHandle dnh){
     enum {buff_len=32};
     DndcAttributePair buff[buff_len];
     size_t n_copied = 0;
@@ -321,11 +321,11 @@ void print_attributes(DndcContext* ctx, DndcNodeHandle dnh){
             DndcStringView k = buff[buf_idx].key;
             DndcStringView v = buff[buf_idx].value;
             if(v.length)
-                printf("[%zu]: @%.*s(%.*s)\n", print_idx,
+                fprintf(fp, "[%zu]: @%.*s(%.*s)\n", print_idx,
                         (int)k.length, k.text,
                         (int)v.length, v.text);
             else
-                printf("[%zu]: @%.*s\n", print_idx,
+                fprintf(fp, "[%zu]: @%.*s\n", print_idx,
                         (int)k.length, k.text);
         }
     }
@@ -366,8 +366,8 @@ dndc_node_append_child(DndcContext* ctx, DndcNodeHandle parent, DndcNodeHandle c
 //     The (valid) node to append to.
 //
 // child:
-//     The child node to append to parent. This node must be an orphan (no parent node)
-//     and must not be equal to the parent.
+//     The child node to append to parent. This node must be an orphan (no
+//     parent node) and must not be equal to the parent.
 //
 //     Call `dndc_node_detach` to make a node an orphan.
 //
@@ -378,150 +378,88 @@ dndc_node_append_child(DndcContext* ctx, DndcNodeHandle parent, DndcNodeHandle c
 
 DNDC_API
 int
-dndc_node_insert_child(DndcContext*, DndcNodeHandle, size_t, DndcNodeHandle);
+dndc_node_insert_child(DndcContext* ctx, DndcNodeHandle parent, size_t i, DndcNodeHandle child);
 // ---------------------
+// Inserts the child as the `i`th child of the parent.
+//
+// Arguments:
+// ----------
+// ctx:
+//     The parsing context.
+//
+// parent:
+//     The (valid) node to insert into.
+//
+// i:
+//     The index to insert the child at. If this is greater than the number of
+//     nodes that are children of the parent, then the child is inserted at the
+//     end, making this function like `dndc_node_append_child` instead.
+//
+// child:
+//     The child node to insert into the children of the parent. This node must
+//     be an orphan (no parent node) and must not be equal to the parent.
+//
+//     Call `dndc_node_detach` to make a node an orphan.
+//
+// Returns:
+// --------
+// Returns 0 on success, a non-zero error code otherwise.
+//
 
 DNDC_API
 void
-dndc_node_detach(DndcContext*, DndcNodeHandle);
+dndc_node_detach(DndcContext* ctx, DndcNodeHandle dnh);
+// ----------------
+// Detaches the given node from its parent. The node will be removed from the
+// parent's children array and the node will have its parent set to the invalid
+// node handle (representing not having a parent). This is sometimes referred
+// to as an orphan node.
+//
 
 DNDC_API
 int
-dndc_node_remove_child(DndcContext*, DndcNodeHandle, size_t);
+dndc_node_remove_child(DndcContext* ctx, DndcNodeHandle parent, size_t i);
+// ----------------------
+// Removes the `i`th child from parent's children array, and makes the child an
+// orphan node.
+//
+// If `i` is out of bounds, a non-zero error code is returned.
+//
+// Returns 0 on success, a non-zero error code otherwise.
+//
 
 DNDC_API
 int
-dndc_node_has_class(DndcContext*, DndcNodeHandle, DndcStringView);
-
-DNDC_API
-int
-dndc_node_has_attribute(DndcContext*, DndcNodeHandle, DndcStringView);
-
+dndc_node_has_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView cls);
+// -------------------
+// Queries if the node has the given class in its classes array.
+//
+// Note: this function does not distinguish between an error and a node not
+// having a class.
+//
+// Returns 0 if it does not or if an error occurs. 1 if it does have that
+// class.
+//
 
 
 DNDC_API
 DndcNodeHandle
 dndc_node_get_parent(DndcContext*, DndcNodeHandle);
-
-DNDC_API
-int
-dndc_node_get_type(DndcContext*, DndcNodeHandle);
-
-DNDC_API
-int
-dndc_node_set_type(DndcContext*, DndcNodeHandle, int);
-
-
-#ifdef __clang__
-enum __attribute__((flag_enum)) {
-#else
-enum {
-#endif
-    DNDC_NODEFLAG_NONE     = 0x0,
-    DNDC_NODEFLAG_IMPORT   = 0x1,
-    DNDC_NODEFLAG_NOID     = 0x2,
-    DNDC_NODEFLAG_HIDE     = 0x4,
-    DNDC_NODEFLAG_NOINLINE = 0x8,
-};
-
-
-DNDC_API
-int
-dndc_node_get_flags(DndcContext*, DndcNodeHandle);
-
-
-DNDC_API
-int
-dndc_node_set_flags(DndcContext*, DndcNodeHandle, int);
-
-DNDC_API
-int
-dndc_node_get_header(DndcContext*, DndcNodeHandle, DndcStringView*);
-
-DNDC_API
-int
-dndc_node_set_header(DndcContext*, DndcNodeHandle, DndcStringView);
-
-DNDC_API
-size_t
-dndc_node_get_children(DndcContext*, DndcNodeHandle, DndcNodeHandle* buff, size_t buff_len, size_t* cookie);
-
-DNDC_API
-size_t
-dndc_node_children_count(DndcContext*, DndcNodeHandle);
-
+// -------------------
+// Returns the handle to the parent node associated with the given node.
 //
-// Convenience function. Iterates over the children of a node and concatenates
-// their strings together.
-// This could be useful for executing custom scripting languages.
+// Note: this function does not distinguish between an error and a node without
+// a parent.
 //
-DNDC_API
-int
-dndc_node_cat_string_children(DndcContext*, DndcNodeHandle, DndcLongString* out);
+// If the node does not have a parent or if an error occurs, returns
+// DNDC_NODE_HANDLE_INVALID.
+//
 
-DNDC_API
-size_t
-dndc_node_classes(DndcContext*, DndcNodeHandle, size_t* cookie, DndcStringView* buff, size_t buff_len);
-
-DNDC_API
-size_t
-dndc_node_classes_count(DndcContext*, DndcNodeHandle);
-
-DNDC_API
-int
-dndc_node_add_class(DndcContext*, DndcNodeHandle, DndcStringView);
-
-DNDC_API
-int
-dndc_node_remove_class(DndcContext*, DndcNodeHandle, DndcStringView);
-
-
-DNDC_API
-int
-dndc_ctx_expand_to_dnd(DndcContext*, DndcLongString*);
-
-DNDC_API
-int
-dndc_ctx_render_to_html(DndcContext*, DndcLongString*);
-
-DNDC_API
-int
-dndc_node_render_to_html(DndcContext*, DndcNodeHandle, DndcLongString*);
-
-DNDC_API
-int
-dndc_ctx_format_tree(DndcContext*, DndcLongString*);
-
-DNDC_API
-int
-dndc_node_format(DndcContext*, DndcNodeHandle, int indent, DndcLongString*);
-
-DNDC_API
-int
-dndc_node_execute_js(DndcContext*, DndcNodeHandle, DndcLongString);
-
-DNDC_API
-int
-dndc_ctx_execute_js(DndcContext*, DndcLongString jsargs);
-
-typedef struct DndcNodeLocation {
-    DndcStringView filename;
-    int row, column;
-} DndcNodeLocation;
-
-DNDC_API
-int
-dndc_node_location(DndcContext*, DndcNodeHandle, DndcNodeLocation*);
-
-
-DNDC_API
-DndcNodeHandle
-dndc_ctx_node_by_id(DndcContext*, DndcStringView);
-
-DNDC_API
-int
-dndc_ctx_node_invalid(DndcContext* ctx, DndcNodeHandle);
-
+// DNDCNDOETYPES
+// -------------
+// This macro is setup so that you can use it in an X macro.  It is all of the
+// node types and their integer value.
+//
 // Usable in an X macro for convenient wrapping.
 #define DNDCNODETYPES(apply) \
     apply(MD,              0)\
@@ -561,39 +499,595 @@ enum DndcNodeType {
     DNDCNODETYPES(X)
 #undef X
 };
+// DndcNodeType
+//----------------------
+// The type of the node.
+//
 
-// header may be empty and parent may be DNDC_NODE_HANDLE_INVALID
+
+DNDC_API
+int
+dndc_node_get_type(DndcContext*, DndcNodeHandle);
+// ------------------
+// Returns the type of the node (as an integer).
+//
+// Note: this function does not distinguish between an error and a node with
+// the type DNDC_NODE_TYPE_INVALID.
+//
+
+DNDC_API
+int
+dndc_node_set_type(DndcContext* ctx, DndcNodeHandle dnh, int node_type);
+// -----------------
+// Sets the type of the node.
+//
+// `node_type` must be a valid value of `DndcNodeType`.
+//
+// Returns 0 on success and non-zero on error.
+//
+
+
+#ifdef __clang__
+enum __attribute__((flag_enum)) {
+#else
+enum {
+#endif
+    DNDC_NODEFLAG_NONE     = 0x0,
+    DNDC_NODEFLAG_IMPORT   = 0x1,
+    DNDC_NODEFLAG_NOID     = 0x2,
+    DNDC_NODEFLAG_HIDE     = 0x4,
+    DNDC_NODEFLAG_NOINLINE = 0x8,
+};
+
+// DNDC_NODEFLAG
+// -------------
+// Flags that can be set or cleared on nodes providing specific behaviors.
+//
+// DNDC_NODEFLAG_NONE:
+//     Does nothing.
+//
+// DNDC_NODEFLAG_IMPORT:
+//     Instead of interpreting the node's children as strings, they are paths
+//     to files that should be loaded and parsed themselves, with the given
+//     node as the parent container. This will get imported if you call
+//     `dndc_ctx_resolve_imports`.
+//
+// DNDC_NODEFLAG_NOID:
+//     Suppresses the generation of the default id (which is derived from the
+//     node's header).
+//
+// DNDC_NODEFLAG_HIDE:
+//     Skip this node when rendering to html.
+//
+// DNDC_NODEFLAG_NOINLINE:
+//     Some nodes (such as IMG and IMGLINKS) are inlined by default, putting
+//     the contents in the document itself instead of generating a link.  This
+//     flag suppressed that behavior and causes a link to be generated instead.
+//     This will mean the resulting document is no longer self-contained.
+//
+
+
+DNDC_API
+int
+dndc_node_get_flags(DndcContext*, DndcNodeHandle);
+// -------------------
+// Retrieves the flags set on a node. This will be the bitwise-or of the
+// `DNDC_NODEFLAG`s that are set.
+//
+// Note: this function does not distinguish between an error and a node with no
+// flags set.
+//
+
+
+DNDC_API
+int
+dndc_node_set_flags(DndcContext*, DndcNodeHandle, int);
+// -------------------
+// Sets the flags on a node to the given value. This should be the bitwise-or
+// of the `DNDC_NODE_FLAG`s you wish to set. Note that this will override all
+// of the flags already set on the node. Call `dndc_node_get_flags` first and
+// bit-twiddle them if you don't want to leave the values of those flags
+// undisturbed.
+//
+// Returns 0 on success and non-zero on error.
+//
+
+DNDC_API
+int
+dndc_node_get_header(DndcContext*, DndcNodeHandle, DndcStringView*);
+// --------------------
+// Gets the "header" associated with a node. The header is the stuff to the
+// left of a double colon in a dnd document and is usually used to generate
+// headings.  As a special case, the header is actually the value of a STRING
+// node.
+//
+// Returns 0 on success and non-zero on error.
+//
+
+DNDC_API
+int
+dndc_node_set_header(DndcContext*, DndcNodeHandle, DndcStringView);
+// --------------------
+// Sets the "header" associated with a node. Note that for a STRING node this
+// is actually that node's value. For most nodes, this is the heading that will
+// be generated at the start of that content in the html. For some ndoes this
+// is ignored.
+//
+// Returns 0 on success and non-zero on error.
+//
+
+
+DNDC_API
+size_t
+dndc_node_children_count(DndcContext*, DndcNodeHandle);
+// ----------------------
+// Returns how many nodes are children of this node.
+//
+// Note: this function does not distinguish between an error and a node with no
+// children.
+//
+
+DNDC_API
+size_t
+dndc_node_get_children(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, DndcNodeHandle* buff, size_t buff_len);
+// -----------------------
+// Copies the handles to the child nodes of a node into a buffer.
+//
+// Arguments:
+// ----------
+// ctx:
+//     The parsing context.
+//
+// dnh:
+//     Handle to the node that the parsed file will be the child of.  Must be a
+//     valid handle.
+//
+// cookie:
+//     A pointer to an opaque value used for remembering where in the children
+//     array this function is. Initialize the cookie to 0 before calling this
+//     function.
+//
+// buff:
+//     The buffer to copy handles into.
+//
+// bufflen:
+//     The length (in items, not bytes) of buff.
+//
+// Returns:
+// --------
+// The number of items copied into buff. If 0 is returned, no items were copied
+// into the buff and there are no more items to copy.
+//
+// Either loop until this function returns 0 or until the total number of items
+// copied is equal to the result of `dnd_node_children_count`.
+
+DNDC_API
+int
+dndc_node_cat_string_children(DndcContext*, DndcNodeHandle, DndcLongString* out);
+// -------------------------------
+// Convenience function. Iterates over the children of a node and concatenates
+// their strings together.  This could be useful for executing custom scripting
+// languages.
+//
+// When you are done with the the string, pass it to `dndc_free_string`.
+//
+// Returns 0 on success and non-zero on error.
+//
+// On error, nothing is written to the string argument and you do not need to
+// call `dndc_free_string`.
+//
+
+
+DNDC_API
+size_t
+dndc_node_classes_count(DndcContext*, DndcNodeHandle);
+// -----------------------
+// Returns how many classes this node has.
+//
+// Note: this function does not distinguish between an error and a node with no
+// classes.
+//
+
+DNDC_API
+size_t
+dndc_node_classes(DndcContext*, DndcNodeHandle, size_t* cookie, DndcStringView* buff, size_t buff_len);
+// -----------------------
+// Copies the classes (string views) of a node into a buffer.
+//
+// Arguments:
+// ----------
+// ctx:
+//     The parsing context.
+//
+// dnh:
+//     Handle to the node that the parsed file will be the child of.
+//     Must be a valid handle.
+//
+// cookie:
+//     A pointer to an opaque value used for remembering where in the classes array
+//     this function is. Initialize the cookie to 0 before calling this function.
+//
+// buff:
+//     The buffer to copy classes into.
+//
+// bufflen:
+//     The length (in items, not bytes) of buff.
+//
+// Returns:
+// --------
+// The number of items copied into buff. If 0 is returned, no items were copied
+// into the buff and there are no more items to copy.
+//
+// Either loop until this function returns 0 or until the total number of items
+// copied is equal to the result of `dnd_node_classes_count`.
+//
+
+DNDC_API
+int
+dndc_node_add_class(DndcContext*, DndcNodeHandle, DndcStringView);
+// ------------------
+// Adds a class to the class array of a node.
+//
+// Returns 0 on success and non-zero on error.
+//
+
+DNDC_API
+int
+dndc_node_remove_class(DndcContext*, DndcNodeHandle, DndcStringView);
+// Removes a class to the class array of a node.
+//
+// Returns 0 on success and non-zero on error.
+//
+// Note: this returns 0 even if the node does not have this class.
+//
+
+
+DNDC_API
+int
+dndc_ctx_expand_to_dnd(DndcContext*, DndcLongString*);
+// ---------------------
+// Serializes the context starting at the root into a string that will parse
+// back into the same tree.
+//
+// Some trees cannot be serialized to a string in this way.
+//
+// When you are done with the the string, pass it to `dndc_free_string`.
+//
+// Returns 0 on success and non-zero on error.
+//
+// On error, nothing is written to the string argument and you do not need to
+// call `dndc_free_string`.
+//
+
+DNDC_API
+int
+dndc_ctx_render_to_html(DndcContext*, DndcLongString*);
+// -----------------------
+// Generates an html document from the context, starting at the root.
+//
+// This will be either a complete document or a fragment if the
+// DNDC_FRAGMENT_ONLY flag was passed to `dndc_create_ctx`.
+//
+// When you are done with the the string, pass it to `dndc_free_string`.
+//
+// Returns 0 on success and non-zero on error.
+//
+// On error, nothing is written to the string argument and you do not need to
+// call `dndc_free_string`.
+//
+
+DNDC_API
+int
+dndc_node_render_to_html(DndcContext*, DndcNodeHandle, DndcLongString*);
+// ------------------------
+// Generates an html fragment starting at the given node. Note this will not
+// have any SCRIPTS nodes or CSS nodes as thsoe are only output in a complete
+// document from `dndc_ctx_render_to_html`.
+//
+// When you are done with the string, pass it to `dndc_free_string`.
+//
+// Returns 0 on success and non-zero on error.
+//
+// On error, nothing is written to the string argument and you do not need to
+// call `dndc_free_string`.
+//
+
+DNDC_API
+int
+dndc_ctx_format_tree(DndcContext*, DndcLongString*);
+// ----------------------
+// Serializes the context starting at the root into a string that is a valid
+// .dnd file and will parse back into the same tree. Unlike
+// `dndc_ctx_expand_to_dnd`, this will be formatted to a specific width, tables
+// aligned, etc.
+//
+// Some trees can't be serialized back into a .dnd string.
+//
+// When you are done with the the string, pass it to `dndc_free_string`.
+//
+// Returns 0 on success and non-zero on error.
+//
+// On error, nothing is written to the string argument and you do not need to
+// call `dndc_free_string`.
+//
+
+DNDC_API
+int
+dndc_node_format(DndcContext*, DndcNodeHandle, int indent, DndcLongString*);
+// ----------------
+// Serializes the node and its children into a string that is valid .dnd and
+// will parse back into the same node + children. Additionally, this will be
+// formatted to a specific width, tables aligned, etc.
+//
+// Some trees can't be serialized back into a .dnd string.
+//
+// When you are done with the the string, pass it to `dndc_free_string`.
+//
+// Returns 0 on success and non-zero on error.
+//
+// On error, nothing is written to the string argument and you do not need to
+// call `dndc_free_string`.
+//
+
+DNDC_API
+int
+dndc_node_execute_js(DndcContext*, DndcNodeHandle, DndcLongString script);
+// --------------------
+// Execute the given javascript script in the context of the given node.  The
+// node and ctx will be placed into the scope of the script as per usual, etc.
+// `Args` will be null.
+//
+// Returns 0 on success and non-zero on error.
+//
+// Note that the tree may be in an unexpected state after an error in
+// javascript. Likely the only safe thing to do is to call `dndc_ctx_destroy`
+// on the context to cleanup resources.
+//
+
+DNDC_API
+int
+dndc_ctx_execute_js(DndcContext* ctx, DndcLongString jsargs);
+// -------------------
+// Executes all of the javascript nodes in the context.  The node and ctx will
+// be placed into the scope of the script as per usual, etc.
+//
+// After execution, the javascript nodes will have their types changed to
+// DNDC_NODE_TYPE_INVALID and are removed from the tree. This means this
+// function can be safely called multiple times.
+//
+// Note that the tree may be in an unexpected state after an error in
+// javascript. Likely the only safe thing to do is to call `dndc_ctx_destroy`
+// on the context to cleanup resources.
+//
+// Arguments:
+// ----------
+// ctx:
+//     The parsing context.
+//
+// jsargs:
+//     A string that will be parsed as json and be present in the javascript
+//     execution as the special `Args` global. For convenience, an empty string
+//     will be treated as "null".
+//
+// Returns:
+// --------
+// Returns 0 on success and non-zero on error.
+//
+
+typedef struct DndcNodeLocation {
+    DndcStringView filename;
+    int row, column;
+} DndcNodeLocation;
+// ----------------
+// Where in the source files the current node comes from.  Note that since
+// nodes can be genereated programatically (this api and from js), that the
+// location might not correspond to a real file or might correspond to a
+// non-sensical part of a real file.
+//
+// Members:
+// --------
+// filename: name of the file where the node came from
+// row:      1-based, which line of the file this node is from.
+// column:   1-based, which column of the line
+//
+
+DNDC_API
+int
+dndc_node_location(DndcContext*, DndcNodeHandle, DndcNodeLocation*);
+// --------------------
+// Returns the location of a node in its source file. See the discussion of the
+// caveats of this information above in `DndcNodeLocation`.
+//
+// Returns 0 on success and non-zero on error.
+//
+
+
+DNDC_API
+DndcNodeHandle
+dndc_ctx_node_by_id(DndcContext*, DndcStringView);
+// --------------------
+// Retrieves the node with the given string id.
+//
+// Note that the id will be normalized (kebabed) before lookup.
+// "Hello World" becomes "hello-world".
+//
+// Returns the node's handle on success lookup and DNDC_NODE_HANDLE_INVALID
+// if the node cannot be found.
+//
+// Note: in some circumstances, two nodes can have the same string id. Which
+// handle is returned is not specified.
+//
+
+DNDC_API
+int
+dndc_ctx_node_invalid(DndcContext* ctx, DndcNodeHandle);
+// ---------------------
+// Returns whether the node handle is invalid.
+//
+// The obvious case is DNDC_NODE_HANDLE_INVALID, but also this allows you to
+// the check the validity of a handle that you deserialized from disk, stuffed
+// into an integer somewhere, taken from user input, etc.
+//
+// Returns 1 if the handle is invalid and 0 otherwise.
+
 DNDC_API
 DndcNodeHandle
 dndc_ctx_make_node(DndcContext*, int type, DndcStringView header, DndcNodeHandle parent);
+// -------------------
+// Creates a new node in the tree.
+//
+// Arguments:
+// ----------
+// ctx:
+//     The parsing context.
+//
+//  type:
+//      The type of the new node. Must be a valid value of DndcNodeType.
+//
+//  header:
+//      The "header" of the new node. This may be an emptry string.
+//
+//  parent:
+//      The parent of the new node. If valid, this node will be appended as a
+//      child to that parent node. If invalid, then this new node will be an
+//      orphan.
+//
+//  Returns:
+//  --------
+//  The handle to the new node on success and DNDC_NODE_HANDLE_INVALID on error.
+//
 
 DNDC_API
 int
 dndc_ctx_resolve_imports(DndcContext*);
+// ------------------------
+// Iterates through all IMPORT nodes and all nodes with the #import flag and
+// imports their children.  These nodes will have the #import flag removed and
+// IMPORT nodes will be changed to a non-IMPORT container node. This means this
+// function is safe to call multiple times as a given node will only be
+// imported once.
+//
+// Returns 0 on success, non-zero on error.
+//
 
 DNDC_API
 int
 dndc_ctx_gather_links(DndcContext*);
+// ---------------------
+// Populates the internal link database based on the ids of the nodes in the
+// tree. Call this before `dndc_ctx_resolve_links` and before rendering to
+// html.
+//
+// Returns 0 on success, non-zero on error.
+//
+// TODO: does this need to be separate from the resolve_links step?
+//
 
 DNDC_API
 int
 dndc_ctx_build_nav(DndcContext*);
+// ------------------
+// Populates the NAV node, if there is one in the context.
+//
+// Returns 0 on success, non-zero on error.
+//
 
 DNDC_API
 int
 dndc_ctx_resolve_links(DndcContext*);
+// ------------------
+// Adds links from LINKS nodes and prepares the internal link database.
+// Call this before `dndc_ctx_resolve_links` and before rendering to html.
+//
+// Returns 0 on success, non-zero on error.
+//
+// TODO: does this need to be separate from the gather_links step?
+//
 
 DNDC_API
 int
 dndc_ctx_resolve_data_blocks(DndcContext*);
+// -----------
+// DELETEME - this data block concept sucks.
 
 DNDC_API
 size_t
-dndc_ctx_select_nodes(DndcContext* ctx, size_t* cookie, int type, DNDC_NULLABLE(DndcStringView*) attributes, size_t attribute_count, DNDC_NULLABLE(DndcStringView*) classes, size_t class_count,  DndcNodeHandle* outbuf, size_t buflen);
+dndc_ctx_select_nodes(DndcContext* ctx, size_t* cookie,
+        int type,
+        DNDC_NULLABLE(DndcStringView*) attributes, size_t attribute_count,
+        DNDC_NULLABLE(DndcStringView*) classes, size_t class_count,
+        DndcNodeHandle* buff, size_t buflen);
+// ---------------------
+// Copies the handles of nodes in the context that meet certain criteria.
+//
+// Note: if type is DNDC_NODE_TYPE_INVALID, attributes is null and classes is
+// null, then every node in the context will be copied into the buffer.
+//
+// Arguments:
+// ----------
+// ctx:
+//     The parsing context.
+//
+// cookie:
+//     A pointer to an opaque value used for remembering where in the nodes
+//     this function is. Initialize the cookie to 0 before calling this
+//     function.
+//
+// type:
+//     The type of the selected nodes. If this is DNDC_NODE_TYPE_INVALID, then
+//     this argument is ignored.  Otherwise, all nodes will be of this type.
+//     Note that there is no way to select nodes with type
+//     DNDC_NODE_TYPE_INVALID as they are supposed to be ignored.
+//
+// attributes:
+//     Pointer to an array of attributes that the selected nodes must have. If
+//     this is length 0, then this argument is ignored. Otherwise, the nodes
+//     must have all of these attributes.
+//
+// attribute_count:
+//     The length of the array pointed to by `attributes` (in elements, not
+//     bytes).
+//
+// classes:
+//     Pointer to an array of classes that the selected nodes must have. If
+//     this is length 0, then this argument is ignored. Otherwise, the nodes
+//     must have all of these classes.
+//
+// class_count:
+//      The length of the array pointed to by `classses` (in elements, not
+//      bytes).
+//
+// buff:
+//      Pointer to an array to copy the handles into.
+//
+// buflen:
+//      The length of `buff` (in elements, not bytes).
+//
+// Returns:
+// --------
+// The number of items copied into buff. If 0 is returned, no items were copied
+// into the buff and there are no more items to copy.
+//
+// To gather all of the nodes meeting this criteria, loop until this returns 0.
+//
+// There is no way to get the total number that meet the criteria ahead of time
+// (maybe in the future).
+//
 
 DNDC_API
 int
 dndc_node_tree_repr(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString*);
+// --------------------
+// Outputs a string representation of the tree starting from the given node.
+// Useful for debugging.
+//
+// When you are done with the the string, pass it to `dndc_free_string`.
+//
+// Returns 0 on success and non-zero on error.
+//
+// On error, nothing is written to the string argument and you do not need to
+// call `dndc_free_string`.
+//
 
 #ifdef __cplusplus
 }
@@ -608,7 +1102,12 @@ dndc_node_tree_repr(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString*);
 //
 static inline
 int
-compile_dnd_to_html(DndcStringView basedir, DndcStringView filename, DndcStringView text, DndcLongString* outhtml){
+compile_dnd_to_html(
+        DndcStringView basedir,
+        DndcStringView filename,
+        DndcStringView text,
+        DndcLongString* outhtml
+        ){
     unsigned long long flags = 0;
     DndcFileCache* b64cache = NULL;
     DndcFileCache* textcache = NULL;
@@ -654,7 +1153,12 @@ compile_dnd_to_html(DndcStringView basedir, DndcStringView filename, DndcStringV
 // This is the same as above, but it additionally injects some javascript
 static inline
 int
-compile_dnd_to_html_with_extra_script(DndcStringView basedir,DndcStringView filename, DndcStringView text, DndcLongString* outhtml){
+compile_dnd_to_html_with_extra_script(
+        DndcStringView basedir,
+        DndcStringView filename,
+        DndcStringView text,
+        DndcLongString* outhtml
+        ){
     unsigned long long flags = 0;
     DndcFileCache* b64cache = NULL;
     DndcFileCache* textcache = NULL;
@@ -671,10 +1175,12 @@ compile_dnd_to_html_with_extra_script(DndcStringView basedir,DndcStringView file
     if(err) goto fail;
 
     // inject a script
-    DndcNodeHandle jsnode = dndc_ctx_make_node(ctx, DNDC_NODE_TYPE_SCRIPTS, (DndcStringView){0}, root);
-#define MYSCRIPT "window.alert('pwned');"
-    dndc_ctx_make_node(ctx, DNDC_NODE_TYPE_STRING, (DndcStringView){sizeof(MYSCRIPT)-1, MYSCRIPT}, jsnode);
-#undef MYSCRIPT
+    DndcStringView empty = {0};
+    DndcNodeHandle jsnode = dndc_ctx_make_node(ctx, DNDC_NODE_TYPE_SCRIPTS, empty, root);
+    #define MYSCRIPT "window.alert('pwned');"
+    DndcStringView myscript = {sizeof(MYSCRIPT)-1, MYSCRIPT};
+    #undef MYSCRIPT
+    dndc_ctx_make_node(ctx, DNDC_NODE_TYPE_STRING, myscript, jsnode);
 
     {
         DndcLongString jsargs = {4, "null"};

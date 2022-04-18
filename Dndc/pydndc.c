@@ -2171,7 +2171,7 @@ DndcNodePy_get_children(PyObject *s, void *_Nullable p){
     size_t cookie = 0;
     size_t done = 0;
     while(done < n){
-        size_t n_read = dndc_node_get_children(ctx, self->handle, buff, sizeof buff / sizeof buff[0], &cookie);
+        size_t n_read = dndc_node_get_children(ctx, self->handle, &cookie, buff, sizeof buff / sizeof buff[0]);
         for(size_t i = 0; i < n_read; i++){
             PyTuple_SET_ITEM(tup, i+done, DndcNode_make(self->pyctx, buff[i]));
         }

@@ -2701,7 +2701,10 @@ dndc_node_remove_child(DndcContext* ctx, DndcNodeHandle parent_, size_t i){
     NodeHandle parent = check_api_handle(ctx, parent_);
     if(NodeHandle_eq(parent, INVALID_NODE_HANDLE))
         return 1;
-    node_remove_child(get_node(ctx, parent), i, ctx->allocator);
+    Node* node = get_node(ctx, parent);
+    if(i >= node->children_count)
+        return 1;
+    node_remove_child(node, i, ctx->allocator);
     return 0;
 }
 
@@ -2939,7 +2942,7 @@ dndc_node_cat_string_children(DndcContext* ctx, DndcNodeHandle dnh, DndcLongStri
 
 DNDC_API
 size_t
-dndc_node_get_children(DndcContext* ctx, DndcNodeHandle dnh, DndcNodeHandle* buff, size_t buff_len, size_t* cookie){
+dndc_node_get_children(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, DndcNodeHandle* buff, size_t buff_len){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return 0;
