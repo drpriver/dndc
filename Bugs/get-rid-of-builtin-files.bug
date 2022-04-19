@@ -1,0 +1,7 @@
+created: 2022-04-19T00:39:45Z
+bugmagic^^^^
+Created Apr 18, 2022, 08:39PM::md.update
+Summary::md.summary
+  Builtin files were a hack to inject the coord helper into a dnd file, but I figured out way better ways to do that in the gui editors.
+
+  Builtin files are opaque, hard to debug and hard to change, so they are not a good idea. It’d be better to just ship some example templates.
