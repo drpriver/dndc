@@ -351,8 +351,6 @@ run_the_dndc(uint64_t flags,
         result = UNEXPECTED_END;
         goto cleanup;
     }
-    // Store the input text as a builtin so user scripts can access it.
-    ctx_store_builtin_file(&ctx, source_path, source_text);
     // Quick and dirty estimate of how many nodes we will need.
     Marray_ensure_total(Node)(&ctx.nodes, ctx.allocator, source_text.length/10+1);
 
@@ -2214,13 +2212,6 @@ dndc_ctx_get_base(DndcContext* ctx, DndcStringView* sv){
     return 0;
 }
 
-
-DNDC_API
-int
-dndc_ctx_store_builtin_file(DndcContext* ctx, DndcStringView filename, DndcStringView contents){
-    ctx_store_builtin_file(ctx, filename, contents);
-    return 0;
-}
 
 static inline
 NodeHandle

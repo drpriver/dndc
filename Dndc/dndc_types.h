@@ -43,15 +43,6 @@
 #include "Rarray.h"
 
 
-typedef struct BuiltinLoadedSource {
-    StringView sourcepath;
-    StringView sourcetext;
-} BuiltinLoadedSource;
-
-#define MARRAY_T BuiltinLoadedSource
-#include "Marray.h"
-
-
 //
 // DataItem
 // --------
@@ -299,9 +290,6 @@ typedef struct DndcContext {
 
     // file/source string cache.
     struct {
-        // Cached strings that are from loaded files.
-        // We also copy the filename as we need those on our nodes.
-        Marray(BuiltinLoadedSource) builtin_files;
         FileCache* textcache;
         FileCache* b64cache;
     };

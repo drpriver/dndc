@@ -1428,27 +1428,6 @@ DndcContextPy_render(PyObject* s, PyObject*_Nullable args){
 
 static
 PyObject*_Nullable
-DndcContextPy_store_builtin_file(PyObject* s, PyObject* args, PyObject* kwargs){
-    PyObject * key, *value;
-    DndcContextPy* self = (DndcContextPy*)s;
-    const char* const keywords[] = {"filename", "text", NULL};
-    PushDiagnostic();
-    SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!|:store_builtin_file", (char**)keywords, &PyUnicode_Type, &key, &PyUnicode_Type, &value)){
-        return NULL;
-    }
-    PopDiagnostic();
-    int err = dndc_ctx_store_builtin_file(self->ctx,
-            dndc_ctx_dup_sv(self->ctx, pystring_borrow_stringview(key)),
-            dndc_ctx_dup_sv(self->ctx, pystring_borrow_stringview(value)));
-    if(err){
-        return PyErr_Format(PyExc_ValueError, "Unable to store builtin file");
-    }
-    Py_RETURN_NONE;
-}
-
-static
-PyObject*_Nullable
 DndcContextPy_make_node(PyObject* s, PyObject* args, PyObject* kwargs){
     PyObject* type;
     PyObject *header = NULL;
@@ -1684,7 +1663,6 @@ static PyMethodDef DndcContextPy_methods[] = {
     {"node_from_int", DndcContextPy_node_from_int, METH_O, "Creates a node from its internal ID, or None if invalid"},
     {"node_by_id", DndcContextPy_node_by_id, METH_O, "Gets a node by its string id"},
     {"format_tree", DndcContextPy_format_tree, METH_NOARGS, "Formats from the root node to .dnd"},
-    {"store_builtin_file", (PyCFunction)DndcContextPy_store_builtin_file, METH_VARARGS|METH_KEYWORDS, "Store a file as a builtin"},
     {"expand", DndcContextPy_expand, METH_NOARGS, "expand"},
     {"render", DndcContextPy_render, METH_NOARGS, "render"},
     {"make_node", (PyCFunction)DndcContextPy_make_node, METH_VARARGS|METH_KEYWORDS, "make_node"},

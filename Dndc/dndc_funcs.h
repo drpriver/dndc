@@ -483,21 +483,6 @@ build_nav_block(DndcContext*);
   ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath);
 
   //
-  // ctx_store_builtin_file
-  // ----------------------
-  // Stores a file in the context as a special builtin file.
-  //
-  // Does not copy the data at all, so make sure these last long enough and
-  // are appropriately allocated.
-  //
-  // The sourcepath will not be adjusted by the base directory, but neither
-  // will lookups for builtin files.
-  //
-  static inline
-  void
-  ctx_store_builtin_file(DndcContext* ctx, StringView sourcepath, StringView text);
-
-  //
   // ctx_note_dependency
   // -------------------
   // Marks a file as being a dependency of the document. Deduplicates.

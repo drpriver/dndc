@@ -20,9 +20,10 @@ int main(int argc, char** argv){
 
 TestFunction(TestDndcAst){
     TESTBEGIN();
-    unsigned long long flags = DNDC_ALLOW_BAD_LINKS;
-    DndcContext* ctx = dndc_create_ctx(flags, dndc_stderr_error_func, NULL, NULL, NULL);
-    int e = dndc_ctx_store_builtin_file(ctx, SV("hello"), SV("hello world"));
+    unsigned long long flags = DNDC_ALLOW_BAD_LINKS | DNDC_DONT_READ;
+    DndcFileCache* textcache = dndc_create_filecache();
+    DndcContext* ctx = dndc_create_ctx(flags, dndc_stderr_error_func, NULL, NULL, textcache);
+    int e = dndc_filecache_store_text(textcache, SV("hello"), SV("hello world"), 0);
     TestExpectFalse(e);
     e = dndc_ctx_parse_string(ctx, DNDC_NODE_HANDLE_INVALID, SV("yolo"), SV("::import\n  hello\n"));
     TestExpectTrue(e);

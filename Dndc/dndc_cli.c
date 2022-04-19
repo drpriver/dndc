@@ -248,8 +248,8 @@ main(int argc, char**argv){
             {
                 .name = SV("--dont-read"),
                 .dest = ArgBitFlagDest(&flags, DNDC_DONT_READ),
-                .help = "Don't read any files (other than builtins and the "
-                        "initial input file).",
+                .help = "Don't read any files other than the "
+                        "initial input file.",
                 .hidden = true,
             },
             {

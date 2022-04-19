@@ -359,23 +359,9 @@ ctx_note_dependency(DndcContext* ctx, StringView path){
     Marray_push(StringView)(&ctx->dependencies, ctx->allocator, pathcpy);
 }
 
-static inline
-void
-ctx_store_builtin_file(DndcContext* ctx, StringView sourcepath, StringView text){
-    BuiltinLoadedSource* loaded = Marray_alloc(BuiltinLoadedSource)(&ctx->builtin_files, ctx->allocator);
-    loaded->sourcepath = sourcepath;
-    loaded->sourcetext = text;
-}
-
 static
 StringViewResult
 ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
-    // check if we already have it as a builtin
-    MARRAY_FOR_EACH(BuiltinLoadedSource, builtin, ctx->builtin_files){
-        if(SV_equals(builtin->sourcepath, sourcepath)){
-            return (StringViewResult){.result=builtin->sourcetext};
-        }
-    }
     MStringBuilder temp_builder = {.allocator=ctx->temp_allocator};
     if(!sourcepath.length){
         return (StringViewResult){.errored=UNEXPECTED_END};

@@ -131,11 +131,6 @@ dndc_ctx_get_base(DndcContext*, DndcStringView*);
 
 DNDC_API
 int
-dndc_ctx_store_builtin_file(DndcContext* ctx, DndcStringView filename, DndcStringView contents);
-// DELETEME
-
-DNDC_API
-int
 dndc_ctx_parse_file(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sourcepath);
 // -------------------
 // Loads and then parses the file into the context.
