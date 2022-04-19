@@ -1,0 +1,8 @@
+created: 2022-04-19T00:54:35Z
+bugmagic^^^^
+Created Apr 18, 2022, 08:54PM::md.update
+Summary::md.summary
+  In a lot of places i used <code>PARSE_ERROR</code> even if it is inappropriate.
+
+  Either punt on semantic error codes and just use <code>1</code> everywhere, or come up with a collection of error codes
+  that a user of the api could meaningfully interact with.
