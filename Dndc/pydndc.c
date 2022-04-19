@@ -2307,7 +2307,7 @@ static PyGetSetDef DndcNodePy_getset[] = {
 };
 static PyMemberDef DndcNodePy_members[] = {
     {"ctx", T_OBJECT, offsetof(DndcNodePy, pyctx), READONLY, "ctx"},
-    {"internal_id", T_UINT, offsetof(DndcNodePy, handle), READONLY, "internal_id"},
+    {"handle", T_UINT, offsetof(DndcNodePy, handle), READONLY, "handle"},
     {}  /* Sentinel */
 };
 
@@ -2348,7 +2348,7 @@ DndcNodePy_repr(PyObject* s){
     PyObject* h = PyUnicode_FromStringAndSize(sv.text, sv.length);
     size_t n_children = dndc_node_children_count(ctx, handle);
 
-    PyObject* result = PyUnicode_FromFormat("Node(%s, %R, [%zu children], int_id=%u)", typename, h, n_children, self->handle);
+    PyObject* result = PyUnicode_FromFormat("Node(%s, %R, [%zu children], handle=%u)", typename, h, n_children, self->handle);
     Py_DECREF(h);
     return result;
 }
