@@ -90,6 +90,7 @@ main(int argc, char**argv){
     bool print_depends = false;
     bool cleanup = false;
     int bench_iters = 0;
+    bool bench_cache_files = false;
     LongString jsargs = LS("");
     MStringBuilder argbuilder = {.allocator = get_mallocator()};
     {
@@ -255,6 +256,12 @@ main(int argc, char**argv){
                 .name = SV("--bench-iters"),
                 .dest = ARGDEST(&bench_iters),
                 .help = "Execute in a repeated loop this many times.",
+                .hidden = true,
+            },
+            {
+                .name = SV("--bench-cache-files"),
+                .dest = ARGDEST(&bench_cache_files),
+                .help = "Cache files while benchmarking",
                 .hidden = true,
             },
             {
@@ -457,6 +464,8 @@ main(int argc, char**argv){
     if(bench_iters){
         LongString output = {0};
         flags &= ~DNDC_NO_CLEANUP;
+        FileCache* b64cache = bench_cache_files?dndc_create_filecache():NULL;
+        FileCache* textcache = bench_cache_files?dndc_create_filecache():NULL;
         for(int i = 0; i < bench_iters; i++){
             int e = run_the_dndc(
                 flags,
@@ -464,7 +473,7 @@ main(int argc, char**argv){
                 source_text,
                 source_path,
                 &output,
-                NULL, NULL,
+                b64cache, textcache,
                 dndc_stderr_error_func, NULL,
                 dependency_func, &dependency_user_data,
                 dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
