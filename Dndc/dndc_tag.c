@@ -209,7 +209,7 @@ main(int argc, const char* const* argv){
         },
     };
 
-    enum {HELP=0, VERSION};
+    enum {HELP=0, VERSION, FISH};
     ArgToParse early_args[] = {
         [HELP] = {
             .name = SV("-h"),
@@ -220,6 +220,11 @@ main(int argc, const char* const* argv){
             .name = SV("-v"),
             .altname1 = SV("--version"),
             .help = "Print the version and exit.",
+        },
+        [FISH] = {
+            .name = SV("--fish-completions"),
+            .help = "Print out commands for fish shell completions.",
+            .hidden = true,
         },
     };
 
@@ -240,6 +245,9 @@ main(int argc, const char* const* argv){
             return 0;
         case VERSION:
             puts("dndc-tag v0.0.1");
+            return 0;
+        case FISH:
+            print_argparse_fish_completions(&parser);
             return 0;
         default:
             break;

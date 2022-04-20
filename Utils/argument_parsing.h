@@ -1664,7 +1664,7 @@ main(int argc, const char*_Null_unspecified*_Null_unspecified argv){
             .help = "Do everything but actually write the file."
         },
     };
-    enum {HELP=0, VERSION};
+    enum {HELP=0, VERSION, FISH};
     ArgToParse early_args[] = {
         [HELP] = {
             .name = SV("-h"),
@@ -1675,6 +1675,11 @@ main(int argc, const char*_Null_unspecified*_Null_unspecified argv){
             .name = SV("-v"),
             .altname1 = SV("--version"),
             .help = "Print the version and exit.",
+        },
+        [FISH] = {
+            .name = SV("--fish-completions"),
+            .help = "Print out commands for fish shell completions.",
+            .hidden = true,
         },
     };
     ArgParser parser = {
@@ -1695,6 +1700,9 @@ main(int argc, const char*_Null_unspecified*_Null_unspecified argv){
             return 0;
         case VERSION:
             puts("argparse_example v1.2.3");
+            return 0;
+        case FISH:
+            print_argparse_fish_completions(&parser);
             return 0;
         default:
             break;
