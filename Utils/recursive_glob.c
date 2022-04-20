@@ -1,6 +1,7 @@
 #ifndef RECURSIVE_GLOB_C
 #define RECURSIVE_GLOB_C
 #include "recursive_glob.h"
+#include "str_util.h"
 #if defined(_WIN32)
 #include <direct.h>
 #else

@@ -161,6 +161,12 @@ add_executable(dndc-browse
 target_link_libraries(dndc-browse
     dndc-dylib
 )
+add_executable(dndc-tag
+    Dndc/dndc_tag.c
+)
+target_link_libraries(dndc-tag
+    dndc-dylib
+)
 
 # tests
 enable_testing()
@@ -205,8 +211,13 @@ install(TARGETS dndc-dylib
     PUBLIC_HEADER DESTINATION include/Dndc
 )
 install(TARGETS dndc-browse DESTINATION bin)
+install(TARGETS dndc-tag DESTINATION bin)
 if(UNIX)
 set_target_properties(dndc-browse PROPERTIES
+    INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib
+    BUILD_WITH_INSTALL_RPATH 0
+)
+set_target_properties(dndc-tag PROPERTIES
     INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib
     BUILD_WITH_INSTALL_RPATH 0
 )

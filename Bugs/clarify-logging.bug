@@ -1,0 +1,7 @@
+created: 2022-04-19T01:13:09Z
+bugmagic^^^^
+Created Apr 18, 2022, 09:13PM::md.update
+Summary::md.summary
+  It needs to be documented which functions from the ast api can end up calling the logger.
+
+  Also the <code>error_func</code> needs to be renamed to <code>logger</code>.

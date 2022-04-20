@@ -95,6 +95,8 @@ node_get_id(DndcContext* ctx, NodeHandle handle){
     Node* node = get_node(ctx, handle);
     if(node->flags & NODEFLAG_NOID)
         return SV("");
+    if(node->type == NODE_STRING)
+        return SV("");
     StringView sv = node->header;
     if(node->flags & NODEFLAG_ID)
         node_get_explicit_id(ctx, handle, &sv); // Ok to ignore return value.
