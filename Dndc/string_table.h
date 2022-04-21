@@ -22,7 +22,9 @@ fast_reduce32(uint32_t x, uint32_t y){
     return ((uint64_t)x * (uint64_t)y) >> 32;
 }
 
+#ifdef __clang__
 #pragma clang assume_nonnull begin
+#endif
 
 static
 void
@@ -108,6 +110,8 @@ string_table_destroy(StringTable* table){
 }
 
 
+#ifdef __clang__
 #pragma clang assume_nonnull end
+#endif
 
 #endif

@@ -223,6 +223,7 @@ class TestExamples(TestCase):
             _ = pydndc.expand(text, base_dir=os.path.dirname(example), error_reporter=lambda *args:(print(example),print(*args)))
             _ = pydndc.reformat(text)
             _ = pydndc.analyze_syntax_for_highlight(text)
+
     def test_ast_api(self) -> None:
         self.maxDiff = None
         for example in EXAMPLE_FILES:
@@ -240,6 +241,9 @@ class TestExamples(TestCase):
             ctx.resolve_data_blocks()
             html2 = ctx.render()
             self.assertEqual(html1, html2)
+            html3 = ctx.clone().render()
+            self.assertEqual(html1, html3)
+
 class TestAst(TestCase):
     def test_select(self) -> None:
         ctx = pydndc.Context()

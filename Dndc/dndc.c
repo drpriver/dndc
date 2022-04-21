@@ -2152,13 +2152,14 @@ dndc_ctx_clone(DndcContext* ctx){
     if(ctx->links.count_){
         size_t cap = ctx->links.capacity_;
         result->links.capacity_ = cap;
-        result->links.count_ = result->links.count_;
+        result->links.count_ = ctx->links.count_;
         result->links.keys = Allocator_zalloc(result->links.allocator, sizeof(*result->links.keys)*cap*2);
         for(size_t i = 0; i < cap; i++){
-            if(ctx->links.keys[i].length){
-                result->links.keys[i] = dndc_ctx_dup_sv(result, ctx->links.keys[i]);
-                result->links.keys[i+cap] = dndc_ctx_dup_sv(result, ctx->links.keys[i+cap]);
-            }
+            StringView k = ctx->links.keys[i];
+            if(!k.length) continue;
+            StringView v = ctx->links.keys[i+cap];
+            result->links.keys[i] = dndc_ctx_dup_sv(result, k);
+            result->links.keys[i+cap] = v.length?dndc_ctx_dup_sv(result, v):v;
         }
     }
     MARRAY_FOR_EACH(DataItem, s, ctx->rendered_data)
@@ -2180,10 +2181,12 @@ dndc_ctx_clone(DndcContext* ctx){
         *newnode = *node;
         if(node->header.length)
             newnode->header = dndc_ctx_dup_sv(result, newnode->header);
-        if(node_children_count(node) > 4)
-            Marray_extend(NodeHandle)(&newnode->children, ctx->allocator, node->children.data, node->children.count);
+        if(node_children_count(node) > 4){
+            memset(&newnode->children, 0, sizeof(newnode->children));
+            Marray_extend(NodeHandle)(&newnode->children, result->allocator, node->children.data, node->children.count);
+        }
         if(node->attributes){
-            newnode->attributes = Rarray_clone(Attribute)(node->attributes, ctx->allocator);
+            newnode->attributes = Rarray_clone(Attribute)(node->attributes, result->allocator);
             RARRAY_FOR_EACH(Attribute, attr, newnode->attributes){
                 attr->key = dndc_ctx_dup_sv(result, attr->key);
                 attr->value = dndc_ctx_dup_sv(result, attr->value);
@@ -2548,7 +2551,7 @@ dndc_ctx_render_to_html(DndcContext* ctx, DndcLongString* ls){
     MStringBuilder output_sb = {.allocator = get_mallocator()};
     if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return 1;
     int e = render_tree(ctx, &output_sb);
-    if(e) {msb_destroy(&output_sb); return e;}
+    if(e) {msb_destroy(&output_sb); report_set_error(ctx); return 1;}
     *ls = msb_detach_ls(&output_sb);
     return 0;
 }
@@ -2561,7 +2564,7 @@ dndc_node_render_to_html(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString* l
         return 1;
     MStringBuilder output_sb = {.allocator = get_mallocator()};
     int e = render_node(ctx, &output_sb, handle, 1, 0);
-    if(e) {msb_destroy(&output_sb); return 1;}
+    if(e) {msb_destroy(&output_sb); report_set_error(ctx); return 1;}
     *ls = msb_detach_ls(&output_sb);
     return 0;
 }
@@ -3190,6 +3193,19 @@ dndc_node_execute_js(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString js){
     free_qjs_rt(rt, &aa);
     ArenaAllocator_free_all(&aa);
     return !!err;
+}
+
+DNDC_API
+int
+dndc_ctx_add_link(DndcContext* ctx, DndcStringView k, DndcStringView v){
+    if(!v.length) return 1;
+    MStringBuilder kebab = {.allocator = ctx->string_allocator};
+    msb_write_kebab(&kebab, k.text, k.length);
+    if(!kebab.cursor) return 1;
+    k = msb_detach_sv(&kebab);
+    v = dndc_ctx_dup_sv(ctx, v);
+    add_link_from_pair(ctx, k, v);
+    return 0;
 }
 
 #endif

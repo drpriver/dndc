@@ -11,6 +11,7 @@
 
 #define MARRAY_T StringView
 #include "Marray.h"
+
 #include "recursive_glob.h"
 
 
@@ -36,6 +37,10 @@ typedef struct WorkItem {
 Marray__WorkItem items;
 _Atomic size_t item_idx;
 _Bool ignore_errors;
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
 
 static
 int process(WorkItem* item);
@@ -272,6 +277,9 @@ main(int argc, const char* const* argv){
     tag_dnd_files(dnd_files.data, dnd_files.count, output, n_threads);
     return 0;
 }
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
 
 
 #include "allocator.c"

@@ -1084,6 +1084,12 @@ dndc_node_tree_repr(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString*);
 // call `dndc_free_string`.
 //
 
+DNDC_API
+int
+dndc_ctx_add_link(DndcContext* ctx, DndcStringView k, DndcStringView v);
+// -----------------
+// Adds an explicit link to the link table.
+
 #ifdef __cplusplus
 }
 #endif

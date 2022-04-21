@@ -1343,7 +1343,8 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
     if(!self) return NULL;
     self->errors = PyList_New(0);
     self->ctx = dndc_create_ctx(0,
-            pydndc_collect_errors, self->errors,
+            dndc_stderr_error_func, NULL,
+            // pydndc_collect_errors, self->errors,
             cache?cache->b64_cache:NULL, cache?cache->text_cache:NULL);
     self->filename = filename;
     if(filename) Py_INCREF(filename);
@@ -1658,10 +1659,43 @@ DndcContextPy_clone(PyObject* s, PyObject* args){
     return (PyObject*)newself;
 }
 
+static
+PyObject* _Nullable
+DndcContextPy_add_link(PyObject* s, PyObject* args, PyObject* kwargs){
+    DndcContextPy* self = (DndcContextPy*)s;
+    DndcContext* ctx = self->ctx;
+    PyObject* key, * value;
+    const char* const keywords[] = {"key", "value", NULL};
+    PushDiagnostic();
+    SuppressCastQual();
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "UU|:add_link", (char**)keywords, &key, &value)){
+        return NULL;
+    }
+    PopDiagnostic();
+    StringView k = pystring_borrow_stringview(key);
+    StringView v = pystring_borrow_stringview(value);
+    int e  = dndc_ctx_add_link(ctx, k, v);
+    if(e) return PyErr_Format(PyExc_ValueError, "Invalid link pair: %R, %R", key, value);
+    Py_RETURN_NONE;
+}
+
 
 static PyMethodDef DndcContextPy_methods[] = {
     {"node_from_int", DndcContextPy_node_from_int, METH_O, "Creates a node from its internal ID, or None if invalid"},
-    {"node_by_id", DndcContextPy_node_by_id, METH_O, "Gets a node by its string id"},
+    {
+        .ml_name="node_by_id",
+        .ml_meth=DndcContextPy_node_by_id,
+        .ml_flags=METH_O,
+        .ml_doc=
+            #if PY_INSPECT_SUPPORTS_ANNOTATIONS
+            "node_by_id(self, id:str) -> Optional[Node]\n"
+            #else
+            "node_by_id(self, id)\n"
+            #endif
+            "--\n"
+            "\n"
+            "Gets a node by its string id.\n",
+    },
     {"format_tree", DndcContextPy_format_tree, METH_NOARGS, "Formats from the root node to .dnd"},
     {"expand", DndcContextPy_expand, METH_NOARGS, "expand"},
     {"render", DndcContextPy_render, METH_NOARGS, "render"},
@@ -1674,6 +1708,7 @@ static PyMethodDef DndcContextPy_methods[] = {
     {"resolve_data_blocks", DndcContextPy_resolve_data_blocks, METH_NOARGS, "resolve_data_blocks"},
     {"select_nodes", (PyCFunction)DndcContextPy_select_nodes, METH_VARARGS|METH_KEYWORDS, "select_nodes"},
     {"clone", DndcContextPy_clone, METH_NOARGS, "deep clone the context"},
+    {"add_link", (PyCFunction)DndcContextPy_add_link, METH_VARARGS|METH_KEYWORDS, "add a link"},
     {} /* Sentinel */
 };
 
@@ -2175,7 +2210,7 @@ DndcNodePy_get_location(PyObject* s, void*_Nullable p){
     return result;
 }
 
-static 
+static
 PyObject* _Nullable
 DndcNodePy_getflag(PyObject* s, void*_Nullable p){
     DndcNodePy* self = (DndcNodePy*)s;
@@ -2322,9 +2357,44 @@ static PyMethodDef DndcNodePy_methods[] = {
     {"parse_file", (PyCFunction)DndcNodePy_parse_file, METH_VARARGS|METH_KEYWORDS, "parse a dnd file"},
     {"format", DndcNodePy_format, METH_O, "format a node"},
     {"render", DndcNodePy_render, METH_NOARGS, "render node to html fragment"},
-    {"append_child", DndcNodePy_append_child, METH_O, "append a node as a child of another node"},
-    {"detach", DndcNodePy_detach, METH_NOARGS, "detach"},
-    {"make_child", (PyCFunction)DndcNodePy_make_child, METH_VARARGS|METH_KEYWORDS, "make_child"},
+    {
+        .ml_name="append_child",
+        .ml_meth=DndcNodePy_append_child,
+        .ml_flags=METH_O,
+        .ml_doc=
+            #if PY_INSPECT_SUPPORTS_ANNOTATIONS
+            "append_child(self, child:Union[Node, str]) -> None\n"
+            #else
+            "append_child(self, child)\n"
+            #endif
+            "--\n"
+            "\n"
+            "Append a node as a child of this node.\n"
+    },
+    {
+        .ml_name="detach",
+        .ml_meth=DndcNodePy_detach,
+        .ml_flags=METH_NOARGS,
+        .ml_doc=
+            "detach()\n"
+            "--\n"
+            "\n"
+            "Detaches this node from its parent."
+    },
+    {
+        .ml_name="make_child",
+        .ml_meth=(PyCFunction)DndcNodePy_make_child,
+        .ml_flags=METH_VARARGS|METH_KEYWORDS,
+        .ml_doc=
+            #if PY_INSPECT_SUPPORTS_ANNOTATIONS
+            "make_child(self, type:NodeType, header:str=None)\n"
+            #else
+            "make_child(self, type, header=None)\n"
+            #endif
+            "--\n"
+            "\n"
+            "Creates a child node of the given type as a child of this node, optionally with the given header\n"
+    },
     {"tree_repr", DndcNodePy_tree_repr, METH_NOARGS, "tree repr"},
     {} /* Sentinel */
 };
