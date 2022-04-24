@@ -122,6 +122,8 @@ class NodeType(IntEnum):
     INVALID      = 30
 
 class Context:
+    def __new__(cls, filecache:Optional[FileCache]) -> Context:
+        ...
     errors: List[str]
     filename: Optional[str]
     root: Node
@@ -154,6 +156,10 @@ class Context:
     def select_nodes(self, type:NodeType=None, attributes:Sequence[str]=None, classes:Sequence[str]=None) -> List[Node]:
         ...
     def clone(self) -> Context:
+        ...
+    def pseudo_clone(self) -> Context:
+        ...
+    def add_link(self, key:str, value:str) -> None:
         ...
 
 

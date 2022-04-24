@@ -2202,6 +2202,65 @@ dndc_ctx_clone(DndcContext* ctx){
 }
 
 DNDC_API
+DndcContext*
+dndc_ctx_shallow_clone(DndcContext* ctx){
+    DndcContext* result = dndc_create_ctx(
+            ctx->flags,
+            ctx->error_func,
+            ctx->error_user_data,
+            !ctx->b64cache_allocated?ctx->b64cache:NULL,
+            !ctx->textcache_allocated?ctx->textcache:NULL);
+    if(ctx->filenames.count)
+        Marray_extend(StringView)(&result->filenames, result->allocator, ctx->filenames.data, ctx->filenames.count);
+    #define cp(x) \
+        Marray_extend(NodeHandle)(&result->x, result->allocator, ctx->x.data, ctx->x.count)
+    if(ctx->base_directory.length)
+        result->base_directory = ctx->base_directory;
+
+    cp(user_script_nodes);
+    cp(imports);
+    cp(stylesheets_nodes);
+    cp(link_nodes);
+    cp(script_nodes);
+    cp(data_nodes);
+    cp(meta_nodes);
+    cp(img_nodes);
+    cp(imglinks_nodes);
+    #undef cp
+    result->titlenode = ctx->titlenode;
+    result->navnode = ctx->navnode;
+    result->root_handle = ctx->root_handle;
+
+    if(ctx->dependencies.count)
+        Marray_extend(StringView)(&result->dependencies, result->allocator, ctx->dependencies.data, ctx->dependencies.count);
+    if(ctx->links.count_){
+        size_t cap = ctx->links.capacity_;
+        result->links.capacity_ = cap;
+        result->links.count_ = ctx->links.count_;
+        result->links.keys = Allocator_dupe(result->links.allocator, ctx->links.keys, sizeof(*result->links.keys)*cap*2);
+    }
+    if(ctx->rendered_data.count)
+        Marray_extend(DataItem)(&result->rendered_data, result->allocator, ctx->rendered_data.data, ctx->rendered_data.count);
+    if(ctx->explicit_node_ids.count)
+        Marray_extend(IdItem)(&result->explicit_node_ids, result->allocator, ctx->explicit_node_ids.data, ctx->explicit_node_ids.count);
+    if(ctx->renderednav.text)
+        result->renderednav = ctx->renderednav;
+    MARRAY_FOR_EACH(Node, node, ctx->nodes){
+        Node* newnode = Marray_alloc(Node)(&result->nodes, result->allocator);
+        *newnode = *node;
+        if(node_children_count(node) > 4){
+            memset(&newnode->children, 0, sizeof(newnode->children));
+            Marray_extend(NodeHandle)(&newnode->children, result->allocator, node->children.data, node->children.count);
+        }
+        if(node->attributes)
+            newnode->attributes = Rarray_clone(Attribute)(node->attributes, result->allocator);
+        if(node->classes)
+            newnode->classes = Rarray_clone(StringView)(node->classes, result->allocator);
+    }
+    return result;
+}
+
+DNDC_API
 int
 dndc_ctx_set_base(DndcContext* ctx, DndcStringView sv){
     ctx->base_directory = sv;

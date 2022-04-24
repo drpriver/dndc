@@ -106,6 +106,19 @@ dndc_ctx_clone(DndcContext*);
 // thing that is not deep copied are the file caches if you passed your own
 // file caches into `dndc_create_ctx` instead of passing NULL.
 //
+//
+DNDC_API
+DndcContext*
+dndc_ctx_shallow_clone(DndcContext*);
+// --------------
+// This is similar to `dndc_ctx_clone`, but it does not copy things that
+// are safe to share, like strings. This means that the context returned
+// from this function should notoutlive the context it was cloned from.
+// This still has independent nodes, etc. so you can use it to fork a context,
+// make some modifications and render the results, etc. which can have
+// significant performance benefits if you need to dynamically render off
+// a shared base.
+//
 
 DNDC_API
 int

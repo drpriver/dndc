@@ -320,7 +320,7 @@ PyMethodDef pydndc_methods[] = {
         #if PY_INSPECT_SUPPORTS_ANNOTATIONS
         "htmlgen(text:str, base_dir:str='.', filename:str='(string input)', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs:str=None)\n"
         #else
-        "htmlgen(text, base_dir='.', filename:str='(string input)', error_reporter=None, file_cache=None, flags=0, jsargs=None)\n"
+        "htmlgen(text, base_dir='.', filename:'(string input)', error_reporter=None, file_cache=None, flags=0, jsargs=None)\n"
         #endif
         "--\n"
         "\n"
@@ -1325,6 +1325,7 @@ typedef struct {
     PyObject* errors;
     DndcContext* ctx;
     PyObject* _Nullable filename;
+    PyObject* prev;
 } DndcContextPy;
 
 static
@@ -1348,12 +1349,13 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
             cache?cache->b64_cache:NULL, cache?cache->text_cache:NULL);
     self->filename = filename;
     if(filename) Py_INCREF(filename);
+    self->prev = NULL;
     return (PyObject*)self;
 }
 
 static PyMemberDef DndcContextPy_members[] = {
-    {"errors", T_OBJECT, offsetof(DndcContextPy, errors), READONLY, "error list"},
-    {"filename", T_OBJECT, offsetof(DndcContextPy, filename), READONLY, "filename"},
+    {"errors", T_OBJECT, offsetof(DndcContextPy, errors), READONLY, "Methods that can log errors store them in this list."},
+    {"filename", T_OBJECT, offsetof(DndcContextPy, filename), READONLY, "The filename of the root document."},
     {}  /* Sentinel */
 };
 
@@ -1644,6 +1646,25 @@ DndcContextPy_select_nodes(PyObject* s, PyObject* args, PyObject* kwargs){
 
 static
 PyObject* _Nullable
+DndcContextPy_pseudo_clone(PyObject* s, PyObject* args){
+    (void)args;
+    DndcContextPy* self = (DndcContextPy*)s;
+    DndcContext* ctx = self->ctx;
+    DndcContext* newctx = dndc_ctx_shallow_clone(ctx);
+
+    DndcContextPy* newself = (DndcContextPy*)self->ob_base.ob_type->tp_alloc(self->ob_base.ob_type, 0);
+    if(!newself) return NULL;
+    newself->errors = PyList_New(0);
+    newself->ctx = newctx;
+    newself->filename = self->filename;
+    newself->prev = s;
+    Py_XINCREF(newself->prev);
+    Py_XINCREF(newself->filename);
+    return (PyObject*)newself;
+}
+
+static
+PyObject* _Nullable
 DndcContextPy_clone(PyObject* s, PyObject* args){
     (void)args;
     DndcContextPy* self = (DndcContextPy*)s;
@@ -1655,6 +1676,7 @@ DndcContextPy_clone(PyObject* s, PyObject* args){
     newself->errors = PyList_New(0);
     newself->ctx = newctx;
     newself->filename = self->filename;
+    newself->prev = NULL;
     Py_XINCREF(newself->filename);
     return (PyObject*)newself;
 }
@@ -1681,7 +1703,6 @@ DndcContextPy_add_link(PyObject* s, PyObject* args, PyObject* kwargs){
 
 
 static PyMethodDef DndcContextPy_methods[] = {
-    {"node_from_int", DndcContextPy_node_from_int, METH_O, "Creates a node from its internal ID, or None if invalid"},
     {
         .ml_name="node_by_id",
         .ml_meth=DndcContextPy_node_by_id,
@@ -1696,19 +1717,148 @@ static PyMethodDef DndcContextPy_methods[] = {
             "\n"
             "Gets a node by its string id.\n",
     },
-    {"format_tree", DndcContextPy_format_tree, METH_NOARGS, "Formats from the root node to .dnd"},
-    {"expand", DndcContextPy_expand, METH_NOARGS, "expand"},
-    {"render", DndcContextPy_render, METH_NOARGS, "render"},
-    {"make_node", (PyCFunction)DndcContextPy_make_node, METH_VARARGS|METH_KEYWORDS, "make_node"},
-    {"resolve_imports", DndcContextPy_resolve_imports, METH_NOARGS, "resolve imports"},
-    {"execute_js", (PyCFunction)DndcContextPy_execute_js, METH_VARARGS|METH_KEYWORDS, "execute_js"},
-    {"gather_links", DndcContextPy_gather_links, METH_NOARGS, "gather_links"},
-    {"resolve_links", DndcContextPy_resolve_links, METH_NOARGS, "resolve_links"},
-    {"build_nav", DndcContextPy_build_nav, METH_NOARGS, "build_nav"},
-    {"resolve_data_blocks", DndcContextPy_resolve_data_blocks, METH_NOARGS, "resolve_data_blocks"},
-    {"select_nodes", (PyCFunction)DndcContextPy_select_nodes, METH_VARARGS|METH_KEYWORDS, "select_nodes"},
-    {"clone", DndcContextPy_clone, METH_NOARGS, "deep clone the context"},
-    {"add_link", (PyCFunction)DndcContextPy_add_link, METH_VARARGS|METH_KEYWORDS, "add a link"},
+    {
+        .ml_name="node_from_int",
+        .ml_meth=DndcContextPy_node_from_int,
+        .ml_flags=METH_O,
+        .ml_doc="node_from_int(self, handle)\n"
+            "--\n"
+            "\n"
+            "Creates a node from its internal ID or None if invalid",
+    },
+    {
+        .ml_name="format_tree",
+        .ml_meth=DndcContextPy_format_tree,
+        .ml_flags=METH_NOARGS,
+        .ml_doc="format_tree(self)\n"
+            "--\n"
+            "\n"
+            "Formats from the root node to .dnd",
+    },
+    {
+        .ml_name="expand",
+        .ml_meth=DndcContextPy_expand,
+        .ml_flags=METH_NOARGS,
+        .ml_doc="expand(self)\n"
+            "--\n"
+            "\n"
+            "Renders the tree into a .dnd string.",
+    },
+    {
+        .ml_name="render",
+        .ml_meth=DndcContextPy_render,
+        .ml_flags=METH_NOARGS,
+        .ml_doc="render(self)\n"
+            "--\n"
+            "\n"
+            "Renders the tree from the root into an html document.",
+    },
+    {
+        .ml_name="make_node",
+        .ml_meth=(PyCFunction)DndcContextPy_make_node,
+        .ml_flags=METH_VARARGS|METH_KEYWORDS,
+        .ml_doc="make_node(self, type, header=None)\n"
+            "--\n"
+            "\n"
+            "Makes a node of the given type, optionally initialized with the\n"
+            "header.",
+    },
+    {
+        .ml_name="resolve_imports",
+        .ml_meth=DndcContextPy_resolve_imports,
+        .ml_flags=METH_NOARGS,
+        .ml_doc="resolve_imports(self)\n"
+            "--\n"
+            "\n"
+            "Iterates over all of the IMPORT nodes or nodes marked with the\n"
+            "import_ flag and reads/parses the files they point to into the\n"
+            "document appropriately.",
+    },
+    {
+        .ml_name="execute_js",
+        .ml_meth=(PyCFunction)DndcContextPy_execute_js,
+        .ml_flags=METH_VARARGS|METH_KEYWORDS,
+        .ml_doc="execute_js(self, jsargs='null')\n"
+            "--\n"
+            "\n"
+            "Executes all of the JS nodes in the tree, with the given jsargs\n"
+            "available to them as Args.",
+    },
+    {
+        .ml_name="gather_links",
+        .ml_meth=DndcContextPy_gather_links,
+        .ml_flags=METH_NOARGS,
+        .ml_doc="gather_links(self)\n"
+            "--\n"
+            "\n"
+            "Walks the tree, noting the internal link targets.",
+    },
+    {
+        .ml_name="resolve_links",
+        .ml_meth=DndcContextPy_resolve_links,
+        .ml_flags=METH_NOARGS,
+        .ml_doc="resolve_links(self)\n"
+            "--\n"
+            "\n"
+            "Might be removed in the future. Gets even more link targets.",
+    },
+    {
+        .ml_name="build_nav",
+        .ml_meth=DndcContextPy_build_nav,
+        .ml_flags=METH_NOARGS,
+        .ml_doc="build_nav(self)\n"
+            "--\n"
+            "\n"
+            "Builds the NAV node if there is one.",
+    },
+    {
+        .ml_name="resolve_data_blocks",
+        .ml_meth=DndcContextPy_resolve_data_blocks,
+        .ml_flags=METH_NOARGS,
+        .ml_doc="resolve_data_blocks(self)\n"
+            "--\n"
+            "\n"
+            "Don't worry aboout this one.",
+    },
+    {
+        .ml_name="select_nodes",
+        .ml_meth=(PyCFunction)DndcContextPy_select_nodes,
+        .ml_flags=METH_VARARGS|METH_KEYWORDS,
+        .ml_doc="select_nodes(self, type=None, attributes=None, classes=None)\n"
+            "--\n"
+            "\n"
+            "Selects nodes from the document, matching the various criteria.\n"
+            "Any that are None is skipped. All criteria must match.",
+    },
+    {
+        .ml_name="clone",
+        .ml_meth=DndcContextPy_clone,
+        .ml_flags=METH_NOARGS,
+        .ml_doc="clone(self)\n"
+            "--\n"
+            "\n"
+            "Deep clone the context.",
+    },
+    {
+        .ml_name="pseudo_clone",
+        .ml_meth=DndcContextPy_pseudo_clone,
+        .ml_flags=METH_NOARGS,
+        .ml_doc="pseudo_clone(self)\n"
+            "--\n"
+            "\n"
+            "Clones the context, but reuses safe resources with this context.\n"
+            "Returns a reference to this context, preventing its deallocation\n"
+            "until it is safe to do so.",
+    },
+    {
+        .ml_name="add_link",
+        .ml_meth=(PyCFunction)DndcContextPy_add_link,
+        .ml_flags=METH_VARARGS|METH_KEYWORDS,
+        .ml_doc="add_link(self, key, value)\n"
+            "--\n"
+            "\n"
+            "Adds a link target to the doc (for use in [] links).",
+    },
     {} /* Sentinel */
 };
 
@@ -1776,8 +1926,8 @@ DndcContextPy_set_base(PyObject* s, PyObject*_Nullable args, void*_Nullable p){
 
 
 static PyGetSetDef DndcContextPy_getset[] = {
-    {"root", DndcContextPy_get_root, DndcContextPy_set_root, "root", NULL},
-    {"base_dir", DndcContextPy_get_base, DndcContextPy_set_base, "base_dir", NULL},
+    {"root", DndcContextPy_get_root, DndcContextPy_set_root, "The root node of the tree (may be None).", NULL},
+    {"base_dir", DndcContextPy_get_base, DndcContextPy_set_base, "Files are imported relative to this path (may be empty string which means .)", NULL},
     {} /* Sentinel */
 };
 
@@ -1786,11 +1936,11 @@ void
 DndcContextPy_dealloc(PyObject* o){
     // fprintf(stderr, "Deallocing ctx: %p\n", o);
     DndcContextPy* self = (DndcContextPy*)o;
-    Py_XDECREF(self->errors);
-    Py_XDECREF(self->filename);
-    self->errors = NULL;
     dndc_ctx_destroy(self->ctx);
     self->ctx = NULL;
+    Py_CLEAR(self->errors);
+    Py_CLEAR(self->filename);
+    Py_CLEAR(self->prev);
     Py_TYPE(self)->tp_free((PyObject *) self);
 }
 
@@ -1798,7 +1948,12 @@ DndcContextPy_dealloc(PyObject* o){
 static PyTypeObject DndcContextPyType  = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "pydndc.Context",
-    .tp_doc = "Context",
+    .tp_doc = "Context(filename=None, filecache=None)\n"
+            "--\n"
+            "\n"
+            "A dndc parsing context that encapsulates all of the nodes, caches, etc.\n"
+            "of the parsing process. This is a lower-level api. To just convert a\n"
+            "simple string to html, see `htmlgen`.\n",
     .tp_basicsize = sizeof(DndcContextPy),
     .tp_itemsize = 0,
     .tp_flags = Py_TPFLAGS_DEFAULT,
@@ -1820,8 +1975,7 @@ void
 DndcNode_dealloc(PyObject* o){
     // fprintf(stderr, "Deallocing node: %p\n", o);
     DndcNodePy* self = (DndcNodePy*)o;
-    Py_XDECREF(self->pyctx);
-    self->pyctx = NULL;
+    Py_CLEAR(self->pyctx);
     Py_TYPE(self)->tp_free((PyObject *) self);
 }
 
@@ -2326,37 +2480,190 @@ DndcNodePy_tree_repr(PyObject* s, PyObject* arg){
 
 
 static PyGetSetDef DndcNodePy_getset[] = {
-    {"header", DndcNodePy_get_header, DndcNodePy_set_header, "header", NULL},
-    {"type", DndcNodePy_get_type, DndcNodePy_set_type, "type", NULL},
-    {"id", DndcNodePy_get_id, DndcNodePy_set_id, "id", NULL},
-    {"parent", DndcNodePy_get_parent, NULL, "parent", NULL},
-    {"children", DndcNodePy_get_children, NULL, "children", NULL},
-    {"location", DndcNodePy_get_location, NULL, "location", NULL},
-    {"classes", DndcNodePy_classes, NULL, "classes", NULL},
-    {"attributes", DndcNodePy_attributes, NULL, "attributes", NULL},
-    {"import_", DndcNodePy_getflag, DndcNodePy_setflag, "import_", (void*)DNDC_NODEFLAG_IMPORT},
-    {"noid", DndcNodePy_getflag, DndcNodePy_setflag, "noid", (void*)DNDC_NODEFLAG_NOID},
-    {"hide", DndcNodePy_getflag, DndcNodePy_setflag, "hide", (void*)DNDC_NODEFLAG_HIDE},
-    {"noinline", DndcNodePy_getflag, DndcNodePy_setflag, "noinline", (void*)DNDC_NODEFLAG_NOINLINE},
+    {
+        .name="header",
+        .get=DndcNodePy_get_header,
+        .set=DndcNodePy_set_header,
+        .doc="The title of the node (or value for STRING nodes).",
+        .closure=NULL,
+    },
+    {
+        .name="type",
+        .get=DndcNodePy_get_type,
+        .set=DndcNodePy_set_type,
+        .doc="The type of the node.",
+        .closure=NULL,
+    },
+    {
+        .name="id",
+        .get=DndcNodePy_get_id,
+        .set=DndcNodePy_set_id,
+        .doc="The string id of the node (may be None).",
+        .closure=NULL,
+    },
+    {
+        .name="parent",
+        .get=DndcNodePy_get_parent,
+        .set=NULL,
+        .doc="The parent node of this node (may be None).",
+        .closure=NULL,
+    },
+    {
+        .name="children",
+        .get=DndcNodePy_get_children,
+        .set=NULL,
+        .doc="The child nodes of this node.",
+        .closure=NULL,
+    },
+    {
+        .name="location",
+        .get=DndcNodePy_get_location,
+        .set=NULL,
+        .doc="Where in its source document this node originates.",
+        .closure=NULL,
+    },
+    {
+        .name="classes",
+        .get=DndcNodePy_classes,
+        .set=NULL,
+        .doc="The classes of this node.",
+        .closure=NULL,
+    },
+    {
+        .name="attributes",
+        .get=DndcNodePy_attributes,
+        .set=NULL,
+        .doc="The attributes set on this node.",
+        .closure=NULL,
+    },
+    {
+        .name="import_",
+        .get=DndcNodePy_getflag,
+        .set=DndcNodePy_setflag,
+        .doc="Whether this is a node where its children should be treated as paths to files to import.",
+        .closure=(void*)DNDC_NODEFLAG_IMPORT,
+    },
+    {
+        .name="noid",
+        .get=DndcNodePy_getflag,
+        .set=DndcNodePy_setflag,
+        .doc="Whether to suppress automatic generation of the string id of this node from the header.",
+        .closure=(void*)DNDC_NODEFLAG_NOID,
+    },
+    {
+        .name="hide",
+        .get=DndcNodePy_getflag,
+        .set=DndcNodePy_setflag,
+        .doc="Whether to skip this node when rendering.",
+        .closure=(void*)DNDC_NODEFLAG_HIDE,
+    },
+    {
+        .name="noinline",
+        .get=DndcNodePy_getflag,
+        .set=DndcNodePy_setflag,
+        .doc="Whether to inline the referenced contents for imgs and such or to generate a link.",
+        .closure=(void*)DNDC_NODEFLAG_NOINLINE,
+    },
+
     {} /* Sentinel */
 };
 static PyMemberDef DndcNodePy_members[] = {
-    {"ctx", T_OBJECT, offsetof(DndcNodePy, pyctx), READONLY, "ctx"},
-    {"handle", T_UINT, offsetof(DndcNodePy, handle), READONLY, "handle"},
+    {"ctx", T_OBJECT, offsetof(DndcNodePy, pyctx), READONLY, "The Context that this node is from."},
+    {"handle", T_UINT, offsetof(DndcNodePy, handle), READONLY, "The opaque integer handle that can be used to uniquely identify this node."},
     {}  /* Sentinel */
 };
 
 static PyMethodDef DndcNodePy_methods[] = {
-    {"set_attribute", (PyCFunction)DndcNodePy_set_attribute, METH_VARARGS|METH_KEYWORDS, "set an attribute"},
-    {"get_attribute", (PyCFunction)DndcNodePy_get_attribute, METH_VARARGS|METH_KEYWORDS, "get an attribute"},
-    {"has_attribute", (PyCFunction)DndcNodePy_has_attribute, METH_VARARGS|METH_KEYWORDS, "if it has an attribute"},
-    {"remove_class", DndcNodePy_remove_class, METH_O, "removes a class from the class list"},
-    {"add_class", DndcNodePy_add_class, METH_O, "adds a class to the class list"},
-    {"execute_js", DndcNodePy_execute_js, METH_O, "executes javascript in the context of this node."},
-    {"parse", (PyCFunction)DndcNodePy_parse, METH_VARARGS|METH_KEYWORDS, "parse a dnd string"},
-    {"parse_file", (PyCFunction)DndcNodePy_parse_file, METH_VARARGS|METH_KEYWORDS, "parse a dnd file"},
-    {"format", DndcNodePy_format, METH_O, "format a node"},
-    {"render", DndcNodePy_render, METH_NOARGS, "render node to html fragment"},
+    {
+        .ml_name="set_attribute",
+        .ml_meth=(PyCFunction)DndcNodePy_set_attribute,
+        .ml_flags=METH_VARARGS|METH_KEYWORDS,
+        .ml_doc="set_attribute(self, key, value)\n"
+            "--\n"
+            "\n"
+            "Set an attribute.",
+    },
+    {
+        .ml_name="get_attribute",
+        .ml_meth=(PyCFunction)DndcNodePy_get_attribute,
+        .ml_flags=METH_VARARGS|METH_KEYWORDS,
+        .ml_doc="get_attribute(self, key)\n"
+            "--\n"
+            "\n"
+            "Get an attribute.",
+    },
+    {
+        .ml_name="has_attribute",
+        .ml_meth=(PyCFunction)DndcNodePy_has_attribute,
+        .ml_flags=METH_VARARGS|METH_KEYWORDS,
+        .ml_doc="has_attribute(self, key)\n"
+            "--\n"
+            "\n"
+            "If it has an attribute.",
+    },
+    {
+        .ml_name="remove_class",
+        .ml_meth=DndcNodePy_remove_class,
+        .ml_flags=METH_O,
+        .ml_doc="remove_class(self, class_)\n"
+            "--\n"
+            "\n"
+            "Removes a class from the class list.",
+    },
+    {
+        .ml_name="add_class",
+        .ml_meth=DndcNodePy_add_class,
+        .ml_flags=METH_O,
+        .ml_doc="add_class(self, class_)\n"
+            "--\n"
+            "\n"
+            "Adds a class to the class list.",
+    },
+    {
+        .ml_name="execute_js",
+        .ml_meth=DndcNodePy_execute_js,
+        .ml_flags=METH_O,
+        .ml_doc="execute_js(self, script)\n"
+            "--\n"
+            "\n"
+            "Executes javascript in the context of this node.",
+    },
+    {
+        .ml_name="parse",
+        .ml_meth=(PyCFunction)DndcNodePy_parse,
+        .ml_flags=METH_VARARGS|METH_KEYWORDS,
+        .ml_doc="parse(self, text, filename=None)\n"
+            "--\n"
+            "\n"
+            "Parse a dnd string.",
+    },
+    {
+        .ml_name="parse_file",
+        .ml_meth=(PyCFunction)DndcNodePy_parse_file,
+        .ml_flags=METH_VARARGS|METH_KEYWORDS,
+        .ml_doc="parse_file(self, path)\n"
+            "--\n"
+            "\n"
+            "Parse a dnd file.",
+    },
+    {
+        .ml_name="format",
+        .ml_meth=DndcNodePy_format,
+        .ml_flags=METH_O,
+        .ml_doc="format(self, indent)\n"
+            "--\n"
+            "\n"
+            "Format a node.",
+    },
+    {
+        .ml_name="render",
+        .ml_meth=DndcNodePy_render,
+        .ml_flags=METH_NOARGS,
+        .ml_doc="render(self)\n"
+            "--\n"
+            "\n"
+            "render node to html fragment",
+    },
     {
         .ml_name="append_child",
         .ml_meth=DndcNodePy_append_child,
@@ -2395,7 +2702,15 @@ static PyMethodDef DndcNodePy_methods[] = {
             "\n"
             "Creates a child node of the given type as a child of this node, optionally with the given header\n"
     },
-    {"tree_repr", DndcNodePy_tree_repr, METH_NOARGS, "tree repr"},
+    {
+        .ml_name="tree_repr",
+        .ml_meth=DndcNodePy_tree_repr,
+        .ml_flags=METH_NOARGS,
+        .ml_doc="tree_repr(self)\n"
+            "--\n"
+            "\n"
+            "Debug tree representation.",
+    },
     {} /* Sentinel */
 };
 

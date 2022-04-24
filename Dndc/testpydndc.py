@@ -243,6 +243,8 @@ class TestExamples(TestCase):
             self.assertEqual(html1, html2)
             html3 = ctx.clone().render()
             self.assertEqual(html1, html3)
+            html4 = ctx.pseudo_clone().render()
+            self.assertEqual(html1, html4)
 
 class TestAst(TestCase):
     def test_select(self) -> None:
