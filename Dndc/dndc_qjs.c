@@ -1912,7 +1912,7 @@ JSMETHOD(js_dndc_context_select_nodes){
     if(!JS_IsObject(arg))
         return JS_ThrowTypeError(jsctx, "Need 1 obj argument to select_nodes");
     LinearAllocator la = new_linear_storage(1024*1024, "select_nodes allocator");
-    Allocator tmp = {.type = ALLOCATOR_LINEAR, ._data = &la};
+    Allocator tmp = allocator_from_la(&la);
     int32_t type = -1;
     Marray(StringView) attributes_array = {0};
     Marray(StringView) classes_array = {0};
