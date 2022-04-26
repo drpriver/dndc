@@ -1344,7 +1344,7 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
     DndcContextPy* self = (DndcContextPy*)type->tp_alloc(type, 0);
     if(!self) return NULL;
     self->errors = PyList_New(0);
-    unsigned long long fl = PyLong_AsUnsignedLongLong(flags);
+    unsigned long long fl = flags?PyLong_AsUnsignedLongLong(flags):0;
     enum {WHITELIST = 0
         | DNDC_INPUT_IS_UNTRUSTED
         | DNDC_FRAGMENT_ONLY
