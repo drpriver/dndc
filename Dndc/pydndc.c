@@ -320,7 +320,7 @@ PyMethodDef pydndc_methods[] = {
         #if PY_INSPECT_SUPPORTS_ANNOTATIONS
         "htmlgen(text:str, base_dir:str='.', filename:str='(string input)', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs:str=None)\n"
         #else
-        "htmlgen(text, base_dir='.', filename:'(string input)', error_reporter=None, file_cache=None, flags=0, jsargs=None)\n"
+        "htmlgen(text, base_dir='.', filename='(string input)', error_reporter=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n"
         #endif
         "--\n"
         "\n"
@@ -459,7 +459,7 @@ PyMethodDef pydndc_methods[] = {
         #if PY_INSPECT_SUPPORTS_ANNOTATIONS
         "expand(text:str, base_dir:str='.', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs=None) -> str\n"
         #else
-        "expand(text, base_dir='.', error_reporter=None, file_cache=None, flags=0, jsargs=None)\n"
+        "expand(text, base_dir='.', error_reporter=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n"
         #endif
         "--\n"
         "\n"
