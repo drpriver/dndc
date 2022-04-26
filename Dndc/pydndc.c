@@ -1331,19 +1331,33 @@ typedef struct {
 static
 PyObject* _Nullable
 DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
+    PyObject* flags = NULL;
     PyObject* filename = NULL;
     DndcPyFileCache * cache=NULL;
-    const char* const keywords[] = {"filename", "filecache", NULL};
+    const char* const keywords[] = {"flags", "filename", "filecache", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "|O!O!:Context", (char**)keywords, &PyUnicode_Type, &filename, &DndcPyFileCache_Type, &cache)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "|O!O!O!:Context", (char**)keywords, &PyLong_Type, &flags, &PyUnicode_Type, &filename, &DndcPyFileCache_Type, &cache)){
         return NULL;
     }
     PopDiagnostic();
     DndcContextPy* self = (DndcContextPy*)type->tp_alloc(type, 0);
     if(!self) return NULL;
     self->errors = PyList_New(0);
-    self->ctx = dndc_create_ctx(DNDC_ALLOW_BAD_LINKS,
+    unsigned long long fl = PyLong_AsUnsignedLongLong(flags);
+    enum {WHITELIST = 0
+        | DNDC_INPUT_IS_UNTRUSTED
+        | DNDC_FRAGMENT_ONLY
+        | DNDC_DONT_INLINE_IMAGES
+        | DNDC_NO_THREADS
+        | DNDC_USE_DND_URL_SCHEME
+        | DNDC_STRIP_WHITESPACE
+        | DNDC_DONT_READ
+        | DNDC_PRINT_STATS
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+    };
+    fl &= WHITELIST;
+    self->ctx = dndc_create_ctx(fl | DNDC_ALLOW_BAD_LINKS,
             dndc_stderr_error_func, NULL,
             // pydndc_collect_errors, self->errors,
             cache?cache->b64_cache:NULL, cache?cache->text_cache:NULL);
@@ -1948,7 +1962,7 @@ DndcContextPy_dealloc(PyObject* o){
 static PyTypeObject DndcContextPyType  = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "pydndc.Context",
-    .tp_doc = "Context(filename=None, filecache=None)\n"
+    .tp_doc = "Context(flags=Flags.NONE, filename=None, filecache=None)\n"
             "--\n"
             "\n"
             "A dndc parsing context that encapsulates all of the nodes, caches, etc.\n"

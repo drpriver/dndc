@@ -71,6 +71,7 @@ PyGdndc/jsdoc.dnd: Dndc/jsdoc.dnd
 PyGdndc/dndc_js_api.d.ts: Dndc/dndc_js_api.d.ts
 	$(CP) $< $@
 pydndc/pydndc$(PYEXTENSION): $(BINDIR)/pydndc$(PYEXTENSION)
+	$(RM) -rf $@
 	$(CP) $< $@
 
 
