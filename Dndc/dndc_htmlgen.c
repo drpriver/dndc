@@ -605,9 +605,6 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
     sb->cursor = cursor;
 #endif
 #if 1 && !defined(NO_SIMD) && defined(__ARM_NEON)
-    // NOTE: this code is untested on actual arm chip.
-    // It compiles and the logic is the same, but I didn't have
-    // access to this arch when I wrote it.
     size_t cursor = sb->cursor;
     unsigned char* sbdata = (unsigned char*)sb->data + cursor;
     uint8x16_t lsquare = vdupq_n_u8('[');

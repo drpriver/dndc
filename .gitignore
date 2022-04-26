@@ -40,3 +40,4 @@ Generated
 TestResults
 RenderedDocs
 RenderedExamples
+*.egg-info

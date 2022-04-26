@@ -87,6 +87,9 @@ all: tests dndc pydndc docs dndc-browse
 install: $(DNDC)
 	$(INSTALL) -C $< $(INSTALLDIR)/dndc$(EXE)
 
+install-pydndc: pydndc
+	$(PYTHON) -m pip install -e . --user
+
 .PHONY: fuzz
 fuzz: $(BINDIR)/dndcfuzz$(EXE) | $(FUZZDIR)
 	$< $(FUZZDIR) -fork=4 -only_ascii=1

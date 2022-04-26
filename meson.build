@@ -100,7 +100,14 @@ pydndc = pyinstall.extension_module(
   link_with: quickjs_static,
   dependencies:pyinstall.dependency(),
   c_args:ignore_bogus_deprecations + py_extra_args,
+  install:true,
+  subdir: 'pydndc',
 )
+pyinstall.install_sources(
+  ['PyPackage/pydndc.pyi', 'PyPackage/py.typed', 'PyPackage/__init__.py',],
+  pure: false,
+  subdir: 'pydndc',
+  )
 
 if host_machine.system() == 'darwin'
   add_languages('objc')
