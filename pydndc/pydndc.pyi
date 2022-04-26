@@ -122,7 +122,7 @@ class NodeType(IntEnum):
     INVALID      = 30
 
 class Context:
-    def __new__(cls, filecache:Optional[FileCache]) -> Context:
+    def __new__(cls, filecache:Optional[FileCache]=None) -> Context:
         ...
     errors: List[str]
     filename: Optional[str]

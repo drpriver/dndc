@@ -1343,7 +1343,7 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
     DndcContextPy* self = (DndcContextPy*)type->tp_alloc(type, 0);
     if(!self) return NULL;
     self->errors = PyList_New(0);
-    self->ctx = dndc_create_ctx(0,
+    self->ctx = dndc_create_ctx(DNDC_ALLOW_BAD_LINKS,
             dndc_stderr_error_func, NULL,
             // pydndc_collect_errors, self->errors,
             cache?cache->b64_cache:NULL, cache?cache->text_cache:NULL);
