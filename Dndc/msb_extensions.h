@@ -44,6 +44,28 @@
 static inline
 void
 msb_write_kebab(MStringBuilder* msb, const char* text, size_t length){
+    // SPEED: Measurements show that this is ran on a lot of nodes as we need
+    // to generate ids for every md node with a header for example.
+    //
+    // On the benchmark document, the following stats were collected for the
+    // length of the strings to be kebabed:
+    //
+    //      records:  1557
+    //      sum:     25874
+    //      avg:        16.61
+    //      std:         7.19
+    //      med:        19
+    //      max:        45
+    //      min:         3
+    //
+    // Note that the median length is greater than 15. This means that if I can
+    // figure out a simd version of this algorithm we can do it in 16 byte
+    // chunks and just chew through that data.
+    //
+    // Currently we only lowercase letters, but I'm ok with turning a raw 17 into
+    // an ascii '1'. Those are unprintable characters anyway.  Could also mask
+    // out the unprintables in the simd version.
+
     msb_ensure_additional(msb, length+2);
     char* data = msb->data;
     size_t cursor = msb->cursor;
