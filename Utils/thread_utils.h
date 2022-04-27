@@ -2,6 +2,7 @@
 #define THREAD_UTILS_H
 
 #if defined(__linux__) || defined(__APPLE__)
+#include <unistd.h> // sysconf
 #include <pthread.h>
 #if defined(__linux__)
 #include <semaphore.h>
@@ -133,6 +134,7 @@ static void worker_destroy(WorkerThread* w);
 // Submit a job to the worker
 static void worker_submit(WorkerThread* w, void* job_data);
 static void worker_wait(WorkerThread* w);
+static int num_cpus(void);
 
 #if defined(__linux__) || defined(__APPLE__)
 
@@ -154,6 +156,12 @@ typedef struct WorkerThread {
     bool shutdown;
 } WorkerThread;
 
+static
+int
+num_cpus(void){
+    int num = sysconf(_SC_NPROCESSORS_ONLN);
+    return num;
+}
 
 static
 THREADFUNC(worker_thread_main){
@@ -267,6 +275,15 @@ typedef struct WorkerThread {
     void*_Nullable job_data;
     bool shutdown;
 } WorkerThread;
+
+static
+int
+num_cpus(void){
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo(&sysinfo);
+    int num = sysinfo.dwNumberOfProcessors;
+    return num;
+}
 
 static
 THREADFUNC(worker_thread_main){
