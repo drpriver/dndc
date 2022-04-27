@@ -1,3 +1,7 @@
+Version 0.13.0::md
+  * Renamed toc node to nav node. nav is still an allowed alias to the toc node.
+  * Removed ctx.outname
+  * Introduced an "ast api" available from the python module or from the c library.
 Version 0.10.3::md
   * <code><h</code><code>r></code> is now an allowed html
     tag. The <code>:</code><code>:hr</code> node type
