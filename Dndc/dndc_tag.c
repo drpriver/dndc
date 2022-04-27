@@ -61,11 +61,11 @@ THREADFUNC(worker_func){
 }
 
 static
-int 
+int
 iterate_children(DndcContext*, DndcNodeHandle, Marray__Tag*, StringView);
 
 static
-int 
+int
 process(WorkItem* item){
     StringView filename = item->filename;
     // fprintf(stderr, "[%p] %s\n", pthread_self(), filename.text);
@@ -90,7 +90,7 @@ process(WorkItem* item){
 
 
 static
-int 
+int
 iterate_children(DndcContext* ctx, DndcNodeHandle node, Marray__Tag* tags, StringView filename){
     StringView id;
     int e;
@@ -98,7 +98,7 @@ iterate_children(DndcContext* ctx, DndcNodeHandle node, Marray__Tag* tags, Strin
     switch((enum DndcNodeType)type){
         case DNDC_NODE_TYPE_INVALID:
         case DNDC_NODE_TYPE_STRING:
-        case DNDC_NODE_TYPE_NAV:
+        case DNDC_NODE_TYPE_TOC:
             return 0;
         default: break;
     }
@@ -170,7 +170,7 @@ sv_append(void* p, const void* sv_){
     return 0;
 }
 
-int 
+int
 main(int argc, const char* const* argv){
     Args args = {argc?argc-1:0, argc?argv+1:NULL};
     LongString directory = {.text = getcwd(0, 0)};

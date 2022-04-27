@@ -3,7 +3,7 @@
     <iframe></iframe>
   ::raw
     <textarea class="right" spellcheck="false" autocomplete="off">
-    ::nav
+    ::toc
     Dnd Document!::title
     This is the document format I have been developing. Check it out, we've got:
 
@@ -13,7 +13,7 @@
         1. Lists even
     * Tables
     * Inline css tags
-    * Auto nav population.
+    * Auto toc population.
 
     Awesome::table
       Pro                    | Cons

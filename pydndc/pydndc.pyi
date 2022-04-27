@@ -110,7 +110,7 @@ class NodeType(IntEnum):
     KEYVALUE     = 18
     KEYVALUEPAIR = 19
     IMGLINKS     = 20
-    NAV          = 21
+    TOC          = 21
     DATA         = 22
     COMMENT      = 23
     CONTAINER    = 24

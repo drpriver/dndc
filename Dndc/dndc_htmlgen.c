@@ -247,21 +247,21 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
     return 0;
 }
 
-static void build_nav_block_node(DndcContext* , NodeHandle, MStringBuilder*, int);
-static void build_nav_block_children(DndcContext* , NodeHandle, MStringBuilder*, int);
+static void build_toc_block_node(DndcContext* , NodeHandle, MStringBuilder*, int);
+static void build_toc_block_children(DndcContext* , NodeHandle, MStringBuilder*, int);
 
 static
 void
-build_nav_block(DndcContext* ctx){
-    MStringBuilder sb = {.allocator=ctx->string_allocator};
-    build_nav_block_node(ctx, ctx->root_handle, &sb, 1);
+build_toc_block(DndcContext* ctx){
+    MStringBuilder sb = {.allocator=string_allocator(ctx)};
+    build_toc_block_node(ctx, ctx->root_handle, &sb, 1);
     if(sb.cursor)
-        ctx->renderednav = msb_detach_ls(&sb);
+        ctx->renderedtoc = msb_detach_ls(&sb);
 }
 
 static
 void
-build_nav_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth){
+build_toc_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth){
     Node* node = get_node(ctx, handle);
     switch(node->type){
         case NODE_BULLETS:
@@ -285,7 +285,7 @@ build_nav_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
                     MSB_FORMAT(sb, "\">", node->header, "</a>\n<ul>\n");
                     // kind of a hack
                     size_t cursor = sb->cursor;
-                    build_nav_block_children(ctx, handle, sb, depth+1);
+                    build_toc_block_children(ctx, handle, sb, depth+1);
                     if(cursor != sb->cursor){
                         msb_write_literal(sb, "</ul>\n");
                     }
@@ -302,7 +302,7 @@ build_nav_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
         case NODE_IMPORT:
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:{
-            build_nav_block_children(ctx, handle, sb, depth);
+            build_toc_block_children(ctx, handle, sb, depth);
         }break;
         case NODE_META:
         case NODE_TITLE: // skip title as everything would be a child of it
@@ -312,7 +312,7 @@ build_nav_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
         case NODE_SCRIPTS:
         case NODE_JS:
         case NODE_STRING:
-        case NODE_NAV:
+        case NODE_TOC:
         case NODE_COMMENT:
         case NODE_INVALID:
         case NODE_HR:
@@ -334,12 +334,12 @@ build_nav_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
 
 static
 void
-build_nav_block_children(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth){
+build_toc_block_children(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth){
     if(depth > 2)
         return;
     Node* node = get_node(ctx, handle);
     NODE_CHILDREN_FOR_EACH(it, node){
-        build_nav_block_node(ctx, *it, sb, depth);
+        build_toc_block_node(ctx, *it, sb, depth);
     }
 }
 
@@ -370,7 +370,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                 size_t alias_length = closing_brace - alias;
 
                 {
-                    MStringBuilder temp = {.allocator=ctx->temp_allocator};
+                    MStringBuilder temp = {.allocator=temp_allocator(ctx)};
                     msb_write_kebab(&temp, alias, alias_length);
                     StringView temp_str = msb_borrow_sv(&temp);
                     const StringView* value = find_link_target(ctx, temp_str);
@@ -732,14 +732,14 @@ RENDERFUNC(DIV){
     msb_write_literal(sb, "</div>\n");
     return 0;
 }
-RENDERFUNC(NAV){
+RENDERFUNC(TOC){
     (void)header_depth;
     Node* node = get_node(ctx, handle);
     if(node->header.length){
-        node_print_warning(ctx, node, SV("Headers on navs unsupported"));
+        node_print_warning(ctx, node, SV("Headers on tocs unsupported"));
     }
     if(node_children_count(node)){
-        node_print_warning(ctx, node, SV("Children on navs unsupported"));
+        node_print_warning(ctx, node, SV("Children on tocs unsupported"));
     }
     StringView id = node_get_id(ctx, handle);
     msb_write_literal(sb, "<nav");
@@ -748,7 +748,7 @@ RENDERFUNC(NAV){
     }
     write_classes(sb, node);
     msb_write_literal(sb, ">\n<ul>\n");
-    msb_write_str(sb, ctx->renderednav.text, ctx->renderednav.length);
+    msb_write_str(sb, ctx->renderedtoc.text, ctx->renderedtoc.length);
     msb_write_literal(sb, "</ul>\n</nav>");
     return 0;
 }

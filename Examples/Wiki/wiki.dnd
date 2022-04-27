@@ -21,8 +21,8 @@
   new_root.add_child(root);
   let left = ctx.make_node(NodeType.MD, {classes:['left']});
   left.parse('[Home]');
-  let nav = ctx.make_node(NodeType.NAV);
-  left.add_child(nav);
+  let toc = ctx.make_node(NodeType.TOC);
+  left.add_child(toc);
   new_root.add_child(left);
   ctx.root = new_root;
   //endjs

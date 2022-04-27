@@ -164,7 +164,7 @@ Convenience::md
       KEYVALUE     | kv           | Yes
       KEYVALUEPAIR | ---          | No
       IMGLINKS     | imglinks     | Yes
-      NAV          | nav          | Yes
+      TOC          | toc          | Yes
       DATA         | data         | No
       COMMENT      | comment      | ---
       CONTAINER    | ---          | No
@@ -483,7 +483,7 @@ But Wait, There's More::md
   let new_root = ctx.make_node(NodeType.DIV, {classes:['root']});
   root.detach();
   new_root.add_child(root);
-  // NAV blocks are kind of special. As one of the last things, the system
+  // TOC blocks are kind of special. As one of the last things, the system
   // will walk the document tree and create a toc of all the h2s and h3s.
-  new_root.add_child(ctx.make_node(NodeType.NAV));
+  new_root.add_child(ctx.make_node(NodeType.TOC));
   ctx.root = new_root;

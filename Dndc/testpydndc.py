@@ -237,7 +237,7 @@ class TestExamples(TestCase):
             ctx.execute_js()
             ctx.gather_links()
             ctx.resolve_links()
-            ctx.build_nav()
+            ctx.build_toc()
             ctx.resolve_data_blocks()
             html2 = ctx.render()
             self.assertEqual(html1, html2)

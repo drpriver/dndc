@@ -491,7 +491,7 @@ dndc_node_get_parent(DndcContext*, DndcNodeHandle);
     apply(KEYVALUE,       18)\
     apply(KEYVALUEPAIR,   19)\
     apply(IMGLINKS,       20)\
-    apply(NAV,            21)\
+    apply(TOC,            21)\
     apply(DATA,           22)\
     apply(COMMENT,        23)\
     apply(CONTAINER,      24)\
@@ -993,9 +993,9 @@ dndc_ctx_gather_links(DndcContext*);
 
 DNDC_API
 int
-dndc_ctx_build_nav(DndcContext*);
+dndc_ctx_build_toc(DndcContext*);
 // ------------------
-// Populates the NAV node, if there is one in the context.
+// Populates the TOC node, if there is one in the context.
 //
 // Returns 0 on success, non-zero on error.
 //
@@ -1149,7 +1149,7 @@ compile_dnd_to_html(
     err = dndc_ctx_resolve_links(ctx);
     if(err) goto fail;
 
-    err = dndc_ctx_build_nav(ctx);
+    err = dndc_ctx_build_toc(ctx);
     if(err) goto fail;
 
     err = dndc_ctx_resolve_data_blocks(ctx);
@@ -1208,7 +1208,7 @@ compile_dnd_to_html_with_extra_script(
     err = dndc_ctx_resolve_links(ctx);
     if(err) goto fail;
 
-    err = dndc_ctx_build_nav(ctx);
+    err = dndc_ctx_build_toc(ctx);
     if(err) goto fail;
 
     err = dndc_ctx_resolve_data_blocks(ctx);

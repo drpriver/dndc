@@ -1,5 +1,5 @@
-DNDCVERSION=0.12.0
-DNDC_COMPAT_VERSION=0.12.0
+DNDCVERSION=0.13.0
+DNDC_COMPAT_VERSION=0.13.0
 
 ifeq ($(UNAME),Darwin)
 RPATH:=-rpath @executable_path
@@ -8,7 +8,7 @@ RPATH:=
 endif
 
 $(BINDIR)/dndc$(EXE): Dndc/dndc_cli.c $(DEPDIR)/dndc.dep  opt.mak $(VENDOBJDIR)/libquickjs.o | $(DIRECTORIES)
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc.dep $< -o $@ $(VENDOBJDIR)/libquickjs.o $(LINK_FLAGS) $(RPATH)
+	$(CC) $(FLAGS) $(OPT_FLAGS) -g $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc.dep $< -o $@ $(VENDOBJDIR)/libquickjs.o $(LINK_FLAGS) $(RPATH)
 .PHONY: dndc
 dndc: $(BINDIR)/dndc$(EXE)
 

@@ -115,7 +115,7 @@ node_set_id(DndcContext* ctx, NodeHandle handle, StringView sv){
             }
         }
     }
-    IdItem* item = Marray_alloc(IdItem)(&ctx->explicit_node_ids, ctx->allocator);
+    IdItem* item = Marray_alloc(IdItem)(&ctx->explicit_node_ids, main_allocator(ctx));
     item->node = handle;
     item->text = sv;
     node->flags |= NODEFLAG_ID;
@@ -134,13 +134,13 @@ node_clone(DndcContext* ctx, NodeHandle handle){
         dstnode->children = srcnode->children;
     }
     else {
-        Marray_extend(NodeHandle)(&dstnode->children, ctx->allocator, node_children(srcnode), node_children_count(srcnode));
+        Marray_extend(NodeHandle)(&dstnode->children, main_allocator(ctx), node_children(srcnode), node_children_count(srcnode));
     }
     RARRAY_FOR_EACH(Attribute, at, srcnode->attributes){
-        dstnode->attributes = Rarray_push(Attribute)(dstnode->attributes, ctx->allocator, *at);
+        dstnode->attributes = Rarray_push(Attribute)(dstnode->attributes, main_allocator(ctx), *at);
     }
     RARRAY_FOR_EACH(StringView, cls, srcnode->classes){
-        dstnode->classes = Rarray_push(StringView)(dstnode->classes, ctx->allocator, *cls);
+        dstnode->classes = Rarray_push(StringView)(dstnode->classes, main_allocator(ctx), *cls);
     }
     dstnode->filename_idx = srcnode->filename_idx;
     dstnode->row = srcnode->row;
@@ -176,7 +176,7 @@ parse_set_err_q(DndcContext* ctx, const char* errchar, StringView msg, StringVie
     ctx->error.filename = ctx->filename;
     ctx->error.line = ctx->lineno;
     ctx->error.col = col;
-    MStringBuilder msb = {.allocator = ctx->string_allocator};
+    MStringBuilder msb = {.allocator = string_allocator(ctx)};
     msb_write_str(&msb, msg.text, msg.length);
     msb_write_char(&msb, '\'');
     msb_write_str(&msb, quoted.text, quoted.length);
@@ -187,7 +187,7 @@ parse_set_err_q(DndcContext* ctx, const char* errchar, StringView msg, StringVie
 static
 void
 node_set_err_q(DndcContext* ctx, const Node* node, StringView msg, StringView quoted){
-    MStringBuilder msb = {.allocator=ctx->string_allocator};
+    MStringBuilder msb = {.allocator=string_allocator(ctx)};
     ctx->error.filename = ctx->filenames.data[node->filename_idx];
     ctx->error.line = node->row;
     ctx->error.col = node->col;
@@ -240,7 +240,7 @@ node_print_err_q(DndcContext* ctx, const Node* node, StringView msg, StringView 
     StringView filename = ctx->filenames.data[node->filename_idx];
     int lineno = node->row;
     int col = node->col;
-    MStringBuilder msb = {.allocator = ctx->temp_allocator};
+    MStringBuilder msb = {.allocator = temp_allocator(ctx)};
     msb_write_str(&msb, msg.text, msg.length);
     msb_write_char(&msb, '\'');
     msb_write_str(&msb, quoted.text, quoted.length);
@@ -278,7 +278,7 @@ node_print_warning2(DndcContext* ctx, const Node* node, StringView a, StringView
     StringView filename = ctx->filenames.data[node->filename_idx];
     int lineno = node->row;
     int col = node->col;
-    MStringBuilder msb = {.allocator = ctx->temp_allocator};
+    MStringBuilder msb = {.allocator = temp_allocator(ctx)};
     msb_write_str(&msb, a.text, a.length);
     msb_write_str(&msb, b.text, b.length);
     LongString msg = msb_borrow_ls(&msb);
@@ -293,7 +293,7 @@ report_time(DndcContext* ctx, StringView msg, uint64_t microseconds){
         return;
     if(! ctx->error_func)
         return;
-    MStringBuilder temp = {.allocator=ctx->temp_allocator};
+    MStringBuilder temp = {.allocator=temp_allocator(ctx)};
     msb_write_str(&temp, msg.text, msg.length);
     msb_write_us_as_ms(&temp, microseconds);
     LongString str = msb_borrow_ls(&temp);
@@ -317,7 +317,7 @@ report_size(DndcContext* ctx, StringView msg, uint64_t size){
         return;
     if(! ctx->error_func)
         return;
-    MStringBuilder temp = {.allocator=ctx->temp_allocator};
+    MStringBuilder temp = {.allocator=temp_allocator(ctx)};
     msb_write_str(&temp, msg.text, msg.length);
     msb_write_uint64(&temp, size);
     LongString str = msb_borrow_ls(&temp);
@@ -334,7 +334,7 @@ report_set_error(DndcContext* ctx){
         goto clear;
     ctx->error_func(ctx->error_user_data, DNDC_ERROR_MESSAGE, ctx->error.filename.text, ctx->error.filename.length, ctx->error.line, ctx->error.col, ctx->error.message.text, ctx->error.message.length);
     clear:
-    Allocator_free(ctx->string_allocator, ctx->error.message.text, ctx->error.message.length+1);
+    Allocator_free(string_allocator(ctx), ctx->error.message.text, ctx->error.message.length+1);
     memset(&ctx->error, 0, sizeof ctx->error);
 }
 
@@ -357,14 +357,14 @@ ctx_note_dependency(DndcContext* ctx, StringView path){
             return;
     }
     // This is weird that I am doing strndup, but then storing in a stringview
-    StringView pathcpy = {.text = Allocator_strndup(ctx->string_allocator, path.text, path.length), .length=path.length};
-    Marray_push(StringView)(&ctx->dependencies, ctx->allocator, pathcpy);
+    StringView pathcpy = {.text = Allocator_strndup(string_allocator(ctx), path.text, path.length), .length=path.length};
+    Marray_push(StringView)(&ctx->dependencies, main_allocator(ctx), pathcpy);
 }
 
 static
 StringViewResult
 ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
-    MStringBuilder temp_builder = {.allocator=ctx->temp_allocator};
+    MStringBuilder temp_builder = {.allocator=temp_allocator(ctx)};
     if(!sourcepath.length){
         return (StringViewResult){.errored=UNEXPECTED_END};
     }
@@ -390,7 +390,7 @@ ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
 static
 StringViewResult
 ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath){
-    MStringBuilder path_builder = {.allocator=ctx->temp_allocator};
+    MStringBuilder path_builder = {.allocator=temp_allocator(ctx)};
     if(! path_is_abspath(binarypath) && ctx->base_directory.length){
         msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
         msb_append_path(&path_builder, binarypath.text, binarypath.length);
@@ -418,7 +418,7 @@ add_link_from_sv(DndcContext* ctx, Node* node){
         node_print_err(ctx, node, LS("no '=' in a link node"));
         return PARSE_ERROR;
     }
-    MStringBuilder sb = {.allocator=ctx->string_allocator};
+    MStringBuilder sb = {.allocator=string_allocator(ctx)};
     msb_write_kebab(&sb, str.text, equals - str.text);
     if(!sb.cursor){
         node_print_err(ctx, node, LS("key is empty."));
@@ -452,7 +452,7 @@ add_link_from_sv(DndcContext* ctx, Node* node){
 static inline
 void
 add_link_from_header(DndcContext* ctx, StringView str){
-    MStringBuilder sb = {.allocator=ctx->string_allocator};
+    MStringBuilder sb = {.allocator=string_allocator(ctx)};
     msb_write_char(&sb, '#');
     msb_write_kebab(&sb, str.text, str.length);
     if(sb.cursor==1){
@@ -475,7 +475,7 @@ static inline
 force_inline
 NodeHandle
 alloc_handle(DndcContext* ctx){
-    size_t index = Marray_alloc_index(Node)(&ctx->nodes, ctx->allocator);
+    size_t index = Marray_alloc_index(Node)(&ctx->nodes, main_allocator(ctx));
     ctx->nodes.data[index] = (Node){0};
     // debug to help find nodes without parents
     ctx->nodes.data[index].parent = INVALID_NODE_HANDLE;
@@ -511,12 +511,12 @@ append_child(DndcContext* ctx, NodeHandle parent_handle, NodeHandle child_handle
     }
     if(parent->children.count == 4){
         Marray(NodeHandle) children = {0};
-        Marray_ensure_total(NodeHandle)(&children, ctx->allocator, 4);
+        Marray_ensure_total(NodeHandle)(&children, main_allocator(ctx), 4);
         memcpy(children.data, parent->inline_children, sizeof(parent->inline_children));
         children.count = 4;
         parent->children = children;
     }
-    Marray_push(NodeHandle)(&parent->children, ctx->allocator, child_handle);
+    Marray_push(NodeHandle)(&parent->children, main_allocator(ctx), child_handle);
 }
 
 static inline
@@ -590,7 +590,7 @@ gather_anchor(DndcContext* ctx, NodeHandle handle, int node_depth){
         case NODE_SCRIPTS:
         case NODE_JS:
         case NODE_STRING:
-        case NODE_NAV:
+        case NODE_TOC:
         case NODE_COMMENT:
         case NODE_INVALID:
         case NODE_HR:

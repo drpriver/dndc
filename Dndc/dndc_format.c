@@ -132,7 +132,7 @@ format_node(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
         case NODE_DIV:
         case NODE_TITLE:
         case NODE_HEADING:
-        case NODE_NAV:
+        case NODE_TOC:
         case NODE_DATA:
         case NODE_QUOTE:
         case NODE_HR:

@@ -157,14 +157,14 @@ dndc_parse(DndcContext*, NodeHandle root, StringView filename,
            const char* text, size_t length);
 
 //
-// build_nav_block
+// build_toc_block
 // ---------------
-// Walks the tree to construct the nav block.
+// Walks the tree to construct the toc block.
 // Sets the result as a string on the context.
 //
 static
 void
-build_nav_block(DndcContext*);
+build_toc_block(DndcContext*);
 
 //
 // Error reporting functions

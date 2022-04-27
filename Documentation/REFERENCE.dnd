@@ -5,7 +5,7 @@
   on. That is so that the parser doesn't see a double colon and issue an error
   due to an illegal node. Again, it is extremely rare to actually talk about the
   nodes themselves in your code, so it is not really a problem.
-::nav .left
+::toc .left
 ::md .right
   Reference::title
   General::md .node
@@ -72,7 +72,7 @@
           alerting the [goblins in 1. | room 1]
       Rendered::md .rightside #noid
         ::comment
-          Use a raw node so that the nav doesn't see these.
+          Use a raw node so that the toc doesn't see these.
           Maybe we should add @nonav or something similar?
         ::raw
           <div>
@@ -513,16 +513,16 @@
       Rendered::md .rightside #noid
         TODO
 
-  <code>:</code><code>:nav</code>::md .node #id(nav)
-    The <code>:</code><code>:nav</code> node is a special kind of node. It
+  <code>:</code><code>:toc</code>::md .node #id(toc)
+    The <code>:</code><code>:toc</code> node is a special kind of node. It
     renders into effectively a table of contents of the document, grabbing all
     h2s and h3s and putting them into an unordered list.
 
     ::div .side-by-side
       Input::pre .leftside #noid
-        ::nav
+        ::toc
       Rendered::md .rightside #noid
-        ::nav
+        ::toc
   <code>:</code><code>:data</code>::md .node #id(data)
     The <code>:</code><code>:data</code> node is for storing nodes that should be
     rendered to html, but not immediately included in the document. They are

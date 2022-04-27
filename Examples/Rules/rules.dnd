@@ -13,5 +13,5 @@
   new_root.add_child(container);
   let left = ctx.make_node(NodeType.DIV, {classes:['left']});
   new_root.add_child(left);
-  left.add_child(ctx.make_node(NodeType.NAV));
+  left.add_child(ctx.make_node(NodeType.TOC));
   ctx.root = new_root;

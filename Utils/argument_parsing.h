@@ -723,7 +723,15 @@ print_arg_help(const ArgToParse* arg, int columns, const ArgStyle* style){
     if(arg->altname1.length){
         printf(", %s%s%s", style->pre_argname, arg->altname1.text, style->post_argname);
     }
-    printf(": %s%s%s", style->pre_typename, typename.text, style->post_typename);
+    if(type == ARG_FLAG || type == ARG_BITFLAG)
+        ;
+    else{
+        printf(" <%s%s%s>", style->pre_typename, typename.text, style->post_typename);
+        if(arg->max_num > 1){
+            printf(" ... ");
+        }
+    }
+
 
     if(arg->min_num != 0 || !arg->show_default){
         putchar('\n');

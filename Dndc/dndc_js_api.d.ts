@@ -103,8 +103,8 @@ type CtxType = {
     //   let container = ctx.make_node(NodeType.DIV,
     //       {classes:['container'],
     //        header:'Table of Contents'});
-    //   let nav = ctx.make_node(NodeType.NAV);
-    //   container.add_child(nav);
+    //   let toc = ctx.make_node(NodeType.TOC);
+    //   container.add_child(toc);
     //   ctx.root.add_child(container);
     // --------
     make_node(type:number, options:{header:string?, classes:Array<string>?,
@@ -534,7 +534,7 @@ type Node = {
     //   let root = ctx.root;
     //   root.detach();
     //   let new_root = ctx.make_node(NodeType.DIV);
-    //   new_root.add_child(ctx.make_node(NodeType.NAV));
+    //   new_root.add_child(ctx.make_node(NodeType.TOC));
     //   new_root.add_child(root);
     //   ctx.root = new_root;
     // --------
@@ -565,7 +565,7 @@ type Node = {
     //   let container = ctx.root.make_child(NodeType.DIV,
     //       {classes:['container'],
     //        header:'Table of Contents'});
-    //   container.make_child(NodeType.NAV);
+    //   container.make_child(NodeType.TOC);
     // --------
     make_child(type:number, options:{header:string?, classes:Array<string>?,
               attributes:Array<string>?}): Node;
@@ -868,7 +868,7 @@ export const NodeType = {
     KEYVALUE:     number;
     KEYVALUEPAIR: number;
     IMGLINKS:     number;
-    NAV:          number;
+    TOC:          number;
     DATA:         number;
     COMMENT:      number;
     CONTAINER:    number;

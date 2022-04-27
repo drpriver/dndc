@@ -149,10 +149,10 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
             node_set_err(ctx, n, LS("DATA_NODE unhandled"));
             return PARSE_ERROR;
         case NODE_HR:
-        case NODE_NAV:
+        case NODE_TOC:
             write_generic_header(ctx, n, indent, msb);
             if(node_children_count(n)){
-                node_set_err(ctx, n, LS("NAV or HR has children"));
+                node_set_err(ctx, n, LS("TOC or HR has children"));
                 return PARSE_ERROR;
             }
             return result;
@@ -205,7 +205,7 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int n
         case NODE_HR:
         case NODE_CONTAINER:
         case NODE_DATA:
-        case NODE_NAV:
+        case NODE_TOC:
         case NODE_KEYVALUEPAIR:
         case NODE_LIST_ITEM:
         case NODE_LIST:

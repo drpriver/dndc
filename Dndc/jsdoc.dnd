@@ -4,7 +4,7 @@ JS Api Documentation::title
     ctx.select_nodes({type:NodeType.TITLE})[0].header = Args[1];
   }
 ::raw @doc
-::md @nav
+::md @toc
 ::js
   // This is kind of a beast, but here is an entire js syntax
   // highlighter.
@@ -324,7 +324,7 @@ JS Api Documentation::title
   let lines = text.split('\n');
   doc.add_child('<pre>');
   let commentstate = null;
-  let nav = ctx.select_nodes({attributes:['nav']})[0];
+  let toc = ctx.select_nodes({attributes:['toc']})[0];
   for(let line of lines){
     if(line.match(/^\s*\/\//)){
       if(commentstate === null)
@@ -346,11 +346,11 @@ JS Api Documentation::title
       ctx.add_link(parent+'-'+child, '#'+ctx.kebab(parent+'-'+child));
     }
   }
-  nav.parse(navstr);
-  nav.id = 'nav';
+  toc.parse(navstr);
+  toc.id = 'toc';
   //endjs
 ::css
-  #nav {
+  #toc {
     position: fixed;
     left: 0;
     top: 0;

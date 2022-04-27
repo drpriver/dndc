@@ -368,7 +368,7 @@ dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const 
     ctx->nspaces = 0;
     ctx->lineno = 0;
     ctx->filename = filename;
-    Marray_push(StringView)(&ctx->filenames, ctx->allocator, filename);
+    Marray_push(StringView)(&ctx->filenames, main_allocator(ctx), filename);
     NodeType type = get_node(ctx, root_handle)->type;
     int e = parse_node(ctx, root_handle, type, -1, NODEFLAG_NONE);
     if(e) return e;
@@ -465,39 +465,39 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                         // result.result |= NODEFLAG_COMMENT;
                         // break;
                     case NODE_JS:
-                        Marray_push(NodeHandle)(&ctx->user_script_nodes, ctx->allocator, node_handle);
+                        Marray_push(NodeHandle)(&ctx->user_script_nodes, main_allocator(ctx), node_handle);
                         break;
                     case NODE_IMPORT:
                         // This is pushed later.
-                        // Marray_push(NodeHandle)(&ctx->imports, ctx->allocator, node_handle);
+                        // Marray_push(NodeHandle)(&ctx->imports, main_allocator(ctx), node_handle);
                         result.result |= NODEFLAG_IMPORT;
                         break;
                     case NODE_STYLESHEETS:
-                        Marray_push(NodeHandle)(&ctx->stylesheets_nodes, ctx->allocator, node_handle);
+                        Marray_push(NodeHandle)(&ctx->stylesheets_nodes, main_allocator(ctx), node_handle);
                         break;
                     case NODE_LINKS:
-                        Marray_push(NodeHandle)(&ctx->link_nodes, ctx->allocator, node_handle);
+                        Marray_push(NodeHandle)(&ctx->link_nodes, main_allocator(ctx), node_handle);
                         break;
                     case NODE_SCRIPTS:
-                        Marray_push(NodeHandle)(&ctx->script_nodes, ctx->allocator, node_handle);
+                        Marray_push(NodeHandle)(&ctx->script_nodes, main_allocator(ctx), node_handle);
                         break;
                     case NODE_DATA:
-                        Marray_push(NodeHandle)(&ctx->data_nodes, ctx->allocator, node_handle);
+                        Marray_push(NodeHandle)(&ctx->data_nodes, main_allocator(ctx), node_handle);
                         break;
                     case NODE_META:
-                        Marray_push(NodeHandle)(&ctx->meta_nodes, ctx->allocator, node_handle);
+                        Marray_push(NodeHandle)(&ctx->meta_nodes, main_allocator(ctx), node_handle);
                         break;
                     case NODE_IMAGE:
-                        Marray_push(NodeHandle)(&ctx->img_nodes, ctx->allocator, node_handle);
+                        Marray_push(NodeHandle)(&ctx->img_nodes, main_allocator(ctx), node_handle);
                         break;
                     case NODE_IMGLINKS:
-                        Marray_push(NodeHandle)(&ctx->imglinks_nodes, ctx->allocator, node_handle);
+                        Marray_push(NodeHandle)(&ctx->imglinks_nodes, main_allocator(ctx), node_handle);
                         break;
                     case NODE_TITLE:
                         ctx->titlenode = node_handle;
                         break;
-                    case NODE_NAV:
-                        ctx->navnode = node_handle;
+                    case NODE_TOC:
+                        ctx->tocnode = node_handle;
                         break;
                     default: break;
                 }
@@ -607,7 +607,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                     return (ErrorableNodeFlags){.errored=PARSE_ERROR};
                 }
                 StringView class_ = {.length = class_length, .text = class_start};
-                node->classes = Rarray_push(StringView)(node->classes, ctx->allocator, class_);
+                node->classes = Rarray_push(StringView)(node->classes, main_allocator(ctx), class_);
             }break;
             case '@':{
                 advance_sv(&aftertype);
@@ -658,7 +658,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                             break;
                         }
                 }
-                Attribute* attr = Rarray_alloc(Attribute)(&node->attributes, ctx->allocator);
+                Attribute* attr = Rarray_alloc(Attribute)(&node->attributes, main_allocator(ctx));
                 attr->key = attr_name;
                 attr->value = SV("");
                 if(aftertype.length){
@@ -695,7 +695,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
         }
     }
     if(result.result & NODEFLAG_IMPORT){
-        Marray_push(NodeHandle)(&ctx->imports, ctx->allocator, node_handle);
+        Marray_push(NodeHandle)(&ctx->imports, main_allocator(ctx), node_handle);
     }
     node->flags = result.result;
     return result;
@@ -729,7 +729,7 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
             return parse_raw_node(ctx, parent_handle, indentation);
         case NODE_IMGLINKS:
         case NODE_DATA:
-        case NODE_NAV:
+        case NODE_TOC:
         case NODE_LINKS:
         case NODE_IMPORT:
         case NODE_IMAGE:

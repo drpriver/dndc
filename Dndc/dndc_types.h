@@ -243,15 +243,14 @@ typedef struct DndcContext {
     Marray(Node) nodes;
     // Handle to the root node. Scripts can change this.
     NodeHandle root_handle;
+
     // General purpose allocator.
     ArenaAllocator main_arena;
-    Allocator allocator;
     // Allocator for strings (strings are almost never freed)
     ArenaAllocator string_arena;
-    Allocator string_allocator;
     // Allocator for scratch allocations
     LinearAllocator temp;
-    Allocator temp_allocator;
+
     // current parsing location
     struct {
         const char*_Nonnull cursor;
@@ -285,7 +284,7 @@ typedef struct DndcContext {
         Marray(NodeHandle) img_nodes;
         Marray(NodeHandle) imglinks_nodes;
         NodeHandle titlenode;
-        NodeHandle navnode;
+        NodeHandle tocnode;
     };
 
     // file/source string cache.
@@ -301,10 +300,10 @@ typedef struct DndcContext {
     // TODO: use an adaptive table (linear at small N, hashmap
     //       at large N).
     Marray(IdItem) explicit_node_ids;
-    // If a nav block exists, this string holds the html fragment
-    // that is the nav.
+    // If a toc block exists, this string holds the html fragment
+    // that is the toc.
     // TODO: make this a string view?
-    LongString renderednav;
+    LongString renderedtoc;
     // See DndcFlags.
     uint64_t flags;
     // See dndc.h
@@ -325,6 +324,26 @@ typedef struct DndcContext {
     unsigned long textcache_allocated: 1;
     unsigned long b64cache_allocated: 1;
 } DndcContext;
+
+static inline force_inline
+Allocator
+main_allocator(DndcContext* ctx){
+    return allocator_from_arena(&ctx->main_arena);
+}
+static inline force_inline
+Allocator
+string_allocator(DndcContext* ctx){
+    return allocator_from_arena(&ctx->string_arena);
+}
+
+static inline force_inline
+Allocator
+temp_allocator(DndcContext* ctx){
+    return allocator_from_la(&ctx->temp);
+}
+
+
+
 
 typedef union DndcDependsArg DependsArg;
 #ifdef __clang__

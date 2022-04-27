@@ -515,7 +515,7 @@ execute_qjs_string(QJSContext* jsctx, DndcContext* ctx, const char* str, size_t 
         {
             Node* node = get_node(ctx, firstline);
             StringView node_filename = ctx->filenames.data[node->filename_idx];
-            filename = Allocator_strndup(ctx->string_allocator, node_filename.text, node_filename.length);
+            filename = Allocator_strndup(string_allocator(ctx), node_filename.text, node_filename.length);
         }
 
         QJSValue err = JS_Eval(jsctx, str, length, filename, 1);
@@ -530,7 +530,7 @@ execute_qjs_string(QJSContext* jsctx, DndcContext* ctx, const char* str, size_t 
             result = GENERIC_ERROR;
         }
         else if(ctx->error.message.length){
-            Allocator_free(ctx->string_allocator, ctx->error.message.text, ctx->error.message.length);
+            Allocator_free(string_allocator(ctx), ctx->error.message.text, ctx->error.message.length);
             ctx->error.message = (LongString){0};
         }
         JS_FreeValue(jsctx, err);
@@ -643,7 +643,7 @@ js_dndc_get_classlist_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* o
 static
 void
 set_js_traceback(DndcContext* ctx, QJSContext* jsctx){
-    MStringBuilder msb = {.allocator = ctx->string_allocator};
+    MStringBuilder msb = {.allocator = string_allocator(ctx)};
     QJSValue exception_val = JS_GetException(jsctx);
     int is_error = JS_IsError(jsctx, exception_val);
     {
@@ -742,7 +742,7 @@ js_console_log(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
         return JS_UNDEFINED;
     if(!ctx->error_func)
         return JS_UNDEFINED;
-    MStringBuilder msb = {.allocator = ctx->temp_allocator};
+    MStringBuilder msb = {.allocator = temp_allocator(ctx)};
 
     for(int i = 0; i < argc; i++){
         if(i != 0) msb_write_char(&msb, ' ');
@@ -829,10 +829,10 @@ js_write_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCons
     if(!JS_IsString(filename_s) || !JS_IsString(text_s)){
         return JS_ThrowTypeError(jsctx, "Must be given two args: filename and data to write");
     }
-    LongString filepath = jsstring_to_longstring(jsctx, filename_s, ctx->temp_allocator);
+    LongString filepath = jsstring_to_longstring(jsctx, filename_s, temp_allocator(ctx));
     StringView data = jsstring_make_stringview_js_allocated(jsctx, text_s);
     FileWriteResult err = write_file(filepath.text, data.text, data.length);
-    Allocator_free(ctx->temp_allocator, filepath.text, filepath.length+1);
+    Allocator_free(temp_allocator(ctx), filepath.text, filepath.length+1);
     JS_FreeCString(jsctx, data.text);
     if(err.errored){
         // Throwing a type error is the wrong way to report this error, but
@@ -874,7 +874,7 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
     if(unlikely(ctx->flags & DNDC_DONT_READ)){
         return JS_ThrowTypeError(jsctx, "File system access is disabled.");
     }
-    MStringBuilder sb = {.allocator = ctx->temp_allocator};
+    MStringBuilder sb = {.allocator = temp_allocator(ctx)};
     StringView base = ctx->base_directory;
     if(argc == 1){
         StringView dir = jsstring_make_stringview_js_allocated(jsctx, argv[0]);
@@ -958,7 +958,7 @@ js_list_dnd_files_inner(QJSContext* jsctx, DndcContext* ctx, QJSValue array, Str
         return JS_ThrowTypeError(jsctx, "Max Recursion depth exceeded: %d. Path was: '%s'", depth, directory.text);
     }
     // fprintf(stderr, "Entering with: '%s'\n", directory.text);
-    MStringBuilder tempbuilder = {.allocator = ctx->temp_allocator};
+    MStringBuilder tempbuilder = {.allocator = temp_allocator(ctx)};
     MSB_FORMAT(&tempbuilder, directory, "/*.dnd");
     msb_nul_terminate(&tempbuilder);
     LongString dndwildcard = msb_borrow_ls(&tempbuilder);
@@ -1029,7 +1029,7 @@ js_path_exists(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
     if(ctx->flags & DNDC_DONT_READ){
         return JS_ThrowTypeError(jsctx, "File system access is disabled.");
     }
-    MStringBuilder sb = {.allocator = ctx->temp_allocator};
+    MStringBuilder sb = {.allocator = temp_allocator(ctx)};
     StringView base = ctx->base_directory;
     StringView dir = jsstring_make_stringview_js_allocated(jsctx, argv[0]);
     if(base.length && !path_is_abspath(dir)){
@@ -1072,7 +1072,7 @@ JSMETHOD(js_dndc_node_parse){
     if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
         return JS_EXCEPTION;
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
-    LongString text = jsstring_to_longstring(jsctx, str, ctx->string_allocator);
+    LongString text = jsstring_to_longstring(jsctx, str, string_allocator(ctx));
     StringView old_filename = ctx->filename;
     int parse_e = dndc_parse(ctx, handle, SV("(generated string from script)"), text.text, text.length);
     if(parse_e){
@@ -1105,7 +1105,7 @@ JSMETHOD(js_dndc_node_detach){
     node->parent = INVALID_NODE_HANDLE;
     for(size_t i = 0; i < node_children_count(parent); i++){
         if(NodeHandle_eq(handle, node_children(parent)[i])){
-            node_remove_child(parent, i, ctx->allocator);
+            node_remove_child(parent, i, main_allocator(ctx));
             goto after;
         }
     }
@@ -1142,7 +1142,7 @@ JSMETHOD(js_dndc_node_add_child){
     QJSValueConst arg = argv[0];
     NodeHandle child;
     if(JS_IsString(arg)){
-        StringView sv = jsstring_to_stringview(jsctx, arg, ctx->string_allocator);
+        StringView sv = jsstring_to_stringview(jsctx, arg, string_allocator(ctx));
         child = alloc_handle(ctx);
         Node* node = get_node(ctx, child);
         node->header = sv;
@@ -1268,26 +1268,26 @@ js_dndc_node_set_type(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst 
     if(type < 0 || type >= NODE_INVALID)
         return JS_ThrowTypeError(jsctx, "Integer out of range for valid node types.");
     switch(type){
-        case NODE_NAV:
-            ctx->navnode = handle;
+        case NODE_TOC:
+            ctx->tocnode = handle;
             break;
         case NODE_TITLE:
             ctx->titlenode = handle;
             break;
         case NODE_STYLESHEETS:
-            Marray_push(NodeHandle)(&ctx->stylesheets_nodes, ctx->allocator, handle);
+            Marray_push(NodeHandle)(&ctx->stylesheets_nodes, main_allocator(ctx), handle);
             break;
         case NODE_LINKS:
-            Marray_push(NodeHandle)(&ctx->link_nodes, ctx->allocator, handle);
+            Marray_push(NodeHandle)(&ctx->link_nodes, main_allocator(ctx), handle);
             break;
         case NODE_SCRIPTS:
-            Marray_push(NodeHandle)(&ctx->script_nodes, ctx->allocator, handle);
+            Marray_push(NodeHandle)(&ctx->script_nodes, main_allocator(ctx), handle);
             break;
         case NODE_DATA:
-            Marray_push(NodeHandle)(&ctx->data_nodes, ctx->allocator, handle);
+            Marray_push(NodeHandle)(&ctx->data_nodes, main_allocator(ctx), handle);
             break;
         case NODE_META:
-            Marray_push(NodeHandle)(&ctx->meta_nodes, ctx->allocator, handle);
+            Marray_push(NodeHandle)(&ctx->meta_nodes, main_allocator(ctx), handle);
             break;
         case NODE_JS:
             return JS_ThrowTypeError(jsctx, "Setting a node to JS is not supported");
@@ -1439,7 +1439,7 @@ JSSETTER(js_dndc_node_set_header){
         return JS_EXCEPTION;
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
     Node* node = get_node(ctx, handle);
-    StringView new_header = jsstring_to_stringview(jsctx, arg, ctx->string_allocator);
+    StringView new_header = jsstring_to_stringview(jsctx, arg, string_allocator(ctx));
     if(!new_header.text)
         return JS_EXCEPTION;
     node->header = new_header;
@@ -1457,7 +1457,7 @@ JSGETTER(js_dndc_node_get_id){
     if(!id.length){
         return JS_NewString(jsctx, "");
     }
-    MStringBuilder msb = {.allocator = ctx->temp_allocator};
+    MStringBuilder msb = {.allocator = temp_allocator(ctx)};
     msb_write_kebab(&msb, id.text, id.length);
     StringView keb = msb_borrow_sv(&msb);
     QJSValue result = JS_NewStringLen(jsctx, keb.text, keb.length);
@@ -1475,7 +1475,7 @@ JSSETTER(js_dndc_node_set_id){
     if(!JS_IsString(arg)){
         return JS_ThrowTypeError(jsctx, "id must be a string");
     }
-    StringView new_id = jsstring_to_stringview(jsctx, arg, ctx->string_allocator);
+    StringView new_id = jsstring_to_stringview(jsctx, arg, string_allocator(ctx));
     node_set_id(ctx, handle, new_id);
     return JS_UNDEFINED;
 }
@@ -1491,7 +1491,7 @@ js_dndc_node_to_string(QJSContext* jsctx, QJSValueConst thisValue, int argc, QJS
         return JS_EXCEPTION;
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
     Node* node = get_node(ctx, handle);
-    MStringBuilder msb = {.allocator=ctx->temp_allocator};
+    MStringBuilder msb = {.allocator=temp_allocator(ctx)};
     MSB_FORMAT(&msb, "Node(", NODENAMES[node->type].text);
     RARRAY_FOR_EACH(StringView, class, node->classes){
         MSB_FORMAT(&msb, ".", *class);
@@ -1566,11 +1566,11 @@ JSMETHOD(js_dndc_node_err){
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
     Node* node = get_node(ctx, handle);
-    LongString msg = jsstring_to_longstring(jsctx, argv[0], ctx->string_allocator);
+    LongString msg = jsstring_to_longstring(jsctx, argv[0], string_allocator(ctx));
     if(!msg.text)
         return JS_EXCEPTION;
     if(ctx->error.message.length){
-        Allocator_free(ctx->string_allocator, ctx->error.message.text, ctx->error.message.length);
+        Allocator_free(string_allocator(ctx), ctx->error.message.text, ctx->error.message.length);
     }
     node_set_err(ctx, node, msg);
     return JS_ThrowTypeError(jsctx, "placeholder");
@@ -1584,11 +1584,11 @@ JSMETHOD(js_dndc_node_has_class){
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
     Node* node = get_node(ctx, handle);
-    StringView msg = jsstring_to_stringview(jsctx, argv[0], ctx->temp_allocator);
+    StringView msg = jsstring_to_stringview(jsctx, argv[0], temp_allocator(ctx));
     if(!msg.text)
         return JS_EXCEPTION;
     bool has_it = node_has_class(node, msg);
-    Allocator_free(ctx->temp_allocator, msg.text, msg.length+1);
+    Allocator_free(temp_allocator(ctx), msg.text, msg.length+1);
     return has_it? JS_TRUE : JS_FALSE;
 }
 JSMETHOD(js_dndc_node_clone){
@@ -1612,7 +1612,7 @@ JSMETHOD(js_dndc_node_get){
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
     Node* node = get_node(ctx, handle);
-    StringView key_arg = jsstring_to_stringview(jsctx, argv[0], ctx->temp_allocator);
+    StringView key_arg = jsstring_to_stringview(jsctx, argv[0], temp_allocator(ctx));
     if(!key_arg.text)
         return JS_EXCEPTION;
     if(node->type != NODE_KEYVALUE)
@@ -1643,10 +1643,10 @@ JSMETHOD(js_dndc_node_set){
     Node* node = get_node(ctx, handle);
     if(node->type != NODE_KEYVALUE)
         return JS_ThrowTypeError(jsctx, "Node is not a KEYVALUE node");
-    StringView key_arg = jsstring_to_stringview(jsctx, argv[0], ctx->temp_allocator);
+    StringView key_arg = jsstring_to_stringview(jsctx, argv[0], temp_allocator(ctx));
     if(!key_arg.text)
         return JS_EXCEPTION;
-    StringView value_arg = jsstring_to_stringview(jsctx, argv[1], ctx->string_allocator);
+    StringView value_arg = jsstring_to_stringview(jsctx, argv[1], string_allocator(ctx));
     if(!value_arg.text)
         return JS_EXCEPTION;
     NODE_CHILDREN_FOR_EACH(h, node){
@@ -1673,7 +1673,7 @@ JSMETHOD(js_dndc_node_set){
         append_child(ctx, kvh, kh);
         Node* n = get_node(ctx, kh);
         n->type = NODE_STRING;
-        StringView key_s = {.text=Allocator_strndup(ctx->string_allocator, key_arg.text, key_arg.length), .length=key_arg.length};
+        StringView key_s = {.text=Allocator_strndup(string_allocator(ctx), key_arg.text, key_arg.length), .length=key_arg.length};
         n->header = key_s;
     }
     {
@@ -1698,7 +1698,7 @@ JSMETHOD(js_dndc_context_make_string){
     QJSValueConst arg = argv[0];
     if(!JS_IsString(arg))
         return JS_ThrowTypeError(jsctx, "Need 1 string arg to make_string");
-    StringView sv = jsstring_to_stringview(jsctx, arg, ctx->string_allocator);
+    StringView sv = jsstring_to_stringview(jsctx, arg, string_allocator(ctx));
     NodeHandle new_handle = alloc_handle(ctx);
     {
         Node* node = get_node(ctx, new_handle);
@@ -1736,7 +1736,7 @@ JSMETHOD(js_dndc_context_make_node){
     Node* node = get_node(ctx, handle);
     node->type = type;
     if(!JS_IsUndefined(header)){
-        StringView sv = jsstring_to_stringview(jsctx, header, ctx->string_allocator);
+        StringView sv = jsstring_to_stringview(jsctx, header, string_allocator(ctx));
         if(!sv.text){
             failure = JS_EXCEPTION;
             goto fail;
@@ -1757,13 +1757,13 @@ JSMETHOD(js_dndc_context_make_node){
         }
         for(int32_t i = 0; i < length; i++){
             QJSValue s = JS_GetPropertyUint32(jsctx, classes, i);
-            StringView sv = jsstring_to_stringview(jsctx, s, ctx->string_allocator);
+            StringView sv = jsstring_to_stringview(jsctx, s, string_allocator(ctx));
             JS_FreeValue(jsctx, s);
             if(!sv.text){
                 failure = JS_EXCEPTION;
                 goto fail;
             }
-            node->classes = Rarray_push(StringView)(node->classes, ctx->allocator, sv);
+            node->classes = Rarray_push(StringView)(node->classes, main_allocator(ctx), sv);
         }
     }
     if(!JS_IsUndefined(attributes)){
@@ -1780,13 +1780,13 @@ JSMETHOD(js_dndc_context_make_node){
         }
         for(int32_t i = 0; i < length; i++){
             QJSValue s = JS_GetPropertyUint32(jsctx, attributes, i);
-            StringView sv = jsstring_to_stringview(jsctx, s, ctx->string_allocator);
+            StringView sv = jsstring_to_stringview(jsctx, s, string_allocator(ctx));
             JS_FreeValue(jsctx, s);
             if(!sv.text){
                 failure = JS_EXCEPTION;
                 goto fail;
             }
-            node_set_attribute(node, ctx->allocator, sv, SV(""));
+            node_set_attribute(node, main_allocator(ctx), sv, SV(""));
         }
     }
     Marray(NodeHandle)* node_store = NULL;
@@ -1815,14 +1815,14 @@ JSMETHOD(js_dndc_context_make_node){
         case NODE_TITLE:
             ctx->titlenode = handle;
             break;
-        case NODE_NAV:
-            ctx->navnode = handle;
+        case NODE_TOC:
+            ctx->tocnode = handle;
             break;
         default:
             break;
     }
     if(node_store)
-        Marray_push(NodeHandle)(node_store, ctx->allocator, handle);
+        Marray_push(NodeHandle)(node_store, main_allocator(ctx), handle);
     JS_FreeValue(jsctx, header);
     JS_FreeValue(jsctx, classes);
     JS_FreeValue(jsctx, attributes);
@@ -1841,10 +1841,10 @@ JSMETHOD(js_dndc_context_add_dependency){
         return JS_EXCEPTION;
     if(argc != 1)
         return JS_ThrowTypeError(jsctx, "Need 1 string argument to add_dependency");
-    StringView sv = jsstring_to_stringview(jsctx, argv[0], ctx->string_allocator);
+    StringView sv = jsstring_to_stringview(jsctx, argv[0], string_allocator(ctx));
     if(!sv.text)
         return JS_EXCEPTION;
-    Marray_push(StringView)(&ctx->dependencies, ctx->allocator, sv);
+    Marray_push(StringView)(&ctx->dependencies, main_allocator(ctx), sv);
     return JS_UNDEFINED;
 }
 
@@ -1854,15 +1854,15 @@ JSMETHOD(js_dndc_context_kebab){
         return JS_EXCEPTION;
     if(argc != 1)
         return JS_ThrowTypeError(jsctx, "Need 1 string argument to kebab");
-    StringView sv = jsstring_to_stringview(jsctx, argv[0], ctx->temp_allocator);
+    StringView sv = jsstring_to_stringview(jsctx, argv[0], temp_allocator(ctx));
     if(!sv.text)
         return JS_EXCEPTION;
-    MStringBuilder msb = {.allocator = ctx->temp_allocator};
+    MStringBuilder msb = {.allocator = temp_allocator(ctx)};
     msb_write_kebab(&msb, sv.text, sv.length);
     StringView keb = msb_borrow_sv(&msb);
     QJSValue result = JS_NewStringLen(jsctx, keb.text, keb.length);
     msb_destroy(&msb);
-    Allocator_free(ctx->temp_allocator, sv.text, sv.length+1);
+    Allocator_free(temp_allocator(ctx), sv.text, sv.length+1);
     return result;
 }
 
@@ -1872,15 +1872,15 @@ JSMETHOD(js_dndc_context_html_escape){
         return JS_EXCEPTION;
     if(argc != 1)
         return JS_ThrowTypeError(jsctx, "Need 1 string argument to html_escape");
-    StringView sv = jsstring_to_stringview(jsctx, argv[0], ctx->temp_allocator);
+    StringView sv = jsstring_to_stringview(jsctx, argv[0], temp_allocator(ctx));
     if(!sv.text)
         return JS_EXCEPTION;
-    MStringBuilder msb = {.allocator = ctx->temp_allocator};
+    MStringBuilder msb = {.allocator = temp_allocator(ctx)};
     msb_write_tag_escaped_str(&msb, sv.text, sv.length);
     StringView esc = msb_borrow_sv(&msb);
     QJSValue result = JS_NewStringLen(jsctx, esc.text, esc.length);
     msb_destroy(&msb);
-    Allocator_free(ctx->temp_allocator, sv.text, sv.length+1);
+    Allocator_free(temp_allocator(ctx), sv.text, sv.length+1);
     return result;
 }
 
@@ -1890,13 +1890,13 @@ JSMETHOD(js_dndc_context_set_data){
         return JS_EXCEPTION;
     if(argc != 2)
         return JS_ThrowTypeError(jsctx, "Need 2 string argument to set_data");
-    StringView key = jsstring_to_stringview(jsctx, argv[0], ctx->string_allocator);
+    StringView key = jsstring_to_stringview(jsctx, argv[0], string_allocator(ctx));
     if(!key.text)
         return JS_EXCEPTION;
-    LongString value = jsstring_to_longstring(jsctx, argv[1], ctx->string_allocator);
+    LongString value = jsstring_to_longstring(jsctx, argv[1], string_allocator(ctx));
     if(!value.text)
         return JS_EXCEPTION;
-    DataItem* new_data = Marray_alloc(DataItem)(&ctx->rendered_data, ctx->allocator);
+    DataItem* new_data = Marray_alloc(DataItem)(&ctx->rendered_data, main_allocator(ctx));
     new_data->key = key;
     new_data->value = value;
     return JS_UNDEFINED;
@@ -2063,7 +2063,7 @@ JSMETHOD(js_dndc_context_to_string){
     if(argc != 0)
         return JS_ThrowTypeError(jsctx, "toString takes no arguments.");
     (void)argv;
-    MStringBuilder msb = {.allocator = ctx->temp_allocator};
+    MStringBuilder msb = {.allocator = temp_allocator(ctx)};
     msb_write_literal(&msb, "{\n");
     MSB_FORMAT(&msb, "  nodes: [", ctx->nodes.count, " nodes],\n");
     MSB_FORMAT(&msb, "  filename: \"", ctx->filename, "\",\n");
@@ -2084,11 +2084,11 @@ JSMETHOD(js_dndc_context_add_link){
         return JS_EXCEPTION;
     if(argc != 2)
         return JS_ThrowTypeError(jsctx, "Need 2 string argument to set_data");
-    LongString kebabed_ = jsstring_to_kebabed(jsctx, argv[0], ctx->string_allocator);
+    LongString kebabed_ = jsstring_to_kebabed(jsctx, argv[0], string_allocator(ctx));
     if(!kebabed_.text)
         return JS_EXCEPTION;
     StringView kebabed = LS_to_SV(kebabed_);
-    StringView value = jsstring_to_stringview(jsctx, argv[1], ctx->string_allocator);
+    StringView value = jsstring_to_stringview(jsctx, argv[1], string_allocator(ctx));
     if(!value.text)
         return JS_EXCEPTION;
     add_link_from_pair(ctx, kebabed, value);
@@ -2219,7 +2219,7 @@ JSMETHOD(js_dndc_node_location_to_string){
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
     Node* node = get_node(ctx, handle);
-    MStringBuilder msb = {.allocator=ctx->temp_allocator};
+    MStringBuilder msb = {.allocator=temp_allocator(ctx)};
     StringView filename = ctx->filenames.data[node->filename_idx];
     MSB_FORMAT(&msb, "{filename:'", filename, "', row:", node->row, ", column:", node->col, "}");
     StringView text = msb_borrow_sv(&msb);
@@ -2292,18 +2292,18 @@ JSMETHOD(js_dndc_attributes_set){
     if(!js_dndc_get_attributes_handle(jsctx, thisValue, &handle))
         return JS_EXCEPTION;
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
-    StringView key = jsstring_to_stringview(jsctx, key_arg, ctx->string_allocator); // extra alloc if key already exists. Could fix this.
+    StringView key = jsstring_to_stringview(jsctx, key_arg, string_allocator(ctx)); // extra alloc if key already exists. Could fix this.
     if(!key.text)
         return JS_EXCEPTION;
     Node* node = get_node(ctx, handle);
     if(argc == 2){
-        StringView value = jsstring_to_stringview(jsctx, argv[1], ctx->string_allocator);
+        StringView value = jsstring_to_stringview(jsctx, argv[1], string_allocator(ctx));
         if(!value.text)
             return JS_EXCEPTION;
-        node_set_attribute(node, ctx->allocator, key, value);
+        node_set_attribute(node, main_allocator(ctx), key, value);
     }
     else {
-        node_set_attribute(node, ctx->allocator, key, SV(""));
+        node_set_attribute(node, main_allocator(ctx), key, SV(""));
     }
     return JS_UNDEFINED;
 }
@@ -2320,7 +2320,7 @@ JSMETHOD(js_dndc_attributes_to_string){
         return JS_EXCEPTION;
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
     Node* node = get_node(ctx, handle);
-    MStringBuilder msb = {.allocator = ctx->temp_allocator};
+    MStringBuilder msb = {.allocator = temp_allocator(ctx)};
     msb_write_literal(&msb, "{ ");
     RARRAY_FOR_EACH(Attribute, kv, node->attributes){
         MSB_FORMAT(&msb, "\n  ", kv->key, ": \"", kv->value, "\",");
@@ -2383,10 +2383,10 @@ JSMETHOD(js_dndc_classlist_append){
     if(!js_dndc_get_classlist_handle(jsctx, thisValue, &handle))
         return JS_EXCEPTION;
     Node* node = get_node(ctx, handle);
-    StringView c = jsstring_to_stringview(jsctx, arg, ctx->string_allocator);
+    StringView c = jsstring_to_stringview(jsctx, arg, string_allocator(ctx));
     if(!c.text)
         return JS_EXCEPTION;
-    node->classes = Rarray_push(StringView)(node->classes, ctx->allocator, c);
+    node->classes = Rarray_push(StringView)(node->classes, main_allocator(ctx), c);
     return JS_UNDEFINED;
 }
 
@@ -2400,7 +2400,7 @@ JSMETHOD(js_dndc_classlist_to_string){
     if(!js_dndc_get_classlist_handle(jsctx, thisValue, &handle))
         return JS_EXCEPTION;
     Node* node = get_node(ctx, handle);
-    MStringBuilder msb = {.allocator = ctx->temp_allocator};
+    MStringBuilder msb = {.allocator = temp_allocator(ctx)};
     msb_write_char(&msb, '[');
     RARRAY_FOR_EACH(StringView, c, node->classes){
         MSB_FORMAT(&msb, "\"", *c, "\", ");

@@ -96,7 +96,7 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
             continue;
         NodeType type;
         NodeHandle firstchild;
-        MStringBuilder msb = (MStringBuilder){.allocator=ctx->string_allocator};
+        MStringBuilder msb = (MStringBuilder){.allocator=string_allocator(ctx)};
         LongString str;
         {
             Node* node = get_node(ctx, handle);
@@ -156,7 +156,7 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
             node->parent = INVALID_NODE_HANDLE;
             for(size_t j = 0; j < node_children_count(parent); j++){
                 if(NodeHandle_eq(handle, node_children(parent)[j])){
-                    node_remove_child(parent, j, ctx->allocator);
+                    node_remove_child(parent, j, main_allocator(ctx));
                     goto after;
                 }
             }
@@ -210,7 +210,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
                 // keep it as is.
                 if(path_is_abspath(child->header) || !ctx->base_directory.length){
                     if(! FileCache_has_file(job.b64cache, child->header)){
-                        StringView* sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
+                        StringView* sv = Marray_alloc(StringView)(&job.sourcepaths, main_allocator(ctx));
                         *sv = child->header;
                     }
                 }
@@ -218,12 +218,12 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
                     // Otherwise we build the path relative to the given
                     // include directory.
                     // Get's cleaned up with the string allocator.
-                    MStringBuilder path_builder = {.allocator=ctx->string_allocator};
+                    MStringBuilder path_builder = {.allocator=string_allocator(ctx)};
                     msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
                     msb_append_path(&path_builder, child->header.text, child->header.length);
                     StringView path = msb_borrow_sv(&path_builder);
                     if(! FileCache_has_file(job.b64cache, path)){
-                        StringView* sv = Marray_alloc(StringView)(&job.sourcepaths, ctx->allocator);
+                        StringView* sv = Marray_alloc(StringView)(&job.sourcepaths, main_allocator(ctx));
                         *sv = msb_detach_sv(&path_builder);
                     }
                     else {
@@ -266,7 +266,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
         report_time(ctx, SV("Joining took: "), after-before);
     }
     if(binary_work_to_be_done){
-        Marray_cleanup(StringView)(&job.sourcepaths, ctx->allocator);
+        Marray_cleanup(StringView)(&job.sourcepaths, main_allocator(ctx));
     }
     else {
         report_info(ctx, SV("No binary work was to be done."));
@@ -335,24 +335,21 @@ run_the_dndc(uint64_t flags,
         .flags = flags,
         .temp = new_linear_storage(1024*1024, "temp storage"),
         .titlenode = INVALID_NODE_HANDLE,
-        .navnode = INVALID_NODE_HANDLE,
+        .tocnode = INVALID_NODE_HANDLE,
         .base_directory = base_directory,
         .b64cache = b64cache,
         .textcache = textcache,
         .error_func = error_func,
         .error_user_data = error_user_data,
     };
-    ctx.allocator = allocator_from_arena(&ctx.main_arena);
-    ctx.links.allocator = ctx.allocator;
-    ctx.string_allocator = allocator_from_arena(&ctx.string_arena);
-    ctx.temp_allocator = allocator_from_la(&ctx.temp);
+    ctx.links.allocator = main_allocator(&ctx);
     if(!source_text.text){
         report_system_error(&ctx, SV("String with no data given as input"));
         result = UNEXPECTED_END;
         goto cleanup;
     }
     // Quick and dirty estimate of how many nodes we will need.
-    Marray_ensure_total(Node)(&ctx.nodes, ctx.allocator, source_text.length/10+1);
+    Marray_ensure_total(Node)(&ctx.nodes, main_allocator(&ctx), source_text.length/10+1);
 
     // Setup the root node.
     {
@@ -361,7 +358,7 @@ run_the_dndc(uint64_t flags,
         Node* root = get_node(&ctx, root_handle);
         root->col = 0;
         root->row = 0;
-        Marray_push(StringView)(&ctx.filenames, ctx.allocator, source_path);
+        Marray_push(StringView)(&ctx.filenames, main_allocator(&ctx), source_path);
         root->filename_idx = ctx.filenames.count-1;
         root->type = NODE_MD;
         root->parent = root_handle;
@@ -449,7 +446,7 @@ run_the_dndc(uint64_t flags,
                     newnode->type = NODE_MD;
                     was_import = true;
                 }
-                newnode->attributes = Rarray_clone(Attribute)(node->attributes, ctx.allocator);
+                newnode->attributes = Rarray_clone(Attribute)(node->attributes, main_allocator(&ctx));
             }
             if(ctx.imports.count > 1000){
                 node_print_err(&ctx, node, LS("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)"));
@@ -468,7 +465,7 @@ run_the_dndc(uint64_t flags,
                 StringView filename = child->header;
                 StringViewResult imp_e = ctx_load_source_file(&ctx, filename);
                 if(imp_e.errored){
-                    MStringBuilder err_builder = {.allocator = ctx.temp_allocator};
+                    MStringBuilder err_builder = {.allocator = temp_allocator(&ctx)};
                     if(ctx.base_directory.length){
                         MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", filename, "'");
                     }
@@ -541,7 +538,7 @@ run_the_dndc(uint64_t flags,
                     }
                 }
                 // I don't think this can happen.
-                Marray_push(NodeHandle)(handles, ctx.allocator, newhandle);
+                Marray_push(NodeHandle)(handles, main_allocator(&ctx), newhandle);
                 foundit:;
             }
         }
@@ -594,11 +591,11 @@ run_the_dndc(uint64_t flags,
         }
     }
 
-    // Render the nav block if we have one.
+    // Render the toc block if we have one.
     {
         uint64_t before = get_t();
-        if(! NodeHandle_eq(ctx.navnode, INVALID_NODE_HANDLE))
-            build_nav_block(&ctx);
+        if(! NodeHandle_eq(ctx.tocnode, INVALID_NODE_HANDLE))
+            build_toc_block(&ctx);
         uint64_t after =  get_t();
         report_time(&ctx, SV("Nav block building took: "), after-before);
     }
@@ -625,7 +622,7 @@ run_the_dndc(uint64_t flags,
     // Render data nodes into the data blob.
     if(!wasm){
         uint64_t before_data = get_t();
-        MStringBuilder sb = {.allocator=ctx.allocator};
+        MStringBuilder sb = {.allocator=main_allocator(&ctx)};
         MARRAY_FOR_EACH(NodeHandle, handle, ctx.data_nodes){
             Node* data_node = get_node(&ctx, *handle);
             // Node could've been mutated after being registered.
@@ -650,7 +647,7 @@ run_the_dndc(uint64_t flags,
                     continue;
                 }
                 LongString text = msb_detach_ls(&sb);
-                DataItem* di = Marray_alloc(DataItem)(&ctx.rendered_data, ctx.allocator);
+                DataItem* di = Marray_alloc(DataItem)(&ctx.rendered_data, main_allocator(&ctx));
                 di->key = child->header;
                 di->value = text;
             }
@@ -749,6 +746,7 @@ run_the_dndc(uint64_t flags,
             Arena* arena = ctx.main_arena.arena;
             while(arena){
                 report_size(&ctx, SV("Arena used: "), arena->used);
+                report_size(&ctx, SV("Arena size: "), ARENA_BUFFER_SIZE);
                 arena = arena->prev;
             }
             BigAllocation* ba = ctx.main_arena.big_allocations;
@@ -762,13 +760,26 @@ run_the_dndc(uint64_t flags,
         }
         {
             uint64_t before = get_t();
-            Allocator_free_all(ctx.string_allocator);
+            #if 0
+            Arena* arena = ctx.string_arena.arena;
+            while(arena){
+                report_size(&ctx, SV("String Arena used: "), arena->used);
+                report_size(&ctx, SV("String Arena size: "), ARENA_BUFFER_SIZE);
+                arena = arena->prev;
+            }
+            BigAllocation* ba = ctx.string_arena.big_allocations;
+            while(ba){
+                report_size(&ctx, SV("String Big allocation: "), ba->size);
+                ba = ba->next;
+            }
+            #endif
+            Allocator_free_all(string_allocator(&ctx));
             uint64_t after = get_t();
             report_time(&ctx, SV("Cleaning string allocator: "), after-before);
         }
         {
             uint64_t before = get_t();
-            Allocator_free_all(ctx.allocator);
+            Allocator_free_all(main_allocator(&ctx));
             // shallow_free_recorded_mallocator(allocator);
             uint64_t after = get_t();
             report_time(&ctx, SV("Cleaning allocator: "), after-before);
@@ -1261,7 +1272,7 @@ js_syntax_is_builtin(StringView str){
 static inline
 _Bool
 js_syntax_is_node_type(StringView str){
-    #define words "|MD|DIV|STRING|PARA|TITLE|HEADING|TABLE|TABLE_ROW|STYLESHEETS|LINKS|SCRIPTS|IMPORT|IMAGE|BULLETS|RAW|PRE|LIST|LIST_ITEM|KEYVALUE|KEYVALUEPAIR|IMGLINKS|NAV|DATA|COMMENT|CONTAINER|QUOTE|HR|JS|DETAILS|"
+    #define words "|MD|DIV|STRING|PARA|TITLE|HEADING|TABLE|TABLE_ROW|STYLESHEETS|LINKS|SCRIPTS|IMPORT|IMAGE|BULLETS|RAW|PRE|LIST|LIST_ITEM|KEYVALUE|KEYVALUEPAIR|IMGLINKS|TOC|DATA|COMMENT|CONTAINER|QUOTE|HR|JS|DETAILS|"
     const char* match = memmem(words, sizeof(words)-1, str.text, str.length);
     if(!match) return 0;
     return match[str.length] == '|' && match[-1] == '|';
@@ -1541,7 +1552,7 @@ js_syntax_is_builtin_utf16(StringViewUtf16 str){
 static inline
 _Bool
 js_syntax_is_node_type_utf16(StringViewUtf16 str){
-    #define words u"|MD|DIV|STRING|PARA|TITLE|HEADING|TABLE|TABLE_ROW|STYLESHEETS|LINKS|SCRIPTS|IMPORT|IMAGE|BULLETS|RAW|PRE|LIST|LIST_ITEM|KEYVALUE|KEYVALUEPAIR|IMGLINKS|NAV|DATA|COMMENT|CONTAINER|QUOTE|HR|JS|DETAILS|"
+    #define words u"|MD|DIV|STRING|PARA|TITLE|HEADING|TABLE|TABLE_ROW|STYLESHEETS|LINKS|SCRIPTS|IMPORT|IMAGE|BULLETS|RAW|PRE|LIST|LIST_ITEM|KEYVALUE|KEYVALUEPAIR|IMGLINKS|TOC|DATA|COMMENT|CONTAINER|QUOTE|HR|JS|DETAILS|"
     const uint16_t* match = memmem(words, sizeof(words)-2, str.text, str.length*2);
     if(!match) return 0;
     return match[str.length] == u'|' && match[-1] == u'|';
@@ -2058,7 +2069,7 @@ DNDC_API
 DndcStringView
 dndc_ctx_dup_sv(DndcContext* ctx, DndcStringView text){
     return (DndcStringView){
-        .text = Allocator_dupe(ctx->string_allocator, text.text, text.length),
+        .text = Allocator_dupe(string_allocator(ctx), text.text, text.length),
         .length = text.length,
     };
 }
@@ -2067,7 +2078,7 @@ static inline
 LongString
 ctx_dup_ls(DndcContext* ctx, LongString text){
     return (LongString){
-        .text = Allocator_strndup(ctx->string_allocator, text.text, text.length),
+        .text = Allocator_strndup(string_allocator(ctx), text.text, text.length),
         .length = text.length,
     };
 }
@@ -2092,13 +2103,10 @@ dndc_create_ctx(unsigned long long flags, DndcErrorFunc*_Nullable error_func, vo
         ctx->textcache_allocated = 1;
     }
     ctx->titlenode = INVALID_NODE_HANDLE;
-    ctx->navnode = INVALID_NODE_HANDLE;
+    ctx->tocnode = INVALID_NODE_HANDLE;
     ctx->root_handle = INVALID_NODE_HANDLE;
     ctx->temp = new_linear_storage(1024*1024, "temporary storage");
-    ctx->temp_allocator = allocator_from_la(&ctx->temp);
-    ctx->allocator = allocator_from_arena(&ctx->main_arena);
-    ctx->string_allocator = allocator_from_arena(&ctx->string_arena);
-    ctx->links.allocator = ctx->allocator;
+    ctx->links.allocator = main_allocator(ctx);
     return ctx;
 }
 
@@ -2110,9 +2118,9 @@ dndc_ctx_destroy(DndcContext* ctx){
         dndc_filecache_destroy(ctx->textcache);
     if(ctx->b64cache_allocated)
         dndc_filecache_destroy(ctx->b64cache);
-    Allocator_free_all(ctx->temp_allocator);
-    Allocator_free_all(ctx->allocator);
-    Allocator_free_all(ctx->string_allocator);
+    Allocator_free_all(temp_allocator(ctx));
+    Allocator_free_all(main_allocator(ctx));
+    Allocator_free_all(string_allocator(ctx));
     destroy_linear_storage(&ctx->temp);
     free(ctx);
 }
@@ -2127,9 +2135,9 @@ dndc_ctx_clone(DndcContext* ctx){
             !ctx->b64cache_allocated?ctx->b64cache:NULL,
             !ctx->textcache_allocated?ctx->textcache:NULL);
     MARRAY_FOR_EACH(StringView, fn, ctx->filenames)
-        Marray_push(StringView)(&result->filenames, result->allocator, dndc_ctx_dup_sv(result, *fn));
+        Marray_push(StringView)(&result->filenames, main_allocator(result), dndc_ctx_dup_sv(result, *fn));
     #define cp(x) \
-        Marray_extend(NodeHandle)(&result->x, result->allocator, ctx->x.data, ctx->x.count)
+        Marray_extend(NodeHandle)(&result->x, main_allocator(result), ctx->x.data, ctx->x.count)
     if(ctx->base_directory.length)
         result->base_directory = dndc_ctx_dup_sv(result, ctx->base_directory);
 
@@ -2144,11 +2152,11 @@ dndc_ctx_clone(DndcContext* ctx){
     cp(imglinks_nodes);
     #undef cp
     result->titlenode = ctx->titlenode;
-    result->navnode = ctx->navnode;
+    result->tocnode = ctx->tocnode;
     result->root_handle = ctx->root_handle;
 
     MARRAY_FOR_EACH(StringView, s, ctx->dependencies)
-        Marray_push(StringView)(&result->dependencies, result->allocator, dndc_ctx_dup_sv(result, *s));
+        Marray_push(StringView)(&result->dependencies, main_allocator(result), dndc_ctx_dup_sv(result, *s));
     if(ctx->links.count_){
         size_t cap = ctx->links.capacity_;
         result->links.capacity_ = cap;
@@ -2163,37 +2171,37 @@ dndc_ctx_clone(DndcContext* ctx){
         }
     }
     MARRAY_FOR_EACH(DataItem, s, ctx->rendered_data)
-        Marray_push(DataItem)(&result->rendered_data, result->allocator,
+        Marray_push(DataItem)(&result->rendered_data, main_allocator(result),
             (DataItem){
                 .key = dndc_ctx_dup_sv(result, s->key),
                 .value = ctx_dup_ls(result, s->value),
             });
     MARRAY_FOR_EACH(IdItem, s, ctx->explicit_node_ids)
-        Marray_push(IdItem)(&result->explicit_node_ids, result->allocator,
+        Marray_push(IdItem)(&result->explicit_node_ids, main_allocator(result),
             (IdItem){
                 .node = s->node,
                 .text = dndc_ctx_dup_sv(result, s->text),
             });
-    if(ctx->renderednav.text)
-        result->renderednav = ctx_dup_ls(result, ctx->renderednav);
+    if(ctx->renderedtoc.text)
+        result->renderedtoc = ctx_dup_ls(result, ctx->renderedtoc);
     MARRAY_FOR_EACH(Node, node, ctx->nodes){
-        Node* newnode = Marray_alloc(Node)(&result->nodes, result->allocator);
+        Node* newnode = Marray_alloc(Node)(&result->nodes, main_allocator(result));
         *newnode = *node;
         if(node->header.length)
             newnode->header = dndc_ctx_dup_sv(result, newnode->header);
         if(node_children_count(node) > 4){
             memset(&newnode->children, 0, sizeof(newnode->children));
-            Marray_extend(NodeHandle)(&newnode->children, result->allocator, node->children.data, node->children.count);
+            Marray_extend(NodeHandle)(&newnode->children, main_allocator(result), node->children.data, node->children.count);
         }
         if(node->attributes){
-            newnode->attributes = Rarray_clone(Attribute)(node->attributes, result->allocator);
+            newnode->attributes = Rarray_clone(Attribute)(node->attributes, main_allocator(result));
             RARRAY_FOR_EACH(Attribute, attr, newnode->attributes){
                 attr->key = dndc_ctx_dup_sv(result, attr->key);
                 attr->value = dndc_ctx_dup_sv(result, attr->value);
             }
         }
         if(node->classes){
-            newnode->classes = Rarray_clone(StringView)(node->classes, result->allocator);
+            newnode->classes = Rarray_clone(StringView)(node->classes, main_allocator(result));
             RARRAY_FOR_EACH(StringView, cls, newnode->classes)
                 *cls = dndc_ctx_dup_sv(result, *cls);
         }
@@ -2211,9 +2219,9 @@ dndc_ctx_shallow_clone(DndcContext* ctx){
             !ctx->b64cache_allocated?ctx->b64cache:NULL,
             !ctx->textcache_allocated?ctx->textcache:NULL);
     if(ctx->filenames.count)
-        Marray_extend(StringView)(&result->filenames, result->allocator, ctx->filenames.data, ctx->filenames.count);
+        Marray_extend(StringView)(&result->filenames, main_allocator(result), ctx->filenames.data, ctx->filenames.count);
     #define cp(x) \
-        Marray_extend(NodeHandle)(&result->x, result->allocator, ctx->x.data, ctx->x.count)
+        Marray_extend(NodeHandle)(&result->x, main_allocator(result), ctx->x.data, ctx->x.count)
     if(ctx->base_directory.length)
         result->base_directory = ctx->base_directory;
 
@@ -2228,11 +2236,11 @@ dndc_ctx_shallow_clone(DndcContext* ctx){
     cp(imglinks_nodes);
     #undef cp
     result->titlenode = ctx->titlenode;
-    result->navnode = ctx->navnode;
+    result->tocnode = ctx->tocnode;
     result->root_handle = ctx->root_handle;
 
     if(ctx->dependencies.count)
-        Marray_extend(StringView)(&result->dependencies, result->allocator, ctx->dependencies.data, ctx->dependencies.count);
+        Marray_extend(StringView)(&result->dependencies, main_allocator(result), ctx->dependencies.data, ctx->dependencies.count);
     if(ctx->links.count_){
         size_t cap = ctx->links.capacity_;
         result->links.capacity_ = cap;
@@ -2240,22 +2248,22 @@ dndc_ctx_shallow_clone(DndcContext* ctx){
         result->links.keys = Allocator_dupe(result->links.allocator, ctx->links.keys, sizeof(*result->links.keys)*cap*2);
     }
     if(ctx->rendered_data.count)
-        Marray_extend(DataItem)(&result->rendered_data, result->allocator, ctx->rendered_data.data, ctx->rendered_data.count);
+        Marray_extend(DataItem)(&result->rendered_data, main_allocator(result), ctx->rendered_data.data, ctx->rendered_data.count);
     if(ctx->explicit_node_ids.count)
-        Marray_extend(IdItem)(&result->explicit_node_ids, result->allocator, ctx->explicit_node_ids.data, ctx->explicit_node_ids.count);
-    if(ctx->renderednav.text)
-        result->renderednav = ctx->renderednav;
+        Marray_extend(IdItem)(&result->explicit_node_ids, main_allocator(result), ctx->explicit_node_ids.data, ctx->explicit_node_ids.count);
+    if(ctx->renderedtoc.text)
+        result->renderedtoc = ctx->renderedtoc;
     MARRAY_FOR_EACH(Node, node, ctx->nodes){
-        Node* newnode = Marray_alloc(Node)(&result->nodes, result->allocator);
+        Node* newnode = Marray_alloc(Node)(&result->nodes, main_allocator(result));
         *newnode = *node;
         if(node_children_count(node) > 4){
             memset(&newnode->children, 0, sizeof(newnode->children));
-            Marray_extend(NodeHandle)(&newnode->children, result->allocator, node->children.data, node->children.count);
+            Marray_extend(NodeHandle)(&newnode->children, main_allocator(result), node->children.data, node->children.count);
         }
         if(node->attributes)
-            newnode->attributes = Rarray_clone(Attribute)(node->attributes, result->allocator);
+            newnode->attributes = Rarray_clone(Attribute)(node->attributes, main_allocator(result));
         if(node->classes)
-            newnode->classes = Rarray_clone(StringView)(node->classes, result->allocator);
+            newnode->classes = Rarray_clone(StringView)(node->classes, main_allocator(result));
     }
     return result;
 }
@@ -2322,7 +2330,7 @@ dndc_ctx_make_root(DndcContext* ctx, DndcStringView filename){
     Node* root = get_node(ctx, root_handle);
     root->col = 0;
     root->row = 0;
-    Marray_push(StringView)(&ctx->filenames, ctx->allocator, filename);
+    Marray_push(StringView)(&ctx->filenames, main_allocator(ctx), filename);
     root->filename_idx = ctx->filenames.count-1;
     root->type = NODE_MD;
     root->parent = root_handle;
@@ -2355,7 +2363,7 @@ dndc_node_set_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView key
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return 1;
     Node* node = get_node(ctx, handle);
-    node_set_attribute(node, ctx->allocator, key, value);
+    node_set_attribute(node, main_allocator(ctx), key, value);
     return 0;
 }
 
@@ -2456,7 +2464,7 @@ dndc_node_add_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView cls){
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return 1;
     Node* node = get_node(ctx, handle);
-    node->classes = Rarray_push(StringView)(node->classes, ctx->allocator, cls);
+    node->classes = Rarray_push(StringView)(node->classes, main_allocator(ctx), cls);
     return 0;
 }
 
@@ -2530,14 +2538,14 @@ dndc_node_set_type(DndcContext* ctx, DndcNodeHandle dnh, int type){
         case NODE_TITLE:
             ctx->titlenode = handle;
             break;
-        case NODE_NAV:
-            ctx->navnode = handle;
+        case NODE_TOC:
+            ctx->tocnode = handle;
             break;
         default:
             break;
     }
     if(node_store)
-        Marray_push(NodeHandle)(node_store, ctx->allocator, handle);
+        Marray_push(NodeHandle)(node_store, main_allocator(ctx), handle);
     return 0;
 }
 
@@ -2664,8 +2672,8 @@ DNDC_API
 DndcNodeHandle
 dndc_ctx_node_by_id(DndcContext* ctx, DndcStringView sv){
     if(sv.length > 256) return DNDC_NODE_HANDLE_INVALID;
-    MStringBuilder msb = {.allocator = ctx->temp_allocator};
-    MStringBuilder msb2 = {.allocator = ctx->temp_allocator};
+    MStringBuilder msb = {.allocator = temp_allocator(ctx)};
+    MStringBuilder msb2 = {.allocator = temp_allocator(ctx)};
     msb_write_kebab(&msb, sv.text, sv.length);
     if(!msb.cursor)
         return DNDC_NODE_HANDLE_INVALID;
@@ -2751,7 +2759,7 @@ dndc_node_remove_child(DndcContext* ctx, DndcNodeHandle parent_, size_t i){
     Node* node = get_node(ctx, parent);
     if(i >= node->children_count)
         return 1;
-    node_remove_child(node, i, ctx->allocator);
+    node_remove_child(node, i, main_allocator(ctx));
     return 0;
 }
 
@@ -2783,7 +2791,7 @@ dndc_node_detach(DndcContext* ctx, DndcNodeHandle dnh){
     node->parent = INVALID_NODE_HANDLE;
     for(size_t i = 0; i < node_children_count(parent); i++){
         if(NodeHandle_eq(handle, node_children(parent)[i])){
-            node_remove_child(parent, i, ctx->allocator);
+            node_remove_child(parent, i, main_allocator(ctx));
             return;
         }
     }
@@ -2829,14 +2837,14 @@ dndc_ctx_make_node(DndcContext* ctx, int type, DndcStringView header, DndcNodeHa
         case NODE_TITLE:
             ctx->titlenode = handle;
             break;
-        case NODE_NAV:
-            ctx->navnode = handle;
+        case NODE_TOC:
+            ctx->tocnode = handle;
             break;
         default:
             break;
     }
     if(node_store)
-        Marray_push(NodeHandle)(node_store, ctx->allocator, handle);
+        Marray_push(NodeHandle)(node_store, main_allocator(ctx), handle);
     return handle._value;
 }
 
@@ -2860,7 +2868,7 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
                 newnode->type = NODE_MD;
                 was_import = true;
             }
-            newnode->attributes = Rarray_clone(Attribute)(node->attributes, ctx->allocator);
+            newnode->attributes = Rarray_clone(Attribute)(node->attributes, main_allocator(ctx));
         }
         if(ctx->imports.count > 1000){
             node_print_err(ctx, node, LS("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)"));
@@ -2877,7 +2885,7 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
             StringView filename = child->header;
             StringViewResult imp_e = ctx_load_source_file(ctx, filename);
             if(imp_e.errored){
-                MStringBuilder err_builder = {.allocator = ctx->temp_allocator};
+                MStringBuilder err_builder = {.allocator = temp_allocator(ctx)};
                 if(ctx->base_directory.length){
                     MSB_FORMAT(&err_builder, "Unable to open '", ctx->base_directory, "/", filename, "'");
                 }
@@ -2948,7 +2956,7 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
                 }
             }
             // I don't think this can happen.
-            Marray_push(NodeHandle)(handles, ctx->allocator, newhandle);
+            Marray_push(NodeHandle)(handles, main_allocator(ctx), newhandle);
             foundit:;
         }
     }
@@ -3044,10 +3052,10 @@ dndc_ctx_gather_links(DndcContext* ctx){
 
 DNDC_API
 int
-dndc_ctx_build_nav(DndcContext* ctx){
-    if(NodeHandle_eq(ctx->navnode, INVALID_NODE_HANDLE))
+dndc_ctx_build_toc(DndcContext* ctx){
+    if(NodeHandle_eq(ctx->tocnode, INVALID_NODE_HANDLE))
         return 0;
-    build_nav_block(ctx);
+    build_toc_block(ctx);
     return 0;
 }
 
@@ -3073,7 +3081,7 @@ dndc_ctx_resolve_links(DndcContext* ctx){
 DNDC_API
 int
 dndc_ctx_resolve_data_blocks(DndcContext* ctx){
-    MStringBuilder sb = {.allocator=ctx->allocator};
+    MStringBuilder sb = {.allocator=main_allocator(ctx)};
     MARRAY_FOR_EACH(NodeHandle, handle, ctx->data_nodes){
         if(NodeHandle_eq(*handle, INVALID_NODE_HANDLE)) continue;
         Node* data_node = get_node(ctx, *handle);
@@ -3100,7 +3108,7 @@ dndc_ctx_resolve_data_blocks(DndcContext* ctx){
                 continue;
             }
             LongString text = msb_detach_ls(&sb);
-            DataItem* di = Marray_alloc(DataItem)(&ctx->rendered_data, ctx->allocator);
+            DataItem* di = Marray_alloc(DataItem)(&ctx->rendered_data, main_allocator(ctx));
             di->key = child->header;
             di->value = text;
         }
@@ -3178,7 +3186,7 @@ dndc_node_tree_repr_inner(DndcContext* ctx, NodeHandle handle, int depth, MStrin
         case NODE_LIST:
         case NODE_COMMENT:
         case NODE_DATA:
-        case NODE_NAV:
+        case NODE_TOC:
         case NODE_KEYVALUE:
         case NODE_IMGLINKS:
         case NODE_DETAILS:
@@ -3258,7 +3266,7 @@ DNDC_API
 int
 dndc_ctx_add_link(DndcContext* ctx, DndcStringView k, DndcStringView v){
     if(!v.length) return 1;
-    MStringBuilder kebab = {.allocator = ctx->string_allocator};
+    MStringBuilder kebab = {.allocator = string_allocator(ctx)};
     msb_write_kebab(&kebab, k.text, k.length);
     if(!kebab.cursor) return 1;
     k = msb_detach_sv(&kebab);

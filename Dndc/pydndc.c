@@ -1539,11 +1539,11 @@ DndcContextPy_resolve_links(PyObject* s, PyObject* arg){
 
 static
 PyObject* _Nullable
-DndcContextPy_build_nav(PyObject* s, PyObject* arg){
+DndcContextPy_build_toc(PyObject* s, PyObject* arg){
     (void)arg;
     DndcContextPy* self = (DndcContextPy*)s;
     PyList_SetSlice(self->errors, 0, PyList_Size(self->errors), NULL);
-    int err = dndc_ctx_build_nav(self->ctx);
+    int err = dndc_ctx_build_toc(self->ctx);
     if(err)
         return PyErr_Format(PyExc_RuntimeError, "Bad imports (Check the errors).");
     Py_RETURN_NONE;
@@ -1817,13 +1817,13 @@ static PyMethodDef DndcContextPy_methods[] = {
             "Might be removed in the future. Gets even more link targets.",
     },
     {
-        .ml_name="build_nav",
-        .ml_meth=DndcContextPy_build_nav,
+        .ml_name="build_toc",
+        .ml_meth=DndcContextPy_build_toc,
         .ml_flags=METH_NOARGS,
-        .ml_doc="build_nav(self)\n"
+        .ml_doc="build_toc(self)\n"
             "--\n"
             "\n"
-            "Builds the NAV node if there is one.",
+            "Builds the TOC node if there is one.",
     },
     {
         .ml_name="resolve_data_blocks",
