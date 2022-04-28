@@ -178,7 +178,7 @@ main(int argc, const char* const* argv){
     LongString output = {0};
     directory.length = strlen(directory.text);
     Marray__StringView dnd_files = {0};
-    uint64_t n_threads = 8;
+    uint64_t n_threads = num_cpus();
     ArgParseUserDefinedType sv_list = {
         .type_name = LS("string"),
     };
