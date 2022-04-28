@@ -22,7 +22,8 @@ TestFunction(TestDndcAst){
     TESTBEGIN();
     unsigned long long flags = DNDC_ALLOW_BAD_LINKS | DNDC_DONT_READ;
     DndcFileCache* textcache = dndc_create_filecache();
-    DndcContext* ctx = dndc_create_ctx(flags, dndc_stderr_error_func, NULL, NULL, textcache);
+    DndcContext* ctx = dndc_create_ctx(flags, NULL, textcache);
+    dndc_ctx_set_logger(ctx, dndc_stderr_log_func, NULL);
     int e = dndc_filecache_store_text(textcache, SV("hello"), SV("hello world"), 0);
     TestExpectFalse(e);
     e = dndc_ctx_parse_string(ctx, DNDC_NODE_HANDLE_INVALID, SV("yolo"), SV("::import\n  hello\n"));
@@ -98,7 +99,7 @@ TestFunction(TestAstExample){
         TestAssertSuccess(data);
         {
             int e;
-            e = dndc_compile_dnd_file(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &dnd_output, NULL, NULL, dndc_stderr_error_func, NULL, NULL, NULL, NULL, LS(""));
+            e = dndc_compile_dnd_file(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &dnd_output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, LS(""));
             if(e){
                 TestPrintValue("dndc_compile_dnd failed, example:", examples[i]);
                 TestPrintValue("Base dir:", base_dirs[i]);

@@ -431,7 +431,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         .text = message,
         .length = message_len,
     };
-    switch((enum DndcErrorMessageType)type){
+    switch((enum DndcLogMessageType)type){
         case DNDC_ERROR_MESSAGE:
         case DNDC_WARNING_MESSAGE:
             if(SV_equals(fn, SV("(string input)"))){
@@ -1553,7 +1553,8 @@ completionHandler:(void (^)(NSString *result))completionHandler{
     if([parts count] != 2) return;
     int internal_id = [parts[0] intValue];
     NSString* doc_string = self->text.string;
-    DndcContext* ctx = dndc_create_ctx(0, dndc_stderr_error_func, NULL, NULL, NULL);
+    DndcContext* ctx = dndc_create_ctx(0, NULL, NULL);
+    dndc_ctx_set_logger(ctx, dndc_stderr_log_func, NULL);
     DndcNodeHandle root = dndc_ctx_make_root(ctx, SV(""));
     int err;
     err = dndc_ctx_parse_string(ctx, root, SV(""), ns_borrow_sv(doc_string));

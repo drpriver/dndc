@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include "MStringBuilder.h"
 #include "long_string.h"
+#include "msb_extensions.h" // FIXME: dependency on msb_write_json_escaped_str
 
 #ifndef force_inline
 #if defined(__GNUC__) || defined(__clang__)
@@ -27,6 +28,7 @@ enum FormatType {
     FORMATTYPE_INT_PADDED = 3,
     FORMATTYPE_INT64 = 4,
     FORMATTYPE_UINT64 = 5,
+    FORMATTYPE_QUOTED_STRING = 6,
 };
 
 typedef struct FormatArg {
@@ -67,7 +69,7 @@ force_inline
 FormatArg
 fmt_fmt(FormatArg value){
     return value;
-    }
+}
 
 static inline
 force_inline
@@ -83,10 +85,10 @@ FormatArg
 ulong_fmt(unsigned long value){
     if(sizeof(value) == sizeof(uint64_t)){
         return (FormatArg){.type = FORMATTYPE_UINT64, .uint64_value=value};
-        }
+    }
     else {
         return (FormatArg){.type = FORMATTYPE_UINT32, .uint32_value=value};
-        }
+    }
 }
 
 static inline
@@ -95,10 +97,10 @@ FormatArg
 long_fmt(long value){
     if(sizeof(value) == sizeof(int64_t)){
         return (FormatArg){.type = FORMATTYPE_INT64, .int64_value=value};
-        }
+    }
     else {
         return (FormatArg){.type = FORMATTYPE_INT32, .int32_value=value};
-        }
+    }
 }
 
 static inline
@@ -138,6 +140,7 @@ FormatArg
 ls_fmt(LongString value){
     return sv_fmt(LS_to_SV(value));
 }
+
 
 // The first 100 characters of 00 - 99.
 // Assumes a little endian cpu. (0x3733 translates to the string '37').
@@ -379,7 +382,7 @@ msb_write_uint32(MStringBuilder* sb, uint32_t value){
     _check_msb_remaining_size(sb, size);
     memcpy(sb->data+sb->cursor, p, size);
     sb->cursor += size;
-    }
+}
 
 static inline
 void
@@ -415,18 +418,37 @@ msb_apply_format(MStringBuilder* sb, FormatArg arg){
         case FORMATTYPE_UINT64:
             msb_write_uint64(sb, arg.uint64_value);
             break;
-        }
+        case FORMATTYPE_QUOTED_STRING:
+            msb_write_char(sb, '"');
+            // FIXME: this file accidentally depends on this functionality.
+            msb_write_json_escaped_str(sb, arg.string_value.text, arg.string_value.length);
+            msb_write_char(sb, '"');
+            break;
     }
+}
 
 static inline
 void
 msb_format(MStringBuilder* sb, size_t n_items, const FormatArg* args){
     for(size_t i = 0; i < n_items; i++){
         msb_apply_format(sb, args[i]);
-        }
     }
+}
 
 #define SV_FMT(lit) sv_fmt(SV(lit))
+
+#define QUOTED(x) (FormatArg){.type=FORMATTYPE_QUOTED_STRING, .string_value={.text="" x, .length=sizeof(x)}}
+static inline
+FormatArg
+quoted(StringView sv){
+    return (FormatArg){.type=FORMATTYPE_QUOTED_STRING, .string_value=sv};
+}
+
+static inline
+FormatArg
+quotedls(LongString ls){
+    return (FormatArg){.type=FORMATTYPE_QUOTED_STRING, .string_value=LS_to_SV(ls)};
+}
 
 #define FMT(x) _Generic(x, \
         FormatArg: fmt_fmt,\
@@ -559,16 +581,16 @@ msb_write_us_as_ms(MStringBuilder* sb, uint64_t microseconds){
         msb_write_literal(sb, "0.");
         if(size < 3){
             msb_write_nchar(sb, '0', 3-size);
-            }
-        msb_write_str(sb, p, size);
         }
+        msb_write_str(sb, p, size);
+    }
     else {
         msb_write_str(sb, p, size-3);
         msb_write_char(sb, '.');
         msb_write_str(sb, p+size-3, 3);
-        }
-    msb_write_literal(sb, "ms");
     }
+    msb_write_literal(sb, "ms");
+}
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

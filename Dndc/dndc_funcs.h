@@ -5,6 +5,7 @@
 #include "common_macros.h"
 #include "MStringBuilder.h"
 #include "dndc_types.h"
+#include "msb_format.h"
 
 #ifndef warn_unused
 #if defined(__GNUC__) || defined(__clang__)
@@ -85,14 +86,14 @@ typedef int(DndcPostParseAstFunc)(Nullable(void*)user_data, DndcContext*);
 //    internally create and then destroy one. Allows saving on computation and
 //    IO if being run repeatedly.
 //
-// error_func:
-//    A function for reporting errors. See `DndcErrorFunc` in dndc.h. If NULL,
-//    errors will not be printed. Use `dndc_stderr_error_func` for a function
+// log_func:
+//    A function for reporting errors. See `DndcLogFunc` in dndc.h. If NULL,
+//    errors will not be printed. Use `dndc_stderr_log_func` for a function
 //    that just prints to stderr.
 //
-// error_user_data:
-//    A pointer that will be passed to the error_func. For
-//    `dndc_stderr_error_func`, this should be NULL. For a function you've
+// log_user_data:
+//    A pointer that will be passed to the log_func. For
+//    `dndc_stderr_log_func`, this should be NULL. For a function you've
 //    defined, pass an appropriate pointer!
 //
 // dependency_func:
@@ -131,8 +132,8 @@ run_the_dndc(uint64_t flags,
         LongString* outstring,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,
-        Nullable(DndcErrorFunc*)error_func,
-        Nullable(void*)error_user_data,
+        Nullable(DndcLogFunc*)log_func,
+        Nullable(void*)log_user_data,
         Nullable(DndcDependencyFunc*)dependency_func,
         Nullable(void*)dependency_user_data,
         Nullable(DndcPostParseAstFunc*)ast_func,
@@ -165,138 +166,6 @@ dndc_parse(DndcContext*, NodeHandle root, StringView filename,
 static
 void
 build_toc_block(DndcContext*);
-
-//
-// Error reporting functions
-// -------------------------
-// The following functions are for reporting errors and warnings. ONLY use
-// these functions for that purpose. Do not directly use printf, fprintf or a
-// log function. These functions will report the error as originating from a
-// specific file, line, column and will handle suppressing them based on the
-// flags given to run_the_dndc.
-//
-
-  //
-  // parse_set_err
-  // -------------
-  // Sets an error message on the context during parsing. errchar is a pointer to
-  // the first character where the error occurred. Pointer arithmetic is then
-  // used to determine the column of the error (file and line are implicit).
-  //
-  static
-  void
-  parse_set_err(DndcContext* ctx, NullUnspec(const char*) errchar, LongString);
-
-  // parse_set_err_q
-  // ---------------
-  // Ditto, but the last argument is quoted.
-  static
-  void
-  parse_set_err_q(DndcContext* ctx, const char* errchar, StringView, StringView);
-
-  //
-  // node_set_err
-  // ------------
-  // Sets an error message originating from the source location that corresponds
-  // to the given node.
-  //
-  static
-  void
-  node_set_err(DndcContext* ctx, const Node*, LongString);
-
-  // node_set_err_q
-  // --------------
-  // Ditto, but the last argument is quoted.
-  static
-  void
-  node_set_err_q(DndcContext* ctx, const Node* node, StringView msg, StringView quoted);
-
-  //
-  // node_set_err_offset
-  // -------------------
-  // Like `node_set_err`, but with an offset to the column.
-  //
-  // Sets an error message originating from the source location that corresponds
-  // to the given node.
-  //
-  static
-  void
-  node_set_err_offset(DndcContext* ctx, const Node*, int, LongString);
-
-  //
-  // node_print_err
-  // --------------
-  // Like node_set_err, but immediately prints the message instead of setting
-  // a string.
-  //
-  // Only use this in the body of run_the_dndc.
-  //
-  static
-  void
-  node_print_err(DndcContext* ctx, const Node*, LongString);
-
-  //
-  // node_print_warning
-  // ------------------
-  // Like node_set_err, but immediately prints the message instead of setting a
-  // string and is intended for non-fatal warning messages.
-  //
-  static
-  void
-  node_print_warning(DndcContext* ctx, const Node* node, StringView msg);
-
-  // node_print_warning2
-  // -------------------
-  // ditto
-  static
-  void
-  node_print_warning2(DndcContext* ctx, const Node* node, StringView, StringView);
-
-  //
-  // report_time
-  // -----------
-  // Reports time to execute some component.
-  //
-  static
-  void
-  report_time(DndcContext*, StringView msg, uint64_t microseconds);
-
-  //
-  // report_size
-  // -----------
-  // Reports size of some component.
-  //
-  static
-  void
-  report_size(DndcContext*, StringView msg, uint64_t microseconds);
-
-  //
-  // report_info
-  // -----------
-  // Reports some information.
-  //
-  static
-  void
-  report_info(DndcContext*, StringView msg);
-
-  //
-  // report_set_error
-  // ----------------
-  // Reports an error that was set by a different part of the system.
-  //
-  static
-  void
-  report_set_error(DndcContext*);
-
-  //
-  // report_system_error
-  // -------------------
-  // Reports an error that did not originate from the source text. Should only be
-  // called by run_the_dndc right before it returns an error.
-  //
-  static
-  void
-  report_system_error(DndcContext* ctx, StringView msg);
 
 //
 // Node Funcs

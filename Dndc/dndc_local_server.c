@@ -94,24 +94,24 @@ read_relative_file_with_suffix_conversion(LongString directory, StringView path,
 
 static
 LongString
-compile_file(DndcErrorFunc*func, void*_Nullable p, LongString directory, uint64_t flags, StringView path, LongString text, int *error);
+compile_file(DndcLogFunc*func, void*_Nullable p, LongString directory, uint64_t flags, StringView path, LongString text, int *error);
 
-static void vlogit(DndcErrorFunc*, void*_Nullable, int lvl, const char* msg, va_list args);
-
-#if defined(__GNUC__) || defined(__clang__)
-__attribute__((__format__(__printf__, 3, 4)))
-#endif
-static void info(DndcErrorFunc*, void*_Nullable, const char* msg, ...);
+static void vlogit(DndcLogFunc*, void*_Nullable, int lvl, const char* msg, va_list args);
 
 #if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 3, 4)))
 #endif
-static void debug(DndcErrorFunc*, void*_Nullable, const char* msg, ...);
+static void info(DndcLogFunc*, void*_Nullable, const char* msg, ...);
 
 #if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 3, 4)))
 #endif
-static void error(DndcErrorFunc*, void*_Nullable, const char* msg, ...);
+static void debug(DndcLogFunc*, void*_Nullable, const char* msg, ...);
+
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((__format__(__printf__, 3, 4)))
+#endif
+static void error(DndcLogFunc*, void*_Nullable, const char* msg, ...);
 
 static
 TextFileResult
@@ -123,7 +123,7 @@ read_relative_file_with_suffix_conversion(LongString directory, StringView path,
 
 static
 LongString
-compile_file(DndcErrorFunc* func, void*_Nullable logdata, LongString directory, uint64_t flags, StringView path, LongString text, int *error){
+compile_file(DndcLogFunc* func, void*_Nullable logdata, LongString directory, uint64_t flags, StringView path, LongString text, int *error){
     const char* slash = NULL;
     const char* p = path.text;
     for(;p;){
@@ -152,16 +152,16 @@ compile_file(DndcErrorFunc* func, void*_Nullable logdata, LongString directory, 
 // winsock is just different enough that I'd rather keep the implementation separate.
 static
 int
-handle_request(DndcErrorFunc* func, void*_Nullable p, uint64_t flags, LongString directory, SOCKET accsd, LongString request);
+handle_request(DndcLogFunc* func, void*_Nullable p, uint64_t flags, LongString directory, SOCKET accsd, LongString request);
 
 struct DndServer{
     SOCKET sd;
-    DndcErrorFunc* func;
+    DndcLogFunc* func;
     void*_Nullable p;
 };
 
 DndServer*_Nullable
-dnd_server_create(DndcErrorFunc* func, void*_Nullable p, int* port){
+dnd_server_create(DndcLogFunc* func, void*_Nullable p, int* port){
     WSADATA wsadata;
     int err = WSAStartup(MAKEWORD(2,2), &wsadata);
     if(err){
@@ -257,7 +257,7 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
 }
 static
 int
-handle_request(DndcErrorFunc*func, void*_Nullable p, uint64_t flags, LongString directory, SOCKET accsd, LongString request){
+handle_request(DndcLogFunc*func, void*_Nullable p, uint64_t flags, LongString directory, SOCKET accsd, LongString request){
     // just assume everything is a GET, lol.
     MStringBuilder urlsb = {.allocator=get_mallocator()};
     StringView path = SV("index.dnd");
@@ -356,18 +356,18 @@ handle_request(DndcErrorFunc*func, void*_Nullable p, uint64_t flags, LongString 
 
 static
 int
-handle_request(DndcErrorFunc*func, void*_Nullable p, uint64_t flags, LongString directory, int accsd, LongString request);
+handle_request(DndcLogFunc*func, void*_Nullable p, uint64_t flags, LongString directory, int accsd, LongString request);
 
 struct DndServer {
     int sd;
-    DndcErrorFunc* func;
+    DndcLogFunc* func;
     void*_Nullable p;
 };
 
 typedef struct DndServer DndServer;
 
 DndServer*_Nullable
-dnd_server_create(DndcErrorFunc* func, void*_Nullable p, int* port){
+dnd_server_create(DndcLogFunc* func, void*_Nullable p, int* port){
     int sd = socket(PF_INET, SOCK_STREAM, 0);
     if(sd < 0){
         error(func, p, "Socket failed: %s", strerror(errno));
@@ -427,7 +427,7 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
     int sd = server->sd;
     char buff[10000];
     struct sockaddr_in clientaddr = {0};
-    DndcErrorFunc* func = server->func;
+    DndcLogFunc* func = server->func;
     void*_Nullable p = server->p;
     for(;;){
         int shutdown = 0;
@@ -465,7 +465,7 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
 
 static
 int
-handle_request(DndcErrorFunc* func, void*_Nullable p, uint64_t flags, LongString directory, int accsd, LongString request){
+handle_request(DndcLogFunc* func, void*_Nullable p, uint64_t flags, LongString directory, int accsd, LongString request){
     // just assume everything is a GET, lol.
     MStringBuilder urlsb = {.allocator=get_mallocator()};
     StringView path = SV("index.dnd");
@@ -585,7 +585,7 @@ handle_request(DndcErrorFunc* func, void*_Nullable p, uint64_t flags, LongString
 
 static
 void
-vlogit(DndcErrorFunc* func, void*_Nullable p, int lvl, const char* msg, va_list args){
+vlogit(DndcLogFunc* func, void*_Nullable p, int lvl, const char* msg, va_list args){
     char buff[4192];
     long len = vsnprintf(buff, sizeof buff, msg, args);
     func(p, lvl, "", 0, -1, -1, buff, len);
@@ -596,7 +596,7 @@ __attribute__((__format__(__printf__, 3, 4)))
 #endif
 static
 void
-info(DndcErrorFunc* func, void*_Nullable p, const char* msg, ...){
+info(DndcLogFunc* func, void*_Nullable p, const char* msg, ...){
     va_list args;
     va_start(args, msg);
     vlogit(func, p, DNDC_STATISTIC_MESSAGE, msg, args);
@@ -608,7 +608,7 @@ __attribute__((__format__(__printf__, 3, 4)))
 #endif
 static
 void
-debug(DndcErrorFunc* func, void*_Nullable p, const char* msg, ...){
+debug(DndcLogFunc* func, void*_Nullable p, const char* msg, ...){
     va_list args;
     va_start(args, msg);
     vlogit(func,p, DNDC_DEBUG_MESSAGE, msg, args);
@@ -620,7 +620,7 @@ __attribute__((__format__(__printf__, 3, 4)))
 #endif
 static
 void
-error(DndcErrorFunc* func, void*_Nullable p, const char* msg, ...){
+error(DndcLogFunc* func, void*_Nullable p, const char* msg, ...){
     va_list args;
     va_start(args, msg);
     vlogit(func,p, DNDC_NODELESS_MESSAGE, msg, args);

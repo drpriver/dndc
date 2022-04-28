@@ -78,6 +78,25 @@ pystring_borrow_longstring(PyObject* pyobj){
 }
 PopDiagnostic(); // unused function
 
+//
+// Wrappers a python callable so that it can be called as a DndcLogger
+// user_data is actually a pointer to the  PyObject*, so it needs to be a static PyObject*
+// or be in some object that is guranteed to live long enough.
+static
+void
+pylogger(void*_Nullable user_data, int type_, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
+    if(!user_data) return;
+    PyObject* callable = *(void**)user_data;
+    if(!callable) return;
+    PyObject *type, *value, *traceback;
+    PyErr_Fetch(&type, &value, &traceback);
+    PyObject* args = Py_BuildValue("is#iis#", type_, filename, (Py_ssize_t)filename_len, line, col, message, (Py_ssize_t)message_len);
+    PyObject* ret = PyObject_CallObject(callable, args);
+    Py_XDECREF(ret);
+    Py_XDECREF(args);
+    PyErr_Restore(type, value, traceback);
+}
+
 typedef struct DndcPyFileCache {
     PyObject_HEAD
     DndcFileCache* text_cache;
@@ -270,6 +289,10 @@ pydndc_htmlgen(PyObject*, PyObject*, PyObject*);
 
 static
 Nullable(PyObject*)
+pydndc_stderr_logger(PyObject*, PyObject*, PyObject*);
+
+static
+Nullable(PyObject*)
 pydndc_anaylze_syntax_for_highlight(PyObject*, PyObject*, PyObject*);
 
 // returns 0 on success
@@ -285,9 +308,9 @@ PyMethodDef pydndc_methods[] = {
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
         #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-        "reformat(text:str, error_reporter:Callable|None=None) -> str\n"
+        "reformat(text:str, logger:Callable|None=None) -> str\n"
         #else
-        "reformat(text, error_reporter=None)\n"
+        "reformat(text, logger=None)\n"
         #endif
         "--\n"
         "\n"
@@ -300,7 +323,7 @@ PyMethodDef pydndc_methods[] = {
         "\n"
         "Optional Args:\n"
         "--------------\n"
-        "error_reporter: Callable(int, str, int, int, str)\n"
+        "logger: Callable(int, str, int, int, str)\n"
         "    A callable for reporting errors. See the discussion in htmlgen.\n"
         "\n"
         "Returns:\n"
@@ -318,9 +341,9 @@ PyMethodDef pydndc_methods[] = {
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
         #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-        "htmlgen(text:str, base_dir:str='.', filename:str='(string input)', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs:str=None)\n"
+        "htmlgen(text:str, base_dir:str='.', filename:str='(string input)', logger:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs:str=None)\n"
         #else
-        "htmlgen(text, base_dir='.', filename='(string input)', error_reporter=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n"
+        "htmlgen(text, base_dir='.', filename='(string input)', logger=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n"
         #endif
         "--\n"
         "\n"
@@ -341,7 +364,7 @@ PyMethodDef pydndc_methods[] = {
         "filename: str\n"
         "    The filename that the text came from.\n"
         "\n"
-        "error_reporter: Callable(int, str, int, int, str)\n"
+        "logger: Callable(int, str, int, int, str)\n"
         "    A callable for reporting errors. See the extended discussion below.\n"
         "\n"
         "file_cache: FileCache\n"
@@ -375,7 +398,7 @@ PyMethodDef pydndc_methods[] = {
         "                        Use a dnd:///absolute/path/to/img url instead.\n"
         "                        This is for applications.\n"
         "\n"
-        "    PRINT_STATS:        Generate Info messages for the error_reporter.\n"
+        "    PRINT_STATS:        Generate Info messages for the logger.\n"
         "                        These are mostly information about timings of\n"
         "                        various stages of execution. Info messages are\n"
         "                        not generated if this is not set.\n"
@@ -406,10 +429,10 @@ PyMethodDef pydndc_methods[] = {
         "Can also throw due to errors in embedded javascript blocks.\n"
         "\n"
         "\n"
-        "If the error_reporter is given, it will be called with the following\n"
+        "If the logger is given, it will be called with the following\n"
         "arguments:\n"
         "\n"
-        "Error Reporter Arguments:\n"
+        "Logger Arguments:\n"
         "-------------------------\n"
         "message_type: MsgType\n"
         "    The values are as follows:\n"
@@ -443,7 +466,7 @@ PyMethodDef pydndc_methods[] = {
         "\n"
         "\n"
         "The error reporter will be called even if an exception is thrown from\n"
-        "parsing. The error_reporter will be called on each error and warning\n"
+        "parsing. The logger will be called on each error and warning\n"
         "encountered while parsing, and then the exception will be thrown. If\n"
         "the error reporter throws, the remaining errors will be skipped and\n"
         "that exception will be propagated in place of the ValueError from the\n"
@@ -457,9 +480,9 @@ PyMethodDef pydndc_methods[] = {
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =
         #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-        "expand(text:str, base_dir:str='.', error_reporter:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs=None) -> str\n"
+        "expand(text:str, base_dir:str='.', logger:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs=None) -> str\n"
         #else
-        "expand(text, base_dir='.', error_reporter=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n"
+        "expand(text, base_dir='.', logger=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n"
         #endif
         "--\n"
         "\n"
@@ -477,7 +500,7 @@ PyMethodDef pydndc_methods[] = {
         "    For relative filepaths referenced in the document, what those paths\n"
         "    are relative to. Defaults to the current directory.\n"
         "\n"
-        "error_reporter: Callable(int, str, int, int, str)\n"
+        "logger: Callable(int, str, int, int, str)\n"
         "    A callable for reporting errors. See the discussion in htlmgen.\n"
         "\n"
         "file_cache: DndcFileCache\n"
@@ -500,7 +523,7 @@ PyMethodDef pydndc_methods[] = {
         "                        It doesn't really make sense to set this for this\n"
         "                        function, but it is allowed.\n"
         "\n"
-        "    PRINT_STATS:        Generate Info messages for the error_reporter.\n"
+        "    PRINT_STATS:        Generate Info messages for the logger.\n"
         "                        These are mostly information about timings of\n"
         "                        various stages of execution. Info messages are\n"
         "                        not generated if this is not set.\n"
@@ -554,6 +577,15 @@ PyMethodDef pydndc_methods[] = {
         "col, byteoffeset and length are all in bytes of utf-8.\n"
         "The type is one of the Syntax enum members.\n"
         ,
+    },
+    {
+        .ml_name = "stderr_logger",
+        .ml_meth = (PyCFunction)pydndc_stderr_logger,
+        .ml_flags = METH_VARARGS|METH_KEYWORDS,
+        .ml_doc = "stderr_logger(type, filename, line, col, message)\n"
+            "--\n"
+            "\n"
+            "An implementation of the dndc logger protocol that just logs to stderr.\n"
     },
     {NULL, NULL, 0, NULL}
 };
@@ -887,38 +919,57 @@ pydndc_collect_errors(Nullable(void*)user_data, int type, const char* filename, 
 }
 
 static
+PyObject*_Nullable
+pydndc_stderr_logger(PyObject* mod, PyObject* args, PyObject* kwargs){
+    (void)mod;
+    const char* const keywords[] = { "type", "filename", "line", "col", "message", NULL};
+    int type, line, col;
+    PyObject* filename, *message;
+    PushDiagnostic();
+    SuppressCastQual();
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "iO!iiO!|:stderr_logger", (char**)keywords, &type, &PyUnicode_Type, &filename, &line, &col, &PyUnicode_Type, &message)){
+        return NULL;
+    }
+    PopDiagnostic();
+    LongString mess = pystring_borrow_longstring(message);
+    StringView fn = pystring_borrow_stringview(filename);
+    dndc_stderr_log_func(NULL, type, fn.text, fn.length, line, col, mess.text, mess.length);
+    Py_RETURN_NONE;
+}
+
+static
 Nullable(PyObject*)
 pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
     (void)mod;
     PyObject* text;
-    PyObject* error_reporter = NULL;
-    const char* const keywords[] = { "text", "error_reporter", NULL};
+    PyObject* logger = NULL;
+    const char* const keywords[] = { "text", "logger", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O:reformat", (char**)keywords, &PyUnicode_Type, &text, &error_reporter)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O:reformat", (char**)keywords, &PyUnicode_Type, &text, &logger)){
         return NULL;
     }
     PopDiagnostic();
-    if(error_reporter && error_reporter == Py_None)
-        error_reporter = NULL;
-    if(error_reporter && !PyCallable_Check(error_reporter)){
-        PyErr_SetString(PyExc_TypeError, "error_reporter must be a callable");
+    if(logger && logger == Py_None)
+        logger = NULL;
+    if(logger && !PyCallable_Check(logger)){
+        PyErr_SetString(PyExc_TypeError, "logger must be a callable");
         return NULL;
     }
     StringView source = pystring_borrow_stringview(text);
     LongString output = {};
-    DndcErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
+    DndcLogFunc* func = logger?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
     int e = dndc_format(source, &output, func, error_list);
     if(PyErr_Occurred()){
         goto finally;
     }
-    if(error_reporter){
+    if(logger){
         Py_ssize_t length = PyList_Size(error_list);
         for(Py_ssize_t i = 0; i < length; i++){
             PyObject* list_item = PyList_GetItem(error_list, i);
-            PyObject* call_result = PyObject_Call(error_reporter, list_item, NULL);
+            PyObject* call_result = PyObject_Call(logger, list_item, NULL);
             if(call_result == NULL)
                 goto finally;
             Py_XDECREF(call_result);
@@ -954,7 +1005,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     (void)mod;
     PyObject* text;
     PyObject* base_dir = NULL;
-    PyObject* error_reporter = NULL;
+    PyObject* logger = NULL;
     PyObject* file_cache = NULL;
     PyObject* jsargs = NULL;
     PyObject* filename = NULL;
@@ -971,10 +1022,10 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
     };
-    const char* const keywords[] = {"text", "base_dir", "filename", "error_reporter", "file_cache", "flags", "jsargs", NULL};
+    const char* const keywords[] = {"text", "base_dir", "filename", "logger", "file_cache", "flags", "jsargs", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O!OOKO:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &error_reporter, &file_cache, &flags, &jsargs)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O!OOKO:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &logger, &file_cache, &flags, &jsargs)){
         return NULL;
     }
     PopDiagnostic();
@@ -983,10 +1034,10 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         PyErr_SetString(PyExc_ValueError, "flags argument contains illegal bits");
         return NULL;
     }
-    if(error_reporter && error_reporter == Py_None)
-        error_reporter = NULL;
-    if(error_reporter && !PyCallable_Check(error_reporter)){
-        PyErr_SetString(PyExc_TypeError, "error_reporter must be a callable");
+    if(logger && logger == Py_None)
+        logger = NULL;
+    if(logger && !PyCallable_Check(logger)){
+        PyErr_SetString(PyExc_TypeError, "logger must be a callable");
         return NULL;
     }
     if(file_cache && file_cache == Py_None)
@@ -1015,7 +1066,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
     LongString output = {};
-    DndcErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
+    DndcLogFunc* func = logger?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
     PyObject* depends_list = PyList_New(0);
@@ -1032,11 +1083,11 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         result = NULL;
         goto finally;
     }
-    if(error_reporter){
+    if(logger){
         Py_ssize_t length = PyList_Size(error_list);
         for(Py_ssize_t i = 0; i < length; i++){
             PyObject* list_item = PyList_GetItem(error_list, i);
-            PyObject* call_result = PyObject_Call(error_reporter, list_item, NULL);
+            PyObject* call_result = PyObject_Call(logger, list_item, NULL);
             if(call_result == NULL)
                 goto finally;
             Py_XDECREF(call_result);
@@ -1062,7 +1113,7 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
     (void)mod;
     PyObject* text;
     PyObject* base_dir = NULL;
-    PyObject* error_reporter = NULL;
+    PyObject* logger = NULL;
     PyObject* file_cache = NULL;
     PyObject* jsargs = NULL;
     unsigned long long flags = 0;
@@ -1073,10 +1124,10 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
     };
-    const char* const keywords[] = {"text", "base_dir", "error_reporter", "file_cache", "flags", "jsargs", NULL};
+    const char* const keywords[] = {"text", "base_dir", "logger", "file_cache", "flags", "jsargs", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOKO:expand", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &error_reporter, &file_cache, &flags, &jsargs)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOKO:expand", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &logger, &file_cache, &flags, &jsargs)){
         return NULL;
     }
     PopDiagnostic();
@@ -1085,10 +1136,10 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         PyErr_SetString(PyExc_ValueError, "flags argument contains illegal bits");
         return NULL;
     }
-    if(error_reporter && error_reporter == Py_None)
-        error_reporter = NULL;
-    if(error_reporter && !PyCallable_Check(error_reporter)){
-        PyErr_SetString(PyExc_TypeError, "error_reporter must be a callable");
+    if(logger && logger == Py_None)
+        logger = NULL;
+    if(logger && !PyCallable_Check(logger)){
+        PyErr_SetString(PyExc_TypeError, "logger must be a callable");
         return NULL;
     }
     if(file_cache && file_cache == Py_None)
@@ -1109,7 +1160,7 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
     flags |= DNDC_OUTPUT_EXPANDED_DND;
     flags |= DNDC_ALLOW_BAD_LINKS;
     LongString output = {};
-    DndcErrorFunc* func = error_reporter?pydndc_collect_errors:NULL;
+    DndcLogFunc* func = logger?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
     DndcFileCache* textcache = NULL;
@@ -1124,11 +1175,11 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         result = NULL;
         goto finally;
     }
-    if(error_reporter){
+    if(logger){
         Py_ssize_t length = PyList_Size(error_list);
         for(Py_ssize_t i = 0; i < length; i++){
             PyObject* list_item = PyList_GetItem(error_list, i);
-            PyObject* call_result = PyObject_Call(error_reporter, list_item, NULL);
+            PyObject* call_result = PyObject_Call(logger, list_item, NULL);
             if(call_result == NULL)
                 goto finally;
             Py_XDECREF(call_result);
@@ -1322,7 +1373,7 @@ pyobj_to_json(PyObject* o, MStringBuilder* msb, int depth){
 
 typedef struct {
     PyObject_HEAD
-    PyObject* errors;
+    PyObject* logger;
     DndcContext* ctx;
     PyObject* _Nullable filename;
     PyObject* prev;
@@ -1343,7 +1394,6 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
     PopDiagnostic();
     DndcContextPy* self = (DndcContextPy*)type->tp_alloc(type, 0);
     if(!self) return NULL;
-    self->errors = PyList_New(0);
     unsigned long long fl = flags?PyLong_AsUnsignedLongLong(flags):0;
     enum {WHITELIST = 0
         | DNDC_INPUT_IS_UNTRUSTED
@@ -1357,10 +1407,8 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
     };
     fl &= WHITELIST;
-    self->ctx = dndc_create_ctx(fl | DNDC_ALLOW_BAD_LINKS,
-            dndc_stderr_error_func, NULL,
-            // pydndc_collect_errors, self->errors,
-            cache?cache->b64_cache:NULL, cache?cache->text_cache:NULL);
+    self->ctx = dndc_create_ctx(fl | DNDC_ALLOW_BAD_LINKS, cache?cache->b64_cache:NULL, cache?cache->text_cache:NULL);
+    dndc_ctx_set_logger(self->ctx, pylogger, &self->logger);
     self->filename = filename;
     if(filename) Py_INCREF(filename);
     self->prev = NULL;
@@ -1368,7 +1416,7 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
 }
 
 static PyMemberDef DndcContextPy_members[] = {
-    {"errors", T_OBJECT, offsetof(DndcContextPy, errors), READONLY, "Methods that can log errors store them in this list."},
+    {"logger", T_OBJECT, offsetof(DndcContextPy, logger), 0, "A callable implementing the dndc logger protocol."},
     {"filename", T_OBJECT, offsetof(DndcContextPy, filename), READONLY, "The filename of the root document."},
     {}  /* Sentinel */
 };
@@ -1471,7 +1519,6 @@ PyObject* _Nullable
 DndcContextPy_resolve_imports(PyObject* s, PyObject* arg){
     (void)arg;
     DndcContextPy* self = (DndcContextPy*)s;
-    PyList_SetSlice(self->errors, 0, PyList_Size(self->errors), NULL);
     int err = dndc_ctx_resolve_imports(self->ctx);
     if(err)
         return PyErr_Format(PyExc_RuntimeError, "Bad imports (Check the errors).");
@@ -1506,7 +1553,6 @@ DndcContextPy_execute_js(PyObject* s, PyObject* args, PyObject* kwargs){
         }
         jsargs_ls = msb_borrow_ls(&jsbuilder);
     }
-    PyList_SetSlice(self->errors, 0, PyList_Size(self->errors), NULL);
     int err = dndc_ctx_execute_js(self->ctx, jsargs_ls);
     msb_destroy(&jsbuilder);
     if(err) return PyErr_Format(PyExc_RuntimeError, "Bad js block execution (Check the errors).");
@@ -1518,7 +1564,6 @@ PyObject* _Nullable
 DndcContextPy_gather_links(PyObject* s, PyObject* arg){
     (void)arg;
     DndcContextPy* self = (DndcContextPy*)s;
-    PyList_SetSlice(self->errors, 0, PyList_Size(self->errors), NULL);
     int err = dndc_ctx_gather_links(self->ctx);
     if(err)
         return PyErr_Format(PyExc_RuntimeError, "Bad imports (Check the errors).");
@@ -1530,7 +1575,6 @@ PyObject* _Nullable
 DndcContextPy_resolve_links(PyObject* s, PyObject* arg){
     (void)arg;
     DndcContextPy* self = (DndcContextPy*)s;
-    PyList_SetSlice(self->errors, 0, PyList_Size(self->errors), NULL);
     int err = dndc_ctx_resolve_links(self->ctx);
     if(err)
         return PyErr_Format(PyExc_RuntimeError, "Bad imports (Check the errors).");
@@ -1542,7 +1586,6 @@ PyObject* _Nullable
 DndcContextPy_build_toc(PyObject* s, PyObject* arg){
     (void)arg;
     DndcContextPy* self = (DndcContextPy*)s;
-    PyList_SetSlice(self->errors, 0, PyList_Size(self->errors), NULL);
     int err = dndc_ctx_build_toc(self->ctx);
     if(err)
         return PyErr_Format(PyExc_RuntimeError, "Bad imports (Check the errors).");
@@ -1554,7 +1597,6 @@ PyObject* _Nullable
 DndcContextPy_resolve_data_blocks(PyObject* s, PyObject* arg){
     (void)arg;
     DndcContextPy* self = (DndcContextPy*)s;
-    PyList_SetSlice(self->errors, 0, PyList_Size(self->errors), NULL);
     int err = dndc_ctx_resolve_data_blocks(self->ctx);
     if(err)
         return PyErr_Format(PyExc_RuntimeError, "Bad imports (Check the errors).");
@@ -1668,7 +1710,8 @@ DndcContextPy_pseudo_clone(PyObject* s, PyObject* args){
 
     DndcContextPy* newself = (DndcContextPy*)self->ob_base.ob_type->tp_alloc(self->ob_base.ob_type, 0);
     if(!newself) return NULL;
-    newself->errors = PyList_New(0);
+    newself->logger = Py_XNewRef(self->logger);
+    dndc_ctx_set_logger(newctx, pylogger, &newself->logger);
     newself->ctx = newctx;
     newself->filename = self->filename;
     newself->prev = s;
@@ -1687,7 +1730,8 @@ DndcContextPy_clone(PyObject* s, PyObject* args){
 
     DndcContextPy* newself = (DndcContextPy*)self->ob_base.ob_type->tp_alloc(self->ob_base.ob_type, 0);
     if(!newself) return NULL;
-    newself->errors = PyList_New(0);
+    newself->logger = Py_XNewRef(self->logger);
+    dndc_ctx_set_logger(newctx, pylogger, &newself->logger);
     newself->ctx = newctx;
     newself->filename = self->filename;
     newself->prev = NULL;
@@ -1756,7 +1800,8 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_doc="expand(self)\n"
             "--\n"
             "\n"
-            "Renders the tree into a .dnd string.",
+            "Renders the tree into a .dnd string.\n"
+            "This method can call the logger.\n",
     },
     {
         .ml_name="render",
@@ -1765,7 +1810,9 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_doc="render(self)\n"
             "--\n"
             "\n"
-            "Renders the tree from the root into an html document.",
+            "Renders the tree from the root into an html document.\n"
+            "This method can call the logger."
+            ,
     },
     {
         .ml_name="make_node",
@@ -1786,7 +1833,8 @@ static PyMethodDef DndcContextPy_methods[] = {
             "\n"
             "Iterates over all of the IMPORT nodes or nodes marked with the\n"
             "import_ flag and reads/parses the files they point to into the\n"
-            "document appropriately.",
+            "document appropriately.\n"
+            "This method can call the logger.\n",
     },
     {
         .ml_name="execute_js",
@@ -1796,7 +1844,8 @@ static PyMethodDef DndcContextPy_methods[] = {
             "--\n"
             "\n"
             "Executes all of the JS nodes in the tree, with the given jsargs\n"
-            "available to them as Args.",
+            "available to them as Args.\n"
+            "This method can call the logger.\n",
     },
     {
         .ml_name="gather_links",
@@ -1814,7 +1863,8 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_doc="resolve_links(self)\n"
             "--\n"
             "\n"
-            "Might be removed in the future. Gets even more link targets.",
+            "Might be removed in the future. Gets even more link targets.\n"
+            "This method can call the logger.\n",
     },
     {
         .ml_name="build_toc",
@@ -1952,7 +2002,7 @@ DndcContextPy_dealloc(PyObject* o){
     DndcContextPy* self = (DndcContextPy*)o;
     dndc_ctx_destroy(self->ctx);
     self->ctx = NULL;
-    Py_CLEAR(self->errors);
+    Py_CLEAR(self->logger);
     Py_CLEAR(self->filename);
     Py_CLEAR(self->prev);
     Py_TYPE(self)->tp_free((PyObject *) self);
@@ -2159,10 +2209,9 @@ DndcNodePy_execute_js(PyObject* s, PyObject* args){
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
     DndcNodeHandle handle = self->handle;
-    PyList_SetSlice(self->pyctx->errors, 0, PyList_Size(self->pyctx->errors), NULL);
     int err = dndc_node_execute_js(ctx, handle, script);
     if(err){
-        return PyErr_Format(PyExc_RuntimeError, "Problem while executing javascript (check .errors)");
+        return PyErr_Format(PyExc_RuntimeError, "Problem while executing javascript");
     }
     Py_RETURN_NONE;
 }
@@ -2180,10 +2229,9 @@ DndcNodePy_parse(PyObject* s, PyObject* args, PyObject* kwargs){
     PopDiagnostic();
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
-    PyList_SetSlice(self->pyctx->errors, 0, PyList_Size(self->pyctx->errors), NULL);
     int err = dndc_ctx_parse_string(ctx, self->handle, filename?dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(filename)):SV("(string input)"), dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(text)));
     if(err){
-        return PyErr_Format(PyExc_ValueError, "Error while parsing (check the Context's errors for details)");
+        return PyErr_Format(PyExc_ValueError, "Error while parsing");
     }
     Py_RETURN_NONE;
 }
@@ -2200,10 +2248,9 @@ DndcNodePy_parse_file(PyObject* s, PyObject* args, PyObject* kwargs){
     PopDiagnostic();
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
-    PyList_SetSlice(self->pyctx->errors, 0, PyList_Size(self->pyctx->errors), NULL);
     int err = dndc_ctx_parse_file(ctx, self->handle, dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(path)));
     if(err){
-        return PyErr_Format(PyExc_ValueError, "Error while parsing (check the Context's errors for details)");
+        return PyErr_Format(PyExc_ValueError, "Error while parsing");
     }
     Py_RETURN_NONE;
 }
@@ -2438,7 +2485,6 @@ DndcNodePy_render(PyObject* s, PyObject* arg){
     DndcNodePy* self = (DndcNodePy*)s;
     LongString html;
     int e = dndc_node_render_to_html(self->pyctx->ctx, self->handle, &html);
-    // TODO: check the error logging strategy of this function.
     if(e){
         return PyErr_Format(PyExc_ValueError, "Unable to render node to html.");
     }
@@ -2649,7 +2695,8 @@ static PyMethodDef DndcNodePy_methods[] = {
         .ml_doc="parse(self, text, filename=None)\n"
             "--\n"
             "\n"
-            "Parse a dnd string.",
+            "Parse a dnd string.\n"
+            "This method can call the logger.\n",
     },
     {
         .ml_name="parse_file",
@@ -2658,7 +2705,9 @@ static PyMethodDef DndcNodePy_methods[] = {
         .ml_doc="parse_file(self, path)\n"
             "--\n"
             "\n"
-            "Parse a dnd file.",
+            "Parse a dnd file.\n"
+            "This method can call the logger.\n",
+
     },
     {
         .ml_name="format",
@@ -2667,7 +2716,9 @@ static PyMethodDef DndcNodePy_methods[] = {
         .ml_doc="format(self, indent)\n"
             "--\n"
             "\n"
-            "Format a node.",
+            "Format a node.\n"
+            "This method can call the logger.\n"
+            ,
     },
     {
         .ml_name="render",

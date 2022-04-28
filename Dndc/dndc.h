@@ -13,7 +13,7 @@
 #define DNDC_VERSION DNDC_STRINGIFY(DNDC_MAJOR) "." DNDC_STRINGIFY(DNDC_MINOR) "." DNDC_STRINGIFY(DNDC_MICRO)
 
 #define DNDC_MAJOR 0
-#define DNDC_MINOR 13
+#define DNDC_MINOR 14
 #define DNDC_MICRO 0
 #define DNDC_STRINGIFY_IMPL(x) #x
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
@@ -24,7 +24,6 @@
 // 11 bits for major
 // 10 bits for minor
 // 10 bits for micro
-//
 
 enum {DNDC_NUMERIC_VERSION = DNDC_INT_VERSION(DNDC_MAJOR, DNDC_MINOR, DNDC_MICRO)};
 
@@ -65,6 +64,13 @@ extern "C" {
 #define _Static_assert static_assert
 #endif
 #endif
+
+DNDC_API
+int 
+dndc_version(void);
+// --------------------
+// For verifying the versions match at runtime.
+
 
 //
 // String Types
@@ -274,7 +280,7 @@ dndc_analyze_syntax_utf16(DndcStringViewUtf16 source_text,
 // Error Reporting
 // ---------------
 
-enum DndcErrorMessageType {
+enum DndcLogMessageType {
     DNDC_ERROR_MESSAGE = 0,
     // ------------------
     // An error that is not possible to recover from.
@@ -306,7 +312,7 @@ enum DndcErrorMessageType {
 // The type of the error message.
 //
 
-typedef void DndcErrorFunc(DNDC_NULLABLE(void*) error_user_data, int type,
+typedef void DndcLogFunc(DNDC_NULLABLE(void*) log_user_data, int type,
         const char* filename, int filename_len, int line,
         int col, const char* message, int message_len);
 // -------------
@@ -316,12 +322,12 @@ typedef void DndcErrorFunc(DNDC_NULLABLE(void*) error_user_data, int type,
 //
 // Arguments:
 // ----------
-// error_user_data:
+// log_user_data:
 //    A pointer to user-defined data. The pointer will be the same one
 //    provided to one of the dndc entry point functions.
 //
 // type:
-//    The type of the message. See `DndcErrorMessageType`.
+//    The type of the message. See `DndcLogMessageType`.
 //
 // filename:
 //    Which file the error occurred in. This pointer is NOT nul-terminated.
@@ -347,7 +353,7 @@ typedef void DndcErrorFunc(DNDC_NULLABLE(void*) error_user_data, int type,
 
 DNDC_API
 void
-dndc_stderr_error_func(DNDC_NULLABLE(void*) error_user_data,
+dndc_stderr_log_func(DNDC_NULLABLE(void*) log_user_data,
     int type, const char* filename, int filename_len,
     int line, int col, const char* message, int message_len);
 // ----------------------
@@ -579,11 +585,11 @@ enum DndcFlags {
 
     DNDC_SUPPRESS_WARNINGS = 0x20,
     // ----------------------
-    // Don't report any non-fatal errors via the `error_func`.
+    // Don't report any non-fatal errors via the `log_func`.
 
     DNDC_DONT_PRINT_ERRORS = 0x40,
     // ----------------------
-    // Don't report errors via the `error_func`.
+    // Don't report errors via the `log_func`.
 
     DNDC_PRINT_STATS = 0x80,
     // ----------------
@@ -660,8 +666,8 @@ dndc_compile_dnd_file(
   DndcLongString* outstring,
   DNDC_NULLABLE(DndcFileCache*) base64cache,
   DNDC_NULLABLE(DndcFileCache*) textcache,
-  DNDC_NULLABLE(DndcErrorFunc*) error_func,
-  DNDC_NULLABLE(void*) error_user_data,
+  DNDC_NULLABLE(DndcLogFunc*) log_func,
+  DNDC_NULLABLE(void*) log_user_data,
   DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
   DNDC_NULLABLE(void*) dependency_user_data,
   DNDC_NULLABLE(DndcWorkerThread*) worker_thread,
@@ -719,14 +725,14 @@ dndc_compile_dnd_file(
 //
 //    This cache is used to cache the results of loading text files.
 //
-// error_func:
-//    A function for reporting errors. See `DndcErrorFunc` above. If NULL,
-//    errors will not be printed. Use `dndc_stderr_error_func` for a function
+// log_func:
+//    A function for reporting errors. See `DndcLogFunc` above. If NULL,
+//    errors will not be printed. Use `dndc_stderr_log_func` for a function
 //    that just prints to stderr.
 //
-// error_user_data:
-//    A pointer that will be passed to the error_func. For
-//    `dndc_stderr_error_func`, this should be NULL. For a function you've
+// log_user_data:
+//    A pointer that will be passed to the log_func. For
+//    `dndc_stderr_log_func`, this should be NULL. For a function you've
 //    defined, pass an appropriate pointer!
 //
 // dependency_func:
@@ -753,8 +759,8 @@ DNDC_API
 int
 dndc_format(DndcStringView source_text,
       DndcLongString* output,
-      DNDC_NULLABLE(DndcErrorFunc*) error_func,
-      DNDC_NULLABLE(void*) error_user_data);
+      DNDC_NULLABLE(DndcLogFunc*) log_func,
+      DNDC_NULLABLE(void*) log_user_data);
 // -----------
 // Turns the given .dnd string into another .dnd string, but formatted such
 // that lines do not exceed 79 characters if it is possible to semantically do
@@ -778,14 +784,14 @@ dndc_format(DndcStringView source_text,
 //    allocated by malloc. You take ownership of the result. Must be non-null.
 //    If there is an error, the output is not written to.
 //
-// error_func:
-//    A function for reporting errors. See `DndcErrorFunc` above. If NULL,
-//    errors will not be printed. Use `dndc_stderr_error_func` for a function
+// log_func:
+//    A function for reporting errors. See `DndcLogFunc` above. If NULL,
+//    errors will not be printed. Use `dndc_stderr_log_func` for a function
 //    that just prints to stderr.
 //
-// error_user_data:
-//    A pointer that will be passed to the error_func. For
-//    `dndc_stderr_error_func`, this should be NULL. For a function you've
+// log_user_data:
+//    A pointer that will be passed to the log_func. For
+//    `dndc_stderr_log_func`, this should be NULL. For a function you've
 //    defined, pass an appropriate pointer!
 //
 // Returns:

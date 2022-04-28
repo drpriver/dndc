@@ -947,7 +947,7 @@ change_coord(int id, int x, int y){
     auto text = page->textedit->toPlainText() + QS("\n");
     auto textbytes = text.toUtf8();
     DndcStringView textsv = {(size_t)textbytes.size(), textbytes.data()};
-    CtxWrapper ctx = {dndc_create_ctx(0, NULL, NULL, NULL, NULL)};
+    CtxWrapper ctx = {dndc_create_ctx(0, NULL, NULL)};
     DndcNodeHandle root = dndc_ctx_make_root(ctx.ctx, {});
     int err = dndc_ctx_parse_string(ctx.ctx, root, {}, textsv);
     if(err) return;
@@ -1185,7 +1185,7 @@ Page::set_scroll_pos(QString&& x){
     auto fnbytes = filename.toUtf8();
     DndcStringView srcpath = {(size_t)fnbytes.size(), fnbytes.data()};
     DndcLongString outstring;
-    DndcErrorFunc* errfunc = [](
+    DndcLogFunc* errfunc = [](
             void* user_data,
             int type,
             const char* filename, int filename_len,
@@ -1232,7 +1232,7 @@ Page::format(void){
     auto text = get_text_for_preview();
     auto textbytes = text.toUtf8();
     DndcStringView textsv = {(size_t)textbytes.size(), textbytes.data()};
-    DndcErrorFunc* errfunc = [](
+    DndcLogFunc* errfunc = [](
             void* user_data,
             int type,
             const char* filename, int filename_len,
@@ -1373,7 +1373,7 @@ Page::export_as_html(void){
     DndcStringView basedir = {(size_t)dirbytes.size(), dirbytes.data()};
     // TODO: change to where it is going
     DndcLongString outstring;
-    DndcErrorFunc* errfunc = [](
+    DndcLogFunc* errfunc = [](
             void* user_data,
             int type,
             const char* filename, int filename_len,

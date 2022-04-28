@@ -14,6 +14,7 @@
 #include "dndc_funcs.h"
 #include "dndc_qjs.h"
 #include "dndc_file_cache.h"
+#include "dndc_logging.h"
 
 #include "path_util.h"
 #include "MStringBuilder.h"
@@ -33,6 +34,12 @@
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
+
+DNDC_API
+int
+dndc_version(void){
+    return DNDC_NUMERIC_VERSION;
+}
 
 #if defined(_WIN32) || defined(WASM)
 // provide our own version
@@ -96,7 +103,7 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
             continue;
         NodeType type;
         NodeHandle firstchild;
-        MStringBuilder msb = (MStringBuilder){.allocator=string_allocator(ctx)};
+        MStringBuilder msb = {.allocator=string_allocator(ctx)};
         LongString str;
         {
             Node* node = get_node(ctx, handle);
@@ -145,7 +152,6 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
             int js_err = execute_qjs_string(jsctx, ctx, str.text, str.length, handle, firstchild);
             msb_destroy(&msb);
             if(js_err){
-                report_set_error(ctx);
                 result = js_err;
                 goto cleanup;
             }
@@ -269,7 +275,8 @@ execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) w
         Marray_cleanup(StringView)(&job.sourcepaths, main_allocator(ctx));
     }
     else {
-        report_info(ctx, SV("No binary work was to be done."));
+        LOG_INFO(ctx, SV(""), 0, 0, SV("No binary work was to be done"));
+        // report_info(ctx, SV("No binary work was to be done."));
     }
     return result;
 }
@@ -283,8 +290,8 @@ run_the_dndc(uint64_t flags,
         Nonnull(LongString*) outstring,
         Nullable(FileCache*)external_b64cache,
         Nullable(FileCache*)external_textcache,
-        Nullable(DndcErrorFunc*)error_func,
-        Nullable(void*)error_user_data,
+        Nullable(DndcLogFunc*)log_func,
+        Nullable(void*)log_user_data,
         Nullable(DndcDependencyFunc*)dependency_func,
         Nullable(void*)dependency_user_data,
         Nullable(DndcPostParseAstFunc*)ast_func,
@@ -339,8 +346,8 @@ run_the_dndc(uint64_t flags,
         .base_directory = base_directory,
         .b64cache = b64cache,
         .textcache = textcache,
-        .error_func = error_func,
-        .error_user_data = error_user_data,
+        .log_func = log_func,
+        .log_user_data = log_user_data,
     };
     ctx.links.allocator = main_allocator(&ctx);
     if(!source_text.text){
@@ -370,7 +377,6 @@ run_the_dndc(uint64_t flags,
         uint64_t after_parse = get_t();
         report_time(&ctx, SV("Initial parsing took: "), after_parse-before_parse);
         if(e){
-            report_set_error(&ctx);
             result = e;
             goto cleanup;
         }
@@ -403,21 +409,21 @@ run_the_dndc(uint64_t flags,
         if(ctx.imports.count){
             NodeHandle handle = ctx.imports.data[0];
             Node* node = get_node(&ctx, handle);
-            node_print_err(&ctx, node, LS("Imports are illegal for untrusted input."));
+            NODE_LOG_ERROR(&ctx, node, SV("Imports are illegal for untrusted input."));
             result = PARSE_ERROR;
             goto cleanup;
         }
         if(ctx.user_script_nodes.count){
             NodeHandle handle = ctx.user_script_nodes.data[0];
             Node* node = get_node(&ctx, handle);
-            node_print_err(&ctx, node, LS("JS blocks are illegal for untrusted input."));
+            NODE_LOG_ERROR(&ctx, node, SV("JS blocks are illegal for untrusted input."));
             result = PARSE_ERROR;
             goto cleanup;
         }
         if(ctx.script_nodes.count){
             NodeHandle handle = ctx.script_nodes.data[0];
             Node* node = get_node(&ctx, handle);
-            node_print_err(&ctx, node, LS("Script blocks are illegal for untrusted input."));
+            NODE_LOG_ERROR(&ctx, node, SV("Script blocks are illegal for untrusted input"));
             result = PARSE_ERROR;
             goto cleanup;
         }
@@ -449,7 +455,7 @@ run_the_dndc(uint64_t flags,
                 newnode->attributes = Rarray_clone(Attribute)(node->attributes, main_allocator(&ctx));
             }
             if(ctx.imports.count > 1000){
-                node_print_err(&ctx, node, LS("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)"));
+                NODE_LOG_ERROR(&ctx, node, SV("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?"));
                 result = PARSE_ERROR;
                 goto cleanup;
             }
@@ -458,29 +464,23 @@ run_the_dndc(uint64_t flags,
                 NodeHandle child_handle = node_children(node)[j];
                 Node* child = get_node(&ctx, child_handle);
                 if(child->type != NODE_STRING){
-                    node_print_err(&ctx, child, LS("import child is not a string"));
+                    NODE_LOG_ERROR(&ctx, child, SV("import child is not a STRING"));
                     result = PARSE_ERROR;
                     goto cleanup;
                 }
                 StringView filename = child->header;
                 StringViewResult imp_e = ctx_load_source_file(&ctx, filename);
                 if(imp_e.errored){
-                    MStringBuilder err_builder = {.allocator = temp_allocator(&ctx)};
-                    if(ctx.base_directory.length){
-                        MSB_FORMAT(&err_builder, "Unable to open '", ctx.base_directory, "/", filename, "'");
-                    }
-                    else{
-                        MSB_FORMAT(&err_builder, "Unable to open '", filename, "'");
-                    }
-                    node_print_err(&ctx, child, msb_borrow_ls(&err_builder));
-                    msb_destroy(&err_builder);
+                    if(ctx.base_directory.length)
+                        NODE_LOG_ERROR(&ctx, child, "Unable to open '", ctx.base_directory, "/", filename, "'");
+                    else
+                        NODE_LOG_ERROR(&ctx, child, "Unable to open '", filename, "'");
                     result = imp_e.errored;
                     goto cleanup;
                 }
                 StringView imp_text = imp_e.result;
                 int parse_e = dndc_parse(&ctx, newhandle, filename, imp_text.text, imp_text.length);
                 if(parse_e){
-                    report_set_error(&ctx);
                     result = parse_e;
                     goto cleanup;
                 }
@@ -582,13 +582,6 @@ run_the_dndc(uint64_t flags,
         gather_anchors(&ctx);
         uint64_t after = get_t();
         report_time(&ctx, SV("Link resolving took: "), after-before);
-        // FIXME: if an error can be set while gathering anchors, we should
-        // return an error!
-        if(ctx.error.message.length){
-            report_set_error(&ctx);
-            result = PARSE_ERROR;
-            goto cleanup;
-        }
     }
 
     // Render the toc block if we have one.
@@ -615,7 +608,6 @@ run_the_dndc(uint64_t flags,
                 }
             }
         }
-        // Sort so we can do a binary search.
         report_size(&ctx, SV("ctx.links.count = "), ctx.links.count_);
     }
 
@@ -631,19 +623,18 @@ run_the_dndc(uint64_t flags,
             NODE_CHILDREN_FOR_EACH(it, data_node){
                 Node* child = get_node(&ctx, *it);
                 if(!child->header.length){
-                    node_print_warning(&ctx, child, SV("Missing header from data child?"));
+                    NODE_LOG_WARNING(&ctx, child, SV("Missing header from data child?"));
                 }
                 {
                     msb_reset(&sb);
                     int e = render_node(&ctx, &sb, *it, 1, 0);
                     if(e){
-                        report_set_error(&ctx);
                         result = e;
                         goto cleanup;
                     }
                 }
                 if(!sb.cursor){
-                    node_print_warning(&ctx, child, SV("Rendered a data node with no data. Not outputting it."));
+                    NODE_LOG_WARNING(&ctx, child, SV("Rendered a data node with no data. Not outputting it."));
                     continue;
                 }
                 LongString text = msb_detach_ls(&sb);
@@ -670,7 +661,6 @@ run_the_dndc(uint64_t flags,
         uint64_t before_render = get_t();
         int e = expand_to_dnd(&ctx, &output_sb);
         if(e){
-            report_set_error(&ctx);
             msb_destroy(&output_sb);
             result = e;
             goto cleanup;
@@ -693,7 +683,6 @@ run_the_dndc(uint64_t flags,
         int e = render_tree(&ctx, &output_sb);
 
         if(e){
-            report_set_error(&ctx);
             msb_destroy(&output_sb);
             result = e;
             goto cleanup;
@@ -807,6 +796,7 @@ run_the_dndc(uint64_t flags,
 #include "dndc_parser.c"
 #include "dndc_context.c"
 #include "dndc_file_cache.c"
+#include "dndc_logging.c"
 #include "allocator.c"
 
 #ifndef WASM
@@ -857,13 +847,13 @@ free_qjs_rt(QJSRuntime*rt, ArenaAllocator*aa){
 
 DNDC_API
 int
-dndc_format(StringView source_text, LongString* output, Nullable(DndcErrorFunc*)error_func, Nullable(void*)error_user_data){
+dndc_format(StringView source_text, LongString* output, Nullable(DndcLogFunc*)log_func, Nullable(void*)log_user_data){
     uint64_t flags = 0
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_ALLOW_BAD_LINKS
         | DNDC_REFORMAT_ONLY
         ;
-    int e = run_the_dndc(flags, SV(""), source_text, SV(""), output, NULL, NULL, error_func, error_user_data, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(flags, SV(""), source_text, SV(""), output, NULL, NULL, log_func, log_user_data, NULL, NULL, NULL, NULL, NULL, LS(""));
     return e;
 }
 
@@ -875,7 +865,7 @@ dndc_free_string(LongString str){
 
 DNDC_API
 void
-dndc_stderr_error_func(Nullable(void*)unused, int type, const char* filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
+dndc_stderr_log_func(Nullable(void*)unused, int type, const char* filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
     (void)unused;
     static int interactive = -1;
     if(interactive == -1){
@@ -900,7 +890,7 @@ dndc_stderr_error_func(Nullable(void*)unused, int type, const char* filename, in
         #undef GREEN
         #undef RESET
     }
-    switch((enum DndcErrorMessageType)type){
+    switch((enum DndcLogMessageType)type){
         case DNDC_NODELESS_MESSAGE:
             fprintf(stderr, "[%s]: %.*s\n", Error, message_len, message);
             return;
@@ -2019,8 +2009,8 @@ dndc_compile_dnd_file(
     DndcLongString* outstring,
     DNDC_NULLABLE(DndcFileCache*) base64cache,
     DNDC_NULLABLE(DndcFileCache*) textcache,
-    DNDC_NULLABLE(DndcErrorFunc*) error_func,
-    DNDC_NULLABLE(void*) error_user_data,
+    DNDC_NULLABLE(DndcLogFunc*) log_func,
+    DNDC_NULLABLE(void*) log_user_data,
     DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
     DNDC_NULLABLE(void*) dependency_user_data,
     DNDC_NULLABLE(DndcWorkerThread*) worker_thread,
@@ -2054,7 +2044,7 @@ dndc_compile_dnd_file(
         return GENERIC_ERROR;
     if(!outstring)
         return GENERIC_ERROR;
-    int err = run_the_dndc(flags, base_directory, source_text, source_path, outstring, base64cache, textcache, error_func, error_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread, jsargs);
+    int err = run_the_dndc(flags, base_directory, source_text, source_path, outstring, base64cache, textcache, log_func, log_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread, jsargs);
     return err;
 }
 
@@ -2085,11 +2075,9 @@ ctx_dup_ls(DndcContext* ctx, LongString text){
 
 DNDC_API
 DndcContext*
-dndc_create_ctx(unsigned long long flags, DndcErrorFunc*_Nullable error_func, void*_Nullable error_func_data, DndcFileCache*_Nullable base64cache, DndcFileCache*_Nullable textcache){
+dndc_create_ctx(unsigned long long flags, DndcFileCache*_Nullable base64cache, DndcFileCache*_Nullable textcache){
     DndcContext* ctx = calloc(1, sizeof *ctx);
     ctx->flags = flags;
-    ctx->error_func = error_func;
-    ctx->error_user_data = error_func_data;
     if(base64cache)
         ctx->b64cache = base64cache;
     else {
@@ -2108,6 +2096,13 @@ dndc_create_ctx(unsigned long long flags, DndcErrorFunc*_Nullable error_func, vo
     ctx->temp = new_linear_storage(1024*1024, "temporary storage");
     ctx->links.allocator = main_allocator(ctx);
     return ctx;
+}
+
+DNDC_API
+void
+dndc_ctx_set_logger(DndcContext*ctx, DndcLogFunc*_Nullable func, void*_Nullable data){
+    ctx->log_func = func;
+    ctx->log_user_data = data;
 }
 
 
@@ -2130,10 +2125,9 @@ DndcContext*
 dndc_ctx_clone(DndcContext* ctx){
     DndcContext* result = dndc_create_ctx(
             ctx->flags,
-            ctx->error_func,
-            ctx->error_user_data,
             !ctx->b64cache_allocated?ctx->b64cache:NULL,
             !ctx->textcache_allocated?ctx->textcache:NULL);
+    dndc_ctx_set_logger(result, ctx->log_func, ctx->log_user_data);
     MARRAY_FOR_EACH(StringView, fn, ctx->filenames)
         Marray_push(StringView)(&result->filenames, main_allocator(result), dndc_ctx_dup_sv(result, *fn));
     #define cp(x) \
@@ -2214,10 +2208,9 @@ DndcContext*
 dndc_ctx_shallow_clone(DndcContext* ctx){
     DndcContext* result = dndc_create_ctx(
             ctx->flags,
-            ctx->error_func,
-            ctx->error_user_data,
             !ctx->b64cache_allocated?ctx->b64cache:NULL,
             !ctx->textcache_allocated?ctx->textcache:NULL);
+    dndc_ctx_set_logger(result, ctx->log_func, ctx->log_user_data);
     if(ctx->filenames.count)
         Marray_extend(StringView)(&result->filenames, main_allocator(result), ctx->filenames.data, ctx->filenames.count);
     #define cp(x) \
@@ -2297,10 +2290,6 @@ dndc_ctx_parse_string(DndcContext* ctx, DndcNodeHandle root, DndcStringView file
     NodeHandle handle = check_api_handle(ctx, root);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE)) return 1;
     int e = dndc_parse(ctx, handle, filename, contents.text, contents.length);
-    if(e){
-        report_set_error(ctx);
-        memset(&ctx->error, 0, sizeof(ctx->error));
-    }
     return e;
 }
 
@@ -2312,10 +2301,6 @@ dndc_ctx_parse_file(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sourcep
     StringViewResult svr = ctx_load_source_file(ctx, sourcepath);
     if(svr.errored) return 1;
     int e = dndc_parse(ctx, handle, sourcepath, svr.result.text, svr.result.length);
-    if(e){
-        report_set_error(ctx);
-        memset(&ctx->error, 0, sizeof(ctx->error));
-    }
     return e;
 }
 
@@ -2604,11 +2589,7 @@ dndc_ctx_expand_to_dnd(DndcContext* ctx, DndcLongString* ls){
     if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return 1;
     MStringBuilder output_sb = {.allocator = get_mallocator()};
     int e = expand_to_dnd(ctx, &output_sb);
-    if(e){
-        report_set_error(ctx);
-        memset(&ctx->error, 0, sizeof ctx->error);
-        return e;
-    }
+    if(e) {msb_destroy(&output_sb); return e;}
     *ls = msb_detach_ls(&output_sb);
     return 0;
 }
@@ -2618,7 +2599,7 @@ dndc_ctx_render_to_html(DndcContext* ctx, DndcLongString* ls){
     MStringBuilder output_sb = {.allocator = get_mallocator()};
     if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return 1;
     int e = render_tree(ctx, &output_sb);
-    if(e) {msb_destroy(&output_sb); report_set_error(ctx); return 1;}
+    if(e) {msb_destroy(&output_sb); return 1;}
     *ls = msb_detach_ls(&output_sb);
     return 0;
 }
@@ -2631,7 +2612,7 @@ dndc_node_render_to_html(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString* l
         return 1;
     MStringBuilder output_sb = {.allocator = get_mallocator()};
     int e = render_node(ctx, &output_sb, handle, 1, 0);
-    if(e) {msb_destroy(&output_sb); report_set_error(ctx); return 1;}
+    if(e) {msb_destroy(&output_sb); return 1;}
     *ls = msb_detach_ls(&output_sb);
     return 0;
 }
@@ -2871,7 +2852,7 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
             newnode->attributes = Rarray_clone(Attribute)(node->attributes, main_allocator(ctx));
         }
         if(ctx->imports.count > 1000){
-            node_print_err(ctx, node, LS("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)"));
+            NODE_LOG_ERROR(ctx, node, LS("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)"));
             goto cleanup;
         }
         // NOTE: re-get the node every loop as the pointer is invalidated.
@@ -2879,27 +2860,21 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
             NodeHandle child_handle = node_children(node)[j];
             Node* child = get_node(ctx, child_handle);
             if(child->type != NODE_STRING){
-                node_print_err(ctx, child, LS("import child is not a string"));
+                NODE_LOG_ERROR(ctx, child, LS("import child is not a string"));
                 goto cleanup;
             }
             StringView filename = child->header;
             StringViewResult imp_e = ctx_load_source_file(ctx, filename);
             if(imp_e.errored){
-                MStringBuilder err_builder = {.allocator = temp_allocator(ctx)};
-                if(ctx->base_directory.length){
-                    MSB_FORMAT(&err_builder, "Unable to open '", ctx->base_directory, "/", filename, "'");
-                }
-                else{
-                    MSB_FORMAT(&err_builder, "Unable to open '", filename, "'");
-                }
-                node_print_err(ctx, child, msb_borrow_ls(&err_builder));
-                msb_destroy(&err_builder);
+                if(ctx->base_directory.length)
+                    NODE_LOG_ERROR(ctx, child, "Unable to open '", ctx->base_directory, "/", filename, "'");
+                else
+                    NODE_LOG_ERROR(ctx, child, "Unable to open '", filename, "'");
                 goto cleanup;
             }
             StringView imp_text = imp_e.result;
             int parse_e = dndc_parse(ctx, newhandle, filename, imp_text.text, imp_text.length);
             if(parse_e){
-                report_set_error(ctx);
                 goto cleanup;
             }
         }
@@ -3041,12 +3016,6 @@ dndc_ctx_gather_links(DndcContext* ctx){
     if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE))
         return 1;
     gather_anchors(ctx);
-    // FIXME: if an error can be set while gathering anchors, we should
-    // return an error!
-    if(ctx->error.message.length){
-        report_set_error(ctx);
-        return 1;
-    }
     return 0;
 }
 
@@ -3092,19 +3061,18 @@ dndc_ctx_resolve_data_blocks(DndcContext* ctx){
         NODE_CHILDREN_FOR_EACH(it, data_node){
             Node* child = get_node(ctx, *it);
             if(!child->header.length){
-                node_print_warning(ctx, child, SV("Missing header from data child?"));
+                NODE_LOG_WARNING(ctx, child, SV("Missing header from data child?"));
             }
             {
                 msb_reset(&sb);
                 int e = render_node(ctx, &sb, *it, 1, 0);
                 if(e){
-                    report_set_error(ctx);
                     msb_destroy(&sb);
                     return 1;
                 }
             }
             if(!sb.cursor){
-                node_print_warning(ctx, child, SV("Rendered a data node with no data. Not outputting it."));
+                NODE_LOG_WARNING(ctx, child, SV("Rendered a data node with no data. Not outputting it."));
                 continue;
             }
             LongString text = msb_detach_ls(&sb);
@@ -3254,9 +3222,6 @@ dndc_node_execute_js(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString js){
         return 1;
     }
     int err = execute_qjs_string(jsctx, ctx, js.text, js.length, handle, handle);
-    if(err){
-        report_set_error(ctx);
-    }
     free_qjs_rt(rt, &aa);
     ArenaAllocator_free_all(&aa);
     return !!err;

@@ -220,7 +220,7 @@ class TestExamples(TestCase):
             _ = pydndc.htmlgen(text, base_dir=os.path.dirname(example))
             if 'calendar.dnd' in example: continue
             if 'OVERVIEW' in example: continue
-            _ = pydndc.expand(text, base_dir=os.path.dirname(example), error_reporter=lambda *args:(print(example),print(*args)))
+            _ = pydndc.expand(text, base_dir=os.path.dirname(example), logger=lambda *args:(print(example),print(*args)))
             _ = pydndc.reformat(text)
             _ = pydndc.analyze_syntax_for_highlight(text)
 
@@ -313,7 +313,7 @@ class TestExpand(TestCase):
         "      long thing! So why not. Be long!\n"
         "\n"
         )
-        output = pydndc.expand(input, error_reporter=print)
+        output = pydndc.expand(input, logger=print)
         self.assertEqual(input, output)
     def test_actual(self) -> None:
         input = (
@@ -327,7 +327,7 @@ class TestExpand(TestCase):
         def testout(kind, file, line, col, mess):
             self.assertEqual('"hi"', mess)
         expected = "hello\n"
-        output = pydndc.expand(input, error_reporter=testout, file_cache=cache)
+        output = pydndc.expand(input, logger=testout, file_cache=cache)
         self.assertEqual(output, expected)
 
 
@@ -365,11 +365,11 @@ class TestJsVars(TestCase):
         d[3] = 3
         _ = pydndc.htmlgen(input,
                 jsargs=d,
-                error_reporter=testout)
+                logger=testout)
         d = '{hello:"world", goodbye:"goodbye", data:[1, 2, 3], y:{}, "3":3}'
         _ = pydndc.htmlgen(input,
                 jsargs=d,
-                error_reporter=testout)
+                logger=testout)
 
 def mymain() -> None:
     parser = argparse.ArgumentParser()

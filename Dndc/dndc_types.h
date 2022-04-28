@@ -307,14 +307,8 @@ typedef struct DndcContext {
     // See DndcFlags.
     uint64_t flags;
     // See dndc.h
-    DndcErrorFunc*_Nullable error_func;
-    void*_Nullable error_user_data;
-    struct {
-        StringView filename;
-        int line; // 0-based
-        int col; // 0-based
-        LongString message;
-    } error;
+    DndcLogFunc*_Nullable log_func;
+    void*_Nullable log_user_data;
 
     // book keeping info for the ast api
     // -----

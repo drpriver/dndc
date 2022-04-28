@@ -69,8 +69,9 @@ int
 process(WorkItem* item){
     StringView filename = item->filename;
     // fprintf(stderr, "[%p] %s\n", pthread_self(), filename.text);
-    DndcContext* ctx = dndc_create_ctx(DNDC_NO_THREADS, dndc_stderr_error_func, NULL, NULL, NULL);
+    DndcContext* ctx = dndc_create_ctx(DNDC_NO_THREADS, NULL, NULL);
     if(!ctx) return 1;
+    dndc_ctx_set_logger(ctx, dndc_stderr_log_func, NULL);
     DndcNodeHandle root = dndc_ctx_make_root(ctx, filename);
     if(root == DNDC_NODE_HANDLE_INVALID) goto fail;
     int e;

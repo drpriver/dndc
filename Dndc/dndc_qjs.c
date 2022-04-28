@@ -65,7 +65,7 @@ js_make_dndc_node(QJSContext*, NodeHandle);
 
 static
 void
-set_js_traceback(DndcContext* ctx, QJSContext* jsctx);
+log_js_traceback(DndcContext* ctx, QJSContext* jsctx, NodeHandle handle);
 
 static
 warn_unused
@@ -520,18 +520,8 @@ execute_qjs_string(QJSContext* jsctx, DndcContext* ctx, const char* str, size_t 
 
         QJSValue err = JS_Eval(jsctx, str, length, filename, 1);
         if(JS_IsException(err)){
-            // FIXME: More robust signalling of errors.
-            if(ctx->error.message.length){
-                // error message already set.
-            }
-            else {
-                set_js_traceback(ctx, jsctx);
-            }
+            log_js_traceback(ctx, jsctx, handle);
             result = GENERIC_ERROR;
-        }
-        else if(ctx->error.message.length){
-            Allocator_free(string_allocator(ctx), ctx->error.message.text, ctx->error.message.length);
-            ctx->error.message = (LongString){0};
         }
         JS_FreeValue(jsctx, err);
     }
@@ -642,8 +632,8 @@ js_dndc_get_classlist_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* o
 
 static
 void
-set_js_traceback(DndcContext* ctx, QJSContext* jsctx){
-    MStringBuilder msb = {.allocator = string_allocator(ctx)};
+log_js_traceback(DndcContext* ctx, QJSContext* jsctx, NodeHandle handle){
+    MStringBuilder msb = {.allocator = temp_allocator(ctx)};
     QJSValue exception_val = JS_GetException(jsctx);
     int is_error = JS_IsError(jsctx, exception_val);
     {
@@ -674,7 +664,9 @@ set_js_traceback(DndcContext* ctx, QJSContext* jsctx){
     }
     JS_FreeValue(jsctx, exception_val);
     msb_erase(&msb, 2); // XXX: I get the one, but why two?
-    ctx->error.message = msb_detach_ls(&msb);
+    LongString msg = msb_borrow_ls(&msb);
+    handle_log_error(ctx, handle, 1, (FormatArg[]){FMT(msg)});
+    msb_destroy(&msb);
 }
 
 static
@@ -740,7 +732,7 @@ js_console_log(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return JS_UNDEFINED;
-    if(!ctx->error_func)
+    if(!ctx->log_func)
         return JS_UNDEFINED;
     MStringBuilder msb = {.allocator = temp_allocator(ctx)};
 
@@ -749,7 +741,7 @@ js_console_log(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
         js_console_inner(jsctx, argv[i], &msb);
     }
     LongString msg = msb_borrow_ls(&msb);
-    ctx->error_func(ctx->error_user_data, DNDC_DEBUG_MESSAGE, filename?filename:"js", filename?strlen(filename):2, line_num-1, -1, msg.text, msg.length);
+    ctx->log_func(ctx->log_user_data, DNDC_DEBUG_MESSAGE, filename?filename:"js", filename?strlen(filename):2, line_num-1, -1, msg.text, msg.length);
     msb_destroy(&msb);
     if(filename)
         JS_FreeCString(jsctx, filename);
@@ -1565,15 +1557,14 @@ JSMETHOD(js_dndc_node_err){
         return JS_EXCEPTION;
     DndcContext* ctx = JS_GetContextOpaque(jsctx);
     assert(ctx);
-    Node* node = get_node(ctx, handle);
-    LongString msg = jsstring_to_longstring(jsctx, argv[0], string_allocator(ctx));
+    LongString msg = jsstring_to_longstring(jsctx, argv[0], temp_allocator(ctx));
     if(!msg.text)
         return JS_EXCEPTION;
-    if(ctx->error.message.length){
-        Allocator_free(string_allocator(ctx), ctx->error.message.text, ctx->error.message.length);
-    }
-    node_set_err(ctx, node, msg);
-    return JS_ThrowTypeError(jsctx, "placeholder");
+    QJSValue jsmsg = JS_NewStringLen(jsctx, msg.text, msg.length);
+    // HANDLE_LOG_ERROR(ctx, handle, msg);
+    QJSValue result = JS_Throw(jsctx, jsmsg);
+    Allocator_free(temp_allocator(ctx), msg.text, msg.length+1);
+    return result;
 }
 JSMETHOD(js_dndc_node_has_class){
     if(argc != 1)

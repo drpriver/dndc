@@ -159,195 +159,6 @@ node_clone(DndcContext* ctx, NodeHandle handle){
     return result;
 }
 
-static
-void
-parse_set_err(DndcContext* ctx, NullUnspec(const char*) errchar, LongString msg){
-    int col = (int)(errchar - ctx->linestart);
-    ctx->error.filename = ctx->filename;
-    ctx->error.line = ctx->lineno;
-    ctx->error.col = col;
-    ctx->error.message = msg;
-}
-
-static
-void
-parse_set_err_q(DndcContext* ctx, const char* errchar, StringView msg, StringView quoted){
-    int col = (int)(errchar - ctx->linestart);
-    ctx->error.filename = ctx->filename;
-    ctx->error.line = ctx->lineno;
-    ctx->error.col = col;
-    MStringBuilder msb = {.allocator = string_allocator(ctx)};
-    msb_write_str(&msb, msg.text, msg.length);
-    msb_write_char(&msb, '\'');
-    msb_write_str(&msb, quoted.text, quoted.length);
-    msb_write_char(&msb, '\'');
-    ctx->error.message = msb_detach_ls(&msb);
-}
-
-static
-void
-node_set_err_q(DndcContext* ctx, const Node* node, StringView msg, StringView quoted){
-    MStringBuilder msb = {.allocator=string_allocator(ctx)};
-    ctx->error.filename = ctx->filenames.data[node->filename_idx];
-    ctx->error.line = node->row;
-    ctx->error.col = node->col;
-    msb_write_str(&msb, msg.text, msg.length);
-    msb_write_char(&msb, '\'');
-    msb_write_str(&msb, quoted.text, quoted.length);
-    msb_write_char(&msb, '\'');
-    ctx->error.message = msb_detach_ls(&msb);
-}
-
-static
-void
-node_set_err(DndcContext* ctx, const Node* node, LongString ls){
-    ctx->error.filename = ctx->filenames.data[node->filename_idx];
-    ctx->error.line = node->row;
-    ctx->error.col = node->col;
-    ctx->error.message = ls;
-}
-
-static
-void
-node_set_err_offset(DndcContext* ctx, const Node* node, int offset, LongString message){
-    ctx->error.filename = ctx->filenames.data[node->filename_idx];
-    ctx->error.line = node->row;
-    ctx->error.col = node->col+offset;
-    ctx->error.message = message;
-}
-
-static
-void
-node_print_err(DndcContext* ctx, const Node* node, LongString msg){
-    if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
-        return;
-    if(! ctx->error_func)
-        return;
-    StringView filename = ctx->filenames.data[node->filename_idx];
-    int lineno = node->row;
-    int col = node->col;
-    ctx->error_func(ctx->error_user_data, DNDC_ERROR_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
-}
-
-#if 0
-static
-void
-node_print_err_q(DndcContext* ctx, const Node* node, StringView msg, StringView quoted){
-    if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
-        return;
-    if(!ctx->error_func)
-        return;
-    StringView filename = ctx->filenames.data[node->filename_idx];
-    int lineno = node->row;
-    int col = node->col;
-    MStringBuilder msb = {.allocator = temp_allocator(ctx)};
-    msb_write_str(&msb, msg.text, msg.length);
-    msb_write_char(&msb, '\'');
-    msb_write_str(&msb, quoted.text, quoted.length);
-    msb_write_char(&msb, '\'');
-    LongString errmsg = msb_borrow_ls(&msb);
-    ctx->error_func(ctx->error_user_data, DNDC_ERROR_MESSAGE, filename.text, filename.length, lineno, col, errmsg.text, errmsg.length);
-    msb_destroy(&msb);
-}
-#endif
-
-static
-void
-node_print_warning(DndcContext* ctx, const Node* node, StringView msg){
-    if(ctx->flags & DNDC_SUPPRESS_WARNINGS)
-        return;
-    if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
-        return;
-    if(! ctx->error_func)
-        return;
-    StringView filename = ctx->filenames.data[node->filename_idx];
-    int lineno = node->row;
-    int col = node->col;
-    ctx->error_func(ctx->error_user_data, DNDC_WARNING_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
-}
-
-static
-void
-node_print_warning2(DndcContext* ctx, const Node* node, StringView a, StringView b){
-    if(ctx->flags & DNDC_SUPPRESS_WARNINGS)
-        return;
-    if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
-        return;
-    if(! ctx->error_func)
-        return;
-    StringView filename = ctx->filenames.data[node->filename_idx];
-    int lineno = node->row;
-    int col = node->col;
-    MStringBuilder msb = {.allocator = temp_allocator(ctx)};
-    msb_write_str(&msb, a.text, a.length);
-    msb_write_str(&msb, b.text, b.length);
-    LongString msg = msb_borrow_ls(&msb);
-    ctx->error_func(ctx->error_user_data, DNDC_WARNING_MESSAGE, filename.text, filename.length, lineno, col, msg.text, msg.length);
-    msb_destroy(&msb);
-}
-
-static
-void
-report_time(DndcContext* ctx, StringView msg, uint64_t microseconds){
-    if(! (ctx->flags & DNDC_PRINT_STATS))
-        return;
-    if(! ctx->error_func)
-        return;
-    MStringBuilder temp = {.allocator=temp_allocator(ctx)};
-    msb_write_str(&temp, msg.text, msg.length);
-    msb_write_us_as_ms(&temp, microseconds);
-    LongString str = msb_borrow_ls(&temp);
-    ctx->error_func(ctx->error_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, str.text, str.length);
-    msb_destroy(&temp);
-}
-
-static
-void
-report_info(DndcContext* ctx, StringView msg){
-    if(! (ctx->flags & DNDC_PRINT_STATS))
-        return;
-    if(! ctx->error_func)
-        return;
-    ctx->error_func(ctx->error_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, msg.text, msg.length);
-}
-static
-void
-report_size(DndcContext* ctx, StringView msg, uint64_t size){
-    if(! (ctx->flags & DNDC_PRINT_STATS))
-        return;
-    if(! ctx->error_func)
-        return;
-    MStringBuilder temp = {.allocator=temp_allocator(ctx)};
-    msb_write_str(&temp, msg.text, msg.length);
-    msb_write_uint64(&temp, size);
-    LongString str = msb_borrow_ls(&temp);
-    ctx->error_func(ctx->error_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, str.text, str.length);
-    msb_destroy(&temp);
-}
-
-static
-void
-report_set_error(DndcContext* ctx){
-    if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
-        goto clear;
-    if(! ctx->error_func)
-        goto clear;
-    ctx->error_func(ctx->error_user_data, DNDC_ERROR_MESSAGE, ctx->error.filename.text, ctx->error.filename.length, ctx->error.line, ctx->error.col, ctx->error.message.text, ctx->error.message.length);
-    clear:
-    Allocator_free(string_allocator(ctx), ctx->error.message.text, ctx->error.message.length+1);
-    memset(&ctx->error, 0, sizeof ctx->error);
-}
-
-static
-void
-report_system_error(DndcContext* ctx, StringView msg){
-    if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
-        return;
-    if(! ctx->error_func)
-        return;
-    ctx->error_func(ctx->error_user_data, DNDC_NODELESS_MESSAGE, "", 0, 0, 0, msg.text, msg.length);
-}
-
 static inline
 void
 ctx_note_dependency(DndcContext* ctx, StringView path){
@@ -415,25 +226,25 @@ add_link_from_sv(DndcContext* ctx, Node* node){
     StringView str = node->header;
     const char* equals = memchr(str.text, '=', str.length);
     if(!equals){
-        node_print_err(ctx, node, LS("no '=' in a link node"));
+        NODE_LOG_ERROR(ctx, node, LS("no '=' in a link node"));
         return PARSE_ERROR;
     }
     MStringBuilder sb = {.allocator=string_allocator(ctx)};
     msb_write_kebab(&sb, str.text, equals - str.text);
     if(!sb.cursor){
-        node_print_err(ctx, node, LS("key is empty."));
+        NODE_LOG_ERROR(ctx, node, LS("key is empty."));
         return PARSE_ERROR;
     }
     StringView key = msb_detach_sv(&sb);
     StringView value = stripped_view(equals + 1, (str.text+str.length)-(equals+1));
     if(!value.length){
-        node_print_err(ctx, node, LS("link target is empty."));
+        NODE_LOG_ERROR(ctx, node, LS("link target is empty."));
         return PARSE_ERROR;
     }
     if(value.text[0] == '#'){
         StringView target = {.text = value.text+1, .length = value.length-1};
         if(!target.length){
-            node_print_err(ctx, node, LS("link target is empty after the '#'"));
+            NODE_LOG_ERROR(ctx, node, LS("link target is empty after the '#'"));
             return PARSE_ERROR;
         }
         const StringView* values = ctx->links.keys + ctx->links.capacity_;
@@ -441,7 +252,7 @@ add_link_from_sv(DndcContext* ctx, Node* node){
             if(SV_equals(values[i], value))
                 goto foundit;
         }
-        node_print_err(ctx, node, LS("Anchor does not correspond to any link"));
+        NODE_LOG_ERROR(ctx, node, LS("Anchor does not correspond to any link"));
         return PARSE_ERROR;
         foundit:;
     }

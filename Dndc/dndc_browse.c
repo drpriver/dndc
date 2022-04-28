@@ -72,7 +72,7 @@ void wrap_report(void* ud, int type, const char* filename, int filename_len, int
         fprintf(stderr, "\r%.*s: ", filename_len, filename);
     else
         fprintf(stderr, "\r");
-    dndc_stderr_error_func(ud, type, filename, filename_len, line, col, message, message_len);
+    dndc_stderr_log_func(ud, type, filename, filename_len, line, col, message, message_len);
     fprintf(stderr, "\r> ");
 }
 

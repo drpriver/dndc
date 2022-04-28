@@ -12,7 +12,7 @@ struct {
 };
 
 static
-void dndc_error_func(void* error_user_data, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
+void dndc_log_func(void* log_user_data, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
     if(message_len+filename_len < 4096-64){
         MStringBuilder msb = {};
         char buff[4096];
@@ -50,17 +50,16 @@ make_html(PString* source){
         ;
     int e = run_the_dndc(
             flags,
-            base,
-            LS_to_SV(text),
-            SV("(string input"),
-            SV("demo.html"), // base_directory, source, outpath
-            &output,               // outstring
-            NULL, NULL,            // caches
-            dndc_error_func, NULL, // error func
-            NULL, NULL,            // dependency funcs
-            NULL, NULL,            // ast funcs
-            NULL,                  // worker
-            LS("")                 // args
+            base,                // base_directory
+            LS_to_SV(text),      // source
+            SV("(string input"), // source_path
+            &output,             // outstring
+            NULL, NULL,          // caches
+            dndc_log_func, NULL, // log func
+            NULL, NULL,          // dependency funcs
+            NULL, NULL,          // ast funcs
+            NULL,                // worker
+            LS("")               // args
             );
     if(e) return NULL;
     PString* result = LongString_to_new_PString(output);
@@ -89,10 +88,9 @@ make_fragment(PString* source){
             base,
             LS_to_SV(text),
             SV("(string input"),
-            SV("demo.html"), // base_directory, source, outpath
             &output,               // outstring
             NULL, NULL,            // caches
-            dndc_error_func, NULL, // error func
+            dndc_log_func, NULL,   // log func
             NULL, NULL,            // dependency funcs
             NULL, NULL,            // ast funcs
             NULL                   // worker
@@ -120,14 +118,14 @@ format_dnd(PString* source){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     int e = run_the_dndc(
-            flags, base, LS_to_SV(text), SV(""), SV(""),
+            flags, base, LS_to_SV(text), SV(""),
             &output,
-            NULL, NULL,            // caches
-            dndc_error_func, NULL, // error func
-            NULL, NULL,            // dependency funcs
-            NULL, NULL,            // ast funcs
-            NULL,                  // worker
-            LS("")                 // jsargs
+            NULL, NULL,          // caches
+            dndc_log_func, NULL, // log func
+            NULL, NULL,          // dependency funcs
+            NULL, NULL,          // ast funcs
+            NULL,                // worker
+            LS("")               // jsargs
             );
     if(e) return NULL;
     PString* result = LongString_to_new_PString(output);

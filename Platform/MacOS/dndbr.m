@@ -377,7 +377,7 @@ asm(".global __app_icon\n"
     NSString* type_str = @"?????";
     NSColor* color = [NSColor textColor];
     Class nc = [NSColor class];
-    switch((enum DndcErrorMessageType)type){
+    switch((enum DndcLogMessageType)type){
         case DNDC_ERROR_MESSAGE:
             type_str = @"ERROR";
             color = [NSColor systemRedColor];

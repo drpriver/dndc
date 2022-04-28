@@ -16,6 +16,8 @@ extern "C" {
 // This is the api for creating and intereacting with an ast directly.  The
 // functions provided in dndc.h are easier to use and have a stable API. This
 // API is unstable by necessity.
+//
+// Some of these functions are documented to invoke the logger.
 
 typedef unsigned DndcNodeHandle;
 // --------------
@@ -49,9 +51,7 @@ dndc_ctx_dup_sv(DndcContext* ctx, DndcStringView text);
 
 DNDC_API
 DndcContext*
-dndc_create_ctx(unsigned long long flags,
-        DNDC_NULLABLE(DndcErrorFunc*) error_func, DNDC_NULLABLE(void*) error_func_data,
-        DNDC_NULLABLE(DndcFileCache*) base64cache, DNDC_NULLABLE(DndcFileCache*) textcache);
+dndc_create_ctx(unsigned long long flags, DNDC_NULLABLE(DndcFileCache*) base64cache, DNDC_NULLABLE(DndcFileCache*) textcache);
 // ------------
 // Creates an ast context.
 //
@@ -60,16 +60,6 @@ dndc_create_ctx(unsigned long long flags,
 // flags:
 //     same as the ones to `dndc_compile_dnd_file`. Note that some of those
 //     flags won't make sense.
-//
-// error_func:
-//    A function for reporting errors. See `DndcErrorFunc`. If NULL, errors
-//    will not be printed. Use `dndc_stderr_error_func` for a function that
-//    just prints to stderr.
-//
-// error_user_data:
-//    A pointer that will be passed to the error_func. For
-//    `dndc_stderr_error_func`, this should be NULL. For a function you've
-//    defined, pass an appropriate pointer!
 //
 // base64cache:
 //    A pointer to a filecache (created with `dndc_create_filecache`) that is
@@ -89,6 +79,28 @@ dndc_create_ctx(unsigned long long flags,
 // Returns:
 // --------
 // A valid context on success, NULL on failure.
+
+DNDC_API
+void
+dndc_ctx_set_logger(DndcContext*, DNDC_NULLABLE(DndcLogFunc*), DNDC_NULLABLE(void*));
+// ------------------
+// Sets the logger on the context. Pass NULL to disable logging.
+//
+// Arguments:
+// ---------
+// ctx:
+//     The parsing context.
+//
+// log_func:
+//    A function for reporting errors. See `DndcLogFunc`. If NULL, errors
+//    will not be printed. Use `dndc_stderr_log_func` for a function that
+//    just prints to stderr.
+//
+// log_user_data:
+//    A pointer that will be passed to the log_func. For
+//    `dndc_stderr_log_func`, this should be NULL. For a function you've
+//    defined, pass an appropriate pointer!
+//
 
 DNDC_API
 void
@@ -165,6 +177,8 @@ dndc_ctx_parse_file(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sourcep
 // --------
 // 0 on success, non-zero on error.
 //
+// This function can invoke the logger.
+//
 
 DNDC_API
 int
@@ -192,6 +206,8 @@ dndc_ctx_parse_string(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView filen
 // Returns:
 // --------
 // 0 on success, non-zero on error.
+//
+// This function can invoke the logger.
 //
 
 DNDC_API
@@ -766,6 +782,8 @@ dndc_ctx_expand_to_dnd(DndcContext*, DndcLongString*);
 // On error, nothing is written to the string argument and you do not need to
 // call `dndc_free_string`.
 //
+// This function can call the logger.
+//
 
 DNDC_API
 int
@@ -783,6 +801,8 @@ dndc_ctx_render_to_html(DndcContext*, DndcLongString*);
 // On error, nothing is written to the string argument and you do not need to
 // call `dndc_free_string`.
 //
+// This function can call the logger.
+//
 
 DNDC_API
 int
@@ -798,6 +818,8 @@ dndc_node_render_to_html(DndcContext*, DndcNodeHandle, DndcLongString*);
 //
 // On error, nothing is written to the string argument and you do not need to
 // call `dndc_free_string`.
+//
+// This function can call the logger.
 //
 
 DNDC_API
@@ -818,6 +840,8 @@ dndc_ctx_format_tree(DndcContext*, DndcLongString*);
 // On error, nothing is written to the string argument and you do not need to
 // call `dndc_free_string`.
 //
+// This function can call the logger.
+//
 
 DNDC_API
 int
@@ -836,6 +860,8 @@ dndc_node_format(DndcContext*, DndcNodeHandle, int indent, DndcLongString*);
 // On error, nothing is written to the string argument and you do not need to
 // call `dndc_free_string`.
 //
+// This function can call the logger.
+//
 
 DNDC_API
 int
@@ -850,6 +876,8 @@ dndc_node_execute_js(DndcContext*, DndcNodeHandle, DndcLongString script);
 // Note that the tree may be in an unexpected state after an error in
 // javascript. Likely the only safe thing to do is to call `dndc_ctx_destroy`
 // on the context to cleanup resources.
+//
+// This function can call the logger.
 //
 
 DNDC_API
@@ -880,6 +908,8 @@ dndc_ctx_execute_js(DndcContext* ctx, DndcLongString jsargs);
 // Returns:
 // --------
 // Returns 0 on success and non-zero on error.
+//
+// This function can call the logger.
 //
 
 typedef struct DndcNodeLocation {
@@ -977,6 +1007,8 @@ dndc_ctx_resolve_imports(DndcContext*);
 //
 // Returns 0 on success, non-zero on error.
 //
+// This function can call the logger.
+//
 
 DNDC_API
 int
@@ -1011,12 +1043,17 @@ dndc_ctx_resolve_links(DndcContext*);
 //
 // TODO: does this need to be separate from the gather_links step?
 //
+// This function can call the logger.
+//
 
 DNDC_API
 int
 dndc_ctx_resolve_data_blocks(DndcContext*);
 // -----------
 // DELETEME - this data block concept sucks.
+//
+// This function can call the logger.
+//
 
 DNDC_API
 size_t
@@ -1125,9 +1162,8 @@ compile_dnd_to_html(
     unsigned long long flags = 0;
     DndcFileCache* b64cache = NULL;
     DndcFileCache* textcache = NULL;
-    DndcErrorFunc* errfunc = dndc_stderr_error_func;
-    void* errarg = NULL;
-    DndcContext* ctx = dndc_create_ctx(flags, errfunc, errarg, b64cache, textcache);
+    DndcContext* ctx = dndc_create_ctx(flags, b64cache, textcache);
+    dndc_ctx_set_logger(ctx, dndc_stderr_log_func, NULL);
     dndc_ctx_set_base(ctx, basedir);
     DndcNodeHandle root = dndc_ctx_make_root(ctx, filename);
     int err = 0;
@@ -1176,9 +1212,8 @@ compile_dnd_to_html_with_extra_script(
     unsigned long long flags = 0;
     DndcFileCache* b64cache = NULL;
     DndcFileCache* textcache = NULL;
-    DndcErrorFunc* errfunc = dndc_stderr_error_func;
-    void* errarg = NULL;
-    DndcContext* ctx = dndc_create_ctx(flags, errfunc, errarg, b64cache, textcache);
+    DndcContext* ctx = dndc_create_ctx(flags, b64cache, textcache);
+    dndc_ctx_set_logger(ctx, dndc_stderr_log_func, NULL);
     dndc_ctx_set_base(ctx, basedir);
     DndcNodeHandle root = dndc_ctx_make_root(ctx, filename);
     int err = 0;

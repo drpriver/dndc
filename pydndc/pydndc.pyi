@@ -18,7 +18,9 @@ class MsgType(IntEnum):
     STATISTIC: int
     DEBUG: int
 # Called with (type, filename, line, col, messsage)
-ErrorReporter = Optional[Callable[[MsgType, str, int, int, str], None]]
+Logger = Callable[[MsgType, str, int, int, str], None]
+stderr_logger: Logger
+
 
 class SynType(IntEnum):
     DOUBLE_COLON: int
@@ -62,7 +64,7 @@ class SyntaxRegion(NamedTuple):
 def htmlgen(
     text:str,
     base_dir:str='.',
-    error_reporter:Optional[ErrorReporter]=None,
+    logger:Optional[Logger]=None,
     file_cache:Optional[FileCache]=None,
     flags:Flags=Flags.NONE,
     output_name:Optional[str] = None,
@@ -73,7 +75,7 @@ def htmlgen(
 def expand(
     text:str,
     base_dir:str='.',
-    error_reporter:Optional[ErrorReporter]=None,
+    logger:Optional[Logger]=None,
     file_cache:Optional[FileCache]=None,
     flags:Flags=Flags.NONE,
     output_name:Optional[str] = None,
@@ -81,7 +83,7 @@ def expand(
 ) -> str:
     ...
 
-def reformat(text:str, error_reporter:Optional[ErrorReporter]=None) -> str:
+def reformat(text:str, logger:Optional[Logger]=None) -> str:
     ...
 
 # result is {line: [SyntaxRegion]}
@@ -128,6 +130,7 @@ class Context:
     filename: Optional[str]
     root: Node
     base_dir: str
+    logger: Optional[Logger]
 
     def node_from_int(self, handle:int) -> Node:
         ...
