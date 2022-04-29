@@ -66,10 +66,10 @@ extern "C" {
 #endif
 
 DNDC_API
-int 
+int
 dndc_version(void);
 // --------------------
-// For verifying the versions match at runtime.
+// For verifying the versions match at runtime (useful for verifying ffi).
 
 
 //
