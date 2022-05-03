@@ -1,8 +1,8 @@
-bug.py: v0.0.1
-created: 2022-01-26T03:33:12.921839
-updated: 2022-01-28T01:41:50.238582
-resolved: 2022-01-28T04:50:00.570575
-bugmagic^^^^
+Changelog::kv
+  bug.py: v0.0.1
+  created: 2022-01-26T03:33:12.921839
+  updated: 2022-01-28T01:41:50.238582
+  resolved: 2022-01-28T04:50:00.570575
 Summary::md.summary
   Better test and document the new jsvars feature.
 

@@ -1,6 +1,6 @@
-created: 2022-04-19T00:54:35Z
-updated: 2022-04-28T07:05:43Z
-bugmagic^^^^
+Changelog::kv
+  created: 2022-04-19T00:54:35Z
+  updated: 2022-04-28T07:05:43Z
 Created Apr 18, 2022, 08:54PM::md.update
 Summary::md.summary
   In a lot of places i used <code>PARSE_ERROR</code> even if it is inappropriate.

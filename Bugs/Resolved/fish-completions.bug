@@ -1,8 +1,8 @@
-bug.py: v0.0.1
-created: 2022-01-04T01:34:35.894101
-updated: 2022-01-04T03:32:11.517401
-resolved: 2022-01-04T03:32:25.058305
-bugmagic^^^^
+Changelog::kv
+  bug.py: v0.0.1
+  created: 2022-01-04T01:34:35.894101
+  updated: 2022-01-04T03:32:11.517401
+  resolved: 2022-01-04T03:32:25.058305
 Summary::md.summary
   argparsing should have an option of <code>--fish-completions</code> to generate fish completions.
 

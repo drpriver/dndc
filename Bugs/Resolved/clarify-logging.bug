@@ -1,6 +1,6 @@
-created: 2022-04-19T01:13:09Z
-resolved: 2022-04-28T06:57:43Z
-bugmagic^^^^
+Changelog::kv
+  created: 2022-04-19T01:13:09Z
+  resolved: 2022-04-28T06:57:43Z
 Created Apr 18, 2022, 09:13PM::md.update
 Summary::md.summary
   It needs to be documented which functions from the ast api can end up calling the logger.

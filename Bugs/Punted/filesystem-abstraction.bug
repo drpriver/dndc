@@ -1,6 +1,6 @@
-updated: 2022-01-01T19:16:53.726118
-punt: 2022-04-18T16:55:29Z
-bugmagic^^^^
+Changelog::kv
+  updated: 2022-01-01T19:16:53.726118
+  punted: 2022-04-18T16:55:29Z
 Summary::md.summary
   It'd be nice to consolidate file caching and file loading into a single
   abstraction (would also help embedding).

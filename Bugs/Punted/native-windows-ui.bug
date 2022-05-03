@@ -1,6 +1,6 @@
-updated: 2022-01-01T19:21:27.013619
-punt: 2022-04-18T16:54:23Z
-bugmagic^^^^
+Changelog::kv
+  updated: 2022-01-01T19:21:27.013619
+  punted: 2022-04-18T16:54:23Z
 Summary::md.summary
   Windows' version of gdndc is implemented with Qt, one version in
   Python and one version in C++. Qt is a fat as fuck dependency and

@@ -1,6 +1,6 @@
-created: 2022-04-19T00:40:25Z
-resolved: 2022-04-27T05:40:06Z
-bugmagic^^^^
+Changelog::kv
+  created: 2022-04-19T00:40:25Z
+  resolved: 2022-04-27T05:40:06Z
 Created Apr 18, 2022, 08:40PM::md.update
 Summary::md.summary
   the NAV node is actually a table of contents, so it should be named as such.

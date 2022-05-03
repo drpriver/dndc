@@ -1,7 +1,7 @@
-updated: 2022-01-01T19:23:42.520651
-updated: 2022-01-03T11:52:29.277866
-punt: 2022-04-18T16:54:08Z
-bugmagic^^^^
+Changelog::kv
+  updated: 2022-01-01T19:23:42.520651
+  updated: 2022-01-03T11:52:29.277866
+  punted: 2022-04-18T16:54:08Z
 Summary::md.summary
   All of the gui editors generate the HTML in the main thread, which blocks the UI,
   additionally on updates and keystrokes. It's fast enough that this mostly works, but

@@ -1,6 +1,6 @@
-created: 2022-04-19T23:29:59Z
-resolved: 2022-04-20T02:22:17Z
-bugmagic^^^^
+Changelog::kv
+  created: 2022-04-19T23:29:59Z
+  resolved: 2022-04-20T02:22:17Z
 Created Apr 19, 2022, 07:29PM::md.update
 Summary::md.summary
   It’s nice to be able to jump with tags in vim

@@ -1,7 +1,7 @@
-bug.py: v0.0.1
-created: 2022-02-06T15:10:47.911421
-resolved: 2022-02-06T18:44:56.819695
-bugmagic^^^^
+Changelog::kv
+  bug.py: v0.0.1
+  created: 2022-02-06T15:10:47.911421
+  resolved: 2022-02-06T18:44:56.819695
 Summary::md.summary
   Don’t import flag.
 
