@@ -781,7 +781,8 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
         case NODE_INVALID:
         case NODE_BULLETS:
         case NODE_LIST:
-            unreachable();
+            parse_log_err(ctx, ctx->linestart, LS("Invalid node to parse from"));
+            return PARSE_ERROR;
     }
     regular_string_parsing:;
     for(;ctx->cursor != ctx->end;){

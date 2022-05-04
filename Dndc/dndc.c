@@ -87,6 +87,9 @@ static
 warn_unused
 int
 execute_user_scripts(DndcContext* ctx, LongString jsargs){
+    // This implementation looks a little weird as I used to have
+    // both python and js scripting. It is structured to allow
+    // others in the future.
     int result = 0;
     uint64_t flags = ctx->flags;
     ArenaAllocator aa = {0};

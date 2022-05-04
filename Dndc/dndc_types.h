@@ -314,9 +314,9 @@ typedef struct DndcContext {
     // -----
 
     // Whether the context and such are heap allocated.
-    unsigned long heap_allocated: 1;
-    unsigned long textcache_allocated: 1;
-    unsigned long b64cache_allocated: 1;
+    uint32_t heap_allocated: 1;
+    uint32_t textcache_allocated: 1;
+    uint32_t b64cache_allocated: 1;
 } DndcContext;
 
 static inline force_inline
