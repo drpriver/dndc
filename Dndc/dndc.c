@@ -515,9 +515,6 @@ run_the_dndc(uint64_t flags,
                 case NODE_STYLESHEETS:
                     handles = &ctx.stylesheets_nodes;
                     break;
-                case NODE_DATA:
-                    handles = &ctx.data_nodes;
-                    break;
                 case NODE_LINKS:
                     handles = &ctx.link_nodes;
                     break;
@@ -614,42 +611,6 @@ run_the_dndc(uint64_t flags,
         report_size(&ctx, SV("ctx.links.count = "), ctx.links.count_);
     }
 
-    // Render data nodes into the data blob.
-    if(!wasm){
-        uint64_t before_data = get_t();
-        MStringBuilder sb = {.allocator=main_allocator(&ctx)};
-        MARRAY_FOR_EACH(NodeHandle, handle, ctx.data_nodes){
-            Node* data_node = get_node(&ctx, *handle);
-            // Node could've been mutated after being registered.
-            if(data_node->type != NODE_DATA)
-                continue;
-            NODE_CHILDREN_FOR_EACH(it, data_node){
-                Node* child = get_node(&ctx, *it);
-                if(!child->header.length){
-                    NODE_LOG_WARNING(&ctx, child, SV("Missing header from data child?"));
-                }
-                {
-                    msb_reset(&sb);
-                    int e = render_node(&ctx, &sb, *it, 1, 0);
-                    if(e){
-                        result = e;
-                        goto cleanup;
-                    }
-                }
-                if(!sb.cursor){
-                    NODE_LOG_WARNING(&ctx, child, SV("Rendered a data node with no data. Not outputting it."));
-                    continue;
-                }
-                LongString text = msb_detach_ls(&sb);
-                DataItem* di = Marray_alloc(DataItem)(&ctx.rendered_data, main_allocator(&ctx));
-                di->key = child->header;
-                di->value = text;
-            }
-        }
-        uint64_t after_data = get_t();
-        report_time(&ctx, SV("Data blob rendering took: "), after_data-before_data);
-        report_size(&ctx, SV("ctx.rendered_data.count = "), ctx.rendered_data.count);
-    }
     // User ast func
     if(!wasm && ast_func){
         int err = ast_func(ast_func_user_data, &ctx);
@@ -1265,7 +1226,7 @@ js_syntax_is_builtin(StringView str){
 static inline
 _Bool
 js_syntax_is_node_type(StringView str){
-    #define words "|MD|DIV|STRING|PARA|TITLE|HEADING|TABLE|TABLE_ROW|STYLESHEETS|LINKS|SCRIPTS|IMPORT|IMAGE|BULLETS|RAW|PRE|LIST|LIST_ITEM|KEYVALUE|KEYVALUEPAIR|IMGLINKS|TOC|DATA|COMMENT|CONTAINER|QUOTE|HR|JS|DETAILS|"
+    #define words "|MD|DIV|STRING|PARA|TITLE|HEADING|TABLE|TABLE_ROW|STYLESHEETS|LINKS|SCRIPTS|IMPORT|IMAGE|BULLETS|RAW|PRE|LIST|LIST_ITEM|KEYVALUE|KEYVALUEPAIR|IMGLINKS|TOC|COMMENT|CONTAINER|QUOTE|HR|JS|DETAILS|"
     const char* match = memmem(words, sizeof(words)-1, str.text, str.length);
     if(!match) return 0;
     return match[str.length] == '|' && match[-1] == '|';
@@ -1545,7 +1506,7 @@ js_syntax_is_builtin_utf16(StringViewUtf16 str){
 static inline
 _Bool
 js_syntax_is_node_type_utf16(StringViewUtf16 str){
-    #define words u"|MD|DIV|STRING|PARA|TITLE|HEADING|TABLE|TABLE_ROW|STYLESHEETS|LINKS|SCRIPTS|IMPORT|IMAGE|BULLETS|RAW|PRE|LIST|LIST_ITEM|KEYVALUE|KEYVALUEPAIR|IMGLINKS|TOC|DATA|COMMENT|CONTAINER|QUOTE|HR|JS|DETAILS|"
+    #define words u"|MD|DIV|STRING|PARA|TITLE|HEADING|TABLE|TABLE_ROW|STYLESHEETS|LINKS|SCRIPTS|IMPORT|IMAGE|BULLETS|RAW|PRE|LIST|LIST_ITEM|KEYVALUE|KEYVALUEPAIR|IMGLINKS|TOC|COMMENT|CONTAINER|QUOTE|HR|JS|DETAILS|"
     const uint16_t* match = memmem(words, sizeof(words)-2, str.text, str.length*2);
     if(!match) return 0;
     return match[str.length] == u'|' && match[-1] == u'|';
@@ -2143,7 +2104,6 @@ dndc_ctx_clone(DndcContext* ctx){
     cp(stylesheets_nodes);
     cp(link_nodes);
     cp(script_nodes);
-    cp(data_nodes);
     cp(meta_nodes);
     cp(img_nodes);
     cp(imglinks_nodes);
@@ -2167,12 +2127,6 @@ dndc_ctx_clone(DndcContext* ctx){
             result->links.keys[i+cap] = v.length?dndc_ctx_dup_sv(result, v):v;
         }
     }
-    MARRAY_FOR_EACH(DataItem, s, ctx->rendered_data)
-        Marray_push(DataItem)(&result->rendered_data, main_allocator(result),
-            (DataItem){
-                .key = dndc_ctx_dup_sv(result, s->key),
-                .value = ctx_dup_ls(result, s->value),
-            });
     MARRAY_FOR_EACH(IdItem, s, ctx->explicit_node_ids)
         Marray_push(IdItem)(&result->explicit_node_ids, main_allocator(result),
             (IdItem){
@@ -2226,7 +2180,6 @@ dndc_ctx_shallow_clone(DndcContext* ctx){
     cp(stylesheets_nodes);
     cp(link_nodes);
     cp(script_nodes);
-    cp(data_nodes);
     cp(meta_nodes);
     cp(img_nodes);
     cp(imglinks_nodes);
@@ -2243,8 +2196,6 @@ dndc_ctx_shallow_clone(DndcContext* ctx){
         result->links.count_ = ctx->links.count_;
         result->links.keys = Allocator_dupe(result->links.allocator, ctx->links.keys, sizeof(*result->links.keys)*cap*2);
     }
-    if(ctx->rendered_data.count)
-        Marray_extend(DataItem)(&result->rendered_data, main_allocator(result), ctx->rendered_data.data, ctx->rendered_data.count);
     if(ctx->explicit_node_ids.count)
         Marray_extend(IdItem)(&result->explicit_node_ids, main_allocator(result), ctx->explicit_node_ids.data, ctx->explicit_node_ids.count);
     if(ctx->renderedtoc.text)
@@ -2516,9 +2467,6 @@ dndc_node_set_type(DndcContext* ctx, DndcNodeHandle dnh, int type){
             break;
         case NODE_JS:
             node_store = &ctx->user_script_nodes;
-            break;
-        case NODE_DATA:
-            node_store = &ctx->data_nodes;
             break;
         case NODE_META:
             node_store = &ctx->meta_nodes;
@@ -2812,9 +2760,6 @@ dndc_ctx_make_node(DndcContext* ctx, int type, DndcStringView header, DndcNodeHa
         case NODE_JS:
             node_store = &ctx->user_script_nodes;
             break;
-        case NODE_DATA:
-            node_store = &ctx->data_nodes;
-            break;
         case NODE_META:
             node_store = &ctx->meta_nodes;
             break;
@@ -2907,9 +2852,6 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
                 break;
             case NODE_STYLESHEETS:
                 handles = &ctx->stylesheets_nodes;
-                break;
-            case NODE_DATA:
-                handles = &ctx->data_nodes;
                 break;
             case NODE_LINKS:
                 handles = &ctx->link_nodes;
@@ -3051,43 +2993,6 @@ dndc_ctx_resolve_links(DndcContext* ctx){
 }
 
 DNDC_API
-int
-dndc_ctx_resolve_data_blocks(DndcContext* ctx){
-    MStringBuilder sb = {.allocator=main_allocator(ctx)};
-    MARRAY_FOR_EACH(NodeHandle, handle, ctx->data_nodes){
-        if(NodeHandle_eq(*handle, INVALID_NODE_HANDLE)) continue;
-        Node* data_node = get_node(ctx, *handle);
-        *handle = INVALID_NODE_HANDLE;
-        // Node could've been mutated after being registered.
-        if(data_node->type != NODE_DATA)
-            continue;
-        NODE_CHILDREN_FOR_EACH(it, data_node){
-            Node* child = get_node(ctx, *it);
-            if(!child->header.length){
-                NODE_LOG_WARNING(ctx, child, SV("Missing header from data child?"));
-            }
-            {
-                msb_reset(&sb);
-                int e = render_node(ctx, &sb, *it, 1, 0);
-                if(e){
-                    msb_destroy(&sb);
-                    return 1;
-                }
-            }
-            if(!sb.cursor){
-                NODE_LOG_WARNING(ctx, child, SV("Rendered a data node with no data. Not outputting it."));
-                continue;
-            }
-            LongString text = msb_detach_ls(&sb);
-            DataItem* di = Marray_alloc(DataItem)(&ctx->rendered_data, main_allocator(ctx));
-            di->key = child->header;
-            di->value = text;
-        }
-    }
-    return 0;
-}
-
-DNDC_API
 size_t
 dndc_ctx_select_nodes(
         DndcContext* ctx, size_t* cookie,
@@ -3156,7 +3061,6 @@ dndc_node_tree_repr_inner(DndcContext* ctx, NodeHandle handle, int depth, MStrin
         case NODE_HEADING:
         case NODE_LIST:
         case NODE_COMMENT:
-        case NODE_DATA:
         case NODE_TOC:
         case NODE_KEYVALUE:
         case NODE_IMGLINKS:

@@ -137,11 +137,8 @@ type CtxType = {
     // A utility function that turns a string into the version of
     // the string that can be used as an ID. It will turn a string
     // looking like "This is a string" into "this-is-a-string".
-    // You don't generally need this as, but if you want to store
-    // ids for later use in the data blob you might need to.  If
-    // you access the '.id' field of a node, it will already be
-    // kebabed, but you might be indirectly referring to ids by
-    // strings.
+    // If you access the '.id' field of a node, it will already be
+    // kebabed, but you might be indirectly referring to ids by strings.
     //
     // This can also be useful just to see how ids will be
     // transformed.
@@ -183,28 +180,6 @@ type CtxType = {
     //   raw.add_child(escaped);
     // --------
     html_escape(s:string): string;
-
-    //
-    // set_data
-    // --------
-    // Sets a key, value in the generated data blob (which will be
-    // available as `data_blob` in the global scope for scripts in
-    // the final document.
-    //
-    // Arguments:
-    // ----------
-    //   key:   The key to retrieve this data from the datablob
-    //   value: the value to store in the data blob under this
-    //          key.
-    // Example:
-    // --------
-    //   let weapons = [
-    //    {name: 'Longsword', damage: '1d8'},
-    //    {name: 'Shortsword', damage: '1d6'},
-    //   ];
-    //   ctx.set_data('weapons', JSON.stringify(weapons));
-    // --------
-    set_data(key:string, value:string);
 
     //
     // select_nodes
@@ -768,13 +743,14 @@ type Attributes = {
     //
     // Example:
     // --------
+    //   let coords = {};
     //   let rooms = ctx.select_nodes(classes:['room']);
     //   for(let room of rooms){
     //     let coord = room.attributes.get('coord');
     //     let[x, y] = coord.split(',');
     //     x = parseInt(x);
     //     y = parseInt(y);
-    //     ctx.set_data(room.id, JSON.stringify([x, y]));
+    //     coords[room.id] = [x, y];
     //   }
     // --------
     get(key:string):string?;
@@ -869,7 +845,6 @@ export const NodeType = {
     KEYVALUEPAIR: number;
     IMGLINKS:     number;
     TOC:          number;
-    DATA:         number;
     COMMENT:      number;
     CONTAINER:    number;
     QUOTE:        number;

@@ -43,18 +43,6 @@
 #include "Rarray.h"
 
 
-//
-// DataItem
-// --------
-// For things that will go in the generated js data_blob.
-//
-typedef struct DataItem {
-    StringView key;
-    LongString value;
-} DataItem;
-#define MARRAY_T DataItem
-#include "Marray.h"
-
 typedef struct Attribute {
     StringView key;
     StringView value; // often null
@@ -276,7 +264,6 @@ typedef struct DndcContext {
         Marray(NodeHandle) stylesheets_nodes;
         Marray(NodeHandle) link_nodes;
         Marray(NodeHandle) script_nodes;
-        Marray(NodeHandle) data_nodes;
         Marray(NodeHandle) meta_nodes;
         // NOTE: we only grab these during parsing right now,
         // we don't add to them from user scripts.
@@ -295,8 +282,6 @@ typedef struct DndcContext {
     Marray(StringView) dependencies;
     // Mapping of shorthand for a link to its actual link.
     StringTable links;
-    // Mapping of key to string (will be outputted as "data_blob").
-    Marray(DataItem) rendered_data;
     // TODO: use an adaptive table (linear at small N, hashmap
     //       at large N).
     Marray(IdItem) explicit_node_ids;

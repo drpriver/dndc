@@ -113,15 +113,14 @@ class NodeType(IntEnum):
     KEYVALUEPAIR = 19
     IMGLINKS     = 20
     TOC          = 21
-    DATA         = 22
-    COMMENT      = 23
-    CONTAINER    = 24
-    QUOTE        = 25
-    HR           = 26
-    JS           = 27
-    DETAILS      = 28
-    META         = 29
-    INVALID      = 30
+    COMMENT      = 22
+    CONTAINER    = 23
+    QUOTE        = 24
+    HR           = 25
+    JS           = 26
+    DETAILS      = 27
+    META         = 28
+    INVALID      = 29
 
 class Context:
     def __new__(cls, flags:Flags=Flags.NONE, filename:Optional[str]=None, filecache:Optional[FileCache]=None) -> Context:

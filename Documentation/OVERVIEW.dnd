@@ -165,7 +165,6 @@ Convenience::md
       KEYVALUEPAIR | ---          | No
       IMGLINKS     | imglinks     | Yes
       TOC          | toc          | Yes
-      DATA         | data         | No
       COMMENT      | comment      | ---
       CONTAINER    | ---          | No
       QUOTE        | quote        | Yes
@@ -230,48 +229,6 @@ Self-Contained::md
   Images can also be included. They are base64-encoded and stored as a data
   string in the html page. Possibly we can add an attribute to disable this in
   the future.
-
-  Data Blobs::md
-    Sometimes your js wants access to some data that you want accessible for your
-    scripts. If what you want is rendered html that you can later dynamically
-    insert into the document, use a data block.
-
-    Example:
-
-    ::pre .embedded
-      ::data
-        Hello::md
-          This entire html fragment that this md block renders into will be
-          stored in a special js object at global scope called 'data_blob'.
-          This one will be under the 'Hello' key.
-        World::md
-          And this will be under the 'World' key.
-          Inspect the source!
-    ::data
-      Hello::md
-        This entire html fragment that this md block renders into will be stored
-        in a special js object at global scope called 'data_blob'. This one will
-        be under the 'Hello' key.
-
-      World::md
-        And this will be under the 'World' key. Inspect the source!
-
-    Data blocks are rendered into html, but do not appear at the document at that
-    location - their contents only appear in the data blob.
-
-    You can add keys to the data blob in javascript blocks. You must use string
-    keys and string values.
-
-    ::pre .embedded
-      ::js
-        ctx.set_data('foo', 'bar')
-
-    You can't currently introspect the data blob from javascript as the blocks
-    aren't rendered until all user scripts are finished executing.
-
-    If you need more than strings, use a javascript block to create a SCRIPTS
-    node, set the 'inline' attribute and then just insert whatever you want using
-    js syntax.
 
 Attributes, Classes and Directives::md
   Blocks can have classes, which directly correspond to css classes in the output

@@ -386,7 +386,6 @@ gather_anchor(DndcContext* ctx, NodeHandle handle, int node_depth){
             }
         }
         // fall-through
-        case NODE_DATA: // this is a little sketchy
         case NODE_IMPORT:
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:{

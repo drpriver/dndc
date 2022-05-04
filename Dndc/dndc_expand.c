@@ -143,9 +143,6 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
         case NODE_QUOTE:
             write_generic_header(ctx, n, indent, msb);
             return expand_node_body(ctx, n, indent+2, msb, node_depth+1);
-        case NODE_DATA:
-            NODE_LOG_ERROR(ctx,n, "DATA node unhandled");
-            return PARSE_ERROR;
         case NODE_HR:
         case NODE_TOC:
             write_generic_header(ctx, n, indent, msb);
@@ -202,7 +199,6 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int n
         case NODE_INVALID:
         case NODE_HR:
         case NODE_CONTAINER:
-        case NODE_DATA:
         case NODE_TOC:
         case NODE_KEYVALUEPAIR:
         case NODE_LIST_ITEM:

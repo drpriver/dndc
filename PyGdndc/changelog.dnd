@@ -1,3 +1,6 @@
+Version 0.15.0::md
+  * Removed the data node and data blob.
+    - This was used in one document and wasn't even the best way to solve that particular problem.
 Version 0.13.0::md
   * Renamed toc node to nav node. nav is still an allowed alias to the toc node.
   * Removed ctx.outname

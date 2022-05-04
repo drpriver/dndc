@@ -238,7 +238,6 @@ class TestExamples(TestCase):
             ctx.gather_links()
             ctx.resolve_links()
             ctx.build_toc()
-            ctx.resolve_data_blocks()
             html2 = ctx.render()
             self.assertEqual(html1, html2)
             html3 = ctx.clone().render()

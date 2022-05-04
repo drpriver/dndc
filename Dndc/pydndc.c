@@ -660,6 +660,10 @@ static PyObject* node_type_enum;
 
 PyMODINIT_FUNC _Nullable
 PyInit_pydndc(void){
+    if(dndc_version() != DNDC_NUMERIC_VERSION){
+        PyErr_SetString(PyExc_RuntimeError, "dndc version mismatch");
+        return NULL;
+    }
     PyObject* mod = PyModule_Create(&pydndc);
     PyObject* enu_mod = NULL;
     PyObject* intenum = NULL;
@@ -1593,17 +1597,6 @@ DndcContextPy_build_toc(PyObject* s, PyObject* arg){
 }
 
 static
-PyObject* _Nullable
-DndcContextPy_resolve_data_blocks(PyObject* s, PyObject* arg){
-    (void)arg;
-    DndcContextPy* self = (DndcContextPy*)s;
-    int err = dndc_ctx_resolve_data_blocks(self->ctx);
-    if(err)
-        return PyErr_Format(PyExc_RuntimeError, "Bad imports (Check the errors).");
-    Py_RETURN_NONE;
-}
-
-static
 PyObject*_Nullable
 DndcContextPy_select_nodes(PyObject* s, PyObject* args, PyObject* kwargs){
     DndcContextPy* self = (DndcContextPy*)s;
@@ -1874,15 +1867,6 @@ static PyMethodDef DndcContextPy_methods[] = {
             "--\n"
             "\n"
             "Builds the TOC node if there is one.",
-    },
-    {
-        .ml_name="resolve_data_blocks",
-        .ml_meth=DndcContextPy_resolve_data_blocks,
-        .ml_flags=METH_NOARGS,
-        .ml_doc="resolve_data_blocks(self)\n"
-            "--\n"
-            "\n"
-            "Don't worry aboout this one.",
     },
     {
         .ml_name="select_nodes",

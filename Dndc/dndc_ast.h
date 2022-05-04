@@ -508,15 +508,14 @@ dndc_node_get_parent(DndcContext*, DndcNodeHandle);
     apply(KEYVALUEPAIR,   19)\
     apply(IMGLINKS,       20)\
     apply(TOC,            21)\
-    apply(DATA,           22)\
-    apply(COMMENT,        23)\
-    apply(CONTAINER,      24)\
-    apply(QUOTE,          25)\
-    apply(HR,             26)\
-    apply(JS,             27)\
-    apply(DETAILS,        28)\
-    apply(META,           29)\
-    apply(INVALID,        30)\
+    apply(COMMENT,        22)\
+    apply(CONTAINER,      23)\
+    apply(QUOTE,          24)\
+    apply(HR,             25)\
+    apply(JS,             26)\
+    apply(DETAILS,        27)\
+    apply(META,           28)\
+    apply(INVALID,        29)\
 
 enum DndcNodeType {
 #define X(a, b) DNDC_NODE_TYPE_##a = b,
@@ -1047,15 +1046,6 @@ dndc_ctx_resolve_links(DndcContext*);
 //
 
 DNDC_API
-int
-dndc_ctx_resolve_data_blocks(DndcContext*);
-// -----------
-// DELETEME - this data block concept sucks.
-//
-// This function can call the logger.
-//
-
-DNDC_API
 size_t
 dndc_ctx_select_nodes(DndcContext* ctx, size_t* cookie,
         int type,
@@ -1188,9 +1178,6 @@ compile_dnd_to_html(
     err = dndc_ctx_build_toc(ctx);
     if(err) goto fail;
 
-    err = dndc_ctx_resolve_data_blocks(ctx);
-    if(err) goto fail;
-
     err = dndc_ctx_render_to_html(ctx, outhtml);
     if(err) goto fail;
 
@@ -1244,9 +1231,6 @@ compile_dnd_to_html_with_extra_script(
     if(err) goto fail;
 
     err = dndc_ctx_build_toc(ctx);
-    if(err) goto fail;
-
-    err = dndc_ctx_resolve_data_blocks(ctx);
     if(err) goto fail;
 
     err = dndc_ctx_render_to_html(ctx, outhtml);

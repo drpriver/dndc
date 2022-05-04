@@ -139,7 +139,6 @@ JSMETHOD(js_dndc_context_make_node);
 JSMETHOD(js_dndc_context_add_dependency);
 JSMETHOD(js_dndc_context_kebab);
 JSMETHOD(js_dndc_context_html_escape);
-JSMETHOD(js_dndc_context_set_data);
 JSMETHOD(js_dndc_context_select_nodes);
 JSMETHOD(js_dndc_context_to_string);
 JSMETHOD(js_dndc_context_add_link);
@@ -156,7 +155,6 @@ JSCFunctionListEntry JS_DNDC_CONTEXT_FUNCS[] = {
     JS_CFUNC_DEF("add_dependency", 1, js_dndc_context_add_dependency),
     JS_CFUNC_DEF("kebab", 1, js_dndc_context_kebab),
     JS_CFUNC_DEF("html_escape", 1, js_dndc_context_html_escape),
-    JS_CFUNC_DEF("set_data", 2, js_dndc_context_set_data),
     JS_CFUNC_DEF("select_nodes", 1, js_dndc_context_select_nodes),
     JS_CFUNC_DEF("toString", 0, js_dndc_context_to_string),
     JS_CFUNC_DEF("add_link", 2, js_dndc_context_add_link),
@@ -1275,9 +1273,6 @@ js_dndc_node_set_type(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst 
         case NODE_SCRIPTS:
             Marray_push(NodeHandle)(&ctx->script_nodes, main_allocator(ctx), handle);
             break;
-        case NODE_DATA:
-            Marray_push(NodeHandle)(&ctx->data_nodes, main_allocator(ctx), handle);
-            break;
         case NODE_META:
             Marray_push(NodeHandle)(&ctx->meta_nodes, main_allocator(ctx), handle);
             break;
@@ -1797,9 +1792,6 @@ JSMETHOD(js_dndc_context_make_node){
         case NODE_JS:
             node_store = &ctx->user_script_nodes;
             break;
-        case NODE_DATA:
-            node_store = &ctx->data_nodes;
-            break;
         case NODE_META:
             node_store = &ctx->meta_nodes;
             break;
@@ -1873,24 +1865,6 @@ JSMETHOD(js_dndc_context_html_escape){
     msb_destroy(&msb);
     Allocator_free(temp_allocator(ctx), sv.text, sv.length+1);
     return result;
-}
-
-JSMETHOD(js_dndc_context_set_data){
-    DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
-    if(!ctx)
-        return JS_EXCEPTION;
-    if(argc != 2)
-        return JS_ThrowTypeError(jsctx, "Need 2 string argument to set_data");
-    StringView key = jsstring_to_stringview(jsctx, argv[0], string_allocator(ctx));
-    if(!key.text)
-        return JS_EXCEPTION;
-    LongString value = jsstring_to_longstring(jsctx, argv[1], string_allocator(ctx));
-    if(!value.text)
-        return JS_EXCEPTION;
-    DataItem* new_data = Marray_alloc(DataItem)(&ctx->rendered_data, main_allocator(ctx));
-    new_data->key = key;
-    new_data->value = value;
-    return JS_UNDEFINED;
 }
 
 JSMETHOD(js_dndc_context_select_nodes){
@@ -2074,7 +2048,7 @@ JSMETHOD(js_dndc_context_add_link){
     if(!ctx)
         return JS_EXCEPTION;
     if(argc != 2)
-        return JS_ThrowTypeError(jsctx, "Need 2 string argument to set_data");
+        return JS_ThrowTypeError(jsctx, "Need 2 string argument to add_link");
     LongString kebabed_ = jsstring_to_kebabed(jsctx, argv[0], string_allocator(ctx));
     if(!kebabed_.text)
         return JS_EXCEPTION;

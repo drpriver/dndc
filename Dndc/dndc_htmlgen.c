@@ -118,17 +118,6 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             }
         }
     }
-    if(ctx->rendered_data.count){
-        msb_write_literal(msb, "<script>\nconst data_blob = {");
-        MARRAY_FOR_EACH(DataItem, data, ctx->rendered_data){
-            msb_write_char(msb, '"');
-            msb_write_str(msb, data->key.text, data->key.length);
-            msb_write_literal(msb, "\": \"");
-            msb_write_json_escaped_str(msb, data->value.text, data->value.length);
-            msb_write_literal(msb, "\",\n");
-        }
-        msb_write_literal(msb, "};\n</script>\n");
-    }
     if(complete_document){
         if(!NodeHandle_eq(ctx->titlenode, INVALID_NODE_HANDLE)){
             Node* n = get_node(ctx, ctx->titlenode);
@@ -298,7 +287,6 @@ build_toc_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
             }
         }
         // fall-through
-        case NODE_DATA: // this is a little sketchy
         case NODE_IMPORT:
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:{
@@ -1385,14 +1373,6 @@ RENDERFUNC(IMGLINKS){
     }
     msb_write_literal(sb, "</svg>\n");
     msb_write_literal(sb, "</div>\n");
-    return 0;
-}
-RENDERFUNC(DATA){
-    // intentionally not rendering this
-    (void)ctx;
-    (void)sb;
-    (void)handle;
-    (void)header_depth;
     return 0;
 }
 RENDERFUNC(COMMENT){

@@ -511,9 +511,6 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                     case NODE_SCRIPTS:
                         Marray_push(NodeHandle)(&ctx->script_nodes, main_allocator(ctx), node_handle);
                         break;
-                    case NODE_DATA:
-                        Marray_push(NodeHandle)(&ctx->data_nodes, main_allocator(ctx), node_handle);
-                        break;
                     case NODE_META:
                         Marray_push(NodeHandle)(&ctx->meta_nodes, main_allocator(ctx), node_handle);
                         break;
@@ -758,7 +755,6 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
         case NODE_SCRIPTS:
             return parse_raw_node(ctx, parent_handle, indentation);
         case NODE_IMGLINKS:
-        case NODE_DATA:
         case NODE_TOC:
         case NODE_LINKS:
         case NODE_IMPORT:

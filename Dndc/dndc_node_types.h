@@ -25,15 +25,14 @@
     apply(KEYVALUEPAIR,   19)\
     apply(IMGLINKS,       20)\
     apply(TOC,            21)\
-    apply(DATA,           22)\
-    apply(COMMENT,        23)\
-    apply(CONTAINER,      24)\
-    apply(QUOTE,          25)\
-    apply(HR,             26)\
-    apply(JS,             27)\
-    apply(DETAILS,        28)\
-    apply(META,           29)\
-    apply(INVALID,        30)\
+    apply(COMMENT,        22)\
+    apply(CONTAINER,      23)\
+    apply(QUOTE,          24)\
+    apply(HR,             25)\
+    apply(JS,             26)\
+    apply(DETAILS,        27)\
+    apply(META,           28)\
+    apply(INVALID,        29)\
 
 typedef enum NodeType {
     #define X(a, b) NODE_##a = b,
@@ -79,7 +78,6 @@ NODEALIASES[] = {
     {SV("imglinks"),     NODE_IMGLINKS},
     {SV("nav"),          NODE_TOC},
     {SV("toc"),          NODE_TOC},
-    {SV("data"),         NODE_DATA},
     {SV("quote"),        NODE_QUOTE},
     {SV("hr"),           NODE_HR},
     {SV("details"),      NODE_DETAILS},
@@ -129,7 +127,6 @@ NODETYPE_TO_NODE_ALIASES[NODE_INVALID+1] = {
      [NODE_COMMENT]     = SV("comment"),
      [NODE_IMGLINKS]    = SV("imglinks"),
      [NODE_TOC]         = SV("toc"),
-     [NODE_DATA]        = SV("data"),
      [NODE_QUOTE]       = SV("quote"),
      [NODE_HR]          = SV("hr"),
      [NODE_JS]          = SV("js"),
