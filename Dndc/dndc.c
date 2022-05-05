@@ -3147,6 +3147,186 @@ dndc_ctx_add_link(DndcContext* ctx, DndcStringView k, DndcStringView v){
     return 0;
 }
 
+static inline
+void
+node_to_json(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
+
+DNDC_API
+int
+dndc_node_to_json(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString*out){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 1;
+    MStringBuilder sb = {.allocator=get_mallocator()};
+    node_to_json(ctx, handle, &sb);
+    *out = msb_detach_ls(&sb);
+    return 0;
+}
+static inline
+void
+node_to_json(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
+    Node* node = get_node(ctx, handle);
+    MSB_FORMAT(sb, "{\"type\":",node->type, ",\"handle\":", handle._value);
+    if(NodeHandle_eq(node->parent, INVALID_NODE_HANDLE))
+        MSB_FORMAT(sb, ",\"parent\":null");
+    else
+        MSB_FORMAT(sb, ",\"parent\":", node->parent._value);
+    MSB_FORMAT(sb, ",\"header\":\"");
+    if(node->header.length)
+        msb_write_json_escaped_str(sb, node->header.text, node->header.length);
+    msb_write_char(sb, '"');
+    MSB_FORMAT(sb, ",\"children\":[");
+    NODE_CHILDREN_FOR_EACH(ch, node){
+        MSB_FORMAT(sb, ch->_value);
+        msb_write_char(sb, ',');
+    }
+    if(node_children_count(node))
+        msb_erase(sb, 1);
+    msb_write_char(sb, ']');
+    msb_write_literal(sb, ",\"attributes\":{");
+    RARRAY_FOR_EACH(Attribute, attr, node->attributes){
+        msb_write_char(sb, '"');
+        msb_write_json_escaped_str(sb, attr->key.text, attr->key.length);
+        msb_write_char(sb, '"');
+        msb_write_char(sb, ':');
+        msb_write_char(sb, '"');
+        if(attr->value.length){
+            msb_write_json_escaped_str(sb, attr->value.text, attr->value.length);
+        }
+        msb_write_char(sb, '"');
+        msb_write_char(sb, ',');
+    }
+    if(node->attributes && node->attributes->count)
+        msb_erase(sb, 1);
+    msb_write_char(sb, '}');
+    msb_write_literal(sb, ",\"classes\":[");
+    RARRAY_FOR_EACH(StringView, cls, node->classes){
+        msb_write_char(sb, '"');
+        msb_write_json_escaped_str(sb, cls->text, cls->length);
+        msb_write_char(sb, '"');
+        msb_write_char(sb, ',');
+    }
+    if(node->classes && node->classes->count)
+        msb_erase(sb, 1);
+    msb_write_char(sb, ']');
+    MSB_FORMAT(sb, ",\"filename\":", node->filename_idx);
+    MSB_FORMAT(sb, ",\"row\":", node->row);
+    MSB_FORMAT(sb, ",\"col\":", node->col);
+    MSB_FORMAT(sb, ",\"flags\":", node->flags, "}");
+}
+
+static inline
+void
+ctx_to_json(DndcContext* ctx, MStringBuilder* sb);
+
+DNDC_API
+int
+dndc_ctx_to_json(DndcContext* ctx, DndcLongString*out){
+    MStringBuilder sb = {.allocator=get_mallocator()};
+    ctx_to_json(ctx, &sb);
+    *out = msb_detach_ls(&sb);
+    return 0;
+}
+
+static inline
+void
+ctx_to_json(DndcContext* ctx, MStringBuilder* sb){
+    msb_write_char(sb, '{');
+    msb_write_literal(sb, "\"nodes\":[");
+    for(size_t i = 0; i < ctx->nodes.count; i++){
+        node_to_json(ctx, (NodeHandle){.index=i}, sb);
+        msb_write_char(sb, ',');
+    }
+    if(ctx->nodes.count)
+        msb_erase(sb, 1);
+    msb_write_char(sb, ']');
+    if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE))
+        MSB_FORMAT(sb, ",\"root\":null");
+    else
+        MSB_FORMAT(sb, ",\"root\":", ctx->root_handle._value);
+    msb_write_literal(sb, ",\"filenames\":[");
+    MARRAY_FOR_EACH(StringView, fn, ctx->filenames){
+        msb_write_char(sb, '"');
+        msb_write_json_escaped_str(sb, fn->text, fn->length);
+        msb_write_char(sb, '"');
+        msb_write_char(sb, ',');
+    }
+    if(ctx->filenames.count)
+        msb_erase(sb, 1);
+    msb_write_char(sb, ']');
+    msb_write_literal(sb, ",\"filename\":\"");
+    msb_write_json_escaped_str(sb, ctx->filename.text, ctx->filename.length);
+    msb_write_char(sb, '"');
+    msb_write_literal(sb, ",\"base_directory\":\"");
+    msb_write_json_escaped_str(sb, ctx->base_directory.text, ctx->base_directory.length);
+    msb_write_char(sb, '"');
+#define WRITE_NODES(nodes) do { \
+    msb_write_literal(sb, ",\"" #nodes "\":["); \
+    MARRAY_FOR_EACH(NodeHandle, nh, ctx->nodes){ \
+        MSB_FORMAT(sb, nh->_value, ","); \
+    } \
+    if(ctx->nodes.count) \
+        msb_erase(sb, 1); \
+    msb_write_char(sb, ']'); \
+}while(0)
+
+    WRITE_NODES(user_script_nodes);
+    WRITE_NODES(imports);
+    WRITE_NODES(stylesheets_nodes);
+    WRITE_NODES(link_nodes);
+    WRITE_NODES(script_nodes);
+    WRITE_NODES(meta_nodes);
+    WRITE_NODES(img_nodes);
+    WRITE_NODES(imglinks_nodes);
+#undef WRITE_NODES
+    if(NodeHandle_eq(ctx->titlenode, INVALID_NODE_HANDLE))
+        MSB_FORMAT(sb, ",\"titlenode\":null");
+    else
+        MSB_FORMAT(sb, ",\"titlenode\":", ctx->titlenode._value);
+    if(NodeHandle_eq(ctx->tocnode, INVALID_NODE_HANDLE))
+        MSB_FORMAT(sb, ",\"tocnode\":null");
+    else
+        MSB_FORMAT(sb, ",\"tocnode\":", ctx->tocnode._value);
+    msb_write_literal(sb, ",\"links\":{}");
+    msb_write_literal(sb, ",\"explicit_node_ids\":{");
+    MARRAY_FOR_EACH(IdItem, eni, ctx->explicit_node_ids){
+        MSB_FORMAT(sb, "\"", eni->node._value, "\":\"");
+        msb_write_json_escaped_str(sb, eni->text.text, eni->text.length);
+        msb_write_char(sb, '"');
+        msb_write_char(sb, ',');
+    }
+    if(ctx->explicit_node_ids.count)
+        msb_erase(sb, 1);
+    msb_write_char(sb, '}');
+    msb_write_literal(sb, ",\"links\":{");
+    for(size_t i = 0; i < ctx->links.capacity_; i++){
+        StringView key = ctx->links.keys[i];
+        if(!key.length) continue;
+        StringView value = ctx->links.keys[i+ctx->links.capacity_];
+        msb_write_char(sb, '"');
+        msb_write_json_escaped_str(sb, key.text, key.length);
+        msb_write_literal(sb, "\":\"");
+        msb_write_json_escaped_str(sb, value.text, value.length);
+        msb_write_char(sb, '"');
+        msb_write_char(sb, ',');
+    }
+    if(ctx->links.count_)
+        msb_erase(sb, 1);
+    msb_write_char(sb, '}');
+    MSB_FORMAT(sb, ",\"flags\":", ctx->flags);
+    msb_write_literal(sb, ",\"dependencies\":[");
+    MARRAY_FOR_EACH(StringView, dep, ctx->dependencies){
+        msb_write_char(sb, '"');
+        msb_write_json_escaped_str(sb, dep->text, dep->length);
+        msb_write_char(sb, '"');
+        msb_write_char(sb, ',');
+    }
+    if(ctx->dependencies.count)
+        msb_erase(sb, 1);
+    msb_write_char(sb, ']');
+    msb_write_char(sb, '}');
+}
+
 #endif
 
 #ifdef __clang__

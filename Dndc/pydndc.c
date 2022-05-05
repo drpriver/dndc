@@ -1752,6 +1752,22 @@ DndcContextPy_add_link(PyObject* s, PyObject* args, PyObject* kwargs){
     Py_RETURN_NONE;
 }
 
+DNDC_API
+int
+dndc_ctx_to_json(DndcContext* ctx, DndcLongString*out);
+static
+PyObject* _Nullable
+DndcContextPy_to_json(PyObject* s, PyObject* arg){
+    (void)arg;
+    DndcContextPy* self = (DndcContextPy*)s;
+    LongString string;
+    int err = dndc_ctx_to_json(self->ctx, &string);
+    if(err) return PyErr_Format(PyExc_ValueError, "Problem converting to json.");
+    PyObject* result = PyUnicode_FromStringAndSize(string.text, string.length);
+    dndc_free_string(string);
+    return result;
+}
+
 
 static PyMethodDef DndcContextPy_methods[] = {
     {
@@ -1906,6 +1922,15 @@ static PyMethodDef DndcContextPy_methods[] = {
             "--\n"
             "\n"
             "Adds a link target to the doc (for use in [] links).",
+    },
+    {
+        .ml_name="_to_json",
+        .ml_meth=DndcContextPy_to_json,
+        .ml_flags=METH_NOARGS,
+        .ml_doc="_to_json(self)\n"
+            "--\n"
+            "\n"
+            "Convert context to a json string.",
     },
     {} /* Sentinel */
 };
@@ -2522,6 +2547,23 @@ DndcNodePy_tree_repr(PyObject* s, PyObject* arg){
     return result;
 }
 
+DNDC_API
+int
+dndc_node_to_json(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString*out);
+
+static
+PyObject* _Nullable
+DndcNodePy_to_json(PyObject* s, PyObject* arg){
+    (void)arg;
+    DndcNodePy* self = (DndcNodePy*)s;
+    LongString string;
+    int err = dndc_node_to_json(self->pyctx->ctx, self->handle, &string);
+    if(err) return PyErr_Format(PyExc_ValueError, "Problem converting to json.");
+    PyObject* result = PyUnicode_FromStringAndSize(string.text, string.length);
+    dndc_free_string(string);
+    return result;
+}
+
 
 static PyGetSetDef DndcNodePy_getset[] = {
     {
@@ -2759,6 +2801,15 @@ static PyMethodDef DndcNodePy_methods[] = {
             "--\n"
             "\n"
             "Debug tree representation.",
+    },
+    {
+        .ml_name="_to_json",
+        .ml_meth=DndcNodePy_to_json,
+        .ml_flags=METH_NOARGS,
+        .ml_doc="_to_json(self)\n"
+            "--\n"
+            "\n"
+            "Convert node to a json string.",
     },
     {} /* Sentinel */
 };
