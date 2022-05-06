@@ -8,20 +8,6 @@ typedef struct QJSContext QJSContext;
 #pragma clang assume_nonnull begin
 #endif
 
-//
-// Bitflags for controlling the qjs behavior
-// Kind of weird to currently have no values, but I used
-// to use this to control whether or not the FileSystem exists.
-// Now it just unconditionally exists.
-// Leaving this in case I want to have more conditional behavior,
-// but if it is still just NONE in a couple months I'll delete it.
-//
-//   - D. Priver, Nov 21 2021
-//
-typedef enum DndcJsFlags {
-    DNDC_JS_FLAGS_NONE = 0x0,
-} DndcJsFlags;
-
 static
 warn_unused
 int
@@ -33,7 +19,7 @@ new_qjs_rt(ArenaAllocator*);
 
 static
 QJSContext*_Nullable
-new_qjs_ctx(QJSRuntime*, DndcContext*, DndcJsFlags, LongString);
+new_qjs_ctx(QJSRuntime*, DndcContext*, LongString);
 
 static
 void

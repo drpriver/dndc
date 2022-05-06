@@ -142,8 +142,7 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
                     goto cleanup;
                 }
                 assert(!jsctx);
-                DndcJsFlags jsflags = DNDC_JS_FLAGS_NONE;
-                jsctx = new_qjs_ctx(rt, ctx, jsflags, jsargs);
+                jsctx = new_qjs_ctx(rt, ctx, jsargs);
                 if(!jsctx){
                     report_system_error(ctx, SV("Failed to initialize javascript context"));
                     result = DNDC_ERROR_JS;
@@ -3127,7 +3126,7 @@ dndc_node_execute_js(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString js){
     ArenaAllocator aa = {0};
     QJSRuntime* rt = new_qjs_rt(&aa);
     if(!rt) return DNDC_ERROR_JS;
-    QJSContext* jsctx = new_qjs_ctx(rt, ctx, DNDC_JS_FLAGS_NONE, LS("null"));
+    QJSContext* jsctx = new_qjs_ctx(rt, ctx, LS("null"));
     if(!jsctx){
         free_qjs_rt(rt, &aa);
         return DNDC_ERROR_JS;
