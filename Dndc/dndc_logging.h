@@ -152,6 +152,16 @@ void
 node_log_err_offset(DndcContext* ctx, const Node*, int, LongString);
 
 //
+// handle_log_err_offset
+// -------------------
+// Logs an error but with an offset to the column.
+// Rarely used.
+//
+static
+void
+handle_log_err_offset(DndcContext* ctx, NodeHandle, int, LongString);
+
+//
 // Error reporting functions
 // -------------------------
 // The following functions are for reporting errors and warnings. ONLY use

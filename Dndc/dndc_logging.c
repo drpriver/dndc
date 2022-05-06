@@ -102,6 +102,20 @@ node_log_err_offset(DndcContext* ctx, const Node* node, int offset, LongString m
 
 static
 void
+handle_log_err_offset(DndcContext* ctx, NodeHandle handle, int offset, LongString mess){
+    if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
+        return;
+    if(!ctx->log_func)
+        return;
+    Node* node = get_node(ctx, handle);
+    StringView filename = ctx->filenames.data[node->filename_idx];
+    int line = node->row;
+    int col = node->col + offset;
+    ctx->log_func(ctx->log_user_data, DNDC_ERROR_MESSAGE, filename.text, filename.length, line, col, mess.text, mess.length);
+}
+
+static
+void
 node_log_warning(DndcContext* ctx, const Node* node, size_t nargs, FormatArg* args){
     if(ctx->flags & DNDC_SUPPRESS_WARNINGS)
         return;

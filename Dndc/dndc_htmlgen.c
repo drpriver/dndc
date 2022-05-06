@@ -333,15 +333,14 @@ build_toc_block_children(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb
 
 static inline
 int
-write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const Node* node){
+write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const NodeHandle handle){
     for(size_t i = 0; i < length; i++){
         char c = text[i];
         switch(c){
             case '[':{
-                msb_write_literal(sb, "<a href=\"");
                 const char* closing_brace = memchr(text+i, ']', length-i);
                 if(unlikely(!closing_brace)){
-                    node_log_err_offset(ctx, node, i, LS("Unterminated '['"));
+                    handle_log_err_offset(ctx, handle, i, LS("Unterminated '['"));
                     return PARSE_ERROR;
                 }
                 const size_t link_length = closing_brace - (text+i);
@@ -360,29 +359,40 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                 {
                     MStringBuilder temp = {.allocator=temp_allocator(ctx)};
                     msb_write_kebab(&temp, alias, alias_length);
-                    StringView temp_str = msb_borrow_sv(&temp);
-                    const StringView* value = find_link_target(ctx, temp_str);
-                    if(unlikely(!value)){
-                        if(ctx->flags & DNDC_ALLOW_BAD_LINKS){
-                            NODE_LOG_WARNING(ctx, node, "Unable to resolve link: ", quoted(temp_str));
-                            msb_write_str(sb, temp_str.text, temp_str.length);
-                        }
-                        else {
-                            NODE_LOG_ERROR(ctx, node, "Unable to resolve link: ", quoted(temp_str));
-                            msb_destroy(&temp);
-                            return PARSE_ERROR;
-                        }
+                    if(!temp.cursor){
+                        msb_write_literal(sb, "<input type=checkbox>");
                     }
                     else {
-                        const StringView* val = value;
-                        msb_write_str(sb, val->text, val->length);
+                        StringView temp_str = msb_borrow_sv(&temp);
+                        if(SV_equals(temp_str, SV("x"))){
+                            msb_write_literal(sb, "<input type=checkbox checked>");
+                        }
+                        else {
+                            msb_write_literal(sb, "<a href=\"");
+                            const StringView* value = find_link_target(ctx, temp_str);
+                            if(unlikely(!value)){
+                                if(ctx->flags & DNDC_ALLOW_BAD_LINKS){
+                                    HANDLE_LOG_WARNING(ctx, handle, "Unable to resolve link: ", quoted(temp_str));
+                                    msb_write_str(sb, temp_str.text, temp_str.length);
+                                }
+                                else {
+                                    HANDLE_LOG_ERROR(ctx, handle, "Unable to resolve link: ", quoted(temp_str));
+                                    msb_destroy(&temp);
+                                    return PARSE_ERROR;
+                                }
+                            }
+                            else {
+                                const StringView* val = value;
+                                msb_write_str(sb, val->text, val->length);
+                            }
+                            msb_write_literal(sb, "\">");
+                            StringView sv = stripped_view(text+i+1, text_length);
+                            msb_write_str(sb, sv.text, sv.length);
+                            msb_write_literal(sb, "</a>");
+                        }
                     }
                     msb_destroy(&temp);
                 }
-                msb_write_literal(sb, "\">");
-                StringView sv = stripped_view(text+i+1, text_length);
-                msb_write_str(sb, sv.text, sv.length);
-                msb_write_literal(sb, "</a>");
                 i += link_length;
                 continue;
             }break;
@@ -547,7 +557,7 @@ print_u8x16(const char* prefix, uint8x16_t v){
 
 static inline
 int
-write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const Node* node){
+write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, NodeHandle nh){
     msb_ensure_additional(sb, length);
 #if 1 && !defined(NO_SIMD) && defined(__x86_64__)
     size_t cursor = sb->cursor;
@@ -643,7 +653,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
     }
     sb->cursor = cursor;
 #endif
-    return write_link_escaped_str_slow(ctx, sb, text, length, node);
+    return write_link_escaped_str_slow(ctx, sb, text, length, nh);
 }
 
 static inline
@@ -659,7 +669,7 @@ write_header(DndcContext* ctx, MStringBuilder* sb, NodeHandle handle, int header
         msb_write_kebab(sb, id.text, id.length);
         msb_write_literal(sb, "\">");
     }
-    int e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
+    int e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, handle);
     if(e) return e;
     MSB_FORMAT(sb, "</h", header_level, ">");
     return 0;
@@ -690,7 +700,7 @@ RENDERFUNC(STRING){
         NODE_LOG_WARNING(ctx, node, SV("Ignoring classes on string node"));
     if(unlikely(node_children_count(node)))
         NODE_LOG_WARNING(ctx, node, SV("Ignoring children of string node"));
-    int e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, node);
+    int e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, handle);
     if(e) return e;
     msb_write_char(sb, '\n');
     return 0;

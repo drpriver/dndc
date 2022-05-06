@@ -1,0 +1,10 @@
+Changelog::kv
+  created:  2022-03-11T00:53:34Z
+  resolved: 2022-05-06T16:28:25Z
+Created Mar 10, 2022, 07:53PM::md .update
+Summary::md .summary
+  Add a “ligature" for plain text checkboxes that basically will render to ✓
+  or similar unicode character.
+
+Resolved May 06, 2022, 12:28PM::md .update
+  Done.

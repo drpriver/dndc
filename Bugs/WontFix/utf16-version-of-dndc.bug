@@ -1,0 +1,19 @@
+Changelog::kv
+  created: 2022-05-05T22:01:25Z
+  wontfix: 2022-05-05T22:53:17Z
+Created May 05, 2022, 06:01PM::md .update
+Summary::md .summary
+  for ease of inter-operating with native gui toolkits, it’d be nice to have a
+  utf16 duplicate of the api.
+
+  This is too painful to do in C, so I’d want to do it in a different
+  language.
+
+  But I like that this is in C.
+
+  Hmm.
+
+WontFix May 05, 2022, 06:53PM::md .update
+  Eh maybe this is wrong approach anyway and you want to use utf-8 everywhere. I
+  only have the utf16 syntax funcs because those apis require it to be in utf16
+  code unit ranges.

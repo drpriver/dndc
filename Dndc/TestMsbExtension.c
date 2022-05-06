@@ -17,6 +17,8 @@ TestFunction(TestKebab){
         {SV("My wonderful cat, Lucy"), SV("my-wonderful-cat-lucy")},
         {SV("123, North Elm St."), SV("123-north-elm-st")},
         {SV(""), SV("")},
+        {SV(" "), SV("")},
+        {SV("x"), SV("x")},
     };
     for(size_t i = 0; i < arrlen(testcases); i++){
         struct test_case* tc = &testcases[i];
