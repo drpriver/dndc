@@ -4,6 +4,7 @@
 // dndc.h
 // ------
 // This documents the external API.
+// For the external, ast api, see dndc_ast.h
 // For the internal API, see dndc_funcs.h.
 //
 

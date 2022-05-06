@@ -523,17 +523,6 @@
         ::toc
       Rendered::md .rightside #noid
         ::toc
-  <code>:</code><code>:data</code>::md .node #id(data)
-    The <code>:</code><code>:data</code> node is for storing nodes that should be
-    rendered to html, but not immediately included in the document. They are
-    instead store in the data blob.
-
-    This is deprecated and discouraged as it is dubiously useful. You could just
-    have them as part of the document and use <code>display: none</code> in css
-    to have them not as part of the document and add them back in when you need
-    to.
-
-    There is no example for this node as it doesn't render into anything.
 
   <code>:</code><code>:quote</code>::md .node #id(quote)
     The <code>:</code><code>:quote</code> node is for block quotes. It's like a
