@@ -7,7 +7,6 @@
 #include "dndc_logging.h"
 #include "str_util.h"
 #include "msb_format.h"
-#include "error_handling.h"
 
 // NOTE: Formatting assumes a certain structure of the input tree
 //       which may not necessarily hold if user scripts or the ast api
@@ -168,7 +167,7 @@ format_node(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
         case NODE_KEYVALUEPAIR:
         case NODE_INVALID:
             NODE_LOG_ERROR(ctx, node, "Requested to format a node that can't be expressed as a top level dnd node: ", NODENAMES[node->type], ". It is possible that the parent node is not what you expect.");
-            return 1;
+            return DNDC_ERROR_INVALID_TREE;
     }
     unreachable();
 }
@@ -180,7 +179,7 @@ format_tree(DndcContext* ctx, MStringBuilder* sb){
     Node* root = get_node(ctx, ctx->root_handle);
     if(root->type != NODE_MD && root->type != NODE_DIV && root->type != NODE_CONTAINER){
         NODE_LOG_ERROR(ctx, root, "Node is not of type MD, DIV or CONTAINER: ", NODENAMES[root->type]);
-        return 1;
+        return DNDC_ERROR_INVALID_TREE;
     }
     int result = 0;
     NODE_CHILDREN_FOR_EACH(it, root){
@@ -285,7 +284,7 @@ FORMATFUNC(para_node){
         // assert(child->type == NODE_STRING);
         if(child->type != NODE_STRING){
             NODE_LOG_ERROR(ctx, node, "Children of paragraphs must be STRINGs");
-            return 1;
+            return DNDC_ERROR_INVALID_TREE;
         }
         format_write_wrapped_string(sb, &state, child->header);
     }
@@ -304,7 +303,7 @@ format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, 
         // assert(child->type == NODE_LIST_ITEM);
         if(child->type != NODE_LIST_ITEM){
             NODE_LOG_ERROR(ctx, node, "Children of bullets must be LIST_ITEMs");
-            return 1;
+            return DNDC_ERROR_INVALID_TREE;
         }
         msb_write_nchar(sb, ' ', indent);
         switch(bullet_depth){
@@ -361,7 +360,7 @@ FORMATFUNC(md_list){
         // assert(child->type == NODE_LIST_ITEM);
         if(child->type != NODE_LIST_ITEM){
             NODE_LOG_ERROR(ctx, node, "Children of lists must be LIST_ITEMs");
-            return 1;
+            return DNDC_ERROR_INVALID_TREE;
         }
         msb_write_nchar(sb, ' ', indent);
         MSB_FORMAT(sb, int_fmt(i+1), ". ");
@@ -445,7 +444,7 @@ FORMATFUNC(table_node){
             continue;
         if(unlikely(node_children_count(row) > arrlen(widths))){
             NODE_LOG_ERROR(ctx, row, SV("Row of a table has more than 100 entries. ("), node_children_count(row), SV("). This is not handled!"));
-            return FORMAT_ERROR;
+            return DNDC_ERROR_INVALID_TREE;
         }
         if(node_children_count(row) > (size_t)n_cells)
             n_cells = node_children_count(row);
@@ -459,7 +458,7 @@ FORMATFUNC(table_node){
                 assert(cell->type == NODE_CONTAINER);
                 if(cell->type != NODE_CONTAINER){
                     NODE_LOG_ERROR(ctx, cell, "Expected a CONTAINER");
-                    return 1;
+                    return DNDC_ERROR_INVALID_TREE;
                 }
                 size_t this_width = 0;
                 NODE_CHILDREN_FOR_EACH(str_iter, cell){
@@ -467,7 +466,7 @@ FORMATFUNC(table_node){
                     // assert(str->type == NODE_STRING);
                     if(str->type != NODE_STRING){
                         NODE_LOG_ERROR(ctx, str, "Expected a STRING");
-                        return 1;
+                        return DNDC_ERROR_INVALID_TREE;
                     }
                     this_width += 1 + str->header.length;
                 }
@@ -574,7 +573,7 @@ FORMATFUNC(kv_node){
         // assert(node_children_count(child) == 2);
         if(node_children_count(child) != 2){
             NODE_LOG_ERROR(ctx, child, "Expected two children");
-            return 1;
+            return DNDC_ERROR_INVALID_TREE;
         }
         StringView key = get_node(ctx, node_children(child)[0])->header;
         Node* value_node = get_node(ctx, node_children(child)[1]);
@@ -591,14 +590,14 @@ FORMATFUNC(kv_node){
             // assert(value_node->type == NODE_CONTAINER);
             if(value_node->type != NODE_CONTAINER){
                 NODE_LOG_ERROR(ctx, value_node, "Expected a CONTAINER");
-                return 1;
+                return DNDC_ERROR_INVALID_TREE;
             }
             NODE_CHILDREN_FOR_EACH(c, value_node){
                 Node* n = get_node(ctx, *c);
                 // assert(n->type == NODE_STRING);
                 if(n->type != NODE_STRING){
                     NODE_LOG_ERROR(ctx, n, "Expected a STRING");
-                    return 1;
+                    return DNDC_ERROR_INVALID_TREE;
                 }
                 format_write_wrapped_string(sb, &state, n->header);
             }
@@ -623,7 +622,7 @@ FORMATFUNC(raw_node){
         // assert(child->type == NODE_STRING);
         if(child->type != NODE_STRING){
             NODE_LOG_ERROR(ctx, child, "Expected A STRING");
-            return 1;
+            return DNDC_ERROR_INVALID_TREE;
         }
         if(child->header.length){
             msb_write_nchar(sb, ' ', nspace);

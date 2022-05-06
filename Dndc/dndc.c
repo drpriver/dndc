@@ -138,7 +138,7 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
                 rt = new_qjs_rt(&aa);
                 if(!rt) {
                     report_system_error(ctx, SV("Failed to create javascript rt"));
-                    result = GENERIC_ERROR;
+                    result = DNDC_ERROR_JS;
                     goto cleanup;
                 }
                 assert(!jsctx);
@@ -146,7 +146,7 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
                 jsctx = new_qjs_ctx(rt, ctx, jsflags, jsargs);
                 if(!jsctx){
                     report_system_error(ctx, SV("Failed to initialize javascript context"));
-                    result = GENERIC_ERROR;
+                    result = DNDC_ERROR_JS;
                     goto cleanup;
                 }
                 uint64_t after_init = get_t();
@@ -355,7 +355,7 @@ run_the_dndc(uint64_t flags,
     ctx.links.allocator = main_allocator(&ctx);
     if(!source_text.text){
         report_system_error(&ctx, SV("String with no data given as input"));
-        result = UNEXPECTED_END;
+        result = DNDC_ERROR_PARSE;
         goto cleanup;
     }
     // Quick and dirty estimate of how many nodes we will need.
@@ -413,21 +413,21 @@ run_the_dndc(uint64_t flags,
             NodeHandle handle = ctx.imports.data[0];
             Node* node = get_node(&ctx, handle);
             NODE_LOG_ERROR(&ctx, node, SV("Imports are illegal for untrusted input."));
-            result = PARSE_ERROR;
+            result = DNDC_ERROR_UNTRUSTED;
             goto cleanup;
         }
         if(ctx.user_script_nodes.count){
             NodeHandle handle = ctx.user_script_nodes.data[0];
             Node* node = get_node(&ctx, handle);
             NODE_LOG_ERROR(&ctx, node, SV("JS blocks are illegal for untrusted input."));
-            result = PARSE_ERROR;
+            result = DNDC_ERROR_UNTRUSTED;
             goto cleanup;
         }
         if(ctx.script_nodes.count){
             NodeHandle handle = ctx.script_nodes.data[0];
             Node* node = get_node(&ctx, handle);
             NODE_LOG_ERROR(&ctx, node, SV("Script blocks are illegal for untrusted input"));
-            result = PARSE_ERROR;
+            result = DNDC_ERROR_UNTRUSTED;
             goto cleanup;
         }
     }
@@ -459,7 +459,7 @@ run_the_dndc(uint64_t flags,
             }
             if(ctx.imports.count > 1000){
                 NODE_LOG_ERROR(&ctx, node, SV("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?"));
-                result = PARSE_ERROR;
+                result = DNDC_ERROR_INVALID_TREE;
                 goto cleanup;
             }
             // NOTE: re-get the node every loop as the pointer is invalidated.
@@ -468,7 +468,7 @@ run_the_dndc(uint64_t flags,
                 Node* child = get_node(&ctx, child_handle);
                 if(child->type != NODE_STRING){
                     NODE_LOG_ERROR(&ctx, child, SV("import child is not a STRING"));
-                    result = PARSE_ERROR;
+                    result = DNDC_ERROR_INVALID_TREE;
                     goto cleanup;
                 }
                 StringView filename = child->header;
@@ -573,7 +573,7 @@ run_the_dndc(uint64_t flags,
     // one.
     if(NodeHandle_eq(ctx.root_handle, INVALID_NODE_HANDLE)){
         report_system_error(&ctx, SV("ctx has no root Node."));
-        result = PARSE_ERROR;
+        result = DNDC_ERROR_INVALID_TREE;
         goto cleanup;
     }
     // Create links from headers.
@@ -2005,9 +2005,9 @@ dndc_compile_dnd_file(
     };
     uint64_t new_flags = flags & DNDC_VALID_FLAGS;
     if(new_flags != flags)
-        return GENERIC_ERROR;
+        return DNDC_ERROR_VALUE;
     if(!outstring)
-        return GENERIC_ERROR;
+        return DNDC_ERROR_VALUE;
     int err = run_the_dndc(flags, base_directory, source_text, source_path, outstring, base64cache, textcache, log_func, log_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread, jsargs);
     return err;
 }
@@ -2242,7 +2242,7 @@ DNDC_API
 int
 dndc_ctx_parse_string(DndcContext* ctx, DndcNodeHandle root, DndcStringView filename, DndcStringView contents){
     NodeHandle handle = check_api_handle(ctx, root);
-    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE)) return 1;
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE)) return DNDC_ERROR_VALUE;
     int e = dndc_parse(ctx, handle, filename, contents.text, contents.length);
     return e;
 }
@@ -2251,9 +2251,9 @@ DNDC_API
 int
 dndc_ctx_parse_file(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sourcepath){
     NodeHandle handle = check_api_handle(ctx, dnh);
-    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE)) return 1;
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE)) return DNDC_ERROR_VALUE;
     StringViewResult svr = ctx_load_source_file(ctx, sourcepath);
-    if(svr.errored) return 1;
+    if(svr.errored) return DNDC_ERROR_FILE_READ;
     int e = dndc_parse(ctx, handle, sourcepath, svr.result.text, svr.result.length);
     return e;
 }
@@ -2285,7 +2285,7 @@ dndc_ctx_get_root(DndcContext* ctx){
 DNDC_API
 int
 dndc_ctx_set_root(DndcContext* ctx, DndcNodeHandle handle){
-    if(handle != DNDC_NODE_HANDLE_INVALID && handle >= ctx->nodes.count) return 1;
+    if(handle != DNDC_NODE_HANDLE_INVALID && handle >= ctx->nodes.count) return DNDC_ERROR_VALUE;
     if(!NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)){
         Node* root = get_node(ctx, ctx->root_handle);
         root->parent = INVALID_NODE_HANDLE;
@@ -2300,7 +2300,7 @@ int
 dndc_node_set_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView key, DndcStringView value){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     Node* node = get_node(ctx, handle);
     node_set_attribute(node, main_allocator(ctx), key, value);
     return 0;
@@ -2311,10 +2311,10 @@ int
 dndc_node_get_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView key, DndcStringView* outvalue){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     Node* node = get_node(ctx, handle);
     StringView* value = node_get_attribute(node, key);
-    if(!value) return 1;
+    if(!value) return DNDC_ERROR_NOT_FOUND;
     *outvalue = *value;
     return 0;
 }
@@ -2401,7 +2401,7 @@ int
 dndc_node_add_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView cls){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     Node* node = get_node(ctx, handle);
     node->classes = Rarray_push(StringView)(node->classes, main_allocator(ctx), cls);
     return 0;
@@ -2412,7 +2412,7 @@ int
 dndc_node_remove_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView cls){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     Node* node = get_node(ctx, handle);
     RARRAY_FOR_EACH(StringView, c, node->classes){
         if(SV_equals(*c, cls)){
@@ -2446,9 +2446,9 @@ int
 dndc_node_set_type(DndcContext* ctx, DndcNodeHandle dnh, int type){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     if(type < 0 || type > NODE_INVALID)
-        return 1;
+        return DNDC_ERROR_VALUE;
     get_node(ctx, handle)->type = type;
     Marray(NodeHandle)* node_store = NULL;
     switch(type){
@@ -2506,8 +2506,8 @@ int
 dndc_node_set_flags(DndcContext* ctx, DndcNodeHandle dnh, int flags){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
-    if((flags & PUBLIC_NODE_FLAGS) != flags) return 1;
+        return DNDC_ERROR_VALUE;
+    if((flags & PUBLIC_NODE_FLAGS) != flags) return DNDC_ERROR_VALUE;
     int old_flags = get_node(ctx, handle)->flags;
     int private_flags = old_flags & ~PUBLIC_NODE_FLAGS;
     get_node(ctx, handle) -> flags = flags | private_flags;
@@ -2519,7 +2519,7 @@ int
 dndc_node_get_header(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView* sv){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     *sv = get_node(ctx, handle)->header;
     return 0;
 }
@@ -2529,7 +2529,7 @@ int
 dndc_node_set_header(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sv){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     get_node(ctx, handle)->header = sv;
     return 0;
 }
@@ -2537,7 +2537,7 @@ dndc_node_set_header(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sv){
 DNDC_API
 int
 dndc_ctx_expand_to_dnd(DndcContext* ctx, DndcLongString* ls){
-    if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return 1;
+    if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return DNDC_ERROR_VALUE;
     MStringBuilder output_sb = {.allocator = get_mallocator()};
     int e = expand_to_dnd(ctx, &output_sb);
     if(e) {msb_destroy(&output_sb); return e;}
@@ -2548,9 +2548,9 @@ DNDC_API
 int
 dndc_ctx_render_to_html(DndcContext* ctx, DndcLongString* ls){
     MStringBuilder output_sb = {.allocator = get_mallocator()};
-    if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return 1;
+    if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return DNDC_ERROR_VALUE;
     int e = render_tree(ctx, &output_sb);
-    if(e) {msb_destroy(&output_sb); return 1;}
+    if(e) {msb_destroy(&output_sb); return e;}
     *ls = msb_detach_ls(&output_sb);
     return 0;
 }
@@ -2560,10 +2560,10 @@ int
 dndc_node_render_to_html(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString* ls){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     MStringBuilder output_sb = {.allocator = get_mallocator()};
     int e = render_node(ctx, &output_sb, handle, 1, 0);
-    if(e) {msb_destroy(&output_sb); return 1;}
+    if(e) {msb_destroy(&output_sb); return e;}
     *ls = msb_detach_ls(&output_sb);
     return 0;
 }
@@ -2571,7 +2571,7 @@ dndc_node_render_to_html(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString* l
 DNDC_API
 int
 dndc_ctx_format_tree(DndcContext* ctx, DndcLongString* ls){
-    if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return 1;
+    if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return DNDC_ERROR_VALUE;
     MStringBuilder output_sb = {.allocator = get_mallocator()};
     int e = format_tree(ctx, &output_sb);
     if(e) {
@@ -2585,10 +2585,10 @@ dndc_ctx_format_tree(DndcContext* ctx, DndcLongString* ls){
 DNDC_API
 int
 dndc_node_format(DndcContext* ctx, DndcNodeHandle dnh, int indent, DndcLongString* ls){
-    if(indent < 0 || indent > 50) return 1;
+    if(indent < 0 || indent > 50) return DNDC_ERROR_VALUE;
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     Node* node = get_node(ctx, handle);
     MStringBuilder output_sb = {.allocator = get_mallocator()};
     int e = format_node(ctx, &output_sb, node, indent);
@@ -2635,7 +2635,7 @@ int
 dndc_node_get_id(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView* outsv){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     *outsv = node_get_id(ctx, handle);
     return 0;
 }
@@ -2645,7 +2645,7 @@ int
 dndc_node_set_id(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sv){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     node_set_id(ctx, handle, sv);
     return 0;
 }
@@ -2656,12 +2656,12 @@ dndc_node_append_child(DndcContext* ctx, DndcNodeHandle parent_, DndcNodeHandle 
     NodeHandle child = check_api_handle(ctx, child_);
     NodeHandle parent = check_api_handle(ctx, parent_);
     if(NodeHandle_eq(child, INVALID_NODE_HANDLE) || NodeHandle_eq(parent, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     Node* ch = get_node(ctx, child);
     if(!NodeHandle_eq(ch->parent, INVALID_NODE_HANDLE)) // must be orphan
-        return 1;
+        return DNDC_ERROR_VALUE;
     if(NodeHandle_eq(child, parent)) // can't append to itself
-        return 1;
+        return DNDC_ERROR_VALUE;
     append_child(ctx, parent, child);
     return 0;
 }
@@ -2672,12 +2672,12 @@ dndc_node_insert_child(DndcContext* ctx, DndcNodeHandle parent_, size_t i, DndcN
     NodeHandle child = check_api_handle(ctx, child_);
     NodeHandle parent = check_api_handle(ctx, parent_);
     if(NodeHandle_eq(child, INVALID_NODE_HANDLE) || NodeHandle_eq(parent, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     Node* ch = get_node(ctx, child);
     if(!NodeHandle_eq(ch->parent, INVALID_NODE_HANDLE)) // must be orphan
-        return 1;
+        return DNDC_ERROR_VALUE;
     if(NodeHandle_eq(child, parent)) // can't append to itself
-        return 1;
+        return DNDC_ERROR_VALUE;
     node_insert_child(ctx, parent, i, child);
     return 0;
 }
@@ -2687,10 +2687,10 @@ int
 dndc_node_remove_child(DndcContext* ctx, DndcNodeHandle parent_, size_t i){
     NodeHandle parent = check_api_handle(ctx, parent_);
     if(NodeHandle_eq(parent, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     Node* node = get_node(ctx, parent);
     if(i >= node->children_count)
-        return 1;
+        return DNDC_ERROR_VALUE;
     node_remove_child(node, i, main_allocator(ctx));
     return 0;
 }
@@ -2780,6 +2780,7 @@ dndc_ctx_make_node(DndcContext* ctx, int type, DndcStringView header, DndcNodeHa
 DNDC_API
 int
 dndc_ctx_resolve_imports(DndcContext* ctx){
+    int result = 0;
     for(size_t i = 0; i < ctx->imports.count; i++){
         NodeHandle handle = ctx->imports.data[i];
         if(!(get_node(ctx, handle)->flags & NODEFLAG_IMPORT))
@@ -2801,6 +2802,7 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
         }
         if(ctx->imports.count > 1000){
             NODE_LOG_ERROR(ctx, node, LS("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)"));
+            result = DNDC_ERROR_INVALID_TREE;
             goto cleanup;
         }
         // NOTE: re-get the node every loop as the pointer is invalidated.
@@ -2809,6 +2811,7 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
             Node* child = get_node(ctx, child_handle);
             if(child->type != NODE_STRING){
                 NODE_LOG_ERROR(ctx, child, LS("import child is not a string"));
+                result = DNDC_ERROR_INVALID_TREE;
                 goto cleanup;
             }
             StringView filename = child->header;
@@ -2818,11 +2821,12 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
                     NODE_LOG_ERROR(ctx, child, "Unable to open '", ctx->base_directory, "/", filename, "'");
                 else
                     NODE_LOG_ERROR(ctx, child, "Unable to open '", filename, "'");
+                result = imp_e.errored;
                 goto cleanup;
             }
             StringView imp_text = imp_e.result;
-            int parse_e = dndc_parse(ctx, newhandle, filename, imp_text.text, imp_text.length);
-            if(parse_e){
+            result = dndc_parse(ctx, newhandle, filename, imp_text.text, imp_text.length);
+            if(result){
                 goto cleanup;
             }
         }
@@ -2880,10 +2884,10 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
             foundit:;
         }
     }
-    return 0;
+    return result;
 
     cleanup:
-    return 1;
+    return result;
 }
 DNDC_API
 size_t
@@ -2900,7 +2904,7 @@ int
 dndc_node_cat_string_children(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString* out){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     MStringBuilder msb = {.allocator=get_mallocator()};
     Node* n = get_node(ctx, handle);
     NODE_CHILDREN_FOR_EACH(c, n){
@@ -2939,7 +2943,7 @@ int
 dndc_node_location(DndcContext* ctx, DndcNodeHandle dnh, DndcNodeLocation* loc){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     Node* node = get_node(ctx, handle);
     loc->filename = ctx->filenames.data[node->filename_idx];
     loc->row = node->row+1;
@@ -2959,7 +2963,7 @@ DNDC_API
 int
 dndc_ctx_gather_links(DndcContext* ctx){
     if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     gather_anchors(ctx);
     return 0;
 }
@@ -2985,7 +2989,7 @@ dndc_ctx_resolve_links(DndcContext* ctx){
                 continue;
             int e = add_link_from_sv(ctx, link_str_node);
             if(e){
-                return 1;
+                return e;
             }
         }
     }
@@ -3107,7 +3111,7 @@ int
 dndc_node_tree_repr(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString* outstring){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     MStringBuilder msb = {.allocator = get_mallocator()};
     dndc_node_tree_repr_inner(ctx, handle, 0, &msb);
     *outstring = msb_detach_ls(&msb);
@@ -3119,28 +3123,28 @@ int
 dndc_node_execute_js(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString js){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     ArenaAllocator aa = {0};
     QJSRuntime* rt = new_qjs_rt(&aa);
-    if(!rt) return 1;
+    if(!rt) return DNDC_ERROR_JS;
     QJSContext* jsctx = new_qjs_ctx(rt, ctx, DNDC_JS_FLAGS_NONE, LS("null"));
     if(!jsctx){
         free_qjs_rt(rt, &aa);
-        return 1;
+        return DNDC_ERROR_JS;
     }
     int err = execute_qjs_string(jsctx, ctx, js.text, js.length, handle, handle);
     free_qjs_rt(rt, &aa);
     ArenaAllocator_free_all(&aa);
-    return !!err;
+    return err;
 }
 
 DNDC_API
 int
 dndc_ctx_add_link(DndcContext* ctx, DndcStringView k, DndcStringView v){
-    if(!v.length) return 1;
+    if(!v.length) return DNDC_ERROR_VALUE;
     MStringBuilder kebab = {.allocator = string_allocator(ctx)};
     msb_write_kebab(&kebab, k.text, k.length);
-    if(!kebab.cursor) return 1;
+    if(!kebab.cursor) return DNDC_ERROR_VALUE;
     k = msb_detach_sv(&kebab);
     v = dndc_ctx_dup_sv(ctx, v);
     add_link_from_pair(ctx, k, v);
@@ -3156,7 +3160,7 @@ int
 dndc_node_to_json(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString*out){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 1;
+        return DNDC_ERROR_VALUE;
     MStringBuilder sb = {.allocator=get_mallocator()};
     node_to_json(ctx, handle, &sb);
     *out = msb_detach_ls(&sb);

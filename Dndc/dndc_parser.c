@@ -484,7 +484,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
     }
     if(!boundary){
         parse_log_err(ctx, postcolon.text, LS("no node type found after '::'"));
-        return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+        return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
     }
     for(size_t i = 0; i < arrlen(NODEALIASES); i++){
         if(NODEALIASES[i].name.length == boundary){
@@ -534,7 +534,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
         }
     }
     parse_log_err_q(ctx, postcolon.text, SV("Unrecognized node name: "), (StringView){.text=postcolon.text,.length=boundary});
-    return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+    return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
     foundit:;
     StringView aftertype = {.text=postcolon.text + boundary, .length=postcolon.length-boundary};
     for(;;){
@@ -556,7 +556,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                 StringView directive = {.length = directive_length, .text = directive_start};
                 if(!directive_length){
                     parse_log_err(ctx, aftertype.text, LS("Empty directive name after a '#'"));
-                    return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+                    return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                 }
                 if(aftertype.text[0] == '('){
                     if(SV_equals(directive, SV("id"))){
@@ -575,12 +575,12 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                         }
                         if(n_parens){
                             parse_log_err(ctx, aftertype.text, LS("End of line when expecting a closing ')'"));
-                            return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+                            return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                         }
                         StringView contents = stripped_view(argstart, aftertype.text-1-argstart);
                         if(!contents.length){
                             parse_log_err(ctx, aftertype.text, LS("#id needs non-empty argument."));
-                            return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+                            return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                         }
                         node_set_id(ctx, node_handle, contents);
                         result.result |= NODEFLAG_ID;
@@ -588,7 +588,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                     }
                     else {
                         parse_log_err(ctx, aftertype.text, LS("only #id takes an argument"));
-                        return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+                        return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                     }
                 }
                 switch(*directive_start){
@@ -616,7 +616,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                         break;
                 }
                 parse_log_err(ctx, aftertype.text, LS("Unrecognized directive"));
-                return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+                return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
             }break;
             case '.':{
                 advance_sv(&aftertype);
@@ -631,7 +631,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                 size_t class_length = aftertype.text - class_start;
                 if(!class_length){
                     parse_log_err(ctx, aftertype.text, LS("Empty class name after a '.'"));
-                    return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+                    return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                 }
                 StringView class_ = {.length = class_length, .text = class_start};
                 node->classes = Rarray_push(StringView)(node->classes, main_allocator(ctx), class_);
@@ -649,7 +649,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                 size_t attribute_length = aftertype.text - attribute_start;
                 if(!attribute_length){
                     parse_log_err(ctx, aftertype.text, LS("Empty attribute name after a '@'"));
-                    return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+                    return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                 }
                 StringView attr_name = {
                     .text = attribute_start,
@@ -660,27 +660,27 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                         case 'i':
                             if(SV_equals(attr_name, SV("import"))){
                                 parse_log_err(ctx, aftertype.text, LS("#import is the name of a directive."));
-                                return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+                                return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                             }
                             if(SV_equals(attr_name, SV("id"))){
                                 parse_log_err(ctx, aftertype.text, LS("#id is the name of a directive."));
-                                return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+                                return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                             }
                             break;
                         case 'n':
                             if(SV_equals(attr_name, SV("noid"))){
                                 parse_log_err(ctx, aftertype.text, LS("#noid is the name of a directive."));
-                                return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+                                return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                             }
                             if(SV_equals(attr_name, SV("noinline"))){
                                 parse_log_err(ctx, aftertype.text, LS("#noinline is the name of a directive."));
-                                return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+                                return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                             }
                             break;
                         case 'h':
                             if(SV_equals(attr_name, SV("hide"))){
                                 parse_log_err(ctx, aftertype.text, LS("#hide is the name of a directive."));
-                                return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+                                return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                             }
                             break;
                         }
@@ -697,7 +697,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                         for(;;){
                             if(!aftertype.length){
                                 parse_log_err(ctx, aftertype.text, LS("End of line when expecting a closing ')'"));
-                                return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+                                return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                             }
                             char first = aftertype.text[0];
                             if(first == '(')
@@ -718,7 +718,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
             }break;
             default:
                 parse_log_err_q(ctx, aftertype.text, SV("illegal character when parsing type, classes and attributes: "), (StringView){.text=aftertype.text, .length=1});
-                return (ErrorableNodeFlags){.errored=PARSE_ERROR};
+                return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
         }
     }
     if(result.result & NODEFLAG_IMPORT){
@@ -734,7 +734,7 @@ int
 parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int indentation, NodeFlags flags){
     if(unlikely(indentation > 64)){
         HANDLE_LOG_ERROR(ctx, parent_handle, "Too deep! Indentation greater than 64 is unsupported.");
-        return PARSE_ERROR;
+        return DNDC_ERROR_PARSE;
     }
     if(flags & NODEFLAG_IMPORT)
         goto regular_string_parsing;
@@ -778,7 +778,7 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
         case NODE_BULLETS:
         case NODE_LIST:
             parse_log_err(ctx, ctx->linestart, LS("Invalid node to parse from"));
-            return PARSE_ERROR;
+            return DNDC_ERROR_PARSE;
     }
     regular_string_parsing:;
     for(;ctx->cursor != ctx->end;){
@@ -837,7 +837,7 @@ PARSEFUNC(parse_list_node){
                     goto after;
                 default:
                     parse_log_err_q(ctx, firstchar, SV("Non numeric found when parsing list: "), (StringView){.text=firstchar, .length=1});
-                    return PARSE_ERROR;
+                    return DNDC_ERROR_PARSE;
             }
         }
         after:;
@@ -870,7 +870,7 @@ PARSEFUNC(parse_list_item){
             break;
         if(ctx->doublecolon){
             parse_log_err(ctx, ctx->doublecolon, LS("This node type cannot contain subnodes, only strings"));
-            return PARSE_ERROR;
+            return DNDC_ERROR_PARSE;
         }
         const char* firstchar = ctx->linestart + ctx->nspaces;
         for(;;firstchar++){
@@ -1055,7 +1055,7 @@ PARSEFUNC(parse_keyvalue_node){
         const char* colon = memchr(cursor, ':', ctx->line_end - cursor);
         if(!colon){
             parse_log_err(ctx, cursor, LS("Expected a colon for key value pairs"));
-            return PARSE_ERROR;
+            return DNDC_ERROR_PARSE;
         }
         const char* pre_text = ctx->linestart+ctx->nspaces;
 
@@ -1099,7 +1099,7 @@ PARSEFUNC(parse_bullets_node){
         char first = *firstchar;
         if(first != '*' && first != '+' && first != '-'){
             parse_log_err_q(ctx, firstchar, SV("Bullets must begin with one of *-+, got "), (StringView){.text=firstchar, .length=1});
-            return PARSE_ERROR;
+            return DNDC_ERROR_PARSE;
         }
         firstchar++;
         StringView bullet_text = stripped_view(firstchar, ctx->line_end - firstchar);
@@ -1131,7 +1131,7 @@ PARSEFUNC(parse_bullet_node){
             break;
         if(ctx->doublecolon){
             parse_log_err(ctx, ctx->doublecolon,LS("This node type cannot contain subnodes, only strings"));
-            return PARSE_ERROR;
+            return DNDC_ERROR_PARSE;
         }
         const char* firstchar = ctx->linestart + ctx->nspaces;
         char first = *firstchar;
@@ -1255,7 +1255,7 @@ PARSEFUNC(parse_md_node){
                     si++;
                     if(si == arrlen(stack)){
                         parse_log_err(ctx, ctx->linestart+ctx->nspaces, LS("Only up to 8 levels of nested lists are supported."));
-                        return PARSE_ERROR;
+                        return DNDC_ERROR_PARSE;
                     }
                     struct StackItem* s = &stack[si];
                     s->list = alloc_handle(ctx);
@@ -1289,7 +1289,7 @@ PARSEFUNC(parse_md_node){
                         si--;
                         if(si < 0){
                             parse_log_err(ctx, ctx->linestart+ctx->nspaces, LS("Dedent does not match initial indent"));
-                            return PARSE_ERROR;
+                            return DNDC_ERROR_PARSE;
                         }
                         assert(si >= 0);
                         int indent = stack[si].indentation;
@@ -1299,7 +1299,7 @@ PARSEFUNC(parse_md_node){
                             break;
                         if(indent < ctx->nspaces){
                             parse_log_err(ctx, ctx->linestart+ctx->nspaces, LS("Ambiguous dedent inside a list"));
-                            return PARSE_ERROR;
+                            return DNDC_ERROR_PARSE;
                         }
                     }
                     struct StackItem* s = &stack[si];
@@ -1346,7 +1346,7 @@ PARSEFUNC(parse_md_node){
         }
         if(ctx->nspaces <= stack[si].indentation){
             parse_log_err(ctx, ctx->linestart+ctx->nspaces, LS("Ambiguous dedent inside a list"));
-            return PARSE_ERROR;
+            return DNDC_ERROR_PARSE;
         }
         // don't change state for these
         StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);

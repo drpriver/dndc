@@ -177,7 +177,7 @@ StringViewResult
 ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
     MStringBuilder temp_builder = {.allocator=temp_allocator(ctx)};
     if(!sourcepath.length){
-        return (StringViewResult){.errored=UNEXPECTED_END};
+        return (StringViewResult){.errored=DNDC_ERROR_FILE_READ};
     }
     assert(sourcepath.length);
 
@@ -191,7 +191,7 @@ ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
     StringResult cache_result = FileCache_read_file(ctx->textcache, sourcepath, !!(ctx->flags & DNDC_DONT_READ));
     msb_destroy(&temp_builder);
     if(cache_result.errored){
-        return (StringViewResult){.errored = PARSE_ERROR};
+        return (StringViewResult){.errored = DNDC_ERROR_FILE_READ};
     }
     uint64_t after = get_t();
     report_time(ctx, SV("Loading a file took "), after-before);
@@ -227,25 +227,25 @@ add_link_from_sv(DndcContext* ctx, Node* node){
     const char* equals = memchr(str.text, '=', str.length);
     if(!equals){
         NODE_LOG_ERROR(ctx, node, LS("no '=' in a link node"));
-        return PARSE_ERROR;
+        return DNDC_ERROR_PARSE;
     }
     MStringBuilder sb = {.allocator=string_allocator(ctx)};
     msb_write_kebab(&sb, str.text, equals - str.text);
     if(!sb.cursor){
         NODE_LOG_ERROR(ctx, node, LS("key is empty."));
-        return PARSE_ERROR;
+        return DNDC_ERROR_PARSE;
     }
     StringView key = msb_detach_sv(&sb);
     StringView value = stripped_view(equals + 1, (str.text+str.length)-(equals+1));
     if(!value.length){
         NODE_LOG_ERROR(ctx, node, LS("link target is empty."));
-        return PARSE_ERROR;
+        return DNDC_ERROR_PARSE;
     }
     if(value.text[0] == '#'){
         StringView target = {.text = value.text+1, .length = value.length-1};
         if(!target.length){
             NODE_LOG_ERROR(ctx, node, LS("link target is empty after the '#'"));
-            return PARSE_ERROR;
+            return DNDC_ERROR_PARSE;
         }
         const StringView* values = ctx->links.keys + ctx->links.capacity_;
         for(size_t i = 0; i < ctx->links.capacity_; i++){
@@ -253,7 +253,7 @@ add_link_from_sv(DndcContext* ctx, Node* node){
                 goto foundit;
         }
         NODE_LOG_ERROR(ctx, node, LS("Anchor does not correspond to any link"));
-        return PARSE_ERROR;
+        return DNDC_ERROR_LINK;
         foundit:;
     }
     string_table_set(&ctx->links, key, value);

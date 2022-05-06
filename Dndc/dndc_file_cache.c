@@ -164,7 +164,7 @@ FileCache_read_file(FileCache* cache, StringView spath, bool cached_only){
         }
     }
     if(unlikely(cached_only)){
-        return (StringResult){.errored = PARSE_ERROR};
+        return (StringResult){.errored = DNDC_ERROR_FILE_READ};
     }
     FileCachePath path = FileCache_alloc_path(cache, key);
     StringResult result = FileCache_read_file_(cache, path);
@@ -187,7 +187,7 @@ FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only
         }
     }
     if(unlikely(cached_only)){
-        return (StringResult){.errored = PARSE_ERROR};
+        return (StringResult){.errored = DNDC_ERROR_FILE_READ};
     }
     FileCachePath path = FileCache_alloc_path(cache, key);
     StringResult base64ed_e = read_and_base64_bin_file(cache->scratch, cache->allocator, path.text);
@@ -272,7 +272,7 @@ FileCache_store_text_file(FileCache* cache, StringView spath, StringView data, b
     LongString ds = {.text=d, .length=data.length};
     MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
         if(FileCache_key_eq(key, src->sourcepath)){
-            if(!overwrite) return 1;
+            if(!overwrite) return DNDC_ERROR_FILE_READ;
             Allocator_free(cache->allocator, src->sourcetext.text, src->sourcetext.length+1);
             src->sourcetext = ds;
             return 0;

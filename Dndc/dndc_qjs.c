@@ -519,7 +519,7 @@ execute_qjs_string(QJSContext* jsctx, DndcContext* ctx, const char* str, size_t 
         QJSValue err = JS_Eval(jsctx, str, length, filename, 1);
         if(JS_IsException(err)){
             log_js_traceback(ctx, jsctx, handle);
-            result = GENERIC_ERROR;
+            result = DNDC_ERROR_JS;
         }
         JS_FreeValue(jsctx, err);
     }

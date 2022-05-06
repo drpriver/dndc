@@ -1,7 +1,6 @@
 #ifndef DNDC_QJS_H
 #define DNDC_QJS_H
 #include "dndc_types.h"
-#include "error_handling.h"
 #include "arena_allocator.h"
 typedef struct QJSRuntime QJSRuntime;
 typedef struct QJSContext QJSContext;

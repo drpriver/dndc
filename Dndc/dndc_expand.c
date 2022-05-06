@@ -4,7 +4,6 @@
 #include "dndc_types.h"
 #include "dndc_funcs.h"
 #include "MStringBuilder.h"
-#include "error_handling.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -48,7 +47,7 @@ expand_to_dnd(DndcContext*ctx, MStringBuilder* msb){
     Node* node = get_node(ctx, ctx->root_handle);
     if(node->type != NODE_MD){
         result = expand_node(ctx, node, 0, msb, 0);
-        // return PARSE_ERROR;
+        // return DNDC_ERROR_INVALID_TREE;
     }
     else
         result = expand_node_body(ctx, node, 0, msb, 0);
@@ -97,7 +96,7 @@ int
 expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
     if(node_depth > DNDC_MAX_NODE_DEPTH){
         NODE_LOG_ERROR(ctx, n, "Max node depth exceeded:", node_depth);
-        return PARSE_ERROR;
+        return DNDC_ERROR_INVALID_TREE;
     }
     int result = 0;
     switch(n->type){
@@ -116,7 +115,7 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
             write_generic_header(ctx, n, indent, msb);
             if(node_children_count(n)){
                 NODE_LOG_ERROR(ctx, n, "TITLE or HEADING has children");
-                return PARSE_ERROR;
+                return DNDC_ERROR_INVALID_TREE;
             }
             return result;
         case NODE_KEYVALUEPAIR:
@@ -127,7 +126,7 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
         case NODE_TABLE_ROW:
         case NODE_PARA:
             NODE_LOG_ERROR(ctx,n, "Node escaped to top level: ", quoted(LS_to_SV(NODENAMES[n->type])));
-            return PARSE_ERROR;
+            return DNDC_ERROR_INVALID_TREE;
         case NODE_META:
         case NODE_DETAILS:
         case NODE_MD:
@@ -148,7 +147,7 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
             write_generic_header(ctx, n, indent, msb);
             if(node_children_count(n)){
                 NODE_LOG_ERROR(ctx,n, "TOC or HR has children");
-                return PARSE_ERROR;
+                return DNDC_ERROR_INVALID_TREE;
             }
             return result;
         case NODE_IMPORT:
@@ -161,7 +160,7 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
         }break;
         case NODE_INVALID:
             NODE_LOG_ERROR(ctx, n, "INVALID NODE");
-            return PARSE_ERROR;
+            return DNDC_ERROR_INVALID_TREE;
     }
     unreachable();
 }
@@ -212,7 +211,7 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int n
         case NODE_PARA:
         case NODE_STRING:
             NODE_LOG_ERROR(ctx, n, "Node can't be expanded into text format: ", quoted(LS_to_SV(NODENAMES[n->type])));
-            return PARSE_ERROR;
+            return DNDC_ERROR_INVALID_TREE;
     }
     unreachable();
 }
@@ -227,14 +226,14 @@ int
 expand_md_bullets(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int depth, int node_depth){
     if(node_depth > DNDC_MAX_NODE_DEPTH){
         NODE_LOG_ERROR(ctx, n, "Max node depth exceeded: ", node_depth);
-        return PARSE_ERROR;
+        return DNDC_ERROR_INVALID_TREE;
     }
     int result = 0;
     NODE_CHILDREN_FOR_EACH(l, n){
         Node* li = get_node(ctx, *l);
         if(li->type != NODE_LIST_ITEM){
             NODE_LOG_ERROR(ctx, li, "Non list-item child of bullets: ", quoted(LS_to_SV(NODENAMES[li->type])));
-            return PARSE_ERROR;
+            return DNDC_ERROR_INVALID_TREE;
         }
         msb_write_nchar(msb, ' ', indent);
         switch(depth){
@@ -245,7 +244,7 @@ expand_md_bullets(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
         size_t count = node_children_count(li);
         if(!count){
             NODE_LOG_ERROR(ctx, li, "List item must have at least one child.");
-            return PARSE_ERROR;
+            return DNDC_ERROR_INVALID_TREE;
         }
         size_t i = 0;
         NODE_CHILDREN_FOR_EACH(subitem, li){
@@ -253,7 +252,7 @@ expand_md_bullets(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
             if(i == 0){
                 if(sub->type != NODE_STRING){
                     NODE_LOG_ERROR(ctx, sub, "First list item must be a string, got ", quoted(LS_to_SV(NODENAMES[sub->type])));
-                    return PARSE_ERROR;
+                    return DNDC_ERROR_INVALID_TREE;
                 }
                 msb_write_str(msb, sub->header.text, sub->header.length);
                 msb_write_char(msb, '\n');
@@ -275,7 +274,7 @@ expand_md_bullets(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
             }
             else {
                 NODE_LOG_ERROR(ctx, sub, "List items must contain strings, bullets or lists, got: ", quoted(LS_to_SV(NODENAMES[sub->type])));
-                return PARSE_ERROR;
+                return DNDC_ERROR_INVALID_TREE;
             }
             i++;
         }
@@ -287,7 +286,7 @@ int
 expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
     if(node_depth > DNDC_MAX_NODE_DEPTH){
         NODE_LOG_ERROR(ctx, n, "Max node depth exceeded: ", node_depth);
-        return PARSE_ERROR;
+        return DNDC_ERROR_INVALID_TREE;
     }
     int result = 0;
     size_t list_number = 0;
@@ -296,14 +295,14 @@ expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int nod
         Node* li = get_node(ctx, *l);
         if(li->type != NODE_LIST_ITEM){
             NODE_LOG_ERROR(ctx, li, "Non list-item child of list: ", quotedls(NODENAMES[li->type]));
-            return PARSE_ERROR;
+            return DNDC_ERROR_INVALID_TREE;
         }
         msb_write_nchar(msb, ' ', indent);
         MSB_FORMAT(msb, list_number, ". ");
         size_t count = node_children_count(li);
         if(!count){
             NODE_LOG_ERROR(ctx, li, "List Item must have at least one child");
-            return PARSE_ERROR;
+            return DNDC_ERROR_INVALID_TREE;
         }
         size_t i = 0;
         NODE_CHILDREN_FOR_EACH(subitem, li){
@@ -311,7 +310,7 @@ expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int nod
             if(i == 0){
                 if(sub->type != NODE_STRING){
                     NODE_LOG_ERROR(ctx, sub, "First List Item must be a string.", quotedls(NODENAMES[sub->type]));
-                    return PARSE_ERROR;
+                    return DNDC_ERROR_INVALID_TREE;
                 }
                 msb_write_str(msb, sub->header.text, sub->header.length);
                 msb_write_char(msb, '\n');
@@ -333,7 +332,7 @@ expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int nod
             }
             else {
                 NODE_LOG_ERROR(ctx, sub, "List items must contain strings, bullets, or lists. Got: ", quotedls(NODENAMES[sub->type]));
-                return PARSE_ERROR;
+                return DNDC_ERROR_INVALID_TREE;
             }
             i++;
         }
@@ -346,14 +345,14 @@ int
 expand_md_para(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
     if(node_depth > DNDC_MAX_NODE_DEPTH){
         NODE_LOG_ERROR(ctx, n, "Max node depth exceeded: ", node_depth);
-        return PARSE_ERROR;
+        return DNDC_ERROR_INVALID_TREE;
     }
     int result = 0;
     NODE_CHILDREN_FOR_EACH(c, n){
         Node* child = get_node(ctx, *c);
         if(child->type != NODE_STRING){
             NODE_LOG_ERROR(ctx, child, "Expected string node in md para, got: ", quotedls(NODENAMES[child->type]));
-            return PARSE_ERROR;
+            return DNDC_ERROR_INVALID_TREE;
         }
         msb_write_nchar(msb, ' ', indent);
         MSB_FORMAT(msb, child->header, "\n");
@@ -367,7 +366,7 @@ int
 expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
     if(node_depth > DNDC_MAX_NODE_DEPTH){
         NODE_LOG_ERROR(ctx, n, "Max node depth exceeded: ", node_depth);
-        return PARSE_ERROR;
+        return DNDC_ERROR_INVALID_TREE;
     }
     int result = 0;
     NODE_CHILDREN_FOR_EACH(c, n){
@@ -403,14 +402,14 @@ int
 expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
     if(node_depth > DNDC_MAX_NODE_DEPTH){
         NODE_LOG_ERROR(ctx, n, "Max node depth exceeded: ", node_depth);
-        return PARSE_ERROR;
+        return DNDC_ERROR_INVALID_TREE;
     }
     int result = 0;
     NODE_CHILDREN_FOR_EACH(t, n){
         Node* row = get_node(ctx, *t);
         if(row->type != NODE_TABLE_ROW){
             NODE_LOG_ERROR(ctx, row, "Expected table row, got ", quotedls(NODENAMES[row->type]));
-            return PARSE_ERROR;
+            return DNDC_ERROR_INVALID_TREE;
         }
         msb_write_nchar(msb, ' ', indent);
         size_t i = 0;
@@ -439,7 +438,7 @@ expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
                     Node* container_item = get_node(ctx, *s);
                     if(container_item->type != NODE_STRING){
                         NODE_LOG_ERROR(ctx, row, "Expected string, got ", quotedls(NODENAMES[row->type]));
-                        return PARSE_ERROR;
+                        return DNDC_ERROR_INVALID_TREE;
                     }
                     msb_write_str(msb, container_item->header.text, container_item->header.length);
                     msb_write_char(msb, '\n');
@@ -447,7 +446,7 @@ expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
             }
             else {
                 NODE_LOG_ERROR(ctx, row, "Expected string or container, got ", quotedls(NODENAMES[row->type]));
-                return PARSE_ERROR;
+                return DNDC_ERROR_INVALID_TREE;
             }
         }
         msb_write_char(msb, '\n');
@@ -460,7 +459,7 @@ int
 expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
     if(node_depth > DNDC_MAX_NODE_DEPTH){
         NODE_LOG_ERROR(ctx, n, "Max node depth exceeded: ", node_depth);
-        return PARSE_ERROR;
+        return DNDC_ERROR_INVALID_TREE;
     }
     int result = 0;
     NODE_CHILDREN_FOR_EACH(c, n){
@@ -472,14 +471,14 @@ expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, i
         }
         if(node_children_count(child) != 2){
             NODE_LOG_ERROR(ctx, child, LS("keyvalue pair node needs exactly two children, has:"), node_children_count(child));
-            return PARSE_ERROR;
+            return DNDC_ERROR_INVALID_TREE;
         }
         NodeHandle* handles = node_children(child);
         Node* key = get_node(ctx, handles[0]);
         Node* value = get_node(ctx, handles[1]);
         if(key->type != NODE_STRING){
             NODE_LOG_ERROR(ctx, key, SV("Expected string for key, got "), quotedls(NODENAMES[key->type]));
-            return PARSE_ERROR;
+            return DNDC_ERROR_INVALID_TREE;
         }
         msb_write_nchar(msb, ' ', indent);
         MSB_FORMAT(msb, key->header, ": ");
@@ -509,7 +508,7 @@ expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, i
         }
         else {
             NODE_LOG_ERROR(ctx, value, SV("Expected string or container for value, got "), quoted(LS_to_SV(NODENAMES[value->type])));
-            return PARSE_ERROR;
+            return DNDC_ERROR_INVALID_TREE;
         }
     }
     return result;

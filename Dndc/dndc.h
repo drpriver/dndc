@@ -72,6 +72,21 @@ dndc_version(void);
 // For verifying the versions match at runtime (useful for verifying ffi).
 
 
+// Error Codes
+enum DndcErrorCode {
+    DNDC_ERROR_NONE         = 0, // No Error.
+    DNDC_ERROR_PARSE        = 1, // Syntax error.
+    DNDC_ERROR_INVALID_TREE = 2, // Tree is invalid (due to user scripts).
+    DNDC_ERROR_FILE_READ    = 3, // Unable to read a file.
+    DNDC_ERROR_JS           = 4, // Error while executing user scripts.
+    DNDC_ERROR_OS           = 5, // Other OS-specific error.
+    DNDC_ERROR_LINK         = 6, // Unresolved link.
+    DNDC_ERROR_UNTRUSTED    = 7, // Insecure content requested in an untrusted context.
+    DNDC_ERROR_VALUE        = 8, // A bad value was given to a DNDC_API function.
+    DNDC_ERROR_NOT_FOUND    = 9, // The given key does not exist.
+};
+
+
 //
 // String Types
 // ============
