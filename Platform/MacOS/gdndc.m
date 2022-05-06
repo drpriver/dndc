@@ -270,6 +270,7 @@ typedef enum GdndInsertTag{
 -(void)flop_editor:(id _Nullable)sender;
 -(NSURL*) this_dnd_url;
 -(void)update_coord:(NSString*)text;
+-(void)scroll_to_id:(NSString*)nodeid;
 @end
 
 //
@@ -759,6 +760,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction
     decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler{
         auto url = navigationAction.request.URL;
+        // LOGIT(url);
         if([url isEqual:[self.controller this_dnd_url]]){
             decisionHandler(WKNavigationActionPolicyAllow);
             return;
@@ -810,7 +812,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
                 }];
             return;
         }
-        LOGIT(url);
+        // LOGIT(url);
         decisionHandler(WKNavigationActionPolicyCancel);
         return;
 }
@@ -850,6 +852,20 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         [self.controller update_coord:body];
         return;
     }
+    if([method isEqualToString:@"POST"] && [url isEqual:[NSURL URLWithString:@"dnd:///scrolltoid"]]){
+        // LOGIT(url);
+        auto response = [[NSURLResponse alloc]
+            initWithURL:request.mainDocumentURL
+            MIMEType:@"text/plain"
+            expectedContentLength:0
+            textEncodingName:nil];
+        [urlSchemeTask didReceiveResponse:response];
+        NSString* body = [[NSString alloc] initWithData:(NSData*)[request HTTPBody] encoding:NSUTF8StringEncoding];
+        // LOGIT(body);
+        [urlSchemeTask didFinish];
+        [self.controller scroll_to_id:body];
+        return;
+    }
     if([method isEqualToString:@"GET"]){
         if([[url scheme] isEqualToString:DND_SCHEME] && [[url path] isEqualToString:@"/scrollresto"]){
         auto response = [[NSHTTPURLResponse alloc]
@@ -879,7 +895,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         urlstr = [@"file://" stringByAppendingString:urlstr];
         url = [[NSURL alloc] initWithString: urlstr];
         // auto path = [url path];
-        LOGIT(url);
+        // LOGIT(url);
         auto data = [NSData dataWithContentsOfURL: url];
         if(!data){
             LOGIT(@"no data?");
@@ -1252,6 +1268,7 @@ BOOL show_stats;
                                 t.scrollIntoView();
                                 e.preventDefault();
                                 e.stopPropagation();
+                                fetch("dnd:///scrolltoid", {method:"POST", body:target});
                                 return false;
                             }
                         }
@@ -1260,9 +1277,8 @@ BOOL show_stats;
                 }
                 for(let a of anchors){
                     add_interceptor(a);
-                    }
-                });
-            )
+                }
+            });)
             "\n"
         ];
     string = [string stringByAppendingString:
@@ -1355,14 +1371,11 @@ BOOL show_stats;
                                 console.log('t', t);
                                 internal_id = _coords2[t];
                             }
-                            console.log(internal_id);
-                            console.log(href);
                             if(!internal_id) return;
                             let request = new XMLHttpRequest();
                             let new_x = anchor.transform.baseVal[0].matrix.e | 0;
                             let new_y = anchor.transform.baseVal[0].matrix.f | 0;
                             const combo = `${internal_id}:${new_x},${new_y}`;
-                            console.log(combo);
                             fetch("dnd:///roommove", {method:"POST", body:combo});
                         }
                         window.addEventListener("pointerup", remove, {once:true});
@@ -1592,6 +1605,44 @@ completionHandler:(void (^)(NSString *result))completionHandler{
     // LOGIT(@"Failed");
     dndc_ctx_destroy(ctx);
     return;
+}
+
+-(void)scroll_to_id:(NSString*)nodeid{
+    NSString* doc_string = self->text.string;
+    DndcContext* ctx = dndc_create_ctx(0, NULL, NULL);
+    dndc_ctx_set_logger(ctx, dndc_stderr_log_func, NULL);
+    DndcNodeHandle root = dndc_ctx_make_root(ctx, SV(""));
+    int err;
+    err = dndc_ctx_parse_string(ctx, root, SV(""), ns_borrow_sv(doc_string));
+    if(err) goto fail;
+    StringView nid = ns_borrow_sv(nodeid);
+    DndcNodeHandle target = dndc_ctx_node_by_id(ctx, nid);
+    if(target == DNDC_NODE_HANDLE_INVALID) goto fail;
+    DndcNodeLocation loc; err = dndc_node_location(ctx, target, &loc);
+    if(err) goto fail;
+    auto length = [doc_string length];
+    size_t lineno = 0;
+    size_t i;
+    for(i = 0; i < length; i++){
+        if([doc_string characterAtIndex:i] == u'\n'){
+            lineno++;
+            if(lineno == loc.row) break;
+        }
+    }
+    if(lineno != loc.row) goto fail;
+    {
+    NSRange range = NSMakeRange(i, 0);
+    // [self->text scrollRangeToVisible:range];
+    NSLayoutManager *l = [self->text layoutManager];
+    NSRect rect = [l boundingRectForGlyphRange:range inTextContainer:[self->text textContainer]];
+    rect = NSOffsetRect(rect, self->text.textContainerOrigin.x, self->text.textContainerOrigin.y);
+    auto point = rect.origin;
+    [self->text scrollPoint:point];
+    dndc_ctx_destroy(ctx);
+    return;
+    }
+fail:
+    dndc_ctx_destroy(ctx);
 }
 
 @end

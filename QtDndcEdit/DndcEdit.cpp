@@ -116,13 +116,10 @@ QString COORD_HELPER_SCRIPT = QS(
     "                      console.log('t', t);\n"
     "                      internal_id = _coords2[t];\n"
     "                  }\n"
-    "                  console.log(internal_id);\n"
-    "                  console.log(href);\n"
     "                  if(!internal_id) return;\n"
     "                  let new_x = anchor.transform.baseVal[0].matrix.e | 0;\n"
     "                  let new_y = anchor.transform.baseVal[0].matrix.f | 0;\n"
     "                  const combo = `${internal_id}.${new_x}.${new_y}`;\n"
-    "                  console.log(combo);\n"
     "                  let request = new XMLHttpRequest();\n"
     "                  request.open('PUT', 'dnd:///roommove/'+combo, true);\n"
     "                  request.send();\n"
@@ -499,13 +496,13 @@ MainWindow::add_menus(void){
         PRINT_STATS = !PRINT_STATS;
         });
     developmenu->addAction(action);
-    }
+}
 
 DndSyntaxHighlighter::~DndSyntaxHighlighter(){
-    }
+}
 
 LineNumberArea::~LineNumberArea(){
-    }
+}
 
 
 DndEditor::DndEditor(QWidget* parent): QPlainTextEdit(parent){
@@ -788,6 +785,7 @@ DndEditor::contextMenuEvent(QContextMenuEvent* event){
 
 void append_room_with_name_at(const QString& name, int x, int y);
 void change_coord(int id, int x, int y);
+void scroll_to_id(QString nid);
 
 
 QWebEngineUrlScheme* DndScheme;
@@ -795,6 +793,7 @@ class DndcSchemeHandler: public QWebEngineUrlSchemeHandler {
     virtual void requestStarted(QWebEngineUrlRequestJob* request) override {
         if(request->requestMethod() == QS("PUT")){
             auto path = request->requestUrl().path();
+            // qDebug() << "path: " << path << "\n";
             auto components = path.split('/');
             if(components[1] == QS("roommove")){
                 auto parts = components[components.length()-1].split('.');
@@ -818,6 +817,13 @@ class DndcSchemeHandler: public QWebEngineUrlSchemeHandler {
                     append_room_with_name_at(name, x, y);
                 });
                 return;
+            }
+            else if(components[1] == QS("scrolltoid")){
+                if(components.length() != 3) return;
+                auto nid = components[2];
+                QTimer::singleShot(0, this, [=](){
+                    scroll_to_id(nid);
+                });
             }
             else {
                 return;
@@ -973,6 +979,38 @@ append_room_with_name_at(const QString& name, int x, int y){
     page->textedit->setFocus(Qt::FocusReason::NoFocusReason);
 }
 
+void
+scroll_to_id(QString nid){
+    // qDebug() << "nid: " << nid << "\n";
+    struct CtxWrapper {
+        DndcContext* ctx;
+        ~CtxWrapper(){ if(ctx) dndc_ctx_destroy(ctx); }
+    };
+
+    auto page = get_current_page();
+    if(!page) return;
+    if(page->textedit->isReadOnly()) return;
+    auto text = page->textedit->toPlainText() + QS("\n");
+    auto textbytes = text.toUtf8();
+    DndcStringView textsv = {(size_t)textbytes.size(), textbytes.data()};
+    CtxWrapper ctx = {dndc_create_ctx(0, NULL, NULL)};
+    DndcNodeHandle root = dndc_ctx_make_root(ctx.ctx, {});
+    int err = dndc_ctx_parse_string(ctx.ctx, root, {}, textsv);
+    if(err) return;
+
+    auto nidbytes = nid.toUtf8();
+    DndcStringView nidsv = {(size_t)nidbytes.size(), nidbytes.data()};
+    DndcNodeHandle target = dndc_ctx_node_by_id(ctx.ctx, nidsv);
+    if(target == DNDC_NODE_HANDLE_INVALID) return;
+    DndcNodeLocation loc;
+    err = dndc_node_location(ctx.ctx, target, &loc);
+    if(err) return;
+    // qDebug() << "loc.row: " << loc.row;
+    page->textedit->moveCursor(QTextCursor::End);
+    auto cursor = QTextCursor(page->textedit->document()->findBlockByLineNumber(loc.row-1));
+    page->textedit->setTextCursor(cursor);
+}
+
 void add_tab(const QString& filename){
 }
 
@@ -1126,6 +1164,41 @@ Page::get_text_for_preview(void){
     auto text = textedit->toPlainText();
     if(coord_helper && !textedit->isReadOnly())
         text += QS("\n")+COORD_HELPER_SCRIPT;
+    if(!coord_helper){
+        text += QS("\n"
+                    "::script\n"
+                    "  document.addEventListener('DOMContentLoaded', function(){\n"
+                    "    const anchors = document.getElementsByTagName('a');\n"
+                    "    function add_interceptor(a){\n"
+                    "      a.onclick = function(e){\n"
+                    "       let href = a.href;\n"
+                    "       if(href.baseVal) href = href.baseVal;\n"
+                    "       let split = href.split('#');\n"
+                    "       if(split.length > 1){\n"
+                    "         let target = split[1];\n"
+                    "         let t = document.getElementById(target);\n"
+                    "         if(t){\n"
+                    "           t.scrollIntoView();\n"
+                    "           e.preventDefault();\n"
+                    "           e.stopPropagation();\n"
+                    "           let request = new XMLHttpRequest();\n"
+                    "           request.open('PUT', 'dnd:///scrolltoid/'+target, true)\n"
+                    "           request.send();\n"
+                    "           return false;\n"
+                    "         }\n"
+                    "       }\n"
+                    "       a.setAttribute('target', '_blank');\n"
+                    "      };\n"
+                    "    }\n"
+                    "    for(let a of anchors){\n"
+                    "      add_interceptor(a);\n"
+                    "    }\n"
+                    "  });\n"
+        );
+#undef RAW
+        // fprintf(stderr, "%s\n", text.toUtf8().data());
+        // qDebug() << text << "\n";
+    }
     if(scroll_pos_string.length()){
         text += QS("\n::script\n  const SCROLLRESTO = ") + scroll_pos_string + QS("\n");
         text += SCROLL_RESTO_SCRIPT;

@@ -12,7 +12,7 @@ if not have_deps:
 from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox, QToolButton
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineUrlScheme, QWebEngineUrlSchemeHandler, QWebEngineUrlRequestJob, QWebEnginePage, QWebEngineProfile
-from PySide6.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices, QCloseEvent, QAction
+from PySide6.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices, QCloseEvent, QAction, QTextCursor
 from PySide6.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher, QFile, QThread, QTimer
 import pydndc
 from typing import Optional, List, Dict, Optional, Callable, Tuple, Set
@@ -72,6 +72,25 @@ def change_coord(id:int, x:int, y:int) -> None:
     except:
         LOGGER.exception('Problem while doing change coord')
 
+def scroll_to_id(nid:str) -> None:
+    page: Optional[Page] = TABWIDGET.currentWidget()
+    if not page: return
+    if page.textedit.isReadOnly(): return
+    text = page.textedit.toPlainText()
+    try:
+        ctx = pydndc.Context()
+        ctx.root.parse(text)
+        n = ctx.node_by_id(nid)
+        if n is None: return
+        loc:pydndc.Location = n.location
+        page.textedit.moveCursor(QTextCursor.End)
+        cursor = QTextCursor(page.textedit.document().findBlockByLineNumber(loc.row-1))
+        page.textedit.setTextCursor(cursor)
+
+    except:
+        LOGGER.exception('Problem while doing scroll_to_id')
+
+
 class SCHEME_Handler(QWebEngineUrlSchemeHandler):
     def requestStarted(self, request:QWebEngineUrlRequestJob) -> None:
         if request.requestMethod() == b'PUT':
@@ -96,6 +115,11 @@ class SCHEME_Handler(QWebEngineUrlSchemeHandler):
                     y = int(parts(1))
                     QTimer.singleShot(0, lambda: append_room_with_name_at(name, x, y))
                     return
+                elif components[1] == 'scrolltoid':
+                    if len(components) != 3:
+                        return
+                    nid = components[2]
+                    QTimer.singleShot(0, lambda: scroll_to_id(nid))
             except:
                 LOGGER.exception('Unable to handle PUT from: %r', path)
             return
@@ -889,6 +913,38 @@ class Page(QSplitter):
         text = self.textedit.toPlainText()
         if self.coord_helper and not self.textedit.isReadOnly():
             text += COORD_HELPER_SCRIPT
+        if not self.coord_helper:
+            text += ( "\n"
+                    "::script\n"
+                    "  document.addEventListener('DOMContentLoaded', function(){\n"
+                    "    const anchors = document.getElementsByTagName('a');\n"
+                    "    function add_interceptor(a){\n"
+                    "      a.onclick = function(e){\n"
+                    "       let href = a.href;\n"
+                    "       if(href.baseVal) href = href.baseVal;\n"
+                    "       let split = href.split('#');\n"
+                    "       if(split.length > 1){\n"
+                    "         let target = split[1];\n"
+                    "         let t = document.getElementById(target);\n"
+                    "         if(t){\n"
+                    "           t.scrollIntoView();\n"
+                    "           e.preventDefault();\n"
+                    "           e.stopPropagation();\n"
+                    "           let request = new XMLHttpRequest();\n"
+                    "           request.open('PUT', 'dnd:///scrolltoid/'+target, true)\n"
+                    "           request.send();\n"
+                    "           return false;\n"
+                    "         }\n"
+                    "       }\n"
+                    "       a.setAttribute('target', '_blank');\n"
+                    "      };\n"
+                    "    }\n"
+                    "    for(let a of anchors){\n"
+                    "      add_interceptor(a);\n"
+                    "    }\n"
+                    "  });\n"
+                    )
+
         if self.scroll_pos_string:
             text += '\n::script\n  const SCROLLRESTO = {}\n'.format(self.scroll_pos_string)
             text += SCROLL_RESTO_SCRIPT
@@ -917,10 +973,10 @@ class Page(QSplitter):
             html, depends = pydndc.htmlgen(
                 self.get_text_for_preview(),
                 base_dir=self.dirname,
-                error_reporter=self.display_dndc_error,
+                logger=self.display_dndc_error,
                 file_cache=FILE_CACHE,
                 flags=flags,
-                )
+            )
         except ValueError:
             # On error, the file cache can have loaded things, but we don't get those
             # dependencies.
@@ -948,7 +1004,7 @@ class Page(QSplitter):
 
     def format(self) -> None:
         try:
-            text = pydndc.reformat(self.textedit.toPlainText(), error_reporter=self.display_dndc_error)
+            text = pydndc.reformat(self.textedit.toPlainText(), logger=self.display_dndc_error)
         except ValueError:
             return
         self.textedit.setPlainText(text)

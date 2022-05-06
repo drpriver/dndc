@@ -1,0 +1,9 @@
+Changelog::kv
+  created: 2022-03-16T23:42:58Z
+  wontfix: 2022-05-06T16:53:27Z
+Created Mar 16, 2022, 07:42PM::md .update
+Summary::md .summary
+  Need a lightweight way to do labels and inputs.
+
+WontFix May 06, 2022, 12:53PM::md .update
+  Meh this is outside the scope tbh. also input elements are unsafe.
