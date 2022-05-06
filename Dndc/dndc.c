@@ -3162,6 +3162,22 @@ dndc_node_to_json(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString*out){
     *out = msb_detach_ls(&sb);
     return 0;
 }
+
+static inline
+void
+ctx_to_json(DndcContext* ctx, MStringBuilder* sb);
+
+DNDC_API
+int
+dndc_ctx_to_json(DndcContext* ctx, DndcLongString*out){
+    MStringBuilder sb = {.allocator=get_mallocator()};
+    ctx_to_json(ctx, &sb);
+    *out = msb_detach_ls(&sb);
+    return 0;
+}
+
+#endif
+
 static inline
 void
 node_to_json(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
@@ -3213,19 +3229,6 @@ node_to_json(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
     MSB_FORMAT(sb, ",\"row\":", node->row);
     MSB_FORMAT(sb, ",\"col\":", node->col);
     MSB_FORMAT(sb, ",\"flags\":", node->flags, "}");
-}
-
-static inline
-void
-ctx_to_json(DndcContext* ctx, MStringBuilder* sb);
-
-DNDC_API
-int
-dndc_ctx_to_json(DndcContext* ctx, DndcLongString*out){
-    MStringBuilder sb = {.allocator=get_mallocator()};
-    ctx_to_json(ctx, &sb);
-    *out = msb_detach_ls(&sb);
-    return 0;
 }
 
 static inline
@@ -3326,8 +3329,6 @@ ctx_to_json(DndcContext* ctx, MStringBuilder* sb){
     msb_write_char(sb, ']');
     msb_write_char(sb, '}');
 }
-
-#endif
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

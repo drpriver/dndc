@@ -62,6 +62,7 @@ enum DndcMainFlags {
     DNDC_MAIN_NONE = 0x0,
     DNDC_MAIN_PRINT_TREE = 0x1,
     DNDC_MAIN_PRINT_LINKS = 0x2,
+    DNDC_MAIN_DUMP_JSON = 0x4,
 };
 
 int
@@ -138,6 +139,12 @@ main(int argc, char**argv){
                 .name = SV("--print-tree"),
                 .dest = ArgBitFlagDest(&ast_func_flags, DNDC_MAIN_PRINT_TREE),
                 .help = "Print out the entire document tree.",
+                .hidden = true,
+            },
+            {
+                .name = SV("--json"),
+                .dest = ArgBitFlagDest(&ast_func_flags, DNDC_MAIN_DUMP_JSON),
+                .help = "Dump out the state of the context as json to stdout.",
                 .hidden = true,
             },
             {
@@ -479,6 +486,7 @@ main(int argc, char**argv){
                 dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
                 worker,
                 jsargs);
+            if(e) return 1;
             assert(!e);
             dndc_free_string(output);
         }
@@ -559,6 +567,9 @@ dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths){
     }
     return 0;
 }
+static inline
+void
+ctx_to_json(DndcContext*, MStringBuilder*);
 
 static
 int
@@ -575,6 +586,12 @@ dndc_main_ast_func(void*_Nullable user_data, DndcContext*_Nonnull ctx){
             StringView v = ctx->links.keys[i+ctx->links.capacity_];
             fprintf(stderr, "[%zu] key: '%.*s', value: '%.*s'\n", print_idx++, (int)k.length, k.text, (int)v.length, v.text);
         }
+    }
+    if(flags & DNDC_MAIN_DUMP_JSON){
+        MStringBuilder sb = {.allocator=get_mallocator()};
+        ctx_to_json(ctx, &sb);
+        puts(msb_borrow_ls(&sb).text);
+        msb_destroy(&sb);
     }
     return 0;
 }
