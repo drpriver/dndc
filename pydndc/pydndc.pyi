@@ -116,11 +116,10 @@ class NodeType(IntEnum):
     COMMENT      = 22
     CONTAINER    = 23
     QUOTE        = 24
-    HR           = 25
-    JS           = 26
-    DETAILS      = 27
-    META         = 28
-    INVALID      = 29
+    JS           = 25
+    DETAILS      = 26
+    META         = 27
+    INVALID      = 28
 
 class Context:
     def __new__(cls, flags:Flags=Flags.NONE, filename:Optional[str]=None, filecache:Optional[FileCache]=None) -> Context:

@@ -142,11 +142,10 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
         case NODE_QUOTE:
             write_generic_header(ctx, n, indent, msb);
             return expand_node_body(ctx, n, indent+2, msb, node_depth+1);
-        case NODE_HR:
         case NODE_TOC:
             write_generic_header(ctx, n, indent, msb);
             if(node_children_count(n)){
-                NODE_LOG_ERROR(ctx,n, "TOC or HR has children");
+                NODE_LOG_ERROR(ctx,n, "TOC has children");
                 return DNDC_ERROR_INVALID_TREE;
             }
             return result;
@@ -196,7 +195,6 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int n
         case NODE_KEYVALUE:
             return expand_keyvalue_body(ctx, n, indent, msb, node_depth);
         case NODE_INVALID:
-        case NODE_HR:
         case NODE_CONTAINER:
         case NODE_TOC:
         case NODE_KEYVALUEPAIR:

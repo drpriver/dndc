@@ -217,10 +217,12 @@ class TestExamples(TestCase):
         for example in EXAMPLE_FILES:
             with open(example, 'r', encoding='utf-8') as fp:
                 text = fp.read()
-            _ = pydndc.htmlgen(text, base_dir=os.path.dirname(example))
+            filename = os.path.basename(example)
+            base = os.path.dirname(example)
+            _ = pydndc.htmlgen(text, base_dir=base, filename=filename)
             if 'calendar.dnd' in example: continue
             if 'OVERVIEW' in example: continue
-            _ = pydndc.expand(text, base_dir=os.path.dirname(example), logger=lambda *args:(print(example),print(*args)))
+            _ = pydndc.expand(text, base_dir=base, logger=pydndc.stderr_logger)
             _ = pydndc.reformat(text)
             _ = pydndc.analyze_syntax_for_highlight(text)
 
@@ -229,10 +231,13 @@ class TestExamples(TestCase):
         for example in EXAMPLE_FILES:
             with open(example, 'r', encoding='utf-8') as fp:
                 text = fp.read()
-            html1 = pydndc.htmlgen(text, base_dir=os.path.dirname(example))[0]
-            ctx = pydndc.Context()
-            ctx.base_dir = os.path.dirname(example)
-            ctx.root.parse(text)
+            base = os.path.dirname(example)
+            fn = os.path.basename(example)
+            html1 = pydndc.htmlgen(text, filename=fn, base_dir=base, logger=pydndc.stderr_logger)[0]
+            ctx = pydndc.Context(filename=fn)
+            ctx.logger = pydndc.stderr_logger
+            ctx.base_dir = base
+            ctx.root.parse(text, filename=fn)
             ctx.resolve_imports()
             ctx.execute_js()
             ctx.gather_links()

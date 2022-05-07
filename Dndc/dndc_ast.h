@@ -511,11 +511,10 @@ dndc_node_get_parent(DndcContext*, DndcNodeHandle);
     apply(COMMENT,        22)\
     apply(CONTAINER,      23)\
     apply(QUOTE,          24)\
-    apply(HR,             25)\
-    apply(JS,             26)\
-    apply(DETAILS,        27)\
-    apply(META,           28)\
-    apply(INVALID,        29)\
+    apply(JS,             25)\
+    apply(DETAILS,        26)\
+    apply(META,           27)\
+    apply(INVALID,        28)\
 
 enum DndcNodeType {
 #define X(a, b) DNDC_NODE_TYPE_##a = b,

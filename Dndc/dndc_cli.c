@@ -79,6 +79,7 @@ append_arg(void* msb_, const void* arg_){
 int
 main(int argc, char**argv){
     StringView source_path = {0};
+    StringView original_source_path = {0};
     StringView source_text = {0};
     StringView output_path = SV("");
     DndcDependencyFunc* dependency_func = NULL;
@@ -99,8 +100,9 @@ main(int argc, char**argv){
             [0] = {
                 .name = SV("source"),
                 .dest = ARGDEST(&source_path),
-                .help = "Source file (.dnd file) to read from.\n"
-                        "If not given, will read from stdin.",
+                .help = "Source file (.dnd file) to read from. "
+                        "This is not adjusted by --base-directory.\n"
+                        "If not given, will read from stdin until EOF.",
                 },
         };
         ArgToParse kw_args[] = {
@@ -122,12 +124,17 @@ main(int argc, char**argv){
                 .altname1 = SV("--base-directory"),
                 .dest = ARGDEST(&base_dir),
                 .help = "Paths in source files will be relative "
-                        "to the given directory.\n"
+                        "to the given directory."
+                        "\n"
                         "If not given, but source_path is given, "
                         "then everything is relative to the directory "
                         "that the source path is in. If that is also "
                         "not given, then everything is relative to the "
-                        "current working directory.",
+                        "current working directory."
+                        "\n"
+                        "NOTE: This does not affect the source "
+                        "argument."
+                        ,
             },
             {
                 .name = SV("--no-js"),
@@ -398,13 +405,16 @@ main(int argc, char**argv){
         }
         if(!cleanup)
             flags |= DNDC_NO_CLEANUP;
+        original_source_path = source_path;
         if(!base_dir.text){
-            if(source_path.text)
+            if(source_path.text){
                 base_dir = path_dirname(source_path);
+                source_path = path_basename(source_path);
+            }
             else
                 base_dir = SV("");
         }
-        if(!source_path.text){
+        if(!original_source_path.text){
             source_path = SV("(stdin)");
             // read from stdin
             MStringBuilder sb = {.allocator=get_mallocator()};
@@ -438,9 +448,9 @@ main(int argc, char**argv){
         }
         else {
             Allocator allocator = get_mallocator();
-            TextFileResult load_err = read_file(source_path.text, allocator);
+            TextFileResult load_err = read_file(original_source_path.text, allocator);
             if(load_err.errored){
-                fprintf(stderr, "Unable to read: '%s'\n", source_path.text);
+                fprintf(stderr, "Unable to read: '%s'\n", original_source_path.text);
                 return 1;
             }
             source_text = LS_to_SV(load_err.result);
@@ -633,7 +643,6 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
         case NODE_CONTAINER:
         case NODE_INVALID:
         case NODE_QUOTE:
-        case NODE_HR:
         case NODE_DIV:{
             printf(" '%.*s' ", (int)node->header.length, node->header.text);
             RARRAY_FOR_EACH(StringView, c, node->classes){

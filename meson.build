@@ -1,5 +1,5 @@
-project('Dndc', 'c', 'cpp', version: '0.15.0', default_options:['c_std=gnu17', 'cpp_std=gnu++17'])
-COMPAT_VERSION = '0.15.0'
+project('Dndc', 'c', 'cpp', version: '0.16.0', default_options:['c_std=gnu17', 'cpp_std=gnu++17'])
+COMPAT_VERSION = '0.16.0'
 thread_dep = dependency('threads')
 pymod = import('python')
 pyinstall = pymod.find_installation()

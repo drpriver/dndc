@@ -167,7 +167,6 @@ Convenience::md
       COMMENT      | comment      | ---
       CONTAINER    | ---          | No
       QUOTE        | quote        | Yes
-      HR           | hr           | No
       JS           | js           | No
       DETAILS      | details      | Yes
       INVALID      | ---          | ---

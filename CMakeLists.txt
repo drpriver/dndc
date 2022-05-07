@@ -1,7 +1,7 @@
 # I just use the makefiles, but here is my attempt
 # at writing a CMakeLists.txt
 cmake_minimum_required(VERSION 3.16)
-project(Dndc VERSION 0.15.0)
+project(Dndc VERSION 0.16.0)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)

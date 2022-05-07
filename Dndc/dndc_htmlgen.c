@@ -122,7 +122,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             Node* n = get_node(ctx, ctx->titlenode);
             msb_write_literal(msb, "<title>");
             msb_write_tag_escaped_str(msb, n->header.text, n->header.length);
-            msb_write_literal(msb, "</title>");
+            msb_write_literal(msb, "</title>\n");
         }
     }
     if(ctx->stylesheets_nodes.count){
@@ -304,7 +304,6 @@ build_toc_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
         case NODE_TOC:
         case NODE_COMMENT:
         case NODE_INVALID:
-        case NODE_HR:
             break;
         case NODE_PRE:
         case NODE_RAW:{
@@ -792,19 +791,6 @@ RENDERFUNC(HEADING){
     if(unlikely(node->classes)){
         NODE_LOG_WARNING(ctx, node, SV("UNIMPLEMENTED: classes on the heading"));
     }
-    return 0;
-}
-RENDERFUNC(HR){
-    (void)header_depth;
-    Node* node = get_node(ctx, handle);
-    if(unlikely(node->header.length)){
-        NODE_LOG_WARNING(ctx, node, SV("Ignoring header of hr"));
-    }
-    if(unlikely(node_children_count(node))){
-        NODE_LOG_WARNING(ctx, node, SV("Ignoring children of hr"));
-    }
-    msb_write_char(sb, '\n');
-    msb_write_literal(sb, "<hr>\n");
     return 0;
 }
 RENDERFUNC(TABLE){

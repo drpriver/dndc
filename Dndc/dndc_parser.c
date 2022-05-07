@@ -764,7 +764,6 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
         case NODE_TITLE:
         case NODE_CONTAINER:
         case NODE_QUOTE:
-        case NODE_HR:
             break; // do regular string parsing
         case NODE_STYLESHEETS:
             return parse_raw_node(ctx, parent_handle, indentation);

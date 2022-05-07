@@ -848,7 +848,6 @@ export const NodeType = {
     COMMENT:      number;
     CONTAINER:    number;
     QUOTE:        number;
-    HR:           number;
     JS:           number;
     DETAILS:      number;
     INVALID:      number;

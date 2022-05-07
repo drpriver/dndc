@@ -1283,7 +1283,6 @@ js_dndc_node_set_type(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst 
         case NODE_STRING:
         case NODE_PARA:
         case NODE_HEADING:
-        case NODE_HR:
         case NODE_TABLE:
         case NODE_TABLE_ROW:
         case NODE_IMAGE:

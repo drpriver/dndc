@@ -247,7 +247,7 @@
           <h1>My Document</h1>
           <p>This is my document</h1>
   <code>:</code><code>:h</code>::md .node #id(h)
-    The <code>:</code><code>:h</code> creates a heading. Generally, a nested md
+    The <code>:</code><code>:h</code> node creates a heading. Generally, a nested md
     block is more useful, but sometimes you want to avoid overly indented
     documents.
 
@@ -265,7 +265,7 @@
           Blah Blah
 
   <code>:</code><code>:table</code>::md .node #id(table)
-    The <code>:</code><code>:table</code> node is for tabless! Columns are
+    The <code>:</code><code>:table</code> node is for tables! Columns are
     separted by the pipe character: <code>|</code>. The first row is the table
     heading. The last column of each row is allowed to continue on the next line
     if it is indented. This allows you to have larger amounts of text in the last
@@ -546,23 +546,6 @@
           blockquote > div > *:before {
             content: "> ";
           }
-  <code>:</code><code>:hr</code>::md .node #id(hr)
-    The <code>:</code><code>:hr</code> inserts an <code><h</code><code>r></code> element.
-
-    This node is deprecated as the <code><h</code><code>r></code> element is now allowed
-    in regular text.
-
-    ::div .side-by-side
-      Input::pre .leftside #noid
-        Hello.
-        ::hr
-        Goodbye.
-      Rendered::md .rightside #noid
-        Hello.
-
-        ::hr
-        Goodbye.
-
   <code>:</code><code>:details</code>::md .node #id(details)
     The <code>:</code><code>:details</code> node is parsed like a <code>md</code>
     node, but the final output will be in a <details> tag. The header will be put
@@ -592,21 +575,15 @@
     box-sizing: border-box;
   }
   .left {
-    position: fixed;
-    left: 0px;
-    top: 0px;
+    height: 100%;
+    overflow-y: auto;
   }
   .right {
-
-    position: fixed;
-    left: 10em;
-    top: 0;
     overflow-y: scroll;
-    width: calc(100% - 10em);
     height: 100%;
     padding-bottom: 40em;
   }
-  .right ul, .right ol, .right p {
+  .right > * {
     max-width: 50em;
   }
   .side-by-side {
@@ -635,9 +612,6 @@
     max-width: 50em;
 
   }
-  .right * {
-    max-width: 100%;
-  }
   .node h2 {
     background-color: #eee;
     border-bottom: 1px solid black;
@@ -646,8 +620,17 @@
   h1, h2, h3 {
     width: 100%;
   }
+  html {
+    width: 100%;
+    height: 100%;
+  }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    display: grid;
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    grid-template-columns: 12em auto;
   }
   code, pre {
     font-family: "SF Mono", ui-mono, "Cascadia Mono", Consolas, monospace;
