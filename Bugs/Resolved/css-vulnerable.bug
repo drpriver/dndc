@@ -1,6 +1,7 @@
 Changelog::kv
-  created: 2022-05-07T06:53:01Z
-  updated: 2022-05-07T06:58:31Z
+  created:  2022-05-07T06:53:01Z
+  updated:  2022-05-07T06:58:31Z
+  resolved: 2022-05-07T20:31:27Z
 Created May 07, 2022, 02:53AM::md .update
 Summary::md .summary
   CSS is pasted in as a raw node. This is a vulnerability as you can just put a
@@ -16,3 +17,6 @@ Summary::md .summary
 Updated May 07, 2022, 02:58AM::md .update
   I think it’s the </style> bit that is the vulnerability. Without it’s just
   unrecognized css?
+
+Resolved May 07, 2022, 04:31PM::md .update
+  Well I sloppily fixed this by just banning the ‘<‘ character.

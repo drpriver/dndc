@@ -83,7 +83,8 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
     // estimate memory usage as 120 characters per node and 200 kb images.
     size_t reserve_amount = ctx->nodes.count*120 + imgcount*200*1024;
     msb_ensure_additional(msb, reserve_amount);
-    bool complete_document = !(ctx->flags & DNDC_FRAGMENT_ONLY);
+    uint64_t flags = ctx->flags;
+    bool complete_document = !(flags & DNDC_FRAGMENT_ONLY);
     if(complete_document){
         msb_write_literal(msb,
             "<!DOCTYPE html>\n"
@@ -97,7 +98,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             // kind of expensive for just a flag.
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=yes\">\n"
         );
-        if(!(ctx->flags & DNDC_INPUT_IS_UNTRUSTED)){
+        if(!(flags & DNDC_INPUT_IS_UNTRUSTED)){
             MARRAY_FOR_EACH(NodeHandle, m, ctx->meta_nodes){
                 Node* mn = get_node(ctx, *m);
                 if(mn->type != NODE_META) continue;
@@ -158,6 +159,12 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
                     NODE_LOG_WARNING(ctx, child, SV("Non-string child of a style sheet is being ignored."));
                     continue;
                 }
+                if(flags & DNDC_INPUT_IS_UNTRUSTED){
+                    if(memchr(child->header.text, '<', child->header.length)){
+                        NODE_LOG_ERROR(ctx, child, SV("Insecure character in css: '<'"));
+                        return DNDC_ERROR_UNTRUSTED;
+                    }
+                }
                 msb_write_str(msb, child->header.text, child->header.length);
                 msb_write_char(msb, '\n');
             }
@@ -166,7 +173,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             msb_write_literal(msb, "</style>\n");
     }
     if(ctx->script_nodes.count){
-        bool strip_ws = !!(ctx->flags & DNDC_STRIP_WHITESPACE);
+        bool strip_ws = !!(flags & DNDC_STRIP_WHITESPACE);
         MARRAY_FOR_EACH(NodeHandle, s, ctx->script_nodes){
             Node* node = get_node(ctx, *s);
             // script nodes can change node types after they are registered
