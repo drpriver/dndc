@@ -1,0 +1,18 @@
+Changelog::kv
+  created: 2022-05-07T06:53:01Z
+  updated: 2022-05-07T06:58:31Z
+Created May 07, 2022, 02:53AM::md .update
+Summary::md .summary
+  CSS is pasted in as a raw node. This is a vulnerability as you can just put a
+  pair of </style><style> tags in your css block and then insert arbitrary
+  content in between, including any javascript. This also means that the wasm
+  dndc is vulnerable to XSS.
+
+  God webs hit is soooo bad.
+
+  I guess I have to write a css parser then so that bad stuff gets escaped? Or
+  at least remove < brackets.
+
+Updated May 07, 2022, 02:58AM::md .update
+  I think it’s the </style> bit that is the vulnerability. Without it’s just
+  unrecognized css?
