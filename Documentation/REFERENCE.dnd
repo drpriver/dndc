@@ -598,7 +598,6 @@
     border-bottom: 1px dotted grey;
   }
   pre {
-    width: 44em;
   }
   td, th  {
     border: 1px solid black;
@@ -609,8 +608,6 @@
   }
   table {
     border-collapse: collapse;
-    max-width: 50em;
-
   }
   .node h2 {
     background-color: #eee;
@@ -630,7 +627,8 @@
     height: 100%;
     width: 100%;
     margin: 0;
-    grid-template-columns: 12em auto;
+    grid-template-columns: max-content auto;
+    grid-column-gap: 3em;
   }
   code, pre {
     font-family: "SF Mono", ui-mono, "Cascadia Mono", Consolas, monospace;

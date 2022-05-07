@@ -383,9 +383,9 @@ But Wait, There's More::md
   }
   div.root {
     display: grid;
-    grid-template-columns: 15% 85%;
+    grid-template-columns: 15em auto;
     grid-column-gap: 4em;
-    padding-bottom: 40em;
+    padding-bottom: 90vh;
   }
   nav a {
     border-bottom: 0;

@@ -469,7 +469,6 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     // auto before= get_t();
     [textStorage removeAttribute:NSForegroundColorAttributeName range:currentLineRange];
     [textStorage removeAttribute:NSBackgroundColorAttributeName range:currentLineRange];
-    // HERE("Clearing syntax costs: %.3fms", (get_t()-before)/1000.);
     auto len = [string length];
     // gross!
     static unichar* chars;
@@ -493,7 +492,6 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     // for(int i = 0; i < 1000; i++)
         dndc_analyze_syntax_utf16(text16, dndc_syntax_func, &sd);
     // auto t1 = get_t();
-    // HERE("dndc_analyze_syntax: %.3fms", (t1-t0)/1000.);
     return;
 }
 @end
@@ -1454,6 +1452,7 @@ BOOL show_stats;
         base_dir.text = dir_text;
         base_dir.length = strlen(dir_text);
     }
+    NSString* filename = [[self->file_url path] lastPathComponent];
     // auto t0 = get_t();
     uint64_t flags = 0;
     // flags |= DNDC_SUPPRESS_WARNINGS;
@@ -1466,11 +1465,10 @@ BOOL show_stats;
     // flags |= DNDC_USE_DND_URL_SCHEME;
     error_text.editable = YES;
     [[error_text textStorage].mutableString setString:@""];
-    auto err = run_the_dndc(flags, base_dir, LS_to_SV(source), SV(""), &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL, gdndc_ast_func, (__bridge void*)self, (WorkerThread*)B64WORKER, LS(""));
+    auto err = run_the_dndc(flags, base_dir, LS_to_SV(source), ns_borrow_sv(filename), &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL, gdndc_ast_func, (__bridge void*)self, (WorkerThread*)B64WORKER, LS(""));
     // auto err = dndc_compile_dnd_file(flags, base_dir, source, &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL);
     error_text.editable = NO;
     // auto t1 = get_t();
-    // HERE("dndc_compile_dnd_file: %.3fms", (t1-t0)/1000.);
     if(err){
         return;
     }
@@ -1481,7 +1479,6 @@ BOOL show_stats;
     NSURL* url = [self this_dnd_url];
     [webview loadData:htmldata MIMEType:@"text/html" characterEncodingName:@"UTF-8" baseURL:url];
     // auto t2 = get_t();
-    // HERE("load the page: %.3fms", (t2-t1)/1000.);
 }
 
 -(NSURL*) this_dnd_url {
