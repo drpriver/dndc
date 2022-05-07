@@ -1,0 +1,20 @@
+Changelog::kv
+  created: 2022-04-19T00:42:17Z
+  updated: 2022-05-07T20:42:44Z
+  updated: 2022-05-07T20:49:38Z
+  punted:  2022-05-07T21:04:33Z
+Created Apr 18, 2022, 08:42PM::md .update
+Summary::md .summary
+  It’d be nice to have a tree widget to navigate the contents of the text
+  editor.
+
+Updated May 07, 2022, 04:42PM::md .update
+  The need for this has been greatly reduced as my link interceptor now scrolls
+  the editor to the right position.
+
+Updated May 07, 2022, 04:49PM::md .update
+  Could still be useful on wide screens though. On my laptop it’s unneeded,
+  but on a wide screen it could be nice.
+
+Punted May 07, 2022, 05:04PM::md .update
+  But not that useful. Punting on this for now.
