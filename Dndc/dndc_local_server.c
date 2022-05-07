@@ -2,6 +2,7 @@
 #include "dndc_long_string.h"
 #include "file_util.h"
 #include "str_util.h"
+#include "path_util.h"
 #include "allocator.h"
 #include "mallocator.h"
 #include "msb_url_helpers.h"
@@ -23,6 +24,7 @@ typedef long long ssize_t;
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+typedef int SOCKET; // easier this way
 
 #endif
 
@@ -65,9 +67,10 @@ memmem(const void* hay_, size_t haysz, const void* needle_, size_t needlesz){
     }
 }
 
-// Hacky helper for stringifying error codes
-// Leaks the error message, but whatever
-const char* wsaerror(void){
+// Helpers for stringifying error codes
+static inline
+const char*
+wsaerror(void){
     DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ALLOCATE_BUFFER;
     int err = WSAGetLastError();
     char* result = NULL;
@@ -77,14 +80,30 @@ const char* wsaerror(void){
     return result;
 }
 
+static inline
 const char*
-leak_error_mess(DWORD err){
+os_error_mess(DWORD err){
     DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ALLOCATE_BUFFER;
     char* result = NULL;
     DWORD ret = FormatMessageA(flags, NULL, err, 0, (void*)&result, 0, NULL);
     if(!result) return "Error when formatting error";
     result[ret-1] = 0;
     return result;
+}
+static inline
+void
+free_error_mess(const char* mess){
+    LocalFree(mess);
+}
+#endif
+#if !defined(_WIN32)
+const char* os_error_mess(int eno){
+    return strerror(eno);
+}
+static inline
+void
+free_error_mess(const char* mess){
+    (void)mess; // strerror should not be freed
 }
 #endif
 
@@ -148,9 +167,6 @@ compile_file(DndcLogFunc* func, void*_Nullable logdata, LongString directory, ui
     return result;
 }
 
-#ifdef _WIN32
-//
-// winsock is just different enough that I'd rather keep the implementation separate.
 static
 int
 handle_request(DndcLogFunc* func, void*_Nullable p, uint64_t flags, LongString directory, SOCKET accsd, LongString request);
@@ -160,6 +176,12 @@ struct DndServer{
     DndcLogFunc* func;
     void*_Nullable p;
 };
+
+typedef struct DndServer DndServer;
+
+#ifdef _WIN32
+//
+// winsock is just different enough that I'd rather keep the implementation separate.
 
 DndServer*_Nullable
 dnd_server_create(DndcLogFunc* func, void*_Nullable p, int* port){
@@ -177,7 +199,9 @@ dnd_server_create(DndcLogFunc* func, void*_Nullable p, int* port){
     BOOL opt = 1;
     err = setsockopt(listensocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof opt);
     if(err){
-        error(func, p, "setsockopt for SO_REUSEADDR failed: %s (%d)", wsaerror(), WSAGetLastError());
+        const char* errmess = wsaerror();
+        error(func, p, "setsockopt for SO_REUSEADDR failed: %s (%d)", errmess, WSAGetLastError());
+        free_error_mess(errmess);
         goto cleanup;
     }
     struct sockaddr_in addr = {
@@ -188,21 +212,27 @@ dnd_server_create(DndcLogFunc* func, void*_Nullable p, int* port){
 
     err = bind(listensocket, (struct sockaddr*)&addr, sizeof addr);
     if(err){
-        error(func, p, "bind error (%d): %s", WSAGetLastError(), wsaerror());
+        const char* errmess = wsaerror();
+        error(func, p, "bind error (%s): %d", errmess, WSAGetLastError());
         error(func, p, "port was: %d", *port);
+        free_error_mess(errrrmess);
         goto cleanup;
     }
 
     int addrlen = sizeof addr;
     err = getsockname(listensocket, (struct sockaddr*)&addr, &addrlen);
     if(err){
-        error(func, p, "getsockname error: %s (%d)", wsaerror(), WSAGetLastError());
+        const char* errmess = wsaerror();
+        error(func, p, "getsockname error: %s (%d)", errmess, WSAGetLastError());
+        free_error_mess(errmess);
         goto cleanup;
     }
 
     err = listen(listensocket, SOMAXCONN);
     if(err){
-        error(func, p, "listen error: %s (%d)", wsaerror(), WSAGetLastError());
+        const char* errmess = wsaerror();
+        error(func, p, "listen error: %s (%d)", errmess, WSAGetLastError());
+        free_error_mess(errmess);
         goto cleanup;
     }
     info(func, p, "Serving at http://localhost:%d", (int)ntohs(addr.sin_port));
@@ -232,14 +262,18 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
         SOCKET accsd = accept(sd, (struct sockaddr*)&clientaddr, &clientlen);
         // debug("Accepted...");
         if(accsd < 0){
-            error(server->func, server->p, "accept failed: %s: %d", wsaerror(), (int)accsd);
+            const char* errmess = wsaerror();
+            error(server->func, server->p, "accept failed: %s: %d", errmess, (int)accsd);
+            free_error_mess(errmess);
             closesocket(sd);
             WSACleanup();
             return 1;
         }
         ssize_t n = recv(accsd, buff, (sizeof buff)-1, 0);
         if(n < 0){
-            error(server->func, server->p, "recv failed: %s: %zd", wsaerror(), n);
+            const char* errmess = wsaerror();
+            error(server->func, server->p, "recv failed: %s: %zd", errmess, n);
+            free_error_mess(errmess);
             goto Close;
         }
         if(n == 0){
@@ -256,116 +290,10 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
     WSACleanup();
     return 0;
 }
-static
-int
-handle_request(DndcLogFunc*func, void*_Nullable p, uint64_t flags, LongString directory, SOCKET accsd, LongString request){
-    // just assume everything is a GET, lol.
-    MStringBuilder urlsb = {.allocator=get_mallocator()};
-    StringView path = SV("index.dnd");
-    StringView suffix = SV("");
-    if(request.length > 6){
-        LongString rest = {request.length-5, request.text+5};
-        const char* space = strchr(rest.text, ' ');
-        if(space && space != rest.text){
-            path = (StringView){.text=rest.text, .length=space-rest.text};
-            int decoderr = msb_url_percent_decode(&urlsb, path.text, path.length);
-            if(decoderr){
-                func(p, DNDC_NODELESS_MESSAGE, "", 0, -1, -1, "Bad percent decode", sizeof("Bad percent decode")-1);
-                goto LNotFound;
-            }
-            path = msb_borrow_sv(&urlsb);
-            func(p, DNDC_STATISTIC_MESSAGE, path.text-1, path.length+1, -1, -1, "Serving", sizeof("Serving")-1);
-            // info(func, p, "Serving: %.*s", (int)path.length+1, path.text-1);
-        }
-        else {
-            func(p, DNDC_STATISTIC_MESSAGE, path.text, path.length, -1, -1, "Serving", sizeof("Serving")-1);
-            // info(func, p, "Serving: %.*s", (int)path.length, path.text);
-        }
-    }
-    if(endswith(path, SV(".html"))){
-        path.length -= 5;
-        suffix = SV(".dnd");
-    }
-    if(SV_equals(path, SV("shutdown"))){
-        #define MESS "HTTP/1.1 200 OK\r\n"
-        send(accsd, MESS, (sizeof MESS)-1, 0);
-        #undef MESS
-        goto LShutdown;
-    }
-    if(memmem(path.text, path.length, "..", 2)){
-        error(func, p, ".. not allowed: '%.*s'", (int)path.length, path.text);
-        goto LNotFound;
-    }
-    if(endswith(path, SV(".dnd")) || SV_equals(suffix, SV(".dnd"))){
-        TextFileResult tfr = read_relative_file_with_suffix_conversion(directory, path, suffix);
-        if(tfr.errored){
-            error(func, p, "Error reading '%.*s': %s", (int)path.length, path.text, leak_error_mess(tfr.native_error));
-            goto LNotFound;
-        }
-        int err = 0;
-        LongString html = compile_file(func, p, directory, flags, path, tfr.result, &err);
-        if(err){
-            #define MESS "HTTP/1.1 500 Compiler-Error\r\n\r\n" \
-            "<div align=center style=\"margin-top:10%; font-family: sans-serif;\">" \
-            "<h1><span style=\"color:red;\">Error</span>Error compiling file.</h1>" \
-            "</div>" \
-            "\r\n"
-            send(accsd, MESS, (sizeof MESS)-1, 0);
-            #undef MESS
-            goto LOk;
-        }
-        char buff[1024];
-        int n = snprintf(buff, sizeof buff, "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\n\r\n", html.length);
-        send(accsd, buff, n, 0);
-        send(accsd, html.text, html.length, 0);
-        dndc_free_string(tfr.result);
-        dndc_free_string(html);
-        goto LOk;
-    }
-    else {
-        TextFileResult tfr = read_relative_file_with_suffix_conversion(directory, path, suffix);
-        if(tfr.errored){
-            error(func, p, "Error reading '%.*s': %s", (int)path.length, path.text, leak_error_mess(tfr.native_error));
-            goto LNotFound;
-        }
-        char buff[1024];
-        int n = snprintf(buff, sizeof buff, "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\n\r\n", tfr.result.length);
-        send(accsd, buff, n, 0);
-        send(accsd, tfr.result.text, tfr.result.length, 0);
-        dndc_free_string(tfr.result);
-        goto LOk;
-    }
-    LNotFound:
-    #define MESS "HTTP/1.1 404 Not-Found\r\n\r\n" \
-        "<div align=center style=\"margin-top:10%; font-family: sans-serif;\">" \
-        "<h1><span style=\"color:red;\">404</span>'ed! Not Found!</h1>" \
-        "</div>" \
-        "\r\n"
-    send(accsd, MESS, (sizeof MESS)-1, 0);
-    #undef MESS
-    msb_destroy(&urlsb);
-    return 0;
-    LOk:
-    msb_destroy(&urlsb);
-    return 0;
-    LShutdown:
-    msb_destroy(&urlsb);
-    return 1;
-}
 
 #else
 
-static
-int
-handle_request(DndcLogFunc*func, void*_Nullable p, uint64_t flags, LongString directory, int accsd, LongString request);
 
-struct DndServer {
-    int sd;
-    DndcLogFunc* func;
-    void*_Nullable p;
-};
-
-typedef struct DndServer DndServer;
 
 DndServer*_Nullable
 dnd_server_create(DndcLogFunc* func, void*_Nullable p, int* port){
@@ -434,7 +362,7 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
         int shutdown = 0;
         socklen_t clientlen = sizeof(clientaddr);
         // debug("Waiting for accept...");
-        int accsd = accept(sd, (struct sockaddr*)&clientaddr, &clientlen);
+        SOCKET accsd = accept(sd, (struct sockaddr*)&clientaddr, &clientlen);
         // debug("Accepted...");
         if(accsd < 0){
             // error(func, p, "accept failed: %s", strerror(errno));
@@ -464,9 +392,28 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
     return 0;
 }
 
+#endif
+
+static const LongString INDEXTEXT = LS(
+    "Index::title\n"
+    "::js\n"
+    "  let paths = FileSystem.list_dnd_files();\n"
+    "  let s = '';\n"
+    "  for(let path of paths){\n"
+    "     s += `* [${path}]\\n`\n"
+    "     ctx.add_link(path, encodeURI(path));\n"
+    "   }\n"
+    "   ctx.root.parse(s);\n"
+    "::css\n"
+    "  body > * {\n"
+    "    margin: auto;\n"
+    "    width: max-content;\n"
+    "  }\n"
+);
+
 static
 int
-handle_request(DndcLogFunc* func, void*_Nullable p, uint64_t flags, LongString directory, int accsd, LongString request){
+handle_request(DndcLogFunc*func, void*_Nullable p, uint64_t flags, LongString directory, SOCKET accsd, LongString request){
     // just assume everything is a GET, lol.
     MStringBuilder urlsb = {.allocator=get_mallocator()};
     StringView path = SV("index.dnd");
@@ -482,7 +429,7 @@ handle_request(DndcLogFunc* func, void*_Nullable p, uint64_t flags, LongString d
                 goto LNotFound;
             }
             path = msb_borrow_sv(&urlsb);
-            func(p, DNDC_STATISTIC_MESSAGE, path.text, path.length, -1, -1, "Serving", sizeof("Serving")-1);
+            func(p, DNDC_STATISTIC_MESSAGE, path.text-1, path.length+1, -1, -1, "Serving", sizeof("Serving")-1);
         }
         else {
             func(p, DNDC_STATISTIC_MESSAGE, path.text, path.length, -1, -1, "Serving", sizeof("Serving")-1);
@@ -503,30 +450,19 @@ handle_request(DndcLogFunc* func, void*_Nullable p, uint64_t flags, LongString d
         error(func, p, ".. not allowed: '%.*s'", (int)path.length, path.text);
         goto LNotFound;
     }
+    debug(func, p, "path: '%.*s' suffix: '%.*s'", (int)path.length, path.text, (int)suffix.length, suffix.text);
     if(endswith(path, SV(".dnd")) || SV_equals(suffix, SV(".dnd"))){
         TextFileResult tfr = read_relative_file_with_suffix_conversion(directory, path, suffix);
         LongString text = LS("");
         if(tfr.errored){
-            if(SV_equals(path, SV("index")) || SV_equals(path, SV("index.dnd"))){
-                text = LS(
-                "Index::title\n"
-                "::js\n"
-                "  let paths = FileSystem.list_dnd_files();\n"
-                "  let s = '';\n"
-                "  for(let path of paths){\n"
-                "     s += `* [${path}]\\n`\n"
-                "     ctx.add_link(path, encodeURI(path));\n"
-                "   }\n"
-                "   ctx.root.parse(s);\n"
-                "::css\n"
-                "  body > * {\n"
-                "    margin: auto;\n"
-                "    width: max-content;\n"
-                "  }\n"
-                );
+            StringView bn = path_basename(path);
+            if(SV_equals(bn, SV("index")) || SV_equals(bn, SV("index.dnd"))){
+                text = INDEXTEXT;
             }
             else {
-                error(func, p, "Error reading '%.*s': %s", (int)path.length, path.text, strerror(tfr.native_error));
+                const char* errmess = os_error_mess(tfr.native_error);
+                error(func, p, "Error reading '%.*s': %s", (int)path.length, path.text, errmess);
+                free_error_mess(errmess);
                 goto LNotFound;
             }
         }
@@ -555,7 +491,9 @@ handle_request(DndcLogFunc* func, void*_Nullable p, uint64_t flags, LongString d
     else {
         TextFileResult tfr = read_relative_file_with_suffix_conversion(directory, path, suffix);
         if(tfr.errored){
-            error(func, p, "Error reading '%.*s': %s", (int)path.length, path.text, strerror(tfr.native_error));
+            const char* errmess = os_error_mess(tfr.native_error);
+            error(func, p, "Error reading '%.*s': %s", (int)path.length, path.text, errmess);
+            free_error_mess(errmess);
             goto LNotFound;
         }
         char buff[1024];
@@ -568,7 +506,7 @@ handle_request(DndcLogFunc* func, void*_Nullable p, uint64_t flags, LongString d
     LNotFound:
     #define MESS "HTTP/1.1 404 Not-Found\r\n\r\n" \
         "<div align=center style=\"margin-top:10%; font-family: sans-serif;\">" \
-        "<h1><span style=\"color:red;\">404</span>'ed! Not Found!</h1>" \
+        "<h1><span style=\"color:red;\">404</span>'ed!<br>Not Found!</h1>" \
         "</div>" \
         "\r\n"
     send(accsd, MESS, (sizeof MESS)-1, 0);
@@ -582,7 +520,6 @@ handle_request(DndcLogFunc* func, void*_Nullable p, uint64_t flags, LongString d
     msb_destroy(&urlsb);
     return 1;
 }
-#endif
 
 static
 void

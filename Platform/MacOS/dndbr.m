@@ -502,6 +502,7 @@ asm(".global __app_icon\n"
         NSIndexPath *indexPath = [browser selectionIndexPath];
         FileSystemNode *node = [browser itemAtIndexPath:indexPath];
         NSString* path = [node.URL path];
+        BOOL wasdir = [node isDirectory];
         // LOGIT(path);
         path = [path substringFromIndex:self->text.stringValue.length];
         // LOGIT(path);
@@ -510,6 +511,11 @@ asm(".global __app_icon\n"
         NSString* s = [NSString stringWithFormat:@"http://localhost:%d%@", self->port, path];
         // LOGIT(s);
         NSURL* u = [NSURL URLWithString:s];
+        // LOGIT(u);
+        if(wasdir){
+            u = [u URLByAppendingPathComponent:@"index.html"];
+        }
+        [self log_mess:DNDC_DEBUG_MESSAGE fn:@"" line:0 column:0 mess:[NSString stringWithFormat:@"url: %@", u]];
         // LOGIT(u);
         [[NSWorkspace sharedWorkspace] openURL:u];
         return;
