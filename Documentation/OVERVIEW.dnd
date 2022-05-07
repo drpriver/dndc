@@ -12,19 +12,19 @@ A Better Way to Write::md
   block is normally introduced by a block containing two colons. For example:
 
   ::pre .embedded
-    Hello World!::text
+    Hello World!::md
       This is some wonderful text!
   In the above example, a block is introduced on the first line. The text to the
   left of the double colon is the "header" of the block. For documents, this is
   used as text for a heading. It is optional. The text to the right of the double
-  colon is the block's type, in this case "text". The type must be one recognized
+  colon is the block's type, in this case "md". The type must be one recognized
   by the compiling program and changes the parsing rules for the subsequent
   block.
 
-  On the next line, we indent as the string is a child of the text block. The
-  rules for text blocks is that consecutive lines of text will be combined
+  On the next line, we indent as the string is a child of the md block. One of
+  the rules for md blocks is that consecutive lines of text will be combined
   together into paragraph nodes. A blank line indicates the end of a paragraph.
-  Text blocks can also embed other blocks, which are introduced in the usual
+  Md blocks can also embed other blocks, which are introduced in the usual
   manner by double colons.
 
   The above snippet will be translated into the following:
@@ -43,8 +43,8 @@ A Better Way to Write::md
     The raw block fixes the indentation, but otherwises pastes the strings as
     is into the resulting document. This is an escape hatch and allows you to
     do arbitrary things that don't deserve special syntax. For example, if you
-    want to embed an input form then you are no longer writing prose, so just
-    writing some raw html there is fine.
+    want to embed an input form then you are no longer writing prose, so it is fine
+    if you just write some raw html.
 
     Most nodes that contain other nodes will either have a <div> tag or will
     have the appropriate tag for that kind of node (for example, a pre node
@@ -138,9 +138,8 @@ Convenience::md
       This is a comment by the way! It is not in the rendered html.
 
       The first row of the table is taken to be the headings for the table.
-      There is no requirement to have the same number of cells in each table,
-      but user beware, it gets wonky, but I think there are CSS properties
-      to fix that.
+      There is no requirement to have the same number of cells in each row,
+      but user beware, it gets wonky.
     The Nodes::table
       Node Type    | Block Name   | Heading
       MD           | md           | Yes
@@ -194,10 +193,6 @@ Convenience::md
     node.parent.parse('::md\n  And here is that table')
     node.parent.parse(text)
 
-
-Styling and Scripting::md
-  We've shown off some regular
-
 Self-Contained::md
   .dnd documents can include css and js files. They will be placed into the head
   of the document so that the html page is completely self-contained. However,
@@ -216,19 +211,19 @@ Self-Contained::md
       another/jsfile.js
     ::comment
       You haven't seen this before. The '#' symbol to the right of the double
-      colon indicates a directive. Only certain directives are allowed. 
+      colon indicates a directive. Only certain directives are allowed.
       For example, this #import
       attribute tells the system to not interpret the contents as raw strings
       to be included in a <script> tag, but instead as file paths to load.
 
-      css blocks also support #import with the same meaning, but for <script>.
+      css blocks also support #import with the same meaning, but for <style>.
     ::css
       * {
         box-sizing: border-box;
       }
   Images can also be included. They are base64-encoded and stored as a data
-  string in the html page. Possibly we can add an attribute to disable this in
-  the future.
+  string in the html page. You can use the <code>#noinline</code> directive
+  to disable this behavior.
 
 Attributes, Classes and Directives::md
   Blocks can have classes, which directly correspond to css classes in the output
@@ -238,12 +233,11 @@ Attributes, Classes and Directives::md
 
   ::pre .embedded
     Hola::div .foo .bar
-      ::text
-        hello, aloha
+      hello, aloha
   In this example the Hola div will have .foo and .bar as css classes.
 
   Blocks can also have attributes, which are user defined tags. They only have whatever
-  meaning you give to them. 
+  meaning you give to them.
 
   Example:
 
@@ -354,12 +348,16 @@ But Wait, There's More::md
   used to embed the text.
 
   ::js
+    let details = ctx.make_node(NodeType.DETAILS, {header:'This Document'});
     let prenode = ctx.make_node(NodeType.PRE,
-        {classes:['embedded'], attributes:['import'], header:'This Document'});
+        {classes:['embedded']});
     // `add_child` can accept two kinds of arguments: nodes and strings
     // strings are converted to STRING nodes.
-    prenode.add_child(ctx.sourcepath);
-    ctx.root.add_child(prenode);
+    for(let line of FileSystem.load_file(ctx.sourcepath).split('\n'))
+      prenode.add_child(line);
+    details.add_child(prenode);
+    details.id = 'this-document';
+    ctx.root.add_child(details);
 
 ::comment
   Normally I would put the css in its own file, but this README
@@ -388,6 +386,7 @@ But Wait, There's More::md
     display: grid;
     grid-template-columns: 15% 85%;
     grid-column-gap: 4em;
+    padding-bottom: 40em;
   }
   nav a {
     border-bottom: 0;
