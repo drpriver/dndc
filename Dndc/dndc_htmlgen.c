@@ -120,7 +120,9 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
     if(complete_document){
         if(!NodeHandle_eq(ctx->titlenode, INVALID_NODE_HANDLE)){
             Node* n = get_node(ctx, ctx->titlenode);
-            MSB_FORMAT(msb, "<title>", n->header, "</title>\n");
+            msb_write_literal(msb, "<title>");
+            msb_write_tag_escaped_str(msb, n->header.text, n->header.length);
+            msb_write_literal(msb, "</title>");
         }
     }
     if(ctx->stylesheets_nodes.count){
