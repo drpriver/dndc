@@ -45,6 +45,12 @@ typedef int SOCKET; // easier this way
 #endif
 #endif
 
+typedef struct DndLogger {
+    DndcLogFunc* func;
+    void*_Nullable p;
+    int loglevel; // higher is more verbose
+} DndLogger;
+
 #if defined(__linux__)
 void*_Nullable memmem(const void*_, size_t, const void*, size_t);
 #endif
@@ -113,24 +119,24 @@ read_relative_file_with_suffix_conversion(LongString directory, StringView path,
 
 static
 LongString
-compile_file(DndcLogFunc*func, void*_Nullable p, LongString directory, uint64_t flags, StringView path, LongString text, int *error);
+compile_file(const DndLogger*, LongString directory, uint64_t flags, StringView path, LongString text, int *error);
 
-static void vlogit(DndcLogFunc*, void*_Nullable, int lvl, const char* msg, va_list args);
-
-#if defined(__GNUC__) || defined(__clang__)
-__attribute__((__format__(__printf__, 3, 4)))
-#endif
-static void info(DndcLogFunc*, void*_Nullable, const char* msg, ...);
+static void vlogit(const DndLogger*logger, int lvl, const char* msg, va_list args);
 
 #if defined(__GNUC__) || defined(__clang__)
-__attribute__((__format__(__printf__, 3, 4)))
+__attribute__((__format__(__printf__, 2, 3)))
 #endif
-static void debug(DndcLogFunc*, void*_Nullable, const char* msg, ...);
+static void info(const DndLogger* logger, const char* msg, ...);
 
 #if defined(__GNUC__) || defined(__clang__)
-__attribute__((__format__(__printf__, 3, 4)))
+__attribute__((__format__(__printf__, 2, 3)))
 #endif
-static void error(DndcLogFunc*, void*_Nullable, const char* msg, ...);
+static void debug(const DndLogger* logger, const char* msg, ...);
+
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((__format__(__printf__, 2, 3)))
+#endif
+static void error(const DndLogger* logger, const char* msg, ...);
 
 static
 TextFileResult
@@ -142,7 +148,7 @@ read_relative_file_with_suffix_conversion(LongString directory, StringView path,
 
 static
 LongString
-compile_file(DndcLogFunc* func, void*_Nullable logdata, LongString directory, uint64_t flags, StringView path, LongString text, int *error){
+compile_file(const DndLogger* logger, LongString directory, uint64_t flags, StringView path, LongString text, int *error){
     const char* slash = NULL;
     const char* p = path.text;
     for(;p;){
@@ -163,18 +169,17 @@ compile_file(DndcLogFunc* func, void*_Nullable logdata, LongString directory, ui
     }
     StringView filename = {.length=path.length-(p-path.text), .text=p};
     LongString result = {0};
-    *error = dndc_compile_dnd_file(flags, base, LS_to_SV(text), filename, &result, NULL, NULL, func, logdata, NULL, NULL, NULL, LS(""));
+    *error = dndc_compile_dnd_file(flags, base, LS_to_SV(text), filename, &result, NULL, NULL, logger->func, logger->p, NULL, NULL, NULL, LS(""));
     return result;
 }
 
 static
 int
-handle_request(DndcLogFunc* func, void*_Nullable p, uint64_t flags, LongString directory, SOCKET accsd, LongString request);
+handle_request(DndLogger*, uint64_t flags, LongString directory, SOCKET accsd, LongString request);
 
 struct DndServer{
     SOCKET sd;
-    DndcLogFunc* func;
-    void*_Nullable p;
+    DndLogger logger;
 };
 
 typedef struct DndServer DndServer;
@@ -184,23 +189,24 @@ typedef struct DndServer DndServer;
 // winsock is just different enough that I'd rather keep the implementation separate.
 
 DndServer*_Nullable
-dnd_server_create(DndcLogFunc* func, void*_Nullable p, int* port){
+dnd_server_create(DndcLogFunc* func, void*_Nullable p, int loglevel, int* port){
+    DndLogger logger = {.func=func, .p=p, .loglevel=loglevel};
     WSADATA wsadata;
     int err = WSAStartup(MAKEWORD(2,2), &wsadata);
     if(err){
-        error(func, p, "some error on startup or something");
+        error(&logger, "some error on startup or something");
         return NULL;
     }
     SOCKET listensocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if(listensocket == INVALID_SOCKET){
-        error(func, p, "Error in socket");
+        error(&logger, "Error in socket");
         goto cleanup;
     }
     BOOL opt = 1;
     err = setsockopt(listensocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof opt);
     if(err){
         const char* errmess = wsaerror();
-        error(func, p, "setsockopt for SO_REUSEADDR failed: %s (%d)", errmess, WSAGetLastError());
+        error(&logger, "setsockopt for SO_REUSEADDR failed: %s (%d)", errmess, WSAGetLastError());
         free_error_mess(errmess);
         goto cleanup;
     }
@@ -213,8 +219,8 @@ dnd_server_create(DndcLogFunc* func, void*_Nullable p, int* port){
     err = bind(listensocket, (struct sockaddr*)&addr, sizeof addr);
     if(err){
         const char* errmess = wsaerror();
-        error(func, p, "bind error (%s): %d", errmess, WSAGetLastError());
-        error(func, p, "port was: %d", *port);
+        error(&logger, "bind error (%s): %d", errmess, WSAGetLastError());
+        error(&logger, "port was: %d", *port);
         free_error_mess(errrrmess);
         goto cleanup;
     }
@@ -223,7 +229,7 @@ dnd_server_create(DndcLogFunc* func, void*_Nullable p, int* port){
     err = getsockname(listensocket, (struct sockaddr*)&addr, &addrlen);
     if(err){
         const char* errmess = wsaerror();
-        error(func, p, "getsockname error: %s (%d)", errmess, WSAGetLastError());
+        error(&logger, "getsockname error: %s (%d)", errmess, WSAGetLastError());
         free_error_mess(errmess);
         goto cleanup;
     }
@@ -231,16 +237,15 @@ dnd_server_create(DndcLogFunc* func, void*_Nullable p, int* port){
     err = listen(listensocket, SOMAXCONN);
     if(err){
         const char* errmess = wsaerror();
-        error(func, p, "listen error: %s (%d)", errmess, WSAGetLastError());
+        error(&logger, "listen error: %s (%d)", errmess, WSAGetLastError());
         free_error_mess(errmess);
         goto cleanup;
     }
-    info(func, p, "Serving at http://localhost:%d", (int)ntohs(addr.sin_port));
+    info(&logger, "Serving at http://localhost:%d", (int)ntohs(addr.sin_port));
     *port = (int)ntohs(addr.sin_port);
     DndServer* server = malloc(sizeof *server);
     server->sd = listensocket;
-    server->func = func;
-    server->p = p;
+    server->logger = logger;
     return server;
 
     cleanup:
@@ -263,7 +268,7 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
         // debug("Accepted...");
         if(accsd < 0){
             const char* errmess = wsaerror();
-            error(server->func, server->p, "accept failed: %s: %d", errmess, (int)accsd);
+            error(&server->logger, "accept failed: %s: %d", errmess, (int)accsd);
             free_error_mess(errmess);
             closesocket(sd);
             WSACleanup();
@@ -272,16 +277,16 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
         ssize_t n = recv(accsd, buff, (sizeof buff)-1, 0);
         if(n < 0){
             const char* errmess = wsaerror();
-            error(server->func, server->p, "recv failed: %s: %zd", errmess, n);
+            error(&server->logger, "recv failed: %s: %zd", errmess, n);
             free_error_mess(errmess);
             goto Close;
         }
         if(n == 0){
-            info(server->func, server->p, "close connection");
+            info(&server->logger, "close connection");
             goto Close;
         }
         buff[n] = 0;
-        shutdown = handle_request(server->func, server->p, flags, directory, accsd, (LongString){n, buff});
+        shutdown = handle_request(&server->logger, flags, directory, accsd, (LongString){n, buff});
         Close:
         closesocket(accsd);
         if(shutdown) break;
@@ -296,22 +301,23 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
 
 
 DndServer*_Nullable
-dnd_server_create(DndcLogFunc* func, void*_Nullable p, int* port){
+dnd_server_create(DndcLogFunc* func, void*_Nullable p, int loglevel, int* port){
+    DndLogger logger = {.func=func,.p=p, .loglevel=loglevel};
     int sd = socket(PF_INET, SOCK_STREAM, 0);
     if(sd < 0){
-        error(func, p, "Socket failed: %s", strerror(errno));
+        error(&logger, "Socket failed: %s", strerror(errno));
         return NULL;
     }
     int opt = 1;
     int sso_err = setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof opt);
     if(sso_err < 0){
-        error(func, p, "setsockopt for SO_REUSEADDR failed: %s", strerror(errno));
+        error(&logger, "setsockopt for SO_REUSEADDR failed: %s", strerror(errno));
         return NULL;
     }
     #if defined(__APPLE__)
     sso_err = setsockopt(sd, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof opt);
     if(sso_err < 0){
-        error(func, p, "setsockopt for SO_NOSIGPIPE failed: %s", strerror(errno));
+        error(&logger, "setsockopt for SO_NOSIGPIPE failed: %s", strerror(errno));
         return NULL;
     }
     #endif
@@ -325,29 +331,28 @@ dnd_server_create(DndcLogFunc* func, void*_Nullable p, int* port){
     };
     int err = bind(sd, (struct sockaddr*)&addr, sizeof addr);
     if(err < 0){
-        error(func, p, "Bind failed: %s", strerror(errno));
+        error(&logger, "Bind failed: %s", strerror(errno));
         close(sd);
         return NULL;
     }
     socklen_t addrlen = sizeof addr;
     err = getsockname(sd, (struct sockaddr*)&addr, &addrlen);
     if(err < 0){
-        error(func, p, "getsockname failed: %s", strerror(errno));
+        error(&logger, "getsockname failed: %s", strerror(errno));
         close(sd);
         return NULL;
     }
     err = listen(sd, SOMAXCONN);
     if(err < 0){
-        error(func, p, "listen failed: %s", strerror(errno));
+        error(&logger, "listen failed: %s", strerror(errno));
         close(sd);
         return NULL;
     }
-    info(func, p, "Serving at http://localhost:%d", (int)ntohs(addr.sin_port));
+    info(&logger, "Serving at http://localhost:%d", (int)ntohs(addr.sin_port));
     *port = (int)ntohs(addr.sin_port);
     DndServer* server = malloc(sizeof *server);
     server->sd = sd;
-    server->func = func;
-    server->p = p;
+    server->logger = logger;
     return server;
 }
 
@@ -356,14 +361,12 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
     int sd = server->sd;
     char buff[10000];
     struct sockaddr_in clientaddr = {0};
-    DndcLogFunc* func = server->func;
-    void*_Nullable p = server->p;
     for(;;){
         int shutdown = 0;
         socklen_t clientlen = sizeof(clientaddr);
-        // debug("Waiting for accept...");
+        debug(&server->logger, "Waiting for accept...");
         SOCKET accsd = accept(sd, (struct sockaddr*)&clientaddr, &clientlen);
-        // debug("Accepted...");
+        debug(&server->logger, "Accepted...");
         if(accsd < 0){
             // error(func, p, "accept failed: %s", strerror(errno));
             close(sd);
@@ -371,23 +374,23 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
         }
         ssize_t n = recv(accsd, buff, (sizeof buff)-1, 0);
         if(n < 0){
-            error(func, p, "recv failed: %s", strerror(errno));
+            error(&server->logger, "recv failed: %s", strerror(errno));
             goto Close;
         }
         if(n == 0){
-            info(func, p, "close connection");
+            info(&server->logger, "close connection");
             goto Close;
         }
         buff[n] = 0;
-        shutdown = handle_request(server->func, server->p, flags, directory, accsd, (LongString){n, buff});
+        shutdown = handle_request(&server->logger, flags, directory, accsd, (LongString){n, buff});
         Close:
         close(accsd);
         if(shutdown){
-            debug(func, p, "got shutdown");
+            info(&server->logger, "got shutdown");
             break;
         }
     }
-    debug(func, p, "Closing socket");
+    debug(&server->logger, "Closing socket");
     close(sd);
     return 0;
 }
@@ -413,7 +416,7 @@ static const LongString INDEXTEXT = LS(
 
 static
 int
-handle_request(DndcLogFunc*func, void*_Nullable p, uint64_t flags, LongString directory, SOCKET accsd, LongString request){
+handle_request(DndLogger* logger, uint64_t flags, LongString directory, SOCKET accsd, LongString request){
     // just assume everything is a GET, lol.
     MStringBuilder urlsb = {.allocator=get_mallocator()};
     StringView path = SV("index.dnd");
@@ -425,14 +428,14 @@ handle_request(DndcLogFunc*func, void*_Nullable p, uint64_t flags, LongString di
             path = (StringView){.text=rest.text, .length=space-rest.text};
             int decoderr = msb_url_percent_decode(&urlsb, path.text, path.length);
             if(decoderr){
-                func(p, DNDC_NODELESS_MESSAGE, "", 0, -1, -1, "Bad percent decode", sizeof("Bad percent decode")-1);
+                logger->func(logger->p, DNDC_NODELESS_MESSAGE, "", 0, -1, -1, "Bad percent decode", sizeof("Bad percent decode")-1);
                 goto LNotFound;
             }
             path = msb_borrow_sv(&urlsb);
-            func(p, DNDC_STATISTIC_MESSAGE, path.text-1, path.length+1, -1, -1, "Serving", sizeof("Serving")-1);
+            logger->func(logger->p, DNDC_STATISTIC_MESSAGE, path.text-1, path.length+1, -1, -1, "Serving", sizeof("Serving")-1);
         }
         else {
-            func(p, DNDC_STATISTIC_MESSAGE, path.text, path.length, -1, -1, "Serving", sizeof("Serving")-1);
+            logger->func(logger->p, DNDC_STATISTIC_MESSAGE, path.text, path.length, -1, -1, "Serving", sizeof("Serving")-1);
         }
     }
     if(endswith(path, SV(".html"))){
@@ -447,10 +450,10 @@ handle_request(DndcLogFunc*func, void*_Nullable p, uint64_t flags, LongString di
         goto LShutdown;
     }
     if(memmem(path.text, path.length, "..", 2)){
-        error(func, p, ".. not allowed: '%.*s'", (int)path.length, path.text);
+        error(logger, ".. not allowed: '%.*s'", (int)path.length, path.text);
         goto LNotFound;
     }
-    debug(func, p, "path: '%.*s' suffix: '%.*s'", (int)path.length, path.text, (int)suffix.length, suffix.text);
+    debug(logger, "path: '%.*s' suffix: '%.*s'", (int)path.length, path.text, (int)suffix.length, suffix.text);
     if(endswith(path, SV(".dnd")) || SV_equals(suffix, SV(".dnd"))){
         TextFileResult tfr = read_relative_file_with_suffix_conversion(directory, path, suffix);
         LongString text = LS("");
@@ -461,7 +464,7 @@ handle_request(DndcLogFunc*func, void*_Nullable p, uint64_t flags, LongString di
             }
             else {
                 const char* errmess = os_error_mess(tfr.native_error);
-                error(func, p, "Error reading '%.*s': %s", (int)path.length, path.text, errmess);
+                error(logger, "Error reading '%.*s': %s", (int)path.length, path.text, errmess);
                 free_error_mess(errmess);
                 goto LNotFound;
             }
@@ -469,7 +472,7 @@ handle_request(DndcLogFunc*func, void*_Nullable p, uint64_t flags, LongString di
         else
             text = tfr.result;
         int err = 0;
-        LongString html = compile_file(func, p, directory, flags, path, text, &err);
+        LongString html = compile_file(logger, directory, flags, path, text, &err);
         if(err){
             #define MESS "HTTP/1.1 500 Compiler-Error\r\n\r\n" \
             "<div align=center style=\"margin-top:10%; font-family: sans-serif;\">" \
@@ -492,7 +495,7 @@ handle_request(DndcLogFunc*func, void*_Nullable p, uint64_t flags, LongString di
         TextFileResult tfr = read_relative_file_with_suffix_conversion(directory, path, suffix);
         if(tfr.errored){
             const char* errmess = os_error_mess(tfr.native_error);
-            error(func, p, "Error reading '%.*s': %s", (int)path.length, path.text, errmess);
+            error(logger, "Error reading '%.*s': %s", (int)path.length, path.text, errmess);
             free_error_mess(errmess);
             goto LNotFound;
         }
@@ -523,45 +526,47 @@ handle_request(DndcLogFunc*func, void*_Nullable p, uint64_t flags, LongString di
 
 static
 void
-vlogit(DndcLogFunc* func, void*_Nullable p, int lvl, const char* msg, va_list args){
+vlogit(const DndLogger* logger, int lvl, const char* msg, va_list args){
     char buff[4192];
     long len = vsnprintf(buff, sizeof buff, msg, args);
-    func(p, lvl, "", 0, -1, -1, buff, len);
+    logger->func(logger->p, lvl, "", 0, -1, -1, buff, len);
 }
 
 #if defined(__GNUC__) || defined(__clang__)
-__attribute__((__format__(__printf__, 3, 4)))
+__attribute__((__format__(__printf__, 2, 3)))
 #endif
 static
 void
-info(DndcLogFunc* func, void*_Nullable p, const char* msg, ...){
+info(const DndLogger* logger, const char* msg, ...){
+    if(logger->loglevel < DNDC_STATISTIC_MESSAGE) return;
     va_list args;
     va_start(args, msg);
-    vlogit(func, p, DNDC_STATISTIC_MESSAGE, msg, args);
+    vlogit(logger, DNDC_STATISTIC_MESSAGE, msg, args);
     va_end(args);
 }
 
 #if defined(__GNUC__) || defined(__clang__)
-__attribute__((__format__(__printf__, 3, 4)))
+__attribute__((__format__(__printf__, 2, 3)))
 #endif
 static
 void
-debug(DndcLogFunc* func, void*_Nullable p, const char* msg, ...){
+debug(const DndLogger* logger, const char* msg, ...){
+    if(logger->loglevel < DNDC_DEBUG_MESSAGE) return;
     va_list args;
     va_start(args, msg);
-    vlogit(func,p, DNDC_DEBUG_MESSAGE, msg, args);
+    vlogit(logger, DNDC_DEBUG_MESSAGE, msg, args);
     va_end(args);
 }
 
 #if defined(__GNUC__) || defined(__clang__)
-__attribute__((__format__(__printf__, 3, 4)))
+__attribute__((__format__(__printf__, 2, 3)))
 #endif
 static
 void
-error(DndcLogFunc* func, void*_Nullable p, const char* msg, ...){
+error(const DndLogger* logger, const char* msg, ...){
     va_list args;
     va_start(args, msg);
-    vlogit(func,p, DNDC_NODELESS_MESSAGE, msg, args);
+    vlogit(logger, DNDC_NODELESS_MESSAGE, msg, args);
     va_end(args);
 }
 

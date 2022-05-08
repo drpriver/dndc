@@ -67,7 +67,8 @@ void null_report(void* ud, int type, const char* filename, int filename_len, int
     (void)message_len;
 }
 static
-void wrap_report(void* ud, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
+void
+wrap_report(void* ud, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
     if(filename_len)
         fprintf(stderr, "\r%.*s: ", filename_len, filename);
     else
@@ -199,7 +200,7 @@ main(int argc, char** argv){
         PopDiagnostic();
     }
 
-    DndServer* server = dnd_server_create(should_log?wrap_report:null_report, NULL, &port);
+    DndServer* server = dnd_server_create(should_log?wrap_report:null_report, NULL, 3, &port);
     if(!server) {
         fprintf(stderr, "No server\n");
         return 1;

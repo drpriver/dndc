@@ -453,7 +453,7 @@ asm(".global __app_icon\n"
         self->serverthread = [[NSThread alloc] initWithBlock:^{
             [self performSelectorOnMainThread:@selector(server_did_start:) withObject:nil waitUntilDone:NO];
             int theport = self->port;
-            DndServer* server = dnd_server_create(logfunc, (__bridge void*)self, &theport);
+            DndServer* server = dnd_server_create(logfunc, (__bridge void*)self, 3, &theport);
             if(!server){
                 NSLog(@"No server!");
                 return;
@@ -497,6 +497,7 @@ asm(".global __app_icon\n"
         [self start_server:sender];
 }
 -(void)open_page:(id _Nullable) sender{
+    // LOGIT(sender);
     if(!self->serving) return;
     if(sender){
         NSIndexPath *indexPath = [browser selectionIndexPath];
@@ -515,7 +516,7 @@ asm(".global __app_icon\n"
         if(wasdir){
             u = [u URLByAppendingPathComponent:@"index.html"];
         }
-        [self log_mess:DNDC_DEBUG_MESSAGE fn:@"" line:0 column:0 mess:[NSString stringWithFormat:@"url: %@", u]];
+        // [self log_mess:DNDC_DEBUG_MESSAGE fn:@"" line:0 column:0 mess:[NSString stringWithFormat:@"url: %@", u]];
         // LOGIT(u);
         [[NSWorkspace sharedWorkspace] openURL:u];
         return;
