@@ -15,6 +15,7 @@
 #include "dndc_qjs.h"
 #include "dndc_file_cache.h"
 #include "dndc_logging.h"
+#include "common_macros.h"
 
 #include "path_util.h"
 #include "MStringBuilder.h"
@@ -2041,6 +2042,8 @@ DndcContext*
 dndc_create_ctx(unsigned long long flags, DndcFileCache*_Nullable base64cache, DndcFileCache*_Nullable textcache){
     DndcContext* ctx = calloc(1, sizeof *ctx);
     ctx->flags = flags;
+    PushDiagnostic();
+    SuppressNullableConversion();
     if(base64cache)
         ctx->b64cache = base64cache;
     else {
@@ -2053,6 +2056,7 @@ dndc_create_ctx(unsigned long long flags, DndcFileCache*_Nullable base64cache, D
         ctx->textcache = dndc_create_filecache();
         ctx->textcache_allocated = 1;
     }
+    PopDiagnostic();
     ctx->titlenode = INVALID_NODE_HANDLE;
     ctx->tocnode = INVALID_NODE_HANDLE;
     ctx->root_handle = INVALID_NODE_HANDLE;
@@ -2415,7 +2419,9 @@ dndc_node_remove_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView cls)
     Node* node = get_node(ctx, handle);
     RARRAY_FOR_EACH(StringView, c, node->classes){
         if(SV_equals(*c, cls)){
+            PushDiagnostic(); SuppressNullableConversion();
             Rarray_remove(StringView)(node->classes, c-node->classes->data);
+            PopDiagnostic();
             break;
         }
     }

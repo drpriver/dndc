@@ -6,6 +6,7 @@
 #include "allocator.h"
 #include "mallocator.h"
 #include "msb_url_helpers.h"
+#include "common_macros.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -99,7 +100,9 @@ os_error_mess(DWORD err){
 static inline
 void
 free_error_mess(const char* mess){
-    LocalFree(mess);
+    PushDiagnostic(); SuppressDiscardQualifiers(); SuppressCastQual();
+    LocalFree((void*)mess);
+    PopDiagnostic();
 }
 #endif
 #if !defined(_WIN32)
@@ -221,7 +224,7 @@ dnd_server_create(DndcLogFunc* func, void*_Nullable p, int loglevel, int* port){
         const char* errmess = wsaerror();
         error(&logger, "bind error (%s): %d", errmess, WSAGetLastError());
         error(&logger, "port was: %d", *port);
-        free_error_mess(errrrmess);
+        free_error_mess(errmess);
         goto cleanup;
     }
 

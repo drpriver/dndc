@@ -1,5 +1,9 @@
 #include <stdlib.h>
+#ifdef _WIN32
+#include <direct.h>
+#else
 #include <unistd.h>
+#endif
 #include <stdio.h>
 #include "common_macros.h"
 #include "dndc_long_string.h"
@@ -174,7 +178,11 @@ sv_append(void* p, const void* sv_){
 int
 main(int argc, const char* const* argv){
     Args args = {argc?argc-1:0, argc?argv+1:NULL};
+#ifdef _WIN32
+    LongString directory = {.text = _getcwd(0, 0)};
+#else
     LongString directory = {.text = getcwd(0, 0)};
+#endif
     LongString output = {0};
     directory.length = strlen(directory.text);
     Marray__StringView dnd_files = {0};

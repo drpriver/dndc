@@ -1944,7 +1944,9 @@ DndcContextPy_get_root(PyObject *s, void *_Nullable p){
     DndcContext* ctx = self->ctx;
     DndcNodeHandle handle = dndc_ctx_get_root(ctx);
     if(handle == DNDC_NODE_HANDLE_INVALID){
+        PushDiagnostic(); SuppressNullableConversion();
         handle = dndc_ctx_make_root(ctx, self->filename?pystring_borrow_stringview(self->filename):SV("(string input)"));
+        PopDiagnostic();
     }
     return DndcNode_make(self, handle);
 }
@@ -1984,16 +1986,18 @@ int
 DndcContextPy_set_base(PyObject* s, PyObject*_Nullable args, void*_Nullable p){
     (void)p;
     if(!args)
-        return PyErr_Format(PyExc_AttributeError, "Deletion of base_dir unsupported"), -1;
+        return (void)PyErr_Format(PyExc_AttributeError, "Deletion of base_dir unsupported"), -1;
     if(!PyUnicode_Check(args))
-        return PyErr_Format(PyExc_TypeError, "base_dir must be a string"), -1;
+        return (void)PyErr_Format(PyExc_TypeError, "base_dir must be a string"), -1;
     DndcContextPy* self = (DndcContextPy*)s;
     DndcContext* ctx = self->ctx;
+    PushDiagnostic(); SuppressNullableConversion();
     StringView sv = pystring_borrow_stringview(args);
+    PopDiagnostic();
     sv = dndc_ctx_dup_sv(ctx, sv);
     int err = dndc_ctx_set_base(ctx, sv);
     if(err)
-        return PyErr_Format(PyExc_RuntimeError, "wtf"), -1;
+        return (void)PyErr_Format(PyExc_RuntimeError, "wtf"), -1;
     return 0;
 }
 

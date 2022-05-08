@@ -61,6 +61,13 @@ PyModule_AddObjectRef(PyObject* mod, const char* name, PyObject* value){
     }
     return result;
 }
+static inline
+PyObject*
+Py_XNewRef(PyObject* o){
+    if(!o) return NULL;
+    Py_INCREF(o);
+    return o;
+}
 #endif
 #if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9
 // shim
@@ -79,6 +86,7 @@ int
 Py_IS_TYPE(const PyObject* o, const PyTypeObject* type){
     return o->ob_type == type;
 }
+
 #endif
 
 #endif

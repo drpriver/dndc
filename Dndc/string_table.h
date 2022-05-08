@@ -40,9 +40,9 @@ string_table_set(StringTable* table, StringView key, StringView value){
             StringView* old_values = table->keys + old_cap;
             for(size_t i = 0; i < old_cap; i++){
                 if(old_keys[i].length){
-                    StringView key = old_keys[i];
-                    StringView value = old_values[i];
-                    uint32_t hash = murmur3_32((const uint8_t*)key.text, key.length, 0x56ee95b8);
+                    StringView k = old_keys[i];
+                    StringView v = old_values[i];
+                    uint32_t hash = murmur3_32((const uint8_t*)k.text, k.length, 0x56ee95b8);
                     uint32_t idx = fast_reduce32(hash, new_cap);
                     // We know that none of the keys are equal, so just find an empty slot.
                     while(new_keys[idx].length){
@@ -50,8 +50,8 @@ string_table_set(StringTable* table, StringView key, StringView value){
                         if(idx >= new_cap)
                             idx = 0;
                     }
-                    new_keys[idx] = key;
-                    new_values[idx] = value;
+                    new_keys[idx] = k;
+                    new_values[idx] = v;
                 }
             }
             assert(old_keys);

@@ -147,6 +147,8 @@
 #define SuppressDoublePromotion()       _Pragma("clang diagnostic ignored \"-Wdouble-promotion\"")
 #define SuppressCoveredSwitchDefault()  _Pragma("clang diagnostic ignored \"-Wcovered-switch-default\"")
 #define SuppressVisibility()            _Pragma("clang diagnostic ignored \"-Wvisibility\"")
+#define SuppressNullableConversion() _Pragma("clang diagnostic ignored\"-Wnullable-to-nonnull-conversion\"")
+
 #define PushDiagnostic()                _Pragma("clang diagnostic push")
 #define PopDiagnostic()                 _Pragma("clang diagnostic pop")
 
@@ -161,6 +163,7 @@
 #define SuppressDoublePromotion()       _Pragma("GCC diagnostic ignored \"-Wdouble-promotion\"")
 #define SuppressCoveredSwitchDefault()
 #define SuppressVisibility()
+#define SuppressNullableConversion()
 #define PushDiagnostic()                _Pragma("GCC diagnostic push")
 #define PopDiagnostic()                 _Pragma("GCC diagnostic pop")
 
@@ -175,6 +178,7 @@
 #define SuppressDoublePromotion()
 #define SuppressCoveredSwitchDefault()
 #define SuppressVisibility()
+#define SuppressNullableConversion()
 #define PushDiagnostic()
 #define PopDiagnostic()
 

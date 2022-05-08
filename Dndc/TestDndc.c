@@ -1,5 +1,6 @@
 #define DNDC_EXAMPLE
 #include <stdio.h>
+#define DNDC_API static inline
 #include "dndc.h"
 #include "dndc_long_string.h"
 #include "testing.h"
