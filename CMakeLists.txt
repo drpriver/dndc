@@ -182,7 +182,7 @@ add_test(rarray TestRarray)
 add_executable(TestStrUtils Utils/TestStrUtils.c)
 add_test(strutil TestStrUtils)
 # Dndc tests
-add_executable(TestMsbExtension Dndc/TestMsbExtension.c)
+add_executable(TestMsbExtension Utils/TestMsbExtension.c)
 add_test(msbext TestMsbExtension)
 add_test(NAME testpydndc
 		COMMAND ${Python3_EXECUTABLE} Dndc/testpydndc.py --extension-directory ${CMAKE_BINARY_DIR}
