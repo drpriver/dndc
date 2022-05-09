@@ -1,6 +1,7 @@
 #ifndef THREAD_UTILS_H
 #define THREAD_UTILS_H
-
+#include <stdlib.h>
+#include <stdbool.h>
 #if defined(__linux__) || defined(__APPLE__)
 #include <unistd.h> // sysconf
 #include <pthread.h>
@@ -16,6 +17,11 @@
 #endif
 #elif defined(_WIN32)
 #include "windowsheader.h"
+#endif
+
+#ifndef unhandled_error_condition
+#include <assert.h>
+#define unhandled_error_condition(x) assert(x)
 #endif
 
 #ifdef __clang__
@@ -35,6 +41,7 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 
 #endif
+
 
 //
 // Implements a very basic portability layer to spawn a worker thread with an
@@ -248,7 +255,7 @@ worker_wait(WorkerThread* w){
 
 static
 void
-create_thread(ThreadHandle* handle, thread_func* func, Nullable(void*)thread_arg){
+create_thread(ThreadHandle* handle, thread_func* func, void*_Nullable thread_arg){
     int err = pthread_create(&handle->thread, NULL, func, thread_arg);
     unhandled_error_condition(err != 0);
 }

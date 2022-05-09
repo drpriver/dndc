@@ -1,5 +1,6 @@
 #ifndef DNDC_FUNCS_H
 #define DNDC_FUNCS_H
+#include "dndc_long_string.h"
 #include "dndc.h"
 #include "errorable_long_string.h"
 #include "common_macros.h"

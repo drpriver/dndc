@@ -1,6 +1,7 @@
 #ifndef DNDC_TYPES_H
 #define DNDC_TYPES_H
 #include <stdint.h>
+#include "dndc_long_string.h"
 #include "dndc.h"
 #include "long_string.h"
 #include "common_macros.h"
@@ -43,10 +44,11 @@
 #include "Rarray.h"
 
 
-typedef struct Attribute {
+typedef struct Attribute Attribute;
+struct Attribute {
     StringView key;
     StringView value; // often null
-} Attribute;
+};
 #define RARRAY_T Attribute
 #include "Rarray.h"
 
@@ -91,11 +93,12 @@ NodeHandle_eq(NodeHandle a, NodeHandle b){
 #include "Marray.h"
 
 // For tracking what's the id of a node.
-typedef struct IdItem {
+typedef struct IdItem IdItem;
+struct IdItem{
     NodeHandle node;
     // text needs to be kebabed before use.
     StringView text;
-} IdItem;
+};
 #define MARRAY_T IdItem
 #include "Marray.h"
 
@@ -137,7 +140,8 @@ enum {
 
 // Node
 // ----
-typedef struct Node {
+typedef struct Node Node;
+struct Node{
     // The type of the node
     NodeType type;                // 4 bytes
     // Handle to this node's parent node.
@@ -164,7 +168,7 @@ typedef struct Node {
     // for the general human-readable version.
     int row, col;         // 4 + 4 bytes.
     NodeFlags flags; // 4 bytes
-} Node;
+};
 
 #if UINTPTR_MAX != 0xFFFFFFFF
 _Static_assert(sizeof(Node) == 10*sizeof(size_t), "");
@@ -226,7 +230,8 @@ node_remove_child(Node* node, size_t i, const Allocator a){
 
 #define NODE_CHILDREN_FOR_EACH(iter, n) for(NodeHandle *iter = node_children(n), *iter##end__=node_children(n)+node_children_count(n);iter != iter##end__;++iter)
 
-typedef struct DndcContext {
+typedef struct DndcContext DndcContext;
+struct DndcContext {
     // The actual storage for all the nodes.
     Marray(Node) nodes;
     // Handle to the root node. Scripts can change this.
@@ -302,7 +307,7 @@ typedef struct DndcContext {
     uint32_t heap_allocated: 1;
     uint32_t textcache_allocated: 1;
     uint32_t b64cache_allocated: 1;
-} DndcContext;
+};
 
 static inline force_inline
 Allocator

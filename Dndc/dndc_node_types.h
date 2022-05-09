@@ -33,11 +33,42 @@
     apply(META,           27)\
     apply(INVALID,        28)\
 
-typedef enum NodeType {
-    #define X(a, b) NODE_##a = b,
-    NODETYPES(X)
-    #undef X
-} NodeType;
+typedef enum NodeType NodeType;
+enum NodeType{
+    NODE_MD           =  0,
+    NODE_DIV          =  1,
+    NODE_STRING       =  2,
+    NODE_PARA         =  3,
+    NODE_TITLE        =  4,
+    NODE_HEADING      =  5,
+    NODE_TABLE        =  6,
+    NODE_TABLE_ROW    =  7,
+    NODE_STYLESHEETS  =  8,
+    NODE_LINKS        =  9,
+    NODE_SCRIPTS      = 10,
+    NODE_IMPORT       = 11,
+    NODE_IMAGE        = 12,
+    NODE_BULLETS      = 13,
+    NODE_RAW          = 14,
+    NODE_PRE          = 15,
+    NODE_LIST         = 16,
+    NODE_LIST_ITEM    = 17,
+    NODE_KEYVALUE     = 18,
+    NODE_KEYVALUEPAIR = 19,
+    NODE_IMGLINKS     = 20,
+    NODE_TOC          = 21,
+    NODE_COMMENT      = 22,
+    NODE_CONTAINER    = 23,
+    NODE_QUOTE        = 24,
+    NODE_JS           = 25,
+    NODE_DETAILS      = 26,
+    NODE_META         = 27,
+    NODE_INVALID      = 28,
+};
+
+#define X(a, b) _Static_assert(NODE_##a == b, #a " != " #b);
+NODETYPES(X)
+#undef X
 
 static const
 LongString NODENAMES[] = {
@@ -50,10 +81,11 @@ LongString NODENAMES[] = {
 // It is intentional that not all nodes have an alias. Many nodes can not
 // be directly created.
 //
-typedef struct NodeAlias {
+typedef struct NodeAlias NodeAlias;
+struct NodeAlias {
     StringView name;
     NodeType type;
-} NodeAlias;
+};
 
 static const
 NodeAlias

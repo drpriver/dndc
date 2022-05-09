@@ -41,20 +41,39 @@ enum {GI_LINE_HISTORY_MAX = 100};
 enum {GI_BUFF_SIZE=4092};
 
 typedef struct GetInputCtx GetInputCtx;
-//
-// Return a negative error code if you encounter an error.
-// Return 0 if tab completion succeeded.
-//
-// Complex tab completion behavior should be implemented by you.
 typedef int(GiTabCompletionFunc)(
     GetInputCtx* ctx,
     size_t original_curr_pos,
     size_t original_used_len,
     int n_tabs
 );
+//
+// Return a negative error code if you encounter an error.
+// Return 0 if tab completion succeeded.
+//
+// Complex tab completion behavior should be implemented by you.
 
 
-// GetInputCtx
+typedef struct GetInputCtx {
+    StringView prompt;
+    size_t prompt_display_length;
+    int _hst_count;
+    int _hst_cursor;
+    int _cols;
+    int _history_index;
+    LongString _history[GI_LINE_HISTORY_MAX];
+    char buff[GI_BUFF_SIZE];
+    size_t buff_cursor;
+    size_t buff_count; // number of used characters.
+    // The tab completion func uses this to save/restore the user's original input.
+    char altbuff[GI_BUFF_SIZE];
+    GiTabCompletionFunc*_Nullable tab_completion_func;
+    void*_Nullable tab_completion_user_data;
+    // Reset to 0 after non-tab input.
+    // Do not store resources that need to be freed
+    // here.
+    uintptr_t tab_completion_cookie;
+} GetInputCtx;
 // -----------
 //
 // The context structure that holds all internal state necessary across
@@ -80,16 +99,16 @@ typedef int(GiTabCompletionFunc)(
 //     internal use
 //   buff:
 //     The buffer that the user types into. After a successful call to
-//     `get_input_line`, the input will be in this buffer and the return value
-//     from get_input_line is how many characters.
+//     `gi_get_input`, the input will be in this buffer and the return value
+//     from gi_get_input is how many characters.
 //   buff_cursor:
 //     Where the conceptual cursor into the buff is. In the tab completion
 //     function, you can change this and should if you replace the contents of
-//     buff. After `get_input_line` returns, this is meaningless.
+//     buff. After `gi_get_input` returns, this is meaningless.
 //   buff_count:
 //     How many characters of the buffer are currently used. In the tab
 //     completion function you can change this and should change it if you
-//     replace the contents of buff. After `get_input_line` returns, this is
+//     replace the contents of buff. After `gi_get_input` returns, this is
 //     meaningless.
 //   altbuff:
 //     When the tab completion function is invoked, the original buffer is
@@ -107,29 +126,10 @@ typedef int(GiTabCompletionFunc)(
 //     such as an index into a list of completions.
 //     Do not store resources that need to be freed.
 //
-typedef struct GetInputCtx {
-    StringView prompt;
-    size_t prompt_display_length;
-    int _hst_count;
-    int _hst_cursor;
-    int _cols;
-    int _history_index;
-    LongString _history[GI_LINE_HISTORY_MAX];
-    char buff[GI_BUFF_SIZE];
-    size_t buff_cursor;
-    size_t buff_count; // number of used characters.
-    // The tab completion func uses this to save/restore the user's original input.
-    char altbuff[GI_BUFF_SIZE];
-    GiTabCompletionFunc*_Nullable tab_completion_func;
-    void*_Nullable tab_completion_user_data;
-    // Reset to 0 after non-tab input.
-    // Do not store resources that need to be freed
-    // here.
-    uintptr_t tab_completion_cookie;
-} GetInputCtx;
 
-//
-// gi_dump_history
+GET_INPUT_API
+int
+gi_dump_history(GetInputCtx*, const char* filename);
 // ---------------
 // Arguments:
 //   ctx:
@@ -142,12 +142,10 @@ typedef struct GetInputCtx {
 // --------
 // Returns zero on success. Returns non-zero if there was an error.
 //
+
 GET_INPUT_API
 int
-gi_dump_history(GetInputCtx*, const char* filename);
-
-//
-// gi_load_history
+gi_load_history(GetInputCtx*, const char* filename);
 // ---------------
 // Arguments:
 //   ctx:
@@ -160,57 +158,47 @@ gi_dump_history(GetInputCtx*, const char* filename);
 // --------
 // Returns zero on success. Returns non-zero if there was an error.
 //
-GET_INPUT_API
-int
-gi_load_history(GetInputCtx*, const char* filename);
 
-//
-// gi_destroy_ctx
+GET_INPUT_API
+void
+gi_destroy_ctx(GetInputCtx*);
 // --------------
 // Cleans up all resources in the ctx.
 //
 // NOTE: this does not save the history to disk. Use `gi_dump_history` to do that.
 //
+
+
 GET_INPUT_API
 void
-gi_destroy_ctx(GetInputCtx*);
-
-
-//
-// gi_add_line_to_history
+gi_add_line_to_history_len(GetInputCtx*, const char*, size_t);
 // ----------------------
 // Adds the string to the history. If the last line is the same as this line,
 // it is skipped.  Internally makes a copy of the input string, so it is safe
 // to pass stack allocated buffers or strings you're about to free, etc.
 //
-GET_INPUT_API
-void
-gi_add_line_to_history_len(GetInputCtx*, const char*, size_t);
 
-//
-// gi_add_line_to_history
-// ----------------------
-// Like `gi_add_line_to_history`, but takes a string view.
 GET_INPUT_API
 void
 gi_add_line_to_history(GetInputCtx*, StringView line);
+// ----------------------
+// Like `gi_add_line_to_history`, but takes a string view.
 
-//
-// gi_remove_last_line_from_history
-// --------------------------------
-// Removes the last entry in the input history
-//
 GET_INPUT_API
 void
 gi_remove_last_line_from_history(GetInputCtx*);
-
+// --------------------------------
+// Removes the last entry in the input history
 //
-// get_input_line
+
+GET_INPUT_API
+ssize_t
+gi_get_input(GetInputCtx* ctx);
 // --------------
 // Handles user input, filling the buffer with the text.
 //
 // NOTE: This does not add the input line to the history. You should
-//       do that yourself by `calling gi_add_line_to_history_len`. This allows
+//       do that yourself by calling `gi_add_line_to_history_len`. This allows
 //       you to filter out bad inputs from the history, which can be quite
 //       annoying to scroll through.
 //
@@ -237,9 +225,6 @@ gi_remove_last_line_from_history(GetInputCtx*);
 // will be nul-terminated, but as it is an internal structure, it will be
 // invalidated when you call this again.
 //
-GET_INPUT_API
-ssize_t
-gi_get_input(GetInputCtx* ctx);
 
 //
 // gi_get_cols

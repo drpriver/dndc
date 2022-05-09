@@ -289,10 +289,11 @@ dndc_node_attributes_count(DndcContext*, DndcNodeHandle);
 // error.
 //
 
-typedef struct DndcAttributePair {
+typedef struct DndcAttributePair DndcAttributePair;
+struct DndcAttributePair {
     DndcStringView key;
     DndcStringView value;
-} DndcAttributePair;
+};
 // -----------------
 // Key-Value pair for the attributes set on a node.
 //
@@ -329,7 +330,7 @@ dndc_node_attributes(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, DndcA
 // into the buff and there are no more items to copy.
 //
 // Either loop until this function returns 0 or until the total number of items
-// copied is equal to the result of `dnd_node_attributes_count`.
+// copied is equal to the result of `dndc_node_attributes_count`.
 //
 // Example:
 // --------
@@ -479,7 +480,7 @@ dndc_node_get_parent(DndcContext*, DndcNodeHandle);
 // DNDC_NODE_HANDLE_INVALID.
 //
 
-// DNDCNDOETYPES
+// DNDCNODETYPES
 // -------------
 // This macro is setup so that you can use it in an X macro.  It is all of the
 // node types and their integer value.
@@ -516,16 +517,46 @@ dndc_node_get_parent(DndcContext*, DndcNodeHandle);
     apply(META,           27)\
     apply(INVALID,        28)\
 
+// Manually expand for better documentation
 enum DndcNodeType {
-#define X(a, b) DNDC_NODE_TYPE_##a = b,
-    DNDCNODETYPES(X)
-#undef X
-};
-// DndcNodeType
 //----------------------
 // The type of the node.
 //
+    DNDC_NODE_TYPE_MD           =  0,
+    DNDC_NODE_TYPE_DIV          =  1,
+    DNDC_NODE_TYPE_STRING       =  2,
+    DNDC_NODE_TYPE_PARA         =  3,
+    DNDC_NODE_TYPE_TITLE        =  4,
+    DNDC_NODE_TYPE_HEADING      =  5,
+    DNDC_NODE_TYPE_TABLE        =  6,
+    DNDC_NODE_TYPE_TABLE_ROW    =  7,
+    DNDC_NODE_TYPE_STYLESHEETS  =  8,
+    DNDC_NODE_TYPE_LINKS        =  9,
+    DNDC_NODE_TYPE_SCRIPTS      = 10,
+    DNDC_NODE_TYPE_IMPORT       = 11,
+    DNDC_NODE_TYPE_IMAGE        = 12,
+    DNDC_NODE_TYPE_BULLETS      = 13,
+    DNDC_NODE_TYPE_RAW          = 14,
+    DNDC_NODE_TYPE_PRE          = 15,
+    DNDC_NODE_TYPE_LIST         = 16,
+    DNDC_NODE_TYPE_LIST_ITEM    = 17,
+    DNDC_NODE_TYPE_KEYVALUE     = 18,
+    DNDC_NODE_TYPE_KEYVALUEPAIR = 19,
+    DNDC_NODE_TYPE_IMGLINKS     = 20,
+    DNDC_NODE_TYPE_TOC          = 21,
+    DNDC_NODE_TYPE_COMMENT      = 22,
+    DNDC_NODE_TYPE_CONTAINER    = 23,
+    DNDC_NODE_TYPE_QUOTE        = 24,
+    DNDC_NODE_TYPE_JS           = 25,
+    DNDC_NODE_TYPE_DETAILS      = 26,
+    DNDC_NODE_TYPE_META         = 27,
+    DNDC_NODE_TYPE_INVALID      = 28,
+};
 
+// Check that the above is correct.
+#define X(a, b) _Static_assert(DNDC_NODE_TYPE_##a == b, #a " has incorrect value, not equal to " #b);
+    DNDCNODETYPES(X)
+#undef X
 
 DNDC_API
 int
@@ -550,9 +581,9 @@ dndc_node_set_type(DndcContext* ctx, DndcNodeHandle dnh, int node_type);
 
 
 #ifdef __clang__
-enum __attribute__((flag_enum)) {
+enum __attribute__((flag_enum)) DNDC_NODEFLAG {
 #else
-enum {
+enum DNDC_NODEFLAG{
 #endif
     DNDC_NODEFLAG_NONE     = 0x0,
     DNDC_NODEFLAG_IMPORT   = 0x1,
@@ -606,7 +637,7 @@ int
 dndc_node_set_flags(DndcContext*, DndcNodeHandle, int);
 // -------------------
 // Sets the flags on a node to the given value. This should be the bitwise-or
-// of the `DNDC_NODE_FLAG`s you wish to set. Note that this will override all
+// of the `DNDC_NODEFLAG`s you wish to set. Note that this will override all
 // of the flags already set on the node. Call `dndc_node_get_flags` first and
 // bit-twiddle them if you don't want to leave the values of those flags
 // undisturbed.
@@ -681,7 +712,7 @@ dndc_node_get_children(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, Dnd
 // into the buff and there are no more items to copy.
 //
 // Either loop until this function returns 0 or until the total number of items
-// copied is equal to the result of `dnd_node_children_count`.
+// copied is equal to the result of `dndc_node_children_count`.
 
 DNDC_API
 int
@@ -741,7 +772,7 @@ dndc_node_classes(DndcContext*, DndcNodeHandle, size_t* cookie, DndcStringView* 
 // into the buff and there are no more items to copy.
 //
 // Either loop until this function returns 0 or until the total number of items
-// copied is equal to the result of `dnd_node_classes_count`.
+// copied is equal to the result of `dndc_node_classes_count`.
 //
 
 DNDC_API
@@ -910,10 +941,11 @@ dndc_ctx_execute_js(DndcContext* ctx, DndcLongString jsargs);
 // This function can call the logger.
 //
 
-typedef struct DndcNodeLocation {
+typedef struct DndcNodeLocation DndcNodeLocation;
+struct DndcNodeLocation {
     DndcStringView filename;
     int row, column;
-} DndcNodeLocation;
+};
 // ----------------
 // Where in the source files the current node comes from.  Note that since
 // nodes can be genereated programatically (this api and from js), that the
@@ -1088,7 +1120,7 @@ dndc_ctx_select_nodes(DndcContext* ctx, size_t* cookie,
 //     must have all of these classes.
 //
 // class_count:
-//      The length of the array pointed to by `classses` (in elements, not
+//      The length of the array pointed to by `classes` (in elements, not
 //      bytes).
 //
 // buff:

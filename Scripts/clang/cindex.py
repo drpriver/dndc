@@ -593,6 +593,9 @@ class TokenKind:
     """
     Describes a specific type of a Token.
     """
+    COMMENT: TokenKind
+    KEYWORD: TokenKind
+    LITERAL: TokenKind
 
     _value_map:Dict[int, 'TokenKind'] = {}
 
@@ -707,6 +710,8 @@ class CursorKind(BaseEnumeration, table=enumerations.CURSOR_KINDS):
     CLASS_DECL                            : CursorKind
     CLASS_TEMPLATE                        : CursorKind
     CLASS_TEMPLATE_PARTIAL_SPECIALIZATION : CursorKind
+    MACRO_DEFINITION : CursorKind
+    OBJC_INTERFACE_DECL: CursorKind
 
     @staticmethod
     def get_all_kinds() -> List['CursorKind']:
@@ -2367,7 +2372,7 @@ class TranslationUnit(ClangObject):
         behavior is undefined.
         """
         if locations is not None:
-            extent = SourceRange(start=locations[0], end=locations[1])
+            extent = SourceRange.from_locations(start=locations[0], end=locations[1])
 
         return TokenGroup.get_tokens(self, extent)
 
@@ -3260,6 +3265,10 @@ functionList = [
   ("clang_parseTranslationUnit",
    [Index, c_interop_string, ctypes.c_void_p,ctypes.c_int, ctypes.c_void_p,ctypes.c_int,ctypes.c_int],
    c_object_p),
+
+  ("clang_parseTranslationUnit2",
+   [Index, c_interop_string, ctypes.c_void_p,ctypes.c_int, ctypes.c_void_p,ctypes.c_int, ctypes.c_int, ctypes.c_void_p],
+   ctypes.c_int),
 
   ("clang_reparseTranslationUnit",
    [TranslationUnit,ctypes.c_int, ctypes.c_void_p,ctypes.c_int],

@@ -1,5 +1,6 @@
 #ifndef MEASURE_TIME_H
 #define MEASURE_TIME_H
+#include <stdint.h>
 
 //
 // Gets current monotonically increasing time, measured in microseconds.

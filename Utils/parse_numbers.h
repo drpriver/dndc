@@ -8,6 +8,7 @@
 #include <stdint.h>
 // INT64_MAX, etc.
 #include <limits.h>
+#include <string.h>
 
 //
 // Functions for parsing strings into integers.

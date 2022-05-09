@@ -286,7 +286,7 @@ def should_exclude(name:str, excludes={}) -> bool: # default arg used as a cache
     excludes[name] = False
     return False
 
-def should_tag_file(f:str, source_files:List[str]) -> bool:
+def should_tag_file(f, source_files:List[str]) -> bool:
     if not f:
         return False
     name = normpath(f.name)

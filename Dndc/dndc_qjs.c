@@ -1,5 +1,6 @@
 #ifndef DNDC_QJS_C
 #define DNDC_QJS_C
+#include "dndc_long_string.h"
 #include "msb_extensions.h"
 #include "MStringBuilder.h"
 #include "dndc.h"

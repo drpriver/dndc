@@ -1,4 +1,4 @@
-JS Api Documentation::title
+JS Api Documentation::title #hide
 ::js
   if(Args && Array.isArray(Args) && Args.length > 1){
     ctx.select_nodes({type:NodeType.TITLE})[0].header = Args[1];
@@ -350,33 +350,44 @@ JS Api Documentation::title
   toc.id = 'toc';
   //endjs
 ::css
+  * {
+    box-sizing: border-box;
+  }
   #toc {
-    position: fixed;
-    left: 0;
-    top: 0;
-    overflow-y: auto;
-    width: max-content;
     height: 100%;
     font-size: 14px;
+    grid-column: 1;
+    overflow-y: auto;
+    padding-right: 2em;
+    padding-left: 1em;
+    grid-row: 1;
   }
   a {
     color: #D2D39A;
     font-family: ui-monospace, "Cascadia Mono", Consolas, mono;
   }
   html {
-    margin: auto;
     background-color: #272822;
     color: #D2D39A;
+    height: 100%;
+    width: 100%;
   }
-  * {
-    max-width: 40em;
+  body {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: max-content auto;
+    grid-column-gap: 4em;
+    margin: 0;
   }
   pre {
     font-family: ui-monospace, "Cascadia Mono", Consolas, mono;
     font-size: 14px;
-  }
-  body > div {
-    margin: auto;
+    grid-column: 2;
+    overflow-y: scroll;
+    height: 100%;
+    grid-row: 1;
+    margin: 0;
   }
   .comment {
     color: #5AC1E5;

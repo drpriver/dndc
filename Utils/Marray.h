@@ -37,11 +37,11 @@
 static inline
 size_t
 marray_resize_to_some_weird_number(size_t x){
-/**
- * If given a power of two number, gives that number roughly * 1.5
- * Any other number will give the next largest power of 2.
- * This leads to a growth rate of sort of sqrt(2)
- */
+//
+// If given a power of two number, gives that number roughly * 1.5
+// Any other number will give the next largest power of 2.
+// This leads to a growth rate of sort of sqrt(2)
+//
 #if UINTPTR_MAX != 0xFFFFFFFF
     _Static_assert(sizeof(size_t) == 8, "");
     _Static_assert(sizeof(size_t) == sizeof(unsigned long long), "fuu");

@@ -6,6 +6,8 @@
 #include <stdlib.h>
 // memcpy, memset
 #include <string.h>
+#include <assert.h>
+#include "allocator.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin

@@ -1,5 +1,6 @@
 #ifndef DNDC_H
 #define DNDC_H
+#include <stddef.h> // for size_t
 //
 // dndc.h
 // ------
@@ -27,8 +28,6 @@
 // 10 bits for micro
 
 enum {DNDC_NUMERIC_VERSION = DNDC_INT_VERSION(DNDC_MAJOR, DNDC_MINOR, DNDC_MICRO)};
-
-#include <stddef.h> // for size_t
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin // Unless marked, pointers are nonnull.
@@ -110,30 +109,34 @@ enum DndcErrorCode {
 // string types yourself. The stringtypes should be a typedef of an existing
 // length + pointer structure. The definition should match this one exactly.
 
-typedef struct DndcLongString {
-    size_t length; // excludes the terminating NUL
-    DNDC_NULLDEP(const char*) text; // utf-8 encoded text
-} DndcLongString;
+typedef struct DndcLongString DndcLongString;
 // -------------
 // A zero terminated string and its length.
 
-//
-// DndcStringView
-typedef struct DndcStringView {
-    size_t length;
-    DNDC_NULLDEP(const char*) text; // utf-8, might not be nul-terminated
-} DndcStringView;
+struct DndcLongString {
+    size_t length; // excludes the terminating NUL
+    DNDC_NULLDEP(const char*) text; // utf-8 encoded text
+};
+
+typedef struct DndcStringView DndcStringView;
 // --------------
 // A pointer to a character array (not zero terminated) and its length.
 
-// Avoiding including <stdint.h> in public header.
+struct DndcStringView {
+    size_t length;
+    DNDC_NULLDEP(const char*) text; // utf-8, might not be nul-terminated
+};
+
 _Static_assert(sizeof(unsigned short) == 2, "unsigned short is not uint16_t");
-typedef struct DndcStringViewUtf16 {
-    size_t length; // in code units
-    DNDC_NULLDEP(const unsigned short*) text; // utf-16, native endianness
-} DndcStringViewUtf16;
+
+typedef struct DndcStringViewUtf16 DndcStringViewUtf16;
 // -------------------
 // Pointer to a utf16 array and its length
+
+struct DndcStringViewUtf16 {
+    size_t length; // in code units
+    DNDC_NULLDEP(const unsigned short*) text; // utf-16, native endianness
+};
 
 #define DNDC_LONGSTRING_DEFINED 1
 
@@ -759,7 +762,7 @@ dndc_compile_dnd_file(
 //   A pointer that will be passed to the dependency_func.
 //
 // worker_thread:
-//   A thread created with `dndc_worker_create`.
+//   A thread created with `dndc_worker_thread_create`.
 //
 // jsargs:
 //   A json string literal that will be available to JS blocks as Args. May be

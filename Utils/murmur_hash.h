@@ -2,6 +2,7 @@
 #define MURMUR_HASH_H
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 
 #ifndef nosan
 #if defined(__clang__)

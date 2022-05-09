@@ -106,3 +106,23 @@ list:
 			-e '^$@$$' \
 			-e '.(dnd|dep|[ch])$$'
 endif
+
+$(DOCDIR)/%.h.html: %.h | $(DOCDIR)
+	$(PYTHON) -m Scripts.cdoc $< -o $(DOCDIR) -d $(DEPDIR)/$<.html.dep --cflags -I. -IUtils -IAllocators -IDndc
+$(DOCDIR)/Utils/Marray.h.html: Utils/Marray.h | $(DOCDIR)
+	$(PYTHON) -m Scripts.cdoc $< -o $(DOCDIR) -d $(DEPDIR)/$<.html.dep --cflags -I. -IUtils -IAllocators -DMARRAY_T=int
+$(DOCDIR)/Utils/Rarray.h.html: Utils/Rarray.h | $(DOCDIR)
+	$(PYTHON) -m Scripts.cdoc $< -o $(DOCDIR) -d $(DEPDIR)/$<.html.dep --cflags -I. -IUtils -IAllocators -DRARRAY_T=int
+$(DOCDIR)/Dndc/pyhead.h.html: Dndc/pyhead.h | $(DOCDIR)
+	$(PYTHON) -m Scripts.cdoc $< -o $(DOCDIR) -d $(DEPDIR)/$<.html.dep --cflags $(PYCFLAGS)
+# these have trouble with generating docs
+NODOC=Utils/gi_byte_distance_completer.h\
+      Utils/dsort.h \
+      Utils/dsort_test_strings.h \
+      Utils/recursive_glob.h \
+      QtDndcEdit/DndcEdit.h
+CDOCS=$(addprefix $(DOCDIR)/,$(addsuffix .html,$(filter-out $(NODOC),$(wildcard */*.h))))
+.PHONY: cdocs
+cdocs: $(CDOCS) $(DOCDIR)/cdocindex.html
+$(DOCDIR)/cdocindex.html: | $(CDOCS)
+	$(PYTHON) -m Scripts.make_cdoc_index $(DOCDIR)

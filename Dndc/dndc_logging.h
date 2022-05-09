@@ -1,5 +1,6 @@
 #ifndef DNDC_LOGGING_H
 #define DNDC_LOGGING_H
+#include "dndc_long_string.h"
 #include "msb_format.h"
 #include "dndc_types.h"
 
