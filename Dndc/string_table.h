@@ -5,9 +5,9 @@
 // greatly (no tombs, easy to tell when you need to expand).
 // We can also use zero length strings as empty keys.
 #include <stdint.h>
-#include "long_string.h"
-#include "murmur_hash.h"
-#include "allocator.h"
+#include "Utils/long_string.h"
+#include "Utils/murmur_hash.h"
+#include "Allocators/allocator.h"
 
 typedef struct StringTable StringTable;
 struct StringTable {

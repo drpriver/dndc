@@ -3,14 +3,14 @@
 #include <stdint.h>
 #include "dndc_long_string.h"
 #include "dndc.h"
-#include "long_string.h"
 #include "common_macros.h"
 #include "dndc_node_types.h"
 #include "dndc_file_cache.h"
-#include "allocator.h"
-#include "arena_allocator.h"
-#include "linear_allocator.h"
 #include "string_table.h"
+#include "Allocators/allocator.h"
+#include "Allocators/arena_allocator.h"
+#include "Allocators/linear_allocator.h"
+#include "Utils/long_string.h"
 
 //
 // dndc_types.h
@@ -35,13 +35,13 @@
 //
 
 #define MARRAY_T StringView
-#include "Marray.h"
+#include "Utils/Marray.h"
 
 #define MARRAY_T LongString
-#include "Marray.h"
+#include "Utils/Marray.h"
 
 #define RARRAY_T StringView
-#include "Rarray.h"
+#include "Utils/Rarray.h"
 
 
 typedef struct Attribute Attribute;
@@ -50,7 +50,7 @@ struct Attribute {
     StringView value; // often null
 };
 #define RARRAY_T Attribute
-#include "Rarray.h"
+#include "Utils/Rarray.h"
 
 //
 // NodeHandle
@@ -90,7 +90,7 @@ NodeHandle_eq(NodeHandle a, NodeHandle b){
 }
 
 #define MARRAY_T NodeHandle
-#include "Marray.h"
+#include "Utils/Marray.h"
 
 // For tracking what's the id of a node.
 typedef struct IdItem IdItem;
@@ -100,7 +100,7 @@ struct IdItem{
     StringView text;
 };
 #define MARRAY_T IdItem
-#include "Marray.h"
+#include "Utils/Marray.h"
 
 typedef enum
 #ifdef __clang__
@@ -179,7 +179,7 @@ _Static_assert(sizeof(Node) == 80, "");
 #endif
 
 #define MARRAY_T Node
-#include "Marray.h"
+#include "Utils/Marray.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin

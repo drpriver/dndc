@@ -1,6 +1,6 @@
 #ifndef DNDC_NODE_TYPES_H
 #define DNDC_NODE_TYPES_H
-#include "long_string.h"
+#include "Utils/long_string.h"
 
 #define NODETYPES(apply) \
     apply(MD,              0)\

@@ -6,13 +6,13 @@
 #include "dndc_ast.h"
 #include "dndc_long_string.h"
 #include "common_macros.h"
-#include "allocator.h"
+#include "Allocators/allocator.h"
 #include "pyhead.h"
 #include "structmember.h"
-#include "mallocator.h"
-#include "MStringBuilder.h"
+#include "Allocators/mallocator.h"
+#include "Utils/MStringBuilder.h"
 #include "msb_extensions.h"
-#include "msb_format.h"
+#include "Utils/msb_format.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin

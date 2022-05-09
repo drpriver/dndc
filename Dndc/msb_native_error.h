@@ -4,7 +4,7 @@
 #ifndef MSB_NATIVE_ERROR_H
 #define MSB_NATIVE_ERROR_H
 #if defined(_WIN32)
-#include "windowsheader.h"
+#include "Platform/Windows/windowsheader.h"
 typedef DWORD native_error_type;
 #elif defined(WASM)
 typedef int native_error_type;
@@ -15,7 +15,7 @@ typedef int native_error_type;
 typedef int native_error_type;
 #endif
 
-#include "MStringBuilder.h"
+#include "Utils/MStringBuilder.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin

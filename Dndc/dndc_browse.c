@@ -1,17 +1,17 @@
 #include "common_macros.h"
 #include "dndc_local_server.h"
-#include "argument_parsing.h"
-#include "term_util.h"
-#include "murmur_hash.h"
-#include "thread_utils.h"
-#include "get_input.h"
-#include "str_util.h"
-#include "allocator.h"
-#include "mallocator.h"
-#include "string_distances.h"
-#include "MStringBuilder.h"
-#include "msb_url_helpers.h"
-#include "msb_format.h"
+#include "Utils/argument_parsing.h"
+#include "Utils/term_util.h"
+#include "Utils/murmur_hash.h"
+#include "Utils/thread_utils.h"
+#include "Utils/get_input.h"
+#include "Utils/str_util.h"
+#include "Allocators/allocator.h"
+#include "Allocators/mallocator.h"
+#include "Utils/string_distances.h"
+#include "Utils/MStringBuilder.h"
+#include "Utils/msb_url_helpers.h"
+#include "Utils/msb_format.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -26,11 +26,11 @@
 #endif
 
 #define MARRAY_T StringView
-#include "Marray.h"
+#include "Utils/Marray.h"
 
-#include "recursive_glob.h"
+#include "Utils/recursive_glob.h"
 
-#include "gi_byte_distance_completer.h"
+#include "Utils/gi_byte_distance_completer.h"
 
 typedef Marray__StringView Entries;
 
@@ -373,6 +373,6 @@ native_gui_pick_directory(LongString* directory){
 #endif
 
 #include "dndc_local_server.c"
-#include "get_input.c"
-#include "gi_byte_distance_completer.c"
-#include "recursive_glob.c"
+#include "Utils/get_input.c"
+#include "Utils/gi_byte_distance_completer.c"
+#include "Utils/recursive_glob.c"

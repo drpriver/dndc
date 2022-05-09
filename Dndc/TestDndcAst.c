@@ -4,9 +4,9 @@
 #include "dndc_long_string.h"
 #define DNDC_AST_EXAMPLE
 #include "dndc_ast.h"
-#include "testing.h"
-#include "file_util.h"
-#include "mallocator.h"
+#include "Utils/testing.h"
+#include "Utils/file_util.h"
+#include "Allocators/mallocator.h"
 
 static TestFunc TestDndcAst;
 static TestFunc TestAstExample;

@@ -108,11 +108,11 @@ list:
 endif
 
 $(DOCDIR)/%.h.html: %.h | $(DOCDIR)
-	$(PYTHON) -m Scripts.cdoc $< -o $(DOCDIR) -d $(DEPDIR)/$<.html.dep --cflags -I. -IUtils -IAllocators -IDndc
+	$(PYTHON) -m Scripts.cdoc $< -o $(DOCDIR) -d $(DEPDIR)/$<.html.dep --cflags -iquote .
 $(DOCDIR)/Utils/Marray.h.html: Utils/Marray.h | $(DOCDIR)
-	$(PYTHON) -m Scripts.cdoc $< -o $(DOCDIR) -d $(DEPDIR)/$<.html.dep --cflags -I. -IUtils -IAllocators -DMARRAY_T=int
+	$(PYTHON) -m Scripts.cdoc $< -o $(DOCDIR) -d $(DEPDIR)/$<.html.dep --cflags -iquote . -DMARRAY_T=int
 $(DOCDIR)/Utils/Rarray.h.html: Utils/Rarray.h | $(DOCDIR)
-	$(PYTHON) -m Scripts.cdoc $< -o $(DOCDIR) -d $(DEPDIR)/$<.html.dep --cflags -I. -IUtils -IAllocators -DRARRAY_T=int
+	$(PYTHON) -m Scripts.cdoc $< -o $(DOCDIR) -d $(DEPDIR)/$<.html.dep --cflags -iquote . -DRARRAY_T=int
 $(DOCDIR)/Dndc/pyhead.h.html: Dndc/pyhead.h | $(DOCDIR)
 	$(PYTHON) -m Scripts.cdoc $< -o $(DOCDIR) -d $(DEPDIR)/$<.html.dep --cflags $(PYCFLAGS)
 # these have trouble with generating docs

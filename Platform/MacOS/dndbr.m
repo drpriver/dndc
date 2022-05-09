@@ -1,7 +1,7 @@
 #import <Cocoa/Cocoa.h>
-#import "dndc_long_string.h"
-#import "dndc_local_server.h"
-#import "common_macros.h"
+#import "Dndc/dndc_long_string.h"
+#import "Dndc/dndc_local_server.h"
+#import "Dndc/common_macros.h"
 #import <string.h>
 #define LOGIT(...) NSLog(@ "%d: " #__VA_ARGS__ "= %@", __LINE__, __VA_ARGS__)
 // We only compile this with apple clang anyway, so using extensions is fine.

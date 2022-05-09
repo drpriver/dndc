@@ -4,9 +4,9 @@
 #include "dndc.h"
 #include "errorable_long_string.h"
 #include "common_macros.h"
-#include "MStringBuilder.h"
 #include "dndc_types.h"
-#include "msb_format.h"
+#include "Utils/MStringBuilder.h"
+#include "Utils/msb_format.h"
 
 #ifndef warn_unused
 #if defined(__GNUC__) || defined(__clang__)

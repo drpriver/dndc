@@ -1,8 +1,8 @@
 #ifndef DNDC_LOGGING_H
 #define DNDC_LOGGING_H
 #include "dndc_long_string.h"
-#include "msb_format.h"
 #include "dndc_types.h"
+#include "Utils/msb_format.h"
 
 #define SELECT_LOG_FORMAT_IMPL(n) LOG_FORMAT_IMPL##n
 #define SELECT_LOG_FORMAT(n) SELECT_LOG_FORMAT_IMPL(n)

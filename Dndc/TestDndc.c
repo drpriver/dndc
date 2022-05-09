@@ -3,7 +3,7 @@
 #define DNDC_API static inline
 #include "dndc.h"
 #include "dndc_long_string.h"
-#include "testing.h"
+#include "Utils/testing.h"
 #define NO_DNDC_AST_API
 #include "dndc.c"
 

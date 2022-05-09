@@ -1,12 +1,12 @@
 #ifndef DNDC_FORMAT_C
 #define DNDC_FORMAT_C
-#include "MStringBuilder.h"
+#include "Utils/MStringBuilder.h"
 #include "dndc_node_types.h"
 #include "dndc_types.h"
 #include "dndc_funcs.h"
 #include "dndc_logging.h"
-#include "str_util.h"
-#include "msb_format.h"
+#include "Utils/str_util.h"
+#include "Utils/msb_format.h"
 
 // NOTE: Formatting assumes a certain structure of the input tree
 //       which may not necessarily hold if user scripts or the ast api

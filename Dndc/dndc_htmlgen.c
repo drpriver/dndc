@@ -3,11 +3,11 @@
 #include "dndc_types.h"
 #include "dndc_funcs.h"
 #include "msb_extensions.h"
-#include "path_util.h"
-#include "str_util.h"
-#include "parse_numbers.h"
-#include "measure_time.h"
-#include "msb_format.h"
+#include "Utils/path_util.h"
+#include "Utils/str_util.h"
+#include "Utils/parse_numbers.h"
+#include "Utils/measure_time.h"
+#include "Utils/msb_format.h"
 
 #ifndef NO_SIMD
 #ifdef __x86_64__

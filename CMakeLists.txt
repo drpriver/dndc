@@ -9,10 +9,9 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 find_package(Python3 3.8 COMPONENTS Development Interpreter)
 find_package(Threads REQUIRED)
 
-include_directories(Utils Dndc Allocators Vendored/quickjs ${CMAKE_SOURCE_DIR})
+include_directories(${CMAKE_SOURCE_DIR})
 
 if(WIN32)
-include_directories(Platform/Windows)
 add_compile_options("-D_CRT_NONSTDC_NO_DEPRECATE" "-D_CRT_SECURE_NO_WARNINGS")
 elseif(APPLE)
 elseif(UNIX)
@@ -118,7 +117,6 @@ if(APPLE)
     )
 	#target_compile_definitions(gdndc PRIVATE QJS_SHARED_LIBRARY)
     target_compile_options(gdndc PUBLIC "-fobjc-arc")
-    target_include_directories(gdndc PRIVATE Dndc)
 
 	add_executable(dndbr
 		MACOSX_BUNDLE
@@ -135,7 +133,6 @@ if(APPLE)
 			"-framework Cocoa"
 			)
     target_compile_options(dndbr PUBLIC "-fobjc-arc")
-    target_include_directories(dndbr PRIVATE Dndc)
 
 endif()
 
@@ -149,7 +146,6 @@ if(WIN32)
     #    ${Python3_LIBRARIES}
     #    quickjs-dylib
     #    )
-    #target_include_directories(gdndc PRIVATE Dndc)
 # for rng
 target_compile_options(quickjs-lib PUBLIC "-mrdseed")
 target_compile_options(quickjs-dylib PUBLIC "-mrdseed")
@@ -245,7 +241,7 @@ if(Qt${QT_VERSION_MAJOR}_FOUND)
         )
     endif()
 
-    target_include_directories(DndcEdit PRIVATE ${CMAKE_SOURCE_DIR})
+	#target_include_directories(DndcEdit PRIVATE ${CMAKE_SOURCE_DIR})
     target_link_libraries(DndcEdit PRIVATE
         Qt${QT_VERSION_MAJOR}::Widgets
         Qt${QT_VERSION_MAJOR}::WebEngineWidgets

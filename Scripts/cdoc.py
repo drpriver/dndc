@@ -206,6 +206,8 @@ a {
   height: 100%;
   font-size: 12px;
   padding-right: 2em;
+  padding-left: 1em;
+  padding-top: 1ex;
 }
 pre {
   font-family: ui-monospace, "Cascadia Mono", Consolas, mono;
@@ -235,10 +237,10 @@ pre {
 .preproc {
   color: #a89ad2;
 }
-a.type, a.macro, a.func, a.enum, a.anonenum, a.global {
+a.type, a.macro, a.func, a.enum, a.anonenum, a.global, a.literal {
   text-decoration: none;
 }
-a.type:hover, a.macro:hover, a.func:hover, a.enum:hover, a.anonenum:hover, a.global:hover {
+a.type:hover, a.macro:hover, a.func:hover, a.enum:hover, a.anonenum:hover, a.global:hover, a.literal:hover {
   text-decoration: underline;
 }
 </style>
@@ -252,9 +254,12 @@ class DocWriter:
         self.lines: List = ['']
         self.prev = (1, 1)
         self.sourcefile = sourcefile
+        self.include = False
+        self.include_buff = []
 
     def do_token(self, token:cindex.Token) -> None:
         if token.location.line != self.prev[0]:
+            self.include = False
             for _ in range(max(0, token.location.line-self.prev[0])):
                 self.lines.append('')
                 self.prev = (token.location.line, 1)
@@ -285,6 +290,8 @@ class DocWriter:
         kind = token.kind
         text = escape(spell)
         if spell in {'#', 'ifdef', 'undef', 'define', 'include', 'import', 'ifndef', 'elif', 'endif', 'pragma'}:
+            if spell == 'include':
+                self.include = True
             return f'<span class="preproc">{text}</span>'
         if token.location.column == 2 and spell in {'else', 'if'}:
             return f'<span class="preproc">{text}</span>'
@@ -303,7 +310,24 @@ class DocWriter:
             if kind == cindex.TokenKind.KEYWORD:
                 return f'<span class="keyword">{text}</span>'
             if kind == cindex.TokenKind.LITERAL:
+                if self.include:
+                    href = text[1:-1]+'.html"'
+                    if '/' in href:
+                        href = '"../'+href
+                    else:
+                        href = '"' + href
+                    self.include = False
+                    return f'<a href={href} class="literal">{text}</a>'
                 return f'<span class="literal">{text}</span>'
+            if self.include:
+                self.include_buff.append(text)
+                if text != '&gt;':
+                    return ''
+                else:
+                    b = ''.join(self.include_buff)
+                    self.include_buff.clear()
+                    self.include = False
+                    return f'<span class="literal">{b}</span>'
             return text
         if ident.lineno == token.location.line:
             return f'<span class="{ident.kind}" id="{ident.id}">{text}</span>'
@@ -314,6 +338,7 @@ class DocWriter:
     def _write_head(self, outfp:TextIO) -> None:
         print(HEAD, file=outfp)
         print('<div id="toc">', file=outfp)
+        print('<a href="cdocindex.html">Index</a>', file=outfp)
         print('<ul>', file=outfp)
         doing_enum = False
         for ident in sorted([i for i in self.idents if same_path(i.filename, self.sourcefile)], key=lambda x: x.lineno):
@@ -330,7 +355,6 @@ class DocWriter:
         print('</ul>', file=outfp)
         print('</div>', file=outfp)
         print('<pre>', file=outfp)
-        print('<a href="cdocindex.html">Index</a>', file=outfp)
     def _write_tail(self, outfp) -> None:
         print('</pre>', file=outfp)
         print('</body>', file=outfp)
@@ -354,9 +378,13 @@ def do_tags(arguments:List[str], source_file:str, compiler:str) -> DocWriter:
     identifiers = {} # type: Dict[str, Ident]
     def t(s:str) -> None:
         identifiers[s] = Ident(Kinds.type, s)
+    def f(s:str) -> None:
+        identifiers[s] = Ident(Kinds.func, s)
     for x in ['int', 'char', 'size_t', 'unsigned', 'void', 'ssize_t', 'long', 'short', 'enum',
-            'signed', 'struct', 'union', 'const', 'FILE', 'int8_t', 'uint8_t', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t', 'int64_t', 'uint64_t', 'bool', '_Bool', 'float', 'double', 'static', 'inline']:
+            'signed', 'struct', 'union', 'const', 'FILE', 'int8_t', 'uint8_t', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t', 'int64_t', 'uint64_t', 'bool', '_Bool', 'float', 'double', 'static', 'inline', 'ptrdiff_t', 'intptr_t']:
         t(x)
+    for x in ['printf', 'fprintf', 'memcpy', 'memset', 'memcmp', 'memchr', 'memmem']:
+        f(x)
     clang_args=(CLANG_DEFAULT_INCLUDES if compiler == 'clang' else CLANGXX_DEFAULT_INCLUDES)+arguments
     try:
         tu = cindex.TranslationUnit.from_source(
@@ -470,7 +498,9 @@ def should_tag_children(cursor) -> bool:
 
 def run(file:str, doc_folder:Optional[str], dep_file:Optional[str], cflags:List[str]) -> None:
     file = os.path.relpath(file)
-    args = ['-x', 'c', file, *cflags]
+    args = ['-x', 'c', file]
+    if cflags:
+        args.extend(cflags)
     args = fix_args(args, file)
     writer = do_tags(args, file, 'clang')
     if not doc_folder:

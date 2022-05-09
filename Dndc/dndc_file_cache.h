@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include "dndc_long_string.h"
 #include "errorable_long_string.h"
-#include "allocator.h"
+#include "Allocators/allocator.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin

@@ -1,18 +1,18 @@
 #include "dndc.h"
 #include "dndc_long_string.h"
-#include "file_util.h"
-#include "str_util.h"
-#include "path_util.h"
-#include "allocator.h"
-#include "mallocator.h"
-#include "msb_url_helpers.h"
+#include "Utils/file_util.h"
+#include "Utils/str_util.h"
+#include "Utils/path_util.h"
+#include "Allocators/allocator.h"
+#include "Allocators/mallocator.h"
+#include "Utils/msb_url_helpers.h"
 #include "common_macros.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
 #ifdef _WIN32
-#include "windowsheader.h"
+#include "Platform/Windows/windowsheader.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
@@ -579,4 +579,4 @@ error(const DndLogger* logger, const char* msg, ...){
 #endif
 
 
-#include "allocator.c"
+#include "Allocators/allocator.c"

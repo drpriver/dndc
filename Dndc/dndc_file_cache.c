@@ -2,9 +2,9 @@
 #define DNDC_FILE_CACHE_C
 #include <string.h>
 #include "dndc_file_cache.h"
-#include "file_util.h"
-#include "base64.h"
-#include "murmur_hash.h"
+#include "Utils/file_util.h"
+#include "Utils/base64.h"
+#include "Utils/murmur_hash.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -41,7 +41,7 @@ struct LoadedSource {
 #pragma clang assume_nonnull end
 #endif
 #define MARRAY_T LoadedSource
-#include "Marray.h"
+#include "Utils/Marray.h"
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif

@@ -10,5 +10,5 @@ typedef struct DndcLongString LongString;
 typedef struct DndcStringView StringView;
 typedef struct DndcStringViewUtf16 StringViewUtf16;
 #define LONGSTRING_DEFINED
-#include "long_string.h"
+#include "Utils/long_string.h"
 #endif

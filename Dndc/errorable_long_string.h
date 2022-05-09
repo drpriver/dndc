@@ -1,6 +1,6 @@
 #ifndef ERRORABLE_LONG_STRING_H
 #define ERRORABLE_LONG_STRING_H
-#include "long_string.h"
+#include "Utils/long_string.h"
 
 typedef struct StringResult StringResult;
 struct StringResult {

@@ -9,12 +9,7 @@ else
   ignore_bogus_deprecations = []
 endif
 
-if host_machine.system() == 'windows'
-includes = include_directories('Allocators', 'Utils', 'Dndc', 'Platform/Windows', 'Vendored/quickjs')
-else
-includes = include_directories('Allocators', 'Utils', 'Dndc', 'Vendored/quickjs')
-endif
-
+includes = include_directories('.')
 install_headers('Dndc/dndc.h', 'Dndc/dndc_ast.h', subdir:'Dndc')
 
 cc = meson.get_compiler('c')

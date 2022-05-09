@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include "MStringBuilder.h"
 #include "long_string.h"
-#include "msb_extensions.h" // FIXME: dependency on msb_write_json_escaped_str
+#include "Dndc/msb_extensions.h" // FIXME: dependency on msb_write_json_escaped_str
 
 #ifndef force_inline
 #if defined(__GNUC__) || defined(__clang__)
@@ -160,17 +160,22 @@ static const uint16_t ZERO_TO_NINETY_NINE[] = {
 _Static_assert(sizeof(ZERO_TO_NINETY_NINE)==200, "");
 
 //
-// buff: A pointer to a buffer that is at least 10 bytes long.
-// value: the value to be turned into a string.
+// buff: 
+//   A pointer to a buffer that is at least 10 bytes long.
+// value: 
+//   the value to be turned into a string.
 //
-// Returns: A pointer into the buffer that is the first character of the string.
-// Note that this is not necessarily the first character of the buffer.
-// You can get the length of the written string via pointer arithmetic:
+// Returns: 
+//   A pointer into the buffer that is the first character of the string.
+//   Note that this is not necessarily the first character of the buffer.
+//   You can get the length of the written string via pointer arithmetic.
 //
 // Example:
-//   buff[10]; // note that a length of 10 leaves no room for a nul.
-//   char* p = uint32_to_str_buffer(buff, some_unsigned_integer);
-//   ptrdiff_t length = (buff+10) - p; // always buff+10, even if buff is longer.
+#if 0
+    buff[10]; // note that a length of 10 leaves no room for a nul.
+    char* p = uint32_to_str_buffer(buff, some_unsigned_integer);
+    ptrdiff_t length = (buff+10) - p; // always buff+10, even if buff is longer.
+#endif
 //
 static inline
 char*
@@ -276,7 +281,7 @@ uint64_to_ascii(char* buff, ptrdiff_t bufsize, uint64_t value){
 static inline
 void
 uint16_to_hex(char* buff, uint16_t value){
-    const char* hexstring = "0123456789aabcdef";
+    const char* hexstring = "0123456789abcdef";
     uint64_t v = value;
     for(int i = 3; i >= 0; i--){
         *buff++ = hexstring[(v >> i*4) &0xf];
@@ -288,7 +293,7 @@ uint16_to_hex(char* buff, uint16_t value){
 static inline
 void
 uint32_to_hex(char* buff, uint32_t value){
-    const char* hexstring = "0123456789aabcdef";
+    const char* hexstring = "0123456789abcdef";
     uint64_t v = value;
     for(int i = 7; i >= 0; i--){
         *buff++ = hexstring[(v >> i*4) &0xf];

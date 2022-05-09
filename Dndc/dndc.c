@@ -17,19 +17,19 @@
 #include "dndc_logging.h"
 #include "common_macros.h"
 
-#include "path_util.h"
-#include "MStringBuilder.h"
+#include "Utils/path_util.h"
+#include "Utils/MStringBuilder.h"
 #include "msb_extensions.h"
-#include "msb_format.h"
-#include "allocator.h"
-#include "mallocator.h"
-#include "linear_allocator.h"
-#include "recording_allocator.h"
-#include "arena_allocator.h"
-#include "measure_time.h"
-#include "thread_utils.h"
+#include "Utils/msb_format.h"
+#include "Allocators/allocator.h"
+#include "Allocators/mallocator.h"
+#include "Allocators/linear_allocator.h"
+#include "Allocators/recording_allocator.h"
+#include "Allocators/arena_allocator.h"
+#include "Utils/measure_time.h"
+#include "Utils/thread_utils.h"
 #ifndef WASM
-#include "term_util.h"
+#include "Utils/term_util.h"
 #endif
 
 #ifdef __clang__
@@ -761,7 +761,7 @@ run_the_dndc(uint64_t flags,
 #include "dndc_context.c"
 #include "dndc_file_cache.c"
 #include "dndc_logging.c"
-#include "allocator.c"
+#include "Allocators/allocator.c"
 
 #ifndef WASM
 

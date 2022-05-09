@@ -1,6 +1,6 @@
-#include "testing.h"
+#include "Utils/testing.h"
 #include "string_table.h"
-#include "mallocator.h"
+#include "Allocators/mallocator.h"
 
 TestFunction(TestStringTable){
     TESTBEGIN();

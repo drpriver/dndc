@@ -9,16 +9,16 @@
 #include "dndc_types.h"
 #include "dndc_node_types.h"
 #include "dndc_credits.h"
-#include "argument_parsing.h"
-#include "term_util.h"
-#include "file_util.h"
-#include "path_util.h"
-#include "MStringBuilder.h"
+#include "Utils/argument_parsing.h"
+#include "Utils/term_util.h"
+#include "Utils/file_util.h"
+#include "Utils/path_util.h"
+#include "Utils/MStringBuilder.h"
 #include "msb_extensions.h"
-#include "mallocator.h"
-#include "gi_indent_completer.h"
+#include "Allocators/mallocator.h"
+#include "Utils/gi_indent_completer.h"
 #define GET_INPUT_API static inline
-#include "get_input.h"
+#include "Utils/get_input.h"
 
 // Print out syntax-highlighted version of the file to stdout.
 static
@@ -807,4 +807,4 @@ print_file_writing_error(const char* filename, FileWriteResult err){
 }
 
 #include "dndc.c"
-#include "get_input.c"
+#include "Utils/get_input.c"

@@ -8,15 +8,15 @@
 #include "common_macros.h"
 #include "dndc_long_string.h"
 #include "dndc_ast.h"
-#include "thread_utils.h" // this has some assumptions about other inclusions that needs to get fixed
-#include "mallocator.h"
-#include "argument_parsing.h"
-#include "term_util.h"
+#include "Utils/thread_utils.h"
+#include "Utils/argument_parsing.h"
+#include "Utils/term_util.h"
+#include "Allocators/mallocator.h"
 
 #define MARRAY_T StringView
-#include "Marray.h"
+#include "Utils/Marray.h"
 
-#include "recursive_glob.h"
+#include "Utils/recursive_glob.h"
 
 
 typedef struct Tag Tag;
@@ -27,7 +27,7 @@ struct Tag {
 };
 
 #define MARRAY_T Tag
-#include "Marray.h"
+#include "Utils/Marray.h"
 
 typedef struct WorkItem WorkItem;
 struct WorkItem {
@@ -35,10 +35,10 @@ struct WorkItem {
     Marray__Tag tags;
 };
 #define MARRAY_T WorkItem
-#include "Marray.h"
+#include "Utils/Marray.h"
 
 #define MARRAY_T ThreadHandle
-#include "Marray.h"
+#include "Utils/Marray.h"
 
 Marray__WorkItem items;
 _Atomic size_t item_idx;
@@ -293,5 +293,5 @@ main(int argc, const char* const* argv){
 #endif
 
 
-#include "allocator.c"
-#include "recursive_glob.c"
+#include "Allocators/allocator.c"
+#include "Utils/recursive_glob.c"

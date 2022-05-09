@@ -2,13 +2,13 @@
 #define DNDC_QJS_C
 #include "dndc_long_string.h"
 #include "msb_extensions.h"
-#include "MStringBuilder.h"
+#include "Utils/MStringBuilder.h"
 #include "dndc.h"
 #include "dndc_funcs.h"
 #include "dndc_types.h"
-#include "msb_format.h"
-#include "str_util.h"
-#include "file_util.h"
+#include "Utils/msb_format.h"
+#include "Utils/str_util.h"
+#include "Utils/file_util.h"
 #include <sys/stat.h>
 #if defined(__APPLE__) || defined(__linux__)
 #include <fts.h>
@@ -19,7 +19,7 @@ PushDiagnostic()
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wunused-parameter"
 #endif
-#include "quickjs.h"
+#include "Vendored/quickjs/quickjs.h"
 PopDiagnostic()
 
 #ifdef __clang__

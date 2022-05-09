@@ -2,7 +2,7 @@
 #define DNDC_QJS_H
 #include "dndc_long_string.h"
 #include "dndc_types.h"
-#include "arena_allocator.h"
+#include "Allocators/arena_allocator.h"
 typedef struct QJSRuntime QJSRuntime;
 typedef struct QJSContext QJSContext;
 #ifdef __clang__

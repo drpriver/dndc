@@ -46,12 +46,7 @@ WARNING_FLAGS:=-Wall\
 STD:=-std=gnu17
 
 #TODO: this should be generated
-INCLUDE_FLAGS=-I.\
-	-IPlatform\
-	-IUtils\
-	-IAllocators\
-	-IDndc\
-	-IVendored/quickjs\
+INCLUDE_FLAGS=-iquote .
 
 LINK_FLAGS=
 FAST_FLAGS=-Ofast

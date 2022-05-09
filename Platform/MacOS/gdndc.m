@@ -2,19 +2,17 @@
 #import <Webkit/WebKit.h>
 #import <dispatch/dispatch.h>
 #define DNDC_API static inline
-#import "dndc_long_string.h"
-#import "common_macros.h"
-#import "measure_time.h"
-#import "dndc.h"
-#import "dndc_ast.h"
-#import "MStringBuilder.h"
-#import "mallocator.h"
-#import "msb_format.h"
-#import "dndc_funcs.h"
-#import "dndc_credits.h"
-#import "murmur_hash.h"
-// #import "log_print.h"
-// #import "terminal_logger.c"
+#import "Dndc/dndc_long_string.h"
+#import "Dndc/common_macros.h"
+#import "Utils/measure_time.h"
+#import "Dndc/dndc.h"
+#import "Dndc/dndc_ast.h"
+#import "Utils/MStringBuilder.h"
+#import "Allocators/mallocator.h"
+#import "Utils/msb_format.h"
+#import "Dndc/dndc_funcs.h"
+#import "Dndc/dndc_credits.h"
+#import "Utils/murmur_hash.h"
 #define LOGIT(...) NSLog(@ "%d: " #__VA_ARGS__ "= %@", __LINE__, __VA_ARGS__)
 // Convenience macro for writing inline javascript without a million quotes.
 // Note that you need to semi-colon terminate all of your lines.
@@ -2012,5 +2010,5 @@ do_menus(void){
 
 #pragma clang assume_nonnull end
 
-#import "dndc.c"
-#import "allocator.c"
+#import "Dndc/dndc.c"
+#import "Allocators/allocator.c"
