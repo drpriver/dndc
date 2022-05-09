@@ -6,12 +6,12 @@
 #include "dndc_ast.h"
 #include "dndc_long_string.h"
 #include "common_macros.h"
-#include "Allocators/allocator.h"
 #include "pyhead.h"
 #include "structmember.h"
+#include "Allocators/allocator.h"
 #include "Allocators/mallocator.h"
 #include "Utils/MStringBuilder.h"
-#include "msb_extensions.h"
+#include "Utils/msb_extensions.h"
 #include "Utils/msb_format.h"
 
 #ifdef __clang__

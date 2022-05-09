@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include "MStringBuilder.h"
 #include "long_string.h"
-#include "Dndc/msb_extensions.h" // FIXME: dependency on msb_write_json_escaped_str
+#include "msb_extensions.h"
 
 #ifndef force_inline
 #if defined(__GNUC__) || defined(__clang__)
@@ -426,7 +426,6 @@ msb_apply_format(MStringBuilder* sb, FormatArg arg){
             break;
         case FORMATTYPE_QUOTED_STRING:
             msb_write_char(sb, '"');
-            // FIXME: this file accidentally depends on this functionality.
             msb_write_json_escaped_str(sb, arg.string_value.text, arg.string_value.length);
             msb_write_char(sb, '"');
             break;

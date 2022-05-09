@@ -21,7 +21,7 @@
 
 #ifndef unhandled_error_condition
 #include <assert.h>
-#define unhandled_error_condition(x) assert(x)
+#define unhandled_error_condition(x) assert(!(x))
 #endif
 
 #ifdef __clang__

@@ -14,7 +14,7 @@
 #include "Utils/file_util.h"
 #include "Utils/path_util.h"
 #include "Utils/MStringBuilder.h"
-#include "msb_extensions.h"
+#include "Utils/msb_extensions.h"
 #include "Allocators/mallocator.h"
 #include "Utils/gi_indent_completer.h"
 #define GET_INPUT_API static inline

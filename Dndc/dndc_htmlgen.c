@@ -2,7 +2,7 @@
 #define DNDC_HTMLGEN_C
 #include "dndc_types.h"
 #include "dndc_funcs.h"
-#include "msb_extensions.h"
+#include "Utils/msb_extensions.h"
 #include "Utils/path_util.h"
 #include "Utils/str_util.h"
 #include "Utils/parse_numbers.h"

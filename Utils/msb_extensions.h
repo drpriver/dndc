@@ -1,7 +1,7 @@
 #ifndef MSB_EXTENSIONS_H
 #define MSB_EXTENSIONS_H
-#include "Utils/MStringBuilder.h"
-#include "Utils/str_util.h"
+#include "MStringBuilder.h"
+#include "str_util.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin

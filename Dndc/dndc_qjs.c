@@ -1,11 +1,11 @@
 #ifndef DNDC_QJS_C
 #define DNDC_QJS_C
 #include "dndc_long_string.h"
-#include "msb_extensions.h"
-#include "Utils/MStringBuilder.h"
 #include "dndc.h"
 #include "dndc_funcs.h"
 #include "dndc_types.h"
+#include "Utils/MStringBuilder.h"
+#include "Utils/msb_extensions.h"
 #include "Utils/msb_format.h"
 #include "Utils/str_util.h"
 #include "Utils/file_util.h"
