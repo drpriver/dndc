@@ -44,9 +44,9 @@
 // If it encounters annotations it just gives you the horrible (...) signature.
 // If I feel like it, I'll submit a patch allowing annotations as it is trivial.
 #if 0
-#define PY_INSPECT_SUPPORTS_ANNOTATIONS 1
+#define PYSIG(typed, untyped) typed
 #else
-#define PY_INSPECT_SUPPORTS_ANNOTATIONS 0
+#define PYSIG(typed, untyped) untyped
 #endif
 
 

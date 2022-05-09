@@ -208,12 +208,9 @@ PyMethodDef DndcPyFileCache_methods[] = {
         .ml_name = "remove",
         .ml_meth = (PyCFunction)DndcPyFileCache_remove,
         .ml_flags = METH_O,
-        .ml_doc =
-            #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-            "remove(self, filepath:str) -> bool\n"
-            #else
-            "remove(self, filepath)\n"
-            #endif
+        .ml_doc = PYSIG(
+            "remove(self, filepath:str) -> bool\n",
+            "remove(self, filepath)\n")
             "--\n"
             "\n"
             "Remove the given filepath (str) from the cache.\n",
@@ -222,12 +219,9 @@ PyMethodDef DndcPyFileCache_methods[] = {
         .ml_name = "clear",
         .ml_meth = (PyCFunction)DndcPyFileCache_clear,
         .ml_flags = METH_NOARGS,
-        .ml_doc =
-            #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-            "clear(self) -> None\n"
-            #else
-            "clear(self)\n"
-            #endif
+        .ml_doc = PYSIG(
+            "clear(self) -> None\n",
+            "clear(self)\n")
             "--\n"
             "\n"
             "Removes all cached files.\n",
@@ -236,12 +230,9 @@ PyMethodDef DndcPyFileCache_methods[] = {
         .ml_name = "paths",
         .ml_meth = (PyCFunction)DndcPyFileCache_paths,
         .ml_flags = METH_NOARGS,
-        .ml_doc =
-            #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-            "paths(self) -> list[str]\n"
-            #else
-            "paths(self)\n"
-            #endif
+        .ml_doc =PYSIG(
+            "paths(self) -> list[str]\n",
+            "paths(self)\n")
             "--\n"
             "\n"
             "Returns a list of the paths in the file cache.\n",
@@ -250,12 +241,9 @@ PyMethodDef DndcPyFileCache_methods[] = {
         .ml_name = "store",
         .ml_meth = (PyCFunction)DndcPyFileCache_store,
         .ml_flags = METH_VARARGS | METH_KEYWORDS,
-        .ml_doc =
-            #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-            "store(self, path:str, data:str, overwrite=True) -> bool\n"
-            #else
-            "store(self, path, data, overwrite=True)\n"
-            #endif
+        .ml_doc = PYSIG(
+            "store(self, path:str, data:str, overwrite=True) -> bool\n",
+            "store(self, path, data, overwrite=True)\n")
             "--\n"
             "\n"
             "Stores the string at the given path.\n"
@@ -307,12 +295,9 @@ PyMethodDef pydndc_methods[] = {
         .ml_name = "reformat",
         .ml_meth = (PyCFunction)pydndc_reformat,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
-        .ml_doc =
-        #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-        "reformat(text:str, logger:Callable|None=None) -> str\n"
-        #else
-        "reformat(text, logger=None)\n"
-        #endif
+        .ml_doc =PYSIG(
+        "reformat(text:str, logger:Callable|None=None) -> str\n",
+        "reformat(text, logger=None)\n")
         "--\n"
         "\n"
         "Reformat the given .dnd string into a nicely formatted representation.\n"
@@ -340,12 +325,9 @@ PyMethodDef pydndc_methods[] = {
         .ml_name = "htmlgen",
         .ml_meth = (PyCFunction)pydndc_htmlgen,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
-        .ml_doc =
-        #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-        "htmlgen(text:str, base_dir:str='.', filename:str='(string input)', logger:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs:str=None)\n"
-        #else
-        "htmlgen(text, base_dir='.', filename='(string input)', logger=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n"
-        #endif
+        .ml_doc =PYSIG(
+        "htmlgen(text:str, base_dir:str='.', filename:str='(string input)', logger:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs:str=None)\n",
+        "htmlgen(text, base_dir='.', filename='(string input)', logger=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n")
         "--\n"
         "\n"
         "Parses and converts the .dnd string into html, returning as a string.\n"
@@ -479,12 +461,9 @@ PyMethodDef pydndc_methods[] = {
         .ml_name = "expand",
         .ml_meth = (PyCFunction)pydndc_expand,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
-        .ml_doc =
-        #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-        "expand(text:str, base_dir:str='.', logger:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs=None) -> str\n"
-        #else
-        "expand(text, base_dir='.', logger=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n"
-        #endif
+        .ml_doc =PYSIG(
+        "expand(text:str, base_dir:str='.', logger:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs=None) -> str\n",
+        "expand(text, base_dir='.', logger=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n")
         "--\n"
         "\n"
         "Parses and converts the .dnd string into an equivelant .dnd string after\n"
@@ -554,12 +533,9 @@ PyMethodDef pydndc_methods[] = {
         .ml_name = "analyze_syntax_for_highlight",
         .ml_meth = (PyCFunction)pydndc_anaylze_syntax_for_highlight,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
-        .ml_doc =
-        #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-        "analyze_syntax_for_highlight(text->str) -> dict[0, tuple[SyntaxType, int, int, int]]\n"
-        #else
-        "analyze_syntax_for_highlight(text)\n"
-        #endif
+        .ml_doc = PYSIG(
+        "analyze_syntax_for_highlight(text->str) -> dict[0, tuple[SyntaxType, int, int, int]]\n",
+        "analyze_syntax_for_highlight(text)\n")
         "--\n"
         "\n"
         "Analyzes the .dnd string and returns a dictionary of syntactic regions.\n"
@@ -1775,12 +1751,9 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_name="node_by_id",
         .ml_meth=DndcContextPy_node_by_id,
         .ml_flags=METH_O,
-        .ml_doc=
-            #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-            "node_by_id(self, id:str) -> Optional[Node]\n"
-            #else
-            "node_by_id(self, id)\n"
-            #endif
+        .ml_doc=PYSIG(
+            "node_by_id(self, id:str) -> Optional[Node]\n",
+            "node_by_id(self, id)\n")
             "--\n"
             "\n"
             "Gets a node by its string id.\n",
@@ -2688,7 +2661,10 @@ static PyMethodDef DndcNodePy_methods[] = {
         .ml_name="has_attribute",
         .ml_meth=(PyCFunction)DndcNodePy_has_attribute,
         .ml_flags=METH_VARARGS|METH_KEYWORDS,
-        .ml_doc="has_attribute(self, key)\n"
+        .ml_doc=PYSIG(
+            "has_attribute(self, key:str) -> bool\n",
+            "has_attribute(self, key)\n"
+            )
             "--\n"
             "\n"
             "If it has an attribute.",
@@ -2697,7 +2673,9 @@ static PyMethodDef DndcNodePy_methods[] = {
         .ml_name="remove_class",
         .ml_meth=DndcNodePy_remove_class,
         .ml_flags=METH_O,
-        .ml_doc="remove_class(self, class_)\n"
+        .ml_doc=PYSIG(
+            "remove_class(self, class_:str)->None\n",
+            "remove_class(self, class_)\n")
             "--\n"
             "\n"
             "Removes a class from the class list.",
@@ -2706,7 +2684,9 @@ static PyMethodDef DndcNodePy_methods[] = {
         .ml_name="add_class",
         .ml_meth=DndcNodePy_add_class,
         .ml_flags=METH_O,
-        .ml_doc="add_class(self, class_)\n"
+        .ml_doc=PYSIG(
+            "add_class(self, class_:str) -> None\n",
+            "add_class(self, class_)\n")
             "--\n"
             "\n"
             "Adds a class to the class list.",
@@ -2715,7 +2695,9 @@ static PyMethodDef DndcNodePy_methods[] = {
         .ml_name="execute_js",
         .ml_meth=DndcNodePy_execute_js,
         .ml_flags=METH_O,
-        .ml_doc="execute_js(self, script)\n"
+        .ml_doc=PYSIG(
+            "execute_js(self, script:str) -> None\n",
+            "execute_js(self, script)\n")
             "--\n"
             "\n"
             "Executes javascript in the context of this node.",
@@ -2724,7 +2706,9 @@ static PyMethodDef DndcNodePy_methods[] = {
         .ml_name="parse",
         .ml_meth=(PyCFunction)DndcNodePy_parse,
         .ml_flags=METH_VARARGS|METH_KEYWORDS,
-        .ml_doc="parse(self, text, filename=None)\n"
+        .ml_doc=PYSIG(
+            "parse(self, text:str, filename:Optional[str]=None) -> None\n",
+            "parse(self, text, filename=None)\n")
             "--\n"
             "\n"
             "Parse a dnd string.\n"
@@ -2734,7 +2718,9 @@ static PyMethodDef DndcNodePy_methods[] = {
         .ml_name="parse_file",
         .ml_meth=(PyCFunction)DndcNodePy_parse_file,
         .ml_flags=METH_VARARGS|METH_KEYWORDS,
-        .ml_doc="parse_file(self, path)\n"
+        .ml_doc=PYSIG(
+            "parse_file(self, path:str) -> None\n",
+            "parse_file(self, path)\n")
             "--\n"
             "\n"
             "Parse a dnd file.\n"
@@ -2745,7 +2731,9 @@ static PyMethodDef DndcNodePy_methods[] = {
         .ml_name="format",
         .ml_meth=DndcNodePy_format,
         .ml_flags=METH_O,
-        .ml_doc="format(self, indent)\n"
+        .ml_doc=PYSIG(
+            "format(self, indent:int) -> str\n",
+            "format(self, indent)\n")
             "--\n"
             "\n"
             "Format a node.\n"
@@ -2756,7 +2744,9 @@ static PyMethodDef DndcNodePy_methods[] = {
         .ml_name="render",
         .ml_meth=DndcNodePy_render,
         .ml_flags=METH_NOARGS,
-        .ml_doc="render(self)\n"
+        .ml_doc=PYSIG(
+            "render(self) -> str\n",
+            "render(self)\n")
             "--\n"
             "\n"
             "render node to html fragment",
@@ -2765,12 +2755,9 @@ static PyMethodDef DndcNodePy_methods[] = {
         .ml_name="append_child",
         .ml_meth=DndcNodePy_append_child,
         .ml_flags=METH_O,
-        .ml_doc=
-            #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-            "append_child(self, child:Union[Node, str]) -> None\n"
-            #else
-            "append_child(self, child)\n"
-            #endif
+        .ml_doc= PYSIG(
+            "append_child(self, child:Union[Node, str]) -> None\n",
+            "append_child(self, child)\n")
             "--\n"
             "\n"
             "Append a node as a child of this node.\n"
@@ -2789,12 +2776,9 @@ static PyMethodDef DndcNodePy_methods[] = {
         .ml_name="make_child",
         .ml_meth=(PyCFunction)DndcNodePy_make_child,
         .ml_flags=METH_VARARGS|METH_KEYWORDS,
-        .ml_doc=
-            #if PY_INSPECT_SUPPORTS_ANNOTATIONS
-            "make_child(self, type:NodeType, header:str=None)\n"
-            #else
-            "make_child(self, type, header=None)\n"
-            #endif
+        .ml_doc= PYSIG(
+            "make_child(self, type:NodeType, header:str=None)\n",
+            "make_child(self, type, header=None)\n")
             "--\n"
             "\n"
             "Creates a child node of the given type as a child of this node, optionally with the given header\n"
