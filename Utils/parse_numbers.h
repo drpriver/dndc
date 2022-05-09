@@ -80,30 +80,35 @@ enum ParseNumberError {
 // If it is zero, then the result field is valid and is the parsed number.
 //
 
-typedef struct Uint64Result {
+typedef struct Uint64Result Uint64Result;
+struct Uint64Result {
     uint64_t result;
     enum ParseNumberError errored;
-} Uint64Result;
+};
 
-typedef struct Int64Result {
+typedef struct Int64Result Int64Result;
+struct Int64Result {
     int64_t result;
     enum ParseNumberError errored;
-} Int64Result;
+};
 
-typedef struct Uint32Result {
+typedef struct Uint32Result Uint32Result;
+struct Uint32Result {
     uint32_t result;
     enum ParseNumberError errored;
-} Uint32Result;
+};
 
-typedef struct Int32Result {
+typedef struct Int32Result Int32Result;
+struct Int32Result {
     int32_t result;
     enum ParseNumberError errored;
-} Int32Result;
+};
 
-typedef struct IntResult {
+typedef struct IntResult IntResult;
+struct IntResult {
     int result;
     enum ParseNumberError errored;
-} IntResult;
+};
 
 //
 // Forward declarations of the public API.

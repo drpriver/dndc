@@ -39,7 +39,9 @@ struct OverflowAllocation {
     struct OverflowAllocation*_Nullable next;
     char buff[];
 };
-typedef struct LinearAllocator {
+typedef struct LinearAllocator LinearAllocator;
+
+struct LinearAllocator{
     // The buffer to allocate from.
     void*_Null_unspecified  _data;
     // How big the buffer is.
@@ -51,7 +53,7 @@ typedef struct LinearAllocator {
     // The name of this allocator. Used for logging when we exceed capacity.
     const char*_Nullable name; // for logging purposes
     struct OverflowAllocation*_Nullable overflow;
-} LinearAllocator;
+};
 
 //
 // Mallocs a block of memory and returns the linear allocator that manages that

@@ -114,10 +114,11 @@ lstripped_view_utf16(const uint16_t* str, size_t len){
     }
     return (StringViewUtf16){.text=str, .length=len};
 }
-typedef struct SplitPair {
+typedef struct SplitPair SplitPair;
+struct SplitPair {
     StringView head;
     StringView tail;
-} SplitPair;
+};
 
 //
 // Given a string + length and a splitting character, returns two views

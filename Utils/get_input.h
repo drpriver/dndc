@@ -54,7 +54,8 @@ typedef int(GiTabCompletionFunc)(
 // Complex tab completion behavior should be implemented by you.
 
 
-typedef struct GetInputCtx {
+typedef struct GetInputCtx GetInputCtx;
+struct GetInputCtx {
     StringView prompt;
     size_t prompt_display_length;
     int _hst_count;
@@ -73,7 +74,7 @@ typedef struct GetInputCtx {
     // Do not store resources that need to be freed
     // here.
     uintptr_t tab_completion_cookie;
-} GetInputCtx;
+};
 // -----------
 //
 // The context structure that holds all internal state necessary across

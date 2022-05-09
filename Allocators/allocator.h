@@ -85,11 +85,13 @@ enum AllocatorType {
     ALLOCATOR_ARENA = 4,
 };
 
-typedef struct Allocator {
+typedef struct Allocator Allocator;
+
+struct Allocator {
     enum AllocatorType type;
     // 4 bytes of padding
     void* _data;
-} Allocator;
+};
 
 
 MALLOC_FUNC

@@ -97,11 +97,12 @@ pylogger(void*_Nullable user_data, int type_, const char* filename, int filename
     PyErr_Restore(type, value, traceback);
 }
 
-typedef struct DndcPyFileCache {
+typedef struct DndcPyFileCache DndcPyFileCache;
+struct DndcPyFileCache {
     PyObject_HEAD
     DndcFileCache* text_cache;
     DndcFileCache* b64_cache;
-} DndcPyFileCache;
+};
 
 static
 Nullable(PyObject*)
@@ -2041,11 +2042,12 @@ static PyTypeObject DndcContextPyType  = {
     .tp_dealloc = DndcContextPy_dealloc,
 };
 
-typedef struct DndcNodePy {
+typedef struct DndcNodePy DndcNodePy;
+struct DndcNodePy {
     PyObject_HEAD
     DndcContextPy* pyctx;
     DndcNodeHandle handle;
-} DndcNodePy;
+};
 
 static
 void

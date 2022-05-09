@@ -24,17 +24,19 @@ typedef long long ssize_t;
 
 enum {FORMAT_WIDTH=79};
 enum {FORMAT_INDENT=2};
-typedef struct FormatState {
+typedef struct FormatState FormatState;
+struct FormatState {
     // signed so it can go negative (simplifies things)
     // Check for <= 0, not == 0
     int lead;
     int col;
-} FormatState;
+};
 
-typedef struct FormatTokenized {
+typedef struct FormatTokenized FormatTokenized;
+struct FormatTokenized {
     StringView token;
     StringView rest;
-} FormatTokenized;
+};
 
 // Splits a string into (token, rest). Splits on ascii whitespace, treating all
 // other characters as opaque (which means it actually works with non-ascii

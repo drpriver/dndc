@@ -7,12 +7,13 @@
 #pragma clang assume_nonnull begin
 #endif
 // Javascript will malloc on our heap and fill out this structure.
-typedef struct PString {
+typedef struct PString PString;
+struct PString {
     // length does not include nul
     size_t length;
     // nul terminated
     unsigned char text[];
-} PString;
+};
 
 static inline
 LongString

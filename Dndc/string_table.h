@@ -9,12 +9,13 @@
 #include "murmur_hash.h"
 #include "allocator.h"
 
-typedef struct StringTable {
+typedef struct StringTable StringTable;
+struct StringTable {
     Allocator allocator;
     uint32_t count_;
     uint32_t capacity_;
     StringView*_Null_unspecified keys;
-} StringTable;
+};
 
 static inline
 uint32_t

@@ -31,7 +31,8 @@ enum FormatType {
     FORMATTYPE_QUOTED_STRING = 6,
 };
 
-typedef struct FormatArg {
+typedef struct FormatArg FormatArg;
+struct FormatArg {
     enum FormatType type;
     union {
         int32_t int32_value;
@@ -44,7 +45,7 @@ typedef struct FormatArg {
             int padding;
         } padded_int;
     };
-} FormatArg;
+};
 
 static inline
 force_inline

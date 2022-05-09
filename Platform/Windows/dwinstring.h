@@ -11,10 +11,11 @@
 
 #include "windowsheader.h"
 
-typedef struct WinString {
+typedef struct WinString WinString;
+struct WinString {
     wchar_t* text;
     size_t nchars_with_zero; // includes terminating null character
-} WinString;
+};
 
 static inline
 WinString

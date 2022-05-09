@@ -7,9 +7,10 @@
 #endif
 #include <stdlib.h>
 
-typedef struct TermSize {
+typedef struct TermSize TermSize;
+struct TermSize {
     int columns, rows;
-} TermSize;
+};
 //
 // Returns the size of the terminal.
 // On error, we return 80 columns and 24 rows.

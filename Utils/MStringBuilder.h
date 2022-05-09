@@ -25,16 +25,17 @@
 //
 // A type for building up a string without having to deal with things like sprintf
 // or strcat.
-typedef struct MStringBuilder {
+typedef struct MStringBuilder MStringBuilder;
+struct MStringBuilder {
     size_t cursor;
     size_t capacity;
     char*_Null_unspecified data;
     const Allocator allocator;
-} MStringBuilder;
+};
 
 //
 // Dealloc the data and zeros out the builder.
-// Unneeded if you called msb_detach_*.
+// Unneeded if you called `msb_detach_ls` or `msb_detach_sv`.
 static inline
 void
 msb_destroy(MStringBuilder* msb){

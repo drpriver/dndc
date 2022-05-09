@@ -145,11 +145,13 @@ static int num_cpus(void);
 
 #if defined(__linux__) || defined(__APPLE__)
 
-typedef struct ThreadHandle {
+typedef struct ThreadHandle ThreadHandle;
+struct ThreadHandle {
     pthread_t thread;
-} ThreadHandle;
+};
 
-typedef struct WorkerThread {
+typedef struct WorkerThread WorkerThread;
+struct WorkerThread {
     ThreadHandle thrd;
     pthread_cond_t worker_cond;
     pthread_mutex_t mutex;
@@ -161,7 +163,7 @@ typedef struct WorkerThread {
     thread_func* job;
     void*_Nullable job_data;
     bool shutdown;
-} WorkerThread;
+};
 
 static
 int
@@ -269,11 +271,13 @@ join_thread(ThreadHandle handle){
 
 #elif defined(_WIN32)
 
-typedef struct ThreadHandle {
+typedef struct ThreadHandle ThreadHandle;
+struct ThreadHandle {
     HANDLE thread;
-} ThreadHandle;
+};
 
-typedef struct WorkerThread {
+typedef struct WorkerThread WorkerThread;
+struct WorkerThread {
     ThreadHandle thrd;
     CONDITION_VARIABLE worker_cond;
     CRITICAL_SECTION mutex;
@@ -281,7 +285,7 @@ typedef struct WorkerThread {
     thread_func* job;
     void*_Nullable job_data;
     bool shutdown;
-} WorkerThread;
+};
 
 static
 int
@@ -369,9 +373,10 @@ join_thread(ThreadHandle handle){
 
 #elif defined(WASM)
 
-typedef struct ThreadHandle {
+typedef struct ThreadHandle ThreadHandle;
+struct ThreadHandle {
     int unused;
-} ThreadHandle;
+};
 
 static
 void
@@ -387,9 +392,10 @@ join_thread(ThreadHandle handle){
     (void)handle;
     unimplemented();
 }
-typedef struct WorkerThread {
+typedef struct WorkerThread WorkerThread;
+struct WorkerThread {
     int unused;
-}WorkerThread;
+};
 
 static WorkerThread dummy_worker_thread;
 static THREADFUNC(worker_thread_main);

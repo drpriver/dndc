@@ -35,10 +35,11 @@
 // If the allocation is bigger than would fit in an arena, it allocates it
 // independently and maintains a linked list of these big allocations.
 //
-typedef struct ArenaAllocator {
+typedef struct ArenaAllocator ArenaAllocator;
+struct ArenaAllocator {
     struct Arena*_Nullable arena;
     struct BigAllocation*_Nullable big_allocations;
-} ArenaAllocator;
+};
 
 static inline
 force_inline
@@ -55,10 +56,11 @@ allocator_from_arena(ArenaAllocator* aa){
 
 //
 // Header for a large allocation. Used to maintain a linked list of allocations.
-typedef struct BigAllocation {
+typedef struct BigAllocation BigAllocation;
+struct BigAllocation {
     struct BigAllocation*_Nullable next;
     size_t size;
-}BigAllocation;
+};
 
 enum {ARENA_PAGE_SIZE=4096};
 
@@ -73,12 +75,13 @@ enum {ARENA_BUFFER_SIZE = ARENA_SIZE-sizeof(void*)-sizeof(size_t)-sizeof(size_t)
 // allocation point and the previous one so that fast realloc can be
 // implemented if reallocing the last allocation.
 //
-typedef struct Arena{
+typedef struct Arena Arena;
+struct Arena {
     struct Arena*_Nullable prev; // The previous, exhausted arena.
     size_t used; // How much of this arena has been used.
     size_t last; // Before the last allocation, how much had been used.
     char buff[ARENA_BUFFER_SIZE];
-}Arena;
+};
 
 
 //
@@ -234,9 +237,10 @@ ArenaAllocator_free_all(ArenaAllocator*_Nullable aa){
     return;
 }
 
-typedef struct ArenaAllocatorStats {
+typedef struct ArenaAllocatorStats ArenaAllocatorStats;
+struct ArenaAllocatorStats {
     size_t used, capacity, big_used, big_count, arena_count;
-} ArenaAllocatorStats;
+};
 
 static inline
 ArenaAllocatorStats

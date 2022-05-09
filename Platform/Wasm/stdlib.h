@@ -9,10 +9,11 @@
 #define alloca __builtin_alloca
 typedef int comparator(const void*, const void*);
 
-typedef struct UntypedSlice {
+typedef struct UntypedSlice UntypedSlice;
+struct UntypedSlice {
     void* data;
     size_t count;
-} UntypedSlice;
+};
 
 static inline void array_sort(void*, size_t, comparator*, size_t);
 static inline void array_sort_insertion(void*, size_t, comparator*, size_t);

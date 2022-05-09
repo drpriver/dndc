@@ -62,18 +62,20 @@ ns_borrow_sv(NSString* str){
 static DndcFileCache*_Nonnull BASE64CACHE;
 static DndcFileCache*_Nonnull TEXTCACHE;
 static DndcWorkerThread*_Nonnull B64WORKER;
-typedef struct FileWatchItem {
+typedef struct FileWatchItem FileWatchItem;
+struct FileWatchItem {
     uint64_t hash;
     uint64_t last_eight_chars;
     LongString fullpath;
     int fd;
     bool tomb;
-} FileWatchItem;
-typedef struct FileWatchCache {
+};
+typedef struct FileWatchCache FileWatchCache;
+struct FileWatchCache {
     size_t capacity;
     size_t count;
     FileWatchItem* items;
-} FileWatchCache;
+};
 
 static
 void

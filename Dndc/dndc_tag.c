@@ -19,19 +19,21 @@
 #include "recursive_glob.h"
 
 
-typedef struct Tag {
+typedef struct Tag Tag;
+struct Tag {
     StringView tagname;
     StringView filename;
     int row;
-} Tag;
+};
 
 #define MARRAY_T Tag
 #include "Marray.h"
 
-typedef struct WorkItem {
+typedef struct WorkItem WorkItem;
+struct WorkItem {
     StringView filename;
     Marray__Tag tags;
-} WorkItem;
+};
 #define MARRAY_T WorkItem
 #include "Marray.h"
 

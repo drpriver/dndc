@@ -60,28 +60,32 @@ enum {
 //   On POSIX or with C_STDIO, this is errno.
 //   On WINDOWS, this is the value from GetLastError()
 //
-typedef struct TextFileResult {
+typedef struct TextFileResult TextFileResult;
+struct TextFileResult {
     LongString result;
     int errored;
     int native_error;
-} TextFileResult;
+};
 
-typedef struct BinaryFileResult {
+typedef struct BinaryFileResult BinaryFileResult;
+struct BinaryFileResult {
     ByteBuffer result;
     int errored;
     int native_error;
-} BinaryFileResult;
+};
 
-typedef struct FileSizeResult {
+typedef struct FileSizeResult FileSizeResult;
+struct FileSizeResult {
     size_t result;
     int errored;
     int native_error;
-} FileSizeResult;
+};
 
-typedef struct FileWriteResult {
+typedef struct FileWriteResult FileWriteResult;
+struct FileWriteResult {
     int errored;
     int native_error;
-} FileWriteResult;
+};
 
 
 // Read an entire file into a string. Reads it in binary mode, so all

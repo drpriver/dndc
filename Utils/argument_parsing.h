@@ -82,11 +82,12 @@ enum ArgParseFlags {
     ARGPARSE_FLAGS_SKIP_NULL_STRINGS = 1 << 2,
 };
 
-typedef struct Args {
+typedef struct Args Args;
+struct Args {
     // argc/argv should exclude the program name, as it is useless
     int argc;
     const char*_Nonnull const *_Null_unspecified argv;
-} Args;
+};
 typedef struct ArgParser ArgParser;
 //
 // Parses the Args into the variables. Returns an error if there was any issue
@@ -210,7 +211,8 @@ static const LongString ArgTypeNames[] = {
 //     ...
 //  };
 //
-typedef struct ArgParseUserDefinedType {
+typedef struct ArgParseUserDefinedType ArgParseUserDefinedType;
+struct ArgParseUserDefinedType {
     // Converts the given string into the defined type by writing
     // into the pointer.
     // Return non-zero to indicate a conversion error.
@@ -226,7 +228,7 @@ typedef struct ArgParseUserDefinedType {
     // If you need complicated state in your converter function,
     // you can store whatever you want here.
     void* _Null_unspecified user_data;
-} ArgParseUserDefinedType;
+};
 
 //
 // A structure for converting strings into enums.  The enum must start at 0. It
@@ -244,7 +246,8 @@ typedef struct ArgParseUserDefinedType {
 //
 // NOTE: You don't have to use a literal enum. You can define the "enum" at
 //       runtime and actually just have it be an index into an array.
-typedef struct ArgParseEnumType {
+typedef struct ArgParseEnumType ArgParseEnumType;
+struct ArgParseEnumType {
     // In order to support packed enums, specify the size of the enum here
     // instead of just assuming it's an int.  Only powers of two are supported
     // and it will be interpreted as an unsigned integer.
@@ -257,9 +260,10 @@ typedef struct ArgParseEnumType {
     // parsing strings into the enum, so they should be in a
     // format that you would type in a command line.
     const StringView* enum_names;
-} ArgParseEnumType;
+};
 
-typedef struct ArgParseDestination {
+typedef struct ArgParseDestination ArgParseDestination;
+struct ArgParseDestination {
     // The type of what pointer points to.
     ArgType type;
     // Pointer to the first element.
@@ -277,7 +281,7 @@ typedef struct ArgParseDestination {
         // For the ARG_BITFLAG type, this will be '|='ed into the destination.
         uint64_t bitflag;
     };
-} ArgParseDestination;
+};
 
 
 //
@@ -327,7 +331,8 @@ ArgUserDest(void* pointer, const ArgParseUserDefinedType* udt){
 // Create an array of these, one for positional args and another for
 // keyword args. The order in the array for the positional args
 // will be the order they need to be parsed in.
-typedef struct ArgToParse {
+typedef struct ArgToParse ArgToParse;
+struct ArgToParse {
     //
     // The name of the argument (include the "-" for keyword arguments).
     StringView name;
@@ -400,9 +405,10 @@ typedef struct ArgToParse {
     // NOTE: You still need to set the user_pointer of the ArgParseDestination
     //       as it is used to lookup the type name for printing the help.
     int (*_Nullable append_proc)(void*, const void*);
-} ArgToParse;
+};
 
-typedef struct ArgParseStyling {
+typedef struct ArgParseStyling ArgParseStyling;
+struct ArgParseStyling {
     // Set to true to not style the output at all.
     bool plain;
     // Don't print a "------" style heading underneath a section heading.
@@ -424,12 +430,13 @@ typedef struct ArgParseStyling {
     // argument (the explanatory text below the arg name and its type).
     const char*_Nullable pre_description;
     const char*_Nullable post_description;
-} ArgParseStyling;
+};
 
 // This is the above, but collected into a struct to simplify
 // passing to specific argument printers.
 // These pointers are nonnull.
-typedef struct ArgStyle {
+typedef struct ArgStyle ArgStyle;
+struct ArgStyle {
     const char* pre_header;
     const char* post_header;
     const char* pre_argname;
@@ -438,11 +445,11 @@ typedef struct ArgStyle {
     const char* post_typename;
     const char* pre_description;
     const char* post_description;
-} ArgStyle;
+};
 
 //
 // Parser structure.
-typedef struct ArgParser {
+struct ArgParser {
     //
     // The name of the program. Usually argv[0], but you can do whatever you
     // want.
@@ -485,7 +492,7 @@ typedef struct ArgParser {
     // nulls to use the default styling. Set to empty string to disable that
     // particular style. Set plain to true to disable styling entirely.
     ArgParseStyling styling;
-} ArgParser;
+};
 
 //
 // Prints the help for a single argument.
@@ -495,11 +502,12 @@ print_arg_help(const ArgToParse*, int, const ArgStyle* style);
 
 
 // Internal helper struct for text-wrapping.
-typedef struct HelpState {
+typedef struct HelpState HelpState;
+struct HelpState {
     int output_width;
     int lead;
     int remaining;
-} HelpState;
+};
 
 // Handle text-wrapping, printing a newline and indenting if necessary.
 static inline

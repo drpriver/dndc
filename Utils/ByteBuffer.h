@@ -6,10 +6,11 @@
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
-typedef struct ByteBuffer {
+typedef struct ByteBuffer ByteBuffer;
+struct ByteBuffer {
     size_t n_bytes;
     void* buff;
-} ByteBuffer;
+};
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

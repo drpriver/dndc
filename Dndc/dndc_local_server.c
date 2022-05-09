@@ -46,11 +46,12 @@ typedef int SOCKET; // easier this way
 #endif
 #endif
 
-typedef struct DndLogger {
+typedef struct DndLogger DndLogger;
+struct DndLogger {
     DndcLogFunc* func;
     void*_Nullable p;
     int loglevel; // higher is more verbose
-} DndLogger;
+};
 
 #if defined(__linux__)
 void*_Nullable memmem(const void*_, size_t, const void*, size_t);

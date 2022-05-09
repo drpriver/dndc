@@ -232,11 +232,12 @@ enum TestCaseFlags {
 // TestCase
 // --------
 // Internal use.
-typedef struct TestCase {
+typedef struct TestCase TestCase;
+struct TestCase {
     StringView test_name;
     TestFunc* test_func;
     enum TestCaseFlags flags;
-} TestCase;
+};
 
 
 // RegsterTest

@@ -48,14 +48,15 @@ static void* sane_realloc(void* ptr, size_t orig_size, size_t size);
 #endif
 
 
-typedef struct RecordingAllocator {
+typedef struct RecordingAllocator RecordingAllocator;
+struct RecordingAllocator{
     // We need a dynamic array to record all of the allocations.
     // We specialize it to be SOA
     void*_Nullable*_Nonnull allocations;
     size_t* allocation_sizes;
     size_t count;
     size_t capacity;
-} RecordingAllocator;
+};
 
 static inline
 void

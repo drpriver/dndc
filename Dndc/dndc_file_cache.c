@@ -10,28 +10,31 @@
 #pragma clang assume_nonnull begin
 #endif
 // A cached loaded source file path
-typedef struct FileCachePath {
+typedef struct FileCachePath FileCachePath;
+struct FileCachePath {
     uint64_t last_eight_chars;
     uint32_t length;
     uint32_t hash;
     const char* text;
-} FileCachePath;
+};
 
 // Same as above, but text is a borrowed, not
 // nul-terminated string. This gives a bit of type safety.
-typedef struct FileCacheLookupKey {
+typedef struct FileCacheLookupKey FileCacheLookupKey;
+struct FileCacheLookupKey {
     uint64_t last_eight_chars;
     uint32_t length;
     uint32_t hash;
     const char* text;
-} FileCacheLookupKey;
+};
 
 
 // A cached loaded file.
-typedef struct LoadedSource {
+typedef struct LoadedSource LoadedSource;
+struct LoadedSource {
     FileCachePath sourcepath; // doesn't have to be a filename
     LongString sourcetext; // the actual source text
-} LoadedSource;
+};
 
 
 #ifdef __clang__
