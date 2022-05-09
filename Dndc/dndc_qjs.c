@@ -469,6 +469,7 @@ new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, LongString jsargs){
             jsargs = LS("null");
         args = JS_ParseJSON2(jsctx, jsargs.text, jsargs.length, "jsargs", JS_PARSE_JSON_EXT);
         if(JS_IsException(args)){
+            log_js_traceback(ctx, jsctx, (NodeHandle){0});
             report_system_error(ctx, SV("Failed to parse jsargs as JSON"));
             goto fail;
         }

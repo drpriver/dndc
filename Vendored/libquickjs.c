@@ -17,6 +17,8 @@
 // These warrant investigation.
 #pragma clang diagnostic ignored "-Wduplicate-enum"
 #pragma clang diagnostic ignored "-Wconditional-uninitialized"
+// Can be a real bug, but too annoying
+#pragma clang diagnostic ignored "-Wsign-compare"
 #elif defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
@@ -25,6 +27,8 @@
 #pragma GCC diagnostic ignored "-Wbad-function-cast"
 // What is up with these?
 #pragma GCC diagnostic ignored "-Wcast-function-type"
+// Can be a real bug, but too annoying
+#pragma GCC diagnostic ignored "-Wsign-compare"
 #endif
 
 

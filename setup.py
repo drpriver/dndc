@@ -1,5 +1,5 @@
 # Always prefer setuptools over distutils
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Extension
 
 # Arguments marked as 'Required' below must be included for upload to PyPI.
 # Fields marked as 'Optional' may be commented out.
@@ -47,14 +47,19 @@ setup(
     #   py_modules=['my_module'],
     #
     packages=['pydndc'],  # Required
+    ext_modules = [
+        Extension(
+            'pydndc.pydndc',
+            sources = ['Dndc/pydndc.c', 'Vendored/libquickjs.c'],
+            include_dirs=['.'],
+        ),
+    ],
     # Specify which Python versions you support. In contrast to the
     # 'Programming Language' classifiers above, 'pip install' will check this
     # and refuse to install the project if the version does not match. See
     # https://packaging.python.org/guides/distributing-packages-using-setuptools/#python-requires
     python_requires='>=3.7, <4',
-    # If there are data files included in your packages that need to be
-    # installed, specify them here.
-    # package_data={  # Optional
-        # 'sample': ['package_data.dat'],
-    # },
+    package_data={
+        'pydndc': ['py.typed', 'pydndc.pyi'],
+    },
 )
