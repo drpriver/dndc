@@ -39,7 +39,7 @@ typedef struct WorkerThread WorkerThread;
 // --------------------
 // Callback for working with the tree right before rendering.
 // This is misleadingly named.
-typedef int(DndcPostParseAstFunc)(Nullable(void*)user_data, DndcContext*);
+typedef int(DndcPostParseAstFunc)(void*_Nullable user_data, DndcContext*);
 
 //
 // run_the_dndc
@@ -131,15 +131,15 @@ run_the_dndc(uint64_t flags,
         StringView source_text,
         StringView source_path,
         LongString* outstring,
-        Nullable(FileCache*)external_b64cache,
-        Nullable(FileCache*)external_textcache,
-        Nullable(DndcLogFunc*)log_func,
-        Nullable(void*)log_user_data,
-        Nullable(DndcDependencyFunc*)dependency_func,
-        Nullable(void*)dependency_user_data,
-        Nullable(DndcPostParseAstFunc*)ast_func,
-        Nullable(void*)ast_func_user_data,
-        Nullable(WorkerThread*) worker_thread,
+        FileCache*_Nullable external_b64cache,
+        FileCache*_Nullable external_textcache,
+        DndcLogFunc*_Nullable log_func,
+        void*_Nullable log_user_data,
+        DndcDependencyFunc*_Nullable dependency_func,
+        void*_Nullable dependency_user_data,
+        DndcPostParseAstFunc*_Nullable ast_func,
+        void*_Nullable ast_func_user_data,
+        WorkerThread*_Nullable  worker_thread,
         LongString jsargs
     );
 
@@ -238,7 +238,7 @@ build_toc_block(DndcContext*);
   // attributes can invalidate the pointer.
   //
   static inline
-  Nullable(StringView*)
+  StringView*_Nullable
   node_get_attribute(const Node* node, StringView attr);
 
   //
@@ -466,7 +466,7 @@ build_toc_block(DndcContext*);
   // Can return NULL if the link can't be resolved.
   //
   static inline
-  Nullable(const StringView*)
+  const StringView*_Nullable
   find_link_target(DndcContext* ctx, StringView kebabed);
 
   //

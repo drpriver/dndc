@@ -151,7 +151,7 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
     const uint8_t* str = src;
     size_t len = src_length;
 
-    /* unsigned here is important! */
+    // unsigned here is important!
     uint8_t t1, t2, t3, t4, t5, t6;
 
     if(len > 5) {
@@ -198,7 +198,7 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
             *d++ = base64_encode_table0[t1];
             *d++ = base64_encode_table1[(t1 & 0x3) << 4];
             break;
-        default: /* case 2 */
+        default: // case 2
             t1 = str[i]; t2 = str[i+1];
             *d++ = base64_encode_table0[t1];
             *d++ = base64_encode_table1[((t1 & 0x3) << 4) | ((t2 >> 4) & 0xf)];

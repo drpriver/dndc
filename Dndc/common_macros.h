@@ -31,17 +31,12 @@
 #endif
 
 #endif
-
-#define Nonnull(x) x _Nonnull
-#define Nullable(x) x _Nullable
-#define NullUnspec(x) x _Null_unspecified
-
-/*
-   Force a compilation error if condition is true, but also produce a result
-   (of value 0 and type size_t), so the expression can be used e.g. in a
-   structure initializer (or where-ever else comma expressions aren't
-   permitted).
-*/
+//
+// Force a compilation error if condition is true, but also produce a result
+// (of value 0 and type size_t), so the expression can be used e.g. in a
+// structure initializer (or where-ever else comma expressions aren't
+// permitted).
+//
 #if 1
 #define __must_be_array(a) 0
 #else
@@ -129,13 +124,13 @@
     }while(0)
 #endif
 
-/*
- * Warning Suppression
- *
- * Pragmas to suppress warnings. Currently only supporting
- * clang and gcc, but using these macros means I can use the
- * compiler-specific pragmas.
- */
+//
+// Warning Suppression
+//
+// Pragmas to suppress warnings. Currently only supporting
+// clang and gcc, but using these macros means I can use the
+// compiler-specific pragmas.
+//
 #ifdef __clang__
 
 #define SuppressNullabilityComplete()   _Pragma("clang diagnostic ignored \"-Wnullability-completeness\"")

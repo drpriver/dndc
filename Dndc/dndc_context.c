@@ -45,7 +45,7 @@ node_has_class(const Node* node, StringView c){
     return false;
 }
 static inline
-Nullable(StringView*)
+StringView*_Nullable
 node_get_attribute(const Node* node, StringView attr){
     // TODO: maybe use a dict? Idk how many attributes we actually use.
     // Maybe if count is greater than some N we sort and do a binary search?
@@ -215,7 +215,7 @@ ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath){
 }
 
 static inline
-Nullable(const StringView*)
+const StringView*_Nullable
 find_link_target(DndcContext* ctx, StringView kebabed){
     return string_table_get(&ctx->links, kebabed);
 }

@@ -387,7 +387,7 @@ struct SyntaxData {
 };
 static
 void
-dndc_syntax_func(void* _Nullable data, int type, int line, int col, Nonnull(const uint16_t*)begin, size_t length){
+dndc_syntax_func(void* _Nullable data, int type, int line, int col, const uint16_t*begin, size_t length){
     (void)line;
     (void)col;
     struct SyntaxData* sd = data;

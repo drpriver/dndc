@@ -49,7 +49,7 @@ PARSEFUNC(parse_md_node);
 
 static inline
 void
-parse_log_err(DndcContext* ctx, NullUnspec(const char*) errchar, LongString mess){
+parse_log_err(DndcContext* ctx, const char*_Null_unspecified errchar, LongString mess){
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
     if(!ctx->log_func)
@@ -62,7 +62,7 @@ parse_log_err(DndcContext* ctx, NullUnspec(const char*) errchar, LongString mess
 
 static inline
 void
-parse_log_err_q(DndcContext* ctx, NullUnspec(const char*) errchar, StringView msg, StringView q){
+parse_log_err_q(DndcContext* ctx, const char*_Null_unspecified errchar, StringView msg, StringView q){
     if(ctx->flags & DNDC_DONT_PRINT_ERRORS)
         return;
     if(!ctx->log_func)

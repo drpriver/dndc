@@ -105,7 +105,7 @@ struct DndcPyFileCache {
 };
 
 static
-Nullable(PyObject*)
+PyObject*_Nullable
 DndcPyFileCache_remove(PyObject* self, PyObject* str){
     if(!PyUnicode_Check(str)){
         PyErr_SetString(PyExc_TypeError, "Argument to remove must be a string");
@@ -119,7 +119,7 @@ DndcPyFileCache_remove(PyObject* self, PyObject* str){
 }
 
 static
-Nullable(PyObject*)
+PyObject*_Nullable
 DndcPyFileCache_clear(PyObject* self){
     DndcPyFileCache* cache = (DndcPyFileCache*)self;
     dndc_filecache_clear(cache->text_cache);
@@ -128,7 +128,7 @@ DndcPyFileCache_clear(PyObject* self){
 }
 
 static
-Nullable(PyObject*)
+PyObject*_Nullable
 DndcPyFileCache_paths(PyObject* self){
     DndcPyFileCache* cache = (DndcPyFileCache*)self;
     Py_ssize_t nfiles = dndc_filecache_n_paths(cache->b64_cache) + dndc_filecache_n_paths(cache->text_cache);
@@ -160,7 +160,7 @@ DndcPyFileCache_paths(PyObject* self){
 }
 
 static
-Nullable(PyObject*)
+PyObject*_Nullable
 DndcPyFileCache_new(PyTypeObject* subtype, PyObject *_Null_unspecified args, PyObject *_Null_unspecified kwds){
     (void)args;
     (void)kwds;
@@ -181,7 +181,7 @@ DndcPyFileCache_dealloc(PyObject* self){
 }
 
 static
-Nullable(PyObject*)
+PyObject*_Nullable
 DndcPyFileCache_store(PyObject* self, PyObject* args, PyObject* kwargs){
     int overwrite = 1;
     PyObject* opath;
@@ -265,23 +265,23 @@ PyTypeObject DndcPyFileCache_Type = {
 };
 
 static
-Nullable(PyObject*)
+PyObject*_Nullable
 pydndc_reformat(PyObject* , PyObject* , PyObject*);
 
 static
-Nullable(PyObject*)
+PyObject*_Nullable
 pydndc_expand(PyObject* , PyObject* , PyObject*);
 
 static
-Nullable(PyObject*)
+PyObject*_Nullable
 pydndc_htmlgen(PyObject*, PyObject*, PyObject*);
 
 static
-Nullable(PyObject*)
+PyObject*_Nullable
 pydndc_stderr_logger(PyObject*, PyObject*, PyObject*);
 
 static
-Nullable(PyObject*)
+PyObject*_Nullable
 pydndc_anaylze_syntax_for_highlight(PyObject*, PyObject*, PyObject*);
 
 // returns 0 on success
@@ -889,7 +889,7 @@ PyInit_pydndc(void){
 
 static
 void
-pydndc_collect_errors(Nullable(void*)user_data, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
+pydndc_collect_errors(void*_Nullable user_data, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
     PyObject* tup = Py_BuildValue("is#iis#", type, filename, (Py_ssize_t)filename_len, line, col, message, (Py_ssize_t)message_len);
     if(!tup)
         return;
@@ -919,7 +919,7 @@ pydndc_stderr_logger(PyObject* mod, PyObject* args, PyObject* kwargs){
 }
 
 static
-Nullable(PyObject*)
+PyObject*_Nullable
 pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
     (void)mod;
     PyObject* text;
@@ -969,7 +969,7 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
 
 static
 int
-pydndc_add_dependencies(Nullable(void*)user_data, size_t npaths, StringView* paths){
+pydndc_add_dependencies(void*_Nullable user_data, size_t npaths, StringView* paths){
     PyObject* list = user_data;
     for(size_t i = 0; i < npaths; i++){
         StringView path = paths[i];
@@ -981,7 +981,7 @@ pydndc_add_dependencies(Nullable(void*)user_data, size_t npaths, StringView* pat
 }
 
 static
-Nullable(PyObject*)
+PyObject*_Nullable
 pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     (void)mod;
     PyObject* text;
@@ -1089,7 +1089,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     return result;
 }
 static
-Nullable(PyObject*)
+PyObject*_Nullable
 pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
     (void)mod;
     PyObject* text;
@@ -1184,7 +1184,7 @@ struct CollectData {
 
 static
 void
-pydndc_collect_syntax_tokens(Nullable(void*)user_data, int type, int line, int col, const char* begin, size_t length){
+pydndc_collect_syntax_tokens(void*_Nullable user_data, int type, int line, int col, const char* begin, size_t length){
     if(PyErr_Occurred())
         return;
     assert(user_data);
@@ -1220,7 +1220,7 @@ pydndc_collect_syntax_tokens(Nullable(void*)user_data, int type, int line, int c
 }
 
 static
-Nullable(PyObject*)
+PyObject*_Nullable
 pydndc_anaylze_syntax_for_highlight(PyObject* mod, PyObject* args, PyObject* kwargs){
     (void)mod;
     PyObject* text;
@@ -1399,7 +1399,7 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
 static PyMemberDef DndcContextPy_members[] = {
     {"logger", T_OBJECT, offsetof(DndcContextPy, logger), 0, "A callable implementing the dndc logger protocol."},
     {"filename", T_OBJECT, offsetof(DndcContextPy, filename), READONLY, "The filename of the root document."},
-    {}  /* Sentinel */
+    {}  // Sentinel
 };
 
 static PyObject* DndcNode_make(DndcContextPy*, DndcNodeHandle);
@@ -1906,7 +1906,7 @@ static PyMethodDef DndcContextPy_methods[] = {
             "\n"
             "Convert context to a json string.",
     },
-    {} /* Sentinel */
+    {} // Sentinel
 };
 
 
@@ -1979,7 +1979,7 @@ DndcContextPy_set_base(PyObject* s, PyObject*_Nullable args, void*_Nullable p){
 static PyGetSetDef DndcContextPy_getset[] = {
     {"root", DndcContextPy_get_root, DndcContextPy_set_root, "The root node of the tree (may be None).", NULL},
     {"base_dir", DndcContextPy_get_base, DndcContextPy_set_base, "Files are imported relative to this path (may be empty string which means .)", NULL},
-    {} /* Sentinel */
+    {} // Sentinel
 };
 
 static
@@ -2630,12 +2630,12 @@ static PyGetSetDef DndcNodePy_getset[] = {
         .closure=(void*)DNDC_NODEFLAG_NOINLINE,
     },
 
-    {} /* Sentinel */
+    {} // Sentinel
 };
 static PyMemberDef DndcNodePy_members[] = {
     {"ctx", T_OBJECT, offsetof(DndcNodePy, pyctx), READONLY, "The Context that this node is from."},
     {"handle", T_UINT, offsetof(DndcNodePy, handle), READONLY, "The opaque integer handle that can be used to uniquely identify this node."},
-    {}  /* Sentinel */
+    {}  // Sentinel
 };
 
 static PyMethodDef DndcNodePy_methods[] = {
@@ -2801,7 +2801,7 @@ static PyMethodDef DndcNodePy_methods[] = {
             "\n"
             "Convert node to a json string.",
     },
-    {} /* Sentinel */
+    {} // Sentinel
 };
 
 static

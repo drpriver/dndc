@@ -190,7 +190,7 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
 static
 warn_unused
 int
-execute_user_scripts_and_load_images(DndcContext* ctx, Nullable(WorkerThread*) worker, LongString jsargs){
+execute_user_scripts_and_load_images(DndcContext* ctx, WorkerThread*_Nullable worker, LongString jsargs){
     int result = 0;
     uint64_t flags = ctx->flags;
     // Setup the worker thread.
@@ -290,16 +290,16 @@ run_the_dndc(uint64_t flags,
         StringView base_directory,
         StringView source_text,
         StringView source_path,
-        Nonnull(LongString*) outstring,
-        Nullable(FileCache*)external_b64cache,
-        Nullable(FileCache*)external_textcache,
-        Nullable(DndcLogFunc*)log_func,
-        Nullable(void*)log_user_data,
-        Nullable(DndcDependencyFunc*)dependency_func,
-        Nullable(void*)dependency_user_data,
-        Nullable(DndcPostParseAstFunc*)ast_func,
-        Nullable(void*)ast_func_user_data,
-        Nullable(WorkerThread*)worker,
+        LongString* outstring,
+        FileCache*_Nullable external_b64cache,
+        FileCache*_Nullable external_textcache,
+        DndcLogFunc*_Nullable log_func,
+        void*_Nullable log_user_data,
+        DndcDependencyFunc*_Nullable dependency_func,
+        void*_Nullable dependency_user_data,
+        DndcPostParseAstFunc*_Nullable ast_func,
+        void*_Nullable ast_func_user_data,
+        WorkerThread*_Nullable worker,
         LongString jsargs
         ){
     // Some flags imply other flags. Set those to simplify code that
@@ -811,7 +811,7 @@ free_qjs_rt(QJSRuntime*rt, ArenaAllocator*aa){
 
 DNDC_API
 int
-dndc_format(StringView source_text, LongString* output, Nullable(DndcLogFunc*)log_func, Nullable(void*)log_user_data){
+dndc_format(StringView source_text, LongString* output, DndcLogFunc*_Nullable log_func, void*_Nullable log_user_data){
     uint64_t flags = 0
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_ALLOW_BAD_LINKS
@@ -829,7 +829,7 @@ dndc_free_string(LongString str){
 
 DNDC_API
 void
-dndc_stderr_log_func(Nullable(void*)unused, int type, const char* filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
+dndc_stderr_log_func(void*_Nullable unused, int type, const char* filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
     (void)unused;
     static int interactive = -1;
     if(interactive == -1){
@@ -903,7 +903,7 @@ dndc_stderr_log_func(Nullable(void*)unused, int type, const char* filename, int 
 
 
 static
-Nullable(const char*)
+const char*_Nullable
 find_double_colon(const char* haystack, size_t length){
     if(length < 2)
         return NULL;
@@ -960,7 +960,7 @@ mem_utf16(const uint16_t* haystack, uint16_t needle, size_t ncode_units){
 
 static inline
 force_inline
-Nullable(const uint16_t*)
+const uint16_t*_Nullable
 find_double_colon_utf16(const uint16_t* haystack, size_t ncode_units){
     if(ncode_units < 2)
         return NULL;
@@ -984,11 +984,11 @@ struct JsStyleState {
 };
 static
 void
-dndc_analyze_syntax_js(struct JsStyleState* state, StringView line, DndcSyntaxFunc* syntax_func, Nullable(void*)syntax_data, int lineno, int indentation);
+dndc_analyze_syntax_js(struct JsStyleState* state, StringView line, DndcSyntaxFunc* syntax_func, void*_Nullable syntax_data, int lineno, int indentation);
 
 DNDC_API
 int
-dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, Nullable(void*)syntax_data){
+dndc_analyze_syntax(StringView source_text, DndcSyntaxFunc* syntax_func, void*_Nullable syntax_data){
     // this is only needed for raw nodes
     ptrdiff_t raw_indentation = 0;
     int line = 0;
@@ -1235,7 +1235,7 @@ js_syntax_is_node_type(StringView str){
 
 static
 void
-dndc_analyze_syntax_js(struct JsStyleState* state, StringView line, DndcSyntaxFunc* syntax_func, Nullable(void*)syntax_data, int lineno, int indentation){
+dndc_analyze_syntax_js(struct JsStyleState* state, StringView line, DndcSyntaxFunc* syntax_func, void*_Nullable syntax_data, int lineno, int indentation){
     size_t n = line.length;
     const char* str = line.text;
     size_t i = 0;
@@ -1515,7 +1515,7 @@ js_syntax_is_node_type_utf16(StringViewUtf16 str){
 
 static
 void
-dndc_analyze_syntax_js_utf16(struct JsStyleState* state, StringViewUtf16 line, DndcSyntaxFuncUtf16* syntax_func, Nullable(void*)syntax_data, int lineno, int indentation){
+dndc_analyze_syntax_js_utf16(struct JsStyleState* state, StringViewUtf16 line, DndcSyntaxFuncUtf16* syntax_func, void*_Nullable syntax_data, int lineno, int indentation){
     size_t n = line.length;
     const uint16_t* str = line.text;
     size_t i = 0;
@@ -1726,7 +1726,7 @@ dndc_analyze_syntax_js_utf16(struct JsStyleState* state, StringViewUtf16 line, D
 //
 DNDC_API
 int
-dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* syntax_func, Nullable(void*)syntax_data){
+dndc_analyze_syntax_utf16(StringViewUtf16 source_text, DndcSyntaxFuncUtf16* syntax_func, void*_Nullable syntax_data){
     // this is only needed for raw nodes
     ptrdiff_t raw_indentation = 0;
     int line = 0;

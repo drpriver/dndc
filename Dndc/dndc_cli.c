@@ -51,7 +51,7 @@ print_file_writing_error(const char* filename, FileWriteResult err);
 //
 static inline
 void
-print_node_and_children(Nonnull(DndcContext*), NodeHandle handle, int depth);
+print_node_and_children(DndcContext*_Nonnull ctx, NodeHandle handle, int depth);
 
 struct DependencyUserData {
     LongString outfile;
