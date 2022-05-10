@@ -1,13 +1,15 @@
 #ifndef RECURSIVE_GLOB_C
 #define RECURSIVE_GLOB_C
-#include "recursive_glob.h"
-#include "str_util.h"
 #if defined(_WIN32)
 #include <direct.h>
 #else
 #include <fts.h>
 #endif
 
+#include "recursive_glob.h"
+#include "str_util.h"
+
+#include "Allocators/mallocator.h"
 #include "MStringBuilder.h"
 
 
@@ -72,6 +74,22 @@ recursive_glob_suffix_inner(StringView original, StringView directory, StringVie
     end:
     msb_destroy(&sb);
 }
+#endif
+
+#ifndef PushDiagnostic
+#if defined(__clang__)
+#define PushDiagnostic()                _Pragma("clang diagnostic push")
+#define PopDiagnostic()                 _Pragma("clang diagnostic pop")
+#define SuppressCastQual()              _Pragma("clang diagnostic ignored \"-Wcast-qual\"")
+#elif defined(__GNUC__)
+#define PushDiagnostic()                _Pragma("GCC diagnostic push")
+#define PopDiagnostic()                 _Pragma("GCC diagnostic pop")
+#define SuppressCastQual()              _Pragma("GCC diagnostic ignored \"-Wcast-qual\"")
+#else
+#define PushDiagnostic()
+#define PopDiagnostic()
+#define SuppressCastQual()
+#endif
 #endif
 
 RECURSIVE_GLOB_API

@@ -4,11 +4,13 @@
 #include "dndc.h"
 #include "dndc_funcs.h"
 #include "dndc_types.h"
+#include "dndc_logging.h"
 #include "Utils/MStringBuilder.h"
 #include "Utils/msb_extensions.h"
 #include "Utils/msb_format.h"
 #include "Utils/str_util.h"
 #include "Utils/file_util.h"
+#include "Utils/path_util.h"
 #include <sys/stat.h>
 #if defined(__APPLE__) || defined(__linux__)
 #include <fts.h>

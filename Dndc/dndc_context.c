@@ -5,6 +5,7 @@
 #include "dndc_api_def.h"
 #include "dndc_types.h"
 #include "dndc_funcs.h"
+#include "dndc_logging.h"
 #include "Utils/MStringBuilder.h"
 #include "Utils/msb_extensions.h"
 #include "Utils/msb_format.h"

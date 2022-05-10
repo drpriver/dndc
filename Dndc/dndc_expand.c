@@ -3,6 +3,7 @@
 #include "dndc.h"
 #include "dndc_types.h"
 #include "dndc_funcs.h"
+#include "dndc_logging.h"
 #include "Utils/MStringBuilder.h"
 
 #ifdef __clang__

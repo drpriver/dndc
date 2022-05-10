@@ -28,8 +28,8 @@
 #define MARRAY_T StringView
 #include "Utils/Marray.h"
 
+#define MARRAY_STRINGVIEW_DEFINED
 #include "Utils/recursive_glob.h"
-
 #include "Utils/gi_byte_distance_completer.h"
 
 typedef Marray__StringView Entries;

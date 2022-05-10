@@ -381,7 +381,7 @@ def do_tags(arguments:List[str], source_file:str, compiler:str) -> DocWriter:
     def f(s:str) -> None:
         identifiers[s] = Ident(Kinds.func, s)
     for x in ['int', 'char', 'size_t', 'unsigned', 'void', 'ssize_t', 'long', 'short', 'enum',
-            'signed', 'struct', 'union', 'const', 'FILE', 'int8_t', 'uint8_t', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t', 'int64_t', 'uint64_t', 'bool', '_Bool', 'float', 'double', 'static', 'inline', 'ptrdiff_t', 'intptr_t']:
+            'signed', 'struct', 'union', 'const', 'FILE', 'int8_t', 'uint8_t', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t', 'int64_t', 'uint64_t', 'bool', '_Bool', 'float', 'double', 'static', 'inline', 'ptrdiff_t', 'intptr_t', 'uintptr_t']:
         t(x)
     for x in ['printf', 'fprintf', 'memcpy', 'memset', 'memcmp', 'memchr', 'memmem']:
         f(x)

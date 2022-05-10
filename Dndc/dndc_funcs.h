@@ -492,6 +492,10 @@ build_toc_block(DndcContext*);
   void
   add_link_from_header(DndcContext* ctx, StringView str);
 
+  static inline
+  void
+  add_link_from_pair(DndcContext* ctx, StringView kebabed, StringView value);
+
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

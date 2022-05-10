@@ -1,8 +1,9 @@
+#include <string.h> // memcpy
+#include <stdlib.h> // malloc, free, qsort
 #include "gi_byte_distance_completer.h"
 #include "str_util.h"
 #include "string_distances.h"
-#include <string.h> // memcpy
-#include <stdlib.h> // malloc, free, qsort
+#include "Allocators/mallocator.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin

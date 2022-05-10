@@ -24,13 +24,13 @@ LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
             SV(""), // base directory
             source, // source text
             SV("lmao.html"), // source path
-            SV(""), // outpath
             &out, // out
             NULL, NULL, // caches
             NULL, NULL, // errors
             NULL, NULL, // dependency
             NULL, NULL, // astfunc
-            NULL // worker
+            NULL, // worker
+            LS("") // js args
             );
     if(!e) dndc_free_string(out);
     return 0;

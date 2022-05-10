@@ -1,6 +1,7 @@
 #ifndef DNDC_LOGGING_C
 #define DNDC_LOGGING_C
 #include "dndc_logging.h"
+#include "dndc_funcs.h"
 #include "common_macros.h"
 
 #ifdef __clang__

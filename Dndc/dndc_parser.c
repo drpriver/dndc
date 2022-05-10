@@ -2,6 +2,7 @@
 #define DNDC_PARSER_C
 #include "dndc_funcs.h"
 #include "dndc_types.h"
+#include "dndc_logging.h"
 #include "Utils/str_util.h"
 
 #ifndef NO_SIMD

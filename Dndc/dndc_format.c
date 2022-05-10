@@ -1,10 +1,10 @@
 #ifndef DNDC_FORMAT_C
 #define DNDC_FORMAT_C
-#include "Utils/MStringBuilder.h"
 #include "dndc_node_types.h"
 #include "dndc_types.h"
 #include "dndc_funcs.h"
 #include "dndc_logging.h"
+#include "Utils/MStringBuilder.h"
 #include "Utils/str_util.h"
 #include "Utils/msb_format.h"
 
