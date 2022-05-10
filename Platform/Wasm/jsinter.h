@@ -2,7 +2,7 @@
 #define JSINTER_H
 #include <stdlib.h>
 #include <string.h>
-#include "long_string.h"
+#include "Utils/long_string.h"
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif

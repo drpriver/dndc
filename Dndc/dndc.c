@@ -781,7 +781,7 @@ static
 int
 execute_qjs_string(QJSContext*jsctx, DndcContext*ctx, const char* str, size_t length, NodeHandle handle, NodeHandle firstline){
     (void)jsctx, (void)ctx, (void)str, (void)length, (void)handle, (void)firstline;
-    return OS_ERROR;
+    return DNDC_ERROR_OS;
 }
 
 static
@@ -793,8 +793,8 @@ new_qjs_rt(ArenaAllocator*aa){
 
 static
 QJSContext*_Nullable
-new_qjs_ctx(QJSRuntime*rt, DndcContext*ctx, DndcJsFlags flags, LongString args){
-    (void)rt, (void)ctx, (void)flags, (void)args;
+new_qjs_ctx(QJSRuntime*rt, DndcContext*ctx, LongString args){
+    (void)rt, (void)ctx, (void)args;
     return NULL;
 }
 

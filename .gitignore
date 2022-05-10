@@ -41,3 +41,4 @@ TestResults
 RenderedDocs
 RenderedExamples
 *.egg-info
+dist

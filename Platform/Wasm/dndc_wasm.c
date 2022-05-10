@@ -1,6 +1,6 @@
-#include "dndc.h"
-#include "dndc.c"
-#include "msb_format.h"
+#include "Dndc/dndc.h"
+#include "Dndc/dndc.c"
+#include "Utils/msb_format.h"
 #include "jsinter.h"
 
 struct {
