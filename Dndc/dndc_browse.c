@@ -18,6 +18,7 @@
 #if defined(_WIN32)
 #include <direct.h>
 #include <shobjidl.h>
+#include "Platform/Windows/wincli.h"
 #elif defined(__APPLE__) || defined(__linux__)
 #include <unistd.h>
 #include <fts.h>
@@ -80,6 +81,9 @@ wrap_report(void* ud, int type, const char* filename, int filename_len, int line
 
 int
 main(int argc, char** argv){
+#ifdef _WIN32
+    if(get_main_args(&argc, &argv) != 0) return 1;
+#endif
     LongString directory = {0};
     int port = 0;
     {

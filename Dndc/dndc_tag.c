@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #ifdef _WIN32
 #include <direct.h>
+#include "Platform/Windows/wincli.h"
 #else
 #include <unistd.h>
 #endif
@@ -180,6 +181,9 @@ sv_append(void* p, const void* sv_){
 
 int
 main(int argc, const char* const* argv){
+#ifdef _WIN32
+    if(get_main_args(&argc, &argv) != 0) return 1;
+#endif
     Args args = {argc?argc-1:0, argc?argv+1:NULL};
 #ifdef _WIN32
     LongString directory = {.text = _getcwd(0, 0)};

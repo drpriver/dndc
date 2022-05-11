@@ -19,6 +19,9 @@
 #include "Utils/gi_indent_completer.h"
 #define GET_INPUT_API static inline
 #include "Utils/get_input.h"
+#ifdef _WIN32
+#include "Utils/wincli.h"
+#endif
 
 // Print out syntax-highlighted version of the file to stdout.
 static
@@ -75,9 +78,13 @@ append_arg(void* msb_, const void* arg_){
     msb_write_char(msb, '"');
     return 0;
 }
-
 int
 main(int argc, char**argv){
+#ifdef _WIN32
+    if(get_main_args(&argc, &argv) != 0)
+        return 1;
+#endif
+
     StringView source_path = {0};
     StringView original_source_path = {0};
     StringView source_text = {0};
@@ -783,7 +790,7 @@ print_file_writing_error(const char* filename, FileWriteResult err){
             return;
     }
     #else
-    char errbuff[4192];
+    char errbuff[4096];
     if(err.errored){
         DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM
                        // "when you are not in control of the message, you
