@@ -37,13 +37,13 @@ INSTALL=install
 SO=.dylib
 SOLIB=.dylib
 
-$(BINDIR)/gdndc: Platform/MacOS/gdndc.m Platform/MacOS/Info.plist Platform/MacOS/app_icon.png opt.mak $(VENDOBJDIR)/libquickjs.o
+$(BINDIR)/DndEdit: Platform/MacOS/gdndc.m Platform/MacOS/Info.plist Platform/MacOS/app_icon.png opt.mak $(VENDOBJDIR)/libquickjs.o
 	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/gdndc.dep $< -o $@ $(LINK_FLAGS) -framework Cocoa -framework WebKit -fobjc-arc -Wl,-sectcreate,__TEXT,__info_plist,Platform/MacOS/Info.plist $(VENDOBJDIR)/libquickjs.o -Wno-sign-compare
 .PHONY: gdndc
-gdndc: $(BINDIR)/gdndc
+gdndc: $(BINDIR)/DndEdit
 .PHONY: install-gdndc
 install-gdndc: $(BINDIR)/gdndc
-	$(INSTALL) -C $< $(INSTALLDIR)/gdndc
+	$(INSTALL) -C $< $(INSTALLDIR)/DndEdit
 
 $(BINDIR)/dndbr: Platform/MacOS/dndbr.m Platform/MacOS/dndbr_app_icon.png Platform/MacOS/DndBrInfo.plist opt.mak $(BINDIR)/libdndc.dylib
 	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndbr.dep $< Dndc/dndc_local_server.c -o $@ $(LINK_FLAGS) -framework Cocoa -fobjc-arc -Wl,-sectcreate,__TEXT,__info_plist,Platform/MacOS/DndBrInfo.plist $(BINDIR)/libdndc.dylib $(RPATH)

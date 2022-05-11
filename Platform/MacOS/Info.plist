@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>Gdndc</string>
+    <string>DndEdit</string>
 
     <key>CFBundleName</key>
-    <string>Gdndc</string>
+    <string>DndEdit</string>
 
     <key>CFBundleIdentifier</key>
-    <string>DavidGdndc</string>
+    <string>DndEdit</string>
 
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
@@ -27,7 +27,7 @@
     <true/>
 
     <key>CFBundleDisplayName</key>
-    <string>Gdndc</string>
+    <string>DndEdit</string>
 
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>

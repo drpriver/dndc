@@ -99,24 +99,24 @@ if(APPLE)
     set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO")
     set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "")
     enable_language(OBJC)
-    add_executable(gdndc
+	add_executable(DndEdit
         MACOSX_BUNDLE
         Platform/MacOS/gdndc.m
     )
-    set_target_properties(gdndc PROPERTIES
+	set_target_properties(DndEdit PROPERTIES
         MACOSX_BUNDLE YES
 		MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Platform/MacOS/Info.plist)
     # this is kind of weird
-    target_compile_definitions(gdndc PRIVATE APP_ICON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/Platform/MacOS/app_icon.png")
+	target_compile_definitions(DndEdit PRIVATE APP_ICON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/Platform/MacOS/app_icon.png")
 
-    target_link_libraries(gdndc
+	target_link_libraries(DndEdit
         # quickjs-dylib
         quickjs-lib
         "-framework Cocoa"
         "-framework WebKit"
     )
-	#target_compile_definitions(gdndc PRIVATE QJS_SHARED_LIBRARY)
-    target_compile_options(gdndc PUBLIC "-fobjc-arc")
+	#target_compile_definitions(DndEdit PRIVATE QJS_SHARED_LIBRARY)
+	target_compile_options(DndEdit PUBLIC "-fobjc-arc")
 
 	add_executable(dndbr
 		MACOSX_BUNDLE

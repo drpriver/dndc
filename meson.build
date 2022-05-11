@@ -100,7 +100,7 @@ pydndc = pyinstall.extension_module(
 if host_machine.system() == 'darwin'
   add_languages('objc')
   executable(
-    'gdndc',
+    'DndEdit',
     'Platform/MacOS/gdndc.m',
     dependencies:[dependency('appleframeworks', modules: ['Cocoa', 'WebKit'])],
     include_directories: includes,

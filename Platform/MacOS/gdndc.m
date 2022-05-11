@@ -306,7 +306,7 @@ static NSRegularExpression* indent_pattern;
 static NSImage* appimage;
 //
 // Name of the app
-NSString* APPNAME = @"Gdndc";
+NSString* APPNAME = @"DndEdit";
 
 
 @implementation DndDocument
@@ -750,9 +750,9 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 }
 
 @end
-#define DND_HOST @"gdndc"
+#define DND_HOST @"DndEdit"
 #define DND_SCHEME @"dnd"
-#define DND_SCHEME_HOST @"dnd://gdndc"
+#define DND_SCHEME_HOST @"dnd://DndEdit"
 @implementation WebNavDel: NSObject
 -(void)webView:(WKWebView *)webView
     decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction
