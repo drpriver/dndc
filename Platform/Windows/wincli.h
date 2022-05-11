@@ -8,6 +8,7 @@ get_main_args(int* argc, char***argv){
     wchar_t* cl = GetCommandLineW();
     wchar_t** wargv = CommandLineToArgvW(cl, argc);
     size_t needed = 0;
+    // NOTE: the length returned by WideCharToMultiByte includes the terminating nul and is in code points.
     for(int i = 0; i < *argc; i++){
         int length = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wargv[i], -1, NULL, 0, NULL, NULL);
         if(!length){

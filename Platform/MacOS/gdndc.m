@@ -750,9 +750,9 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 }
 
 @end
-#define DND_HOST @"DndEdit"
+#define DND_HOST @"dndedit"
 #define DND_SCHEME @"dnd"
-#define DND_SCHEME_HOST @"dnd://DndEdit"
+#define DND_SCHEME_HOST @"dnd://dndedit"
 @implementation WebNavDel: NSObject
 -(void)webView:(WKWebView *)webView
     decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction

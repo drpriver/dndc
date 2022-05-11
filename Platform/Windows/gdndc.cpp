@@ -14,14 +14,16 @@
 #include <wchar.h>
 // #include <wchar.h>
 #undef ERROR
-#include "dndc_api_def.h"
-#include "dndc.h"
+#include "Dndc/dndc_api_def.h"
+#include "Dndc/dndc.h"
 typedef struct DndcLongString LongString;
 typedef struct DndcLongStringUtf16 LongStringUtf16;
 typedef struct DndcStringView StringView;
 typedef struct DndcStringViewUtf16 StringViewUtf16;
-#define LONGSTRING_DEFINED
-#include "long_string.h"
+#include "Dndc/dndc_long_string.h"
+#include "dwinstring.h"
+#include "Allocators/allocator.h"
+#include "Allocators/mallocator.h"
 #pragma comment(lib, "user32.lib")
 // #pragma comment(lib, "WebView2Loader.dll.lib")
 #pragma comment(lib, "WebView2LoaderStatic.lib")
@@ -110,27 +112,11 @@ get_utf8_string_from_window(HWND handle){
     return {.length=needed_size-1, .text=result};
 }
 
-struct WinString {
-    wchar_t* text;
-    size_t nchars_with_zero; // includes terminating null character
-};
-
 static void choose_open_file(HWND);
 static bool save_file(HWND);
 static bool save_as_file(HWND);
 static bool sortof_atomically_write_file(LongString text, WinString path);
 static bool choose_font(HWND);
-static
-WinString
-make_windows_string_from_utf8_string(const char* text){
-    int n_needed = MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0);
-    wchar_t* result = (wchar_t*)malloc(n_needed * sizeof(*result));
-    if(!result){
-        return {NULL, 0};
-    }
-    int n_written = MultiByteToWideChar(CP_UTF8, 0, text, -1, result, n_needed);
-    return {result, (size_t)n_written};
-}
 
 static struct {
     const char* text;
@@ -495,14 +481,14 @@ choose_open_file(HWND textedit){
                     BOOL read_success = ReadFile(handle, text, size.QuadPart*sizeof(*text), &nread, NULL);
                     if(read_success){
                         text[size.QuadPart] = '\0';
-                        auto ws = make_windows_string_from_utf8_string(text);
+                        auto ws = utf8_to_wstring(get_mallocator(), text);
                         if(ws.text)
                             SetWindowTextW(textedit, ws.text);
                         else
                             SetWindowTextW(textedit, L"\0");
                         static_assert(sizeof(filepath) == sizeof(filestr));
                         memcpy(filepath, filestr, sizeof(filestr));
-                        free(ws.text);
+                        Allocator_free(get_mallocator(), ws.text, ws.length);
                     }
                 }
                 free(text);
@@ -715,3 +701,5 @@ choose_font(HWND textedit){
     font_handle = new_font_handle;
     return true;
 }
+
+#include "Allocators/allocator.c"

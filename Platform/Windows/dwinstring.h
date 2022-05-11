@@ -2,8 +2,8 @@
 #define DWINSTRING_H
 // NOTE: This file might be include from c++. So it needs to be a dual-lang
 // header.
-#include "long_string.h"
-#include "allocator.h"
+#include "Utils/long_string.h"
+#include "Allocators/allocator.h"
 
 #ifndef _WIN32
 #error "Only valid on win32"
@@ -19,12 +19,12 @@ struct WinString {
 
 static inline
 WinString
-make_windows_string_from_utf8_string(Allocator a, const char* text){
+utf8_to_wstring(Allocator a, const char* text){
     int n_needed = MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0);
     wchar_t* result = (wchar_t*)Allocator_alloc(a, n_needed*sizeof(*result));
     if(!result){
         return {NULL, 0};
-        }
+    }
     int n_written = MultiByteToWideChar(CP_UTF8, 0, text, -1, result, n_needed);
     return (WinString){result, (size_t)n_written};
 }
@@ -36,7 +36,7 @@ make_utf8_string_from_windows_string(Allocator a, wchar_t* text, size_t nchars_w
     char* result = (char*)Allocator_alloc(a, needed_size);
     WideCharToMultiByte(CP_UTF8, 0, text, nchars_with_zero, result, needed_size, NULL, NULL);
     return (LongString){needed_size, result};
-    }
+}
 
 
 #endif
