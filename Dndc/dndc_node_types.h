@@ -33,7 +33,6 @@
     apply(META,           27)\
     apply(INVALID,        28)\
 
-typedef enum NodeType NodeType;
 enum NodeType{
     NODE_MD           =  0,
     NODE_DIV          =  1,
@@ -65,6 +64,7 @@ enum NodeType{
     NODE_META         = 27,
     NODE_INVALID      = 28,
 };
+typedef enum NodeType NodeType;
 
 #define X(a, b) _Static_assert(NODE_##a == b, #a " != " #b);
 NODETYPES(X)
