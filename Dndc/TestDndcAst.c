@@ -64,9 +64,9 @@ TestFunction(TestAstExample){
         LS("Examples/index.dnd"),
         LS("Documentation/OVERVIEW.dnd"),
         LS("Documentation/REFERENCE.dnd"),
-        LS("PyGdndc/jsdoc.dnd"),
-        LS("PyGdndc/changelog.dnd"),
-        LS("PyGdndc/Manual.dnd"),
+        LS("PyDndEdit/jsdoc.dnd"),
+        LS("PyDndEdit/changelog.dnd"),
+        LS("PyDndEdit/Manual.dnd"),
     };
     StringView base_dirs[] = {
         SV("Examples/Calendar"),
@@ -84,7 +84,7 @@ TestFunction(TestAstExample){
         SV("Examples"),
         SV(""),
         SV(""),
-        SV("PyGdndc"),
+        SV("PyDndEdit"),
         SV(""),
         SV(""),
     };

@@ -16,9 +16,9 @@ $(DOCDIR)/REFERENCE.html: Documentation/REFERENCE.dnd
 	$(DNDC) $< -o $@ -d $(DEPDIR)/REFERENCE.dep
 $(DOCDIR)/jsdoc.html: Dndc/jsdoc.dnd Dndc/dndc_js_api.d.ts
 	$(DNDC) Dndc/jsdoc.dnd -o $@ -d $(DEPDIR)/jsdoc.dep
-$(DOCDIR)/changelog.html: PyGdndc/changelog.dnd
+$(DOCDIR)/changelog.html: PyDndEdit/changelog.dnd
 	$(DNDC) $< -o $@ -d $(DEPDIR)/changelog.dep
-$(DOCDIR)/gui-manual.html: PyGdndc/Manual.dnd
+$(DOCDIR)/gui-manual.html: PyDndEdit/Manual.dnd
 	$(DNDC) $< -o $@ -d $(DEPDIR)/gui-manual.dep
 $(DOCDIR)/index.html: Documentation/index.dnd
 	$(DNDC) $< -o $@ -d $(DEPDIR)/docs-index.dep

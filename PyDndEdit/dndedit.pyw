@@ -25,7 +25,7 @@ import datetime
 import zipfile
 import io
 QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-APPNAME = 'PyGdndc'
+APPNAME = 'DndEdit'
 APP = QApplication(sys.argv)
 APP.setApplicationName(APPNAME)
 APP.setApplicationDisplayName(APPNAME)
@@ -156,7 +156,7 @@ class Logs:
             self.stream = open(LOGFILE_LOCATION, 'a', encoding='utf-8')
         except:
             self.stream = sys.stderr
-        self.LOGGER = logging.getLogger('pygdndc')
+        self.LOGGER = logging.getLogger('DndEdit')
         self.LOGGER.setLevel(logging.DEBUG)
         handler = logging.StreamHandler(stream=self.stream)
         handler.setFormatter(logging.Formatter(

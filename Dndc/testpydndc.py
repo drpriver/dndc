@@ -207,9 +207,9 @@ EXAMPLE_FILES = [
     "Examples/index.dnd",
     "Documentation/OVERVIEW.dnd",
     "Documentation/REFERENCE.dnd",
-    "PyGdndc/jsdoc.dnd",
-    "PyGdndc/changelog.dnd",
-    "PyGdndc/Manual.dnd",
+    "PyDndEdit/jsdoc.dnd",
+    "PyDndEdit/changelog.dnd",
+    "PyDndEdit/Manual.dnd",
 ]
 
 class TestExamples(TestCase):

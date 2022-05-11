@@ -25,9 +25,9 @@ builddir
 build2
 *.zip
 Release
-PyGdndc/pydndc.pyi
-PyGdndc/jsdoc.dnd
-PyGdndc/dndc_js_api.d.ts
+PyDndEdit/pydndc.pyi
+PyDndEdit/jsdoc.dnd
+PyDndEdit/dndc_js_api.d.ts
 .obj
 *.dll
 *.dylib
