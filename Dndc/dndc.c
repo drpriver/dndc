@@ -763,14 +763,7 @@ run_the_dndc(uint64_t flags,
 #include "dndc_logging.c"
 #include "Allocators/allocator.c"
 
-#ifndef WASM
-
-#include "dndc_qjs.c"
-#ifdef __clang__
-#pragma clang assume_nonnull begin
-#endif
-
-#else
+#if defined(WASM) || defined(NO_QJS)
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -803,6 +796,11 @@ void
 free_qjs_rt(QJSRuntime*rt, ArenaAllocator*aa){
     (void)rt, (void)aa;
 }
+#else
+#include "dndc_qjs.c"
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
 
 #endif
 
