@@ -180,11 +180,12 @@ sv_append(void* p, const void* sv_){
 }
 
 int
-main(int argc, const char* const* argv){
+main(int argc, char** argv){
 #ifdef _WIN32
+    // unclear if this is needed.
     if(get_main_args(&argc, &argv) != 0) return 1;
 #endif
-    Args args = {argc?argc-1:0, argc?argv+1:NULL};
+    Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
 #ifdef _WIN32
     LongString directory = {.text = _getcwd(0, 0)};
 #else

@@ -20,7 +20,7 @@
 #define GET_INPUT_API static inline
 #include "Utils/get_input.h"
 #ifdef _WIN32
-#include "Utils/wincli.h"
+#include "Platform/Windows/wincli.h"
 #endif
 
 // Print out syntax-highlighted version of the file to stdout.
@@ -81,6 +81,7 @@ append_arg(void* msb_, const void* arg_){
 int
 main(int argc, char**argv){
 #ifdef _WIN32
+    // unclear if this is actually needed or if argv is utf8.
     if(get_main_args(&argc, &argv) != 0)
         return 1;
 #endif

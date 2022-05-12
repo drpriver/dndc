@@ -31,7 +31,7 @@ pystring_to_longstring(PyObject* pyobj, Allocator a){
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
     unhandled_error_condition(!text);
     if(!length){
-        return (LongString){};
+        return (LongString){0};
     }
     char* copy = Allocator_dupe(a, text, length+1);
     return (LongString){
@@ -48,7 +48,7 @@ pystring_to_stringview(PyObject* pyobj, Allocator a){
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
     unhandled_error_condition(!text);
     if(!length){
-        return (StringView){};
+        return (StringView){0};
     }
     char* copy = Allocator_dupe(a, text, length);
     return (StringView){
@@ -249,7 +249,7 @@ PyMethodDef DndcPyFileCache_methods[] = {
             "Stores the string at the given path.\n"
             "Returns True on success, False on failure.",
     },
-    {},
+    {0},
 };
 
 
@@ -938,7 +938,7 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
         return NULL;
     }
     StringView source = pystring_borrow_stringview(text);
-    LongString output = {};
+    LongString output = {0};
     DndcLogFunc* func = logger?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
@@ -1046,7 +1046,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     // flags |= DNDC_DONT_PRINT_ERRORS;
     // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
-    LongString output = {};
+    LongString output = {0};
     DndcLogFunc* func = logger?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
@@ -1140,7 +1140,7 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
     // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_OUTPUT_EXPANDED_DND;
     flags |= DNDC_ALLOW_BAD_LINKS;
-    LongString output = {};
+    LongString output = {0};
     DndcLogFunc* func = logger?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
@@ -1399,7 +1399,7 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
 static PyMemberDef DndcContextPy_members[] = {
     {"logger", T_OBJECT, offsetof(DndcContextPy, logger), 0, "A callable implementing the dndc logger protocol."},
     {"filename", T_OBJECT, offsetof(DndcContextPy, filename), READONLY, "The filename of the root document."},
-    {}  // Sentinel
+    {0}  // Sentinel
 };
 
 static PyObject* DndcNode_make(DndcContextPy*, DndcNodeHandle);
@@ -1906,7 +1906,7 @@ static PyMethodDef DndcContextPy_methods[] = {
             "\n"
             "Convert context to a json string.",
     },
-    {} // Sentinel
+    {0} // Sentinel
 };
 
 
@@ -1979,7 +1979,7 @@ DndcContextPy_set_base(PyObject* s, PyObject*_Nullable args, void*_Nullable p){
 static PyGetSetDef DndcContextPy_getset[] = {
     {"root", DndcContextPy_get_root, DndcContextPy_set_root, "The root node of the tree (may be None).", NULL},
     {"base_dir", DndcContextPy_get_base, DndcContextPy_set_base, "Files are imported relative to this path (may be empty string which means .)", NULL},
-    {} // Sentinel
+    {0} // Sentinel
 };
 
 static
@@ -2630,12 +2630,12 @@ static PyGetSetDef DndcNodePy_getset[] = {
         .closure=(void*)DNDC_NODEFLAG_NOINLINE,
     },
 
-    {} // Sentinel
+    {0} // Sentinel
 };
 static PyMemberDef DndcNodePy_members[] = {
     {"ctx", T_OBJECT, offsetof(DndcNodePy, pyctx), READONLY, "The Context that this node is from."},
     {"handle", T_UINT, offsetof(DndcNodePy, handle), READONLY, "The opaque integer handle that can be used to uniquely identify this node."},
-    {}  // Sentinel
+    {0}  // Sentinel
 };
 
 static PyMethodDef DndcNodePy_methods[] = {
@@ -2801,7 +2801,7 @@ static PyMethodDef DndcNodePy_methods[] = {
             "\n"
             "Convert node to a json string.",
     },
-    {} // Sentinel
+    {0} // Sentinel
 };
 
 static

@@ -3188,7 +3188,7 @@ static inline
 void
 node_to_json(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
     Node* node = get_node(ctx, handle);
-    MSB_FORMAT(sb, "{\"type\":",node->type, ",\"handle\":", handle._value);
+    MSB_FORMAT(sb, "{\"type\":",(int)node->type, ",\"handle\":", handle._value);
     if(NodeHandle_eq(node->parent, INVALID_NODE_HANDLE))
         MSB_FORMAT(sb, ",\"parent\":null");
     else
@@ -3234,7 +3234,7 @@ node_to_json(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
     MSB_FORMAT(sb, ",\"filename\":", node->filename_idx);
     MSB_FORMAT(sb, ",\"row\":", node->row);
     MSB_FORMAT(sb, ",\"col\":", node->col);
-    MSB_FORMAT(sb, ",\"flags\":", node->flags, "}");
+    MSB_FORMAT(sb, ",\"flags\":", (int)node->flags, "}");
 }
 
 static inline

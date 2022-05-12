@@ -1,7 +1,13 @@
 #ifndef WINCLI_H
 #define WINCLI_H
 #include <stdlib.h>
+#include <stdio.h>
 #include "windowsheader.h"
+#include <shellapi.h>
+#pragma comment(lib, "Shell32.lib")
+// I am honestly confused if we need to do this
+// or not as it seems like the regular main's argv is being passed as utf8 or whatever??
+// But maybe I've set my windows box to use utf8?
 static inline
 int
 get_main_args(int* argc, char***argv){
@@ -18,7 +24,7 @@ get_main_args(int* argc, char***argv){
         }
         needed += length;
     }
-    size_t array_size = (argc+1)*sizeof(*argv);
+    size_t array_size = (*argc+1)*sizeof(*argv);
     void* p = malloc(array_size+needed);
     char** result = p;
     char* c = array_size + (char*)p;
@@ -29,8 +35,8 @@ get_main_args(int* argc, char***argv){
         c += length;
     }
     result[*argc] = NULL; // argv is null-terminated
-    LocalFree(argv);
-    *argv = p;
+    LocalFree(wargv);
+    *argv = result;
     return 0;
 }
 #endif

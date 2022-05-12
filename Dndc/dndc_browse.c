@@ -82,6 +82,7 @@ wrap_report(void* ud, int type, const char* filename, int filename_len, int line
 int
 main(int argc, char** argv){
 #ifdef _WIN32
+    // unclear if this is needed.
     if(get_main_args(&argc, &argv) != 0) return 1;
 #endif
     LongString directory = {0};

@@ -15,7 +15,7 @@
 #if defined(__GNUC__) || defined(__clang__)
 #define warn_unused __attribute__((warn_unused_result))
 #elif defined(_MSC_VER)
-#define warn_unused _Check_return
+#define warn_unused
 #else
 #define warn_unused
 #endif

@@ -679,6 +679,7 @@ static
 int
 test_main(int argc, char*_Nonnull *_Nonnull argv){
 #ifdef _WIN32
+    // unclear if this is actually needed or if argv is utf8.
     if(get_main_args(&argc, &argv) != 0) return 1;
 #endif
     if(argc < 1){
