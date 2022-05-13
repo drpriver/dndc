@@ -1,13 +1,14 @@
 //
 // Exposes dndc as a c-extension for python.
 //
+#include "pyhead.h"
+// why this isn't in python.h or include python.h I don't know.
+#include <structmember.h>
 #define DNDC_API static inline
 #include "dndc.h"
 #include "dndc_ast.h"
 #include "dndc_long_string.h"
 #include "common_macros.h"
-#include "pyhead.h"
-#include "structmember.h"
 #include "Allocators/allocator.h"
 #include "Allocators/mallocator.h"
 #include "Utils/MStringBuilder.h"

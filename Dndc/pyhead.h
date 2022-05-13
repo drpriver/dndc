@@ -20,6 +20,9 @@
 #define _DEBUG
 
 #else
+// The proper way to include this on macos when compiling against a framework
+// is to do <Python/Python.h>, but cmake and meson don't use the framework
+// argument, they instead set include paths. Very annoying.
 #include <Python.h>
 #endif
 
