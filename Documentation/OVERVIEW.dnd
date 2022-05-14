@@ -201,6 +201,14 @@ Self-Contained::md
   Example:
 
   ::pre .embedded
+    ::comment
+      You haven't seen this before. The '#' symbol to the right of the double
+      colon indicates a directive. Only certain directives are allowed.
+      For example, this #import directive tells the system to not interpret the
+      contents as raw strings to be included in a <script> tag, but instead as
+      file paths to load.
+
+      css blocks also support #import with the same meaning, but for <style>.
     ::css #import
       cssfile1.css
       another/css/file.css
@@ -208,14 +216,6 @@ Self-Contained::md
     ::script #import
       somejsfile.js
       another/jsfile.js
-    ::comment
-      You haven't seen this before. The '#' symbol to the right of the double
-      colon indicates a directive. Only certain directives are allowed.
-      For example, this #import
-      attribute tells the system to not interpret the contents as raw strings
-      to be included in a <script> tag, but instead as file paths to load.
-
-      css blocks also support #import with the same meaning, but for <style>.
     ::css
       * {
         box-sizing: border-box;
@@ -233,7 +233,8 @@ Attributes, Classes and Directives::md
   ::pre .embedded
     Hola::div .foo .bar
       hello, aloha
-  In this example the Hola div will have .foo and .bar as css classes.
+  In this example the Hola div will have <code>foo</code> and <code>bar</code>
+  as css classes.
 
   Blocks can also have attributes, which are user defined tags. They only have whatever
   meaning you give to them.
@@ -427,6 +428,12 @@ But Wait, There's More::md
     div.root {
       display: initial;
     }
+  }
+  code {
+    background-color: #f3f3f3;
+    padding: 1px;
+    padding-left: 3px;
+    padding-right: 3px;
   }
 
 ::js
