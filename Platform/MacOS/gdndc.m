@@ -1739,8 +1739,26 @@ fail:
     credits.documentView = creditstext;
     licenses_window.contentView = credits;
     licenses_window.title = @"Open Source Licenses";
+#if 0
+    // this code is totally unnecessary as the webviews are aware of dark mode - duh!
+    // I am leaving it here in case I need it for something else.
+    static id o;
+    o = [[NSDistributedNotificationCenter defaultCenter] addObserverForName:@"AppleInterfaceThemeChangedNotification" object:nil queue:nil usingBlock:^(NSNotification* note){
+        auto windows = [NSApp windows];
+        for(NSWindow* win in windows){
+            NSViewController* vc = win.contentViewController;
+            if([vc isKindOfClass:[DndViewController class]]){
+             [(DndViewController*)vc refresh];
+            }
+        }
+    }];
+#endif
 
 }
+#if 0
+-(void)did_dark_mode:(nullable id) sender {
+}
+#endif
 -(void)show_licenses:(nullable id) sender{
     [licenses_window makeKeyAndOrderFront:self];
 }
