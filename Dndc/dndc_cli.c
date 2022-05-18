@@ -101,6 +101,7 @@ main(int argc, char**argv){
     bool cleanup = false;
     int bench_iters = 0;
     bool bench_cache_files = false;
+    bool no_null_terminator = false;
     LongString jsargs = LS("");
     MStringBuilder argbuilder = {.allocator = get_mallocator()};
     {
@@ -331,6 +332,13 @@ main(int argc, char**argv){
                 .max_num = 0xffff,
                 .append_proc = &append_arg,
             },
+            {
+                .name = SV("--no-nul-terminator"),
+                .hidden = true,
+                .dest = ARGDEST(&no_null_terminator),
+                .help = "Don't have a trailing nul after the input text. "
+                        " For reproducing fuzzing bugs.",
+            },
         };
         enum {HELP, VERSION, HIDDEN_HELP, OPEN_SOURCE, FISH};
         ArgToParse early_args[] = {
@@ -462,6 +470,13 @@ main(int argc, char**argv){
                 return 1;
             }
             source_text = LS_to_SV(load_err.result);
+            if(no_null_terminator){
+                // make a copy so we can remove the nul-terminator (for repro-ing
+                // fuzz crashes)
+                char* t = malloc(source_text.length);
+                memcpy(t, source_text.text, source_text.length);
+                source_text.text = t;
+            }
         }
         if(argbuilder.cursor){
             msb_write_char(&argbuilder, ']');

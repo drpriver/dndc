@@ -444,7 +444,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                 if(length - i >= 2){
                     char peek1 = text[i+1];
                     if(peek1 == 'c'){ // could be <code> tag
-                        if(length - i >= sizeof("<code>")-2){
+                        if(length - i >= sizeof("<code>")-1){
                             if(memcmp(text+i, "<code>", sizeof("<code>")-1) == 0){
                                 msb_write_literal(sb, "<code>");
                                 i += 5;
@@ -453,7 +453,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                         }
                     }
                     if(peek1 == 'h'){
-                        if(length - i >= sizeof("<hr>")-2){
+                        if(length - i >= sizeof("<hr>")-1){
                             if(memcmp(text+i, "<hr>", sizeof("<hr>")-1) == 0){
                                 msb_write_literal(sb, "<hr>");
                                 i += 4;
@@ -462,7 +462,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                         }
                     }
                     if(peek1 == '/'){
-                        if(length - i >= sizeof("</code>")-2){
+                        if(length - i >= sizeof("</code>")-1){
                             if(memcmp(text+i, "</code>", sizeof("</code>")-1) == 0){
                                 msb_write_literal(sb, "</code>");
                                 i += sizeof("</code>")-2;

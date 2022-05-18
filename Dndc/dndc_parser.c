@@ -41,11 +41,13 @@ int
 parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int indentation, NodeFlags flags);
 PARSEFUNC(parse_table_node);
 PARSEFUNC(parse_keyvalue_node);
+#if 0
 PARSEFUNC(parse_bullets_node);
 PARSEFUNC(parse_bullet_node);
-PARSEFUNC(parse_raw_node);
 PARSEFUNC(parse_list_node);
 PARSEFUNC(parse_list_item);
+#endif
+PARSEFUNC(parse_raw_node);
 PARSEFUNC(parse_md_node);
 
 static inline
@@ -559,7 +561,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                     parse_log_err(ctx, aftertype.text, LS("Empty directive name after a '#'"));
                     return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                 }
-                if(aftertype.text[0] == '('){
+                if(aftertype.length && aftertype.text[0] == '('){
                     if(SV_equals(directive, SV("id"))){
                         advance_sv(&aftertype);
                         eat_leading_tabspaces(&aftertype);
@@ -804,6 +806,7 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
     }
     return 0;
 }
+#if 0
 PARSEFUNC(parse_list_node){
     {
         Node* parent = get_node(ctx, parent_handle);
@@ -899,6 +902,7 @@ PARSEFUNC(parse_list_item){
     }
     return 0;
 }
+#endif
 PARSEFUNC(parse_raw_node){
     // In order to avoid needing to scan all of the lines in the text
     // to figure out what the minimum leading indent is, we use the indent
@@ -1075,6 +1079,7 @@ PARSEFUNC(parse_keyvalue_node){
     return 0;
 }
 
+#if 0
 PARSEFUNC(parse_bullets_node){
     {
         Node* parent = get_node(ctx, parent_handle);
@@ -1152,6 +1157,7 @@ PARSEFUNC(parse_bullet_node){
     }
     return 0;
 }
+#endif
 
 PARSEFUNC(parse_md_node){
     // This was originally for debugging, but `dndc_parse` will set the

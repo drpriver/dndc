@@ -483,7 +483,6 @@ TestFunction(TestCrashesFixed){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
-        | DNDC_DONT_WRITE
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     struct {
@@ -492,21 +491,28 @@ TestFunction(TestCrashesFixed){
     } cases[] = {
         {.name=LS("TestCases/case1.dnd"), .error=false},
         {.name=LS("TestCases/case2.dnd"), .error=true},
+        {.name=LS("TestCases/case3.dnd"), .error=true},
+        {.name=LS("TestCases/case4.dnd"), .error=false},
     };
     for(size_t i = 0; i < arrlen(cases); i++){
         LongString output = {};
         Allocator allocator = get_mallocator();
-        TextFileResult data = read_file(cases[i].name.text, allocator);
+        // Read as binary to avoid appending a nul terminator
+        // which can mask off-by-one read errors.
+        BinaryFileResult data = read_bin_file(cases[i].name.text, allocator);
         TestAssertSuccess(data);
-        int e = run_the_dndc(flags, SV("TestCases"), LS_to_SV(data.result), LS_to_SV(cases[i].name), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
-        TestExpectFalse(output.text);
+        StringView text = {.length=data.result.n_bytes, .text=data.result.buff};
+        int e = run_the_dndc(flags, SV("TestCases"), text, LS_to_SV(cases[i].name), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
         if(cases[i].error){
             TestExpectTrue(e);
         }
         else {
             TestExpectFalse(e);
         }
-        Allocator_free(allocator, data.result.text, data.result.length+1);
+        if(!e){
+            dndc_free_string(output);
+        }
+        Allocator_free(allocator, text.text, text.length);
     }
     TESTEND();
 }
