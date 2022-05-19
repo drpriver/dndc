@@ -521,6 +521,15 @@ main(int argc, char**argv){
                 jsargs);
             if(e) return 1;
             assert(!e);
+            if(!(flags & DNDC_DONT_WRITE)){
+                if(output_path.length){
+                    FileWriteResult write_err = write_file(output_path.text, output.text, output.length);
+                    print_file_writing_error(output_path.text, write_err);
+                }
+                else {
+                    puts(output.text);
+                }
+            }
             dndc_free_string(output);
         }
         if(worker)
