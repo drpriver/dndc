@@ -841,7 +841,7 @@ QJS_API void *QJS_GetOpaque2(QJSContext *ctx, QJSValueConst obj, QJSClassID clas
 /* 'buf' must be zero terminated i.e. buf[buf_len] = '\0'. */
 QJS_API QJSValue QJS_ParseJSON(QJSContext *ctx, const char *buf, size_t buf_len,
                      const char *filename);
-#define QJS_PARSE_JSON_EXT (1 << 0) /* allow extended QJSON */
+#define QJS_PARSE_JSON_EXT (1 << 0) /* allow extended JSON */
 QJS_API QJSValue QJS_ParseJSON2(QJSContext *ctx, const char *buf, size_t buf_len,
                       const char *filename, int flags);
 QJS_API QJSValue QJS_JSONStringify(QJSContext *ctx, QJSValueConst obj,

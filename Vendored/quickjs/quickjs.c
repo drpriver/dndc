@@ -20231,7 +20231,7 @@ typedef struct QJSParseState {
     QJSFunctionDef *cur_func;
     BOOL is_module; /* parsing a module */
     BOOL allow_html_comments;
-    BOOL ext_json; /* true if accepting QJSON superset */
+    BOOL ext_json; /* true if accepting JSON superset */
 } QJSParseState;
 
 typedef struct QJSOpCode {
@@ -20487,7 +20487,7 @@ static __exception int js_parse_string(QJSParseState *s, int sep,
         if (c < 0x20) {
             if (!s->cur_func) {
                 if (do_throw)
-                    js_parse_error(s, "invalid character in a QJSON string");
+                    js_parse_error(s, "invalid character in a JSON string");
                 goto fail;
             }
             if (sep == '`') {
@@ -20510,7 +20510,7 @@ static __exception int js_parse_string(QJSParseState *s, int sep,
         }
         if (c == '\\') {
             c = *p;
-            /* XXX: need a specific QJSON case to avoid
+            /* XXX: need a specific JSON case to avoid
                accepting invalid escapes */
             switch(c) {
             case '\0':
@@ -20537,7 +20537,7 @@ static __exception int js_parse_string(QJSParseState *s, int sep,
             default:
                 if (c >= '0' && c <= '9') {
                     if (!s->cur_func)
-                        goto invalid_escape; /* QJSON case */
+                        goto invalid_escape; /* JSON case */
                     if (!(s->cur_func->js_mode & QJS_MODE_STRICT) && sep != '`')
                         goto parse_escape;
                     if (c == '0' && !(p[1] >= '0' && p[1] <= '9')) {
@@ -21364,7 +21364,7 @@ static __exception int json_next_token(QJSParseState *s)
         break;
     case '\'':
         if (!s->ext_json) {
-            /* QJSON does not accept single quoted strings */
+            /* JSON does not accept single quoted strings */
             goto def_token;
         }
         /* fall through */
@@ -21384,7 +21384,7 @@ static __exception int json_next_token(QJSParseState *s)
     case '\f':
     case '\v':
         if (!s->ext_json) {
-            /* QJSONWhitespace does not match <VT>, nor <FF> */
+            /* JSONWhitespace does not match <VT>, nor <FF> */
             goto def_token;
         }
         /* fall through */
@@ -21394,7 +21394,7 @@ static __exception int json_next_token(QJSParseState *s)
         goto redo;
     case '/':
         if (!s->ext_json) {
-            /* QJSON does not accept comments */
+            /* JSON does not accept comments */
             goto def_token;
         }
         if (p[1] == '*') {
@@ -43692,7 +43692,7 @@ void QJS_AddIntrinsicRegExp(QJSContext *ctx)
                                countof(js_regexp_string_iterator_proto_funcs));
 }
 
-/* QJSON */
+/* JSON */
 
 static int json_parse_expect(QJSParseState *s, int tok)
 {
@@ -44085,7 +44085,7 @@ static int js_json_to_str(QJSContext *ctx, QJSONStringifyContext *jsc,
         else if (cl == QJS_CLASS_BIG_FLOAT) {
             return string_buffer_concat_value_free(jsc->b, val);
         } else if (cl == QJS_CLASS_BIG_INT) {
-            QJS_ThrowTypeError(ctx, "bigint are forbidden in QJSON.stringify");
+            QJS_ThrowTypeError(ctx, "bigint are forbidden in JSON.stringify");
             goto exception;
         }
 #endif
@@ -44220,7 +44220,7 @@ static int js_json_to_str(QJSContext *ctx, QJSONStringifyContext *jsc,
         return string_buffer_concat_value_free(jsc->b, val);
 #ifdef CONFIG_BIGNUM
     case QJS_TAG_BIG_INT:
-        QJS_ThrowTypeError(ctx, "bigint are forbidden in QJSON.stringify");
+        QJS_ThrowTypeError(ctx, "bigint are forbidden in JSON.stringify");
         goto exception;
 #endif
     default:
@@ -44383,17 +44383,17 @@ static QJSValue js_json_stringify(QJSContext *ctx, QJSValueConst this_val,
 static const QJSCFunctionListEntry js_json_funcs[] = {
     QJS_CFUNC_DEF("parse", 2, js_json_parse ),
     QJS_CFUNC_DEF("stringify", 3, js_json_stringify ),
-    QJS_PROP_STRING_DEF("[Symbol.toStringTag]", "QJSON", QJS_PROP_CONFIGURABLE ),
+    QJS_PROP_STRING_DEF("[Symbol.toStringTag]", "JSON", QJS_PROP_CONFIGURABLE ),
 };
 
 static const QJSCFunctionListEntry js_json_obj[] = {
-    QJS_OBJECT_DEF("QJSON", js_json_funcs, countof(js_json_funcs), QJS_PROP_WRITABLE | QJS_PROP_CONFIGURABLE ),
+    QJS_OBJECT_DEF("JSON", js_json_funcs, countof(js_json_funcs), QJS_PROP_WRITABLE | QJS_PROP_CONFIGURABLE ),
 };
 
 QJS_API
 void QJS_AddIntrinsicJSON(QJSContext *ctx)
 {
-    /* add QJSON as autoinit object */
+    /* add JSON as autoinit object */
     QJS_SetPropertyFunctionList(ctx, ctx->global_obj, js_json_obj, countof(js_json_obj));
 }
 
