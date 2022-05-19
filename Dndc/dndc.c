@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifdef LOG_LEVEL
 #undef LOG_LEVEL
 #endif

@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef MEASURE_TIME_H
 #define MEASURE_TIME_H
 #include <stdint.h>

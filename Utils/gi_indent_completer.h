@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef GI_INDENT_COMPLETER_H
 #define GI_INDENT_COMPLETER_H
 

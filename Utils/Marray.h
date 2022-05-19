@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef MARRAY_H
 #define MARRAY_H
 //

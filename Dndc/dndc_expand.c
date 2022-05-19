@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef DNDC_EXPAND_C
 #define DNDC_EXPAND_C
 #include "dndc.h"

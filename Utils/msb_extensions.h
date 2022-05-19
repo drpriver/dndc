@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef MSB_EXTENSIONS_H
 #define MSB_EXTENSIONS_H
 #include "MStringBuilder.h"

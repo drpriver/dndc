@@ -1,3 +1,7 @@
+//
+// Copyright © 2021-2022, David Priver
+//
+
 // Unity build simplifies build system and also allows better
 // control of visibility of symbols for library.
 #define CONFIG_VERSION "2021-03-27"

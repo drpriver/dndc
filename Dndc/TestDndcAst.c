@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #include <stdio.h>
 #define DNDC_API static inline
 #include "dndc.h"

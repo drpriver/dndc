@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef RARRAY_H
 #define RARRAY_H
 #include <stddef.h> // size_t

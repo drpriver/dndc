@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef THREAD_UTILS_H
 #define THREAD_UTILS_H
 #include <stdlib.h>

@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #include "Utils/testing.h"
 #include "string_table.h"
 #include "Allocators/mallocator.h"

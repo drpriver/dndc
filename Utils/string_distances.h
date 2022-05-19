@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef STRING_DISTANCES_H
 #define STRING_DISTANCES_H
 

@@ -150,12 +150,14 @@ def fix_args(args:List[str], source_file:str) -> List[str]:
 
 def escape(s:str) -> str:
     return s.replace('<', '&lt;').replace('>', '&gt;')
+
 def same_path(a:str, b:str) -> bool:
     # os.path.relpath can throw on windows
     try:
         return os.path.relpath(a) == os.path.relpath(b)
     except:
         return False
+
 HEAD='''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -279,7 +281,7 @@ class DocWriter:
         text = match[1]
         ident = self.name_to_ident.get(text)
         if ident is None:
-            print(self.sourcefile+':', match[0], ' matches nothing', file=sys.stderr)
+            if 0: print(self.sourcefile+':', match[0], ' matches nothing', file=sys.stderr)
             return match[0]
         if ident.filename:
             href = self.href(ident)

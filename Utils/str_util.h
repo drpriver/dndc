@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef STR_UTIL_H
 #define STR_UTIL_H
 #include <assert.h>

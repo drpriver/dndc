@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #include "dndc.h"
 #include "dndc_long_string.h"
 #include "Utils/file_util.h"

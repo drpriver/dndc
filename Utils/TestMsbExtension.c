@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #include "long_string.h"
 #include "testing.h"
 #include "MStringBuilder.h"

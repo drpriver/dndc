@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #include "str_util.h"
 #include "testing.h"
 TestFunction(TestStrip){

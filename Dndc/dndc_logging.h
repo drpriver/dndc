@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef DNDC_LOGGING_H
 #define DNDC_LOGGING_H
 #include "dndc_long_string.h"

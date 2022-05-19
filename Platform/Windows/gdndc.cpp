@@ -1,3 +1,6 @@
+// This is was an experiment to make a gui using just COM and win32.
+// It was too big a pain in the butt compared to Qt or Appkit, so I
+// gave up on it.
 #define UNICODE
 #define _UNICODE
 #include <windows.h>

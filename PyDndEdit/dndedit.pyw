@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+
+#
+# Copyright © 2021-2022, David Priver
+#
 PYGDNDC_VERSION = '0.16.0'
 __version__ = PYGDNDC_VERSION
 import os

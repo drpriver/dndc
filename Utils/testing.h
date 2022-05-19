@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef TESTING_H
 #define TESTING_H
 #include <assert.h>

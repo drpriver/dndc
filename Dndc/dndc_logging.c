@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef DNDC_LOGGING_C
 #define DNDC_LOGGING_C
 #include "dndc_logging.h"

@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef BASE64_H
 #define BASE64_H
 #include <stddef.h>

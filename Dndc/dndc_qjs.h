@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef DNDC_QJS_H
 #define DNDC_QJS_H
 #include "dndc_long_string.h"

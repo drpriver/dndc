@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef BYTE_BUFFER_H
 #define BYTE_BUFFER_H
 // for size_t

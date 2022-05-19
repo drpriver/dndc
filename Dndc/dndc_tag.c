@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #include <stdlib.h>
 #ifdef _WIN32
 #include <direct.h>

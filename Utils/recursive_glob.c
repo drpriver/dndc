@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef RECURSIVE_GLOB_C
 #define RECURSIVE_GLOB_C
 #if defined(_WIN32)

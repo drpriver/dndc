@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef DNDC_LOCAL_SERVER_H
 #define DNDC_LOCAL_SERVER_H
 #include "dndc_long_string.h"

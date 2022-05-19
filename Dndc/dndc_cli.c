@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #if !defined(_WIN32)
 #include <errno.h> // For reporting write file erors
 #endif

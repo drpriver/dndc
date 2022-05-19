@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef DNDC_LONG_STRING_H
 #define DNDC_LONG_STRING_H
 // The existence of this file sucks, but allows to put the LongString

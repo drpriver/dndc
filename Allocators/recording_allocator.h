@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef RECORDING_ALLOCATOR_H
 #define RECORDING_ALLOCATOR_H
 #include <stdlib.h>

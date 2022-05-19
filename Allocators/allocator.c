@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef ALLOCATOR_C
 #define ALLOCATOR_C
 #include <stddef.h>

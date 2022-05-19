@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef PYHEAD_H
 #define PYHEAD_H
 #define PY_SSIZE_T_CLEAN

@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef GI_BYTE_DISTANCE_COMPLETER_H
 #define GI_BYTE_DISTANCE_COMPLETER_H
 #include "get_input.h"

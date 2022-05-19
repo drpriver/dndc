@@ -1,4 +1,8 @@
 //
+// Copyright © 2021-2022, David Priver
+//
+
+//
 // Exposes dndc as a c-extension for python.
 //
 #include "pyhead.h"

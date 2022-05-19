@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #import <Cocoa/Cocoa.h>
 #import "Dndc/dndc_long_string.h"
 #import "Dndc/dndc_local_server.h"

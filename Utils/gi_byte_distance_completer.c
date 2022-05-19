@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #include <string.h> // memcpy
 #include <stdlib.h> // malloc, free, qsort
 #include "gi_byte_distance_completer.h"

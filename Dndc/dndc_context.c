@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef DNDC_CONTEXT_C
 #define DNDC_CONTEXT_C
 // This file is kind of a grab bag of random functionality

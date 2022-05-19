@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef LOG_PRINT_H
 #define LOG_PRINT_H
 #include "long_string.h"

@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef PATH_UTIL_H
 #define PATH_UTIL_H
 // size_t

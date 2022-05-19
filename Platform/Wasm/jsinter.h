@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef JSINTER_H
 #define JSINTER_H
 #include <stdlib.h>

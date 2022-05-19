@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef DNDC_AST_H
 #define DNDC_AST_H
 #ifndef NO_DNDC_AST_API

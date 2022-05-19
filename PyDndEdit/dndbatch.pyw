@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+
+#
+# Copyright © 2021-2022, David Priver
+#
 import datetime
 import sys
 import os

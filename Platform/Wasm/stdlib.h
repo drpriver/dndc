@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef STDLIB_H
 #define STDLIB_H
 #include "allstd.h"

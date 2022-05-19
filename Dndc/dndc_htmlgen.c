@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef DNDC_HTMLGEN_C
 #define DNDC_HTMLGEN_C
 #include "dndc_types.h"

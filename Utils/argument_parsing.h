@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef ARGUMENT_PARSING_H
 #define ARGUMENT_PARSING_H
 // size_t

@@ -1,3 +1,6 @@
+#
+# Copyright © 2021-2022, David Priver
+#
 def win_install_qt() -> bool:
     import sys
     assert sys.platform == 'win32'

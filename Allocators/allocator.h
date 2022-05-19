@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef ALLOCATOR_H
 #define ALLOCATOR_H
 // size_t

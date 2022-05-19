@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef ERRORABLE_LONG_STRING_H
 #define ERRORABLE_LONG_STRING_H
 #include "Utils/long_string.h"

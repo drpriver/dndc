@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #include "Dndc/dndc.h"
 #include "Dndc/dndc.c"
 #include "Utils/msb_format.h"

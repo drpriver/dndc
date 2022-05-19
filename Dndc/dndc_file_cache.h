@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef DNDC_FILE_CACHE_H
 #define DNDC_FILE_CACHE_H
 #include <stdint.h>

@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef ALLSTD_H
 #define ALLSTD_H
 // Just put everything in one header and have

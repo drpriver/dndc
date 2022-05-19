@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef MEM_UTIL_H
 #define MEM_UTIL_H
 

@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #import <Cocoa/Cocoa.h>
 #import <Webkit/WebKit.h>
 #import <dispatch/dispatch.h>

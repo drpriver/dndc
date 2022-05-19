@@ -1,3 +1,6 @@
+//
+// Copyright © 2021-2022, David Priver
+//
 #ifndef LONG_STRING_H
 #define LONG_STRING_H
 // size_t
