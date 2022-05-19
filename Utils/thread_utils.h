@@ -179,11 +179,11 @@ THREADFUNC(worker_thread_main){
     pthread_mutex_lock(&w->mutex);
     void* (*job)(void*) = w->job;
     for(;;){
-        if(w->shutdown){
+        if(w->shutdown)
             break;
-        }
         void* job_data = w->job_data;
         w->job_data = NULL;
+        pthread_mutex_unlock(&w->mutex);
         if(job_data){
             job(job_data);
             #ifdef __APPLE__
@@ -192,6 +192,7 @@ THREADFUNC(worker_thread_main){
             sem_post(&w->sem);
             #endif
         }
+        pthread_mutex_lock(&w->mutex);
         pthread_cond_wait(&w->worker_cond, &w->mutex);
     }
     pthread_mutex_unlock(&w->mutex);
@@ -231,8 +232,8 @@ void
 worker_destroy(WorkerThread* w){
     pthread_mutex_lock(&w->mutex);
     w->shutdown = true;
-    pthread_mutex_unlock(&w->mutex);
     pthread_cond_signal(&w->worker_cond);
+    pthread_mutex_unlock(&w->mutex);
 }
 
 static
@@ -307,10 +308,12 @@ THREADFUNC(worker_thread_main){
             break;
         void* job_data = w->job_data;
         w->job_data = NULL;
+        LeaveCriticalSection(&w->mutex);
         if(job_data){
             job(job_data);
             ReleaseSemaphore(w->sem, 1, NULL);
         }
+        EnterCriticalSection(&w->mutex);
         SleepConditionVariableCS(&w->worker_cond, &w->mutex, INFINITE);
     }
     LeaveCriticalSection(&w->mutex);
