@@ -416,16 +416,25 @@ build_toc_block(DndcContext*);
   render_node(DndcContext*, MStringBuilder* restrict, NodeHandle, int header_depth, int node_depth);
 
   //
+  // render_md
+  // -----------
+  // Writes the document tree (starting from the context's root node)
+  // as a .md file, in a best effort manner.
+  //
+  // Returns 0 on success.
+  //
+  static
+  warn_unused
+  int
+  render_md(DndcContext*, MStringBuilder*);
+
+  //
   // format_tree
   // -----------
   // Writes the document tree (starting from the context's root node)
   // as a .dnd file, formatted to remove trailing spaces, wrap to 80 columns, etc.
   //
   // Returns 0 on success.
-  //
-  // TODO: maybe this should take a node argument so you can format
-  // starting from nodes other than the root node, but there is not
-  // a use case for that yet.
   //
   static
   warn_unused

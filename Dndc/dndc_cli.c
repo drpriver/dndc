@@ -214,8 +214,9 @@ main(int argc, char**argv){
                 .dest = ArgBitFlagDest(&flags, DNDC_DONT_IMPORT),
                 .help = "Don't import files (via #import or from import nodes), "
                         "instead leaving them as-is in the document. "
-                        "Useful for breaking circular dependencies during bootstrapping. "
-                        "Can also speed up introspection-only runs.",
+                        "Useful for breaking circular dependencies during "
+                        "bootstrapping. Can also speed up introspection-only "
+                        "runs.",
                 .hidden = true,
             },
             {
@@ -229,23 +230,35 @@ main(int argc, char**argv){
                 .name = SV("--cleanup"),
                 .dest = ARGDEST(&cleanup),
                 .help = "Cleanup all resources (memory allocations, etc.).\n"
-                        "Development debugging tool, useless in regular cli use.",
+                        "Development debugging tool, useless in regular cli "
+                        "use.",
                 .hidden = true,
             },
             {
                 .name = SV("--format"),
                 .dest = ArgBitFlagDest(&flags, DNDC_REFORMAT_ONLY),
                 .help = "Instead of rendering to html, render to .dnd\n"
-                        "Trailing spaces are removed, text wrapped to 80 columns "
-                        "(if semantically equivalent), etc." ,
+                        "Trailing spaces are removed, text wrapped to 80 "
+                        "columns (if semantically equivalent), etc." ,
             },
             {
                 .name = SV("--expand"),
                 .altname1 = SV("--expand-only"),
                 .dest = ArgBitFlagDest(&flags, DNDC_OUTPUT_EXPANDED_DND),
                 .help = "Output as a single .dnd file instead of html.\n"
-                        "Expansion is after resolving imports and executing user  "
-                        "scripts.",
+                        "Expansion is after resolving imports and executing "
+                        "user scripts.",
+                .hidden = true,
+            },
+            {
+                .name = SV("--md"),
+                .altname1 = SV("--markdown"),
+                .dest = ArgBitFlagDest(&flags, DNDC_OUTPUT_MD),
+                .help = "Output as a single .md file instead of html.\n"
+                        "Expansion is after resolving imports and executing "
+                        "user scripts. This is a best effort attempt to "
+                        "translate to markdown, some things will be dropped."
+                        ,
                 .hidden = true,
             },
             {
@@ -294,14 +307,16 @@ main(int argc, char**argv){
                 .name = SV("--fragment"),
                 .altname1 = SV("--fragment-only"),
                 .dest = ArgBitFlagDest(&flags, DNDC_FRAGMENT_ONLY),
-                .help = "Produce an html fragment instead of a full html document.",
+                .help = "Produce an html fragment instead of a full html "
+                        "document.",
                 .hidden = false,
             },
             {
                 .name = SV("--disallow-attribute-directive-overlap"),
                 .altname1 = SV("--dado"),
                 .dest = ArgBitFlagDest(&flags, DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP),
-                .help = "Error if an attribute name overlaps with a directive name.",
+                .help = "Error if an attribute name overlaps with a directive "
+                        "name.",
                 .hidden = true,
             },
             {
@@ -328,9 +343,9 @@ main(int argc, char**argv){
                         .type_name = LS("string"),
                     },
                 },
-                .help = "The following arguments will be appened to a js array that will "
-                        "be available as Args. This overwrites any argument given by --jsargs. "
-                        "Use one or the other.",
+                .help = "The following arguments will be appened to a js array "
+                        "that will be available as Args. This overwrites any "
+                        "argument given by --jsargs. Use one or the other.",
                 .hidden = true,
                 .max_num = 0xffff,
                 .append_proc = &append_arg,
@@ -362,7 +377,8 @@ main(int argc, char**argv){
             },
             [OPEN_SOURCE] = {
                 .name = SV("--open-source-credits"),
-                .help = "Print out attribution of open source libraries used and exit.",
+                .help = "Print out attribution of open source libraries used "
+                        "and exit.",
             },
             [FISH] = {
                 .name = SV("--fish-completions"),
@@ -370,7 +386,8 @@ main(int argc, char**argv){
                 .hidden = true,
             },
         };
-        const char* version = "dndc version " DNDC_VERSION ". Compiled " __DATE__ " " __TIME__ ".";
+        const char* version = "dndc version " DNDC_VERSION ". Compiled " 
+                              __DATE__ " " __TIME__ ".";
         ArgParser argparser = {
             .name = argc? argv[0]: "dndc",
             .description = "A .dnd to .html parser and compiler.",
@@ -382,7 +399,7 @@ main(int argc, char**argv){
             .early_out.count = arrlen(early_args),
             .styling.plain = !isatty(fileno(stdout)),
         };
-        Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
+        Args args = argc?(Args){argc-1, (const char*const*)argv+1}:(Args){0, 0};
         switch(check_for_early_out_args(&argparser, &args)){
             case HELP:{
                 int columns = get_terminal_size().columns;
@@ -419,7 +436,18 @@ main(int argc, char**argv){
             return e;
         }
         if((flags & DNDC_OUTPUT_EXPANDED_DND) && (flags & DNDC_REFORMAT_ONLY)){
-            fprintf(stderr, "Do not specify both --expand and --format. Only one is allowed\n");
+            fprintf(stderr, "Do not specify both --expand and --format. "
+                            "Only one is allowed\n");
+            return 1;
+        }
+        if((flags & DNDC_OUTPUT_EXPANDED_DND) && (flags & DNDC_OUTPUT_MD)){
+            fprintf(stderr, "Do not specify both --expand and --md. "
+                            "Only one is allowed\n");
+            return 1;
+        }
+        if((flags & DNDC_REFORMAT_ONLY) && (flags & DNDC_OUTPUT_MD)){
+            fprintf(stderr, "Do not specify both --format and --md. "
+                            "Only one is allowed\n");
             return 1;
         }
         if(!cleanup)

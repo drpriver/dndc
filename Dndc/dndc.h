@@ -19,7 +19,7 @@
 
 #define DNDC_MAJOR 0
 #define DNDC_MINOR 16
-#define DNDC_MICRO 0
+#define DNDC_MICRO 1
 #define DNDC_STRINGIFY_IMPL(x) #x
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
 
@@ -670,6 +670,11 @@ enum DndcFlags {
     // ------------------------
     // After resolving imports and executing user scripts, output as a single
     // file .dnd file instead of html.
+
+    DNDC_OUTPUT_MD = 0x80000,
+    // ----------------------
+    // Do a best effort attempt at converting the tree to markdown. It won't be
+    // 100% accurate. <script> and <style> tags will not be outputted.
 };
 
 // --------------------

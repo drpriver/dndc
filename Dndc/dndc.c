@@ -643,6 +643,26 @@ run_the_dndc(uint64_t flags,
             *outstring = msb_detach_ls(&output_sb);
         }
     }
+    else if(!wasm &&(flags & DNDC_OUTPUT_MD)){
+        MStringBuilder output_sb = {.allocator = get_mallocator()};
+        uint64_t before_render = get_t();
+        int e = render_md(&ctx, &output_sb);
+        if(e){
+            msb_destroy(&output_sb);
+            result = e;
+            goto cleanup;
+        }
+        uint64_t after_render = get_t();
+        report_time(&ctx, SV("rendering to .md took: "), after_render - before_render);
+        if(flags & DNDC_DONT_WRITE){
+            msb_destroy(&output_sb);
+            goto success;
+        }
+        else {
+            assert(outstring);
+            *outstring = msb_detach_ls(&output_sb);
+        }
+    }
     // Render the actual document into a string as html.
     else {
         MStringBuilder output_sb = {.allocator = get_mallocator()};
@@ -764,6 +784,7 @@ run_the_dndc(uint64_t flags,
 #include "dndc_context.c"
 #include "dndc_file_cache.c"
 #include "dndc_logging.c"
+#include "dndc_md.c"
 #include "Allocators/allocator.c"
 
 #if defined(WASM) || defined(NO_QJS)
