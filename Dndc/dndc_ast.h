@@ -518,7 +518,9 @@ dndc_node_get_parent(DndcContext*, DndcNodeHandle);
     apply(JS,             25)\
     apply(DETAILS,        26)\
     apply(META,           27)\
-    apply(INVALID,        28)\
+    apply(DEFLIST,        28)\
+    apply(DEF,            29)\
+    apply(INVALID,        30)\
 
 // Manually expand for better documentation
 enum DndcNodeType {
@@ -553,7 +555,9 @@ enum DndcNodeType {
     DNDC_NODE_TYPE_JS           = 25,
     DNDC_NODE_TYPE_DETAILS      = 26,
     DNDC_NODE_TYPE_META         = 27,
-    DNDC_NODE_TYPE_INVALID      = 28,
+    DNDC_NODE_TYPE_DEFLIST      = 28,
+    DNDC_NODE_TYPE_DEF          = 29,
+    DNDC_NODE_TYPE_INVALID      = 30,
 };
 
 // Check that the above is correct.

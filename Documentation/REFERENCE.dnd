@@ -175,6 +175,31 @@
     Note that the top level of the document is implicitly an <code>md</code>
     node.
 
+  <code>:</code><code>:deflist</code> and <code>:</code>:def</code>::md .node #id(deflist)
+
+    <code>deflist</code> nodes form a definition list, which corresponds to the
+    <dl> html tag. The contents of a <code>deflist</code> should be <code>def</code> nodes. The contents of a <code>def</code> node is parsed
+    in the same manner as the <code>md</code> node.
+    ::div .side-by-side
+      Input::pre .leftside #noid
+        Game Terms::deflist
+          d6::def
+            A six-sided die.
+          Space::def
+            A square on the game board.
+          Hit Points::def
+            How many points of damage a unit can take before
+            it is removed from the board.
+      Rendered::md .rightside #noid
+        Game Terms::deflist #noid
+          d6::def #noid
+            A six-sided die.
+          Space::def #noid
+            A square on the game board.
+          Hit Points::def #noid
+            How many points of damage a unit can take before
+            it is removed from the board.
+
   <code>:</code><code>:div</code>::md .node #id(div)
     The <code>div</code> node is useful for creating wrapper nodes. Plain lines
     within the div node are not parsed specially and are outputted as plain lines

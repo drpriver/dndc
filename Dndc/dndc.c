@@ -3100,7 +3100,9 @@ dndc_node_tree_repr_inner(DndcContext* ctx, NodeHandle handle, int depth, MStrin
         case NODE_CONTAINER:
         case NODE_INVALID:
         case NODE_QUOTE:
-        case NODE_DIV:{
+        case NODE_DIV:
+        case NODE_DEFLIST:
+        case NODE_DEF:{
             MSB_FORMAT(sb, " '", node->header, "' ");
             RARRAY_FOR_EACH(StringView, c, node->classes){
                 MSB_FORMAT(sb, ".", *c, " ");

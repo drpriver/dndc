@@ -386,7 +386,7 @@ main(int argc, char**argv){
                 .hidden = true,
             },
         };
-        const char* version = "dndc version " DNDC_VERSION ". Compiled " 
+        const char* version = "dndc version " DNDC_VERSION ". Compiled "
                               __DATE__ " " __TIME__ ".";
         ArgParser argparser = {
             .name = argc? argv[0]: "dndc",
@@ -701,6 +701,8 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
         case NODE_TOC:
         case NODE_KEYVALUE:
         case NODE_IMGLINKS:
+        case NODE_DEFLIST:
+        case NODE_DEF:
         case NODE_DETAILS:
         case NODE_MD:
         case NODE_CONTAINER:

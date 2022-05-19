@@ -163,12 +163,12 @@ static const uint16_t ZERO_TO_NINETY_NINE[] = {
 _Static_assert(sizeof(ZERO_TO_NINETY_NINE)==200, "");
 
 //
-// buff: 
+// buff:
 //   A pointer to a buffer that is at least 10 bytes long.
-// value: 
+// value:
 //   the value to be turned into a string.
 //
-// Returns: 
+// Returns:
 //   A pointer into the buffer that is the first character of the string.
 //   Note that this is not necessarily the first character of the buffer.
 //   You can get the length of the written string via pointer arithmetic.

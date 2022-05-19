@@ -1,5 +1,9 @@
+ifeq ($(origin CC), default)
 CC=clang $(ARCHES)
+endif
+ifeq ($(origin CXX), default)
 CXX=clang++ $(ARCHES)
+endif
 PYTHON:=python3
 PYCFLAGS:=-F/Library/Frameworks -isystem /Library/Frameworks/Python.framework/Headers
 ifeq ($(shell arch),i386)

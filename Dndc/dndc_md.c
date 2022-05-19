@@ -36,7 +36,7 @@ render_md(DndcContext* ctx, MStringBuilder* sb){
 }
 
 // returns how much the header depth has increased.
-static 
+static
 int
 write_md_header(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth){
     Node* node = get_node(ctx, handle);
@@ -64,6 +64,29 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
                 if(err) return err;
                 msb_write_char(sb, '\n');
             }
+        }return 0;
+        case NODE_DEFLIST:{
+            header_depth += write_md_header(ctx, handle, sb, header_depth);
+            msb_write_literal(sb, "<dl>\n");
+            NODE_CHILDREN_FOR_EACH(ch, node){
+                int err = render_node_as_md(ctx, *ch, sb, header_depth);
+                if(err) return err;
+                msb_write_char(sb, '\n');
+            }
+            msb_write_literal(sb, "</dl>\n");
+        }return 0;
+        case NODE_DEF:{
+            msb_write_literal(sb, "<dt>");
+            int err = write_md_string(ctx, handle, sb);
+            if(err) return err;
+            msb_write_literal(sb, "</dt>\n");
+            msb_write_literal(sb, "<dd>\n");
+            NODE_CHILDREN_FOR_EACH(ch, node){
+                int err = render_node_as_md(ctx, *ch, sb, header_depth);
+                if(err) return err;
+                msb_write_char(sb, '\n');
+            }
+            msb_write_literal(sb, "</dd>\n");
         }return 0;
         case NODE_DIV:{
             header_depth += write_md_header(ctx, handle, sb, header_depth);
@@ -189,11 +212,11 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
     return DNDC_ERROR_INVALID_TREE;
 }
 
-static 
-warn_unused 
-int 
+static
+warn_unused
+int
 write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
-    // This is a slow character by character implementation, but 
+    // This is a slow character by character implementation, but
     // this is a rarely used piece. We can SIMD it later.
     //
     // We need to scan for links and convert them to markdown links.
@@ -275,37 +298,37 @@ write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
     }
     return 0;
 }
-static 
-warn_unused 
-int 
+static
+warn_unused
+int
 write_md_bullets(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth){
     (void)ctx, (void)handle, (void)sb, (void)header_depth;
     return DNDC_ERROR_FILE_READ;
 }
-static 
-warn_unused 
-int 
+static
+warn_unused
+int
 write_md_list(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth){
     (void)ctx, (void)handle, (void)sb, (void)header_depth;
     return DNDC_ERROR_FILE_READ;
 }
-static 
-warn_unused 
-int 
+static
+warn_unused
+int
 write_md_keyvalue(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth){
     (void)ctx, (void)handle, (void)sb, (void)header_depth;
     return DNDC_ERROR_FILE_READ;
 }
-static 
-warn_unused 
-int 
+static
+warn_unused
+int
 write_md_table(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth){
     (void)ctx, (void)handle, (void)sb, (void)header_depth;
     return DNDC_ERROR_FILE_READ;
 }
-static 
-warn_unused 
-int 
+static
+warn_unused
+int
 write_md_raw(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
     (void)ctx, (void)handle, (void)sb;
     return DNDC_ERROR_FILE_READ;

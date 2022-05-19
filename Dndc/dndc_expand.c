@@ -132,6 +132,8 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
             NODE_LOG_ERROR(ctx,n, "Node escaped to top level: ", quoted(LS_to_SV(NODENAMES[n->type])));
             return DNDC_ERROR_INVALID_TREE;
         case NODE_META:
+        case NODE_DEFLIST:
+        case NODE_DEF:
         case NODE_DETAILS:
         case NODE_MD:
         case NODE_DIV:
@@ -173,6 +175,8 @@ int
 expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
     int result = 0;
     switch(n->type){
+        case NODE_DEFLIST:
+        case NODE_DEF:
         case NODE_DETAILS:
         case NODE_MD:
             result = expand_md_body(ctx, n, indent, msb, node_depth);

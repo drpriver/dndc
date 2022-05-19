@@ -755,6 +755,8 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
             return parse_table_node(ctx, parent_handle, indentation);
         case NODE_KEYVALUE:
             return parse_keyvalue_node(ctx, parent_handle, indentation);
+        case NODE_DEFLIST:
+        case NODE_DEF:
         case NODE_DETAILS:
         case NODE_MD:
             return parse_md_node(ctx, parent_handle, indentation);
@@ -1172,7 +1174,7 @@ PARSEFUNC(parse_md_node){
     // instead of asserting in htmlgen.
     if(0){
         Node* parent = get_node(ctx, parent_handle);
-        assert(parent->type == NODE_MD || parent->type == NODE_DETAILS);
+        assert(parent->type == NODE_MD || parent->type == NODE_DETAILS || parent->type == NODE_DEF || parent->type == NODE_DEFLIST);
     }
     enum MDSTATE {
         NONE = 0,

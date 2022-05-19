@@ -274,6 +274,8 @@ build_toc_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
         case NODE_LIST:
         case NODE_KEYVALUE:
         case NODE_IMGLINKS:
+        case NODE_DEFLIST:
+        case NODE_DEF:
         case NODE_DETAILS:
         case NODE_MD:
         case NODE_QUOTE:
@@ -1459,6 +1461,60 @@ RENDERFUNC(DETAILS){
         if(e) return e;
     }
     msb_write_literal(sb, "</div>\n</details>\n");
+    return 0;
+}
+RENDERFUNC(DEFLIST){
+    Node* node = get_node(ctx, handle);
+    if(node->header.length){
+        header_depth++;
+        int e = write_header(ctx, sb, handle, header_depth);
+        if(e) return e;
+        msb_write_char(sb, '\n');
+    }
+    msb_write_literal(sb, "<dl");
+    write_classes(sb, node);
+    if(!node->header.length){
+        StringView id = node_get_id(ctx, handle);
+        if(id.length){
+            MSB_FORMAT(sb, SV(" id=\""));
+            msb_write_kebab(sb, id.text, id.length);
+            msb_write_literal(sb, "\"");
+        }
+    }
+    msb_write_literal(sb, ">\n");
+    NODE_CHILDREN_FOR_EACH(it, node){
+        int e = render_node(ctx, sb, *it, header_depth, node_depth);
+        if(e) return e;
+    }
+    msb_write_literal(sb, "</dl>\n");
+    return 0;
+}
+RENDERFUNC(DEF){
+    Node* node = get_node(ctx, handle);
+    msb_write_literal(sb, "<dt");
+    StringView id = node_get_id(ctx, handle);
+    if(id.length){
+        MSB_FORMAT(sb, SV(" id=\""));
+        msb_write_kebab(sb, id.text, id.length);
+        msb_write_literal(sb, "\"");
+    }
+    // FIXME: ambiguous if class applies to the
+    // dt or the dd or both. probably both.
+    write_classes(sb, node);
+    msb_write_char(sb, '>');
+    if(node->header.length){
+        int e = write_link_escaped_str(ctx, sb, node->header.text, node->header.length, handle);
+        if(e) return e;
+    }
+    msb_write_literal(sb, "</dt>\n");
+    msb_write_literal(sb, "<dd");
+    write_classes(sb, node);
+    msb_write_literal(sb, ">\n");
+    NODE_CHILDREN_FOR_EACH(it, node){
+        int e = render_node(ctx, sb, *it, header_depth, node_depth);
+        if(e) return e;
+    }
+    msb_write_literal(sb, "</dd>\n");
     return 0;
 }
 RENDERFUNC(META){

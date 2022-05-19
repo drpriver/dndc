@@ -429,7 +429,7 @@ def do_cursor(cursor, source_files:List[str], identifiers:dict) -> None:
         if cursor.kind == CursorKind.ENUM_CONSTANT_DECL:
             if not cursor.semantic_parent.spelling:
                 kind = Kinds.anonenum
-            
+
         identifiers[cursor.spelling] = Ident(kind, cursor.spelling, normpath(cursor.location.file.name), cursor.location.line)
 
     if should_tag_children(cursor):

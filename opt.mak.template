@@ -14,6 +14,10 @@ INSTALLDIR?=/usr/local/bin
 # set the default target (what is built when you type a bare `make`)
 .DEFAULT_GOAL:=dndc
 
+# You can set your C compiler here. Defaults to gcc on linux and
+# clang elsewhere.
+# CC=
+
 # Windows people will want to set the right pyflags here
 # See windows.mak for what these are.
 # PYCFLAGS=

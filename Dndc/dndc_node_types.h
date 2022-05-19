@@ -34,7 +34,9 @@
     apply(JS,             25)\
     apply(DETAILS,        26)\
     apply(META,           27)\
-    apply(INVALID,        28)\
+    apply(DEFLIST,        28)\
+    apply(DEF,            29)\
+    apply(INVALID,        30)\
 
 enum NodeType{
     NODE_MD           =  0,
@@ -65,7 +67,9 @@ enum NodeType{
     NODE_JS           = 25,
     NODE_DETAILS      = 26,
     NODE_META         = 27,
-    NODE_INVALID      = 28,
+    NODE_DEFLIST      = 28,
+    NODE_DEF          = 29,
+    NODE_INVALID      = 30,
 };
 typedef enum NodeType NodeType;
 
@@ -115,6 +119,9 @@ NODEALIASES[] = {
     {SV("quote"),        NODE_QUOTE},
     {SV("details"),      NODE_DETAILS},
     {SV("meta"),         NODE_META},
+    {SV("dl"),           NODE_DEFLIST},
+    {SV("deflist"),      NODE_DEFLIST},
+    {SV("def"),          NODE_DEF},
 };
 
 enum {RAW_NODE_JS_INDEX = 5 };
@@ -164,6 +171,8 @@ NODETYPE_TO_NODE_ALIASES[NODE_INVALID+1] = {
      [NODE_JS]          = SV("js"),
      [NODE_DETAILS]     = SV("details"),
      [NODE_META]        = SV("meta"),
+     [NODE_DEFLIST]     = SV("deflist"),
+     [NODE_DEF]         = SV("def"),
 };
 
 enum {DNDC_MAX_NODE_DEPTH=100};

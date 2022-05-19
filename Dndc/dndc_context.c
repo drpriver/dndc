@@ -380,6 +380,8 @@ gather_anchor(DndcContext* ctx, NodeHandle handle, int node_depth){
         case NODE_LIST:
         case NODE_KEYVALUE:
         case NODE_IMGLINKS:
+        case NODE_DEFLIST:
+        case NODE_DEF:
         case NODE_DETAILS:
         case NODE_MD:
         case NODE_QUOTE:

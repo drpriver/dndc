@@ -104,7 +104,11 @@ list:
 		| egrep -v \
 			-e '^[^[:alnum:]]' \
 			-e '^$@$$' \
-			-e '.(dnd|dep|[ch])$$'
+			-e '.(dnd|dep|[ch])$$' \
+			-e '^(Bin|Depends|Objs|VendObjs|Generated|FuzzCorpus)' \
+			-e '^(RenderedExamples|RenderedDocs|TestResults)' \
+			-e '^(Dndc/)'
+			
 endif
 
 $(DOCDIR)/%.h.html: %.h | $(DOCDIR)
