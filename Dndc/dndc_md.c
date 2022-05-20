@@ -17,9 +17,9 @@ warn_unused
 int
 render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth);
 static warn_unused int write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
-static warn_unused int write_md_bullets(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth);
-static warn_unused int write_md_list(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth);
-static warn_unused int write_md_keyvalue(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth);
+static warn_unused int write_md_bullets(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth);
+static warn_unused int write_md_list(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth);
+static warn_unused int write_md_keyvalue(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
 static warn_unused int write_md_table(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth);
 static warn_unused int write_md_raw(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
 
@@ -32,6 +32,7 @@ render_md(DndcContext* ctx, MStringBuilder* sb){
         LOG_ERROR(ctx, ctx->filename, -1, -1, "Request to render tree to markdown without a root node");
         return DNDC_ERROR_INVALID_TREE;
     }
+    msb_write_literal(sb, "<!-- This md file was generated from a dnd file. -->\n");
     return render_node_as_md(ctx, root, sb, 2);
 }
 
@@ -42,11 +43,11 @@ write_md_header(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int hea
     Node* node = get_node(ctx, handle);
     StringView header = node->header;
     if(!header.length) return 0;
-    msb_write_nchar(sb, '#', header_depth);
+    MSB_FORMAT(sb, "<h", header_depth, ">");
     int err = write_md_string(ctx, handle, sb);
     (void)err; // can't fail.
     // msb_write_str(sb, header.text, header.length);
-    msb_write_char(sb, '\n');
+    MSB_FORMAT(sb, "</h", header_depth, ">");
     return 1;
 }
 
@@ -126,6 +127,10 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
             NODE_LOG_ERROR(ctx, node, "Unexpected table row");
             return DNDC_ERROR_INVALID_TREE;
         case NODE_STYLESHEETS:
+            // some markdowns allow inline style tags.
+            msb_write_literal(sb, "<style>\n");
+            (void)write_md_raw(ctx, handle, sb);
+            msb_write_literal(sb, "</style>\n");
             return 0; // ignore
         case NODE_LINKS:
             return 0; // ignore
@@ -137,7 +142,7 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
             return 0; // punt
         case NODE_BULLETS:{
             header_depth += write_md_header(ctx, handle, sb, header_depth);
-            int err = write_md_bullets(ctx, handle, sb, header_depth);
+            int err = write_md_bullets(ctx, handle, sb, 0);
             if(err) return err;
         }return 0;
         case NODE_RAW:{
@@ -155,7 +160,7 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
         }return 0;
         case NODE_LIST:{
             header_depth += write_md_header(ctx, handle, sb, header_depth);
-            int err = write_md_list(ctx, handle, sb, header_depth);
+            int err = write_md_list(ctx, handle, sb, 0);
             if(err) return err;
         }return 0;
         case NODE_LIST_ITEM:
@@ -163,7 +168,7 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
             return DNDC_ERROR_INVALID_TREE;
         case NODE_KEYVALUE:{
             header_depth += write_md_header(ctx, handle, sb, header_depth);
-            int err = write_md_keyvalue(ctx, handle, sb, header_depth);
+            int err = write_md_keyvalue(ctx, handle, sb);
             if(err) return err;
         }return 0;
         case NODE_KEYVALUEPAIR:
@@ -194,8 +199,9 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
         case NODE_JS:
             return 0;
         case NODE_DETAILS:
-            msb_write_literal(sb, "<details><summary>\n");
-            header_depth += write_md_header(ctx, handle, sb, header_depth);
+            msb_write_literal(sb, "<details><summary>");
+            (void)write_md_string(ctx, handle, sb);
+            // header_depth += write_md_header(ctx, handle, sb, header_depth);
             msb_write_literal(sb, "</summary>\n");
             NODE_CHILDREN_FOR_EACH(ch, node){
                 int err = render_node_as_md(ctx, *ch, sb, header_depth);
@@ -301,37 +307,219 @@ write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
 static
 warn_unused
 int
-write_md_bullets(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth){
-    (void)ctx, (void)handle, (void)sb, (void)header_depth;
-    return DNDC_ERROR_FILE_READ;
+write_md_bullets(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth){
+    int result;
+    Node* node = get_node(ctx, handle);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        Node* li = get_node(ctx, *it);
+        if(li->type != NODE_LIST_ITEM){
+            NODE_LOG_ERROR(ctx, li, "Non list-item child of bullets: ", quoted(LS_to_SV(NODENAMES[li->type])));
+            return DNDC_ERROR_INVALID_TREE;
+        }
+        msb_write_nchar(sb, ' ', 4*depth);
+        switch(depth){
+            case 0:  msb_write_literal(sb, "* "); break;
+            case 1:  msb_write_literal(sb, "+ "); break;
+            default: msb_write_literal(sb, "- "); break;
+        }
+        size_t count = node_children_count(li);
+        if(!count){
+            NODE_LOG_ERROR(ctx, li, "List item must have at least one child.");
+            return DNDC_ERROR_INVALID_TREE;
+        }
+        size_t i = 0;
+        NODE_CHILDREN_FOR_EACH(subitem, li){
+            Node* sub = get_node(ctx, *subitem);
+            if(i == 0){
+                if(sub->type != NODE_STRING){
+                    NODE_LOG_ERROR(ctx, sub, "First list item must be a string, got ", quoted(LS_to_SV(NODENAMES[sub->type])));
+                    return DNDC_ERROR_INVALID_TREE;
+                }
+                (void)write_md_string(ctx, *subitem, sb);
+                msb_write_char(sb, '\n');
+                i++;
+                continue;
+            }
+            if(sub->type == NODE_STRING){
+                msb_write_nchar(sb, ' ', (depth+1)*4);
+                (void)write_md_string(ctx, *subitem, sb);
+                msb_write_char(sb, '\n');
+            }
+            else if(sub->type == NODE_BULLETS){
+                result = write_md_bullets(ctx, *subitem, sb, depth+1);
+                if(result) return result;
+            }
+            else if(sub->type == NODE_LIST){
+                result = write_md_list(ctx, *subitem, sb, depth+1);
+                if(result) return result;
+            }
+            else {
+                NODE_LOG_ERROR(ctx, sub, "List items must contain strings, bullets or lists, got: ", quoted(LS_to_SV(NODENAMES[sub->type])));
+                return DNDC_ERROR_INVALID_TREE;
+            }
+            i++;
+        }
+    }
+    return 0;
 }
 static
 warn_unused
 int
-write_md_list(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth){
-    (void)ctx, (void)handle, (void)sb, (void)header_depth;
-    return DNDC_ERROR_FILE_READ;
+write_md_list(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth){
+    int result;
+    Node* node = get_node(ctx, handle);
+    NODE_CHILDREN_FOR_EACH(it, node){
+        Node* li = get_node(ctx, *it);
+        if(li->type != NODE_LIST_ITEM){
+            NODE_LOG_ERROR(ctx, li, "Non list-item child of bullets: ", quoted(LS_to_SV(NODENAMES[li->type])));
+            return DNDC_ERROR_INVALID_TREE;
+        }
+        msb_write_nchar(sb, ' ', 4*depth);
+        msb_write_literal(sb, "1. ");
+        size_t count = node_children_count(li);
+        if(!count){
+            NODE_LOG_ERROR(ctx, li, "List item must have at least one child.");
+            return DNDC_ERROR_INVALID_TREE;
+        }
+        size_t i = 0;
+        NODE_CHILDREN_FOR_EACH(subitem, li){
+            Node* sub = get_node(ctx, *subitem);
+            if(i == 0){
+                if(sub->type != NODE_STRING){
+                    NODE_LOG_ERROR(ctx, sub, "First list item must be a string, got ", quoted(LS_to_SV(NODENAMES[sub->type])));
+                    return DNDC_ERROR_INVALID_TREE;
+                }
+                (void)write_md_string(ctx, *subitem, sb);
+                msb_write_char(sb, '\n');
+                i++;
+                continue;
+            }
+            if(sub->type == NODE_STRING){
+                msb_write_nchar(sb, ' ', (depth+1)*4);
+                (void)write_md_string(ctx, *subitem, sb);
+                msb_write_char(sb, '\n');
+            }
+            else if(sub->type == NODE_BULLETS){
+                result = write_md_bullets(ctx, *subitem, sb, depth+1);
+                if(result) return result;
+            }
+            else if(sub->type == NODE_LIST){
+                result = write_md_list(ctx, *subitem, sb, depth+1);
+                if(result) return result;
+            }
+            else {
+                NODE_LOG_ERROR(ctx, sub, "List items must contain strings, bullets or lists, got: ", quoted(LS_to_SV(NODENAMES[sub->type])));
+                return DNDC_ERROR_INVALID_TREE;
+            }
+            i++;
+        }
+    }
+    return 0;
 }
 static
 warn_unused
 int
-write_md_keyvalue(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth){
-    (void)ctx, (void)handle, (void)sb, (void)header_depth;
-    return DNDC_ERROR_FILE_READ;
+write_md_keyvalue(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
+    // Most markdowns don't support tables without headers, so just use
+    // an html table.
+    msb_write_literal(sb, "<table>\n<tbody>\n");
+    Node* node = get_node(ctx, handle);
+    NODE_CHILDREN_FOR_EACH(ch, node){
+        Node* child = get_node(ctx, *ch);
+        if(child->type != NODE_KEYVALUEPAIR){
+            NODE_LOG_ERROR(ctx, child, "Expected keyvaluepair child of keyvalue node when rendering md");
+            return DNDC_ERROR_INVALID_TREE;
+        }
+        if(node_children_count(child) != 2){
+            NODE_LOG_ERROR(ctx, child, "Expected two string children of keyvaluepair node when rendering md");
+            return DNDC_ERROR_INVALID_TREE;
+        }
+        NodeHandle kh = node_children(child)[0];
+        NodeHandle vh = node_children(child)[1];
+        Node* key = get_node(ctx, kh);
+        Node* value = get_node(ctx, vh);
+        if(key->type != NODE_STRING){
+            NODE_LOG_ERROR(ctx, key, "Expected two string children of keyvaluepair node when rendering md");
+            return DNDC_ERROR_INVALID_TREE;
+        }
+        if(value->type != NODE_STRING){
+            NODE_LOG_ERROR(ctx, value, "Expected two string children of keyvaluepair node when rendering md");
+            return DNDC_ERROR_INVALID_TREE;
+        }
+        int err;
+        msb_write_literal(sb, "<tr>\n<td>");
+        err = write_md_string(ctx, kh, sb);
+        if(err) return err;
+        msb_write_literal(sb, "</td>\n<td>");
+        err = write_md_string(ctx, vh, sb);
+        if(err) return err;
+        msb_write_literal(sb, "</td>\n</tr>\n");
+    }
+    msb_write_literal(sb, "</tbody>\n</table>\n");
+    return 0;
 }
 static
 warn_unused
 int
 write_md_table(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth){
-    (void)ctx, (void)handle, (void)sb, (void)header_depth;
-    return DNDC_ERROR_FILE_READ;
+    // Original markdown doesn't have table support, so just use an html
+    // table anyway.
+    msb_write_literal(sb, "<table>\n  <thead>\n");
+    Node* node = get_node(ctx, handle);
+    size_t count = node_children_count(node);
+    NodeHandle* children = node_children(node);
+    if(count){
+        Node* child = get_node(ctx, children[0]);
+        if(unlikely(child->type != NODE_TABLE_ROW)){
+            NODE_LOG_ERROR(ctx, child, LS("children of a table ought to be table rows..."));
+            return DNDC_ERROR_INVALID_TREE;
+        }
+        // inline rendering table row here so we can do heads
+        msb_write_literal(sb, "<tr>\n");
+        NODE_CHILDREN_FOR_EACH(it, child){
+            msb_write_literal(sb, "<th>");
+            int e = render_node_as_md(ctx, *it, sb, header_depth+1);
+            if(e) return e;
+            msb_write_literal(sb, "</th>\n");
+        }
+        msb_write_literal(sb, "</tr>\n");
+    }
+    msb_write_literal(sb, "</thead>\n<tbody>\n");
+    for(size_t i = 1; i < count; i++){
+        NodeHandle ch = children[i];
+        Node* child = get_node(ctx, ch);
+        if(unlikely(child->type != NODE_TABLE_ROW)){
+            NODE_LOG_ERROR(ctx, child, LS("children of a table ought to be table rows..."));
+            return DNDC_ERROR_INVALID_TREE;
+        }
+        msb_write_literal(sb, "<tr>\n");
+        NODE_CHILDREN_FOR_EACH(it, child){
+            msb_write_literal(sb, "<td>");
+            int e = render_node_as_md(ctx, *it, sb, header_depth+1);
+            if(e) return e;
+            msb_write_literal(sb, "</td>\n");
+        }
+        msb_write_literal(sb, "</tr>\n");
+    }
+    msb_write_literal(sb, "</tbody>\n</table>\n");
+    return 0;
 }
 static
 warn_unused
 int
 write_md_raw(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
-    (void)ctx, (void)handle, (void)sb;
-    return DNDC_ERROR_FILE_READ;
+    // trust the user
+    Node* node = get_node(ctx, handle);
+    NODE_CHILDREN_FOR_EACH(ch, node){
+        Node* child = get_node(ctx, *ch);
+        if(child->type != NODE_STRING){
+            continue;
+        }
+        if(child->header.length)
+            msb_write_str(sb, child->header.text, child->header.length);
+        msb_write_char(sb, '\n');
+    }
+    return 0;
 }
 
 #ifdef __clang__
