@@ -403,9 +403,14 @@ static
 QJSContext*_Nullable
 new_qjs_ctx(QJSRuntime* rt, DndcContext* ctx, LongString jsargs){
     QJSContext* jsctx = NULL;
-    jsctx = QJS_NewContext(rt);
+    jsctx = QJS_NewContextRaw(rt);
     if(!jsctx)
         goto fail;
+    QJS_AddIntrinsicBaseObjects(jsctx);
+    QJS_AddIntrinsicEval(jsctx);
+    QJS_AddIntrinsicRegExp(jsctx);
+    QJS_AddIntrinsicJSON(jsctx);
+    QJS_AddIntrinsicMapSet(jsctx);
     // setup DndcContext class
     {
         QJSValue proto = QJS_NewObject(jsctx); // new ref
