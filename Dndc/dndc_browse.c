@@ -2,7 +2,7 @@
 #include "dndc_local_server.h"
 #include "Utils/argument_parsing.h"
 #include "Utils/term_util.h"
-#include "Utils/murmur_hash.h"
+#include "Utils/hash_func.h"
 #include "Utils/thread_utils.h"
 #include "Utils/get_input.h"
 #include "Utils/str_util.h"
@@ -96,7 +96,7 @@ main(int argc, char** argv){
         #endif
         if(!cwd) return 1;
         size_t cwdlen = strlen(cwd);
-        port = (3000 + murmur3_32((const uint8_t*)cwd, cwdlen, 0x1337)) & 0x7fff;
+        port = (3000 + hash_align1(cwd, cwdlen)) & 0x7fff;
         free(cwd);
     }
 

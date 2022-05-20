@@ -9,7 +9,7 @@
 // We can also use zero length strings as empty keys.
 #include <stdint.h>
 #include "Utils/long_string.h"
-#include "Utils/murmur_hash.h"
+#include "Utils/hash_func.h"
 #include "Allocators/allocator.h"
 
 typedef struct StringTable StringTable;
@@ -46,7 +46,7 @@ string_table_set(StringTable* table, StringView key, StringView value){
                 if(old_keys[i].length){
                     StringView k = old_keys[i];
                     StringView v = old_values[i];
-                    uint32_t hash = murmur3_32((const uint8_t*)k.text, k.length, 0x56ee95b8);
+                    uint32_t hash = hash_align1(k.text, k.length);
                     uint32_t idx = fast_reduce32(hash, new_cap);
                     // We know that none of the keys are equal, so just find an empty slot.
                     while(new_keys[idx].length){
@@ -65,7 +65,7 @@ string_table_set(StringTable* table, StringView key, StringView value){
         table->capacity_ = new_cap;
     }
     size_t cap = table->capacity_;
-    uint32_t hash = murmur3_32((const uint8_t*)key.text, key.length, 0x56ee95b8);
+    uint32_t hash = hash_align1(key.text, key.length);
     StringView* keys = table->keys;
     StringView* values = keys + cap;
     uint32_t idx = fast_reduce32(hash, cap);
@@ -93,7 +93,7 @@ const StringView* _Nullable
 string_table_get(StringTable* table, StringView key){
     if(!table->count_) return NULL;
     size_t cap = table->capacity_;
-    uint32_t hash = murmur3_32((const uint8_t*)key.text, key.length, 0x56ee95b8);
+    uint32_t hash = hash_align1(key.text, key.length);
     const StringView* keys = table->keys;
     const StringView* values = keys + cap;
     uint32_t idx = fast_reduce32(hash, cap);

@@ -7,7 +7,7 @@
 #include "dndc_file_cache.h"
 #include "Utils/file_util.h"
 #include "Utils/base64.h"
-#include "Utils/murmur_hash.h"
+#include "Utils/hash_func.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -89,7 +89,7 @@ FileCache_make_key(StringView sv){
     result.length = sv.length;
     result.last_eight_chars = 0;
     memcpy(&result.last_eight_chars, sv.text, sv.length >= 8? 8 : sv.length);
-    result.hash = murmur3_32((const uint8_t*)sv.text, sv.length, 0xd9d870de);
+    result.hash = hash_align1(sv.text, sv.length);
     return result;
 }
 

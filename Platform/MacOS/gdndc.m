@@ -15,7 +15,7 @@
 #import "Utils/msb_format.h"
 #import "Dndc/dndc_funcs.h"
 #import "Dndc/dndc_credits.h"
-#import "Utils/murmur_hash.h"
+#import "Utils/hash_func.h"
 #define LOGIT(...) NSLog(@ "%d: " #__VA_ARGS__ "= %@", __LINE__, __VA_ARGS__)
 // Convenience macro for writing inline javascript without a million quotes.
 // Note that you need to semi-colon terminate all of your lines.
@@ -87,7 +87,7 @@ cache_watch_file(void* cache_, StringView path){
         NSLog(@"Not watching invalid path");
         return;
     }
-    uint64_t hash = murmur3_32((const uint8_t*)path.text, path.length, 1107845655llu);
+    uint64_t hash = hash_align1(path.text, path.length);
     uint64_t last_eight = 0;
     const char* end = path.text + path.length;
     size_t length = path.length >= 8? 8 : path.length;

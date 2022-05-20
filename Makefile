@@ -22,8 +22,6 @@ $(DOCDIR)/gui-manual.html: PyDndEdit/Manual.dnd
 	$(DNDC) $< -o $@ -d $(DEPDIR)/gui-manual.dep
 $(DOCDIR)/index.html: Documentation/index.dnd
 	$(DNDC) $< -o $@ -d $(DEPDIR)/docs-index.dep
-$(DOCDIR)/dndc.html: Dndc/jsdoc.dnd Dndc/dndc.h
-	$(DNDC) Dndc/jsdoc.dnd -o $@ -d $(DEPDIR)/dndc.html.dep --args dndc.h 'Dndc API'
 
 .PHONY: docs
 DOCS=$(addprefix $(DOCDIR)/,OVERVIEW.html REFERENCE.html jsdoc.html changelog.html gui-manual.html index.html dndc.html)

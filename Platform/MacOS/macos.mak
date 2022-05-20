@@ -7,7 +7,7 @@ endif
 PYTHON:=python3
 PYCFLAGS:=-F/Library/Frameworks -isystem /Library/Frameworks/Python.framework/Headers
 ifeq ($(shell arch),i386)
-ARCHES?=-arch x86_64
+ARCHES?=-arch x86_64 -msse4.2
 else
 ARCHES?=-arch arm64
 endif
