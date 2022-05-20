@@ -1,0 +1,22 @@
+Changelog::kv
+  created: 2022-03-11T01:00:00Z
+  punted:  2022-04-18T16:13:34Z
+  wontfix: 2022-05-20T22:31:17Z
+Created Mar 10, 2022, 08:00PM::md .update
+Summary::md .summary
+  There’s a nutso bananas protocol that you can put
+  <code>javascript:alert(1)</code> in hrefs and it will execute when clicked!
+  This is so ridiculous!
+
+Punted Apr 18, 2022, 12:13PM::md .update
+  I think the solution is to use CSP:
+  https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
+
+  It’s non-trivial to detect these as the string can be html-entity encoded.
+  For example:
+
+  ::pre
+    &#106;avascript&#58; window.alert(1);
+WontFix May 20, 2022, 06:31PM::md .update
+  But this should still be a bug as it means the <code>INPUT_IS_UNTRUSTED</code>
+  flag is not foolproof.
