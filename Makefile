@@ -128,3 +128,6 @@ CDOCS=$(addprefix $(DOCDIR)/,$(addsuffix .html,$(filter-out $(NODOC),$(wildcard 
 cdocs: $(CDOCS) $(DOCDIR)/cdocindex.html
 $(DOCDIR)/cdocindex.html: | $(CDOCS)
 	$(PYTHON) -m Scripts.make_cdoc_index $(DOCDIR)
+
+README.md: README.dnd | $(BINDIR)/dndc$(EXE)
+	$(BINDIR)/dndc$(EXE) $< -o $@ --md
