@@ -1,7 +1,8 @@
 Changelog::kv
-  created: 2022-03-11T01:00:00Z
-  punted:  2022-04-18T16:13:34Z
-  wontfix: 2022-05-20T22:31:17Z
+  created:  2022-03-11T01:00:00Z
+  punted:   2022-04-18T16:13:34Z
+  wontfix:  2022-05-20T22:31:17Z
+  resolved: 2022-05-20T22:58:12Z
 Created Mar 10, 2022, 08:00PM::md .update
 Summary::md .summary
   There’s a nutso bananas protocol that you can put
@@ -20,3 +21,6 @@ Punted Apr 18, 2022, 12:13PM::md .update
 WontFix May 20, 2022, 06:31PM::md .update
   But this should still be a bug as it means the <code>INPUT_IS_UNTRUSTED</code>
   flag is not foolproof.
+
+Resolved May 20, 2022, 06:58PM::md .update
+  I now check hrefs instead of blindly allowing them

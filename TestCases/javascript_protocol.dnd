@@ -1,0 +1,3 @@
+[<script>alert(1)</script> | foo]
+::links
+  foo = &#106;avascript&#58;alert("1);

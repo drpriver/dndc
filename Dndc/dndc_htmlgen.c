@@ -383,10 +383,11 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                         else {
                             msb_write_literal(sb, "<a href=\"");
                             const StringView* value = find_link_target(ctx, temp_str);
+                            StringView href;
                             if(unlikely(!value)){
                                 if(ctx->flags & DNDC_ALLOW_BAD_LINKS){
                                     HANDLE_LOG_WARNING(ctx, handle, "Unable to resolve link: ", quoted(temp_str));
-                                    msb_write_str(sb, temp_str.text, temp_str.length);
+                                    href = temp_str;
                                 }
                                 else {
                                     HANDLE_LOG_ERROR(ctx, handle, "Unable to resolve link: ", quoted(temp_str));
@@ -395,12 +396,49 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                                 }
                             }
                             else {
-                                const StringView* val = value;
-                                msb_write_str(sb, val->text, val->length);
+                                href = *value;
                             }
+                            href = stripped_view(href.text, href.length);
+                            if(!href.length){
+                                if(ctx->flags & DNDC_ALLOW_BAD_LINKS){
+                                    HANDLE_LOG_WARNING(ctx, handle, "href with no length");
+                                }
+                                else {
+                                    HANDLE_LOG_ERROR(ctx, handle, "href with no length");
+                                    return DNDC_ERROR_LINK;
+                                }
+                            }
+                            if(unlikely(ctx->flags & DNDC_INPUT_IS_UNTRUSTED)){
+                                // <a> tags support inline javascript in the href.
+                                // It's case insensitive and also can be escaped with html
+                                // entities.
+                                // So, we'll reject anything that looks like an html entity
+                                // in column1.
+                                if(href.text[0] == '&'){
+                                    HANDLE_LOG_ERROR(ctx, handle, "html entities not allowed in link: ", quoted(href));
+                                    return DNDC_ERROR_UNTRUSTED;
+                                }
+                                for(size_t i = 0; i < href.length && i < sizeof("javascript:")-1; i++){
+                                    if(href.text[i] == '&'){
+                                        HANDLE_LOG_ERROR(ctx, handle, "html entities not allowed in link: ", quoted(href));
+                                        return DNDC_ERROR_UNTRUSTED;
+                                    }
+                                    if((href.text[i] | 0x20) == "javascript:"[i])
+                                        continue;
+                                    goto L_allowed_href;
+                                }
+                                HANDLE_LOG_ERROR(ctx, handle, "javascript protocol not allowed");
+                                return DNDC_ERROR_UNTRUSTED;
+                            }
+                            L_allowed_href:;
+                            msb_write_str(sb, href.text, href.length);
                             msb_write_literal(sb, "\">");
                             StringView sv = stripped_view(text+i+1, text_length);
-                            msb_write_str(sb, sv.text, sv.length);
+                            // The contents inside the href also need to be escaped.
+                            // So we're forced to do a recursive call here.
+                            int err = write_link_escaped_str_slow(ctx, sb, sv.text, sv.length, handle);
+                            if(err) return err;
+                            // msb_write_str(sb, sv.text, sv.length);
                             msb_write_literal(sb, "</a>");
                         }
                     }

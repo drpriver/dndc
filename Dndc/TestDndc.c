@@ -483,7 +483,7 @@ TestFunction(TestFormatKV){
 
 TestFunction(TestCrashesFixed){
     TESTBEGIN();
-    uint64_t flags = DNDC_FLAGS_NONE
+    uint64_t FLAGS = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
@@ -491,11 +491,11 @@ TestFunction(TestCrashesFixed){
     struct {
         LongString name;
         bool error; // if we expect an error
+        uint64_t flags;
     } cases[] = {
-        {.name=LS("TestCases/case1.dnd"), .error=false},
-        {.name=LS("TestCases/case2.dnd"), .error=true},
-        {.name=LS("TestCases/case3.dnd"), .error=true},
-        {.name=LS("TestCases/case4.dnd"), .error=false},
+        {.name=LS("TestCases/case1.dnd"), .error=false, .flags=FLAGS},
+        {.name=LS("TestCases/case2.dnd"), .error=true, .flags=FLAGS},
+        {.name=LS("TestCases/case3.dnd"), .error=true, .flags=FLAGS},
     };
     for(size_t i = 0; i < arrlen(cases); i++){
         LongString output = {};
@@ -505,7 +505,7 @@ TestFunction(TestCrashesFixed){
         BinaryFileResult data = read_bin_file(cases[i].name.text, allocator);
         TestAssertSuccess(data);
         StringView text = {.length=data.result.n_bytes, .text=data.result.buff};
-        int e = run_the_dndc(flags, SV("TestCases"), text, LS_to_SV(cases[i].name), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        int e = run_the_dndc(cases[i].flags, SV("TestCases"), text, LS_to_SV(cases[i].name), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
         if(cases[i].error){
             TestExpectTrue(e);
         }
@@ -612,6 +612,7 @@ TestFunction(TestUntrusted){
         LS("Examples/KrugsBasement/krugs-basement.dnd"),
         LS("Examples/Rules/mechanics.dnd"),
         LS("Examples/Rules/characters.dnd"),
+        LS("TestCases/javascript_protocol.dnd"),
         // These aren't great tests.
         LS("TestCases/untrusted-imports.dnd"),
         LS("TestCases/untrusted-js.dnd"),
@@ -622,6 +623,7 @@ TestFunction(TestUntrusted){
         SV("Examples/KrugsBasement"),
         SV("Examples/Rules"),
         SV("Examples/Rules"),
+        SV("TestCases"),
         SV("TestCases"),
         SV("TestCases"),
         SV("TestCases"),

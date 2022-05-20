@@ -53,10 +53,10 @@ enum {
     FILE_ERROR = 1,
     // Failure happened when trying to open the file. Use
     // os-specific means to retrieive specific error.
-    FILE_NOT_OPENED = 3,
+    FILE_NOT_OPENED = 2,
     // Allocator failed, operations up to that point succeeded.
     // No further information is available.
-    FILE_RESULT_ALLOC_FAILURE = 2,
+    FILE_RESULT_ALLOC_FAILURE = 3,
 };
 
 // Re: the `native_error` member of the following:
