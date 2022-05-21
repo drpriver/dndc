@@ -3,6 +3,7 @@
 //
 #ifndef DNDC_HTMLGEN_C
 #define DNDC_HTMLGEN_C
+#include "common_macros.h"
 #include "dndc_types.h"
 #include "dndc_funcs.h"
 #include "dndc_logging.h"
@@ -418,6 +419,8 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                                     HANDLE_LOG_ERROR(ctx, handle, "html entities not allowed in link: ", quoted(href));
                                     return DNDC_ERROR_UNTRUSTED;
                                 }
+                                PushDiagnostic();
+                                SuppressShadowing();
                                 for(size_t i = 0; i < href.length && i < sizeof("javascript:")-1; i++){
                                     if(href.text[i] == '&'){
                                         HANDLE_LOG_ERROR(ctx, handle, "html entities not allowed in link: ", quoted(href));
@@ -427,6 +430,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                                         continue;
                                     goto L_allowed_href;
                                 }
+                                PopDiagnostic();
                                 HANDLE_LOG_ERROR(ctx, handle, "javascript protocol not allowed");
                                 return DNDC_ERROR_UNTRUSTED;
                             }
