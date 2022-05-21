@@ -16,12 +16,12 @@ static
 warn_unused
 int
 render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth);
-static warn_unused int write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
+static void write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
 static warn_unused int write_md_bullets(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth);
 static warn_unused int write_md_list(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth);
 static warn_unused int write_md_keyvalue(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
 static warn_unused int write_md_table(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth);
-static warn_unused int write_md_raw(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
+static void write_md_raw(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
 
 static
 warn_unused
@@ -44,8 +44,7 @@ write_md_header(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int hea
     StringView header = node->header;
     if(!header.length) return 0;
     MSB_FORMAT(sb, "<h", header_depth, ">");
-    int err = write_md_string(ctx, handle, sb);
-    (void)err; // can't fail.
+    write_md_string(ctx, handle, sb);
     // msb_write_str(sb, header.text, header.length);
     MSB_FORMAT(sb, "</h", header_depth, ">");
     return 1;
@@ -78,8 +77,7 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
         }return 0;
         case NODE_DEF:{
             msb_write_literal(sb, "<dt>");
-            int err = write_md_string(ctx, handle, sb);
-            if(err) return err;
+            write_md_string(ctx, handle, sb);
             msb_write_literal(sb, "</dt>\n");
             msb_write_literal(sb, "<dd>\n");
             NODE_CHILDREN_FOR_EACH(ch, node){
@@ -100,8 +98,7 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
             msb_write_literal(sb, "</div>\n");
         }return 0;
         case NODE_STRING:{
-            int err = write_md_string(ctx, handle, sb);
-            if(err) return err;
+            write_md_string(ctx, handle, sb);
             return 0;
         }
         case NODE_PARA:{
@@ -129,7 +126,7 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
         case NODE_STYLESHEETS:
             // some markdowns allow inline style tags.
             msb_write_literal(sb, "<style>\n");
-            (void)write_md_raw(ctx, handle, sb);
+            write_md_raw(ctx, handle, sb);
             msb_write_literal(sb, "</style>\n");
             return 0; // ignore
         case NODE_LINKS:
@@ -146,8 +143,7 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
             if(err) return err;
         }return 0;
         case NODE_RAW:{
-            int err = write_md_raw(ctx, handle, sb);
-            if(err) return err;
+            write_md_raw(ctx, handle, sb);
         }return 0;
         case NODE_PRE:{
             msb_write_literal(sb, "<pre>\n");
@@ -200,7 +196,7 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
             return 0;
         case NODE_DETAILS:
             msb_write_literal(sb, "<details><summary>");
-            (void)write_md_string(ctx, handle, sb);
+            write_md_string(ctx, handle, sb);
             // header_depth += write_md_header(ctx, handle, sb, header_depth);
             msb_write_literal(sb, "</summary>\n");
             NODE_CHILDREN_FOR_EACH(ch, node){
@@ -219,8 +215,7 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
 }
 
 static
-warn_unused
-int
+void
 write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
     // This is a slow character by character implementation, but
     // this is a rarely used piece. We can SIMD it later.
@@ -228,7 +223,7 @@ write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
     // We need to scan for links and convert them to markdown links.
     Node* node = get_node(ctx, handle);
     StringView header = node->header;
-    if(!header.length) return 0;
+    if(!header.length) return;
     const char* text = header.text;
     size_t length = header.length;
     for(size_t i = 0; i < length; i++){
@@ -302,7 +297,6 @@ write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
                 msb_write_char(sb, c);
         }
     }
-    return 0;
 }
 static
 warn_unused
@@ -335,14 +329,14 @@ write_md_bullets(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int de
                     NODE_LOG_ERROR(ctx, sub, "First list item must be a string, got ", quoted(LS_to_SV(NODENAMES[sub->type])));
                     return DNDC_ERROR_INVALID_TREE;
                 }
-                (void)write_md_string(ctx, *subitem, sb);
+                write_md_string(ctx, *subitem, sb);
                 msb_write_char(sb, '\n');
                 i++;
                 continue;
             }
             if(sub->type == NODE_STRING){
                 msb_write_nchar(sb, ' ', (depth+1)*4);
-                (void)write_md_string(ctx, *subitem, sb);
+                write_md_string(ctx, *subitem, sb);
                 msb_write_char(sb, '\n');
             }
             else if(sub->type == NODE_BULLETS){
@@ -389,14 +383,14 @@ write_md_list(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth
                     NODE_LOG_ERROR(ctx, sub, "First list item must be a string, got ", quoted(LS_to_SV(NODENAMES[sub->type])));
                     return DNDC_ERROR_INVALID_TREE;
                 }
-                (void)write_md_string(ctx, *subitem, sb);
+                write_md_string(ctx, *subitem, sb);
                 msb_write_char(sb, '\n');
                 i++;
                 continue;
             }
             if(sub->type == NODE_STRING){
                 msb_write_nchar(sb, ' ', (depth+1)*4);
-                (void)write_md_string(ctx, *subitem, sb);
+                write_md_string(ctx, *subitem, sb);
                 msb_write_char(sb, '\n');
             }
             else if(sub->type == NODE_BULLETS){
@@ -446,13 +440,10 @@ write_md_keyvalue(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
             NODE_LOG_ERROR(ctx, value, "Expected two string children of keyvaluepair node when rendering md");
             return DNDC_ERROR_INVALID_TREE;
         }
-        int err;
         msb_write_literal(sb, "<tr>\n<td>");
-        err = write_md_string(ctx, kh, sb);
-        if(err) return err;
+        write_md_string(ctx, kh, sb);
         msb_write_literal(sb, "</td>\n<td>");
-        err = write_md_string(ctx, vh, sb);
-        if(err) return err;
+        write_md_string(ctx, vh, sb);
         msb_write_literal(sb, "</td>\n</tr>\n");
     }
     msb_write_literal(sb, "</tbody>\n</table>\n");
@@ -505,8 +496,7 @@ write_md_table(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int head
     return 0;
 }
 static
-warn_unused
-int
+void
 write_md_raw(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
     // trust the user
     Node* node = get_node(ctx, handle);
@@ -519,7 +509,6 @@ write_md_raw(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
             msb_write_str(sb, child->header.text, child->header.length);
         msb_write_char(sb, '\n');
     }
-    return 0;
 }
 
 #ifdef __clang__
