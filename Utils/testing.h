@@ -340,19 +340,29 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 // * `TestExpectSuccess`
 // * `TestExpectFailure`
 //
+// Beware:
+// -------
+// With clang and gcc, we can use typeof or __auto_type to turn the lhs and rhs
+// of these conditions into local variables so that we don't have to worry
+// about multiple evaluation of the arguments.
+//
+// However, other compilers (MSVC in C mode) don't support that, so we are
+// faced between the choice of requiring the user to pass in the type as one of
+// the macro args (which is error prone) or allow double evaluation. I have
+// chosen to allow double evaluation with MSVC. Tests with side effects is
+// a bad idea anyway.
 
   //
   // TestExpectEquals
   // ----------------
   // Expects lhs == rhs, using the == operator
   //
+#if defined (__GNUC__) || defined(__clang__)
   #define TestExpectEquals(lhs, rhs) do {\
           __auto_type _lhs = lhs; \
           typeof(lhs) _rhs = rhs; \
           TEST_stats.executed++;\
-          int equal__ = 1; \
           if (!(_lhs == _rhs)) {\
-              equal__ = 0; \
               TEST_stats.failures++; \
               TestReport("Test condition failed");\
               TestReport("%s == %s", #lhs, #rhs); \
@@ -360,18 +370,29 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
               TestPrintValue(#rhs, _rhs);\
               }\
           }while(0)
+#else
+  #define TestExpectEquals(lhs, rhs) do {\
+          TEST_stats.executed++;\
+          if (!(lhs == rhs)) {\
+              TEST_stats.failures++; \
+              TestReport("Test condition failed");\
+              TestReport("%s == %s", #lhs, #rhs); \
+              TestPrintValue(#lhs, lhs);\
+              TestPrintValue(#rhs, rhs);\
+              }\
+          }while(0)
+#endif
   //
   // TestExpectEquals2
   // -----------------
   // Expects lhs == rhs, using the passed in binary function instead of == operator
   //
+#if defined (__GNUC__) || defined(__clang__)
   #define TestExpectEquals2(func, lhs, rhs) do {\
           __auto_type _lhs = lhs; \
           __auto_type _rhs = rhs; \
           TEST_stats.executed++;\
-          int equal__ = 1; \
           if (!(func(_lhs, _rhs))) {\
-              equal__ = 0; \
               TEST_stats.failures++; \
               TestReport("Test condition failed");\
               TestReport("!%s(%s, %s)", #func, #lhs, #rhs); \
@@ -379,19 +400,30 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
               TestPrintValue(#rhs, _rhs);\
           }\
       } while(0)
+#else
+  #define TestExpectEquals2(func, lhs, rhs) do {\
+          TEST_stats.executed++;\
+          if (!(func(lhs, rhs))) {\
+              TEST_stats.failures++; \
+              TestReport("Test condition failed");\
+              TestReport("!%s(%s, %s)", #func, #lhs, #rhs); \
+              TestPrintValue(#lhs, lhs);\
+              TestPrintValue(#rhs, rhs);\
+          }\
+      } while(0)
+#endif
 
   //
   // TestExpectNotEquals
   // -------------------
   // Expects lhs != rhs, using the != operator
   //
+#if defined (__GNUC__) || defined(__clang__)
   #define TestExpectNotEquals(lhs, rhs) do {\
           __auto_type _lhs = lhs; \
           typeof(lhs) _rhs = rhs; \
           TEST_stats.executed++;\
-          int neq = 1; \
           if (!(_lhs != _rhs)) {\
-              neq = 0; \
               TEST_stats.failures++; \
               TestReport("Test condition failed");\
               TestReport("%s != %s", #lhs, #rhs); \
@@ -399,27 +431,50 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
               TestPrintValue(#rhs, _rhs);\
           }\
       }while(0)
+#else
+  #define TestExpectNotEquals(lhs, rhs) do {\
+          TEST_stats.executed++;\
+          if (!(lhs != rhs)) {\
+              TEST_stats.failures++; \
+              TestReport("Test condition failed");\
+              TestReport("%s != %s", #lhs, #rhs); \
+              TestPrintValue(#lhs, lhs);\
+              TestPrintValue(#rhs, rhs);\
+          }\
+      }while(0)
+#endif
 
   //
   // TestExpectNotEqual2
   // -------------------
   // Checks for func(lhs, rhs) == 0
   //
+#if defined (__GNUC__) || defined(__clang__)
   #define TestExpectNotEqual2(func, lhs, rhs) do{\
           __auto_type _lhs = lhs; \
           __auto_type _rhs = rhs; \
           TEST_stats.executed++;\
-          int notequal__ = 1; \
           if (func(_lhs, _rhs)) {\
-              notequal__ = 0; \
               TEST_stats.failures++; \
               TestReport("Test condition failed");\
               TestReport("%s(%s, %s)", #func, #lhs, #rhs); \
               TestPrintValue(#lhs, _lhs);\
               TestPrintValue(#rhs, _rhs);\
               }\
+          }while(0)
+#else
+  #define TestExpectNotEqual2(func, lhs, rhs) do{\
+          TEST_stats.executed++;\
+          if (func(lhs, rhs)) {\
+              TEST_stats.failures++; \
+              TestReport("Test condition failed");\
+              TestReport("%s(%s, %s)", #func, #lhs, #rhs); \
+              TestPrintValue(#lhs, lhs);\
+              TestPrintValue(#rhs, rhs);\
+              }\
           notequal__; \
           }while(0)
+#endif
 
   //
   // TestExpectTrue
@@ -459,9 +514,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
   //
   #define TestExpectSuccess(cond) do{\
           TEST_stats.executed++;\
-          _Bool succeeded = 1; \
           if ((cond).errored){ \
-              succeeded = 0; \
               TEST_stats.failures++; \
               TestReport("Test condition failed");\
               TestReport("%s = %d", #cond, (cond).errored);\
@@ -475,9 +528,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
   //
   #define TestExpectFailure(cond) do{\
           TEST_stats.executed++;\
-          _Bool did_fail = 1; \
           if (!(cond).errored){ \
-              did_fail = 0; \
               TEST_stats.failures++; \
               TestReport("Test condition failed");\
               TestReport("%s = %d", #cond, (cond).errored);\
@@ -539,7 +590,8 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 // ----------------
 // Asserts lhs is equal to rhs, using ==
 //
-#define TestAssertEquals(lhs, rhs) do{\
+#if defined (__GNUC__) || defined(__clang__)
+  #define TestAssertEquals(lhs, rhs) do{\
         __auto_type _lhs = lhs; \
         typeof(lhs) _rhs = rhs; \
         TEST_stats.executed++;\
@@ -554,6 +606,21 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
             return TEST_stats;\
         }\
     }while(0)
+#else
+  #define TestAssertEquals(lhs, rhs) do{\
+        TEST_stats.executed++;\
+        if (! (lhs==rhs)){ \
+            TEST_stats.failures++; \
+            TEST_stats.assert_failures++; \
+            TestReport("Test condition failed");\
+            TestReport("%s prematurely ended", __func__);\
+            TestReport("%s == %s", #lhs, #rhs); \
+            TestPrintValue(#lhs, lhs);\
+            TestPrintValue(#rhs, rhs); \
+            return TEST_stats;\
+        }\
+    }while(0)
+#endif
 
 //
 // TestAssertSuccess
