@@ -404,7 +404,8 @@ TestFunction(TestFormatList){
         ;
     LongString outdata = {};
     int e = run_the_dndc(flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
-    if(!TestExpectFalse(e)){
+    TestExpectFalse(e);
+    if(!e){
         // A bit brittle of a test, but it shows that the outparam works.
         LongString expected = LS(
             "Hello\n"
@@ -580,7 +581,8 @@ TestFunction(TestExamplesWork){
         {
             int e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
             TestExpectFalse(output.text);
-            if(!TestExpectFalse(e)){
+            TestExpectFalse(e);
+            if(e){
                 TestPrintValue("Example failed:", examples[i]);
                 TestPrintValue("Base dir:", base_dirs[i]);
             }
@@ -588,7 +590,8 @@ TestFunction(TestExamplesWork){
         {
             int e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, (WorkerThread*)worker, LS(""));
             TestExpectFalse(output.text);
-            if(!TestExpectFalse(e)){
+            TestExpectFalse(e);
+            if(e){
                 TestPrintValue("Example failed:", examples[i]);
                 TestPrintValue("Base dir:", base_dirs[i]);
             }
@@ -636,7 +639,8 @@ TestFunction(TestUntrusted){
         TestAssertSuccess(data);
         int e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
         TestExpectFalse(output.text);
-        if(!TestExpectTrue(e)){
+        TestExpectTrue(e);
+        if(!e){
             TestPrintValue("source file", examples[i]);
         }
         Allocator_free(allocator, data.result.text, data.result.length+1);
@@ -656,7 +660,8 @@ TestFunction(TestUntrusted){
         StringView data = inline_examples[i];
         int e = run_the_dndc(flags, base_dirs[i], data, SV("(string input"), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
         TestExpectFalse(output.text);
-        if(!TestExpectTrue(e)){
+        TestExpectTrue(e);
+        if(!e){
             TestPrintValue("source file", examples[i]);
         }
     }
@@ -696,7 +701,8 @@ TestFunction(TestSpecialChars){
         LongString output = {};
         int e = run_the_dndc(flags, SV(""), testcases[i].source, SV(""), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
         TestAssertFalse(e);
-        if(!TestExpectEquals2(SV_equals, sv_slice(LS_to_SV(output), 172, testcases[i].result.length), testcases[i].result)){
+        TestExpectEquals2(SV_equals, sv_slice(LS_to_SV(output), 172, testcases[i].result.length), testcases[i].result);
+        if(!SV_equals(sv_slice(LS_to_SV(output), 172, testcases[i].result.length), testcases[i].result)){
             TestPrintValue("output", output);
         }
         dndc_free_string(output);
@@ -815,13 +821,18 @@ test_syntax_func(void* ud_, int type, int line, int col, const unsigned short* b
         return;
     }
     struct TestToken token = tokens[ud->idx++];
-    int fail1 = !TestExpectEquals(token.type, type);
-    int fail2 = !TestExpectEquals(token.line, line);
-    int fail3 = !TestExpectEquals(token.col, col);
-    int fail4 = !TestExpectEquals(token.msg.length, length);
+    TestExpectEquals(token.type, type);
+    int fail1 = token.type != type;
+    TestExpectEquals(token.line, line);
+    int fail2 = token.line != line;
+    TestExpectEquals(token.col, col);
+    int fail3 = token.col != col;
+    TestExpectEquals(token.msg.length, length);
+    int fail4 = token.msg.length != length;
     StringViewUtf16 msg = {.text=begin, .length=length};
     int equals = SV_utf16_equals(token.msg, msg);
-    int fail5 = !TestExpectTrue(equals);
+    TestExpectTrue(equals);
+    int fail5 = !equals;
     if(fail1 || fail2 || fail3 || fail4 || fail5){
         TestPrintf("Failed for token: %d:%d\n", token.line, token.col);
         fprintf(stderr, "[%zu] = {%d,%d,%d, SV16(\"", ud->idx++, type, line, col);
@@ -893,14 +904,16 @@ post_js_ast_func(void* user_data, DndcContext*ctx){
             TestExpectTrue(node->flags & NODEFLAG_NOID);
             TestExpectTrue(node->flags & NODEFLAG_HIDE);
             TestExpectTrue(node->flags & NODEFLAG_NOINLINE);
-            if(TestExpectTrue(node->attributes)){
+            TestExpectTrue(node->attributes);
+            if(node->attributes){
                 TestExpectEquals(node->attributes->count, 1);
                 RARRAY_FOR_EACH(Attribute, attr, node->attributes){
                     TestExpectEquals2(SV_equals, attr->key, SV("1"));
                     TestExpectEquals2(SV_equals, attr->value, SV("1"));
                 }
             }
-            if(TestExpectTrue(node->classes)){
+            TestExpectTrue(node->classes);
+            if(node->classes){
                 TestExpectEquals(node->classes->count, 1);
                 RARRAY_FOR_EACH(StringView, cls, node->classes){
                     TestExpectEquals2(SV_equals, *cls, SV("hello"));

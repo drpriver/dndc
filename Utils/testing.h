@@ -346,7 +346,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
   // ----------------
   // Expects lhs == rhs, using the == operator
   //
-  #define TestExpectEquals(lhs, rhs) ({\
+  #define TestExpectEquals(lhs, rhs) do {\
           __auto_type _lhs = lhs; \
           typeof(lhs) _rhs = rhs; \
           TEST_stats.executed++;\
@@ -359,14 +359,13 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
               TestPrintValue(#lhs, _lhs);\
               TestPrintValue(#rhs, _rhs);\
               }\
-          equal__; \
-          })
+          }while(0)
   //
   // TestExpectEquals2
   // -----------------
   // Expects lhs == rhs, using the passed in binary function instead of == operator
   //
-  #define TestExpectEquals2(func, lhs, rhs) ({\
+  #define TestExpectEquals2(func, lhs, rhs) do {\
           __auto_type _lhs = lhs; \
           __auto_type _rhs = rhs; \
           TEST_stats.executed++;\
@@ -379,15 +378,14 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
               TestPrintValue(#lhs, _lhs);\
               TestPrintValue(#rhs, _rhs);\
           }\
-          equal__;\
-      })
+      } while(0)
 
   //
   // TestExpectNotEquals
   // -------------------
   // Expects lhs != rhs, using the != operator
   //
-  #define TestExpectNotEquals(lhs, rhs) ({\
+  #define TestExpectNotEquals(lhs, rhs) do {\
           __auto_type _lhs = lhs; \
           typeof(lhs) _rhs = rhs; \
           TEST_stats.executed++;\
@@ -400,15 +398,14 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
               TestPrintValue(#lhs, _lhs);\
               TestPrintValue(#rhs, _rhs);\
           }\
-          neq ;\
-      })
+      }while(0)
 
   //
   // TestExpectNotEqual2
   // -------------------
   // Checks for func(lhs, rhs) == 0
   //
-  #define TestExpectNotEqual2(func, lhs, rhs) ({\
+  #define TestExpectNotEqual2(func, lhs, rhs) do{\
           __auto_type _lhs = lhs; \
           __auto_type _rhs = rhs; \
           TEST_stats.executed++;\
@@ -422,14 +419,14 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
               TestPrintValue(#rhs, _rhs);\
               }\
           notequal__; \
-          })
+          }while(0)
 
   //
   // TestExpectTrue
   // --------------
   // Expects the condition is truthy (for the usual C definition of truth).
   //
-  #define TestExpectTrue(cond) ({\
+  #define TestExpectTrue(cond) do {\
           TEST_stats.executed++;\
           _Bool cond_ = !!(cond); \
           if (! (cond_)){ \
@@ -437,15 +434,14 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
               TestReport("Test condition failed");\
               TestReport("%s", #cond);\
           }\
-          cond_; \
-      })
+      }while(0)
 
   //
   // TestExpectFalse
   // ---------------
   // Expects the condition is falsey (for the usual C definition of truth).
   //
-  #define TestExpectFalse(cond) ({\
+  #define TestExpectFalse(cond) do{\
           _Bool cond_ = !!(cond); \
           TEST_stats.executed++;\
           if (cond_){ \
@@ -454,14 +450,14 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
               TestPrintValue(#cond, cond);\
           }\
           !cond_; \
-      })
+      }while(0)
 
   //
   // TestExpectSuccess
   // -----------------
   // For an errorable (struct with .errored field), expects .errored is 0
   //
-  #define TestExpectSuccess(cond) ({\
+  #define TestExpectSuccess(cond) do{\
           TEST_stats.executed++;\
           _Bool succeeded = 1; \
           if ((cond).errored){ \
@@ -470,15 +466,14 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
               TestReport("Test condition failed");\
               TestReport("%s = %d", #cond, (cond).errored);\
           }\
-          succeeded; \
-      })
+      }while(0)
 
   //
   // TestExpectFailure
   // -----------------
   // For an errorable (struct with .errored field), expects .errored is not 0
   //
-  #define TestExpectFailure(cond) ({\
+  #define TestExpectFailure(cond) do{\
           TEST_stats.executed++;\
           _Bool did_fail = 1; \
           if (!(cond).errored){ \
@@ -487,8 +482,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
               TestReport("Test condition failed");\
               TestReport("%s = %d", #cond, (cond).errored);\
               }\
-          did_fail; \
-          })
+          }while(0)
 
 // TestAsserts
 // -----------

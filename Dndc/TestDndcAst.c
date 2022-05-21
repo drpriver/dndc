@@ -115,7 +115,8 @@ TestFunction(TestAstExample){
                 TestPrintValue("Base dir:", base_dirs[i]);
             }
             TestAssertFalse(e);
-            if(!TestExpectEquals2(LS_equals, ast_output, dnd_output)){
+            TestExpectEquals2(LS_equals, ast_output, dnd_output);
+            if(!LS_equals(ast_output, dnd_output)){
                 TestPrintValue("Example failed:", examples[i]);
                 TestPrintValue("Base dir:", base_dirs[i]);
                 TEST_stats.assert_failures++;
