@@ -35,6 +35,7 @@
 #include <stddef.h> // size_t
 #include <string.h> // memmove, memcpy
 #include <assert.h> // assert
+#include "Utils/bit_util.h" //
 #include "Allocators/allocator.h" // Allocator
 
 static inline
@@ -56,13 +57,13 @@ marray_resize_to_some_weird_number(size_t x){
         return 16;
     // grow by factor of approx sqrt(2)
     // I have no idea if this is ideal, but it has a nice elegance to it
-    int cnt = __builtin_popcountll(x);
+    int cnt = popcount_64(x);
     size_t result;
     if(cnt == 1){
         result =  x | (x >> 1);
     }
     else {
-        int clz = __builtin_clzll(x);
+        int clz = clz_64(x);
         result = 1ull << (64 - clz);
     }
     return result;
@@ -76,13 +77,13 @@ marray_resize_to_some_weird_number(size_t x){
         return 16;
     // grow by factor of approx sqrt(2)
     // I have no idea if this is ideal, but it has a nice elegance to it
-    int cnt = __builtin_popcount(x);
+    int cnt = popcont_32(x);
     size_t result;
     if(cnt == 1){
         result =  x | (x >> 1);
     }
     else {
-        int clz = __builtin_clz(x);
+        int clz = clz_32(x);
         result = 1u << (32 - clz);
     }
     return result;

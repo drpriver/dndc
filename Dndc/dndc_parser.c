@@ -6,6 +6,7 @@
 #include "dndc_funcs.h"
 #include "dndc_types.h"
 #include "dndc_logging.h"
+#include "Utils/bit_util.h"
 #include "Utils/str_util.h"
 
 #ifndef NO_SIMD
@@ -128,7 +129,7 @@ analyze_line(DndcContext* ctx){
         __m128i spacecr    = _mm_or_si128(test_space, test_cr);
         __m128i whitespace = _mm_or_si128(spacecr, test_tabs);
         unsigned mask = _mm_movemask_epi8(whitespace);
-        int n = __builtin_ctz(~mask);
+        int n = ctz_32(~mask);
         nspace += n;
         if(n != 16){
             cursor += n;
@@ -152,7 +153,7 @@ analyze_line(DndcContext* ctx){
         uint8x16_t whitespace = vorrq_u8(spacecr, test_tabs);
         // uint64x2_t had_it     = vreinterpretq_u64_u8(whitespace);
         unsigned mask = _mm_movemask_aarch64(whitespace);
-        int n = __builtin_ctz(~mask);
+        int n = ctz_32(~mask);
         nspace += n;
         if(n != 16){
             cursor += n;
@@ -191,15 +192,15 @@ analyze_line(DndcContext* ctx){
         unsigned colon1    = _mm_movemask_epi8(testcolon1);
         unsigned end       = _mm_movemask_epi8(testend);
         if(end){
-            unsigned endoff = __builtin_ctz(end);
+            unsigned endoff = ctz_32(end);
             unsigned colonoff = -1;
             if(colon0){
-                unsigned off = __builtin_ctz(colon0);
+                unsigned off = ctz_32(colon0);
                 if(off < endoff && off < colonoff)
                     colonoff = off;
             }
             if(colon1){
-                unsigned off = __builtin_ctz(colon1)+1;
+                unsigned off = ctz_32(colon1)+1;
                 if(off < endoff && off < colonoff)
                     colonoff = off;
             }
@@ -212,11 +213,11 @@ analyze_line(DndcContext* ctx){
         if(colon0 || colon1){
             unsigned colonoff = -1;
             if(colon0){
-                unsigned off = __builtin_ctz(colon0);
+                unsigned off = ctz_32(colon0);
                 colonoff = off;
             }
             if(colon1){
-                unsigned off = __builtin_ctz(colon1)+1;
+                unsigned off = ctz_32(colon1)+1;
                 if(off < colonoff)
                     colonoff = off;
             }
@@ -247,15 +248,15 @@ analyze_line(DndcContext* ctx){
         unsigned colon1 = _mm_movemask_aarch64(testcolon1);
         unsigned end    = _mm_movemask_aarch64(testend);
         if(end){
-            unsigned endoff = __builtin_ctz(end);
+            unsigned endoff = ctz_32(end);
             unsigned colonoff = -1;
             if(colon0){
-                unsigned off = __builtin_ctz(colon0);
+                unsigned off = ctz_32(colon0);
                 if(off < endoff && off < colonoff)
                     colonoff = off;
             }
             if(colon1){
-                unsigned off = __builtin_ctz(colon1)+1;
+                unsigned off = ctz_32(colon1)+1;
                 if(off < endoff && off < colonoff)
                     colonoff = off;
             }
@@ -268,11 +269,11 @@ analyze_line(DndcContext* ctx){
         if(colon0 || colon1){
             unsigned colonoff = -1;
             if(colon0){
-                unsigned off = __builtin_ctz(colon0);
+                unsigned off = ctz_32(colon0);
                 colonoff = off;
             }
             if(colon1){
-                unsigned off = __builtin_ctz(colon1)+1;
+                unsigned off = ctz_32(colon1)+1;
                 if(off < colonoff)
                     colonoff = off;
             }
@@ -313,7 +314,7 @@ analyze_line(DndcContext* ctx){
         __m128i testend = _mm_or_si128(testnl, testzed);
         unsigned end = _mm_movemask_epi8(testend);
         if(end){
-            unsigned endoff = __builtin_ctz(end);
+            unsigned endoff = ctz_32(end);
             endline = cursor + endoff;
             goto Lfinish;
         }
@@ -329,7 +330,7 @@ analyze_line(DndcContext* ctx){
         uint8x16_t testend = vorrq_u8(testnl, testzed);
         unsigned end       = _mm_movemask_aarch64(testend);
         if(end){
-            unsigned endoff = __builtin_ctz(end);
+            unsigned endoff = ctz_32(end);
             endline = cursor + endoff;
             goto Lfinish;
         }

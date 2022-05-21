@@ -16,6 +16,14 @@
 #pragma clang assume_nonnull begin
 #endif
 
+#ifndef unreachable
+#if defined(__GNUC__) || defined(__clang__)
+#define unreachable() __builtin_unreachable()
+#else
+#define unreachable() __assume(0)
+#endif
+#endif
+
 static inline
 void
 Allocator_free_all(Allocator a){
@@ -59,7 +67,7 @@ Allocator_alloc(Allocator a, size_t size){
             return ArenaAllocator_alloc(a._data, size);
     }
     abort();
-    __builtin_unreachable();
+    unreachable();
 }
 
 MALLOC_FUNC
@@ -82,7 +90,7 @@ Allocator_zalloc(Allocator a, size_t size){
             return ArenaAllocator_zalloc(a._data, size);
     }
     abort();
-    __builtin_unreachable();
+    unreachable();
 }
 
 static inline
@@ -104,7 +112,7 @@ Allocator_realloc(Allocator a, void*_Nullable data, size_t orig_size, size_t siz
             return (void*)ArenaAllocator_realloc(a._data, data, orig_size, size);
     }
     abort();
-    __builtin_unreachable();
+    unreachable();
 }
 
 static inline

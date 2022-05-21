@@ -13,14 +13,18 @@
 #endif
 
 #ifndef unreachable
+#if defined(__GNUC__) || defined(__clang__)
 #define unreachable() __builtin_unreachable()
+#else
+#define unreachable() __assume(0)
+#endif
 #endif
 
 #ifndef warn_unused
 #if defined(__GNUC__) || defined(__clang__)
 #define warn_unused __attribute__((warn_unused_result))
 #elif defined(_MSC_VER)
-#define warn_unused _Check_return
+#define warn_unused
 #else
 #define warn_unused
 #endif

@@ -63,7 +63,7 @@ typedef intptr_t ssize_t;
 
 #define OPTIMIZE         1
 #define SHORT_OPCODES    1
-#if defined(EMSCRIPTEN)
+#if defined(EMSCRIPTEN) || (defined(_MSC_VER) && !defined(__clang__))
 #define DIRECT_DISPATCH  0
 #else
 #define DIRECT_DISPATCH  1
@@ -127,6 +127,9 @@ typedef intptr_t ssize_t;
 #ifdef CONFIG_ATOMICS
 #ifndef _WIN32
 #include <pthread.h>
+#if defined(_MSC_VER) !defined(__clang__)
+#include <immintrin.h>
+#endif
 #endif
 #include <stdatomic.h>
 #include <errno.h>
@@ -221,7 +224,15 @@ typedef enum QJSErrorEnum {
 #define QJS_STACK_SIZE_MAX 65534
 #define QJS_STRING_LEN_MAX ((1 << 30) - 1)
 
+#if defined(__GNUC__) || defined(__clang__)
 #define __exception __attribute__((warn_unused_result))
+#define QJSVALUECAST  (QJSValue)
+#define QJSVALUETOCONSTCAST  (QJSValueConst)
+#else
+#define __exception
+#define QJSVALUECAST
+#define QJSVALUECONSTCAST
+#endif
 
 typedef struct QJSShape QJSShape;
 typedef struct QJSString QJSString;
@@ -1038,7 +1049,7 @@ static __exception int QJS_ToArrayLengthFree(QJSContext *ctx, uint32_t *plen,
                                             QJSValue val, BOOL is_array_ctor);
 static QJSValue QJS_EvalObject(QJSContext *ctx, QJSValueConst this_obj,
                              QJSValueConst val, int flags, int scope_idx);
-QJSValue __attribute__((format(printf, 2, 3))) QJS_ThrowInternalError(QJSContext *ctx, const char *fmt, ...);
+QJSValue printflike(2, 3) QJS_ThrowInternalError(QJSContext *ctx, const char *fmt, ...);
 static __maybe_unused void QJS_DumpAtoms(QJSRuntime *rt);
 static __maybe_unused void QJS_DumpString(QJSRuntime *rt,
                                                   const QJSString *p);
@@ -1614,7 +1625,11 @@ static inline BOOL js_check_stack_overflow(QJSRuntime *rt, size_t alloca_size)
 /* Note: OS and CPU dependent */
 static inline uintptr_t js_get_stack_pointer(void)
 {
+#if defined(_MSC_VER) && !defined(__clang__)
+    return (uintptr_t)_AddressOfReturnAddress();
+#else
     return (uintptr_t)__builtin_frame_address(0);
+#endif
 }
 
 static inline BOOL js_check_stack_overflow(QJSRuntime *rt, size_t alloca_size)
@@ -6689,7 +6704,7 @@ static QJSValue QJS_ThrowError(QJSContext *ctx, QJSErrorEnum error_num,
     return QJS_ThrowError2(ctx, error_num, fmt, ap, add_backtrace);
 }
 
-QJSValue __attribute__((format(printf, 2, 3))) QJS_ThrowSyntaxError(QJSContext *ctx, const char *fmt, ...)
+QJSValue printflike(2, 3) QJS_ThrowSyntaxError(QJSContext *ctx, const char *fmt, ...)
 {
     QJSValue val;
     va_list ap;
@@ -6700,7 +6715,7 @@ QJSValue __attribute__((format(printf, 2, 3))) QJS_ThrowSyntaxError(QJSContext *
     return val;
 }
 
-QJSValue __attribute__((format(printf, 2, 3))) QJS_ThrowTypeError(QJSContext *ctx, const char *fmt, ...)
+QJSValue printflike(2, 3) QJS_ThrowTypeError(QJSContext *ctx, const char *fmt, ...)
 {
     QJSValue val;
     va_list ap;
@@ -6711,7 +6726,7 @@ QJSValue __attribute__((format(printf, 2, 3))) QJS_ThrowTypeError(QJSContext *ct
     return val;
 }
 
-static int __attribute__((format(printf, 3, 4))) QJS_ThrowTypeErrorOrFalse(QJSContext *ctx, int flags, const char *fmt, ...)
+static int printflike(3, 4) QJS_ThrowTypeErrorOrFalse(QJSContext *ctx, int flags, const char *fmt, ...)
 {
     va_list ap;
 
@@ -6727,7 +6742,7 @@ static int __attribute__((format(printf, 3, 4))) QJS_ThrowTypeErrorOrFalse(QJSCo
 }
 
 /* never use it directly */
-static QJSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(QJSContext *ctx, QJSAtom atom, const char *fmt, ...)
+static QJSValue printflike(3, 4) __JS_ThrowTypeErrorAtom(QJSContext *ctx, QJSAtom atom, const char *fmt, ...)
 {
     char buf[ATOM_GET_STR_BUF_SIZE];
     return QJS_ThrowTypeError(ctx, fmt,
@@ -6735,7 +6750,7 @@ static QJSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(QJ
 }
 
 /* never use it directly */
-static QJSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(QJSContext *ctx, QJSAtom atom, const char *fmt, ...)
+static QJSValue printflike(3, 4) __JS_ThrowSyntaxErrorAtom(QJSContext *ctx, QJSAtom atom, const char *fmt, ...)
 {
     char buf[ATOM_GET_STR_BUF_SIZE];
     return QJS_ThrowSyntaxError(ctx, fmt,
@@ -6758,7 +6773,7 @@ static int QJS_ThrowTypeErrorReadOnly(QJSContext *ctx, int flags, QJSAtom atom)
     }
 }
 
-QJSValue __attribute__((format(printf, 2, 3))) QJS_ThrowReferenceError(QJSContext *ctx, const char *fmt, ...)
+QJSValue printflike(2, 3) QJS_ThrowReferenceError(QJSContext *ctx, const char *fmt, ...)
 {
     QJSValue val;
     va_list ap;
@@ -6769,7 +6784,7 @@ QJSValue __attribute__((format(printf, 2, 3))) QJS_ThrowReferenceError(QJSContex
     return val;
 }
 
-QJSValue __attribute__((format(printf, 2, 3))) QJS_ThrowRangeError(QJSContext *ctx, const char *fmt, ...)
+QJSValue printflike(2, 3) QJS_ThrowRangeError(QJSContext *ctx, const char *fmt, ...)
 {
     QJSValue val;
     va_list ap;
@@ -6780,7 +6795,7 @@ QJSValue __attribute__((format(printf, 2, 3))) QJS_ThrowRangeError(QJSContext *c
     return val;
 }
 
-QJSValue __attribute__((format(printf, 2, 3))) QJS_ThrowInternalError(QJSContext *ctx, const char *fmt, ...)
+QJSValue printflike(2, 3) QJS_ThrowInternalError(QJSContext *ctx, const char *fmt, ...)
 {
     QJSValue val;
     va_list ap;
@@ -7332,7 +7347,7 @@ static int QJS_DefinePrivateField(QJSContext *ctx, QJSValueConst obj,
         QJS_ThrowTypeErrorNotASymbol(ctx);
         goto fail;
     }
-    prop = js_symbol_to_atom(ctx, (QJSValue)name);
+    prop = js_symbol_to_atom(ctx, QJSVALUECAST name);
     p = QJS_VALUE_GET_OBJ(obj);
     prs = find_own_property(&pr, p, prop);
     if (prs) {
@@ -7363,7 +7378,7 @@ static QJSValue QJS_GetPrivateField(QJSContext *ctx, QJSValueConst obj,
     /* safety check */
     if (unlikely(QJS_VALUE_GET_TAG(name) != QJS_TAG_SYMBOL))
         return QJS_ThrowTypeErrorNotASymbol(ctx);
-    prop = js_symbol_to_atom(ctx, (QJSValue)name);
+    prop = js_symbol_to_atom(ctx, QJSVALUECAST name);
     p = QJS_VALUE_GET_OBJ(obj);
     prs = find_own_property(&pr, p, prop);
     if (!prs) {
@@ -7390,7 +7405,7 @@ static int QJS_SetPrivateField(QJSContext *ctx, QJSValueConst obj,
         QJS_ThrowTypeErrorNotASymbol(ctx);
         goto fail;
     }
-    prop = js_symbol_to_atom(ctx, (QJSValue)name);
+    prop = js_symbol_to_atom(ctx, QJSVALUECAST name);
     p = QJS_VALUE_GET_OBJ(obj);
     prs = find_own_property(&pr, p, prop);
     if (!prs) {
@@ -7480,7 +7495,7 @@ static int QJS_CheckBrand(QJSContext *ctx, QJSValueConst obj, QJSValueConst func
     if (unlikely(QJS_VALUE_GET_TAG(obj) != QJS_TAG_OBJECT))
         goto not_obj;
     p = QJS_VALUE_GET_OBJ(obj);
-    prs = find_own_property(&pr, p, js_symbol_to_atom(ctx, (QJSValue)brand));
+    prs = find_own_property(&pr, p, js_symbol_to_atom(ctx, QJSVALUECAST brand));
     if (!prs) {
         QJS_ThrowTypeError(ctx, "invalid brand on object");
         return -1;
@@ -9145,7 +9160,7 @@ int QJS_DefineProperty(QJSContext *ctx, QJSValueConst this_obj,
                 return -1;
             }
             /* this code relies on the fact that Uint32 are never allocated */
-            val = (QJSValueConst)QJS_NewUint32(ctx, array_length);
+            val = QJSVALUETOCONSTCAST QJS_NewUint32(ctx, array_length);
             /* prs may have been modified */
             prs = find_own_property(&pr, p, prop);
             assert(prs != NULL);
@@ -10354,7 +10369,11 @@ static QJSValue js_atof(QJSContext *ctx, const char *str, const char **pp,
             } else
 #endif
             {
+                #if defined(_MSC_VER) && !defined(__clang__)
+                double d = INFINITY;
+                #else
                 double d = 1.0 / 0.0;
+                #endif
                 if (is_neg)
                     d = -d;
                 val = QJS_NewFloat64(ctx, d);
@@ -16171,7 +16190,7 @@ static QJSValue js_call_c_function(QJSContext *ctx, QJSValueConst func_obj,
 #else
     sf->js_mode = 0;
 #endif
-    sf->cur_func = (QJSValue)func_obj;
+    sf->cur_func = QJSVALUECAST func_obj;
     sf->arg_count = argc;
     arg_buf = argv;
 
@@ -16415,7 +16434,7 @@ static QJSValue QJS_CallInternal(QJSContext *caller_ctx, QJSValueConst func_obj,
     sf->js_mode = b->js_mode;
     arg_buf = argv;
     sf->arg_count = argc;
-    sf->cur_func = (QJSValue)func_obj;
+    sf->cur_func = QJSVALUECAST func_obj;
     init_list_head(&sf->var_ref_list);
     var_refs = p->u.func.var_refs;
 
@@ -20301,7 +20320,7 @@ static void free_token(QJSParseState *s, QJSToken *token)
     }
 }
 
-static void __attribute((unused)) dump_token(QJSParseState *s,
+static void __maybe_unused dump_token(QJSParseState *s,
                                              const QJSToken *token)
 {
     switch(token->val) {
@@ -20362,7 +20381,7 @@ static void __attribute((unused)) dump_token(QJSParseState *s,
     }
 }
 
-int __attribute__((format(printf, 2, 3))) js_parse_error(QJSParseState *s, const char *fmt, ...)
+int printflike(2, 3) js_parse_error(QJSParseState *s, const char *fmt, ...)
 {
     QJSContext *ctx = s->ctx;
     va_list ap;
@@ -34947,7 +34966,7 @@ typedef struct BCReaderState {
 } BCReaderState;
 
 #ifdef DUMP_READ_OBJECT
-static void __attribute__((format(printf, 2, 3))) bc_read_trace(BCReaderState *s, const char *fmt, ...) {
+static void printflike(2, 3) bc_read_trace(BCReaderState *s, const char *fmt, ...) {
     va_list ap;
     int i, n, n0;
 
@@ -39410,8 +39429,8 @@ static int64_t QJS_FlattenIntoArray(QJSContext *ctx, QJSValueConst target,
         if (!QJS_IsUndefined(mapperFunction)) {
             QJSValueConst args[3] = { element, QJS_NewInt64(ctx, sourceIndex), source };
             element = QJS_Call(ctx, mapperFunction, thisArg, 3, args);
-            QJS_FreeValue(ctx, (QJSValue)args[0]);
-            QJS_FreeValue(ctx, (QJSValue)args[1]);
+            QJS_FreeValue(ctx, QJSVALUECAST args[0]);
+            QJS_FreeValue(ctx, QJSVALUECAST args[1]);
             if (QJS_IsException(element))
                 return -1;
         }
@@ -40829,7 +40848,7 @@ static QJSValue js_string_match(QJSContext *ctx, QJSValueConst this_val,
         str = QJS_NewString(ctx, "g");
         if (QJS_IsException(str))
             goto fail;
-        args[args_len++] = (QJSValueConst)str;
+        args[args_len++] = QJSVALUETOCONSTCAST str;
     }
     rx = QJS_CallConstructor(ctx, ctx->regexp_ctor, args_len, args);
     QJS_FreeValue(ctx, str);
@@ -40838,7 +40857,7 @@ static QJSValue js_string_match(QJSContext *ctx, QJSValueConst this_val,
         QJS_FreeValue(ctx, S);
         return QJS_EXCEPTION;
     }
-    result = QJS_InvokeFree(ctx, rx, atom, 1, (QJSValueConst *)&S);
+    result = QJS_InvokeFree(ctx, rx, atom, 1, /*(QJSValueConst *)*/&S);
     QJS_FreeValue(ctx, S);
     return result;
 }
@@ -41888,7 +41907,11 @@ static QJSValue js_math_min_max(QJSContext *ctx, QJSValueConst this_val,
     uint32_t tag;
 
     if (unlikely(argc == 0)) {
+#if defined(_MSC_VER) && !defined(__clang__)
+        return __JS_NewFloat64(ctx, is_max ? -INFINITY : INFINITY);
+#else
         return __JS_NewFloat64(ctx, is_max ? -1.0 / 0.0 : 1.0 / 0.0);
+#endif
     }
 
     tag = QJS_VALUE_GET_TAG(argv[0]);
@@ -42041,7 +42064,11 @@ static uint64_t xorshift64star(uint64_t *pstate)
 static void js_random_init(QJSContext *ctx)
 {
 #ifdef _WIN32
-    __builtin_ia32_rdseed64_step(&ctx->random_state);
+    #if defined(_MSC_VER) && !defined(__clang__)
+        _rdseed64_step(&ctx->random_state);
+    #else
+        __builtin_ia32_rdseed64_step(&ctx->random_state);
+    #endif
 #else
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -45884,7 +45911,7 @@ static QJSMapRecord *map_add_record(QJSContext *ctx, QJSMapState *s,
     } else {
         QJS_DupValue(ctx, key);
     }
-    mr->key = (QJSValue)key;
+    mr->key = QJSVALUECAST key;
     h = map_hash_key(ctx, key) & (s->hash_size - 1);
     list_add_tail(&mr->hash_link, &s->hash_table[h]);
     list_add_tail(&mr->link, &s->records);
@@ -46106,7 +46133,7 @@ static QJSValue js_map_forEach(QJSContext *ctx, QJSValueConst this_val,
                 args[0] = args[1];
             else
                 args[0] = QJS_DupValue(ctx, mr->value);
-            args[2] = (QJSValue)this_val;
+            args[2] = QJSVALUECAST this_val;
             ret = QJS_Call(ctx, func, this_arg, 3, (QJSValueConst *)args);
             QJS_FreeValue(ctx, args[0]);
             if (!magic)
@@ -47087,7 +47114,7 @@ static QJSValue js_promise_all(QJSContext *ctx, QJSValueConst this_val,
                 goto fail_reject;
             }
             resolve_element_data[0] = QJS_NewBool(ctx, FALSE);
-            resolve_element_data[1] = (QJSValueConst)QJS_NewInt32(ctx, index);
+            resolve_element_data[1] = QJSVALUETOCONSTCAST QJS_NewInt32(ctx, index);
             resolve_element_data[2] = values;
             resolve_element_data[3] = resolving_funcs[is_promise_any];
             resolve_element_data[4] = resolve_element_env;
@@ -47446,7 +47473,7 @@ static QJSValue js_async_from_sync_iterator_unwrap_func_create(QJSContext *ctx,
 {
     QJSValueConst func_data[1];
 
-    func_data[0] = (QJSValueConst)QJS_NewBool(ctx, done);
+    func_data[0] = QJSVALUETOCONSTCAST QJS_NewBool(ctx, done);
     return QJS_NewCFunctionData(ctx, js_async_from_sync_iterator_unwrap,
                                1, 0, 1, func_data);
 }
@@ -47752,7 +47779,7 @@ static int isURIReserved(int c) {
     return c < 0x100 && memchr(";/?:@&=+$,#", c, sizeof(";/?:@&=+$,#") - 1) != NULL;
 }
 
-static int __attribute__((format(printf, 2, 3))) js_throw_URIError(QJSContext *ctx, const char *fmt, ...)
+static int printflike(2, 3) js_throw_URIError(QJSContext *ctx, const char *fmt, ...)
 {
     va_list ap;
 
@@ -52907,8 +52934,8 @@ static int js_TA_cmp_generic(const void *a, const void *b, void *opaque) {
             psc->exception = 1;
         }
     done:
-        QJS_FreeValue(ctx, (QJSValue)argv[0]);
-        QJS_FreeValue(ctx, (QJSValue)argv[1]);
+        QJS_FreeValue(ctx, QJSVALUECAST argv[0]);
+        QJS_FreeValue(ctx, QJSVALUECAST argv[1]);
     }
     return cmp;
 }

@@ -101,6 +101,11 @@ LS_equals(const LongString a, const LongString b){
 #define LS(literal) ((LongString){.length=sizeof("" literal)-1, .text="" literal})
 #define SV(literal) ((StringView){.length=sizeof("" literal)-1, .text=""  literal})
 #define SV16(literal) ((StringViewUtf16){.length = sizeof(u"" literal)/2-1, .text=u"" literal})
+// MSCV is garbage and doesn't like compound literals for static initializers
+// So use this macro instead.
+#define SVINIT(literal) {.length=sizeof("" literal)-1, .text="" literal}
+#define LSINIT(literal) {.length=sizeof("" literal)-1, .text="" literal}
+#define SV16INIT(literal) {.length=sizeof(u"" literal)/2-1, .text=u"" literal}
 static inline
 force_inline
 bool

@@ -15,7 +15,25 @@
 // dummy structs to allow unaligned loads.
 // ubsan complains otherwise. This is sort of a grey
 // area.
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma pack(push)
+#pragma pack(1)
+typedef struct packed_uint64 packed_uint64;
+struct packed_uint64 {
+    uint64_t v;
+};
 
+typedef struct packed_uint32 packed_uint32;
+struct packed_uint32 {
+    uint32_t v;
+};
+
+typedef struct packed_uint16 packed_uint16;
+struct packed_uint16 {
+    uint16_t v;
+};
+#pragma pack(pop)
+#else
 typedef struct packed_uint64 packed_uint64;
 struct __attribute__((packed)) packed_uint64 {
     uint64_t v;
@@ -30,6 +48,7 @@ typedef struct packed_uint16 packed_uint16;
 struct __attribute__((packed)) packed_uint16 {
     uint16_t v;
 };
+#endif
 
 
 

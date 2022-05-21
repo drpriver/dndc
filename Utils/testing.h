@@ -20,6 +20,14 @@
 #define arrlen(arr) (sizeof(arr)/sizeof(arr[0]))
 #endif
 
+#ifndef force_inline
+#if defined(__GNUC__) || defined(__clang__)
+#define force_inline __attribute__((always_inline))
+#else
+#define force_inline
+#endif
+#endif
+
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #else
@@ -147,7 +155,7 @@ TestPrintf(const char* fmt, ...){
     struct{int foo;}: 0)(__FILE__, __func__, __LINE__, str, val)
 
 #define TestPrintImpl_(suffix, type, fmt, ...) \
-    static inline __attribute__((always_inline)) void \
+    static inline force_inline void \
     TestPrintImpl_##suffix(const char* file, const char* func, int line, const char* str, type x){ \
         TestPrintf("%s%s:%s:%d%s %s = " fmt "\n",\
                 _test_color_gray, file, func, line, _test_color_reset, str, __VA_ARGS__); \

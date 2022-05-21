@@ -1,10 +1,16 @@
 import argparse
 import os
+import sys
 import shutil
 
 def main() -> None:
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--install-directory', type=str, default=os.path.expanduser('~/.vim'), help='Where to install the vim files to')
+    if sys.platform == 'win32':
+        default = '~/_vim'
+    else:
+        default = '~/.vim'
+    default = os.path.expanduser(default)
+    parser.add_argument('--install-directory', type=str, default=default, help='Where to install the vim files to')
     args = parser.parse_args()
     run(**vars(args))
 

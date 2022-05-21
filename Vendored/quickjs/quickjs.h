@@ -43,7 +43,11 @@
 #endif
 
 #else
+#if defined(_MSC_VER) && !defined(__clang__)
+#define QJS_API extern
+#else
 #define QJS_API extern __attribute__((visibility("hidden")))
+#endif
 
 #endif
 #endif

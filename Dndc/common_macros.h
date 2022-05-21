@@ -44,10 +44,10 @@
 #endif
 
 #ifndef unreachable
-#ifdef DEBUG
-#define unreachable() do{assert(0);__builtin_unreachable();} while(0)
-#else
+#if defined(__GNUC__) || defined(__clang__)
 #define unreachable() __builtin_unreachable()
+#else
+#define unreachable() __assume(0)
 #endif
 #endif
 

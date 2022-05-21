@@ -34,6 +34,14 @@
 #define _Null_unspecified
 #endif
 #endif
+
+#ifndef unreachable
+#if defined(__GNUC__) || defined(__clang__)
+#define unreachable() __builtin_unreachable()
+#else
+#define unreachable() __assume(0)
+#endif
+#endif
 //
 // Parses argv (like from main) into variables.
 // Supports parsing argv into strings, ints, unsigned ints (decimal, binary,
@@ -171,12 +179,12 @@ typedef enum ArgType {
 } ArgType;
 
 static const LongString ArgTypeNames[] = {
-#define X(a,b, string) LS(string),
+#define X(a,b, string) LSINIT(string),
     ARGS(X)
 #undef X
-    LS("flag"),
-    LS("enum"),
-    LS("USER DEFINED THIS IS A BUG"),
+    LSINIT("flag"),
+    LSINIT("enum"),
+    LSINIT("USER DEFINED THIS IS A BUG"),
 };
 
 // Type Generic macro allows us to turn a type into an enum.
@@ -871,7 +879,7 @@ next_tokenize_help(const char* help){
                 continue;
         }
     }
-    __builtin_unreachable();
+    unreachable();
 }
 
 static inline

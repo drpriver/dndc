@@ -298,8 +298,8 @@ alloc_handle(DndcContext* ctx){
 }
 
 static inline
-Node*
 force_inline
+Node*
 get_node(DndcContext* ctx, NodeHandle handle){
     assert(handle.index < ctx->nodes.count);
     Node* result = &ctx->nodes.data[handle.index];

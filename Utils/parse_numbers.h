@@ -25,9 +25,48 @@
 // Defects:
 //    * Currently only builds with gnuc (gcc, clang) due to use of overflow
 //      intrinsics.
+//
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
+#endif
+
+#if defined(_MSC_VER) && !defined(__clang__)
+// Shim the overflow intrinsics for MSVC
+// FIXME: actually do overflow detection, this shim
+// just ignores overflow.
+static inline
+int
+__builtin_mul_overflow_32(uint32_t a, uint32_t b, uint32_t* dst){
+    *dst = a * b;
+    return 0;
+}
+static inline
+int
+__builtin_mul_overflow_64(uint64_t a, uint64_t b, uint64_t* dst){
+    *dst = a * b;
+    return 0;
+}
+#define __builtin_mul_overflow(a, b, dst) _Generic(a, \
+    uint32_t: __builtin_mul_overflow_32, \
+    uint64_t: __builtin_mul_overflow_64)(a, b, dst)
+
+static inline
+int
+__builtin_add_overflow_32(uint32_t a, uint32_t b, uint32_t* dst){
+    *dst = a + b;
+    return 0;
+}
+static inline
+int
+__builtin_add_overflow_64(uint64_t a, uint64_t b, uint64_t* dst){
+    *dst = a + b;
+    return 0;
+}
+#define __builtin_add_overflow(a, b, dst) _Generic(a, \
+    uint32_t: __builtin_add_overflow_32, \
+    uint64_t: __builtin_add_overflow_64)(a, b, dst)
+
 #endif
 
 #ifndef warn_unused
@@ -35,7 +74,7 @@
 #if defined(__GNUC__) || defined(__clang__)
 #define warn_unused __attribute__((warn_unused_result))
 #elif defined(_MSC_VER)
-#define warn_unused _Check_return
+#define warn_unused
 #else
 #define warn_unused
 #endif
@@ -125,7 +164,8 @@ struct IntResult {
 
 //
 // Parses a decimal uint64.
-static inline
+static
+inline
 warn_unused
 struct Uint64Result
 parse_uint64(const char* str, size_t length);
@@ -305,7 +345,7 @@ parse_int64(const char* str, size_t length){
             result.errored = PARSENUMBER_OVERFLOWED_VALUE;
             return result;
         }
-        result.result = (int64_t)-value;
+        result.result = -(int64_t)value;
     }
     else{
         if(value > (uint64_t)INT64_MAX){
@@ -431,7 +471,7 @@ parse_int32(const char*str, size_t length){
             result.errored = PARSENUMBER_OVERFLOWED_VALUE;
             return result;
         }
-        result.result = (int32_t)-value;
+        result.result = -(int32_t)value;
     }
     else{
         if(value > (uint32_t)INT32_MAX){
