@@ -70,7 +70,7 @@ TestFunction(TestDndc1){
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    LongString output = {};
+    LongString output = {0};
     int e = run_the_dndc(flags, SV(""), source, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(output.text);
     TestExpectFalse(e);
@@ -92,7 +92,7 @@ TestFunction(TestDndc2){
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    LongString output = {};
+    LongString output = {0};
     int e = run_the_dndc(flags, SV(""), source, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(output.text);
     TestExpectFalse(e);
@@ -113,7 +113,7 @@ TestFunction(TestDndc3){
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    LongString output = {};
+    LongString output = {0};
     int e = run_the_dndc(flags, SV(""), source, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(output.text);
     TestExpectTrue(e);
@@ -163,7 +163,7 @@ TestFunction(TestDndcOutParam){
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    LongString outdata = {};
+    LongString outdata = {0};
     int e = run_the_dndc(flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(e);
     if(!e){
@@ -215,7 +215,7 @@ TestFunction(TestDndcFragment){
         | DNDC_FRAGMENT_ONLY
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    LongString outdata = {};
+    LongString outdata = {0};
     int e = run_the_dndc(flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(e);
     if(!e){
@@ -262,7 +262,7 @@ TestFunction(TestDndcTableMultiline){
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    LongString outdata = {};
+    LongString outdata = {0};
     int e = run_the_dndc(flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(e);
     if(!e){
@@ -341,7 +341,7 @@ TestFunction(TestFormatTable){
         | DNDC_REFORMAT_ONLY
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    LongString outdata = {};
+    LongString outdata = {0};
     int e = run_the_dndc(flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(e);
     if(!e){
@@ -365,7 +365,7 @@ TestFunction(TestFormatTable){
             "  a\n"
             "  b\n"
             );
-    outdata = (LongString){};
+    outdata = (LongString){0};
     e = run_the_dndc(flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(e);
     if(!e){
@@ -402,7 +402,7 @@ TestFunction(TestFormatList){
         | DNDC_REFORMAT_ONLY
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    LongString outdata = {};
+    LongString outdata = {0};
     int e = run_the_dndc(flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(e);
     if(!e){
@@ -427,7 +427,7 @@ TestFunction(TestFormatList){
         TestExpectEquals2(LS_equals, expected, outdata);
         {
             // check it parses after format
-            LongString output = {};
+            LongString output = {0};
             int e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""), LS_to_SV(outdata),  SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
             TestExpectFalse(output.text);
             TestExpectFalse(e2);
@@ -454,7 +454,7 @@ TestFunction(TestFormatKV){
         | DNDC_REFORMAT_ONLY
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    LongString outdata = {};
+    LongString outdata = {0};
     int e = run_the_dndc(flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     TestExpectFalse(e);
     if(!e){
@@ -472,7 +472,7 @@ TestFunction(TestFormatKV){
         TestExpectEquals2(LS_equals, expected, outdata);
         {
             // check it parses after format
-            LongString output = {};
+            LongString output = {0};
             int e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""),  LS_to_SV(outdata), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
             TestExpectFalse(output.text);
             TestExpectFalse(e2);
@@ -499,7 +499,7 @@ TestFunction(TestCrashesFixed){
         {.name=LS("TestCases/case3.dnd"), .error=true, .flags=FLAGS},
     };
     for(size_t i = 0; i < arrlen(cases); i++){
-        LongString output = {};
+        LongString output = {0};
         Allocator allocator = get_mallocator();
         // Read as binary to avoid appending a nul terminator
         // which can mask off-by-one read errors.
@@ -571,7 +571,7 @@ TestFunction(TestExamplesWork){
     _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
     DndcWorkerThread* worker = dndc_worker_thread_create();
     for(size_t i = 0; i < arrlen(examples); i++){
-        LongString output = {};
+        LongString output = {0};
         Allocator allocator = get_mallocator();
         TextFileResult data = read_file(examples[i].text, allocator);
         if(data.errored){
@@ -633,7 +633,7 @@ TestFunction(TestUntrusted){
     };
     _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
     for(size_t i = 0; i < arrlen(examples); i++){
-        LongString output = {};
+        LongString output = {0};
         Allocator allocator = get_mallocator();
         TextFileResult data = read_file(examples[i].text, allocator);
         TestAssertSuccess(data);
@@ -656,7 +656,7 @@ TestFunction(TestUntrusted){
         ),
     };
     for(size_t i = 0; i < arrlen(inline_examples); i++){
-        LongString output = {};
+        LongString output = {0};
         StringView data = inline_examples[i];
         int e = run_the_dndc(flags, base_dirs[i], data, SV("(string input"), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
         TestExpectFalse(output.text);
@@ -698,7 +698,7 @@ TestFunction(TestSpecialChars){
     };
 
     for(size_t i = 0; i < arrlen(testcases); i++){
-        LongString output = {};
+        LongString output = {0};
         int e = run_the_dndc(flags, SV(""), testcases[i].source, SV(""), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
         TestAssertFalse(e);
         TestExpectEquals2(SV_equals, sv_slice(LS_to_SV(output), 172, testcases[i].result.length), testcases[i].result);
@@ -721,94 +721,94 @@ struct test_utf16_data {
 };
 
 static const struct TestToken tokens[] = {
-    [ 0] = {DNDC_SYNTAX_HEADER,              0,  0, SV16("This is a node")},
-    [ 1] = {DNDC_SYNTAX_DOUBLE_COLON,        0, 14, SV16("::")},
-    [ 2] = {DNDC_SYNTAX_NODE_TYPE,           0, 16, SV16("md")},
-    [ 3] = {DNDC_SYNTAX_ATTRIBUTE,           0, 19, SV16("@hello")},
-    [ 4] = {DNDC_SYNTAX_DIRECTIVE,           0, 26, SV16("#id")},
-    [ 5] = {DNDC_SYNTAX_ATTRIBUTE_ARGUMENT,  0, 30, SV16("hi")},
-    [ 6] = {DNDC_SYNTAX_CLASS,               0, 34, SV16(".a")},
-    [ 7] = {DNDC_SYNTAX_CLASS,               0, 37, SV16(".b")},
-    [ 8] = {DNDC_SYNTAX_HEADER,              1,  2, SV16("This is a table")},
-    [ 9] = {DNDC_SYNTAX_DOUBLE_COLON,        1, 17, SV16("::")},
-    [10] = {DNDC_SYNTAX_NODE_TYPE,           1, 19, SV16("table")},
-    [11] = {DNDC_SYNTAX_ATTRIBUTE,           1, 25, SV16("@ok")},
-    [12] = {DNDC_SYNTAX_ATTRIBUTE_ARGUMENT,  1, 29, SV16("((1))")},
-    [13] = {DNDC_SYNTAX_DOUBLE_COLON,        4,  0, SV16("::")},
-    [14] = {DNDC_SYNTAX_NODE_TYPE,           4,  2, SV16("import")},
-    [15] = {DNDC_SYNTAX_DOUBLE_COLON,        6,  0, SV16("::")},
-    [16] = {DNDC_SYNTAX_NODE_TYPE,           6,  2, SV16("css")},
-    [17] = {DNDC_SYNTAX_DIRECTIVE,           6,  6, SV16("#import")},
-    [18] = {DNDC_SYNTAX_DOUBLE_COLON,        8,  0, SV16("::")},
-    [19] = {DNDC_SYNTAX_NODE_TYPE,           8,  2, SV16("raw")},
-    [20] = {DNDC_SYNTAX_RAW_STRING,          9,  2, SV16("<div>Spooky!</div>")},
-    [21] = {DNDC_SYNTAX_DOUBLE_COLON,       10,  0, SV16("::")},
-    [22] = {DNDC_SYNTAX_NODE_TYPE,          10,  2, SV16("js")},
-    [23] = {DNDC_SYNTAX_JS_KEYWORD,         11,  2, SV16("for")},
-    [24] = {DNDC_SYNTAX_JS_VAR,             11,  6, SV16("let")},
-    [25] = {DNDC_SYNTAX_JS_IDENTIFIER,      11, 10, SV16("n")},
-    [26] = {DNDC_SYNTAX_JS_IDENTIFIER,      11, 12, SV16("of")},
-    [27] = {DNDC_SYNTAX_JS_BUILTIN,         11, 15, SV16("ctx")},
-    [28] = {DNDC_SYNTAX_JS_IDENTIFIER,      11, 19, SV16("select_nodes")},
-    [29] = {DNDC_SYNTAX_JS_BRACE,           11, 32, SV16("{")},
-    [30] = {DNDC_SYNTAX_JS_IDENTIFIER,      11, 33, SV16("type")},
-    [31] = {DNDC_SYNTAX_JS_BUILTIN,         11, 38, SV16("NodeType")},
-    [32] = {DNDC_SYNTAX_JS_NODETYPE,        11, 47, SV16("DIV")},
-    [33] = {DNDC_SYNTAX_JS_IDENTIFIER,      11, 52, SV16("classes")},
-    [34] = {DNDC_SYNTAX_JS_STRING,          11, 61, SV16("'hi'")},
-    [35] = {DNDC_SYNTAX_JS_BRACE,           11, 65, SV16("}")},
-    [36] = {DNDC_SYNTAX_JS_BRACE,           11, 68, SV16("{")},
-    [37] = {DNDC_SYNTAX_JS_BUILTIN,         12,  4, SV16("console")},
-    [38] = {DNDC_SYNTAX_JS_IDENTIFIER,      12, 12, SV16("log")},
-    [39] = {DNDC_SYNTAX_JS_STRING,          12, 16, SV16("`hi ${n}\\n`")},
-    [40] = {DNDC_SYNTAX_JS_KEYWORD,         13,  4, SV16("if")},
-    [41] = {DNDC_SYNTAX_JS_STRING,          13,  7, SV16("'foo bar'")},
-    [42] = {DNDC_SYNTAX_JS_IDENTIFIER,      13, 17, SV16("matches")},
-    [43] = {DNDC_SYNTAX_JS_REGEX,           13, 25, SV16("/foo\\sbar/g")},
-    [44] = {DNDC_SYNTAX_JS_IDENTIFIER,      13, 38, SV16("length")},
-    [45] = {DNDC_SYNTAX_JS_KEYWORD,         14,  4, SV16("for")},
-    [46] = {DNDC_SYNTAX_JS_VAR,             14,  8, SV16("let")},
-    [47] = {DNDC_SYNTAX_JS_IDENTIFIER,      14, 12, SV16("i")},
-    [48] = {DNDC_SYNTAX_JS_NUMBER,          14, 16, SV16("0")},
-    [49] = {DNDC_SYNTAX_JS_IDENTIFIER,      14, 19, SV16("i")},
-    [50] = {DNDC_SYNTAX_JS_NUMBER,          14, 23, SV16("10")},
-    [51] = {DNDC_SYNTAX_JS_IDENTIFIER,      14, 27, SV16("i")},
-    [52] = {DNDC_SYNTAX_JS_BUILTIN,         14, 32, SV16("console")},
-    [53] = {DNDC_SYNTAX_JS_IDENTIFIER,      14, 40, SV16("log")},
-    [54] = {DNDC_SYNTAX_JS_IDENTIFIER,      14, 44, SV16("i")},
-    [55] = {DNDC_SYNTAX_JS_VAR,             15,  4, SV16("let")},
-    [56] = {DNDC_SYNTAX_JS_IDENTIFIER,      15,  8, SV16("x")},
-    [57] = {DNDC_SYNTAX_JS_NUMBER,          15, 13, SV16("1")},
-    [58] = {DNDC_SYNTAX_JS_VAR,             16,  4, SV16("let")},
-    [59] = {DNDC_SYNTAX_JS_IDENTIFIER,      16,  8, SV16("m")},
-    [60] = {DNDC_SYNTAX_JS_KEYWORD,         16, 12, SV16("new")},
-    [61] = {DNDC_SYNTAX_JS_IDENTIFIER,      16, 16, SV16("Map")},
-    [62] = {DNDC_SYNTAX_JS_COMMENT,         18,  4, SV16("/* This is a ")},
-    [63] = {DNDC_SYNTAX_JS_COMMENT,         19,  5, SV16("* block")},
-    [64] = {DNDC_SYNTAX_JS_COMMENT,         20,  5, SV16("* comment */")},
-    [65] = {DNDC_SYNTAX_JS_COMMENT,         21,  4, SV16("// this is a line comment")},
-    [66] = {DNDC_SYNTAX_JS_BRACE,           22,  2, SV16("}")},
-    [67] = {DNDC_SYNTAX_JS_KEYWORD,         23,  2, SV16("for")},
-    [68] = {DNDC_SYNTAX_JS_VAR,             23,  6, SV16("let")},
-    [69] = {DNDC_SYNTAX_JS_IDENTIFIER,      23, 10, SV16("i")},
-    [70] = {DNDC_SYNTAX_JS_NUMBER,          23, 14, SV16("0")},
-    [71] = {DNDC_SYNTAX_JS_IDENTIFIER,      23, 17, SV16("i")},
-    [72] = {DNDC_SYNTAX_JS_NUMBER,          23, 21, SV16("10")},
-    [73] = {DNDC_SYNTAX_JS_IDENTIFIER,      23, 27, SV16("i")},
-    [74] = {DNDC_SYNTAX_JS_BRACE,           23, 29, SV16("{")},
-    [75] = {DNDC_SYNTAX_JS_VAR,             24,  5, SV16("const")},
-    [76] = {DNDC_SYNTAX_JS_IDENTIFIER,      24, 11, SV16("x")},
-    [77] = {DNDC_SYNTAX_JS_BRACE,           24, 15, SV16("{")},
-    [78] = {DNDC_SYNTAX_JS_IDENTIFIER,      24, 16, SV16("a")},
-    [79] = {DNDC_SYNTAX_JS_NUMBER,          24, 18, SV16("1")},
-    [80] = {DNDC_SYNTAX_JS_STRING,          24, 21, SV16("'b'")},
-    [81] = {DNDC_SYNTAX_JS_NUMBER,          24, 26, SV16("1")},
-    [82] = {DNDC_SYNTAX_JS_NUMBER,          24, 28, SV16("2")},
-    [83] = {DNDC_SYNTAX_JS_NUMBER,          24, 30, SV16("3")},
-    [84] = {DNDC_SYNTAX_JS_BRACE,           24, 32, SV16("}")},
-    [85] = {DNDC_SYNTAX_JS_IDENTIFIER,      25,  7, SV16("x")},
-    [86] = {DNDC_SYNTAX_JS_STRING,          25,  9, SV16("'a'")},
-    [87] = {DNDC_SYNTAX_JS_BRACE,           26,  2, SV16("}")},
+    [ 0] = {DNDC_SYNTAX_HEADER,              0,  0, SV16INIT("This is a node")},
+    [ 1] = {DNDC_SYNTAX_DOUBLE_COLON,        0, 14, SV16INIT("::")},
+    [ 2] = {DNDC_SYNTAX_NODE_TYPE,           0, 16, SV16INIT("md")},
+    [ 3] = {DNDC_SYNTAX_ATTRIBUTE,           0, 19, SV16INIT("@hello")},
+    [ 4] = {DNDC_SYNTAX_DIRECTIVE,           0, 26, SV16INIT("#id")},
+    [ 5] = {DNDC_SYNTAX_ATTRIBUTE_ARGUMENT,  0, 30, SV16INIT("hi")},
+    [ 6] = {DNDC_SYNTAX_CLASS,               0, 34, SV16INIT(".a")},
+    [ 7] = {DNDC_SYNTAX_CLASS,               0, 37, SV16INIT(".b")},
+    [ 8] = {DNDC_SYNTAX_HEADER,              1,  2, SV16INIT("This is a table")},
+    [ 9] = {DNDC_SYNTAX_DOUBLE_COLON,        1, 17, SV16INIT("::")},
+    [10] = {DNDC_SYNTAX_NODE_TYPE,           1, 19, SV16INIT("table")},
+    [11] = {DNDC_SYNTAX_ATTRIBUTE,           1, 25, SV16INIT("@ok")},
+    [12] = {DNDC_SYNTAX_ATTRIBUTE_ARGUMENT,  1, 29, SV16INIT("((1))")},
+    [13] = {DNDC_SYNTAX_DOUBLE_COLON,        4,  0, SV16INIT("::")},
+    [14] = {DNDC_SYNTAX_NODE_TYPE,           4,  2, SV16INIT("import")},
+    [15] = {DNDC_SYNTAX_DOUBLE_COLON,        6,  0, SV16INIT("::")},
+    [16] = {DNDC_SYNTAX_NODE_TYPE,           6,  2, SV16INIT("css")},
+    [17] = {DNDC_SYNTAX_DIRECTIVE,           6,  6, SV16INIT("#import")},
+    [18] = {DNDC_SYNTAX_DOUBLE_COLON,        8,  0, SV16INIT("::")},
+    [19] = {DNDC_SYNTAX_NODE_TYPE,           8,  2, SV16INIT("raw")},
+    [20] = {DNDC_SYNTAX_RAW_STRING,          9,  2, SV16INIT("<div>Spooky!</div>")},
+    [21] = {DNDC_SYNTAX_DOUBLE_COLON,       10,  0, SV16INIT("::")},
+    [22] = {DNDC_SYNTAX_NODE_TYPE,          10,  2, SV16INIT("js")},
+    [23] = {DNDC_SYNTAX_JS_KEYWORD,         11,  2, SV16INIT("for")},
+    [24] = {DNDC_SYNTAX_JS_VAR,             11,  6, SV16INIT("let")},
+    [25] = {DNDC_SYNTAX_JS_IDENTIFIER,      11, 10, SV16INIT("n")},
+    [26] = {DNDC_SYNTAX_JS_IDENTIFIER,      11, 12, SV16INIT("of")},
+    [27] = {DNDC_SYNTAX_JS_BUILTIN,         11, 15, SV16INIT("ctx")},
+    [28] = {DNDC_SYNTAX_JS_IDENTIFIER,      11, 19, SV16INIT("select_nodes")},
+    [29] = {DNDC_SYNTAX_JS_BRACE,           11, 32, SV16INIT("{")},
+    [30] = {DNDC_SYNTAX_JS_IDENTIFIER,      11, 33, SV16INIT("type")},
+    [31] = {DNDC_SYNTAX_JS_BUILTIN,         11, 38, SV16INIT("NodeType")},
+    [32] = {DNDC_SYNTAX_JS_NODETYPE,        11, 47, SV16INIT("DIV")},
+    [33] = {DNDC_SYNTAX_JS_IDENTIFIER,      11, 52, SV16INIT("classes")},
+    [34] = {DNDC_SYNTAX_JS_STRING,          11, 61, SV16INIT("'hi'")},
+    [35] = {DNDC_SYNTAX_JS_BRACE,           11, 65, SV16INIT("}")},
+    [36] = {DNDC_SYNTAX_JS_BRACE,           11, 68, SV16INIT("{")},
+    [37] = {DNDC_SYNTAX_JS_BUILTIN,         12,  4, SV16INIT("console")},
+    [38] = {DNDC_SYNTAX_JS_IDENTIFIER,      12, 12, SV16INIT("log")},
+    [39] = {DNDC_SYNTAX_JS_STRING,          12, 16, SV16INIT("`hi ${n}\\n`")},
+    [40] = {DNDC_SYNTAX_JS_KEYWORD,         13,  4, SV16INIT("if")},
+    [41] = {DNDC_SYNTAX_JS_STRING,          13,  7, SV16INIT("'foo bar'")},
+    [42] = {DNDC_SYNTAX_JS_IDENTIFIER,      13, 17, SV16INIT("matches")},
+    [43] = {DNDC_SYNTAX_JS_REGEX,           13, 25, SV16INIT("/foo\\sbar/g")},
+    [44] = {DNDC_SYNTAX_JS_IDENTIFIER,      13, 38, SV16INIT("length")},
+    [45] = {DNDC_SYNTAX_JS_KEYWORD,         14,  4, SV16INIT("for")},
+    [46] = {DNDC_SYNTAX_JS_VAR,             14,  8, SV16INIT("let")},
+    [47] = {DNDC_SYNTAX_JS_IDENTIFIER,      14, 12, SV16INIT("i")},
+    [48] = {DNDC_SYNTAX_JS_NUMBER,          14, 16, SV16INIT("0")},
+    [49] = {DNDC_SYNTAX_JS_IDENTIFIER,      14, 19, SV16INIT("i")},
+    [50] = {DNDC_SYNTAX_JS_NUMBER,          14, 23, SV16INIT("10")},
+    [51] = {DNDC_SYNTAX_JS_IDENTIFIER,      14, 27, SV16INIT("i")},
+    [52] = {DNDC_SYNTAX_JS_BUILTIN,         14, 32, SV16INIT("console")},
+    [53] = {DNDC_SYNTAX_JS_IDENTIFIER,      14, 40, SV16INIT("log")},
+    [54] = {DNDC_SYNTAX_JS_IDENTIFIER,      14, 44, SV16INIT("i")},
+    [55] = {DNDC_SYNTAX_JS_VAR,             15,  4, SV16INIT("let")},
+    [56] = {DNDC_SYNTAX_JS_IDENTIFIER,      15,  8, SV16INIT("x")},
+    [57] = {DNDC_SYNTAX_JS_NUMBER,          15, 13, SV16INIT("1")},
+    [58] = {DNDC_SYNTAX_JS_VAR,             16,  4, SV16INIT("let")},
+    [59] = {DNDC_SYNTAX_JS_IDENTIFIER,      16,  8, SV16INIT("m")},
+    [60] = {DNDC_SYNTAX_JS_KEYWORD,         16, 12, SV16INIT("new")},
+    [61] = {DNDC_SYNTAX_JS_IDENTIFIER,      16, 16, SV16INIT("Map")},
+    [62] = {DNDC_SYNTAX_JS_COMMENT,         18,  4, SV16INIT("/* This is a ")},
+    [63] = {DNDC_SYNTAX_JS_COMMENT,         19,  5, SV16INIT("* block")},
+    [64] = {DNDC_SYNTAX_JS_COMMENT,         20,  5, SV16INIT("* comment */")},
+    [65] = {DNDC_SYNTAX_JS_COMMENT,         21,  4, SV16INIT("// this is a line comment")},
+    [66] = {DNDC_SYNTAX_JS_BRACE,           22,  2, SV16INIT("}")},
+    [67] = {DNDC_SYNTAX_JS_KEYWORD,         23,  2, SV16INIT("for")},
+    [68] = {DNDC_SYNTAX_JS_VAR,             23,  6, SV16INIT("let")},
+    [69] = {DNDC_SYNTAX_JS_IDENTIFIER,      23, 10, SV16INIT("i")},
+    [70] = {DNDC_SYNTAX_JS_NUMBER,          23, 14, SV16INIT("0")},
+    [71] = {DNDC_SYNTAX_JS_IDENTIFIER,      23, 17, SV16INIT("i")},
+    [72] = {DNDC_SYNTAX_JS_NUMBER,          23, 21, SV16INIT("10")},
+    [73] = {DNDC_SYNTAX_JS_IDENTIFIER,      23, 27, SV16INIT("i")},
+    [74] = {DNDC_SYNTAX_JS_BRACE,           23, 29, SV16INIT("{")},
+    [75] = {DNDC_SYNTAX_JS_VAR,             24,  5, SV16INIT("const")},
+    [76] = {DNDC_SYNTAX_JS_IDENTIFIER,      24, 11, SV16INIT("x")},
+    [77] = {DNDC_SYNTAX_JS_BRACE,           24, 15, SV16INIT("{")},
+    [78] = {DNDC_SYNTAX_JS_IDENTIFIER,      24, 16, SV16INIT("a")},
+    [79] = {DNDC_SYNTAX_JS_NUMBER,          24, 18, SV16INIT("1")},
+    [80] = {DNDC_SYNTAX_JS_STRING,          24, 21, SV16INIT("'b'")},
+    [81] = {DNDC_SYNTAX_JS_NUMBER,          24, 26, SV16INIT("1")},
+    [82] = {DNDC_SYNTAX_JS_NUMBER,          24, 28, SV16INIT("2")},
+    [83] = {DNDC_SYNTAX_JS_NUMBER,          24, 30, SV16INIT("3")},
+    [84] = {DNDC_SYNTAX_JS_BRACE,           24, 32, SV16INIT("}")},
+    [85] = {DNDC_SYNTAX_JS_IDENTIFIER,      25,  7, SV16INIT("x")},
+    [86] = {DNDC_SYNTAX_JS_STRING,          25,  9, SV16INIT("'a'")},
+    [87] = {DNDC_SYNTAX_JS_BRACE,           26,  2, SV16INIT("}")},
 };
 
 void

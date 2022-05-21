@@ -404,7 +404,7 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
 
 #endif
 
-static const LongString INDEXTEXT = LS(
+static const LongString INDEXTEXT = LSINIT(
     "Index::title\n"
     "::js\n"
     "  let paths = FileSystem.list_dnd_files();\n"

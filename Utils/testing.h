@@ -126,6 +126,7 @@ TestPrintf(const char* fmt, ...){
 
 #ifndef TestPrintValue
 
+#if defined(__GNUC__) || defined(__clang__)
 #define TestPrintFuncs(apply) \
     apply(bool, _Bool, "%s", x?"true":"false")\
     apply(char, char, "%c", x)\
@@ -147,6 +148,31 @@ TestPrintf(const char* fmt, ...){
     apply(pcvoid, const void*, "%p", x) \
     apply(LongString, LongString, "\"%s\"", x.text) \
     apply(StringView, StringView, "\"%.*s\"", (int)x.length, x.text)
+#else
+// MSVC treats char and signed char as the same, even though they should
+// be distinct. Sigh. This means we can't distinguish between int8_t and
+// char. So drop char from this.
+#define TestPrintFuncs(apply) \
+    apply(bool, _Bool, "%s", x?"true":"false")\
+    apply(uchar, unsigned char, "%u", x) \
+    apply(schar, signed char, "%d", x) \
+    apply(float, float, "%f", (double)x) \
+    apply(double, double, "%f", x) \
+    apply(short, short, "%d", x) \
+    apply(ushort, unsigned short, "%u", x) \
+    apply(int, int, "%d", x)\
+    apply(uint, unsigned int, "%u", x) \
+    apply(long, long, "%ld", x) \
+    apply(ulong, unsigned long, "%lu", x) \
+    apply(llong, long long, "%lld", x) \
+    apply(ullong, unsigned long long, "%llu", x) \
+    apply(cstr, char*, "\"%s\"", x) \
+    apply(ccstr, const char*, "\"%s\"", x) \
+    apply(pvoid, void*, "%p", x) \
+    apply(pcvoid, const void*, "%p", x) \
+    apply(LongString, LongString, "\"%s\"", x.text) \
+    apply(StringView, StringView, "\"%.*s\"", (int)x.length, x.text)
+#endif
 #define TestPrintFunc(suffix, type, unused, ...) type: TestPrintImpl_##suffix,
 
 #define TestPrintValue(str, val) \
@@ -373,7 +399,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 #else
   #define TestExpectEquals(lhs, rhs) do {\
           TEST_stats.executed++;\
-          if (!(lhs == rhs)) {\
+          if (!((lhs) == (rhs))) {\
               TEST_stats.failures++; \
               TestReport("Test condition failed");\
               TestReport("%s == %s", #lhs, #rhs); \
@@ -434,7 +460,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 #else
   #define TestExpectNotEquals(lhs, rhs) do {\
           TEST_stats.executed++;\
-          if (!(lhs != rhs)) {\
+          if (!((lhs) != (rhs))) {\
               TEST_stats.failures++; \
               TestReport("Test condition failed");\
               TestReport("%s != %s", #lhs, #rhs); \
@@ -472,7 +498,6 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
               TestPrintValue(#lhs, lhs);\
               TestPrintValue(#rhs, rhs);\
               }\
-          notequal__; \
           }while(0)
 #endif
 
@@ -504,7 +529,6 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
               TestReport("Test condition failed (expected falsey)");\
               TestPrintValue(#cond, cond);\
           }\
-          !cond_; \
       }while(0)
 
   //
@@ -609,7 +633,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 #else
   #define TestAssertEquals(lhs, rhs) do{\
         TEST_stats.executed++;\
-        if (! (lhs==rhs)){ \
+        if (! ((lhs)==(rhs))){ \
             TEST_stats.failures++; \
             TEST_stats.assert_failures++; \
             TestReport("Test condition failed");\

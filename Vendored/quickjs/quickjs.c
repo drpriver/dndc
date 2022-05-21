@@ -231,7 +231,7 @@ typedef enum QJSErrorEnum {
 #else
 #define __exception
 #define QJSVALUECAST
-#define QJSVALUECONSTCAST
+#define QJSVALUETOCONSTCAST
 #endif
 
 typedef struct QJSShape QJSShape;

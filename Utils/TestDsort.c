@@ -92,7 +92,7 @@ TestFunction(TestSortRandoms){
     enum {N = 500000};
     int* array = malloc(N*sizeof(*array));
     TestAssert(array);
-    RngState rng = {};
+    RngState rng = {0};
     seed_rng_fixed(&rng, 0x7123, 81728);
     for(int n = 1; n < 0xffff; n++){
         printf("\r%d", n); fflush(stdout);

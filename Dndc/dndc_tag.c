@@ -9,6 +9,9 @@
 #include <unistd.h>
 #endif
 #include <stdio.h>
+#if !defined(_MSC_VER) || defined(__clang__)
+#include <stdatomic.h>
+#endif
 #include "common_macros.h"
 #include "dndc_long_string.h"
 #include "dndc_ast.h"
@@ -46,7 +49,13 @@ struct WorkItem {
 #include "Utils/Marray.h"
 
 Marray__WorkItem items;
-_Atomic size_t item_idx;
+// My version of msvc doesn't have _Atomic, but volatile
+// has atomic semantics.
+#if defined(_MSC_VER) && ! defined(__clang__)
+volatile size_t item_idx;
+#else
+_Atomic size_t  item_idx;
+#endif
 _Bool ignore_errors;
 
 #ifdef __clang__

@@ -17,9 +17,9 @@ TestFunction(TestBase64){
         StringView encoded = msb_borrow_sv(&sb);
         TestExpectEquals(gt.length, encoded.length);
         TestExpectEquals2(SV_equals, gt, encoded);
-        char decoded[sizeof("any carnal pleasur")] = {};
+        char decoded[sizeof("any carnal pleasur")] = {0};
         Base64Error e = base64_decode(decoded, sizeof(decoded), (const uint8_t*)encoded.text, encoded.length);
-        TestExpectEquals(e, BASE64_NO_ERROR);
+        TestExpectEquals((int)e, BASE64_NO_ERROR);
         TestExpectEquals2(SV_equals, cstr_to_SV(decoded), text);
         msb_reset(&sb);
     }
@@ -30,9 +30,9 @@ TestFunction(TestBase64){
         StringView encoded = msb_borrow_sv(&sb);
         TestExpectEquals(encoded.length, gt.length);
         TestExpectEquals2(SV_equals, encoded, gt);
-        char decoded[sizeof("any carnal pleasure.")] = {};
+        char decoded[sizeof("any carnal pleasure.")] = {0};
         Base64Error e = base64_decode(decoded, sizeof(decoded), (const uint8_t*)encoded.text, encoded.length);
-        TestExpectEquals(e, BASE64_NO_ERROR);
+        TestExpectEquals((int)e, BASE64_NO_ERROR);
         TestExpectEquals2(SV_equals, cstr_to_SV(decoded), text);
         msb_reset(&sb);
     }
@@ -40,16 +40,16 @@ TestFunction(TestBase64){
         uint64_t data[] = {0x7812231, 0xdeadbeef, 0xcafebabe, 0x1337f00d, 0x888a6a96};
         msb_write_b64(&sb, data, sizeof(data));
         StringView encoded = msb_borrow_sv(&sb);
-        uint64_t decoded[arrlen(data)] = {};
+        uint64_t decoded[arrlen(data)] = {0};
         Base64Error e = base64_decode(decoded, sizeof(decoded), (const uint8_t*)encoded.text, encoded.length);
-        TestExpectEquals(e, BASE64_NO_ERROR);
+        TestExpectEquals((int)e, BASE64_NO_ERROR);
         TestExpectEquals(memcmp(decoded, data, sizeof(data)), 0);
         for(size_t i = 0; i < arrlen(data); i++){
             TestExpectEquals(data[i], decoded[i]);
-            }
-        uint8_t shortbuff[sizeof(decoded)-1] = {};
+        }
+        uint8_t shortbuff[sizeof(decoded)-1] = {0};
         Base64Error e2 = base64_decode(shortbuff, sizeof(shortbuff), (const uint8_t*)encoded.text, encoded.length);
-        TestExpectNotEquals(e2, BASE64_NO_ERROR);
+        TestExpectNotEquals((int)e2, BASE64_NO_ERROR);
     }
     msb_destroy(&sb);
     shallow_free_recorded_mallocator(a);
@@ -65,7 +65,7 @@ TestFunction(TestBase64_2){
         void* buff = Allocator_alloc(a, size);
 
         Base64Error e = base64_decode(buff, size, (const unsigned char*)data.text, data.length);
-        TestExpectEquals(e, BASE64_NO_ERROR);
+        TestExpectEquals((int)e, BASE64_NO_ERROR);
         Allocator_free(a, buff, size);
     }
     {
@@ -75,9 +75,9 @@ TestFunction(TestBase64_2){
         StringView encoded = msb_borrow_sv(&sb);
         StringView expected = SV("AQIDBAUGBwgJCw");
         TestExpectEquals2(SV_equals,encoded, expected);
-        uint8_t decoded[arrlen(data)] = {};
+        uint8_t decoded[arrlen(data)] = {0};
         Base64Error e = base64_decode(decoded, sizeof(decoded), (const uint8_t*)encoded.text, encoded.length);
-        TestExpectEquals(e, BASE64_NO_ERROR);
+        TestExpectEquals((int)e, BASE64_NO_ERROR);
         TestExpectEquals(memcmp(decoded, data, sizeof(data)), 0);
         msb_destroy(&sb);
     }
