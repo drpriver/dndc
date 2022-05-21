@@ -345,7 +345,7 @@ parse_int64(const char* str, size_t length){
             result.errored = PARSENUMBER_OVERFLOWED_VALUE;
             return result;
         }
-        result.result = -(int64_t)value;
+        result.result = (int64_t)-value;
     }
     else{
         if(value > (uint64_t)INT64_MAX){
@@ -471,7 +471,7 @@ parse_int32(const char*str, size_t length){
             result.errored = PARSENUMBER_OVERFLOWED_VALUE;
             return result;
         }
-        result.result = -(int32_t)value;
+        result.result = (int32_t)-value;
     }
     else{
         if(value > (uint32_t)INT32_MAX){
