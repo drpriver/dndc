@@ -62,13 +62,10 @@ def dnd_outline() -> List[Loc]:
             result.extend(get_locs(child, depth+1 if loc is not None else depth))
         return result
     ctx = pydndc.Context()
+    ctx.logger = pydndc.stderr_logger
     cb: vim.Buffer = vim.current.buffer
     text = '\n'.join(cb)
-    try:
-        ctx.root.parse(text)
-    except Exception as e:
-        print(*ctx.errors, file=sys.stderr, sep='\n')
-        raise
+    ctx.root.parse(text)
     locs = get_locs(ctx.root, 0)
     return locs
 
