@@ -116,7 +116,7 @@ class SCHEME_Handler(QWebEngineUrlSchemeHandler):
                     parts = components[3].split('.')
                     if len(parts) != 2: return
                     x = int(parts[0])
-                    y = int(parts(1))
+                    y = int(parts[1])
                     QTimer.singleShot(0, lambda: append_room_with_name_at(name, x, y))
                     return
                 elif components[1] == 'scrolltoid':
@@ -150,16 +150,17 @@ class SCHEME_Handler(QWebEngineUrlSchemeHandler):
                 file = QFile(imgpath, request)
                 request.reply(types[imgtype], file)  # type: ignore
                 return
-        request.fail(QWebEngineUrlRequestJob.Error().RequestDenied)
+        request.fail(QWebEngineUrlRequestJob.Error.RequestDenied)
 
 
 class Logs:
     def __init__(self) -> None:
         self.old_hook: Optional[Callable] = None
+        self.stream = sys.stderr
         try:
             self.stream = open(LOGFILE_LOCATION, 'a', encoding='utf-8')
         except:
-            self.stream = sys.stderr
+            pass
         self.LOGGER = logging.getLogger('DndEdit')
         self.LOGGER.setLevel(logging.DEBUG)
         handler = logging.StreamHandler(stream=self.stream)
@@ -923,25 +924,25 @@ class Page(QSplitter):
                     "  document.addEventListener('DOMContentLoaded', function(){\n"
                     "    const anchors = document.getElementsByTagName('a');\n"
                     "    function add_interceptor(a){\n"
-                    "      a.onclick = function(e){\n"
-                    "       let href = a.href;\n"
-                    "       if(href.baseVal) href = href.baseVal;\n"
-                    "       let split = href.split('#');\n"
-                    "       if(split.length > 1){\n"
-                    "         let target = split[1];\n"
-                    "         let t = document.getElementById(target);\n"
-                    "         if(t){\n"
-                    "           t.scrollIntoView();\n"
-                    "           e.preventDefault();\n"
-                    "           e.stopPropagation();\n"
-                    "           let request = new XMLHttpRequest();\n"
-                    "           request.open('PUT', 'dnd:///scrolltoid/'+target, true)\n"
-                    "           request.send();\n"
-                    "           return false;\n"
-                    "         }\n"
-                    "       }\n"
-                    "       a.setAttribute('target', '_blank');\n"
-                    "      };\n"
+                    "      let href = a.href;\n"
+                    "      if(href.baseVal) href = href.baseVal;\n"
+                    "      let split = href.split('#');\n"
+                    "      if(split.length > 1){\n"
+                    "        a.onclick = function(e){\n"
+                    "          let target = split[1];\n"
+                    "          let t = document.getElementById(target);\n"
+                    "          if(t){\n"
+                    "            t.scrollIntoView();\n"
+                    "            e.preventDefault();\n"
+                    "            e.stopPropagation();\n"
+                    "            let request = new XMLHttpRequest();\n"
+                    "            request.open('PUT', 'dnd:///scrolltoid/'+target, true)\n"
+                    "            request.send();\n"
+                    "            return false;\n"
+                    "          }\n"
+                    "        };\n"
+                    "        a.setAttribute('target', '_blank');\n"
+                    "      }\n"
                     "    }\n"
                     "    for(let a of anchors){\n"
                     "      add_interceptor(a);\n"
