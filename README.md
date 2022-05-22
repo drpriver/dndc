@@ -13,10 +13,8 @@ stands for David's New Document.
 
 <h2>Building</h2>
 This project builds with clang (including apple clang) or gcc. It does not
-compile with MSVC and there is no interest in having it compile with MSVC or
-as C++. You can just use clang on windows anyway. Mingw is not supported as
-its headers have some incompatible declarations (probably wouldn't be hard to
-support though).
+compile with MSVC. MSVC has some weird bug with static constant initializers that only manifests in release builds (strangely, debug builds do compile).You can just use clang on windows anyway.
+Mingw is not supported.
 
 <details><summary>Make</summary>
 
