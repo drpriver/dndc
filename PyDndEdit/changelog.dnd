@@ -1,3 +1,5 @@
+Version 0.17.0::md
+  * Added deflist and def nodes. See the [reference].
 Version 0.15.0::md
   * Removed the data node and data blob.
     - This was used in one document and wasn't even the best way to solve that particular problem.
@@ -268,6 +270,8 @@ Version 0.3.11::md
     - Logs are per day.
     - You can delete the old logs if they get too fat.
 
+::links
+  reference = REFERENCE.dnd
 ::css
   body > div {
     margin: auto;
