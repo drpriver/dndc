@@ -25,6 +25,7 @@
 #ifdef _WIN32
 #include "Platform/Windows/wincli.h"
 #endif
+#include <stdio.h>
 
 // Print out syntax-highlighted version of the file to stdout.
 static
@@ -39,6 +40,11 @@ dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths);
 // Print out the dependencies instead of writing to file.
 static int depends_print_callback(void*_Nullable, size_t, StringView*);
 
+
+struct MainAstData {
+    uint64_t flags;
+    LongString output_path;
+};
 //
 // Peek into the private ctx so we can print out links and print
 // out the tree.
@@ -57,7 +63,7 @@ print_file_writing_error(const char* filename, FileWriteResult err);
 //
 static inline
 void
-print_node_and_children(DndcContext*_Nonnull ctx, NodeHandle handle, int depth);
+print_node_and_children(DndcContext*_Nonnull ctx, NodeHandle handle, int depth, FILE*);
 
 struct DependencyUserData {
     LongString outfile;
@@ -532,6 +538,12 @@ main(int argc, char**argv){
     if(!(flags & DNDC_NO_THREADS))
         worker = (WorkerThread*)dndc_worker_thread_create();
 
+    struct MainAstData mad = {
+        .flags = ast_func_flags,
+        // output_path is really a LongString, so this is fine.
+        .output_path = {output_path.length, output_path.text},
+    };
+
     if(bench_iters){
         LongString output = {0};
         flags &= ~DNDC_NO_CLEANUP;
@@ -547,7 +559,7 @@ main(int argc, char**argv){
                 b64cache, textcache,
                 dndc_stderr_log_func, NULL,
                 dependency_func, &dependency_user_data,
-                dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
+                dndc_main_ast_func, &mad, 
                 worker,
                 jsargs);
             if(e) return 1;
@@ -578,10 +590,11 @@ main(int argc, char**argv){
             NULL, NULL,
             dndc_stderr_log_func, NULL,
             dependency_func, &dependency_user_data,
-            dndc_main_ast_func, (void*)(uintptr_t)ast_func_flags,
+            dndc_main_ast_func, &mad,
             worker,
             jsargs
-            );
+        );
+        if(e == -1) return 0;
         if(e) return e;
         if(flags & DNDC_DONT_WRITE)
             return 0;
@@ -647,9 +660,18 @@ ctx_to_json(DndcContext*, MStringBuilder*);
 static
 int
 dndc_main_ast_func(void*_Nullable user_data, DndcContext*_Nonnull ctx){
-    uint64_t flags = (uintptr_t)user_data;
+    struct MainAstData* data = user_data;
+    uint64_t flags = data->flags;
+    FILE* fp;
+    if(data->output_path.length){
+        fp = fopen(data->output_path.text, "wb");
+        if(!fp) return DNDC_ERROR_USER_ERROR;
+    }
+    else
+        fp = stdout;
     if(flags & DNDC_MAIN_PRINT_TREE){
-        print_node_and_children(ctx, ctx->root_handle, 0);
+        print_node_and_children(ctx, ctx->root_handle, 0, fp);
+        return -1;
     }
     if(flags & DNDC_MAIN_PRINT_LINKS){
         size_t print_idx = 0;
@@ -657,26 +679,30 @@ dndc_main_ast_func(void*_Nullable user_data, DndcContext*_Nonnull ctx){
             StringView k = ctx->links.keys[i];
             if(!k.length) continue;
             StringView v = ctx->links.keys[i+ctx->links.capacity_];
-            fprintf(stderr, "[%zu] key: '%.*s', value: '%.*s'\n", print_idx++, (int)k.length, k.text, (int)v.length, v.text);
+            fprintf(fp, "[%zu] key: '%.*s', value: '%.*s'\n", print_idx++, (int)k.length, k.text, (int)v.length, v.text);
         }
+        if(data->output_path.length) fclose(fp);
+        return -1;
     }
     if(flags & DNDC_MAIN_DUMP_JSON){
         MStringBuilder sb = {.allocator=get_mallocator()};
         ctx_to_json(ctx, &sb);
-        puts(msb_borrow_ls(&sb).text);
+        fputs(msb_borrow_ls(&sb).text, fp);
         msb_destroy(&sb);
+        if(data->output_path.length) fclose(fp);
+        return -1;
     }
     return 0;
 }
 
 static inline
 void
-print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
+print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth, FILE* out){
     Node* node = get_node(ctx, handle);
     for(int i = 0 ; i < depth*2; i++){
-        putchar(' ');
+        fputc(' ', out);
     }
-    printf("[%-8s]", NODENAMES[node->type].text);
+    fprintf(out, "[%-8s]", NODENAMES[node->type].text);
     switch((NodeType)node->type){
         case NODE_PARA:
         case NODE_TABLE_ROW:
@@ -709,25 +735,25 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth){
         case NODE_INVALID:
         case NODE_QUOTE:
         case NODE_DIV:{
-            printf(" '%.*s' ", (int)node->header.length, node->header.text);
+            fprintf(out," '%.*s' ", (int)node->header.length, node->header.text);
             RARRAY_FOR_EACH(StringView, c, node->classes){
-                printf(".%.*s ", (int)c->length, c->text);
+                fprintf(out, ".%.*s ", (int)c->length, c->text);
             }
             RARRAY_FOR_EACH(Attribute, a, node->attributes){
-                printf("@%.*s", (int)a->key.length, a->key.text);
+                fprintf(out, "@%.*s", (int)a->key.length, a->key.text);
                 if(a->value.length)
-                    printf("(%.*s) ", (int)a->value.length, a->value.text);
+                    fprintf(out, "(%.*s) ", (int)a->value.length, a->value.text);
                 else
-                    putchar(' ');
+                    fputc(' ', out);
             }
         }break;
         case NODE_STRING:{
-            printf(" '%.*s'", (int)node->header.length, node->header.text);
+            fprintf(out, " '%.*s'", (int)node->header.length, node->header.text);
         }break;
     }
-    putchar('\n');
+    fputc('\n', out);
     NODE_CHILDREN_FOR_EACH(it, node){
-        print_node_and_children(ctx, *it, depth+1);
+        print_node_and_children(ctx, *it, depth+1, out);
     }
 }
 

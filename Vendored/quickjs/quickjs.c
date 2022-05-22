@@ -127,7 +127,7 @@ typedef intptr_t ssize_t;
 #ifdef CONFIG_ATOMICS
 #ifndef _WIN32
 #include <pthread.h>
-#if defined(_MSC_VER) !defined(__clang__)
+#if defined(_MSC_VER) && !defined(__clang__)
 #include <immintrin.h>
 #endif
 #endif

@@ -617,6 +617,10 @@ run_the_dndc(uint64_t flags,
     // User ast func
     if(!wasm && ast_func){
         int err = ast_func(ast_func_user_data, &ctx);
+        if(err < 0) {
+            result = -1;
+            goto cleanup;
+        }
         if(err){
             report_system_error(&ctx, SV("Error during user defined ast func"));
             goto cleanup;

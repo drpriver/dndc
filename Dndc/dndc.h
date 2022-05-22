@@ -87,6 +87,7 @@ enum DndcErrorCode {
     DNDC_ERROR_UNTRUSTED    = 7, // Insecure content requested in an untrusted context.
     DNDC_ERROR_VALUE        = 8, // A bad value was given to a DNDC_API function.
     DNDC_ERROR_NOT_FOUND    = 9, // The given key does not exist.
+    DNDC_ERROR_USER_ERROR   = 10, // An error generated from your code.
 };
 
 
