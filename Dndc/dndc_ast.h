@@ -3,7 +3,6 @@
 //
 #ifndef DNDC_AST_H
 #define DNDC_AST_H
-#ifndef NO_DNDC_AST_API
 #include "dndc.h"
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -1047,6 +1046,35 @@ dndc_ctx_resolve_imports(DndcContext*);
 // This function can call the logger.
 //
 
+typedef struct DndcPreloadImageJob DndcPreloadImageJob;
+DNDC_API
+DNDC_NULLABLE(DndcPreloadImageJob*)
+dndc_ctx_create_preload_img_job(DndcContext*);
+// ------------------------------------
+// Preps the preload job so it can be safely performed in parallel with things
+// like user scripts that can add more img nodes.
+//
+// Returns NULL if there is no work to do.
+//
+
+DNDC_API
+void
+dndc_preload_imgs(DNDC_NULLABLE(DndcPreloadImageJob*));
+// ---------------------------------
+// Iterates the IMG nodes and the IMGLINKS node and popluates the loaded image
+// chage. This can speed up html generation as this work would otherwise have
+// to be done during html generation.
+//
+// The intended use is to call this in parallel with executing user scripts.
+//
+// This function does not report errors.
+//
+DNDC_API
+void
+dndc_ctx_preload_img_job_join(DndcContext*, DNDC_NULLABLE(DndcPreloadImageJob*));
+// ----------------------------
+// Merges the result of preloading into the ctx. Call this after user scripts have
+// finished.
 
 DNDC_API
 int
@@ -1266,5 +1294,4 @@ compile_dnd_to_html_with_extra_script(
 #pragma clang assume_nonnull end
 #endif
 
-#endif
 #endif

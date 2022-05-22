@@ -68,16 +68,15 @@ memmem(const void* hay_, size_t haysz, const void* needle_, size_t needlesz){
 void*_Nullable memmem(const void*, size_t, const void*, size_t);
 #endif
 
-// Unsure of where to put this. So, just putting it here for now.
-typedef struct BinaryJob{
+struct DndcPreloadImageJob{
     Marray(StringView) sourcepaths;
     FileCache* b64cache;
-} BinaryJob;
+};
 
 static
-THREADFUNC(binary_worker){
+THREADFUNC(preload_img_job_func){
     // Prepopulate the binary cache.
-    BinaryJob* jobp = thread_arg;
+    DndcPreloadImageJob* jobp = thread_arg;
     FileCache* cache = jobp->b64cache;
     size_t count = jobp->sourcepaths.count;
     StringView* data = jobp->sourcepaths.data;
@@ -186,79 +185,101 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
     return result;
 }
 
-// NOTE: we can have larger scope than this if we want.
-// Slicing the work here this way is not inherent.
-// However, care must be taken that the spawned thread is
-// joined by the time we exit.
+
+DNDC_API
+DNDC_NULLABLE(DndcPreloadImageJob*)
+dndc_ctx_create_preload_img_job(DndcContext* ctx){
+    if(ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME | DNDC_DONT_READ)) return NULL;
+    Marray(NodeHandle)* img_nodes[] = {
+        &ctx->img_nodes,
+        &ctx->imglinks_nodes,
+    };
+    Marray(StringView) sourcepaths = {0};
+    for(size_t n = 0; n < arrlen(img_nodes); n++){
+        Marray(NodeHandle)* nodes = img_nodes[n];
+        MARRAY_FOR_EACH(NodeHandle, it, *nodes){
+            Node* node = get_node(ctx, *it);
+            if(!node_children_count(node))
+                continue;
+            Node* child = get_node(ctx, node_children(node)[0]);
+            if(!child->header.length)
+                continue;
+            if(path_is_abspath(child->header) || !ctx->base_directory.length){
+                // Already absolute or we're relative to cwd, so
+                // keep it as is.
+                if(! FileCache_has_file(ctx->b64cache, child->header)){
+                    StringView* sv = Marray_alloc(StringView)(&sourcepaths, main_allocator(ctx));
+                    *sv = child->header;
+                }
+            }
+            else {
+                // Otherwise we build the path relative to the given
+                // include directory.
+                // Get's cleaned up with the string allocator.
+                MStringBuilder path_builder = {.allocator=string_allocator(ctx)};
+                msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
+                msb_append_path(&path_builder, child->header.text, child->header.length);
+                StringView path = msb_borrow_sv(&path_builder);
+                if(! FileCache_has_file(ctx->b64cache, path)){
+                    StringView* sv = Marray_alloc(StringView)(&sourcepaths, main_allocator(ctx));
+                    *sv = msb_detach_sv(&path_builder);
+                }
+                else {
+                    msb_destroy(&path_builder);
+                }
+            }
+        }
+    }
+    if(!sourcepaths.count) return NULL;
+    DndcPreloadImageJob* job = Allocator_alloc(temp_allocator(ctx), sizeof(*job));
+    job->sourcepaths = sourcepaths;
+    job->b64cache = ctx->b64cache;
+    return job;
+}
+
+DNDC_API
+void
+dndc_preload_imgs(DNDC_NULLABLE(DndcPreloadImageJob*)job){
+    if(!job) return;
+    preload_img_job_func(job);
+}
+
+DNDC_API
+void
+dndc_ctx_preload_img_job_join(DndcContext* ctx, DNDC_NULLABLE(DndcPreloadImageJob*)job){
+    // Docs claims that this is where we merge the results, but we actually don't.
+    // We just wrote directly into the image cache before.
+    if(!job) return;
+    // Don't bother trying to free the paths, as some are allocated and some are borrowed.
+    // They're not that big and will get cleaned up at the end anyway.
+    Marray_cleanup(StringView)(&job->sourcepaths, main_allocator(ctx));
+    Allocator_free(temp_allocator(ctx), job, sizeof *job);
+}
+
+// NOTE: we can have larger scope than this if we want.  Slicing the work here
+// this way is not inherent.  However, care must be taken that the spawned
+// thread is joined by the time we exit.
 static
 warn_unused
 int
 execute_user_scripts_and_load_images(DndcContext* ctx, WorkerThread*_Nullable worker, LongString jsargs){
     int result = 0;
     uint64_t flags = ctx->flags;
-    // Setup the worker thread.
-    // NOTE: a pointer to this struct is sent to the worker thread, so if
-    //       you return before the thread is done, bad things will happen.
-    BinaryJob job = {
-        .b64cache = ctx->b64cache,
-    };
-    if(! (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME | DNDC_DONT_READ))){
-        // Populate a list of filepaths to load up in order
-        // to pre-populate the cache.
-        Marray(NodeHandle)* img_nodes[] = {
-            &ctx->img_nodes,
-            &ctx->imglinks_nodes,
-        };
-        for(size_t n = 0; n < arrlen(img_nodes); n++){
-            Marray(NodeHandle)* nodes = img_nodes[n];
-            MARRAY_FOR_EACH(NodeHandle, it, *nodes){
-                Node* node = get_node(ctx, *it);
-                if(!node_children_count(node))
-                    continue;
-                Node* child = get_node(ctx, node_children(node)[0]);
-                if(!child->header.length)
-                    continue;
-                // Already absolute or we're relative to cwd, so
-                // keep it as is.
-                if(path_is_abspath(child->header) || !ctx->base_directory.length){
-                    if(! FileCache_has_file(job.b64cache, child->header)){
-                        StringView* sv = Marray_alloc(StringView)(&job.sourcepaths, main_allocator(ctx));
-                        *sv = child->header;
-                    }
-                }
-                else {
-                    // Otherwise we build the path relative to the given
-                    // include directory.
-                    // Get's cleaned up with the string allocator.
-                    MStringBuilder path_builder = {.allocator=string_allocator(ctx)};
-                    msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
-                    msb_append_path(&path_builder, child->header.text, child->header.length);
-                    StringView path = msb_borrow_sv(&path_builder);
-                    if(! FileCache_has_file(job.b64cache, path)){
-                        StringView* sv = Marray_alloc(StringView)(&job.sourcepaths, main_allocator(ctx));
-                        *sv = msb_detach_sv(&path_builder);
-                    }
-                    else {
-                        msb_destroy(&path_builder);
-                    }
-                }
-            }
-        }
-    }
+    DndcPreloadImageJob* job = dndc_ctx_create_preload_img_job(ctx);
     ThreadHandle thread_worker = {0};
-    bool binary_work_to_be_done = !!job.sourcepaths.count;
+    bool binary_work_to_be_done = !!job;
     bool thread_created = false;
     if(binary_work_to_be_done){
         if(flags & DNDC_NO_THREADS){
             // Do it ourselves in this thread.
-            binary_worker(&job);
+            preload_img_job_func(job);
         }
         else{
             if(worker){
-                worker_submit((WorkerThread*)worker, &job);
+                worker_submit((WorkerThread*)worker, job);
             }
             else{
-                create_thread(&thread_worker, &binary_worker, &job);
+                create_thread(&thread_worker, &preload_img_job_func, job);
             }
             thread_created = true;
         }
@@ -277,13 +298,10 @@ execute_user_scripts_and_load_images(DndcContext* ctx, WorkerThread*_Nullable wo
         // This is usually very fast as the worker thread finished before scripts.
         report_time(ctx, SV("Joining took: "), after-before);
     }
-    if(binary_work_to_be_done){
-        Marray_cleanup(StringView)(&job.sourcepaths, main_allocator(ctx));
-    }
-    else {
+    if(binary_work_to_be_done)
+        dndc_ctx_preload_img_job_join(ctx, job);
+    else
         LOG_INFO(ctx, SV(""), 0, 0, SV("No binary work was to be done"));
-        // report_info(ctx, SV("No binary work was to be done."));
-    }
     return result;
 }
 
@@ -1981,7 +1999,7 @@ dndc_filecache_store_text(DndcFileCache* cache, DndcStringView path, DndcStringV
 DNDC_API
 DndcWorkerThread*
 dndc_worker_thread_create(void){
-    return (DndcWorkerThread*)worker_create(binary_worker);
+    return (DndcWorkerThread*)worker_create(preload_img_job_func);
 }
 
 DNDC_API
@@ -2040,12 +2058,7 @@ dndc_compile_dnd_file(
 }
 
 
-#if defined(WASM) && !defined(NO_DNDC_AST_API)
-#define NO_DNDC_AST_API
-#endif
-
 // ast API
-#ifndef NO_DNDC_AST_API
 DNDC_API
 DndcStringView
 dndc_ctx_dup_sv(DndcContext* ctx, DndcStringView text){
@@ -3209,7 +3222,6 @@ dndc_ctx_to_json(DndcContext* ctx, DndcLongString*out){
     return 0;
 }
 
-#endif
 
 static inline
 void

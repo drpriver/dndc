@@ -7,7 +7,6 @@
 #include "dndc.h"
 #include "dndc_long_string.h"
 #include "Utils/testing.h"
-#define NO_DNDC_AST_API
 #include "dndc.c"
 
 // These are forward function decls
