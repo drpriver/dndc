@@ -13,8 +13,9 @@ stands for David's New Document.
 
 <h2>Building</h2>
 This project builds with clang (including apple clang) or gcc. It does not
-compile with MSVC. MSVC has some weird bug with static constant initializers that only manifests in release builds (strangely, debug builds do compile).You can just use clang on windows anyway.
-Mingw is not supported.
+compile with MSVC. MSVC has some weird bug with static constant initializers
+that only manifests in release builds (strangely, debug builds do compile).
+You can just use clang on windows anyway. Mingw is not supported.
 
 <details><summary>Make</summary>
 
@@ -129,6 +130,11 @@ This will embed quickjs in the python extension.
 Mac only. A rich gui editor for dnd files, showing the resulting document in
 a webview. Built with appkit.
 
+
+This does not produce an app bundle. It creates a self-contained executable
+with an embedded Info.plist and app icon. Patches to create an actual app
+bundle instead are welcome.
+
 </dd>
 
 <dt>DndcEdit</dt>
@@ -170,6 +176,9 @@ in your browser.
 
 Mac Only. This is similar to dndc-browse, but is a gui app instead of a
 command-line utility.
+
+
+Similar to DndEdit, this does not produce an app bundle.
 
 </dd>
 
