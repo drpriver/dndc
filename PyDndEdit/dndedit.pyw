@@ -415,16 +415,12 @@ COORD_HELPER_SCRIPT= (
     "                      internal_id = _coords2[href];\n"
     "                  if(!internal_id){\n"
     "                      let t = anchor.childNodes[0].textContent.trim();\n"
-    "                      console.log('t', t);\n"
     "                      internal_id = _coords2[t];\n"
     "                  }\n"
-    "                  console.log(internal_id);\n"
-    "                  console.log(href);\n"
     "                  if(!internal_id) return;\n"
     "                  let new_x = anchor.transform.baseVal[0].matrix.e | 0;\n"
     "                  let new_y = anchor.transform.baseVal[0].matrix.f | 0;\n"
     "                  const combo = `${internal_id}.${new_x}.${new_y}`;\n"
-    "                  console.log(combo);\n"
     "                  let request = new XMLHttpRequest();\n"
     "                  request.open('PUT', 'dnd:///roommove/'+combo, true);\n"
     "                  request.send();\n"
@@ -477,7 +473,6 @@ COORD_HELPER_SCRIPT= (
 SCROLL_RESTO_SCRIPT='''
 ::script
     document.addEventListener('DOMContentLoaded', function(){
-        console.log(SCROLLRESTO);
         for(let [key, value] of Object.entries(SCROLLRESTO)){
             if(key == "html"){
                 const html = document.getElementsByTagName("html")[0];

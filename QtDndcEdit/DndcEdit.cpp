@@ -113,7 +113,6 @@ QString COORD_HELPER_SCRIPT = QS(
     "                      internal_id = _coords2[href];\n"
     "                  if(!internal_id){\n"
     "                      let t = anchor.childNodes[0].textContent.trim();\n"
-    "                      console.log('t', t);\n"
     "                      internal_id = _coords2[t];\n"
     "                  }\n"
     "                  if(!internal_id) return;\n"
@@ -173,7 +172,6 @@ QString COORD_HELPER_SCRIPT = QS(
 QString SCROLL_RESTO_SCRIPT = QS(
     "::script\n"
     "    document.addEventListener('DOMContentLoaded', function(){\n"
-    "        console.log(SCROLLRESTO);\n"
     "        for(let [key, value] of Object.entries(SCROLLRESTO)){\n"
     "            if(key == 'html'){\n"
     "                const html = document.getElementsByTagName('html')[0];\n"
