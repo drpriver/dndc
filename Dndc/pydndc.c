@@ -1547,17 +1547,6 @@ DndcContextPy_execute_js(PyObject* s, PyObject* args, PyObject* kwargs){
 
 static
 PyObject* _Nullable
-DndcContextPy_gather_links(PyObject* s, PyObject* arg){
-    (void)arg;
-    DndcContextPy* self = (DndcContextPy*)s;
-    int err = dndc_ctx_gather_links(self->ctx);
-    if(err)
-        return PyErr_Format(PyExc_RuntimeError, "Bad imports (Check the errors).");
-    Py_RETURN_NONE;
-}
-
-static
-PyObject* _Nullable
 DndcContextPy_resolve_links(PyObject* s, PyObject* arg){
     (void)arg;
     DndcContextPy* self = (DndcContextPy*)s;
@@ -1836,22 +1825,14 @@ static PyMethodDef DndcContextPy_methods[] = {
             "This method can call the logger.\n",
     },
     {
-        .ml_name="gather_links",
-        .ml_meth=DndcContextPy_gather_links,
-        .ml_flags=METH_NOARGS,
-        .ml_doc="gather_links(self)\n"
-            "--\n"
-            "\n"
-            "Walks the tree, noting the internal link targets.",
-    },
-    {
         .ml_name="resolve_links",
         .ml_meth=DndcContextPy_resolve_links,
         .ml_flags=METH_NOARGS,
         .ml_doc="resolve_links(self)\n"
             "--\n"
             "\n"
-            "Might be removed in the future. Gets even more link targets.\n"
+            "Walks the tree, noting the internal link targets.\n"
+            "Also adds in the explitic link nodes.\n"
             "This method can call the logger.\n",
     },
     {

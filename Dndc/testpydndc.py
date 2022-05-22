@@ -240,7 +240,6 @@ class TestExamples(TestCase):
             ctx.root.parse(text, filename=fn)
             ctx.resolve_imports()
             ctx.execute_js()
-            ctx.gather_links()
             ctx.resolve_links()
             ctx.build_toc()
             html2 = ctx.render()

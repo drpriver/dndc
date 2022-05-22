@@ -1047,17 +1047,18 @@ dndc_ctx_resolve_imports(DndcContext*);
 // This function can call the logger.
 //
 
+
 DNDC_API
 int
-dndc_ctx_gather_links(DndcContext*);
-// ---------------------
+dndc_ctx_resolve_links(DndcContext*);
+// ------------------
 // Populates the internal link database based on the ids of the nodes in the
-// tree. Call this before `dndc_ctx_resolve_links` and before rendering to
-// html.
+// Also, adds links from LINKS nodes and prepares the internal link database.
+// Call this before rendering to html.
 //
 // Returns 0 on success, non-zero on error.
 //
-// TODO: does this need to be separate from the resolve_links step?
+// This function can call the logger.
 //
 
 DNDC_API
@@ -1069,19 +1070,6 @@ dndc_ctx_build_toc(DndcContext*);
 // Returns 0 on success, non-zero on error.
 //
 
-DNDC_API
-int
-dndc_ctx_resolve_links(DndcContext*);
-// ------------------
-// Adds links from LINKS nodes and prepares the internal link database.
-// Call this before `dndc_ctx_resolve_links` and before rendering to html.
-//
-// Returns 0 on success, non-zero on error.
-//
-// TODO: does this need to be separate from the gather_links step?
-//
-// This function can call the logger.
-//
 
 DNDC_API
 size_t
@@ -1207,9 +1195,6 @@ compile_dnd_to_html(
     }
     if(err) goto fail;
 
-    err = dndc_ctx_gather_links(ctx);
-    if(err) goto fail;
-
     err = dndc_ctx_resolve_links(ctx);
     if(err) goto fail;
 
@@ -1260,9 +1245,6 @@ compile_dnd_to_html_with_extra_script(
         DndcLongString jsargs = {4, "null"};
         err = dndc_ctx_execute_js(ctx, jsargs);
     }
-    if(err) goto fail;
-
-    err = dndc_ctx_gather_links(ctx);
     if(err) goto fail;
 
     err = dndc_ctx_resolve_links(ctx);

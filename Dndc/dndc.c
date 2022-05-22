@@ -585,19 +585,8 @@ run_the_dndc(uint64_t flags,
         gather_anchors(&ctx);
         uint64_t after = get_t();
         report_time(&ctx, SV("Link resolving took: "), after-before);
-    }
 
-    // Render the toc block if we have one.
-    {
-        uint64_t before = get_t();
-        if(! NodeHandle_eq(ctx.tocnode, INVALID_NODE_HANDLE))
-            build_toc_block(&ctx);
-        uint64_t after =  get_t();
-        report_time(&ctx, SV("Nav block building took: "), after-before);
-    }
-
-    // Add in the links from explicit link blocks.
-    {
+        // Add in the links from explicit link blocks.
         MARRAY_FOR_EACH(NodeHandle, link_handle, ctx.link_nodes){
             Node* link_node = get_node(&ctx, *link_handle);
             NODE_CHILDREN_FOR_EACH(it, link_node){
@@ -613,6 +602,16 @@ run_the_dndc(uint64_t flags,
         }
         report_size(&ctx, SV("ctx.links.count = "), ctx.links.count_);
     }
+
+    // Render the toc block if we have one.
+    {
+        uint64_t before = get_t();
+        if(! NodeHandle_eq(ctx.tocnode, INVALID_NODE_HANDLE))
+            build_toc_block(&ctx);
+        uint64_t after =  get_t();
+        report_time(&ctx, SV("Nav block building took: "), after-before);
+    }
+
 
     // User ast func
     if(!wasm && ast_func){
@@ -2992,15 +2991,6 @@ dndc_ctx_execute_js(DndcContext* ctx, DndcLongString jsargs){
 
 DNDC_API
 int
-dndc_ctx_gather_links(DndcContext* ctx){
-    if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE))
-        return DNDC_ERROR_VALUE;
-    gather_anchors(ctx);
-    return 0;
-}
-
-DNDC_API
-int
 dndc_ctx_build_toc(DndcContext* ctx){
     if(NodeHandle_eq(ctx->tocnode, INVALID_NODE_HANDLE))
         return 0;
@@ -3011,6 +3001,9 @@ dndc_ctx_build_toc(DndcContext* ctx){
 DNDC_API
 int
 dndc_ctx_resolve_links(DndcContext* ctx){
+    if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE))
+        return DNDC_ERROR_VALUE;
+    gather_anchors(ctx);
     // Add in the links from explicit link blocks.
     MARRAY_FOR_EACH(NodeHandle, link_handle, ctx->link_nodes){
         Node* link_node = get_node(ctx, *link_handle);
