@@ -204,7 +204,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, WorkerThread*_Nullable wo
     };
     if(! (ctx->flags & (DNDC_DONT_INLINE_IMAGES | DNDC_USE_DND_URL_SCHEME | DNDC_DONT_READ))){
         // Populate a list of filepaths to load up in order
-        // to pre-populate the cahce.
+        // to pre-populate the cache.
         Marray(NodeHandle)* img_nodes[] = {
             &ctx->img_nodes,
             &ctx->imglinks_nodes,
@@ -770,6 +770,8 @@ run_the_dndc(uint64_t flags,
         dndc_filecache_destroy(ctx.b64cache);
     if(!external_textcache)
         dndc_filecache_destroy(ctx.textcache);
+    if(ctx.jsb64cache)
+        dndc_filecache_destroy(ctx.jsb64cache);
     uint64_t t1 = get_t();
     report_time(&ctx, SV("Execution took: "), t1-t0);
     if(!wasm && !(flags & DNDC_NO_CLEANUP))
@@ -2105,6 +2107,8 @@ dndc_ctx_destroy(DndcContext* ctx){
         dndc_filecache_destroy(ctx->textcache);
     if(ctx->b64cache_allocated)
         dndc_filecache_destroy(ctx->b64cache);
+    if(ctx->jsb64cache)
+        dndc_filecache_destroy(ctx->jsb64cache);
     Allocator_free_all(temp_allocator(ctx));
     Allocator_free_all(main_allocator(ctx));
     Allocator_free_all(string_allocator(ctx));

@@ -286,6 +286,9 @@ struct DndcContext {
     struct {
         FileCache* textcache;
         FileCache* b64cache;
+        FileCache* jsb64cache; // For the rare cases that js is reading
+                               // files as base64. Needs to be its own
+                               // cache for thread safety.
     };
     Marray(StringView) dependencies;
     // Mapping of shorthand for a link to its actual link.
