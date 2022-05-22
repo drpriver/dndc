@@ -49,7 +49,8 @@ TestFunction(TestCmp){
         SV("b"),
     };
     qsort(strings, arrlen(strings), sizeof(strings[0]), StringView_cmp);
-    TestExpectEquals(memcmp(strings, expected, sizeof(strings)), 0);
+    for(size_t i = 0; i < arrlen(strings); i++)
+        TestExpectEquals2(SV_equals, strings[i], expected[i]);
     TESTEND();
 }
 

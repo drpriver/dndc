@@ -33,17 +33,18 @@
 
 #if defined(_MSC_VER) && !defined(__clang__)
 // Shim the overflow intrinsics for MSVC
-// FIXME: actually do overflow detection, this shim
-// just ignores overflow.
+// These are slow as they use division.
 static inline
 int
 __builtin_mul_overflow_32(uint32_t a, uint32_t b, uint32_t* dst){
+    if(a && b > UINT32_MAX / a) return 1;
     *dst = a * b;
     return 0;
 }
 static inline
 int
 __builtin_mul_overflow_64(uint64_t a, uint64_t b, uint64_t* dst){
+    if(a && b > UINT64_MAX / a) return 1;
     *dst = a * b;
     return 0;
 }
@@ -54,14 +55,12 @@ __builtin_mul_overflow_64(uint64_t a, uint64_t b, uint64_t* dst){
 static inline
 int
 __builtin_add_overflow_32(uint32_t a, uint32_t b, uint32_t* dst){
-    *dst = a + b;
-    return 0;
+    return _addcarry_u32(0, a, b, dst);
 }
 static inline
 int
 __builtin_add_overflow_64(uint64_t a, uint64_t b, uint64_t* dst){
-    *dst = a + b;
-    return 0;
+    return _addcarry_u64(0, a, b, dst);
 }
 #define __builtin_add_overflow(a, b, dst) _Generic(a, \
     uint32_t: __builtin_add_overflow_32, \

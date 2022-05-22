@@ -24040,7 +24040,8 @@ static int js_parse_destructuring_element(QJSParseState *s, int tok, int is_arg,
                                         int hasval, int has_ellipsis,
                                         BOOL allow_initializer)
 {
-    int label_parse, label_assign, label_done, label_lvalue, depth_lvalue;
+    // AUDITME: 
+    int label_parse, label_assign, label_done, label_lvalue=0, depth_lvalue;
     int start_addr, assign_addr;
     QJSAtom prop_name, var_name;
     int opcode, scope, tok1, skip_bits;

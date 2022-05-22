@@ -9,9 +9,6 @@
 #include <unistd.h>
 #endif
 #include <stdio.h>
-#if !defined(_MSC_VER) || defined(__clang__)
-#include <stdatomic.h>
-#endif
 #include "common_macros.h"
 #include "dndc_long_string.h"
 #include "dndc_ast.h"
