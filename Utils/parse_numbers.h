@@ -37,8 +37,9 @@
 static inline
 int
 __builtin_mul_overflow_32(uint32_t a, uint32_t b, uint32_t* dst){
-    if(a && b > UINT32_MAX / a) return 1;
-    *dst = a * b;
+    uint64_t res = (uint64_t)a * (uint64_t)b;
+    if(res > (uint64_t)UINT32_MAX) return 1;
+    *dst = res;
     return 0;
 }
 static inline
