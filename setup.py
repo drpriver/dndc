@@ -51,6 +51,7 @@ setup(
             'pydndc.pydndc',
             sources = ['Dndc/pydndc.c', 'Vendored/libquickjs.c'],
             include_dirs=['.'],
+            define_macros=[('BUILDING_PYTHON_EXTENSION', '1')]
         ),
     ],
     # Specify which Python versions you support. In contrast to the

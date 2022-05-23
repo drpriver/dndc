@@ -11,7 +11,7 @@ wheels: civenv
 else
 ifeq ($(UNAME), Linux)
 wheels: civenv
-	. civenv/bin/activate && CIBW_SKIP='pp*' cibuildwheel --platform linux --archs x86_64 .
+	. civenv/bin/activate && CIBW_SKIP='{pp*,*musl*}' cibuildwheel --platform linux --archs x86_64 .
 else
 
 #TODO: windows

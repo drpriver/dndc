@@ -16,7 +16,16 @@
 #include "Utils/path_util.h"
 #include <sys/stat.h>
 #if defined(__APPLE__) || defined(__linux__)
+
+// hack it for old linux so the manylinux builds
+#if defined(BUILDING_PYTHON_EXTENSION) && defined(__USE_FILE_OFFSET64)
+#undef __USE_FILE_OFFSET64
 #include <fts.h>
+#define __USE_FILE_OFFSET64
+#else
+#include <fts.h>
+#endif
+
 #elif defined(_WIN32)
 #endif
 
