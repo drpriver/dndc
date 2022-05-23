@@ -53,7 +53,7 @@ class TestHtmlGen(TestCase):
             ''')
             + FOOTER
         )
-        output = pydndc.htmlgen(input)[0]
+        output = pydndc.htmlgen(input)
         self.assertEqual(output, expected)
 
     def testfragment(self) -> None:
@@ -69,7 +69,7 @@ class TestHtmlGen(TestCase):
         "<img src=\"SomeImg.png\" width=\"600\" height=\"800\" alt=\"&quot;Hello World!&quot;\">\n"
         "</div>\n"
         )
-        output = pydndc.htmlgen(input, flags=pydndc.Flags.FRAGMENT_ONLY)[0]
+        output = pydndc.htmlgen(input, flags=pydndc.Flags.FRAGMENT_ONLY)
         self.assertEqual(output, expected)
     def testfragment2(self) -> None:
         input = (
@@ -99,7 +99,7 @@ class TestHtmlGen(TestCase):
         "</div>\n"
         "hello\n"
         )
-        output = pydndc.htmlgen(input, flags=pydndc.Flags.FRAGMENT_ONLY)[0]
+        output = pydndc.htmlgen(input, flags=pydndc.Flags.FRAGMENT_ONLY)
         self.assertEqual(output, expected)
     def test_multiline_table(self) -> None:
         input = (
@@ -161,7 +161,7 @@ class TestHtmlGen(TestCase):
         "</body>\n"
         "</html>\n"
         )
-        output = pydndc.htmlgen(input)[0]
+        output = pydndc.htmlgen(input)
         self.assertEqual(output, expected)
 
 class TestReformat(TestCase):
@@ -233,7 +233,7 @@ class TestExamples(TestCase):
                 text = fp.read()
             base = os.path.dirname(example)
             fn = os.path.basename(example)
-            html1 = pydndc.htmlgen(text, filename=fn, base_dir=base, logger=pydndc.stderr_logger)[0]
+            html1 = pydndc.htmlgen(text, filename=fn, base_dir=base, logger=pydndc.stderr_logger)
             ctx = pydndc.Context(filename=fn)
             ctx.logger = pydndc.stderr_logger
             ctx.base_dir = base
@@ -274,8 +274,10 @@ class TestFileCache(TestCase):
             "  Makefile\n"
         )
         cache = pydndc.FileCache()
-        output = pydndc.htmlgen(input, file_cache=cache)
-        self.assertListEqual(output[1], ['Makefile'])
+        deps = set()
+        _ = pydndc.htmlgen(input, file_cache=cache, deps=deps)
+        deps = list(deps)
+        self.assertListEqual(deps, ['Makefile'])
         self.assertListEqual(cache.paths(), ['Makefile'])
     def test_store(self) -> None:
         cache = pydndc.FileCache()
@@ -292,7 +294,7 @@ class TestFileCache(TestCase):
             "</p>\n"
         )
         output = pydndc.htmlgen(input, flags=pydndc.Flags.FRAGMENT_ONLY, file_cache=cache)
-        self.assertEqual(output[0], expected)
+        self.assertEqual(output, expected)
         cache.remove('hello')
         self.assertListEqual(cache.paths(), [])
         with self.assertRaises(Exception):

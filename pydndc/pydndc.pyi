@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Dict, Tuple, List, NamedTuple, Union, Any, Sequence
+from typing import Callable, Optional, Dict, Tuple, List, NamedTuple, Union, Any, Sequence, Set
 from enum import IntEnum, IntFlag
 
 class FileCache:
@@ -69,7 +69,8 @@ def htmlgen(
     flags:Flags=Flags.NONE,
     output_name:Optional[str] = None,
     jsargs:Optional[Union[dict, list, str]] = None,
-) -> Tuple[str, List[str]]:
+    deps:Optional[Set[str]] = None,
+) -> str:
     ...
 
 def expand(
@@ -119,7 +120,9 @@ class NodeType(IntEnum):
     JS           = 25
     DETAILS      = 26
     META         = 27
-    INVALID      = 28
+    DEFLIST      = 28
+    DEF          = 29
+    INVALID      = 30
 
 class Context:
     def __new__(cls, flags:Flags=Flags.NONE, filename:Optional[str]=None, filecache:Optional[FileCache]=None) -> Context:

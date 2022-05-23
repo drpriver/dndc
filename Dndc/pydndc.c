@@ -331,8 +331,8 @@ PyMethodDef pydndc_methods[] = {
         .ml_meth = (PyCFunction)pydndc_htmlgen,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =PYSIG(
-        "htmlgen(text:str, base_dir:str='.', filename:str='(string input)', logger:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs:str=None)\n",
-        "htmlgen(text, base_dir='.', filename='(string input)', logger=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n")
+        "htmlgen(text:str, base_dir:str='.', filename:str='(string input)', logger:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs:Union[str, dict, list]=None, deps:Set[str]=None)\n",
+        "htmlgen(text, base_dir='.', filename='(string input)', logger=None, file_cache=None, flags=Flags.NONE, jsargs=None, deps=None)\n")
         "--\n"
         "\n"
         "Parses and converts the .dnd string into html, returning as a string.\n"
@@ -402,13 +402,15 @@ PyMethodDef pydndc_methods[] = {
         "                        in separate namespaces, but that can be confusing.\n"
         "                        Set this flag to disallow that.\n"
         "\n"
-        "jsargs: dict or str\n"
+        "jsargs: dict, list or str\n"
         "    A dict or json literal that will be exposed to js blocks as Args.\n"
+        "\n"
+        "deps: set\n"
+        "    The file dependencies of this dnd document will be added to this set.\n"
         "\n"
         "Returns:\n"
         "--------\n"
         "str: The html.\n"
-        "List[str]: the files the string depends on (such as an import).\n"
         "\n"
         "Throws:\n"
         "-------\n"
@@ -975,12 +977,13 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
 static
 int
 pydndc_add_dependencies(void*_Nullable user_data, size_t npaths, StringView* paths){
-    PyObject* list = user_data;
+    PyObject* set = user_data;
     for(size_t i = 0; i < npaths; i++){
         StringView path = paths[i];
         PyObject* str = PyUnicode_FromStringAndSize(path.text, path.length);
-        PyList_Append(list, str);
+        int fail = PySet_Add(set, str);
         Py_XDECREF(str);
+        if(fail) return 1;
     }
     return 0;
 }
@@ -995,6 +998,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     PyObject* file_cache = NULL;
     PyObject* jsargs = NULL;
     PyObject* filename = NULL;
+    PyObject* deps = NULL;
     unsigned long long flags = 0;
     _Static_assert(sizeof(flags) == sizeof(uint64_t), "");
     enum {WHITELIST = 0
@@ -1008,10 +1012,10 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
     };
-    const char* const keywords[] = {"text", "base_dir", "filename", "logger", "file_cache", "flags", "jsargs", NULL};
+    const char* const keywords[] = {"text", "base_dir", "filename", "logger", "file_cache", "flags", "jsargs", "deps", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O!OOKO:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &logger, &file_cache, &flags, &jsargs)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O!OOKOO!:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &logger, &file_cache, &flags, &jsargs, &PySet_Type, &deps)){
         return NULL;
     }
     PopDiagnostic();
@@ -1055,7 +1059,6 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     DndcLogFunc* func = logger?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
-    PyObject* depends_list = PyList_New(0);
     DndcFileCache* textcache = NULL;
     DndcFileCache* b64cache = NULL;
     if(file_cache){
@@ -1064,7 +1067,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         b64cache = cache->b64_cache;
     }
     StringView source_path = filename?pystring_borrow_stringview(filename): SV("(string input)");
-    int e = dndc_compile_dnd_file(flags, base_str, source, source_path, &output, b64cache, textcache, func, error_list, pydndc_add_dependencies, depends_list, NULL, jsargs_ls);
+    int e = dndc_compile_dnd_file(flags, base_str, source, source_path, &output, b64cache, textcache, func, error_list, deps?pydndc_add_dependencies:NULL, deps, NULL, jsargs_ls);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
@@ -1083,9 +1086,8 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         PyErr_SetString(PyExc_ValueError, "html error.");
         goto finally;
     }
-    result = Py_BuildValue("s#O", output.text, (Py_ssize_t)output.length, depends_list);
+    result = PyUnicode_FromStringAndSize(output.text, (Py_ssize_t)output.length);
     finally:
-    Py_XDECREF(depends_list);
     Py_XDECREF(error_list);
     dndc_free_string(output);
     if(jsbuilder.capacity){

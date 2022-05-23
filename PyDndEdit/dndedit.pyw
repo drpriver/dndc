@@ -3,7 +3,7 @@
 #
 # Copyright © 2021-2022, David Priver
 #
-PYGDNDC_VERSION = '0.18.0'
+PYGDNDC_VERSION = '0.19.0'
 __version__ = PYGDNDC_VERSION
 import os
 # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
@@ -970,12 +970,14 @@ class Page(QSplitter):
             if PRINT_STATS:
                 flags |= Flags.PRINT_STATS
             flags |= Flags.DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
-            html, depends = pydndc.htmlgen(
+            depends = set()
+            html = pydndc.htmlgen(
                 self.get_text_for_preview(),
                 base_dir=self.dirname,
                 logger=self.display_dndc_error,
                 file_cache=FILE_CACHE,
                 flags=flags,
+                deps=depends,
             )
         except ValueError:
             # On error, the file cache can have loaded things, but we don't get those
@@ -994,9 +996,9 @@ class Page(QSplitter):
         # LOGGER.debug("u: %s", u)
         self.webpage.setHtml(html, baseUrl=u)
         # t2 = time.time()
-        self.dependencies = set(depends)
+        self.dependencies = depends:
         if depends:
-            WINDOW.watcher.addPaths(depends)
+            WINDOW.watcher.addPaths(list(depends))
         # t3 = time.time()
         # print(f'htmlgen = {(t1-t0)*1000:.3f}ms')
         # print(f'sethtml = {(t2-t1)*1000:.3f}ms')
@@ -1099,7 +1101,7 @@ class Page(QSplitter):
         self.textedit.insert_script(fname)
     def export_as_html(self) -> None:
         try:
-            html, _ = pydndc.htmlgen(self.textedit.toPlainText(), base_dir=self.dirname)
+            html = pydndc.htmlgen(self.textedit.toPlainText(), base_dir=self.dirname)
         except ValueError:
             mbox = QMessageBox()
             mbox.critical(None, 'Unable to convert current document', 'Unable to convert current document to html.\n\nSyntax Error in document (see error output).')  # type: ignore
