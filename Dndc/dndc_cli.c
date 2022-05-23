@@ -567,6 +567,7 @@ main(int argc, char**argv){
                 if(output_path.length){
                     FileWriteResult write_err = write_file(output_path.text, output.text, output.length);
                     print_file_writing_error(output_path.text, write_err);
+                    if(write_err.errored) return write_err.errored;
                 }
                 else {
                     puts(output.text);
