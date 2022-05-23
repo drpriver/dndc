@@ -516,7 +516,6 @@ def run(file:str, doc_folder:Optional[str], dep_file:Optional[str], cflags:List[
     if dep_file is not None:
         parts = dep_file.split('/')
         dep_file = parts[0] + '/' + '_'.join(parts[1:])
-        print(dep_file)
         with open(dep_file, 'w') as fp:
             writer.write_deps(p, fp)
 
