@@ -662,6 +662,7 @@ int
 dndc_main_ast_func(void*_Nullable user_data, DndcContext*_Nonnull ctx){
     struct MainAstData* data = user_data;
     uint64_t flags = data->flags;
+    if(!flags) return 0;
     FILE* fp;
     if(data->output_path.length){
         fp = fopen(data->output_path.text, "wb");
