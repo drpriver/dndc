@@ -18,7 +18,7 @@
 #if defined(__APPLE__) || defined(__linux__)
 
 // hack it for old linux so the manylinux builds
-#if defined(BUILDING_PYTHON_EXTENSION) && defined(__USE_FILE_OFFSET64)
+#if defined(BUILDING_PYTHON_EXTENSION) && defined(__USE_FILE_OFFSET64) && !defined(__APPLE__)
 #undef __USE_FILE_OFFSET64
 #include <fts.h>
 #define __USE_FILE_OFFSET64
