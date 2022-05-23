@@ -398,6 +398,12 @@ PyMethodDef pydndc_methods[] = {
         "    DONT_READ:          Don't read any files not already in the file\n"
         "                        cache.\n"
         "\n"
+        "    DONT_IMPORT:        Don't do imports.\n"
+        "\n"
+        "    NO_COMPILETIME_JS:  Don't execute js blocks.\n"
+        "\n"
+        "    SUPPRESS_WARNINGS:  Don't report any non-fatal errors.\n"
+        "\n"
         "    DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP: Attributes and directives are\n"
         "                        in separate namespaces, but that can be confusing.\n"
         "                        Set this flag to disallow that.\n"
@@ -518,6 +524,8 @@ PyMethodDef pydndc_methods[] = {
         "    DONT_READ:          Don't read any files not already in the file\n"
         "                        cache.\n"
         "\n"
+        "    SUPPRESS_WARNINGS:  Don't report any non-fatal errors.\n"
+        "\n"
         "    DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP: Attributes and directives are\n"
         "                        in separate namespaces, but that can be confusing.\n"
         "                        Set this flag to disallow that.\n"
@@ -636,6 +644,15 @@ add_doc(PyObject* obj, const char* text){
     PyObject_SetAttrString(obj, "__doc__", doc);
     Py_DECREF(doc);
     return 0;
+}
+static inline
+int
+doc_member(PyObject* obj, const char* member, const char* text){
+    PyObject* m = PyObject_GetAttrString(obj, member);
+    if(!m) return 1;
+    int err = add_doc(m, text);
+    Py_DECREF(m);
+    return err;
 }
 
 static PyTypeObject DndcContextPyType, DndcNodePyType;
@@ -783,6 +800,9 @@ PyInit_pydndc(void){
     ADDFLAGCONSTANT(USE_DND_URL_SCHEME);
     ADDFLAGCONSTANT(STRIP_WHITESPACE);
     ADDFLAGCONSTANT(DONT_READ);
+    ADDFLAGCONSTANT(DONT_IMPORT);
+    ADDFLAGCONSTANT(NO_COMPILETIME_JS);
+    ADDFLAGCONSTANT(SUPPRESS_WARNINGS);
     ADDFLAGCONSTANT(PRINT_STATS);
     ADDFLAGCONSTANT(DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP);
     {
@@ -805,6 +825,45 @@ PyInit_pydndc(void){
     if(!flagenum) goto fail;
     if(add_doc(flagenum, "Flags for controlling the behavior of htmlgen.") != 0)
         goto fail;
+    #define DOCFLAG(m, d) doc_member(flagenum, #m, d)
+    // NOTE: these were copied from the doc comments in dndc.h
+    // If you want to improve these, also improve them there.
+    DOCFLAG(NONE, "No flags");
+    DOCFLAG(INPUT_IS_UNTRUSTED,
+        "Input is untrusted and thus should not be allowed to read files,\n"
+        "execute javascript blocks or embed javascript in the output. As raw\n"
+        "nodes are inserted literally, raw nodes are ignored.");
+    DOCFLAG(FRAGMENT_ONLY,
+        "Instead of a complete document, only produce the html fragment.\n"
+        "If scripts and styles are included, they will also be produced.");
+    DOCFLAG(DONT_INLINE_IMAGES,
+        "Instead of base64-ing the image, use a link.");
+    DOCFLAG(NO_THREADS,
+        "Don't spawn any worker threads. No parallelism.");
+    DOCFLAG(USE_DND_URL_SCHEME,
+      "For imgs, don't base64 them and don't use regular links. Instead, use a\n"
+      "dnd:///absolute/path/to/img url instead. Applications can then\n"
+      "implement custom url handlers for this url scheme.");
+    DOCFLAG(STRIP_WHITESPACE,
+      "Strip trailing and leading whitespace from all output lines.");
+    DOCFLAG(DONT_READ,
+      "Don't read any files not already in the file cache.\n"
+      "Additionally, prevent access to the filesystem (like checking if a file\n"
+      "exists.");
+    DOCFLAG(DONT_IMPORT,
+      "Don't import files (via #import or from import nodes), instead leaving\n"
+      "them as is in the document. This is useful for breaking circular\n"
+      "dependencies when bootstrapping a document that relies on introspection.");
+    DOCFLAG(NO_COMPILETIME_JS, "Don't execute js blocks.");
+    DOCFLAG(SUPPRESS_WARNINGS, "Don't report any non-fatal errors via the logger.");
+    DOCFLAG(PRINT_STATS, "Log stats during execution of timings and counts.");
+    DOCFLAG(DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP,
+      "Attributes and directives are in separate namespaces, but that can be\n"
+      "confusing.  It's generally bad practice to use an attribute that is the\n"
+      "same as a directive as that is really confusing and error-prone.\n"
+      "However, to allow for future changes we do not error on that. Set this\n"
+      "flag to turn that into an error so you can migrate your collisions.");
+    #undef DOCFLAG
     if(PyModule_AddObjectRef(mod, "Flags", flagenum) < 0)
         goto fail;
 
@@ -1011,6 +1070,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_DONT_READ
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+        | DNDC_SUPPRESS_WARNINGS
     };
     const char* const keywords[] = {"text", "base_dir", "filename", "logger", "file_cache", "flags", "jsargs", "deps", NULL};
     PushDiagnostic();
@@ -1019,11 +1079,8 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         return NULL;
     }
     PopDiagnostic();
-    // Check for any flags that python callers shouldn't be able to set.
-    if((flags & WHITELIST) != flags){
-        PyErr_SetString(PyExc_ValueError, "flags argument contains illegal bits");
-        return NULL;
-    }
+    // Allow sloppy flags.
+    flags &= WHITELIST;
     if(logger && logger == Py_None)
         logger = NULL;
     if(logger && !PyCallable_Check(logger)){
@@ -1109,8 +1166,11 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
     enum {WHITELIST = 0
         | DNDC_INPUT_IS_UNTRUSTED
         | DNDC_DONT_READ
+        | DNDC_DONT_IMPORT
+        | DNDC_NO_COMPILETIME_JS
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+        | DNDC_SUPPRESS_WARNINGS
     };
     const char* const keywords[] = {"text", "base_dir", "logger", "file_cache", "flags", "jsargs", NULL};
     PushDiagnostic();
@@ -1119,11 +1179,8 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         return NULL;
     }
     PopDiagnostic();
-    // Check for any flags that python callers shouldn't be able to set.
-    if((flags & WHITELIST) != flags){
-        PyErr_SetString(PyExc_ValueError, "flags argument contains illegal bits");
-        return NULL;
-    }
+    // Allow sloppy flags.
+    flags &= WHITELIST;
     if(logger && logger == Py_None)
         logger = NULL;
     if(logger && !PyCallable_Check(logger)){
@@ -1136,11 +1193,20 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         PyErr_SetString(PyExc_TypeError, "file_cache must be a DndcFileCache");
         return NULL;
     }
-    if(jsargs && !PyUnicode_Check(jsargs)){
-        PyErr_SetString(PyExc_TypeError, "jsargs must be a str");
-        return NULL;
+    LongString jsargs_ls = LS("");
+    MStringBuilder jsbuilder = {.allocator = get_mallocator()};
+    if(jsargs && PyUnicode_Check(jsargs)){
+        jsargs_ls = pystring_borrow_longstring(jsargs);
     }
-    LongString jsargs_ls = jsargs? pystring_borrow_longstring(jsargs) : LS("");
+    else if(jsargs){
+        if(pyobj_to_json(jsargs, &jsbuilder, 0) != 0){
+            if(jsbuilder.capacity){
+                msb_destroy(&jsbuilder);
+            }
+            return NULL;
+        }
+        jsargs_ls = msb_borrow_ls(&jsbuilder);
+    }
     StringView source = pystring_borrow_stringview(text);
     StringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
     // flags |= DNDC_DONT_PRINT_ERRORS;
@@ -1181,6 +1247,9 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
     finally:
     Py_XDECREF(error_list);
     dndc_free_string(output);
+    if(jsbuilder.capacity){
+        msb_destroy(&jsbuilder);
+    }
     return result;
 }
 
@@ -1391,9 +1460,12 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
         | DNDC_USE_DND_URL_SCHEME
         | DNDC_STRIP_WHITESPACE
         | DNDC_DONT_READ
+        | DNDC_DONT_IMPORT
+        | DNDC_NO_COMPILETIME_JS
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
     };
+    // Allow sloppy flags.
     fl &= WHITELIST;
     self->ctx = dndc_create_ctx(fl | DNDC_ALLOW_BAD_LINKS, cache?cache->b64_cache:NULL, cache?cache->text_cache:NULL);
     dndc_ctx_set_logger(self->ctx, pylogger, &self->logger);

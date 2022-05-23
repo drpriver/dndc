@@ -52,6 +52,8 @@ class Flags(IntFlag):
     USE_DND_URL_SCHEME: int
     STRIP_WHITESPACE: int
     DONT_READ: int
+    DONT_IMPORT: int
+    NO_COMPILETIME_JS: int
     PRINT_STATS: int
     DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP: int
 
@@ -67,7 +69,6 @@ def htmlgen(
     logger:Optional[Logger]=None,
     file_cache:Optional[FileCache]=None,
     flags:Flags=Flags.NONE,
-    output_name:Optional[str] = None,
     jsargs:Optional[Union[dict, list, str]] = None,
     deps:Optional[Set[str]] = None,
 ) -> str:
@@ -79,7 +80,6 @@ def expand(
     logger:Optional[Logger]=None,
     file_cache:Optional[FileCache]=None,
     flags:Flags=Flags.NONE,
-    output_name:Optional[str] = None,
     jsargs:Optional[Union[dict, list, str]] = None
 ) -> str:
     ...
