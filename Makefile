@@ -3,6 +3,7 @@ DNDC_COMPAT_VERSION:=0.18.0
 include defs.mak
 include Vendored/quickjs.mak
 include Dndc/dndc.mak
+include Dndc/pydndc.mak
 ifeq ($(QTGUI),true)
 include qt.mak
 endif

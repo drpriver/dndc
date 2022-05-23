@@ -42,3 +42,6 @@ RenderedDocs
 RenderedExamples
 *.egg-info
 dist
+*venv*
+wheelhouse
+
