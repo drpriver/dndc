@@ -103,13 +103,13 @@ $(BINDIR)/demo.html: Platform/Wasm/demo.dnd $(OBJDIR)/dndc.wasm | $(DIRECTORIES)
 	$(BINDIR)/dndc $< -o $@ -d $(DEPDIR)/demo.html.dep
 
 
-$(BINDIR)/dndc-browse$(EXE): Bin/libdndc$(SO) Dndc/dndc_browse.c
+$(BINDIR)/dndc-browse$(EXE): Bin/libdndc.$(DNDCVERSION)$(SO) Dndc/dndc_browse.c
 	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc_browse.dep Dndc/dndc_browse.c -o $@ Bin/libdndc.$(DNDCVERSION)$(SOLIB) $(LINK_FLAGS) $(RPATH)
 .PHONY: dndc-browse
 dndc-browse: $(BINDIR)/dndc-browse$(EXE)
 all: dndc-browse
 
-$(BINDIR)/dndc-tag$(EXE): Bin/libdndc$(SO) Dndc/dndc_tag.c
+$(BINDIR)/dndc-tag$(EXE): Bin/libdndc.$(DNDCVERSION)$(SO) Dndc/dndc_tag.c
 	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc_tag.dep Dndc/dndc_tag.c -o $@ Bin/libdndc.$(DNDCVERSION)$(SOLIB) $(LINK_FLAGS) $(RPATH)
 .PHONY: dndc-tag
 dndc-tag: $(BINDIR)/dndc-tag$(EXE)

@@ -1,6 +1,6 @@
 civenv:
 	$(PYTHON) -m venv civenv
-	. civenv/bin/activate && python -m pip install cibuildwheel
+	. civenv/bin/activate && python -m pip install cibuildwheel && python -m pip install twine
 
 .PHONY: wheels
 ifeq ($(UNAME),Darwin)
@@ -20,4 +20,6 @@ else
 endif
 endif
 
-
+.PHONY: ci-upload
+pypi-upload:
+	. civenv/bin/activate && python3 -m twine upload wheelhouse/*

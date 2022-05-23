@@ -50,14 +50,14 @@ install-gdndc: $(BINDIR)/gdndc
 	$(INSTALL) -C $< $(INSTALLDIR)/DndEdit
 
 $(BINDIR)/dndbr: Platform/MacOS/dndbr.m Platform/MacOS/dndbr_app_icon.png Platform/MacOS/DndBrInfo.plist opt.mak $(BINDIR)/libdndc.$(DNDCVERSION).dylib
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndbr.dep $< Dndc/dndc_local_server.c -o $@ $(LINK_FLAGS) -framework Cocoa -fobjc-arc -Wl,-sectcreate,__TEXT,__info_plist,Platform/MacOS/DndBrInfo.plist $(BINDIR)/libdndc.dylib $(RPATH)
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndbr.dep $< Dndc/dndc_local_server.c -o $@ $(LINK_FLAGS) -framework Cocoa -fobjc-arc -Wl,-sectcreate,__TEXT,__info_plist,Platform/MacOS/DndBrInfo.plist $(BINDIR)/libdndc.$(DNDCVERSION).dylib $(RPATH)
 .PHONY: dndbr
 dndbr: $(BINDIR)/dndbr
 
-$(OBJDIR)/libdndc.a: $(OBJDIR)/dndc.o
+$(OBJDIR)/libdndc.$(DNDCVERSION).a: $(OBJDIR)/dndc.o
 	ar crs $@ $^
 $(BINDIR)/libdndc.$(DNDCVERSION).dylib: $(OBJDIR)/dndc.o $(VENDOBJDIR)/libquickjs.o
 	$(CC) $^ -o $@ $(OPT_FLAGS) -Wl,-dead_strip_dylibs -Wl,-headerpad_max_install_names -Wl,-undefined,error -shared -install_name @rpath/libdndc.$(DNDCVERSION).dylib -compatibility_version $(DNDC_COMPAT_VERSION) -current_version $(DNDCVERSION) -g
 
-all: gdndc $(OBJDIR)/libdndc.a $(BINDIR)/libdndc.dylib
+all: gdndc $(OBJDIR)/libdndc.$(DNDCVERSION).a $(BINDIR)/libdndc.$(DNDCVERSION).dylib
 all: dndbr

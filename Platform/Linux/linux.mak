@@ -36,7 +36,7 @@ SOLIB=.so
 INSTALL=install
 PYEXTENSION=.cpython-38-x86_64-linux-gnu.so
 PYEXTFLAGS=-shared -fPIC
-$(OBJDIR)/libdndc.a: $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o
+$(OBJDIR)/libdndc.$(DNDCVERSION).a: $(OBJDIR)/dndc.o $(OBJDIR)/frozenstdlib.o
 	ar crs $@ $^
-$(BINDIR)/libdndc.so: $(OBJDIR)/dndc.o $(VENDOBJDIR)/libquickjs.o
+$(BINDIR)/libdndc.$(DNDCVERSION).so: $(OBJDIR)/dndc.o $(VENDOBJDIR)/libquickjs.o
 	$(CC) $^ -o $@ -Wl,-undefined,error -shared -g
