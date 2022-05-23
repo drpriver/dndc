@@ -533,7 +533,6 @@ DndEditor::update_syntax(void){
 
 int
 DndEditor::lineNumberAreaWidth(void){
-    int digits = 1;
     auto max_value = std::max(1, blockCount());
     int space = 3 + fontMetrics().horizontalAdvance(QString::number(max_value*10));
     return space;

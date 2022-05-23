@@ -30,7 +30,7 @@ typedef unsigned DndcNodeHandle;
 #ifdef __clang__
 enum: DndcNodeHandle {DNDC_NODE_HANDLE_INVALID = (DndcNodeHandle)-1};
 #else
-enum {DNDC_NODE_HANDLE_INVALID = -1};
+enum {DNDC_NODE_HANDLE_INVALID = (DndcNodeHandle)-1};
 #endif
 // ------------------------
 // This value represents the absence of a node.
