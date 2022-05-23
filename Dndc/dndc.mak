@@ -1,5 +1,3 @@
-DNDCVERSION=0.18.0
-DNDC_COMPAT_VERSION=0.18.0
 
 ifeq ($(UNAME),Darwin)
 RPATH:=-rpath @executable_path
@@ -84,6 +82,17 @@ release: $(RELEASEFILES)
 	$(CP) -r Examples Release/Dndc
 	$(PYTHON) -m zipfile -c Release/Dndc.$(DNDCVERSION).zip Release/Dndc
 	$(RM) Release/Dndc
+ifeq ($(UNAME),Darwin)
+MACFILES=$(BINDIR)/dndc $(BINDIR)/DndEdit $(BINDIR)/dndbr Documentation/OVERVIEW.dnd Dndc/jsdoc.dnd \
+	 Dndc/dndc_js_api.d.ts Documentation/REFERENCE.dnd $(BINDIR)/libdndc.$(DNDCVERSION)$(SO) $(BINDIR)/dndc-tag
+macrelease: $(MACFILES)
+	$(RM) -rf Release/MacDndc Release/MacDndc.$(DNDCVERSION).zip Release/Dndc.$(DNDCVERSION)
+	$(MKDIR) -p Release/MacDndc
+	$(CP) $(MACFILES) Release/MacDndc
+	$(CP) -r Examples Release/MacDndc
+	$(PYTHON) -m zipfile -c Release/MacDndc.$(DNDCVERSION).zip Release/MacDndc
+	$(RM) Release/MacDndc
+endif
 
 include Platform/Wasm/wasm.mak
 
@@ -95,13 +104,13 @@ $(BINDIR)/demo.html: Platform/Wasm/demo.dnd $(OBJDIR)/dndc.wasm | $(DIRECTORIES)
 
 
 $(BINDIR)/dndc-browse$(EXE): Bin/libdndc$(SO) Dndc/dndc_browse.c
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc_browse.dep Dndc/dndc_browse.c -o $@ Bin/libdndc$(SOLIB) $(LINK_FLAGS) $(RPATH)
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc_browse.dep Dndc/dndc_browse.c -o $@ Bin/libdndc.$(DNDCVERSION)$(SOLIB) $(LINK_FLAGS) $(RPATH)
 .PHONY: dndc-browse
 dndc-browse: $(BINDIR)/dndc-browse$(EXE)
 all: dndc-browse
 
 $(BINDIR)/dndc-tag$(EXE): Bin/libdndc$(SO) Dndc/dndc_tag.c
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc_tag.dep Dndc/dndc_tag.c -o $@ Bin/libdndc$(SOLIB) $(LINK_FLAGS) $(RPATH)
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc_tag.dep Dndc/dndc_tag.c -o $@ Bin/libdndc.$(DNDCVERSION)$(SOLIB) $(LINK_FLAGS) $(RPATH)
 .PHONY: dndc-tag
 dndc-tag: $(BINDIR)/dndc-tag$(EXE)
 all: dndc-tag
