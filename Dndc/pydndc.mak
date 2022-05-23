@@ -7,7 +7,8 @@ ifeq ($(UNAME),Darwin)
 # macos you need to build twice
 wheels: civenv
 	. civenv/bin/activate && CIBW_SKIP='pp*' cibuildwheel --platform macos --archs x86_64 .
-	. civenv/bin/activate && cibuildwheel --platform macos --archs arm64 .
+	. civenv/bin/activate && CIBW_SKIP='pp*' cibuildwheel --platform macos --archs arm64 .
+	. civenv/bin/activate && CIBW_SKIP='pp*' cibuildwheel --platform macos --archs universal2 .
 else
 ifeq ($(UNAME), Linux)
 wheels: civenv
