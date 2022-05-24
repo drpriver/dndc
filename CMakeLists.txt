@@ -85,7 +85,7 @@ set_target_properties(dndc-dylib
     PROPERTIES OUTPUT_NAME dndc
     VERSION ${PROJECT_VERSION}
     SOVERSION 0.${PROJECT_VERSION_MINOR}
-    PUBLIC_HEADER "Dndc/dndc.h"
+    PUBLIC_HEADER "Dndc/dndc.h;Dndc/dndc_ast.h"
 )
 
 Python3_add_library(pydndc
