@@ -73,7 +73,7 @@ pydndc/pydndc$(PYEXTENSION): $(BINDIR)/pydndc$(PYEXTENSION)
 	$(CP) $< $@
 
 
-RELEASEFILES = $(BINDIR)/dndc$(EXE) $(BINDIR)/pydndc$(PYEXTENSION) PyDndEdit/dndedit.pyw PyDndEdit/dndbatch.pyw PyDndEdit/changelog.dnd PyDndEdit/install_deps.py PyDndEdit/README.txt Documentation/OVERVIEW.dnd PyDndEdit/Manual.dnd Dndc/jsdoc.dnd Dndc/dndc_js_api.d.ts Documentation/REFERENCE.dnd pydndc/pydndc.pyi
+RELEASEFILES = $(BINDIR)/dndc$(EXE) $(BINDIR)/pydndc$(PYEXTENSION) PyDndEdit/dndedit.pyw PyDndEdit/changelog.dnd PyDndEdit/install_deps.py PyDndEdit/README.txt Documentation/OVERVIEW.dnd PyDndEdit/Manual.dnd Dndc/jsdoc.dnd Dndc/dndc_js_api.d.ts Documentation/REFERENCE.dnd pydndc/pydndc.pyi
 .PHONY: release
 release: $(RELEASEFILES)
 	$(RM) -rf Release/Dndc Release/Dndc.$(DNDCVERSION).zip Release/Dndc.$(DNDCVERSION)

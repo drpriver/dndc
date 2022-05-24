@@ -3,6 +3,8 @@
 #
 # Copyright © 2021-2022, David Priver
 #
+
+# This program sucks.
 import datetime
 import sys
 import os
@@ -17,10 +19,10 @@ import pydndc
 import logging
 import glob
 import json
-from typing import List
-from PySide2.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QAction, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox, QToolButton, QPushButton, QLineEdit, QVBoxLayout, QGridLayout, QSpacerItem, QSizePolicy, QListWidget, QListWidgetItem
-from PySide2.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices, QCloseEvent
-from PySide2.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher, QFile, QThread, QTimer
+from typing import List, Optional, Callable
+from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox, QToolButton, QPushButton, QLineEdit, QVBoxLayout, QGridLayout, QSpacerItem, QSizePolicy, QListWidget, QListWidgetItem
+from PySide6.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices, QCloseEvent, QAction
+from PySide6.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher, QFile, QThread, QTimer
 VERSION = '0.0.1'
 QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
 APPNAME = 'DndBatch'
@@ -39,10 +41,11 @@ LOGFILE_LOCATION = os.path.join(LOGS_FOLDER, datetime.datetime.now().strftime('%
 class Logs:
     def __init__(self) -> None:
         self.old_hook: Optional[Callable] = None
+        self.stream = sys.stderr
         try:
             self.stream = open(LOGFILE_LOCATION, 'a', encoding='utf-8')
         except:
-            self.stream = sys.stderr
+            pass
         self.LOGGER = logging.getLogger('pygdndc')
         self.LOGGER.setLevel(logging.DEBUG)
         handler = logging.StreamHandler(stream=self.stream)
@@ -81,7 +84,7 @@ class SingleJobPage(QWidget):
         self.layout = QGridLayout(self)
 
         self.layout.setSpacing(4)
-        self.layout.setMargin(4)
+        self.layout.setContentsMargins(4,4,4,4)
 
         self.file_lab = QLabel("Dnd File:")
         self.file_ed = QLineEdit()
@@ -169,7 +172,7 @@ class SingleJobPage(QWidget):
                     else:
                         self.error_display.appendPlainText(f'{et}:{row+1}:{col+1}: {message}')
                 try:
-                    html, _ = pydndc.htmlgen(text, base_dir=dirname, error_reporter=error_reporter)
+                    html = pydndc.htmlgen(text, base_dir=dirname, logger=error_reporter)
                 except Exception as e:
                     self.error_display.appendPlainText(f'{e}')
                     return
@@ -211,7 +214,7 @@ class SingleJobPage(QWidget):
         self.bottom_buttons = QWidget()
         self.bot_layout = QHBoxLayout()
         self.bot_layout.setSpacing(0)
-        self.bot_layout.setMargin(0)
+        self.bot_layout.setContentsMargins(0,0,0,0)
         self.bot_layout.addWidget(self.do_it_button)
         self.bot_layout.addWidget(self.open_button)
         self.bottom_buttons.setLayout(self.bot_layout)
@@ -240,7 +243,7 @@ class FolderJobPage(QWidget):
         self.layout = QGridLayout(self)
 
         self.layout.setSpacing(4)
-        self.layout.setMargin(4)
+        self.layout.setContentsMargins(4,4,4,4)
 
         self.folder_lab = QLabel("Dnd Folder:")
         self.folder_ed = QLineEdit()
@@ -303,7 +306,7 @@ class FolderJobPage(QWidget):
                 else:
                     self.error_display.appendPlainText(f'{infile}: {et}:{row+1}:{col+1}: {message}')
             try:
-                html, _ = pydndc.htmlgen(text, base_dir=basedir, error_reporter=error_reporter)
+                html = pydndc.htmlgen(text, base_dir=basedir, logger=error_reporter)
             except Exception as e:
                 self.error_display.appendPlainText(f'{infile}: {e}')
                 return
@@ -356,7 +359,7 @@ class FolderJobPage(QWidget):
         self.bottom_buttons = QWidget()
         self.bot_layout = QHBoxLayout()
         self.bot_layout.setSpacing(0)
-        self.bot_layout.setMargin(0)
+        self.bot_layout.setContentsMargins(0,0,0,0)
         self.bot_layout.addWidget(self.do_it_button)
         self.bot_layout.addWidget(self.open_button)
         self.bottom_buttons.setLayout(self.bot_layout)
@@ -390,7 +393,7 @@ class FileItemWidg(QWidget):
         self.del_button = QPushButton('Remove')
         self.row = QHBoxLayout()
         self.row.setSpacing(0)
-        self.row.setMargin(0)
+        self.row.setContentsMargins(0,0,0,0)
         self.row.addWidget(self.out_ed)
         self.row.addWidget(self.del_button)
         self.setLayout(self.row)
@@ -440,7 +443,7 @@ class ProjectJobPage(QWidget):
         self.layout = QGridLayout(self)
 
         self.layout.setSpacing(4)
-        self.layout.setMargin(4)
+        self.layout.setContentsMargins(4,4,4,4)
 
         self.file_lab = QLabel("Project File:")
         self.file_ed = QLineEdit()
@@ -593,29 +596,23 @@ class ProjectJobPage(QWidget):
     def compile(self):
         self.clearmess()
         def compile_one(infile:str, basedir:str, outfile:str) -> None:
+            basedir = os.path.dirname(infile)
             try:
                 text = open(infile, 'r', encoding='utf-8').read()
             except Exception as e:
                 self.addmess(f'{infile}: {e}')
                 return
             def error_reporter(error_type:int, filename:str, row:int, col:int, message:str):
-                error_types = (
-                    'Error',
-                    'Warning',
-                    'System Error',
-                    'Info',
-                    'Debug',
-                    )
                 if error_type < 0 or error_type >= len(error_types):
                     LOGGER.error('unrecognized error type: %d', error_type)
                     return
-                et = error_types[error_type]
-                if et == 'Info':
+                error_type = pydndc.MsgType(error_type)
+                if et == pydndc.MsgType.STATISTIC:
                     self.addmess(f'{infile}: {et}: {message}')
                 else:
-                    self.addmess(f'{infile}: {et}:{row+1}:{col+1}: {message}')
+                    self.addmess(f'{infile}: {et.name}:{row+1}:{col+1}: {message}')
             try:
-                html, _= pydndc.htmlgen(text, base_dir=basedir, error_reporter=error_reporter)
+                html = pydndc.htmlgen(text, base_dir=basedir, logger=error_reporter)
             except Exception as e:
                 self.addmess(f'{infile}: {e}')
                 return
@@ -640,7 +637,6 @@ class ProjectJobPage(QWidget):
         base = os.path.dirname(self.file_ed.text())
         files = self.file_list_widg.files()
         for f in files:
-
             if f.endswith('.dnd'):
                 outf = os.path.basename(f[:-4])
             else:
