@@ -281,12 +281,16 @@ build_toc_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
         case NODE_MD:
         case NODE_QUOTE:
         case NODE_CONTAINER:{
-            if(node->header.length){
+            StringView header = node->header;
+            header = stripped_view_chars(header.text, header.length, "[]");
+            if(header.length){
                 StringView id = node_get_id(ctx, handle);
                 if(id.length){
                     msb_write_literal(sb, "<li><a href=\"#");
                     msb_write_kebab(sb, id.text, id.length);
-                    MSB_FORMAT(sb, "\">", node->header, "</a>\n<ul>\n");
+                    msb_write_literal(sb, "\">");
+                    msb_write_tag_escaped_str(sb, header.text, header.length);
+                    msb_write_literal(sb,  "</a>\n<ul>\n");
                     // kind of a hack
                     size_t cursor = sb->cursor;
                     build_toc_block_children(ctx, handle, sb, depth+1);
@@ -321,12 +325,16 @@ build_toc_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
             break;
         case NODE_PRE:
         case NODE_RAW:{
-            if(node->header.length){
+            StringView header = node->header;
+            header = stripped_view_chars(header.text, header.length, "[]");
+            if(header.length){
                 StringView id = node_get_id(ctx, handle);
                 if(id.length){
                     msb_write_literal(sb, "<li><a href=\"#");
                     msb_write_kebab(sb, id.text, id.length);
-                    MSB_FORMAT(sb, "\">", node->header, "</a>");
+                    msb_write_literal(sb, "\">");
+                    msb_write_tag_escaped_str(sb, header.text, header.length);
+                    msb_write_literal(sb,  "</a>");
                     msb_write_literal(sb, "</li>\n");
                 }
             }break;

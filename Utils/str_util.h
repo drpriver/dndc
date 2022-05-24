@@ -123,6 +123,26 @@ struct SplitPair {
     StringView tail;
 };
 
+static inline
+StringView
+stripped_view_chars(const char*_Null_unspecified str, size_t len, const char* chars){
+    for(;len;str++, len--){
+        for(size_t i = 0; chars[i]; i++){
+            if(*str == chars[i]) goto Continue1;
+        }
+        break;
+        Continue1:;
+    }
+    for(;len;len--){
+        for(size_t i = 0; chars[i]; i++){
+            if(str[len-1] == chars[i]) goto Continue2;
+        }
+        break;
+        Continue2:;
+    }
+    return (StringView){.length=len, .text=str};
+}
+
 //
 // Given a string + length and a splitting character, returns two views
 // which are the before and after of that character. Each view is stripped of
