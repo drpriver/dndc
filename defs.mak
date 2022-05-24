@@ -26,7 +26,7 @@ DIRECTORIES= $(DEPDIR) $(OBJDIR) $(BINDIR) $(DOCDIR) $(TESTDIR) $(EXAMPLEDIR) $(
 DEPFILES:= $(wildcard Depends/*.dep)
 include $(DEPFILES)
 
-WARNING_FLAGS:=-Wall\
+WARNING_FLAGS=-Wall\
 	-Wbad-function-cast\
 	-Wextra \
 	-Wvla\
@@ -86,7 +86,7 @@ endif
 endif
 endif
 
-ifeq ($(CC),clang)
+ifneq ($(findstring $(CC),clang),)
 WARNING_FLAGS+=-Wassign-enum\
 	-Wshadow \
 	-Warray-bounds-pointer-arithmetic\
@@ -110,7 +110,8 @@ WARNING_FLAGS+=-Wassign-enum\
 	-Wconditional-uninitialized\
 	-Werror=undefined-internal\
 	-Wcomma
-else ifeq ($(CC),gcc)
+endif
+ifneq ($(findstring  $(CC),gcc),)
 WARNING_FLAGS+=-Wno-missing-braces\
 	-Wno-missing-field-initializers
 endif
