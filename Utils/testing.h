@@ -964,7 +964,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     _test_color_red = red;
 #endif
 
-    size_t num_to_run = run_all? test_funcs_count : kw_args[TARGET_INDEX].num_parsed;
+    size_t num_to_run = run_all? test_funcs_count : (size_t)kw_args[TARGET_INDEX].num_parsed;
 
     assert(SV_equals(kw_args[TARGET_INDEX].name, SV("-t")));
 

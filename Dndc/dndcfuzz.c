@@ -18,6 +18,9 @@ LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
 #ifdef FUZZ_FORMAT
         | DNDC_REFORMAT_ONLY
 #endif
+#ifdef FUZZ_MD
+        | DNDC_OUTPUT_MD
+#endif
         ;
     StringView source = {.text=(const char*)data, .length=size};
     LongString out;

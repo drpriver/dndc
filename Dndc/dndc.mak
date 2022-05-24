@@ -24,6 +24,11 @@ $(BINDIR)/dndcfuzzformat$(EXE): Dndc/dndcfuzz.c $(DEPDIR)/dndcfuzzformat.dep $(V
 .PHONY: dndcfuzzformat
 dndcfuzz: $(BINDIR)/dndcfuzzformat$(EXE)
 
+$(BINDIR)/dndcfuzzmd$(EXE): Dndc/dndcfuzz.c $(DEPDIR)/dndcfuzzmd.dep $(VENDOBJDIR)/libquickjs.o
+	$(CC) -DFUZZ_MD=1 $(FLAGS) $(PLATFORM_FLAGS) -O1 -g $(DEPFLAGS) $(DEPDIR)/dndcfuzzmd.dep $< -o $@ $(VENDOBJDIR)/libquickjs.o $(LINK_FLAGS) -fsanitize=fuzzer,address,undefined
+.PHONY: dndcfuzzmd
+dndcfuzz: $(BINDIR)/dndcfuzzmd$(EXE)
+
 FUZZDIR=FuzzCorpus
 $(FUZZDIR): ; @$(MKDIR) -p $@
 

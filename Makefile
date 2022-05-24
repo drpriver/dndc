@@ -97,6 +97,9 @@ fuzz: $(BINDIR)/dndcfuzz$(EXE) | $(FUZZDIR)
 .PHONY: fuzzformat
 fuzzformat: $(BINDIR)/dndcfuzzformat$(EXE) | $(FUZZDIR)
 	$< $(FUZZDIR) -fork=4 -only_ascii=1
+.PHONY: fuzzmd
+fuzzmd: $(BINDIR)/dndcfuzzmd$(EXE) | $(FUZZDIR)
+	$< $(FUZZDIR) -fork=4 -only_ascii=1
 
 ifneq ($(UNAME),Windows) # shells out to unix commands
 .PHONY: list

@@ -230,7 +230,7 @@ write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
         char c = text[i];
         switch(c){
             case '[':{
-                const char* closing_brace = memchr(text+i, ']', length-1);
+                const char* closing_brace = memchr(text+i, ']', length-i);
                 if(unlikely(!closing_brace)){
                     msb_write_char(sb, c);
                     break;

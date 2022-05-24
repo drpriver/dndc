@@ -498,6 +498,7 @@ TestFunction(TestCrashesFixed){
         {.name=LS("TestCases/case1.dnd"), .error=false, .flags=FLAGS},
         {.name=LS("TestCases/case2.dnd"), .error=true, .flags=FLAGS},
         {.name=LS("TestCases/case3.dnd"), .error=true, .flags=FLAGS},
+        {.name=LS("TestCases/oob_md.dnd"), .error=false, .flags=FLAGS|DNDC_OUTPUT_MD},
     };
     for(size_t i = 0; i < arrlen(cases); i++){
         LongString output = {0};
