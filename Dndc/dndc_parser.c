@@ -626,15 +626,26 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                 return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
             }break;
             case '.':{
+                // classes are written verbatim, so we need to only allow valid characters
                 advance_sv(&aftertype);
                 eat_leading_tabspaces(&aftertype);
                 const char* class_start = aftertype.text;
                 while(aftertype.length){
                     char first = aftertype.text[0];
-                    if(first == ' ' || first == '\t' || first == '@' || first == '.' || first == '#')
-                        break;
-                    advance_sv(&aftertype);
+                    switch(first){
+                        case CASE_a_z:
+                        case CASE_A_Z:
+                        case '-':
+                            advance_sv(&aftertype);
+                            continue;
+                        case ' ': case '\t': case '@': case '.': case '#':
+                            goto Break;
+                        default:
+                            parse_log_err_q(ctx, aftertype.text, SV("Illegal character when parsing a class: "), aftertype);
+                            return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
+                    }
                 }
+                Break:;
                 size_t class_length = aftertype.text - class_start;
                 if(!class_length){
                     parse_log_err(ctx, aftertype.text, LS("Empty class name after a '.'"));

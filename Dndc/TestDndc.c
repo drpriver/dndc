@@ -20,6 +20,7 @@ static TestFunc TestFormatTable;
 static TestFunc TestFormatList;
 static TestFunc TestFormatKV;
 static TestFunc TestCrashesFixed;
+static TestFunc TestEscapedFixed;
 static TestFunc TestExamplesWork;
 static TestFunc TestUntrusted;
 static TestFunc TestSpecialChars;
@@ -41,6 +42,7 @@ int main(int argc, char** argv){
     RegisterTest(TestFormatList);
     RegisterTest(TestFormatKV);
     RegisterTest(TestCrashesFixed);
+    RegisterTest(TestEscapedFixed);
     RegisterTest(TestExamplesWork);
     RegisterTest(TestUntrusted);
     RegisterTest(TestSpecialChars);
@@ -511,6 +513,47 @@ TestFunction(TestCrashesFixed){
         }
         else {
             TestExpectFalse(e);
+        }
+        if(!e){
+            dndc_free_string(output);
+        }
+        Allocator_free(allocator, text.text, text.length);
+    }
+    TESTEND();
+}
+TestFunction(TestEscapedFixed){
+    TESTBEGIN();
+    uint64_t FLAGS = DNDC_FLAGS_NONE
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_DONT_PRINT_ERRORS
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+        ;
+    struct {
+        LongString name;
+        bool error; // if we expect an error
+        uint64_t flags;
+    } cases[] = {
+        {.name=LS("TestCases/class_escape.dnd"), .error=true, .flags=FLAGS},
+        {.name=LS("TestCases/toc_escape.dnd"), .error=false, .flags=FLAGS},
+    };
+    for(size_t i = 0; i < arrlen(cases); i++){
+        LongString output = {0};
+        Allocator allocator = get_mallocator();
+        // Read as binary to avoid appending a nul terminator
+        // which can mask off-by-one read errors.
+        BinaryFileResult data = read_bin_file(cases[i].name.text, allocator);
+        TestAssertSuccess(data);
+        StringView text = {.length=data.result.n_bytes, .text=data.result.buff};
+        int e = run_the_dndc(cases[i].flags, SV("TestCases"), text, LS_to_SV(cases[i].name), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        if(cases[i].error){
+            TestExpectTrue(e);
+        }
+        else {
+            TestExpectFalse(e);
+            if(!e){
+                TestAssert(output.length);
+                TestExpectFalse(strstr(output.text, "<script>"));
+            }
         }
         if(!e){
             dndc_free_string(output);
