@@ -113,6 +113,7 @@ main(int argc, char** argv){
         },
     };
     _Bool should_log = false;
+    _Bool bind_all = false;
     ArgToParse kw_args[] = {
         {
             .name = SV("-p"),
@@ -138,6 +139,11 @@ main(int argc, char** argv){
             .dest = ARGDEST(&should_log),
             .help = "log requests etc. (can be chatty)",
 
+        },
+        {
+            .name = SV("--bind-all"),
+            .dest = ARGDEST(&bind_all),
+            .help = "Bind to 0.0.0.0 instead of loopback. Don't do this if you don't trust the network and for god's sake don't put it on the internet.",
         },
     };
     enum {HELP, VERSION, FISH};
@@ -205,7 +211,8 @@ main(int argc, char** argv){
         PopDiagnostic();
     }
 
-    DndServer* server = dnd_server_create(should_log?wrap_report:null_report, NULL, 3, &port);
+    // TODO: add log level to cli.
+    DndServer* server = dnd_server_create(should_log?wrap_report:null_report, NULL, 3, &port, bind_all);
     if(!server) {
         fprintf(stderr, "No server\n");
         return 1;

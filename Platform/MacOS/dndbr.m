@@ -456,7 +456,7 @@ asm(".global __app_icon\n"
         self->serverthread = [[NSThread alloc] initWithBlock:^{
             [self performSelectorOnMainThread:@selector(server_did_start:) withObject:nil waitUntilDone:NO];
             int theport = self->port;
-            DndServer* server = dnd_server_create(logfunc, (__bridge void*)self, 3, &theport);
+            DndServer* server = dnd_server_create(logfunc, (__bridge void*)self, 3, &theport, false);
             if(!server){
                 NSLog(@"No server!");
                 return;

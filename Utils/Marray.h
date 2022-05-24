@@ -77,7 +77,7 @@ marray_resize_to_some_weird_number(size_t x){
         return 16;
     // grow by factor of approx sqrt(2)
     // I have no idea if this is ideal, but it has a nice elegance to it
-    int cnt = popcont_32(x);
+    int cnt = popcount_32(x);
     size_t result;
     if(cnt == 1){
         result =  x | (x >> 1);

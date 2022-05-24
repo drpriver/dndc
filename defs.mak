@@ -111,7 +111,7 @@ WARNING_FLAGS+=-Wassign-enum\
 	-Werror=undefined-internal\
 	-Wcomma
 endif
-ifneq ($(findstring  $(CC),gcc),)
+ifneq ($(findstring $(CC),gcc),)
 WARNING_FLAGS+=-Wno-missing-braces\
 	-Wno-missing-field-initializers
 endif
@@ -139,7 +139,8 @@ FLAGS=$(INCLUDE_FLAGS) $(WARNING_FLAGS) $(PLATFORM_FLAGS)
 
 
 # TestDndc needs special link arguments, so define it manually.
-TESTS:=$(filter-out Dndc/TestDndc.c Dndc/TestDndcAst.c, $(wildcard **/Test*.c))
+# TestDsort hangs gcc for some reason.
+TESTS:=$(filter-out Dndc/TestDndc.c Dndc/TestDndcAst.c Utils/TestDsort.c,$(wildcard **/Test*.c))
 
 # This template defines how to build and run a test. Tests are automatically
 # discovered by convention: a test program is a C file starting with 'Test'.

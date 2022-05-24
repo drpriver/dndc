@@ -26,8 +26,10 @@ typedef long long ssize_t;
 
 #include <errno.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
 typedef int SOCKET; // easier this way
 
 #endif
@@ -196,7 +198,7 @@ typedef struct DndServer DndServer;
 // winsock is just different enough that I'd rather keep the implementation separate.
 
 DndServer*_Nullable
-dnd_server_create(DndcLogFunc* func, void*_Nullable p, int loglevel, int* port){
+dnd_server_create(DndcLogFunc* func, void*_Nullable p, int loglevel, int* port, _Bool bind_all){
     DndLogger logger = {.func=func, .p=p, .loglevel=loglevel};
     WSADATA wsadata;
     int err = WSAStartup(MAKEWORD(2,2), &wsadata);
@@ -219,7 +221,7 @@ dnd_server_create(DndcLogFunc* func, void*_Nullable p, int loglevel, int* port){
     }
     struct sockaddr_in addr = {
         .sin_family = AF_INET,
-        .sin_addr.S_un.S_addr=htonl(INADDR_LOOPBACK),
+        .sin_addr.S_un.S_addr=htonl(bind_all?INADDR_ANY:INADDR_LOOPBACK),
         .sin_port = htons(*port),
     };
 
@@ -308,7 +310,7 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
 
 
 DndServer*_Nullable
-dnd_server_create(DndcLogFunc* func, void*_Nullable p, int loglevel, int* port){
+dnd_server_create(DndcLogFunc* func, void*_Nullable p, int loglevel, int* port, _Bool bind_all){
     DndLogger logger = {.func=func,.p=p, .loglevel=loglevel};
     int sd = socket(PF_INET, SOCK_STREAM, 0);
     if(sd < 0){
@@ -328,12 +330,18 @@ dnd_server_create(DndcLogFunc* func, void*_Nullable p, int loglevel, int* port){
         return NULL;
     }
     #endif
+    sso_err = setsockopt(sd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof opt);
+    if(sso_err < 0){
+        error(&logger, "setsockopt for TCP_NODELAY failed: %s", strerror(errno));
+        return NULL;
+    }
+
     struct sockaddr_in addr = {
         #if defined(__APPLE__)
         .sin_len = sizeof(addr),
         #endif
         .sin_family = AF_INET,
-        .sin_addr = {htonl(INADDR_LOOPBACK)},
+        .sin_addr = {htonl(bind_all?INADDR_ANY:INADDR_LOOPBACK)},
         .sin_port = htons(*port),
     };
     int err = bind(sd, (struct sockaddr*)&addr, sizeof addr);
@@ -375,13 +383,33 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
         SOCKET accsd = accept(sd, (struct sockaddr*)&clientaddr, &clientlen);
         debug(&server->logger, "Accepted...");
         if(accsd < 0){
-            // error(func, p, "accept failed: %s", strerror(errno));
+            error(&server->logger, "accept failed: %s", strerror(errno));
             close(sd);
             return 1;
         }
-        ssize_t n = recv(accsd, buff, (sizeof buff)-1, 0);
+        // WEIRD:
+        // Fucking safari on macos will sometimes open a connection and then not send data
+        // or something weird like that. If you close the connection it will immediately
+        // retry though. So just set a timeout on the socket of 50ms and if it hasn't completed
+        // by then just close it. This is intended to be used on local host anyway so it's fine.
+        // Maybe a buffer is being filled but not flushed? If you open a second tab to the same
+        // local server then the request unblocks.
+        //
+        // The above does not happen when I try using firefox on the same machine.
+        struct timeval tv;
+        tv.tv_sec = 0;
+        tv.tv_usec = 50000;
+        int sso_err = setsockopt(accsd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof tv);
+        if(sso_err < 0){
+            error(&server->logger, "setsockopt for SO_RCVTIMEO failed: %s", strerror(errno));
+            goto Close;
+        }
+
+        debug(&server->logger, "recv");
+        ssize_t n = recv(accsd, buff, sizeof(buff) -1, 0);
+        debug(&server->logger, "recvd: %lld", (long long)n);
         if(n < 0){
-            error(&server->logger, "recv failed: %s", strerror(errno));
+            debug(&server->logger, "recv failed: %s", strerror(errno));
             goto Close;
         }
         if(n == 0){
@@ -389,7 +417,9 @@ dnd_server_serve(DndServer* server, uint64_t flags, LongString directory){
             goto Close;
         }
         buff[n] = 0;
+        debug(&server->logger, "Handling request");
         shutdown = handle_request(&server->logger, flags, directory, accsd, (LongString){n, buff});
+        debug(&server->logger, "Request handled");
         Close:
         close(accsd);
         if(shutdown){
