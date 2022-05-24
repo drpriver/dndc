@@ -87,21 +87,16 @@
     height: 100%;
     width: 100%;
   }
-  body > div {
-    height: 100%;
-    width: 100%;
-  }
   iframe {
     grid-column: 1;
     grid-row: 1 / 4;
     height: 100%;
     width: 100%;
+    opacity: none;
   }
   .right {
     grid-column: 2;
     grid-row: 1;
-    height: 100%;
-    width: 100%;
   }
   textarea {
     font-family: Menlo, Mono;
@@ -110,8 +105,6 @@
   #log {
     grid-column: 2;
     grid-row: 3;
-    height: 100%;
-    width: 100%;
     border: 1px solid gray;
   }
   #checkboxes{
