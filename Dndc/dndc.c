@@ -424,6 +424,7 @@ run_the_dndc(uint64_t flags,
         }
         else {
             assert(outstring);
+            if(!outsb.cursor) msb_nul_terminate(&outsb);
             *outstring = msb_detach_ls(&outsb);
         }
         goto success;
@@ -661,6 +662,7 @@ run_the_dndc(uint64_t flags,
         }
         else {
             assert(outstring);
+            if(!output_sb.cursor) msb_nul_terminate(&output_sb);
             *outstring = msb_detach_ls(&output_sb);
         }
     }
@@ -681,6 +683,7 @@ run_the_dndc(uint64_t flags,
         }
         else {
             assert(outstring);
+            if(!output_sb.cursor) msb_nul_terminate(&output_sb);
             *outstring = msb_detach_ls(&output_sb);
         }
     }
@@ -704,6 +707,7 @@ run_the_dndc(uint64_t flags,
         }
         else {
             assert(outstring);
+            if(!output_sb.cursor) msb_nul_terminate(&output_sb);
             *outstring = msb_detach_ls(&output_sb);
         }
     }
