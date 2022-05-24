@@ -4,6 +4,7 @@
 #ifndef DNDC_NODE_TYPES_H
 #define DNDC_NODE_TYPES_H
 #include "dndc_long_string.h"
+#include "common_macros.h"
 
 #define NODETYPES(apply) \
     apply(MD,              0)\
@@ -71,11 +72,15 @@ enum NodeType{
     NODE_DEF          = 29,
     NODE_INVALID      = 30,
 };
+
 typedef enum NodeType NodeType;
 
+PushDiagnostic();
+SuppressEnumCompare();
 #define X(a, b) _Static_assert(NODE_##a == b, #a " != " #b);
 NODETYPES(X)
 #undef X
+PopDiagnostic();
 
 static const
 LongString NODENAMES[] = {

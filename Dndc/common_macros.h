@@ -114,6 +114,7 @@
 #define SuppressVisibility()            _Pragma("clang diagnostic ignored \"-Wvisibility\"")
 #define SuppressNullableConversion()    _Pragma("clang diagnostic ignored\"-Wnullable-to-nonnull-conversion\"")
 #define SuppressShadowing()             _Pragma("clang diagnostic ignored\"-Wshadow\"")
+#define SuppressEnumCompare()
 
 #define PushDiagnostic()                _Pragma("clang diagnostic push")
 #define PopDiagnostic()                 _Pragma("clang diagnostic pop")
@@ -127,10 +128,12 @@
 #define SuppressCastFunction()          _Pragma("GCC diagnostic ignored \"-Wcast-function-type\"")
 #define SuppressMissingBraces()         _Pragma("GCC diagnostic ignored \"-Wmissing-braces\"")
 #define SuppressDoublePromotion()       _Pragma("GCC diagnostic ignored \"-Wdouble-promotion\"")
-#define SuppressShadowing()             _Pragma("GCC diagnostic ignored\"-Wshadow\"")
 #define SuppressCoveredSwitchDefault()
 #define SuppressVisibility()
 #define SuppressNullableConversion()
+#define SuppressShadowing()             _Pragma("GCC diagnostic ignored \"-Wshadow\"")
+#define SuppressEnumCompare()           _Pragma("GCC diagnostic ignored \"-Wenum-compare\"")
+
 #define PushDiagnostic()                _Pragma("GCC diagnostic push")
 #define PopDiagnostic()                 _Pragma("GCC diagnostic pop")
 
@@ -146,7 +149,9 @@
 #define SuppressCoveredSwitchDefault()
 #define SuppressVisibility()
 #define SuppressNullableConversion()
-#define SuppressShadowing();
+#define SuppressShadowing()
+#define SuppressEnumCompare()
+
 #define PushDiagnostic()
 #define PopDiagnostic()
 

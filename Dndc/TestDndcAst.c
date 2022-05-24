@@ -130,9 +130,12 @@ TestFunction(TestAstExample){
     TESTEND();
 }
 #include "dndc_node_types.h"
+PushDiagnostic();
+SuppressEnumCompare();
 #define X(a, b) _Static_assert(NODE_##a == DNDC_NODE_TYPE_##a, #a " doesn't match in public and private header!");
 NODETYPES(X)
 #undef X
+PopDiagnostic();
 
 
 
