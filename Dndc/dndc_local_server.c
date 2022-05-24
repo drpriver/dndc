@@ -469,7 +469,7 @@ handle_request(DndLogger* logger, uint64_t flags, LongString directory, SOCKET a
                 goto LNotFound;
             }
             path = msb_borrow_sv(&urlsb);
-            logger->func(logger->p, DNDC_STATISTIC_MESSAGE, path.text-1, path.length+1, -1, -1, "Serving", sizeof("Serving")-1);
+            logger->func(logger->p, DNDC_STATISTIC_MESSAGE, path.text, path.length, -1, -1, "Serving", sizeof("Serving")-1);
         }
         else {
             logger->func(logger->p, DNDC_STATISTIC_MESSAGE, path.text, path.length, -1, -1, "Serving", sizeof("Serving")-1);
