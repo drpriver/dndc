@@ -1313,21 +1313,19 @@ Page::format(void){
             page->display_dndc_error(type, QString::fromUtf8(filename, filename_len), line, col, QString::fromUtf8(message, message_len));
         };
     DndcLongString outstring;
-    unsigned long long flags = 0
-        | DNDC_REFORMAT_ONLY
-        ;
+    uint64_t flags = 0;
     if(PRINT_STATS)
         flags |= DNDC_PRINT_STATS;
-    int err = dndc_compile_dnd_file(
+    int err = dndc_expand_to_dnd(
             flags,
             DndcStringView{},
             textsv,
             DndcStringView{},
             &outstring,
-            nullptr, nullptr,
+            nullptr,
             errfunc, this,
             nullptr, nullptr,
-            nullptr,{0, ""});
+            {0, ""});
     if(err) return;
     textedit->setPlainText(QString::fromUtf8(outstring.text, outstring.length));
     dndc_free_string(outstring);
