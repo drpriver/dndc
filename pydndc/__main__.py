@@ -27,16 +27,15 @@ def main() -> None:
     parser.add_argument('--strip-spaces', action='store_true', help='String trailing and leading whitespace from all output lines (for html output)')
     parser.add_argument('--format', action='store_true', help='Instead of rendering to html, render to .dnd with trailing spaces removed, text wrapped to 80 columns, etc. Scripts and imports are not resolved.')
     parser.add_argument('--expand', action='store_true', help='Render to .dnd, after scripts and imports are resolved. Some documents may not be representable in this way. This does not format the output.')
-    # parser.add_argument('--md', '--markdown', action='store_true', 'Render to markdown instead of html.')
+    parser.add_argument('--md', '--markdown', action='store_true', help='Render to markdown instead of html.')
 
     args = parser.parse_args()
-    from pprint import pprint; pprint(vars(args))
     run(**vars(args))
 
 def run(
         format:bool, 
         expand:bool, 
-        # markdown:bool, 
+        md:bool,
         source:str, 
         output:Optional[str], 
         depends_path:Optional[str], 
@@ -83,7 +82,6 @@ def run(
     if strip_spaces:
         flags |= pydndc.Flags.STRIP_WHITESPACE
 
-    print(repr(flags))
     with open(source, 'r') as fp:
         source_text = fp.read()
 
@@ -94,8 +92,8 @@ def run(
         outs = pydndc.reformat(source_text, logger=pydndc.stderr_logger)
     elif expand:
         outs = pydndc.expand(source_text, base_dir=base_directory, logger=pydndc.stderr_logger, flags=flags, jsargs=jsstuff)
-    # elif markdown:
-        # outs = pydndc.markdown(source_text, logger=pydndc.stderr_logger)
+    elif md:
+        outs = pydndc.to_markdown(source_text, base_dir=base_directory, logger=pydndc.stderr_logger, flags=flags, jsargs=jsstuff)
     else:
         outs = pydndc.htmlgen(source_text, base_dir=base_directory, jsargs=jsstuff, logger=pydndc.stderr_logger, flags=flags)
     if dont_write:

@@ -436,14 +436,23 @@ write_md_keyvalue(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
             NODE_LOG_ERROR(ctx, key, "Expected two string children of keyvaluepair node when rendering md");
             return DNDC_ERROR_INVALID_TREE;
         }
-        if(value->type != NODE_STRING){
+        if(value->type != NODE_STRING && value->type != NODE_CONTAINER){
             NODE_LOG_ERROR(ctx, value, "Expected two string children of keyvaluepair node when rendering md");
             return DNDC_ERROR_INVALID_TREE;
         }
         msb_write_literal(sb, "<tr>\n<td>");
         write_md_string(ctx, kh, sb);
         msb_write_literal(sb, "</td>\n<td>");
-        write_md_string(ctx, vh, sb);
+        if(value->type == NODE_CONTAINER){
+            NODE_CHILDREN_FOR_EACH(c, value){
+                Node* chi = get_node(ctx, *c);
+                if(chi->type != NODE_STRING) continue;
+                write_md_string(ctx, *c, sb);
+            }
+        }
+        else {
+            write_md_string(ctx, vh, sb);
+        }
         msb_write_literal(sb, "</td>\n</tr>\n");
     }
     msb_write_literal(sb, "</tbody>\n</table>\n");
@@ -455,7 +464,7 @@ int
 write_md_table(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth){
     // Original markdown doesn't have table support, so just use an html
     // table anyway.
-    msb_write_literal(sb, "<table>\n  <thead>\n");
+    msb_write_literal(sb, "<table>\n<thead>\n");
     Node* node = get_node(ctx, handle);
     size_t count = node_children_count(node);
     NodeHandle* children = node_children(node);
