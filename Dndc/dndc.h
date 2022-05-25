@@ -19,7 +19,7 @@
 
 #define DNDC_MAJOR 0
 #define DNDC_MINOR 19
-#define DNDC_MICRO 1
+#define DNDC_MICRO 2
 #define DNDC_STRINGIFY_IMPL(x) #x
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
 
@@ -601,10 +601,10 @@ enum DndcFlags {
     // javascript blocks or embed javascript in the output. As raw nodes are
     // inserted literally, raw nodes are ignored.
 
-    DNDC_REFORMAT_ONLY = 0x10,
+    // DNDC_UNUSED_FLAG = 0x10,
     // ------------------
-    // Instead of rendering to html, render to .dnd with trailing spaces
-    // removed, text aligned to 79 columns (if semantically equivelant) etc.
+    // This flag slot is unused and will either be used when 1.0 is reached
+    // or the value of the other flags will all shift.
 
     DNDC_SUPPRESS_WARNINGS = 0x20,
     // ----------------------
@@ -666,16 +666,6 @@ enum DndcFlags {
     // For imgs, don't base64 them and don't use regular links. Instead, use a
     // dnd:///absolute/path/to/img url instead. Applications can then
     // implement custom url handlers for this url scheme.
-
-    DNDC_OUTPUT_EXPANDED_DND = 0x40000,
-    // ------------------------
-    // After resolving imports and executing user scripts, output as a single
-    // file .dnd file instead of html.
-
-    DNDC_OUTPUT_MD = 0x80000,
-    // ----------------------
-    // Do a best effort attempt at converting the tree to markdown. It won't be
-    // 100% accurate. <script> and <style> tags will not be outputted.
 };
 
 // --------------------
@@ -826,6 +816,165 @@ dndc_format(DndcStringView source_text,
 // --------
 // Returns 0 on success, a non-zero error code otherwise.
 // If non-zero, output will not be written to.
+
+
+DNDC_API
+int
+dndc_expand_to_dnd(
+  unsigned long long flags,
+  DndcStringView base_directory,
+  DndcStringView source_text,
+  DndcStringView source_path,
+  DndcLongString* outstring,
+  DNDC_NULLABLE(DndcFileCache*) textcache,
+  DNDC_NULLABLE(DndcLogFunc*) log_func,
+  DNDC_NULLABLE(void*) log_user_data,
+  DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
+  DNDC_NULLABLE(void*) dependency_user_data,
+  DndcLongString jsargs
+);
+// ---------------------
+// Compiles and executes dnd, rendering to a single dnd document (if
+// possible).
+//
+// Arguments:
+// ----------
+//
+// flags:
+//    A bitwise-or combination of `DndcFlags`.
+//
+// base_directory:
+//    May be a zero-length string. For relative filepaths referenced in the
+//    document, what those paths are relative to. Defaults to the current
+//    directory for a zero length string view.
+//
+//    Specifically, this string plus a directory separator will be prepended to
+//    all paths for the purposes of opening those paths.
+//
+// source_text:
+//    The string to be parsed and compiled.
+//
+// source_path:
+//    The filepath that the source path was loaded from. This is mostly used
+//    for reporting errors.
+//
+// outstring:
+//    A pointer to a string structure to write the data to. The text will be
+//    allocated via malloc. You can call `dndc_free_string` on the text if you
+//    are on a platform where each dynamic library has its own heap (aka
+//    Windows).
+//
+// textfilecache:
+//    A pointer to a filecache (created with `dndc_create_filecache`) that is
+//    used to cache files across invocations of this function. This may be
+//    null, in which case no caching is done.
+//
+//    This cache is used to cache the results of loading text files.
+//
+// log_func:
+//    A function for reporting errors. See `DndcLogFunc` above. If NULL,
+//    errors will not be printed. Use `dndc_stderr_log_func` for a function
+//    that just prints to stderr.
+//
+// log_user_data:
+//    A pointer that will be passed to the log_func. For
+//    `dndc_stderr_log_func`, this should be NULL. For a function you've
+//    defined, pass an appropriate pointer!
+//
+// dependency_func:
+//    A function for reporting the dependencies of the generated file. See
+//    `DndcDependencyFunc` above.
+//
+// dependency_user_data:
+//   A pointer that will be passed to the dependency_func.
+//
+// jsargs:
+//   A json string literal that will be available to JS blocks as Args. May be
+//   the empty string. Should be an object literal or an array literal. An
+//   empty string will be treated as "null".
+//
+// Returns:
+// --------
+// Returns 0 on success, a non-zero error code otherwise.
+//
+//
+DNDC_API
+int
+dndc_expand_to_md(
+  unsigned long long flags,
+  DndcStringView base_directory,
+  DndcStringView source_text,
+  DndcStringView source_path,
+  DndcLongString* outstring,
+  DNDC_NULLABLE(DndcFileCache*) textcache,
+  DNDC_NULLABLE(DndcLogFunc*) log_func,
+  DNDC_NULLABLE(void*) log_user_data,
+  DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
+  DNDC_NULLABLE(void*) dependency_user_data,
+  DndcLongString jsargs
+);
+// ---------------------
+// Compiles and executes dnd, rendering to a best effort markdown version.
+//
+// Arguments:
+// ----------
+//
+// flags:
+//    A bitwise-or combination of `DndcFlags`.
+//
+// base_directory:
+//    May be a zero-length string. For relative filepaths referenced in the
+//    document, what those paths are relative to. Defaults to the current
+//    directory for a zero length string view.
+//
+//    Specifically, this string plus a directory separator will be prepended to
+//    all paths for the purposes of opening those paths.
+//
+// source_text:
+//    The string to be parsed and compiled.
+//
+// source_path:
+//    The filepath that the source path was loaded from. This is mostly used
+//    for reporting errors.
+//
+// outstring:
+//    A pointer to a string structure to write the data to. The text will be
+//    allocated via malloc. You can call `dndc_free_string` on the text if you
+//    are on a platform where each dynamic library has its own heap (aka
+//    Windows).
+//
+// textfilecache:
+//    A pointer to a filecache (created with `dndc_create_filecache`) that is
+//    used to cache files across invocations of this function. This may be
+//    null, in which case no caching is done.
+//
+//    This cache is used to cache the results of loading text files.
+//
+// log_func:
+//    A function for reporting errors. See `DndcLogFunc` above. If NULL,
+//    errors will not be printed. Use `dndc_stderr_log_func` for a function
+//    that just prints to stderr.
+//
+// log_user_data:
+//    A pointer that will be passed to the log_func. For
+//    `dndc_stderr_log_func`, this should be NULL. For a function you've
+//    defined, pass an appropriate pointer!
+//
+// dependency_func:
+//    A function for reporting the dependencies of the generated file. See
+//    `DndcDependencyFunc` above.
+//
+// dependency_user_data:
+//   A pointer that will be passed to the dependency_func.
+//
+// jsargs:
+//   A json string literal that will be available to JS blocks as Args. May be
+//   the empty string. Should be an object literal or an array literal. An
+//   empty string will be treated as "null".
+//
+// Returns:
+// --------
+// Returns 0 on success, a non-zero error code otherwise.
 //
 
 DNDC_API

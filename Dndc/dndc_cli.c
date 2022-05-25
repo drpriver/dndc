@@ -111,6 +111,10 @@ main(int argc, char**argv){
     bool bench_cache_files = false;
     bool no_null_terminator = false;
     bool dont_write = false;
+    bool format_only = false;
+    bool markdown = false;
+    bool expand = false;
+    enum OutputTarget output_target = OUTPUT_HTML;
     LongString jsargs = LS("");
     MStringBuilder argbuilder = {.allocator = get_mallocator()};
     {
@@ -242,7 +246,7 @@ main(int argc, char**argv){
             },
             {
                 .name = SV("--format"),
-                .dest = ArgBitFlagDest(&flags, DNDC_REFORMAT_ONLY),
+                .dest = ARGDEST(&format_only),
                 .help = "Instead of rendering to html, render to .dnd\n"
                         "Trailing spaces are removed, text wrapped to 80 "
                         "columns (if semantically equivalent), etc." ,
@@ -250,7 +254,7 @@ main(int argc, char**argv){
             {
                 .name = SV("--expand"),
                 .altname1 = SV("--expand-only"),
-                .dest = ArgBitFlagDest(&flags, DNDC_OUTPUT_EXPANDED_DND),
+                .dest = ARGDEST(&expand),
                 .help = "Output as a single .dnd file instead of html.\n"
                         "Expansion is after resolving imports and executing "
                         "user scripts.",
@@ -259,7 +263,7 @@ main(int argc, char**argv){
             {
                 .name = SV("--md"),
                 .altname1 = SV("--markdown"),
-                .dest = ArgBitFlagDest(&flags, DNDC_OUTPUT_MD),
+                .dest = ARGDEST(&markdown),
                 .help = "Output as a single .md file instead of html.\n"
                         "Expansion is after resolving imports and executing "
                         "user scripts. This is a best effort attempt to "
@@ -441,21 +445,24 @@ main(int argc, char**argv){
             fprintf(stderr, "Use --help to see usage.\n");
             return e;
         }
-        if((flags & DNDC_OUTPUT_EXPANDED_DND) && (flags & DNDC_REFORMAT_ONLY)){
+        if(expand && format_only){
             fprintf(stderr, "Do not specify both --expand and --format. "
                             "Only one is allowed\n");
             return 1;
         }
-        if((flags & DNDC_OUTPUT_EXPANDED_DND) && (flags & DNDC_OUTPUT_MD)){
+        if(expand && markdown){
             fprintf(stderr, "Do not specify both --expand and --md. "
                             "Only one is allowed\n");
             return 1;
         }
-        if((flags & DNDC_REFORMAT_ONLY) && (flags & DNDC_OUTPUT_MD)){
+        if(format_only && markdown){
             fprintf(stderr, "Do not specify both --format and --md. "
                             "Only one is allowed\n");
             return 1;
         }
+        if(expand) output_target = OUTPUT_EXPAND;
+        if(markdown) output_target = OUTPUT_MD;
+        if(format_only) output_target = OUTPUT_REFORMAT;
         if(!cleanup)
             flags |= DNDC_NO_CLEANUP;
         original_source_path = source_path;
@@ -551,6 +558,7 @@ main(int argc, char**argv){
         FileCache* textcache = bench_cache_files?dndc_create_filecache():NULL;
         for(int i = 0; i < bench_iters; i++){
             int e = run_the_dndc(
+                output_target,
                 flags,
                 base_dir,
                 source_text,
@@ -583,6 +591,7 @@ main(int argc, char**argv){
     else {
         LongString output;
         int e = run_the_dndc(
+            output_target,
             flags,
             base_dir,
             source_text,

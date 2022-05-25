@@ -308,7 +308,9 @@ execute_user_scripts_and_load_images(DndcContext* ctx, WorkerThread*_Nullable wo
 
 static
 int
-run_the_dndc(uint64_t flags,
+run_the_dndc(
+        enum OutputTarget output_target,
+        uint64_t flags,
         StringView base_directory,
         StringView source_text,
         StringView source_path,
@@ -326,10 +328,10 @@ run_the_dndc(uint64_t flags,
         ){
     // Some flags imply other flags. Set those to simplify code that
     // needs to check those conditions.
-    if(flags & DNDC_REFORMAT_ONLY){
+    if(output_target == OUTPUT_REFORMAT){
         flags |= DNDC_NO_COMPILETIME_JS;
     }
-    if(flags & DNDC_OUTPUT_EXPANDED_DND)
+    if(output_target == OUTPUT_EXPAND || output_target == OUTPUT_MD)
         flags |= DNDC_DONT_INLINE_IMAGES;
     if(flags & DNDC_INPUT_IS_UNTRUSTED){
         flags |= DNDC_NO_COMPILETIME_JS;
@@ -407,7 +409,7 @@ run_the_dndc(uint64_t flags,
         }
     }
     // Do reformatting if requested.
-    if(unlikely(flags & DNDC_REFORMAT_ONLY)){
+    if(unlikely(output_target == OUTPUT_REFORMAT)){
         MStringBuilder outsb = {.allocator = get_mallocator()};
         uint64_t before = get_t();
         int format_error = format_tree(&ctx, &outsb);
@@ -524,71 +526,75 @@ run_the_dndc(uint64_t flags,
             goto cleanup;
         }
     }
-    // Render as a .dnd file if requested.
-    if(!wasm && (flags & DNDC_OUTPUT_EXPANDED_DND)){
-        MStringBuilder output_sb = {.allocator = get_mallocator()};
-        uint64_t before_render = get_t();
-        result = expand_to_dnd(&ctx, &output_sb);
-        if(result){
-            msb_destroy(&output_sb);
-            goto cleanup;
-        }
-        uint64_t after_render = get_t();
-        report_time(&ctx, SV("Expanding to .dnd took: "), after_render - before_render);
-        if(outstring){
-            msb_nul_terminate(&output_sb);
-            *outstring = msb_detach_ls(&output_sb);
-        }
-        else {
-            msb_destroy(&output_sb);
-            result = DNDC_ERROR_VALUE;
-            goto cleanup;
-        }
-    }
-    else if(!wasm &&(flags & DNDC_OUTPUT_MD)){
-        MStringBuilder output_sb = {.allocator = get_mallocator()};
-        uint64_t before_render = get_t();
-        int e = render_md(&ctx, &output_sb);
-        if(e){
-            msb_destroy(&output_sb);
-            result = e;
-            goto cleanup;
-        }
-        uint64_t after_render = get_t();
-        report_time(&ctx, SV("rendering to .md took: "), after_render - before_render);
-        if(outstring){
-            msb_nul_terminate(&output_sb);
-            *outstring = msb_detach_ls(&output_sb);
-        }
-        else {
-            msb_destroy(&output_sb);
-            result = DNDC_ERROR_VALUE;
-            goto cleanup;
-        }
-    }
-    // Render the actual document into a string as html.
-    else {
-        MStringBuilder output_sb = {.allocator = get_mallocator()};
-        uint64_t before_render = get_t();
-        int e = render_tree(&ctx, &output_sb);
+    switch(output_target){
+        case OUTPUT_EXPAND: {
+            // Render as a .dnd file if requested.
+            MStringBuilder output_sb = {.allocator = get_mallocator()};
+            uint64_t before_render = get_t();
+            result = expand_to_dnd(&ctx, &output_sb);
+            if(result){
+                msb_destroy(&output_sb);
+                goto cleanup;
+            }
+            uint64_t after_render = get_t();
+            report_time(&ctx, SV("Expanding to .dnd took: "), after_render - before_render);
+            if(outstring){
+                msb_nul_terminate(&output_sb);
+                *outstring = msb_detach_ls(&output_sb);
+            }
+            else {
+                msb_destroy(&output_sb);
+                result = DNDC_ERROR_VALUE;
+                goto cleanup;
+            }
+        } break;
+        case OUTPUT_MD: {
+            // Render as markdown.
+            MStringBuilder output_sb = {.allocator = get_mallocator()};
+            uint64_t before_render = get_t();
+            int e = render_md(&ctx, &output_sb);
+            if(e){
+                msb_destroy(&output_sb);
+                result = e;
+                goto cleanup;
+            }
+            uint64_t after_render = get_t();
+            report_time(&ctx, SV("rendering to .md took: "), after_render - before_render);
+            if(outstring){
+                msb_nul_terminate(&output_sb);
+                *outstring = msb_detach_ls(&output_sb);
+            }
+            else {
+                msb_destroy(&output_sb);
+                result = DNDC_ERROR_VALUE;
+                goto cleanup;
+            }
+        }break;
+        case OUTPUT_HTML:{
+            // Render the actual document into a string as html.
+            MStringBuilder output_sb = {.allocator = get_mallocator()};
+            uint64_t before_render = get_t();
+            int e = render_tree(&ctx, &output_sb);
 
-        if(e){
-            msb_destroy(&output_sb);
-            result = e;
-            goto cleanup;
-        }
-        uint64_t after_render = get_t();
-        report_time(&ctx, SV("Rendering took: "), after_render-before_render);
-        if(outstring){
-            assert(outstring);
-            msb_nul_terminate(&output_sb);
-            *outstring = msb_detach_ls(&output_sb);
-        }
-        else {
-            msb_destroy(&output_sb);
-            result = DNDC_ERROR_VALUE;
-            goto cleanup;
-        }
+            if(e){
+                msb_destroy(&output_sb);
+                result = e;
+                goto cleanup;
+            }
+            uint64_t after_render = get_t();
+            report_time(&ctx, SV("Rendering took: "), after_render-before_render);
+            if(outstring){
+                assert(outstring);
+                msb_nul_terminate(&output_sb);
+                *outstring = msb_detach_ls(&output_sb);
+            }
+            else {
+                msb_destroy(&output_sb);
+                result = DNDC_ERROR_VALUE;
+                goto cleanup;
+            }
+        }break;
+        default:break;
     }
     // Call the user's dependency function so they can write a Makestyle
     // dependency file, or watch those files, or whatever.
@@ -743,9 +749,8 @@ dndc_format(StringView source_text, LongString* output, DndcLogFunc*_Nullable lo
     uint64_t flags = 0
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_ALLOW_BAD_LINKS
-        | DNDC_REFORMAT_ONLY
         ;
-    int e = run_the_dndc(flags, SV(""), source_text, SV(""), output, NULL, NULL, log_func, log_user_data, NULL, NULL, NULL, NULL, NULL, LS(""));
+    int e = run_the_dndc(OUTPUT_REFORMAT, flags, SV(""), source_text, SV(""), output, NULL, NULL, log_func, log_user_data, NULL, NULL, NULL, NULL, NULL, LS(""));
     return e;
 }
 
@@ -1915,7 +1920,6 @@ dndc_compile_dnd_file(
             | DNDC_DONT_IMPORT
             | DNDC_DONT_READ
             | DNDC_INPUT_IS_UNTRUSTED
-            | DNDC_REFORMAT_ONLY
             | DNDC_SUPPRESS_WARNINGS
             | DNDC_DONT_PRINT_ERRORS
             | DNDC_PRINT_STATS
@@ -1928,14 +1932,99 @@ dndc_compile_dnd_file(
             | DNDC_STRIP_WHITESPACE
             | DNDC_DONT_INLINE_IMAGES
             | DNDC_USE_DND_URL_SCHEME
-            | DNDC_OUTPUT_EXPANDED_DND
     };
     uint64_t new_flags = flags & DNDC_VALID_FLAGS;
     if(new_flags != flags)
         return DNDC_ERROR_VALUE;
     if(!outstring)
         return DNDC_ERROR_VALUE;
-    int err = run_the_dndc(flags, base_directory, source_text, source_path, outstring, base64cache, textcache, log_func, log_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread, jsargs);
+    int err = run_the_dndc(OUTPUT_HTML, flags, base_directory, source_text, source_path, outstring, base64cache, textcache, log_func, log_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread, jsargs);
+    return err;
+}
+
+DNDC_API
+int
+dndc_expand_to_dnd(
+  unsigned long long flags,
+  DndcStringView base_directory,
+  DndcStringView source_text,
+  DndcStringView source_path,
+  DndcLongString* outstring,
+  DNDC_NULLABLE(DndcFileCache*) textcache,
+  DNDC_NULLABLE(DndcLogFunc*) log_func,
+  DNDC_NULLABLE(void*) log_user_data,
+  DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
+  DNDC_NULLABLE(void*) dependency_user_data,
+  DndcLongString jsargs
+){
+    enum {
+        // All the valid flags.
+        DNDC_VALID_FLAGS = 0
+            | DNDC_DONT_IMPORT
+            | DNDC_DONT_READ
+            | DNDC_INPUT_IS_UNTRUSTED
+            | DNDC_SUPPRESS_WARNINGS
+            | DNDC_DONT_PRINT_ERRORS
+            | DNDC_PRINT_STATS
+            | DNDC_ALLOW_BAD_LINKS
+            | DNDC_NO_COMPILETIME_JS
+            | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+            | DNDC_ENABLE_JS_WRITE
+            | DNDC_NO_THREADS
+            | DNDC_NO_CLEANUP
+            | DNDC_STRIP_WHITESPACE
+            | DNDC_DONT_INLINE_IMAGES
+            | DNDC_USE_DND_URL_SCHEME
+    };
+    uint64_t new_flags = flags & DNDC_VALID_FLAGS;
+    if(new_flags != flags)
+        return DNDC_ERROR_VALUE;
+    if(!outstring)
+        return DNDC_ERROR_VALUE;
+    int err = run_the_dndc(OUTPUT_EXPAND, flags, base_directory, source_text, source_path, outstring, NULL, textcache, log_func, log_user_data, dependency_func, dependency_user_data, NULL, NULL, NULL, jsargs);
+    return err;
+}
+
+DNDC_API
+int
+dndc_expand_to_md(
+  unsigned long long flags,
+  DndcStringView base_directory,
+  DndcStringView source_text,
+  DndcStringView source_path,
+  DndcLongString* outstring,
+  DNDC_NULLABLE(DndcFileCache*) textcache,
+  DNDC_NULLABLE(DndcLogFunc*) log_func,
+  DNDC_NULLABLE(void*) log_user_data,
+  DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
+  DNDC_NULLABLE(void*) dependency_user_data,
+  DndcLongString jsargs
+){
+    enum {
+        // All the valid flags.
+        DNDC_VALID_FLAGS = 0
+            | DNDC_DONT_IMPORT
+            | DNDC_DONT_READ
+            | DNDC_INPUT_IS_UNTRUSTED
+            | DNDC_SUPPRESS_WARNINGS
+            | DNDC_DONT_PRINT_ERRORS
+            | DNDC_PRINT_STATS
+            | DNDC_ALLOW_BAD_LINKS
+            | DNDC_NO_COMPILETIME_JS
+            | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+            | DNDC_ENABLE_JS_WRITE
+            | DNDC_NO_THREADS
+            | DNDC_NO_CLEANUP
+            | DNDC_STRIP_WHITESPACE
+            | DNDC_DONT_INLINE_IMAGES
+            | DNDC_USE_DND_URL_SCHEME
+    };
+    uint64_t new_flags = flags & DNDC_VALID_FLAGS;
+    if(new_flags != flags)
+        return DNDC_ERROR_VALUE;
+    if(!outstring)
+        return DNDC_ERROR_VALUE;
+    int err = run_the_dndc(OUTPUT_MD, flags, base_directory, source_text, source_path, outstring, NULL, textcache, log_func, log_user_data, dependency_func, dependency_user_data, NULL, NULL, NULL, jsargs);
     return err;
 }
 
@@ -2722,7 +2811,7 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
             continue;
         // only error if we actually have an import node
         if(flags & DNDC_INPUT_IS_UNTRUSTED) {
-            NODE_LOG_ERROR(&ctx, get_node(ctx, handle), SV("Imports are illegal for untrusted input."));
+            NODE_LOG_ERROR(ctx, get_node(ctx, handle), SV("Imports are illegal for untrusted input."));
             return DNDC_ERROR_UNTRUSTED;
         }
         // We parse into a different node and then swap the two.

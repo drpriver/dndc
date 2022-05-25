@@ -1211,20 +1211,18 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
     StringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
     // flags |= DNDC_DONT_PRINT_ERRORS;
     // flags |= DNDC_SUPPRESS_WARNINGS;
-    flags |= DNDC_OUTPUT_EXPANDED_DND;
+    // flags |= DNDC_OUTPUT_EXPANDED_DND;
     flags |= DNDC_ALLOW_BAD_LINKS;
     LongString output = {0};
     DndcLogFunc* func = logger?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
     DndcFileCache* textcache = NULL;
-    DndcFileCache* b64cache = NULL;
     if(file_cache){
         DndcPyFileCache* cache = (DndcPyFileCache*)file_cache;
         textcache = cache->text_cache;
-        b64cache = cache->b64_cache;
     }
-    int e = dndc_compile_dnd_file(flags, base_str, source, SV(""), &output, b64cache, textcache, func, error_list, NULL, NULL, NULL, jsargs_ls);
+    int e = dndc_expand_to_dnd(flags, base_str, source, SV(""), &output, textcache, func, error_list, NULL, NULL, jsargs_ls);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;

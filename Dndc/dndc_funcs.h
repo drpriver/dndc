@@ -54,6 +54,9 @@ typedef int(DndcPostParseAstFunc)(void*_Nullable user_data, DndcContext*);
 //
 // Arguments:
 // ----------
+// output_target:
+//    What to output.
+//
 // flags:
 //    Bitflags controlling behavior of execution. Consult the flags header for
 //    the meanings of individual values. Is a bitwise-or combination of the
@@ -126,10 +129,20 @@ typedef int(DndcPostParseAstFunc)(void*_Nullable user_data, DndcContext*);
 // On failure, a non-zero error code will be returned.
 //
 
+
+enum OutputTarget {
+    OUTPUT_HTML     = 0,
+    OUTPUT_REFORMAT = 1,
+    OUTPUT_MD       = 2,
+    OUTPUT_EXPAND   = 3,
+};
+
 static
 warn_unused
 int
-run_the_dndc(uint64_t flags,
+run_the_dndc(
+        enum OutputTarget output_target,
+        uint64_t flags,
         StringView base_directory,
         StringView source_text,
         StringView source_path,

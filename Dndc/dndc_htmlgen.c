@@ -187,7 +187,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             if(unlikely(node->type != NODE_SCRIPTS))
                 continue;
             if(flags & DNDC_INPUT_IS_UNTRUSTED){
-                NODE_LOG_ERROR(ctx node, SV("Script blocks are illegal for untrusted."));
+                NODE_LOG_ERROR(ctx, node, SV("Script blocks are illegal for untrusted."));
                 return DNDC_ERROR_UNTRUSTED;
             }
             msb_write_literal(msb, "<script>\n");
