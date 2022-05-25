@@ -139,6 +139,8 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             // css nodes can change node types after they are registered
             if(unlikely(node->type != NODE_STYLESHEETS))
                 continue;
+            // Honestly, styles should also be untrusted, but I am waiting for
+            // a POC of how that could be exploited first.
             if(node->flags & NODEFLAG_NOINLINE){
                 if(! written){
                     msb_erase(msb, sizeof("<style>\n")-1);
@@ -184,6 +186,10 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             // script nodes can change node types after they are registered
             if(unlikely(node->type != NODE_SCRIPTS))
                 continue;
+            if(flags & DNDC_INPUT_IS_UNTRUSTED){
+                NODE_LOG_ERROR(ctx node, SV("Script blocks are illegal for untrusted."));
+                return DNDC_ERROR_UNTRUSTED;
+            }
             msb_write_literal(msb, "<script>\n");
             if(node->flags & NODEFLAG_NOINLINE){
                 msb_erase(msb, sizeof("<script>\n")-1);

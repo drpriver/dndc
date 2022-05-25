@@ -95,6 +95,7 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
     // others in the future.
     int result = 0;
     uint64_t flags = ctx->flags;
+    if(flags & DNDC_INPUT_IS_UNTRUSTED) return DNDC_ERROR_UNTRUSTED;
     ArenaAllocator aa = {0};
     // The rt is lazily initialized as they are pretty expensive
     // if not actually used.
@@ -430,25 +431,25 @@ run_the_dndc(uint64_t flags,
         goto success;
     }
     // Error out on untrusted input if requested.
-    if(wasm || unlikely(flags & DNDC_INPUT_IS_UNTRUSTED)){
+    if(wasm){
         if(ctx.imports.count){
             NodeHandle handle = ctx.imports.data[0];
             Node* node = get_node(&ctx, handle);
-            NODE_LOG_ERROR(&ctx, node, SV("Imports are illegal for untrusted input."));
+            NODE_LOG_ERROR(&ctx, node, SV("Imports are illegal for wasm."));
             result = DNDC_ERROR_UNTRUSTED;
             goto cleanup;
         }
         if(ctx.user_script_nodes.count){
             NodeHandle handle = ctx.user_script_nodes.data[0];
             Node* node = get_node(&ctx, handle);
-            NODE_LOG_ERROR(&ctx, node, SV("JS blocks are illegal for untrusted input."));
+            NODE_LOG_ERROR(&ctx, node, SV("JS blocks are illegal for wasm."));
             result = DNDC_ERROR_UNTRUSTED;
             goto cleanup;
         }
         if(ctx.script_nodes.count){
             NodeHandle handle = ctx.script_nodes.data[0];
             Node* node = get_node(&ctx, handle);
-            NODE_LOG_ERROR(&ctx, node, SV("Script blocks are illegal for untrusted input"));
+            NODE_LOG_ERROR(&ctx, node, SV("Script blocks are illegal for wasm"));
             result = DNDC_ERROR_UNTRUSTED;
             goto cleanup;
         }
@@ -2714,10 +2715,16 @@ DNDC_API
 int
 dndc_ctx_resolve_imports(DndcContext* ctx){
     int result = 0;
+    uint64_t flags = ctx->flags;
     for(size_t i = 0; i < ctx->imports.count; i++){
         NodeHandle handle = ctx->imports.data[i];
         if(!(get_node(ctx, handle)->flags & NODEFLAG_IMPORT))
             continue;
+        // only error if we actually have an import node
+        if(flags & DNDC_INPUT_IS_UNTRUSTED) {
+            NODE_LOG_ERROR(&ctx, get_node(ctx, handle), SV("Imports are illegal for untrusted input."));
+            return DNDC_ERROR_UNTRUSTED;
+        }
         // We parse into a different node and then swap the two.
         NodeHandle newhandle = alloc_handle(ctx);
         Node* node = get_node(ctx, handle);
