@@ -5,7 +5,7 @@ from setuptools import setup, find_packages, Extension
 # Fields marked as 'Optional' may be commented out.
 setup(
     name='pydndc',  # Required
-    version='0.19.2',  # Required
+    version='0.20.0',  # Required
     description='dndc, but from python',  # Optional
     # url='https://github.com/pypa/sampleproject',  # Optional
     author='David Priver',  # Optional

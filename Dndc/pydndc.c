@@ -276,6 +276,9 @@ pydndc_reformat(PyObject* , PyObject* , PyObject*);
 static
 PyObject*_Nullable
 pydndc_expand(PyObject* , PyObject* , PyObject*);
+static
+PyObject*_Nullable
+pydndc_md(PyObject* , PyObject* , PyObject*);
 
 static
 PyObject*_Nullable
@@ -480,6 +483,80 @@ PyMethodDef pydndc_methods[] = {
         "--\n"
         "\n"
         "Parses and converts the .dnd string into an equivelant .dnd string after\n"
+        "imports are resolved and js blocks are executed.\n"
+        "\n"
+        "Args:\n"
+        "-----\n"
+        "text: str\n"
+        "    The .dnd string.\n"
+        "\n"
+        "Optional Args:\n"
+        "--------------\n"
+        "base_dir: str\n"
+        "    For relative filepaths referenced in the document, what those paths\n"
+        "    are relative to. Defaults to the current directory.\n"
+        "\n"
+        "logger: Callable(int, str, int, int, str)\n"
+        "    A callable for reporting errors. See the discussion in htlmgen.\n"
+        "\n"
+        "file_cache: DndcFileCache\n"
+        "    The file cache for caching files in between invocations.\n"
+        "    Create a new one and pass it in between calls.\n"
+        "    It is your responsibility to remove stale files by calling\n"
+        "    .remove on it.\n"
+        "    If you don't pass one in, no caching will be done.\n"
+        "\n"
+        "flags: int\n"
+        "    Bit flags controlling some behavior. The allowed flags are\n"
+        "    exported on the module as Flags and are as follows:\n"
+        "\n"
+        "    INPUT_IS_UNTRUSTED: Input is from an untrusted source and so\n"
+        "                        should not be allowed to load files, output\n"
+        "                        raw html, etc. as that could lead to\n"
+        "                        data leakage, etc. JavaScript will be\n"
+        "                        disabled.\n"
+        "\n"
+        "                        It doesn't really make sense to set this for this\n"
+        "                        function, but it is allowed.\n"
+        "\n"
+        "    PRINT_STATS:        Generate Info messages for the logger.\n"
+        "                        These are mostly information about timings of\n"
+        "                        various stages of execution. Info messages are\n"
+        "                        not generated if this is not set.\n"
+        "\n"
+        "    DONT_READ:          Don't read any files not already in the file\n"
+        "                        cache.\n"
+        "\n"
+        "    SUPPRESS_WARNINGS:  Don't report any non-fatal errors.\n"
+        "\n"
+        "    DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP: Attributes and directives are\n"
+        "                        in separate namespaces, but that can be confusing.\n"
+        "                        Set this flag to disallow that.\n"
+        "\n"
+        "jsargs: dict or str\n"
+        "    A dict or json literal that will be exposed to js blocks as Args.\n"
+        "\n"
+        "Returns:\n"
+        "--------\n"
+        "str: The dnd string.\n"
+        "\n"
+        "Throws:\n"
+        "-------\n"
+        "Throws ValueError if there is a syntax error in the given string.\n"
+        "Can also throw due to missing files.\n"
+        "Can also throw due to errors in embedded javascript blocks.\n"
+        "\n"
+    },
+    {
+        .ml_name = "to_markdown",
+        .ml_meth = (PyCFunction)pydndc_md,
+        .ml_flags = METH_VARARGS|METH_KEYWORDS,
+        .ml_doc =PYSIG(
+        "to_markdown(text:str, base_dir:str='.', logger:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs=None) -> str\n",
+        "to_markdown(text, base_dir='.', logger=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n")
+        "--\n"
+        "\n"
+        "Parses and converts the .dnd string into a best effort markdown string after\n"
         "imports are resolved and js blocks are executed.\n"
         "\n"
         "Args:\n"
@@ -1251,6 +1328,106 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
     return result;
 }
 
+// copy-pasted basically from above. Could factor together. meh.
+static
+PyObject*_Nullable
+pydndc_md(PyObject* mod, PyObject* args, PyObject* kwargs){
+    (void)mod;
+    PyObject* text;
+    PyObject* base_dir = NULL;
+    PyObject* logger = NULL;
+    PyObject* file_cache = NULL;
+    PyObject* jsargs = NULL;
+    unsigned long long flags = 0;
+    _Static_assert(sizeof(flags) == sizeof(uint64_t), "");
+    enum {WHITELIST = 0
+        | DNDC_INPUT_IS_UNTRUSTED
+        | DNDC_DONT_READ
+        | DNDC_DONT_IMPORT
+        | DNDC_NO_COMPILETIME_JS
+        | DNDC_PRINT_STATS
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+        | DNDC_SUPPRESS_WARNINGS
+    };
+    const char* const keywords[] = {"text", "base_dir", "logger", "file_cache", "flags", "jsargs", NULL};
+    PushDiagnostic();
+    SuppressCastQual();
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOKO:to_markdown", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &logger, &file_cache, &flags, &jsargs)){
+        return NULL;
+    }
+    PopDiagnostic();
+    // Allow sloppy flags.
+    flags &= WHITELIST;
+    if(logger && logger == Py_None)
+        logger = NULL;
+    if(logger && !PyCallable_Check(logger)){
+        PyErr_SetString(PyExc_TypeError, "logger must be a callable");
+        return NULL;
+    }
+    if(file_cache && file_cache == Py_None)
+        file_cache = NULL;
+    if(file_cache && !PyObject_IsInstance(file_cache, (PyObject*)&DndcPyFileCache_Type)){
+        PyErr_SetString(PyExc_TypeError, "file_cache must be a DndcFileCache");
+        return NULL;
+    }
+    LongString jsargs_ls = LS("");
+    MStringBuilder jsbuilder = {.allocator = get_mallocator()};
+    if(jsargs && PyUnicode_Check(jsargs)){
+        jsargs_ls = pystring_borrow_longstring(jsargs);
+    }
+    else if(jsargs){
+        if(pyobj_to_json(jsargs, &jsbuilder, 0) != 0){
+            if(jsbuilder.capacity){
+                msb_destroy(&jsbuilder);
+            }
+            return NULL;
+        }
+        jsargs_ls = msb_borrow_ls(&jsbuilder);
+    }
+    StringView source = pystring_borrow_stringview(text);
+    StringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
+    // flags |= DNDC_DONT_PRINT_ERRORS;
+    // flags |= DNDC_SUPPRESS_WARNINGS;
+    // flags |= DNDC_OUTPUT_EXPANDED_DND;
+    flags |= DNDC_ALLOW_BAD_LINKS;
+    LongString output = {0};
+    DndcLogFunc* func = logger?pydndc_collect_errors:NULL;
+    PyObject* error_list = func? PyList_New(0) : NULL;
+    PyObject* result = NULL;
+    DndcFileCache* textcache = NULL;
+    if(file_cache){
+        DndcPyFileCache* cache = (DndcPyFileCache*)file_cache;
+        textcache = cache->text_cache;
+    }
+    int e = dndc_expand_to_md(flags, base_str, source, SV(""), &output, textcache, func, error_list, NULL, NULL, jsargs_ls);
+    if(PyErr_Occurred()){
+        result = NULL;
+        goto finally;
+    }
+    if(logger){
+        Py_ssize_t length = PyList_Size(error_list);
+        for(Py_ssize_t i = 0; i < length; i++){
+            PyObject* list_item = PyList_GetItem(error_list, i);
+            PyObject* call_result = PyObject_Call(logger, list_item, NULL);
+            if(call_result == NULL)
+                goto finally;
+            Py_XDECREF(call_result);
+        }
+    }
+    if(e){
+        PyErr_SetString(PyExc_ValueError, "html error.");
+        goto finally;
+    }
+    result = Py_BuildValue("s#", output.text, (Py_ssize_t)output.length);
+    finally:
+    Py_XDECREF(error_list);
+    dndc_free_string(output);
+    if(jsbuilder.capacity){
+        msb_destroy(&jsbuilder);
+    }
+    return result;
+}
+
 struct CollectData {
     const char* begin;
     PyObject* dict;
@@ -1485,11 +1662,11 @@ static
 PyObject*_Nullable
 DndcContextPy_node_from_int(PyObject* s, PyObject* arg){
     if(!PyLong_Check(arg))
-        return PyErr_Format(PyExc_TypeError, "node_from_int takes an int");
+        return PyErr_Format(PyExc_TypeError, "node_from_int takes an int.");
     long id = PyLong_AsLong(arg);
     DndcContextPy* self = (DndcContextPy*)s;
     if(dndc_ctx_node_invalid(self->ctx, id)){
-        return PyErr_Format(PyExc_ValueError, "%R is an invalid node id", arg);
+        return PyErr_Format(PyExc_ValueError, "%R is an invalid node id.", arg);
     }
     return DndcNode_make(self, id);
 }
@@ -1498,7 +1675,7 @@ static
 PyObject*_Nullable
 DndcContextPy_node_by_id(PyObject* s, PyObject* arg){
     if(!PyUnicode_Check(arg))
-        return PyErr_Format(PyExc_TypeError, "node_by_id takes a str");
+        return PyErr_Format(PyExc_TypeError, "node_by_id takes a str.");
     DndcStringView sv = pystring_borrow_stringview(arg);
     DndcContextPy* self = (DndcContextPy*)s;
     DndcNodeHandle id = dndc_ctx_node_by_id(self->ctx, sv);
@@ -1515,7 +1692,7 @@ DndcContextPy_format_tree(PyObject* s, PyObject*_Nullable args){
     DndcLongString ls;
     int err = dndc_ctx_format_tree(self->ctx, &ls);
     if(err)
-        return PyErr_Format(PyExc_ValueError, "Tree can't be formatted");
+        return PyErr_Format(PyExc_ValueError, "Tree can't be formatted.");
     PyObject* result = PyUnicode_FromStringAndSize(ls.text, ls.length);
     dndc_free_string(ls);
     return result;
@@ -1529,7 +1706,21 @@ DndcContextPy_expand(PyObject* s, PyObject*_Nullable args){
     DndcLongString ls;
     int err = dndc_ctx_expand_to_dnd(self->ctx, &ls);
     if(err)
-        return PyErr_Format(PyExc_ValueError, "Tree can't be expanded");
+        return PyErr_Format(PyExc_ValueError, "Tree can't be expanded.");
+    PyObject* result = PyUnicode_FromStringAndSize(ls.text, ls.length);
+    dndc_free_string(ls);
+    return result;
+}
+
+static
+PyObject*_Nullable
+DndcContextPy_md(PyObject* s, PyObject*_Nullable args){
+    (void)args;
+    DndcContextPy* self = (DndcContextPy*)s;
+    DndcLongString ls;
+    int err = dndc_ctx_render_to_md(self->ctx, &ls);
+    if(err)
+        return PyErr_Format(PyExc_ValueError, "Tree can't be rendered to md.");
     PyObject* result = PyUnicode_FromStringAndSize(ls.text, ls.length);
     dndc_free_string(ls);
     return result;
@@ -1543,7 +1734,7 @@ DndcContextPy_render(PyObject* s, PyObject*_Nullable args){
     DndcLongString ls;
     int err = dndc_ctx_render_to_html(self->ctx, &ls);
     if(err)
-        return PyErr_Format(PyExc_ValueError, "Tree can't be rendered");
+        return PyErr_Format(PyExc_ValueError, "Tree can't be rendered.");
     PyObject* result = PyUnicode_FromStringAndSize(ls.text, ls.length);
     dndc_free_string(ls);
     return result;
@@ -1850,6 +2041,16 @@ static PyMethodDef DndcContextPy_methods[] = {
             "--\n"
             "\n"
             "Renders the tree into a .dnd string.\n"
+            "This method can call the logger.\n",
+    },
+    {
+        .ml_name="to_md",
+        .ml_meth=DndcContextPy_md,
+        .ml_flags=METH_NOARGS,
+        .ml_doc="expand(self)\n"
+            "--\n"
+            "\n"
+            "Renders the tree into a .md string.\n"
             "This method can call the logger.\n",
     },
     {

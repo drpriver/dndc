@@ -2565,6 +2565,17 @@ dndc_ctx_expand_to_dnd(DndcContext* ctx, DndcLongString* ls){
 }
 DNDC_API
 int
+dndc_ctx_render_to_md(DndcContext* ctx, DndcLongString* ls){
+    if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return DNDC_ERROR_VALUE;
+    MStringBuilder output_sb = {.allocator = get_mallocator()};
+    int e = render_md(ctx, &output_sb);
+    if(e) {msb_destroy(&output_sb); return e;}
+    msb_nul_terminate(&output_sb);
+    *ls = msb_detach_ls(&output_sb);
+    return 0;
+}
+DNDC_API
+int
 dndc_ctx_render_to_html(DndcContext* ctx, DndcLongString* ls){
     MStringBuilder output_sb = {.allocator = get_mallocator()};
     if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return DNDC_ERROR_VALUE;

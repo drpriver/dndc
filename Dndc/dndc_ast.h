@@ -822,6 +822,23 @@ dndc_ctx_expand_to_dnd(DndcContext*, DndcLongString*);
 
 DNDC_API
 int
+dndc_ctx_render_to_md(DndcContext*, DndcLongString*);
+// ---------------------
+// Generates a markdown document from the context, starting at the root.
+// This is a best effort attempt and can fail.
+//
+// When you are done with the the string, pass it to `dndc_free_string`.
+//
+// Returns 0 on success and non-zero on error.
+//
+// On error, nothing is written to the string argument and you do not need to
+// call `dndc_free_string`.
+//
+// This function can call the logger.
+//
+
+DNDC_API
+int
 dndc_ctx_render_to_html(DndcContext*, DndcLongString*);
 // -----------------------
 // Generates an html document from the context, starting at the root.
