@@ -11,7 +11,6 @@ int
 LLVMFuzzerTestOneInput(const uint8_t*data, size_t size){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
-        // | DNDC_DONT_WRITE
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_NO_THREADS
         // | DNDC_INPUT_IS_UNTRUSTED

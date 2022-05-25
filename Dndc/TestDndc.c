@@ -66,15 +66,14 @@ TestFunction(TestDndc1){
         "  ctx.root.add_child('hello');\n"
     );
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_DONT_WRITE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString output = {0};
     int e = run_the_dndc(flags, SV(""), source, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
-    TestExpectFalse(output.text);
     TestExpectFalse(e);
+    if(!e) dndc_free_string(output);
     TESTEND();
 }
 
@@ -88,15 +87,14 @@ TestFunction(TestDndc2){
         "  ctx.root.add_child('hello')\n"
     );
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_DONT_WRITE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString output = {0};
     int e = run_the_dndc(flags, SV(""), source, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
-    TestExpectFalse(output.text);
     TestExpectFalse(e);
+    if(!e) dndc_free_string(output);
     TESTEND();
 }
 TestFunction(TestDndc3){
@@ -109,7 +107,6 @@ TestFunction(TestDndc3){
         "  ctx.root.add_child('hello')\n"
     );
     uint64_t flags = DNDC_FLAGS_NONE
-        | DNDC_DONT_WRITE
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
@@ -429,9 +426,9 @@ TestFunction(TestFormatList){
         {
             // check it parses after format
             LongString output = {0};
-            int e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""), LS_to_SV(outdata),  SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
-            TestExpectFalse(output.text);
+            int e2 = run_the_dndc(flags, SV(""), LS_to_SV(outdata),  SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
             TestExpectFalse(e2);
+            if(!e2) dndc_free_string(output);
         }
         dndc_free_string(outdata);
     }
@@ -474,9 +471,11 @@ TestFunction(TestFormatKV){
         {
             // check it parses after format
             LongString output = {0};
-            int e2 = run_the_dndc(flags|DNDC_DONT_WRITE, SV(""),  LS_to_SV(outdata), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
-            TestExpectFalse(output.text);
+            int e2 = run_the_dndc(flags, SV(""),  LS_to_SV(outdata), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
             TestExpectFalse(e2);
+            if(!e2){
+                dndc_free_string(output);
+            }
         }
         dndc_free_string(outdata);
     }
@@ -568,7 +567,6 @@ TestFunction(TestExamplesWork){
     uint64_t flags = DNDC_FLAGS_NONE
         | DNDC_SUPPRESS_WARNINGS
         // | DNDC_DONT_PRINT_ERRORS
-        | DNDC_DONT_WRITE
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString examples[] = {
@@ -623,20 +621,24 @@ TestFunction(TestExamplesWork){
         TestAssertSuccess(data);
         {
             int e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
-            TestExpectFalse(output.text);
             TestExpectFalse(e);
             if(e){
                 TestPrintValue("Example failed:", examples[i]);
                 TestPrintValue("Base dir:", base_dirs[i]);
             }
+            else {
+                dndc_free_string(output);
+            }
         }
         {
             int e = run_the_dndc(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, (WorkerThread*)worker, LS(""));
-            TestExpectFalse(output.text);
             TestExpectFalse(e);
             if(e){
                 TestPrintValue("Example failed:", examples[i]);
                 TestPrintValue("Base dir:", base_dirs[i]);
+            }
+            else {
+                dndc_free_string(output);
             }
         }
         Allocator_free(allocator, data.result.text, data.result.length+1);
@@ -650,7 +652,6 @@ TestFunction(TestUntrusted){
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DONT_PRINT_ERRORS
         | DNDC_INPUT_IS_UNTRUSTED
-        | DNDC_DONT_WRITE
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
     LongString examples[] = {
@@ -1012,8 +1013,7 @@ TestFunction(TestJs){
             "  }catch(e){"
             "  }\n"
             "");
-    uint64_t flags = 0
-        | DNDC_DONT_WRITE;
+    uint64_t flags = 0;
     DndcLongString output;
     int e = run_the_dndc(flags, SV(""),input, SV(""), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, post_js_ast_func, &TEST_stats, NULL, LS(""));
     TestAssertFalse(e);
@@ -1035,7 +1035,7 @@ TestFunction(TestFileCache){
             "::img\n"
             "  Makefile\n"
             );
-    uint64_t flags = DNDC_DONT_WRITE;
+    uint64_t flags = 0;
     DndcLongString output;
     int e = run_the_dndc(flags, SV(""), input, SV(""), &output, &cache, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
     FileCache_clear(&cache);

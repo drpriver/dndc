@@ -585,10 +585,6 @@ enum DndcFlags {
     // Instead of a complete document, only produce the html fragment.
     // If scripts and styles are included, they will also be produced.
 
-    DNDC_DONT_WRITE = 0x2,
-    // ---------------
-    // Don't write out the final result.
-
     DNDC_DONT_READ = 0x4,
     // --------------
     // Don't read any files not already in the file cache (with the exception

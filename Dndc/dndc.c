@@ -419,13 +419,13 @@ run_the_dndc(uint64_t flags,
         report_time(&ctx, SV("Formatting took: "), after-before);
         report_size(&ctx, SV("Total output size (bytes): "), outsb.cursor);
 
-        if(flags & DNDC_DONT_WRITE){
-            msb_destroy(&outsb);
+        if(outstring){
+            msb_nul_terminate(&outsb);
+            *outstring = msb_detach_ls(&outsb);
         }
         else {
-            assert(outstring);
-            if(!outsb.cursor) msb_nul_terminate(&outsb);
-            *outstring = msb_detach_ls(&outsb);
+            msb_destroy(&outsb);
+            result = DNDC_ERROR_USER_ERROR;
         }
         goto success;
     }
@@ -457,113 +457,9 @@ run_the_dndc(uint64_t flags,
         // don't do imports
     }
     else {
-        // Handle imports. Imports can import more imports, so don't use a FOR_EACH.
         uint64_t before_imports = get_t();
-        // for(size_t i = 0; i < ctx.imports.count; progbar("Imports", &i, ctx.imports.count)){
-        for(size_t i = 0; i < ctx.imports.count; i++){
-            NodeHandle handle = ctx.imports.data[i];
-            if(!(get_node(&ctx, handle)->flags & NODEFLAG_IMPORT))
-                continue;
-            // We parse into a different node and then swap the two.
-            NodeHandle newhandle = alloc_handle(&ctx);
-            Node* node = get_node(&ctx, handle);
-            node->flags &= ~NODEFLAG_IMPORT;
-            bool was_import = false;
-            {
-                Node* newnode = get_node(&ctx, newhandle);
-                *newnode = *node;
-                newnode->children.count = 0;
-                if(newnode->type == NODE_IMPORT){
-                    newnode->type = NODE_MD;
-                    was_import = true;
-                }
-                newnode->attributes = Rarray_clone(Attribute)(node->attributes, main_allocator(&ctx));
-            }
-            if(ctx.imports.count > 1000){
-                NODE_LOG_ERROR(&ctx, node, SV("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?"));
-                result = DNDC_ERROR_INVALID_TREE;
-                goto cleanup;
-            }
-            // NOTE: re-get the node every loop as the pointer is invalidated.
-            for(size_t j = 0; j < node_children_count(node); j++, node=get_node(&ctx, handle)){
-                NodeHandle child_handle = node_children(node)[j];
-                Node* child = get_node(&ctx, child_handle);
-                if(child->type != NODE_STRING){
-                    NODE_LOG_ERROR(&ctx, child, SV("import child is not a STRING"));
-                    result = DNDC_ERROR_INVALID_TREE;
-                    goto cleanup;
-                }
-                StringView filename = child->header;
-                StringViewResult imp_e = ctx_load_source_file(&ctx, filename);
-                if(imp_e.errored){
-                    if(ctx.base_directory.length)
-                        NODE_LOG_ERROR(&ctx, child, "Unable to open '", ctx.base_directory, "/", filename, "'");
-                    else
-                        NODE_LOG_ERROR(&ctx, child, "Unable to open '", filename, "'");
-                    result = imp_e.errored;
-                    goto cleanup;
-                }
-                StringView imp_text = imp_e.result;
-                int parse_e = dndc_parse(&ctx, newhandle, filename, imp_text.text, imp_text.length);
-                if(parse_e){
-                    result = parse_e;
-                    goto cleanup;
-                }
-            }
-            Node* newnode = get_node(&ctx, newhandle);
-            if(was_import){
-                // change to container
-                newnode->type = NODE_CONTAINER;
-            }
-            Node* parent = get_node(&ctx, newnode->parent);
-            NodeHandle* parentchildren = node_children(parent);
-            for(size_t j = 0; j < node_children_count(parent); j++){
-                if(NodeHandle_eq(parentchildren[j], handle)){
-                    parentchildren[j] = newhandle;
-                    break;
-                }
-            }
-            {
-                node = get_node(&ctx, handle);
-                node->type = NODE_INVALID;
-                node->parent = INVALID_NODE_HANDLE;
-                node->children.count = 0;
-            }
-            Marray(NodeHandle*) handles = NULL;
-            switch(newnode->type){
-                case NODE_JS:
-                    handles = &ctx.user_script_nodes;
-                    break;
-                case NODE_STYLESHEETS:
-                    handles = &ctx.stylesheets_nodes;
-                    break;
-                case NODE_LINKS:
-                    handles = &ctx.link_nodes;
-                    break;
-                case NODE_SCRIPTS:
-                    handles = &ctx.script_nodes;
-                    break;
-                case NODE_IMAGE:
-                    handles = &ctx.img_nodes;
-                    break;
-                case NODE_IMGLINKS:
-                    handles = &ctx.imglinks_nodes;
-                    break;
-                default:
-                    break;
-            }
-            if(handles){
-                for(size_t j = 0; j < handles->count; j++){
-                    if(NodeHandle_eq(handles->data[j], handle)){
-                        handles->data[j] = newhandle;
-                        goto foundit;
-                    }
-                }
-                // I don't think this can happen.
-                Marray_push(NodeHandle)(handles, main_allocator(&ctx), newhandle);
-                foundit:;
-            }
-        }
+        result = dndc_ctx_resolve_imports(&ctx);
+        if(result) goto cleanup;
         uint64_t after_imports = get_t();
         report_time(&ctx, SV("Resolving imports took: "), after_imports-before_imports);
     }
@@ -577,11 +473,8 @@ run_the_dndc(uint64_t flags,
         // the worker has joined before continuing beyond this point.
         // Putting it in its own function with single-point-of-exit style
         // makes that easier to do.
-        int e = execute_user_scripts_and_load_images(&ctx, worker, jsargs);
-        if(e){
-            result = e;
-            goto cleanup;
-        }
+        result = execute_user_scripts_and_load_images(&ctx, worker, jsargs);
+        if(result) goto cleanup;
     }
     // Do some reporting as we don't add any nodes after this.
     if(!wasm){
@@ -601,24 +494,10 @@ run_the_dndc(uint64_t flags,
     // Create links from headers.
     {
         uint64_t before = get_t();
-        gather_anchors(&ctx);
+        result = dndc_ctx_resolve_links(&ctx);
+        if(result) goto cleanup;
         uint64_t after = get_t();
         report_time(&ctx, SV("Link resolving took: "), after-before);
-
-        // Add in the links from explicit link blocks.
-        MARRAY_FOR_EACH(NodeHandle, link_handle, ctx.link_nodes){
-            Node* link_node = get_node(&ctx, *link_handle);
-            NODE_CHILDREN_FOR_EACH(it, link_node){
-                Node* link_str_node = get_node(&ctx, *it);
-                if(link_str_node->type != NODE_STRING)
-                    continue;
-                int e = add_link_from_sv(&ctx, link_str_node);
-                if(e){
-                    result = e;
-                    goto cleanup;
-                }
-            }
-        }
         report_size(&ctx, SV("ctx.links.count = "), ctx.links.count_);
     }
 
@@ -648,22 +527,21 @@ run_the_dndc(uint64_t flags,
     if(!wasm && (flags & DNDC_OUTPUT_EXPANDED_DND)){
         MStringBuilder output_sb = {.allocator = get_mallocator()};
         uint64_t before_render = get_t();
-        int e = expand_to_dnd(&ctx, &output_sb);
-        if(e){
+        result = expand_to_dnd(&ctx, &output_sb);
+        if(result){
             msb_destroy(&output_sb);
-            result = e;
             goto cleanup;
         }
         uint64_t after_render = get_t();
         report_time(&ctx, SV("Expanding to .dnd took: "), after_render - before_render);
-        if(flags & DNDC_DONT_WRITE){
-            msb_destroy(&output_sb);
-            goto success;
+        if(outstring){
+            msb_nul_terminate(&output_sb);
+            *outstring = msb_detach_ls(&output_sb);
         }
         else {
-            assert(outstring);
-            if(!output_sb.cursor) msb_nul_terminate(&output_sb);
-            *outstring = msb_detach_ls(&output_sb);
+            msb_destroy(&output_sb);
+            result = DNDC_ERROR_USER_ERROR;
+            goto cleanup;
         }
     }
     else if(!wasm &&(flags & DNDC_OUTPUT_MD)){
@@ -677,14 +555,14 @@ run_the_dndc(uint64_t flags,
         }
         uint64_t after_render = get_t();
         report_time(&ctx, SV("rendering to .md took: "), after_render - before_render);
-        if(flags & DNDC_DONT_WRITE){
-            msb_destroy(&output_sb);
-            goto success;
+        if(outstring){
+            msb_nul_terminate(&output_sb);
+            *outstring = msb_detach_ls(&output_sb);
         }
         else {
-            assert(outstring);
-            if(!output_sb.cursor) msb_nul_terminate(&output_sb);
-            *outstring = msb_detach_ls(&output_sb);
+            msb_destroy(&output_sb);
+            result = DNDC_ERROR_USER_ERROR;
+            goto cleanup;
         }
     }
     // Render the actual document into a string as html.
@@ -700,15 +578,15 @@ run_the_dndc(uint64_t flags,
         }
         uint64_t after_render = get_t();
         report_time(&ctx, SV("Rendering took: "), after_render-before_render);
-
-        if(flags & DNDC_DONT_WRITE){
-            msb_destroy(&output_sb);
-            goto success;
+        if(outstring){
+            assert(outstring);
+            msb_nul_terminate(&output_sb);
+            *outstring = msb_detach_ls(&output_sb);
         }
         else {
-            assert(outstring);
-            if(!output_sb.cursor) msb_nul_terminate(&output_sb);
-            *outstring = msb_detach_ls(&output_sb);
+            msb_destroy(&output_sb);
+            result = DNDC_ERROR_USER_ERROR;
+            goto cleanup;
         }
     }
     // Call the user's dependency function so they can write a Makestyle
@@ -2033,7 +1911,6 @@ dndc_compile_dnd_file(
         // All the valid flags.
         DNDC_VALID_FLAGS = 0
             | DNDC_FRAGMENT_ONLY
-            | DNDC_DONT_WRITE
             | DNDC_DONT_IMPORT
             | DNDC_DONT_READ
             | DNDC_INPUT_IS_UNTRUSTED
@@ -2592,6 +2469,7 @@ dndc_ctx_expand_to_dnd(DndcContext* ctx, DndcLongString* ls){
     MStringBuilder output_sb = {.allocator = get_mallocator()};
     int e = expand_to_dnd(ctx, &output_sb);
     if(e) {msb_destroy(&output_sb); return e;}
+    msb_nul_terminate(&output_sb);
     *ls = msb_detach_ls(&output_sb);
     return 0;
 }
@@ -2602,6 +2480,7 @@ dndc_ctx_render_to_html(DndcContext* ctx, DndcLongString* ls){
     if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return DNDC_ERROR_VALUE;
     int e = render_tree(ctx, &output_sb);
     if(e) {msb_destroy(&output_sb); return e;}
+    msb_nul_terminate(&output_sb);
     *ls = msb_detach_ls(&output_sb);
     return 0;
 }
@@ -2615,6 +2494,7 @@ dndc_node_render_to_html(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString* l
     MStringBuilder output_sb = {.allocator = get_mallocator()};
     int e = render_node(ctx, &output_sb, handle, 1, 0);
     if(e) {msb_destroy(&output_sb); return e;}
+    msb_nul_terminate(&output_sb);
     *ls = msb_detach_ls(&output_sb);
     return 0;
 }
@@ -2629,6 +2509,7 @@ dndc_ctx_format_tree(DndcContext* ctx, DndcLongString* ls){
         msb_destroy(&output_sb);
         return e;
     }
+    msb_nul_terminate(&output_sb);
     *ls = msb_detach_ls(&output_sb);
     return 0;
 }
@@ -2647,6 +2528,7 @@ dndc_node_format(DndcContext* ctx, DndcNodeHandle dnh, int indent, DndcLongStrin
         msb_destroy(&output_sb);
         return e;
     }
+    msb_nul_terminate(&output_sb);
     *ls = msb_detach_ls(&output_sb);
     return 0;
 }

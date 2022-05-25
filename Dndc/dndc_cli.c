@@ -110,6 +110,7 @@ main(int argc, char**argv){
     int bench_iters = 0;
     bool bench_cache_files = false;
     bool no_null_terminator = false;
+    bool dont_write = false;
     LongString jsargs = LS("");
     MStringBuilder argbuilder = {.allocator = get_mallocator()};
     {
@@ -210,7 +211,7 @@ main(int argc, char**argv){
             },
             {
                 .name = SV("--dont-write"),
-                .dest = ArgBitFlagDest(&flags, DNDC_DONT_WRITE),
+                .dest = ARGDEST(&dont_write),
                 .help = "Don't write out the document.",
                 .hidden = true,
             },
@@ -563,7 +564,7 @@ main(int argc, char**argv){
                 jsargs);
             if(e) return 1;
             assert(!e);
-            if(!(flags & DNDC_DONT_WRITE)){
+            if(!dont_write){
                 if(output_path.length){
                     FileWriteResult write_err = write_file(output_path.text, output.text, output.length);
                     print_file_writing_error(output_path.text, write_err);
@@ -596,7 +597,7 @@ main(int argc, char**argv){
         );
         if(e == -1) return 0;
         if(e) return e;
-        if(flags & DNDC_DONT_WRITE)
+        if(dont_write)
             return 0;
         if(output_path.length){
             FileWriteResult write_err = write_file(output_path.text, output.text, output.length);
