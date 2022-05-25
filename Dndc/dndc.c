@@ -425,7 +425,7 @@ run_the_dndc(uint64_t flags,
         }
         else {
             msb_destroy(&outsb);
-            result = DNDC_ERROR_USER_ERROR;
+            result = DNDC_ERROR_VALUE;
         }
         goto success;
     }
@@ -540,7 +540,7 @@ run_the_dndc(uint64_t flags,
         }
         else {
             msb_destroy(&output_sb);
-            result = DNDC_ERROR_USER_ERROR;
+            result = DNDC_ERROR_VALUE;
             goto cleanup;
         }
     }
@@ -561,7 +561,7 @@ run_the_dndc(uint64_t flags,
         }
         else {
             msb_destroy(&output_sb);
-            result = DNDC_ERROR_USER_ERROR;
+            result = DNDC_ERROR_VALUE;
             goto cleanup;
         }
     }
@@ -585,7 +585,7 @@ run_the_dndc(uint64_t flags,
         }
         else {
             msb_destroy(&output_sb);
-            result = DNDC_ERROR_USER_ERROR;
+            result = DNDC_ERROR_VALUE;
             goto cleanup;
         }
     }

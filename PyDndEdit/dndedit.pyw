@@ -3,7 +3,7 @@
 #
 # Copyright © 2021-2022, David Priver
 #
-PYGDNDC_VERSION = '0.19.0'
+PYGDNDC_VERSION = '0.19.1'
 __version__ = PYGDNDC_VERSION
 import os
 # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
