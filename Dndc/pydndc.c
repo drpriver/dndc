@@ -626,7 +626,7 @@ PyMethodDef pydndc_methods[] = {
         .ml_meth = (PyCFunction)pydndc_anaylze_syntax_for_highlight,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc = PYSIG(
-        "analyze_syntax_for_highlight(text->str) -> dict[0, tuple[SyntaxType, int, int, int]]\n",
+        "analyze_syntax_for_highlight(text:str) -> dict[int, tuple[SyntaxType, int, int, int]]\n",
         "analyze_syntax_for_highlight(text)\n")
         "--\n"
         "\n"
@@ -651,7 +651,9 @@ PyMethodDef pydndc_methods[] = {
         .ml_name = "stderr_logger",
         .ml_meth = (PyCFunction)pydndc_stderr_logger,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
-        .ml_doc = "stderr_logger(type, filename, line, col, message)\n"
+        .ml_doc = PYSIG(
+            "stderr_logger(type::int, filename:str, line:int, col:int, message:str) -> None\n",
+            "stderr_logger(type, filename, line, col, message)\n")
             "--\n"
             "\n"
             "An implementation of the dndc logger protocol that just logs to stderr.\n"
@@ -2019,7 +2021,9 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_name="node_from_int",
         .ml_meth=DndcContextPy_node_from_int,
         .ml_flags=METH_O,
-        .ml_doc="node_from_int(self, handle)\n"
+        .ml_doc=PYSIG(
+            "node_from_int(self, handle:int) -> Node\n",
+            "node_from_int(self, handle)\n")
             "--\n"
             "\n"
             "Creates a node from its internal ID or None if invalid",
@@ -2028,7 +2032,9 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_name="format_tree",
         .ml_meth=DndcContextPy_format_tree,
         .ml_flags=METH_NOARGS,
-        .ml_doc="format_tree(self)\n"
+        .ml_doc=PYSIG(
+            "format_tree(self) -> str\n",
+            "format_tree(self)\n")
             "--\n"
             "\n"
             "Formats from the root node to .dnd",
@@ -2037,7 +2043,9 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_name="expand",
         .ml_meth=DndcContextPy_expand,
         .ml_flags=METH_NOARGS,
-        .ml_doc="expand(self)\n"
+        .ml_doc=PYSIG(
+            "expand(self) -> str\n",
+            "expand(self)\n")
             "--\n"
             "\n"
             "Renders the tree into a .dnd string.\n"
@@ -2047,7 +2055,9 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_name="to_md",
         .ml_meth=DndcContextPy_md,
         .ml_flags=METH_NOARGS,
-        .ml_doc="expand(self)\n"
+        .ml_doc=PYSIG(
+            "to_md(self) -> str\n",
+            "to_md(self)\n")
             "--\n"
             "\n"
             "Renders the tree into a .md string.\n"
@@ -2057,7 +2067,9 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_name="render",
         .ml_meth=DndcContextPy_render,
         .ml_flags=METH_NOARGS,
-        .ml_doc="render(self)\n"
+        .ml_doc=PYSIG(
+            "render(self) -> str\n",
+            "render(self)\n")
             "--\n"
             "\n"
             "Renders the tree from the root into an html document.\n"
@@ -2068,7 +2080,9 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_name="make_node",
         .ml_meth=(PyCFunction)DndcContextPy_make_node,
         .ml_flags=METH_VARARGS|METH_KEYWORDS,
-        .ml_doc="make_node(self, type, header=None)\n"
+        .ml_doc=PYSIG(
+            "make_node(self, type:NodeType, header:str=None) -> Node\n",
+            "make_node(self, type, header=None)\n")
             "--\n"
             "\n"
             "Makes a node of the given type, optionally initialized with the\n"
@@ -2078,7 +2092,9 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_name="resolve_imports",
         .ml_meth=DndcContextPy_resolve_imports,
         .ml_flags=METH_NOARGS,
-        .ml_doc="resolve_imports(self)\n"
+        .ml_doc=PYSIG(
+            "resolve_imports(self) -> None\n",
+            "resolve_imports(self)\n")
             "--\n"
             "\n"
             "Iterates over all of the IMPORT nodes or nodes marked with the\n"
@@ -2090,7 +2106,9 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_name="execute_js",
         .ml_meth=(PyCFunction)DndcContextPy_execute_js,
         .ml_flags=METH_VARARGS|METH_KEYWORDS,
-        .ml_doc="execute_js(self, jsargs='null')\n"
+        .ml_doc=PYSIG(
+            "execute_js(self, jsargs:str|dict|list='null') -> None\n",
+            "execute_js(self, jsargs='null')\n")
             "--\n"
             "\n"
             "Executes all of the JS nodes in the tree, with the given jsargs\n"
@@ -2101,7 +2119,9 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_name="resolve_links",
         .ml_meth=DndcContextPy_resolve_links,
         .ml_flags=METH_NOARGS,
-        .ml_doc="resolve_links(self)\n"
+        .ml_doc=PYSIG(
+            "resolve_links(self) -> None\n",
+            "resolve_links(self)\n")
             "--\n"
             "\n"
             "Walks the tree, noting the internal link targets.\n"
@@ -2112,7 +2132,9 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_name="build_toc",
         .ml_meth=DndcContextPy_build_toc,
         .ml_flags=METH_NOARGS,
-        .ml_doc="build_toc(self)\n"
+        .ml_doc=PYSIG(
+            "build_toc(self) -> None\n",
+            "build_toc(self)\n")
             "--\n"
             "\n"
             "Builds the TOC node if there is one.",
@@ -2121,7 +2143,9 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_name="select_nodes",
         .ml_meth=(PyCFunction)DndcContextPy_select_nodes,
         .ml_flags=METH_VARARGS|METH_KEYWORDS,
-        .ml_doc="select_nodes(self, type=None, attributes=None, classes=None)\n"
+        .ml_doc=PYSIG(
+            "select_nodes(self, type:NodeType=None, attributes:Sequence[str]=None, classes:Sequence[str]=None) -> List[Node]\n",
+            "select_nodes(self, type=None, attributes=None, classes=None)\n")
             "--\n"
             "\n"
             "Selects nodes from the document, matching the various criteria.\n"
@@ -2131,7 +2155,10 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_name="clone",
         .ml_meth=DndcContextPy_clone,
         .ml_flags=METH_NOARGS,
-        .ml_doc="clone(self)\n"
+        .ml_doc=PYSIG(
+            "clone(self) -> Self\n",
+            "clone(self)\n")
+
             "--\n"
             "\n"
             "Deep clone the context.",
@@ -2140,18 +2167,22 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_name="pseudo_clone",
         .ml_meth=DndcContextPy_pseudo_clone,
         .ml_flags=METH_NOARGS,
-        .ml_doc="pseudo_clone(self)\n"
+        .ml_doc=PYSIG(
+            "pseudo_clone(self) -> Self\n",
+            "pseudo_clone(self)\n")
             "--\n"
             "\n"
             "Clones the context, but reuses safe resources with this context.\n"
-            "Returns a reference to this context, preventing its deallocation\n"
+            "Retains a reference to this context, preventing its deallocation\n"
             "until it is safe to do so.",
     },
     {
         .ml_name="add_link",
         .ml_meth=(PyCFunction)DndcContextPy_add_link,
         .ml_flags=METH_VARARGS|METH_KEYWORDS,
-        .ml_doc="add_link(self, key, value)\n"
+        .ml_doc=PYSIG(
+            "add_link(self, key:str, value:str) -> None\n",
+            "add_link(self, key, value)\n")
             "--\n"
             "\n"
             "Adds a link target to the doc (for use in [] links).",
@@ -2160,7 +2191,9 @@ static PyMethodDef DndcContextPy_methods[] = {
         .ml_name="_to_json",
         .ml_meth=DndcContextPy_to_json,
         .ml_flags=METH_NOARGS,
-        .ml_doc="_to_json(self)\n"
+        .ml_doc=PYSIG(
+            "_to_json(self) -> str\n",
+            "_to_json(self)\n")
             "--\n"
             "\n"
             "Convert context to a json string.",
@@ -2258,7 +2291,9 @@ DndcContextPy_dealloc(PyObject* o){
 static PyTypeObject DndcContextPyType  = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "pydndc.Context",
-    .tp_doc = "Context(flags=Flags.NONE, filename=None, filecache=None)\n"
+    .tp_doc = PYSIG(
+            "Context(flags:Flags=Flags.NONE, filename:str=None, filecache:FileCache=None)\n",
+            "Context(flags=Flags.NONE, filename=None, filecache=None)\n")
             "--\n"
             "\n"
             "A dndc parsing context that encapsulates all of the nodes, caches, etc.\n"
