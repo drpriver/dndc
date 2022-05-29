@@ -1801,10 +1801,8 @@ asm(".global __app_icon\n"
 int
 main(int argc, const char *_Null_unspecified *_Nonnull argv) {
     auto font = [NSFont fontWithName:@"SF Mono" size:11];
-    if(!font)
-        font = [NSFont fontWithName:@"Courier" size:11];
-    if(!font)
-        font = [NSFont fontWithName:@"Menlo" size:11];
+    if(!font) font = [NSFont fontWithName:@"Courier" size:11];
+    if(!font) font = [NSFont fontWithName:@"Menlo" size:11];
     EDITOR_FONT = font;
     BASE64CACHE = dndc_create_filecache();
     TEXTCACHE = dndc_create_filecache();

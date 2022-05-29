@@ -402,7 +402,7 @@ def write_vim(funcs:List[str], enums:List[str], types:List[str], globs:List[str]
         capglobs = []
         noncapglobs =[]
         for g in globs:
-            if g.isupper():
+            if 0 and g.isupper():
                 capglobs.append(g)
             else:
                 noncapglobs.append(g)
