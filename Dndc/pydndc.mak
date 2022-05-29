@@ -26,10 +26,10 @@ endif
 ifeq ($(UNAME),Windows)
 civenv:
 	$(PYTHON) -m venv civenv
-	civenv/bin/activate && py -m pip install cibuildwheel && py -m pip install twine
+	civenv\Scripts\activate && py -m pip install cibuildwheel && py -m pip install twine
 
 wheels: civenv
-	civenv/bin/activate && CIBW_SKIP='pp*' cibuildwheel --platform windows --archs AMD64 .
+	civenv\Scripts\activate && cmd /V /C "SET CIBW_SKIP=pp*&& cibuildwheel --platform windows --archs AMD64 ."
 endif
 
 

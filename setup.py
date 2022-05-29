@@ -1,5 +1,26 @@
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages, Extension
+import sys
+if sys.platform == 'win32':
+    # hack to compile with clang
+    # pr to add clang cl was never merged to distutils
+    import distutils._msvccompiler
+    class ClangCl(distutils._msvccompiler.MSVCCompiler):
+        def initialize(self):
+            super().initialize()
+            self.cc = 'clang-cl.exe'
+            self.compile_options.append('-mrdseed')
+            self.compile_options.append('-Wno-unused-variable')
+            self.compile_options.append('-Wno-visibility')
+            self.compile_options.append('-D_CRT_SECURE_NO_WARNINGS=1')
+    distutils._msvccompiler.MSVCCompiler = ClangCl
+
+extension = Extension(
+    'pydndc.pydndc',
+    sources = ['Dndc/pydndc.c', 'Vendored/libquickjs.c'],
+    include_dirs=['.'],
+    define_macros=[('BUILDING_PYTHON_EXTENSION', '1')]
+)
 
 # Arguments marked as 'Required' below must be included for upload to PyPI.
 # Fields marked as 'Optional' may be commented out.
@@ -46,14 +67,7 @@ setup(
     #   py_modules=['my_module'],
     #
     packages=['pydndc'],  # Required
-    ext_modules = [
-        Extension(
-            'pydndc.pydndc',
-            sources = ['Dndc/pydndc.c', 'Vendored/libquickjs.c'],
-            include_dirs=['.'],
-            define_macros=[('BUILDING_PYTHON_EXTENSION', '1')]
-        ),
-    ],
+    ext_modules = [extension],
     # Specify which Python versions you support. In contrast to the
     # 'Programming Language' classifiers above, 'pip install' will check this
     # and refuse to install the project if the version does not match. See
