@@ -27,6 +27,7 @@ extension = Extension(
 setup(
     name='pydndc',  # Required
     version='0.20.0',  # Required
+    license='Proprietary',
     description='dndc, but from python',  # Optional
     # url='https://github.com/pypa/sampleproject',  # Optional
     author='David Priver',  # Optional
@@ -39,11 +40,12 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        # 'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         # Indicate who your project is intended for
         # 'Intended Audience :: Developers',
         # 'Topic :: Software Development :: Build Tools',
         # Pick your license as you wish
+        'License :: Other/Proprietary License',
         # 'License :: OSI Approved :: MIT License',
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate you support Python 3. These classifiers are *not*
