@@ -332,7 +332,7 @@ def get_proj_dirs() -> List[str]:
         'Generated', 'TestResults', 'RenderedDocs', 'Timings', 'RenderedExamples',
         'VendObjs', 'covdir',
         }
-    dirs = [d for d in os.listdir('.') if os.path.isdir(d) and d not in EXCLUDED and not d.startswith(('.', '_')) and not 'build' in d.lower() and '.app' not in d and 'egg' not in d and '.' not in d]
+    dirs = [d for d in os.listdir('.') if os.path.isdir(d) and d not in EXCLUDED and not d.startswith(('.', '_')) and not 'build' in d.lower() and '.app' not in d and 'egg' not in d and '.' not in d and 'Wheel' not in d and 'wheel' not in d and 'dist' not in d]
     subdirs = []
     for d in dirs:
         for subdir in os.listdir(d):

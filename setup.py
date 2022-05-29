@@ -4,6 +4,7 @@ import sys
 if sys.platform == 'win32':
     # hack to compile with clang
     # pr to add clang cl was never merged to distutils
+    # https://github.com/pypa/distutils/pull/7
     import distutils._msvccompiler
     class ClangCl(distutils._msvccompiler.MSVCCompiler):
         def initialize(self):
