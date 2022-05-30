@@ -17,7 +17,7 @@ struct {
 static
 void dndc_log_func(void* log_user_data, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
     if(message_len+filename_len < 4096-64){
-        MStringBuilder msb = {};
+        MStringBuilder msb = {0};
         char buff[4096];
         msb.data = buff;
         msb.capacity = sizeof(buff);
@@ -139,7 +139,7 @@ format_dnd(PString* source){
 printf_func(5, 6)
 static
 void logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, ...){
-    MStringBuilder msb = {};
+    MStringBuilder msb = {0};
     char buff[4096];
     msb.data = buff;
     msb.capacity = sizeof(buff);
