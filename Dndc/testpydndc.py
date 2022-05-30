@@ -293,12 +293,12 @@ class TestFileCache(TestCase):
             "hi\n"
             "</p>\n"
         )
-        output = pydndc.htmlgen(input, flags=pydndc.Flags.FRAGMENT_ONLY, file_cache=cache)
+        output = pydndc.htmlgen(input, flags=pydndc.Flags.FRAGMENT_ONLY|pydndc.Flags.DONT_READ, file_cache=cache)
         self.assertEqual(output, expected)
         cache.remove('hello')
         self.assertListEqual(cache.paths(), [])
         with self.assertRaises(Exception):
-            output = pydndc.htmlgen(input, flags=pydndc.Flags.FRAGMENT_ONLY, file_cache=cache)
+            output = pydndc.htmlgen(input, flags=pydndc.Flags.FRAGMENT_ONLY|pydndc.Flags.DONT_READ, file_cache=cache)
         cache.store('1', '1')
         cache.store('2', '2')
         self.assertListEqual(cache.paths(), ['1', '2'])
