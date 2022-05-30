@@ -271,14 +271,14 @@ class TestFileCache(TestCase):
     def test_contents(self) -> None:
         input = (
             "::img\n"
-            "  Makefile\n"
+            "  " + __file__
         )
         cache = pydndc.FileCache()
         deps = set()
         _ = pydndc.htmlgen(input, file_cache=cache, deps=deps)
         deps = list(deps)
-        self.assertListEqual(deps, ['Makefile'])
-        self.assertListEqual(cache.paths(), ['Makefile'])
+        self.assertListEqual(deps, [__file__])
+        self.assertListEqual(cache.paths(), [__file__])
     def test_store(self) -> None:
         cache = pydndc.FileCache()
         stored = cache.store('hello', 'hi')
