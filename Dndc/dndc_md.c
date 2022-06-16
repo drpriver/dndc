@@ -124,6 +124,8 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
             NODE_LOG_ERROR(ctx, node, "Unexpected table row");
             return DNDC_ERROR_INVALID_TREE;
         case NODE_STYLESHEETS:
+            if(ctx->flags & DNDC_NO_CSS)
+                return 0;
             // some markdowns allow inline style tags.
             msb_write_literal(sb, "<style>\n");
             write_md_raw(ctx, handle, sb);

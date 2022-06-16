@@ -884,6 +884,7 @@ PyInit_pydndc(void){
     ADDFLAGCONSTANT(SUPPRESS_WARNINGS);
     ADDFLAGCONSTANT(PRINT_STATS);
     ADDFLAGCONSTANT(DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP);
+    ADDFLAGCONSTANT(NO_CSS);
     {
         PyObject* v = PyLong_FromLong(0);
         if(!v) goto fail;
@@ -942,6 +943,7 @@ PyInit_pydndc(void){
       "same as a directive as that is really confusing and error-prone.\n"
       "However, to allow for future changes we do not error on that. Set this\n"
       "flag to turn that into an error so you can migrate your collisions.");
+    DOCFLAG(NO_CSS, "Don't include css or style tags in output");
     #undef DOCFLAG
     if(PyModule_AddObjectRef(mod, "Flags", flagenum) < 0)
         goto fail;
@@ -1150,6 +1152,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         | DNDC_SUPPRESS_WARNINGS
+        | DNDC_NO_CSS
     };
     const char* const keywords[] = {"text", "base_dir", "filename", "logger", "file_cache", "flags", "jsargs", "deps", NULL};
     PushDiagnostic();
@@ -1250,6 +1253,7 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         | DNDC_SUPPRESS_WARNINGS
+        | DNDC_NO_CSS
     };
     const char* const keywords[] = {"text", "base_dir", "logger", "file_cache", "flags", "jsargs", NULL};
     PushDiagnostic();
@@ -1350,6 +1354,7 @@ pydndc_md(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         | DNDC_SUPPRESS_WARNINGS
+        | DNDC_NO_CSS
     };
     const char* const keywords[] = {"text", "base_dir", "logger", "file_cache", "flags", "jsargs", NULL};
     PushDiagnostic();
@@ -1641,6 +1646,7 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
         | DNDC_NO_COMPILETIME_JS
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+        | DNDC_NO_CSS
     };
     // Allow sloppy flags.
     fl &= WHITELIST;

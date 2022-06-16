@@ -1932,6 +1932,7 @@ dndc_compile_dnd_file(
             | DNDC_STRIP_WHITESPACE
             | DNDC_DONT_INLINE_IMAGES
             | DNDC_USE_DND_URL_SCHEME
+            | DNDC_NO_CSS
     };
     uint64_t new_flags = flags & DNDC_VALID_FLAGS;
     if(new_flags != flags)
@@ -1975,6 +1976,7 @@ dndc_expand_to_dnd(
             | DNDC_STRIP_WHITESPACE
             | DNDC_DONT_INLINE_IMAGES
             | DNDC_USE_DND_URL_SCHEME
+            | DNDC_NO_CSS
     };
     uint64_t new_flags = flags & DNDC_VALID_FLAGS;
     if(new_flags != flags)
@@ -2018,6 +2020,7 @@ dndc_expand_to_md(
             | DNDC_STRIP_WHITESPACE
             | DNDC_DONT_INLINE_IMAGES
             | DNDC_USE_DND_URL_SCHEME
+            | DNDC_NO_CSS
     };
     uint64_t new_flags = flags & DNDC_VALID_FLAGS;
     if(new_flags != flags)

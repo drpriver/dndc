@@ -367,6 +367,12 @@ main(int argc, char**argv){
                 .help = "Don't have a trailing nul after the input text. "
                         " For reproducing fuzzing bugs.",
             },
+            {
+                .name = SV("--no-css"),
+                .hidden = true,
+                .dest = ArgBitFlagDest(&flags, DNDC_NO_CSS),
+                .help = "Don't output css",
+            },
         };
         enum {HELP, VERSION, HIDDEN_HELP, OPEN_SOURCE, FISH};
         ArgToParse early_args[] = {

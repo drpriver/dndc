@@ -137,4 +137,4 @@ $(DOCDIR)/cdocindex.html: | $(CDOCS)
 	$(PYTHON) -m Scripts.make_cdoc_index $(DOCDIR)
 
 README.md: README.dnd | $(BINDIR)/dndc$(EXE)
-	$(BINDIR)/dndc$(EXE) $< -o $@ --md
+	$(BINDIR)/dndc$(EXE) $< -o $@ --md --no-css

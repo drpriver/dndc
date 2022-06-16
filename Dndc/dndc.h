@@ -585,9 +585,9 @@ enum DndcFlags {
     // Instead of a complete document, only produce the html fragment.
     // If scripts and styles are included, they will also be produced.
 
-    // DNDC_UNUSED_FLAG = 0x2
-    // This flag slot is unused and will either be used when 1.0 is reached
-    // or the value of the other flags will all shift.
+    DNDC_NO_CSS = 0x2,
+    // --------------
+    // Don't include css in the output (works for both html and md target).
 
     DNDC_DONT_READ = 0x4,
     // --------------

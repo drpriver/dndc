@@ -131,7 +131,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             msb_write_literal(msb, "</title>\n");
         }
     }
-    if(ctx->stylesheets_nodes.count){
+    if(ctx->stylesheets_nodes.count && !(flags & DNDC_NO_CSS)){
         msb_write_literal(msb, "<style>\n");
         bool written = false;
         MARRAY_FOR_EACH(NodeHandle, ss, ctx->stylesheets_nodes){
