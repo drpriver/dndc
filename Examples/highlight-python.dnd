@@ -1,0 +1,189 @@
+::css
+  .python .keyword {
+    color: blue;
+  }
+  .python .type {
+    color: green;
+  }
+  .python .control {
+    color: rgb(200, 100, 0);
+  }
+  .python .comment {
+    color: grey;
+  }
+  .python .None {
+    color: purple;
+  }
+  .python .string {
+    color: rgb(220, 0, 0);
+  }
+  .python .number {
+    color: teal;
+  }
+  .python .import {
+    color: purple;
+  }
+  /*endcss*/
+::js
+  function sp(a, c){
+    return `<span class="${c}">${a}</span>`;
+  }
+  const ident_classes = {};
+  const KEYWORDS = ['in', 'not', 'is', 'def', 'class'];
+  for(let i of KEYWORDS) ident_classes[i] = 'keyword';
+  ident_classes['None'] = 'None';
+  const CONTROL = ['if', 'elif', 'else', 'for', 'return', 'assert', 'raise'];
+  for(let i of CONTROL) ident_classes[i] = 'control';
+  const TYPES = [
+      'Union', 'Any', 'Callable', 'tuple', 'Tuple',
+      'object', 'str', 'Optional', 'int', 'float',
+      'list', 'List', 'dict', 'Dict', 'set', 'Set',
+  ];
+  for(let i of TYPES) ident_classes[i] = 'type';
+  const IMPORTS = ['from', 'import'];
+  for(let i of IMPORTS) ident_classes[i] = 'import';
+  function highlight_ident(ident){
+    let cls = ident_classes[ident];
+    if(cls) return sp(ident, cls);
+    return ident;
+  }
+
+  const BEGIN = 0;
+  const IDENT = 1;
+  const STRING = 2;
+  const NUMBER = 3;
+  const COMMENT = 4;
+  for(let node of ctx.select_nodes({type:NodeType.PRE, classes:['python']})){
+    for(let child of node.children){
+      let state = BEGIN;
+      let result = '';
+      let comment = '';
+      let ident = '';
+      let qchar = '';
+      let quote = '';
+      let number = '';
+      for(let c of child.header){
+        if(state == IDENT){
+          const code = c.charCodeAt(0);
+          if ((code > 47 && code < 58) || // numeric (0-9)
+              (code > 64 && code < 91) || // upper alpha (A-Z)
+              (code > 96 && code < 123) || 
+               code == 95){
+            ident += c;
+            continue;
+          }
+          else {
+            result += highlight_ident(ident);
+            ident = '';
+            state = BEGIN;
+          }
+        }
+        if(state == NUMBER){
+          const code = c.charCodeAt(0);
+          if((code > 47 && code < 58) || code == 46){
+            number += c;
+            continue;
+          }
+          else {
+            result += sp(number, 'number');
+            number = '';
+            state = BEGIN;
+          }
+        }
+        if(state == COMMENT){
+          comment += c;
+          continue;
+        }
+        if(state == STRING){
+          if(c == qchar){
+            result += sp(quote+c, 'string');
+            qchar = '';
+            quote = '';
+            state = BEGIN;
+            continue;
+          }
+          else
+            quote += c;
+          continue;
+        }
+        if(state == BEGIN){
+          const code = c.charCodeAt(0);
+          if(code > 47 && code < 58) { // numeric (0-9)
+            state = NUMBER;
+            number = c;
+            continue;
+          }
+          if((code > 64 && code <  91) || // upper alpha (A-Z)
+             (code > 96 && code < 123) ||  // lower alpha
+              code == 95){ // underscore
+            ident = c;
+            state = IDENT;
+            continue;
+          }
+          if(c == "'"){
+            quote = c;
+            qchar = c;
+            state = STRING;
+            continue;
+          }
+          if(c == '"'){
+            quote = c;
+            qchar = c;
+            state = STRING;
+            continue;
+          }
+          if(c == '#'){
+            comment = c;
+            state = COMMENT;
+            continue;
+          }
+          if(c == '<'){
+            result += '&lt;';
+            continue;
+          }
+          if(c == '>'){
+            result += '&gt;';
+            continue;
+          }
+          if(c == '&'){
+            result += '&amp;';
+            continue;
+          }
+          result += c;
+          continue;
+        }
+        if(c == '<'){
+          result += '&lt;';
+          continue;
+        }
+        if(c == '>'){
+          result += '&gt;';
+          continue;
+        }
+        if(c == '&'){
+          result += '&amp;';
+          continue;
+        }
+        result += c;
+      }
+      switch(state){
+        case COMMENT:
+          result += sp(comment, 'comment');
+          break;
+        case IDENT:
+          result += highlight_ident(ident);
+          break;
+        case STRING:
+          result += sp(quote+qchar, 'string');
+          break;
+        case NUMBER:
+          result += sp(number, 'number');
+          break;
+      }
+      child.header = result;
+    }
+    node.type = NodeType.RAW;
+    node.insert_child(0, '<pre class="python">');
+    node.add_child('</pre>');
+  }
+  //endjs
