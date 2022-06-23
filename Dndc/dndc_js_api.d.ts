@@ -590,7 +590,7 @@ type Node = {
     //     container.add_child(table);
     //   }
     // --------
-    replace_child(old:Node, new:Node);
+    replace_child(old:Node, new:Node|string);
 
     //
     // insert_child
@@ -610,7 +610,7 @@ type Node = {
     //   let h = ctx.make_node(NodeType.HEADING, {header:'An Example'});
     //   ctx.root.insert_child(0, h);
     // --------
-    insert_child(where:numer, node:Node);
+    insert_child(where:number, node:Node|string);
 
     //
     // attributes

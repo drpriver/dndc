@@ -1,5 +1,0 @@
-Changelog::kv
-  created: 2022-06-22T22:01:33Z
-Created Jun 22, 2022, 03:01PM::md.update
-Summary::md.summary
-  Some apis allow strings as a shorthand for a string node, while others don’t. They all should.

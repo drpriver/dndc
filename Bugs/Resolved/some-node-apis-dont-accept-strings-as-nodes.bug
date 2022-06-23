@@ -1,0 +1,10 @@
+Changelog::kv
+  created:  2022-06-22T22:01:33Z
+  resolved: 2022-06-23T04:50:10Z
+Created Jun 22, 2022, 03:01PM::md .update
+Summary::md .summary
+  Some apis allow strings as a shorthand for a string node, while others
+  don’t. They all should.
+
+Resolved Jun 22, 2022, 09:50PM::md .update
+  Fixed.

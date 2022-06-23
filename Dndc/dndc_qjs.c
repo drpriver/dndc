@@ -1191,8 +1191,17 @@ QJSMETHOD(js_dndc_node_replace_child){
     NodeHandle child, new_child;
     if(!js_dndc_get_node_handle(jsctx, child_arg, &child))
         return QJS_EXCEPTION;
-    if(!js_dndc_get_node_handle(jsctx, newchild_arg, &new_child))
-        return QJS_EXCEPTION;
+    if(QJS_IsString(newchild_arg)){
+        StringView sv = jsstring_to_stringview(jsctx, newchild_arg, string_allocator(ctx));
+        new_child = alloc_handle(ctx);
+        Node* node = get_node(ctx, new_child);
+        node->header = sv;
+        node->type = NODE_STRING;
+    }
+    else {
+        if(!js_dndc_get_node_handle(jsctx, newchild_arg, &new_child))
+            return QJS_EXCEPTION;
+    }
     assert(!NodeHandle_eq(child, INVALID_NODE_HANDLE));
     assert(!NodeHandle_eq(new_child, INVALID_NODE_HANDLE));
     NodeHandle handle;
@@ -1237,8 +1246,17 @@ QJSMETHOD(js_dndc_node_insert_child){
         return QJS_ThrowTypeError(jsctx, "Expected an integer index.");
     QJSValueConst newchild_arg = argv[1];
     NodeHandle new_child;
-    if(!js_dndc_get_node_handle(jsctx, newchild_arg, &new_child))
-        return QJS_EXCEPTION;
+    if(QJS_IsString(newchild_arg)){
+        StringView sv = jsstring_to_stringview(jsctx, newchild_arg, string_allocator(ctx));
+        new_child = alloc_handle(ctx);
+        Node* node = get_node(ctx, new_child);
+        node->header = sv;
+        node->type = NODE_STRING;
+    }
+    else {
+        if(!js_dndc_get_node_handle(jsctx, newchild_arg, &new_child))
+            return QJS_EXCEPTION;
+    }
     assert(!NodeHandle_eq(new_child, INVALID_NODE_HANDLE));
     NodeHandle handle;
     if(!js_dndc_get_node_handle(jsctx, thisValue, &handle))
