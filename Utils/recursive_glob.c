@@ -22,7 +22,8 @@
 #if defined(_WIN32)
 static
 void
-recursive_glob_suffix_inner(StringView original, StringView directory, StringView suffix, Marray(StringView)* entries){
+recursive_glob_suffix_inner(StringView original, StringView directory, StringView suffix, Marray(StringView)* entries, int max_depth){
+    if(max_depth <= 0) return;
     MStringBuilder sb = {.allocator = get_mallocator()};
     msb_write_str(&sb, directory.text, directory.length);
     msb_write_char(&sb, '/');
@@ -71,7 +72,7 @@ recursive_glob_suffix_inner(StringView original, StringView directory, StringVie
         msb_write_str(&sb, fn.text, fn.length);
         msb_nul_terminate(&sb);
         StringView nextdir = msb_borrow_sv(&sb);
-        recursive_glob_suffix_inner(original, nextdir, suffix, entries);
+        recursive_glob_suffix_inner(original, nextdir, suffix, entries, max_depth-1);
         msb_erase(&sb, 1+fn.length);
     }while(FindNextFileA(handle, &findd));
     end:
@@ -97,7 +98,7 @@ recursive_glob_suffix_inner(StringView original, StringView directory, StringVie
 
 RECURSIVE_GLOB_API
 void
-recursive_glob_suffix(LongString directory, StringView suffix, Marray(StringView)* entries){
+recursive_glob_suffix(LongString directory, StringView suffix, Marray(StringView)* entries, int max_depth){
 #if defined(__APPLE__) || defined(__linux__)
     const char* dirs[] = {directory.text, NULL};
     PushDiagnostic();
@@ -109,6 +110,10 @@ recursive_glob_suffix(LongString directory, StringView suffix, Marray(StringView
         FTSENT* ent = fts_read(handle);
         if(!ent) break;
         if(ent->fts_namelen > 1 && ent->fts_name[0] == '.'){
+            fts_set(handle, ent, FTS_SKIP);
+            continue;
+        }
+        if(ent->fts_level > max_depth){
             fts_set(handle, ent, FTS_SKIP);
             continue;
         }
@@ -125,7 +130,7 @@ recursive_glob_suffix(LongString directory, StringView suffix, Marray(StringView
     }
     fts_close(handle);
 #elif defined(_WIN32)
-    recursive_glob_suffix_inner(LS_to_SV(directory), LS_to_SV(directory), suffix, entries);
+    recursive_glob_suffix_inner(LS_to_SV(directory), LS_to_SV(directory), suffix, entries, max_depth);
 #endif
 }
 

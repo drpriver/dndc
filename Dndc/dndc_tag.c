@@ -299,7 +299,7 @@ main(int argc, char** argv){
             };
         }
     if(!dnd_files.count)
-        recursive_glob_suffix(directory, SV(".dnd"), &dnd_files);
+        recursive_glob_suffix(directory, SV(".dnd"), &dnd_files, 100);
     tag_dnd_files(dnd_files.data, dnd_files.count, output, n_threads);
     return 0;
 }

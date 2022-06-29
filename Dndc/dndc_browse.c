@@ -114,6 +114,7 @@ main(int argc, char** argv){
     };
     _Bool should_log = false;
     _Bool bind_all = false;
+    int depth = 10;
     ArgToParse kw_args[] = {
         {
             .name = SV("-p"),
@@ -144,6 +145,12 @@ main(int argc, char** argv){
             .name = SV("--bind-all"),
             .dest = ARGDEST(&bind_all),
             .help = "Bind to 0.0.0.0 instead of loopback. Don't do this if you don't trust the network and for god's sake don't put it on the internet.",
+        },
+        {
+            .name = SV("-d"),
+            .altname1 = SV("--max-depth"),
+            .help = "How many directories deep to look for dnd files. 1 means only check the current directory",
+            .dest = ARGDEST(&depth),
         },
     };
     enum {HELP, VERSION, FISH};
@@ -228,7 +235,7 @@ main(int argc, char** argv){
     create_thread(&thrd, &serve, &data);
     // int err = dnd_server_serve(server, flags, directory);
     Entries entries = {0};
-    recursive_glob_suffix(directory, SV(".dnd"), &entries);
+    recursive_glob_suffix(directory, SV(".dnd"), &entries, depth);
     if(!entries.count) return 1;
     for(size_t i = 0; i < entries.count; i++){
         if(SV_equals(entries.data[i], SV("index.dnd"))) goto LHasIndex;

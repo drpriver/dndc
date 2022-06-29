@@ -565,11 +565,42 @@ get_line_internal_loop(GetInputCtx* ctx){
     return ctx->buff_count;
 }
 
+typedef struct GiSimpleWriter GiSimpleWriter;
+struct GiSimpleWriter {
+    char buff[GI_BUFF_SIZE];
+    size_t cursor;
+    int overflowed;
+};
+
+static inline
+void
+gis_write(GiSimpleWriter*buff, const char* data, size_t length){
+    size_t remainder = GI_BUFF_SIZE - buff->cursor;
+    if(length > remainder){
+        buff->overflowed = 1;
+        return;
+    }
+    memcpy(buff->buff+buff->cursor, data, length);
+    buff->cursor += length;
+}
+
+static inline
+void
+gis_put(GiSimpleWriter*buff, char c){
+    size_t remainder = GI_BUFF_SIZE - buff->cursor;
+    if(1 > remainder){
+        buff->overflowed = 1;
+        return;
+    }
+    buff->buff[buff->cursor++] = c;
+}
+
 static
 void
 redisplay(GetInputCtx*ctx){
-    char seq[GI_BUFF_SIZE];
-    int seq_pos = 0;
+    GiSimpleWriter writer;
+    writer.cursor = 0;
+    writer.overflowed = 0;
     // WARNING: Do not confuse display length and buffer length for the prompt.
     size_t plen = ctx->prompt_display_length?ctx->prompt_display_length:ctx->prompt.length;
     char* buff = ctx->buff;
@@ -589,56 +620,25 @@ redisplay(GetInputCtx*ctx){
         len--;
     }
     // Move to left.
-    seq[seq_pos++] = '\r';
+    gis_put(&writer, '\r');
 
     // Copy the prompt.
     // Do not confuse the prompt display length for the actual length in bytes.
-    if(ctx->prompt.length+seq_pos < GI_BUFF_SIZE){
-        memcpy(seq+seq_pos, ctx->prompt.text, ctx->prompt.length);
-        seq_pos += ctx->prompt.length;
-    }
-    else {
-        // DBG("plen+seq_pos >= LINESIZE\n");
-        return;
-    }
+    gis_write(&writer, ctx->prompt.text, ctx->prompt.length);
 
     // Copy the visible section of the buffer.
-    if(seq_pos + len < GI_BUFF_SIZE){
-        DBG("seq_pos: %d\n", seq_pos);
-        DBG("buff: '%.*s'\n", (int)len, buff);
-        memcpy(seq+seq_pos, buff, len);
-        seq_pos += len;
-    }
-    else {
-        DBG("seq_pos + len >= LINESIZE\n");
-        return;
-    }
+    gis_write(&writer, buff, len);
     // Erase anything remaining on this line to the right.
     #define ERASERIGHT "\x1b[0K"
-    if(seq_pos + sizeof(ERASERIGHT)-1 < GI_BUFF_SIZE){
-        DBG("seq_pos: %d\n", seq_pos);
-        memcpy(seq+seq_pos, ERASERIGHT, sizeof(ERASERIGHT)-1);
-        seq_pos += sizeof(ERASERIGHT)-1;
-    }
-    else {
-        DBG("seq_pos + sizeof(ERASERIGHT)-1 >= LINESIZE\n");
-        return;
-    }
+    gis_write(&writer, ERASERIGHT, sizeof(ERASERIGHT)-1);
     #undef ERASERIGHT
     // Move cursor back to original position.
-    DBG("seq_pos: %d\n", seq_pos);
-    DBG("pos+plen: %zu\n", pos+plen);
-    int printsize = snprintf(seq+seq_pos, GI_BUFF_SIZE-seq_pos, "\r\x1b[%zuC", pos+plen);
-    DBG("printsize: %d\n", printsize);
-    if(printsize > GI_BUFF_SIZE-seq_pos){
-        DBG("printsize > LINESIZE-seq_pos\n");
-        return;
-    }
-    else
-        seq_pos += printsize;
+    char tmp[128];
+    int printsize = snprintf(tmp, sizeof tmp, "\r\x1b[%zuC", pos+plen);
+    gis_write(&writer, tmp, printsize);
     // Actually write to the terminal.
-    DBG("seq_pos: %d\n", seq_pos);
-    write_data(seq, seq_pos);
+    if(writer.overflowed) return;
+    write_data(writer.buff, writer.cursor);
 }
 
 static

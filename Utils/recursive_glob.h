@@ -16,6 +16,6 @@
 #include "Marray.h"
 #endif
 
-RECURSIVE_GLOB_API void recursive_glob_suffix(LongString directory, StringView suffix, Marray(StringView)* entries);
+RECURSIVE_GLOB_API void recursive_glob_suffix(LongString directory, StringView suffix, Marray(StringView)* entries, int max_depth);
 
 #endif

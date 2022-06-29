@@ -937,6 +937,10 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
             fts_set(handle, ent, FTS_SKIP);
             continue;
         }
+        if(ent->fts_level > 8){
+            fts_set(handle, ent, FTS_SKIP);
+            continue;
+        }
         if(ent->fts_info & (FTS_F | FTS_NSOK)){
             StringView name = {.text = ent->fts_name, .length=ent->fts_namelen};
             if(endswith(name, SV(".dnd"))){
