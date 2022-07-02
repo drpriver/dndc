@@ -1,0 +1,10 @@
+Changelog::kv
+  created: 2022-05-20T23:38:00Z
+  wontfix: 2022-07-02T20:41:28Z
+Created May 20, 2022, 07:38PM::md .update
+Summary::md .summary
+  Currently you can’t make or edit maps. Although maybe that should be another
+  project to port the dungeon editor.
+
+WontFix Jul 02, 2022, 01:41PM::md .update
+  My other project has a standalone html file that can create maps.
