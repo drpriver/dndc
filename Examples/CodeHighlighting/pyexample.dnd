@@ -1,0 +1,30 @@
+::import 
+  highlight-python.dnd
+
+Enterprise grade hello world is simple in python:
+
+::pre .python
+  class Helloer:
+      def __init__(self, subject:str) -> None:
+         self.subject = subject
+
+      def greet(self) -> None:
+         print('Hello', self.subject)
+
+  class HelloerFactory:
+      def __init__(self, subject:str) -> None:
+          self.subject = subject
+      def __call__(self) -> Helloer:
+          return Helloer(self.subject)
+
+  class FactoryFactory:
+      def __init__(self, factory:type, *args, **kwargs) -> None:
+          self.factory = factory
+          self.args = args
+          self.kwargs = kwargs
+      def __call__(self):
+          return self.factory(*self.args, **self.kwargs)
+
+  ff = FactoryFactory(FactoryFactory, FactoryFactory, HelloerFactory, 'world')
+  ff()()()().greet()
+
