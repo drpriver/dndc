@@ -635,6 +635,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                     switch(first){
                         case CASE_a_z:
                         case CASE_A_Z:
+                        case CASE_0_9:
                         case '-':
                             advance_sv(&aftertype);
                             continue;
