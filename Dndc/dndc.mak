@@ -68,7 +68,7 @@ $(BINDIR)/pydndc$(PYEXTENSION): Dndc/pydndc.c $(VENDOBJDIR)/libquickjs.o
 .PHONY: pydndc
 pydndc: pydndc/pydndc$(PYEXTENSION) $(BINDIR)/pydndc$(PYEXTENSION) PyDndEdit/pydndc$(PYEXTENSION) PyDndEdit/jsdoc.dnd PyDndEdit/dndc_js_api.d.ts
 
-TestResults/testpydndc: $(BINDIR)/pydndc$(PYEXTENSION) Dndc/testpydndc.py
+TestResults/testpydndc: $(BINDIR)/pydndc$(PYEXTENSION) Dndc/testpydndc.py Examples/HobswellManor/add.py Examples/HobswellManor/hobswell-manor-before.dnd Examples/HobswellManor/hobswell-manor.dnd
 	$(PYTHON) Dndc/testpydndc.py --extension-directory $(BINDIR) --tee $@
 tests: TestResults/testpydndc
 

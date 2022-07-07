@@ -588,6 +588,8 @@ TestFunction(TestExamplesWork){
         [17] = LS("PyDndEdit/jsdoc.dnd"),
         [18] = LS("PyDndEdit/changelog.dnd"),
         [19] = LS("PyDndEdit/Manual.dnd"),
+        [20] = LS("Examples/HobswellManor/hobswell-manor-before.dnd"),
+        [21] = LS("Examples/HobswellManor/hobswell-manor.dnd"),
     };
     StringView base_dirs[] = {
         [ 0] = SV("Examples/Calendar"),
@@ -610,6 +612,8 @@ TestFunction(TestExamplesWork){
         [17] = SV("PyDndEdit"),
         [18] = SV(""),
         [19] = SV(""),
+        [20] = SV("Examples/HobswellManor"),
+        [21] = SV("Examples/HobswellManor"),
     };
     _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
     DndcWorkerThread* worker = dndc_worker_thread_create();

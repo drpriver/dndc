@@ -4,6 +4,7 @@ import sys
 import os
 import textwrap
 from typing import Optional, List, TYPE_CHECKING, TextIO
+import subprocess
 if TYPE_CHECKING:
     import pydndc
 else:
@@ -375,6 +376,19 @@ class TestJsVars(TestCase):
         _ = pydndc.htmlgen(input,
                 jsargs=d,
                 logger=testout)
+class TestScriptExample(TestCase):
+    def test_add(self) -> None:
+        cmd = [sys.executable, 'Examples/HobswellManor/add.py']
+        with open('Examples/HobswellManor/hobswell-manor.dnd') as fp:
+            before = fp.read()
+        subprocess.check_call(cmd, env={'PYTHONPATH':os.path.dirname(pydndc.__file__)})
+        with open('Examples/HobswellManor/hobswell-manor.dnd') as fp:
+            after = fp.read()
+        if before != after:
+            with open('Examples/HobswellManor/hobswell-manor.dnd', 'w') as fp:
+                fp.write(before)
+        self.assertEqual(before, after)
+
 
 def mymain() -> None:
     parser = argparse.ArgumentParser()

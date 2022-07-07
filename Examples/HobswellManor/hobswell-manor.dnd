@@ -1,0 +1,125 @@
+::css
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100vh;
+    padding: 0;
+    margin: 0;
+  }
+  html {
+    padding: 0;
+    margin: 0;
+  }
+  #left, #right {
+    height: 100%;
+    overflow-y: scroll;
+  }
+  #right {
+    padding-left: 16px;
+  }
+  /*endcss*/
+::div #id(left)
+  ::imglinks
+    level1.png
+    width = 777
+    height = 800
+    viewBox = 0 0 1455 1497
+    ::js
+      let imglinks = node.parent;
+      let coord_nodes = ctx.select_nodes({classes:['level1'], attributes:['coord']});
+      for(let c of coord_nodes){
+        let lead = c.header.split('.')[0];
+        let position = c.attributes.get('coord');
+        imglinks.add_child(`${lead} = #${c.id} @${position}`);
+      }
+      //endjs
+  ::imglinks
+    level2.png
+    width = 774
+    height = 800
+    viewBox = 0 0 1236 1277
+    ::js
+      // this is an example of how to script the imglinks
+      let imglinks = node.parent;
+      let coord_nodes = ctx.select_nodes({classes:['level2'], attributes:['coord']});
+      for(let c of coord_nodes){
+        let lead = c.header.split('.')[0];
+        let position = c.attributes.get('coord');
+        imglinks.add_child(`${lead} = #${c.id} @${position}`);
+      }
+      //endjs
+
+::div #id(right)
+  1. Bedroom::md .room .level1 @coord(415,378)
+  2. Butler's Bedroom::md .room .level1 @coord(411,508)
+  3. Butler's Pantry::md .room .level1 @coord(411,649)
+  4. Plate Safe::md .room .level1 @coord(462,650)
+  5. Yard and Garden::md .room .level1 @coord(462,512)
+  6. Housekeeper's Room::md .room .level1 @coord(593,683)
+  7. Lounge::md .room .level1 @coord(722,555)
+  8. Stairs up and Cupboard (under the stairs)::md .room .level1 @coord(685,465)
+  9. Arms::md .room .level1 @coord(591,426)
+  10. Wine Cellar::md .room .level1 @coord(505,424)
+  11. Water Closet::md .room .level1 @coord(636,336)
+  12. Larder::md .room .level1 @coord(726,383)
+  13. Beer::md .room .level1 @coord(820,387)
+  14. Dairy::md .room .level1 @coord(816,557)
+  15. Entry Hall::md .room .level1 @coord(896,565)
+  16. Yard::md .room .level1 @coord(900,434)
+  17. Scullery::md .room .level1 @coord(999,508)
+  18. Great Hall::md .room .level1 @coord(808,639)
+  19. Vestibule::md .room .level1 @coord(1031,731)
+  20. Coat Closet::md .room .level1 @coord(984,606)
+  21. Stairs Up::md .room .level1 @coord(1039,647)
+  22. Servant's Hall::md .room .level1 @coord(1164,694)
+  23. Kitchen::md .room .level1 @coord(1112,512)
+  24. Stove::md .room .level1 @coord(1165,603)
+  25. Library::md .room .level1 @coord(1162,868)
+  26. Stairs Up::md .room .level1 @coord(1153,1040)
+  27. Water Closet::md .room .level1 @coord(1247,1085)
+  28. Bed Room::md .room .level1 @coord(1202,1171)
+  29. Morning Room::md .room .level1 @coord(1074,1177)
+  30. Dungeon::md .room .level1 @coord(859,1171)
+  31. Billiard Room::md .room .level1 @coord(677,1178)
+  32. Lobby::md .room .level1 @coord(415,1042)
+  33. Exterior Stairs up::md .room .level1 @coord(501,1042)
+  34. Unused::md .room .level1 @coord(406,870)
+  35. The Quadrangle::md .room .level1 @coord(771,916)
+  36. West Bridge::md .room .level1 @coord(237,952)
+  37. South Bridge::md .room .level1 @coord(769,1308)
+  38. North Bridge::md .room .level1 @coord(941,213)
+  39. Bedroom::md .room .level2 @coord(198,245)
+  40. Dressing Room::md .room .level2 @coord(292,247)
+  41. Bedroom::md .room .level2 @coord(408,255)
+  42. Bedroom::md .room .level2 @coord(552,248)
+  43. Water Closet::md .room .level2 @coord(636,289)
+  44. Bedroom::md .room .level2 @coord(678,208)
+  45. Wardrobe::md .room .level2 @coord(812,248)
+  46. Bedroom::md .room .level2 @coord(234,381)
+  47. Bedroom::md .room .level2 @coord(241,470)
+  48. Bedroom::md .room .level2 @coord(330,473)
+  49. Lounge::md .room .level2 @coord(460,510)
+  50. Stairs down::md .room .level2 @coord(591,379)
+  51. Bedroom::md .room .level2 @coord(731,376)
+  52. Stairs down::md .room .level2 @coord(857,381)
+  53. Hallway::md .room .level2 @coord(1026,376)
+  54. Closet::md .room .level2 @coord(1028,339)
+  55. Bedroom::md .room .level2 @coord(1034,240)
+  56. Cleric's Closet::md .room .level2 @coord(145,598)
+  57. Priest's Room::md .room .level2 @coord(237,593)
+  58. Sunroom::md .room .level2 @coord(852,553)
+  59. Bird Gallery::md .room .level2 @coord(942,508)
+  60. Day Nursery::md .room .level2 @coord(1031,508)
+  61. Chapel::md .room .level2 @coord(190,773)
+  62. Withdrawing Room::md .room .level2 @coord(332,1033)
+  63. Relaxing Room::md .room .level2 @coord(544,1037)
+  64. Down to Dungeon::md .room .level2 @coord(638,1083)
+  65. Dressing Room::md .room .level2 @coord(768,1048)
+  66. Bedroom::md .room .level2 @coord(937,1038)
+  67. Water Closet::md .room .level2 @coord(1069,914)
+  68. Bedroom::md .room .level2 @coord(1034,818)
+  69. Night Nursery::md .room .level2 @coord(1028,638)
+
