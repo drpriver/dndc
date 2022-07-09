@@ -971,6 +971,7 @@ static
 QJSValue
 js_list_dnd_files_inner(QJSContext* jsctx, DndcContext* ctx, QJSValue array, StringView directory, size_t base_length, int depth){
     if(depth > 8){
+        return array;
         QJS_FreeValue(jsctx, array);
         return QJS_ThrowTypeError(jsctx, "Max Recursion depth exceeded: %d. Path was: '%s'", depth, directory.text);
     }
