@@ -65,7 +65,7 @@ endif
 
 .PHONY: ci-upload
 pypi-upload: archive-wheels
-	. civenv/bin/activate && python3 -m twine upload wheelhouse/*
+	. civenv/bin/activate && python3 -m twine upload wheelhouse/* --verbose
 
 .PHONY: archive-wheels
 archive-wheels: | ArchivedWheels
