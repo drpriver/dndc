@@ -22,6 +22,7 @@ civenv:
 
 # macos you need to build multiple times
 wheels: civenv
+	$(RM) -rf dist build
 	$(RM) -f wheelhouse/*.whl
 	. civenv/bin/activate && CIBW_SKIP='pp*' cibuildwheel --platform macos --archs x86_64 .
 	. civenv/bin/activate && CIBW_SKIP='pp*' cibuildwheel --platform macos --archs arm64 .
@@ -40,6 +41,7 @@ civenv:
 	. civenv/bin/activate && python -m pip install cibuildwheel && python -m pip install twine
 
 wheels: civenv
+	$(RM) -rf dist build
 	$(RM) -f wheelhouse/*.whl
 	. civenv/bin/activate && CIBW_SKIP='{pp*,*musl*}' cibuildwheel --platform linux --archs x86_64 .
 
@@ -55,7 +57,9 @@ civenv:
 	civenv\Scripts\activate && py -m pip install cibuildwheel && py -m pip install twine
 
 wheels: civenv
-	civenv\Scripts\activate && cmd /V /C "SET CIBW_SKIP=pp*&& cibuildwheel --platform windows --archs AMD64 ."
+	$(RM) -rf dist build
+	civenv\Scripts\activate && cmd /V /C "SET CIBW_SKIP=pp* && cibuildwheel --platform windows --archs AMD64 ."
+
 dndedit-wheel: civenv dndeditfolder
 	civenv\Scripts\activate && py -m pip install build && cd dndeditfolder && py -m build --wheel
 	$(CP) dndeditfolder/dist/PyDndEdit-*-py3-none-any.whl wheelhouse
