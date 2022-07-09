@@ -364,7 +364,7 @@ JS Api Documentation::title #hide
   }
   a {
     color: #D2D39A;
-    font-family: ui-monospace, "Cascadia Mono", Consolas, mono;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
   }
   html {
     background-color: #272822;
@@ -381,7 +381,7 @@ JS Api Documentation::title #hide
     margin: 0;
   }
   pre {
-    font-family: ui-monospace, "Cascadia Mono", Consolas, mono;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
     font-size: 14px;
     grid-column: 2;
     overflow-y: scroll;

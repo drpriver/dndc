@@ -66,24 +66,17 @@ TestDndcAst: $(TESTDIR)/TestDndcAst_debug $(TESTDIR)/TestDndcAst_fast
 $(BINDIR)/pydndc$(PYEXTENSION): Dndc/pydndc.c $(VENDOBJDIR)/libquickjs.o
 	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -O3 -g $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@  $(VENDOBJDIR)/libquickjs.o $(PYLDFLAGS) $(LINK_FLAGS)
 .PHONY: pydndc
-pydndc: pydndc/pydndc$(PYEXTENSION) $(BINDIR)/pydndc$(PYEXTENSION) PyDndEdit/pydndc$(PYEXTENSION) Dndc/jsdoc.dnd PyDndEdit/dndc_js_api.d.ts
+pydndc: pydndc/pydndc$(PYEXTENSION) $(BINDIR)/pydndc$(PYEXTENSION) Dndc/jsdoc.dnd
 
 TestResults/testpydndc: $(BINDIR)/pydndc$(PYEXTENSION) Dndc/testpydndc.py Examples/HobswellManor/add.py Examples/HobswellManor/hobswell-manor-before.dnd Examples/HobswellManor/hobswell-manor.dnd
 	$(PYTHON) Dndc/testpydndc.py --extension-directory $(BINDIR) --tee $@
 tests: TestResults/testpydndc
 
-PyDndEdit/pydndc$(PYEXTENSION): $(BINDIR)/pydndc$(PYEXTENSION)
-	$(CP) $< $@
-PyDndEdit/jsdoc.dnd: Dndc/jsdoc.dnd
-	$(CP) $< $@
-PyDndEdit/dndc_js_api.d.ts: Dndc/dndc_js_api.d.ts
-	$(CP) $< $@
 pydndc/pydndc$(PYEXTENSION): $(BINDIR)/pydndc$(PYEXTENSION)
 	$(RM) -rf $@
 	$(CP) $< $@
 
-
-RELEASEFILES = $(BINDIR)/dndc$(EXE) $(BINDIR)/pydndc$(PYEXTENSION) PyDndEdit/dndedit.pyw PyDndEdit/changelog.dnd PyDndEdit/install_deps.py PyDndEdit/README.txt Documentation/OVERVIEW.dnd PyDndEdit/Manual.dnd Dndc/jsdoc.dnd Dndc/dndc_js_api.d.ts Documentation/REFERENCE.dnd pydndc/pydndc.pyi
+RELEASEFILES = $(BINDIR)/dndc$(EXE) PyDndEdit/DndEdit.pyw PyDndEdit/README.txt
 .PHONY: release
 release: $(RELEASEFILES)
 	$(RM) -rf Release/Dndc Release/Dndc.$(DNDCVERSION).zip Release/Dndc.$(DNDCVERSION)
