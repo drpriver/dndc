@@ -948,6 +948,9 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
     }
 
     filename = strrchr(filename, '/')? strrchr(filename, '/')+1 : filename;
+#ifdef _WIN32
+    filename = strrchr(filename, '\\')? strrchr(filename, '\\')+1 : filename;
+#endif
     _Bool use_colors = force_colors || (!no_colors && isatty(fileno(stderr)));
     const char* gray  = use_colors? "\033[97m"    : "";
     const char* blue  = use_colors? "\033[94m"    : "";
