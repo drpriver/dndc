@@ -51,7 +51,7 @@ def win_install_deps() -> bool:
 
     pb = ProgressBar()
     command = [sys.executable, '-m', 'pip', 'install', 'PySide6==6.2', f'pydndc=={pydndcver}']
-    process = subprocess.Popen(command)
+    process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     while process.poll() is None:
         time.sleep(0.01)
         pump_messages()
