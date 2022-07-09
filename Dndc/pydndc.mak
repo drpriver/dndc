@@ -29,7 +29,7 @@ wheels: civenv
 
 dndedit-wheel: civenv dndeditfolder
 	. civenv/bin/activate && python3 -m pip install build && cd dndeditfolder && python3 -m build --wheel
-	$(CP) dndeditfolder/dist/PyDndEdit-0.20.1-py3-none-any.whl wheelhouse
+	$(CP) dndeditfolder/dist/PyDndEdit-*-py3-none-any.whl wheelhouse
 	$(RM) -rf dndeditfolder
 
 endif
@@ -45,7 +45,7 @@ wheels: civenv
 
 dndedit-wheel: civenv dndeditfolder
 	. civenv/bin/activate && python3 -m pip install build && cd dndeditfolder && python3 -m build --wheel
-	$(CP) dndeditfolder/dist/PyDndEdit-0.20.1-py3-none-any.whl wheelhouse
+	$(CP) dndeditfolder/dist/PyDndEdit-*-py3-none-any.whl wheelhouse
 	$(RM) -rf dndeditfolder
 endif
 
@@ -58,7 +58,7 @@ wheels: civenv
 	civenv\Scripts\activate && cmd /V /C "SET CIBW_SKIP=pp*&& cibuildwheel --platform windows --archs AMD64 ."
 dndedit-wheel: civenv dndeditfolder
 	civenv\Scripts\activate && py -m pip install build && cd dndeditfolder && py -m build --wheel
-	$(CP) dndeditfolder/dist/PyDndEdit-0.20.1-py3-none-any.whl wheelhouse
+	$(CP) dndeditfolder/dist/PyDndEdit-*-py3-none-any.whl wheelhouse
 	$(RM) -rf dndeditfolder
 endif
 

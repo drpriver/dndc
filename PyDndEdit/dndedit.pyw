@@ -2,7 +2,7 @@
 # Copyright © 2021-2022, David Priver
 #
 import sys
-pydndcver = '0.20'
+pydndcver = '0.21'
 def win_install_deps() -> bool:
     import sys
     assert sys.platform == 'win32'
@@ -50,7 +50,7 @@ def win_install_deps() -> bool:
             DispatchMessageW(pmsg)
 
     pb = ProgressBar()
-    command = [sys.executable, '-m', 'pip', 'install', 'PySide6==6.2', f'pydndc=={pydndcver}']
+    command = [sys.executable, '-m', 'pip', 'install', 'PySide6', f'pydndc=={pydndcver}']
     process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     while process.poll() is None:
         time.sleep(0.01)
@@ -79,7 +79,7 @@ def unix_install_deps() -> bool:
         return False
     if response and not response.strip().lower().startswith('y'):
         return False
-    command = [sys.executable, '-m', 'pip', 'install', 'PySide6==6.2', f'pydndc=={pydndcver}', '-U']
+    command = [sys.executable, '-m', 'pip', 'install', 'PySide6', f'pydndc=={pydndcver}', '-U']
     process = subprocess.run(command, check=True)
     return True
 
@@ -98,7 +98,7 @@ def ensure_deps() -> None:
     try:
         import PySide6
         import pydndc
-        if pydndc.version[:2] != (0, 20):
+        if pydndc.version[:2] != (0, 21):
             if not install_deps():
                 return
         import PyDndEdit
