@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='PyDndEdit',
-    version='0.22.0',
+    version='0.23.0',
     license='Proprietary',
     description='Qt based editor for the dnd file format',
     author = 'David Priver',
