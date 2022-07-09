@@ -82,5 +82,5 @@ ctx.base_dir = '.'
 ctx.root.parse_file('hobswell-manor-before.dnd')
 for a, b in stuff:
     ctx.node_by_id(a).header = f'{a} {b}'
-with open('hobswell-manor.dnd', 'w') as fp:
+with open('hobswell-manor.dnd', 'w', newline='') as fp:
     print(ctx.format_tree(), file=fp)
