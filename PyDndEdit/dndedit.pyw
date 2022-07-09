@@ -105,7 +105,7 @@ def ensure_deps() -> None:
     except ImportError as e:
         if not install_deps():
             return
-        import PyDndEdit
+    import PyDndEdit.dndedit
 
 if __name__ == '__main__':
     ensure_deps()
