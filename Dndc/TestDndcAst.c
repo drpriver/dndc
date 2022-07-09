@@ -51,46 +51,7 @@ TestFunction(TestAstExample){
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         ;
-    LongString examples[] = {
-        LS("Examples/Calendar/calendar.dnd"),
-        LS("Examples/KrugsBasement/krugs-basement.dnd"),
-        LS("Examples/Rules/characters.dnd"),
-        LS("Examples/Rules/index.dnd"),
-        LS("Examples/Rules/mechanics.dnd"),
-        LS("Examples/Rules/religion.dnd"),
-        LS("Examples/Rules/rules.dnd"),
-        LS("Examples/Wiki/Inner/hello.dnd"),
-        LS("Examples/Wiki/flat.dnd"),
-        LS("Examples/Wiki/index.dnd"),
-        LS("Examples/Wiki/lorem.dnd"),
-        LS("Examples/Wiki/wiki.dnd"),
-        LS("Examples/index.dnd"),
-        LS("Documentation/OVERVIEW.dnd"),
-        LS("Documentation/REFERENCE.dnd"),
-        LS("PyDndEdit/jsdoc.dnd"),
-        LS("PyDndEdit/changelog.dnd"),
-        LS("PyDndEdit/Manual.dnd"),
-    };
-    StringView base_dirs[] = {
-        SV("Examples/Calendar"),
-        SV("Examples/KrugsBasement"),
-        SV("Examples/Rules"),
-        SV("Examples/Rules"),
-        SV("Examples/Rules"),
-        SV("Examples/Rules"),
-        SV("Examples/Rules"),
-        SV("Examples/Wiki/Inner"),
-        SV("Examples/Wiki"),
-        SV("Examples/Wiki"),
-        SV("Examples/Wiki"),
-        SV("Examples/Wiki"),
-        SV("Examples"),
-        SV(""),
-        SV(""),
-        SV("PyDndEdit"),
-        SV(""),
-        SV(""),
-    };
+#include "TESTEXAMPLES.h"
     _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString ast_output = {0};
