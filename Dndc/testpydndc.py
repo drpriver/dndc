@@ -208,7 +208,7 @@ EXAMPLE_FILES = [
     "Examples/index.dnd",
     "Documentation/OVERVIEW.dnd",
     "Documentation/REFERENCE.dnd",
-    "PyDndEdit/jsdoc.dnd",
+    "Dndc/jsdoc.dnd",
     "PyDndEdit/changelog.dnd",
     "PyDndEdit/Manual.dnd",
 ]
@@ -381,11 +381,11 @@ class TestScriptExample(TestCase):
         cmd = [sys.executable, 'Examples/HobswellManor/add.py']
         with open('Examples/HobswellManor/hobswell-manor.dnd') as fp:
             before = fp.read()
-        subprocess.check_call(cmd, env={'PYTHONPATH':os.path.dirname(pydndc.__file__)})
+        subprocess.check_call(cmd, env={**os.environ, 'PYTHONPATH':os.path.dirname(pydndc.__file__)})
         with open('Examples/HobswellManor/hobswell-manor.dnd') as fp:
             after = fp.read()
         if before != after:
-            with open('Examples/HobswellManor/hobswell-manor.dnd', 'w') as fp:
+            with open('Examples/HobswellManor/hobswell-manor.dnd', 'w', newline='') as fp:
                 fp.write(before)
         self.assertEqual(before, after)
 
@@ -436,7 +436,7 @@ def run(
         print('Unable to find the built pydndc extension. If you have built it, then specify what directory it is in with --extension-directory', file=sys.stderr)
         sys.exit(1)
     if tee:
-        with open(tee, 'w', encoding='utf-8') as fp:
+        with open(tee, 'w', encoding='utf-8', newline='') as fp:
             # ignore that we don't actually implement all of TextTIO
             runner = TextTestRunner(Tee(fp, sys.stderr)) # type: ignore
             main(argv=argv, testRunner=runner)
