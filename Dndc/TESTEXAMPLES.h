@@ -17,8 +17,8 @@ LongString examples[] = {
     [15] = LS("Documentation/OVERVIEW.dnd"),
     [16] = LS("Documentation/REFERENCE.dnd"),
     [17] = LS("Dndc/jsdoc.dnd"),
-    [18] = LS("PyDndEdit/changelog.dnd"),
-    [19] = LS("PyDndEdit/Manual.dnd"),
+    [18] = LS("PyDndEdit/PyDndEdit/changelog.dnd"),
+    [19] = LS("PyDndEdit/PyDndEdit/Manual.dnd"),
     [20] = LS("Examples/HobswellManor/hobswell-manor-before.dnd"),
     [21] = LS("Examples/HobswellManor/hobswell-manor.dnd"),
 };
