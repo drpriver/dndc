@@ -492,6 +492,13 @@ SCROLL_RESTO_SCRIPT='''
         }
     });
 '''
+EXTRA_CSS='''
+::css
+  body {
+    /* the overscroll effect looks really bad in the webview */
+    overscroll-behavior: none;
+  }
+'''
 GET_SCROLL_POSITION_SCRIPT='''
 (function(){
     const result = {};
@@ -944,6 +951,7 @@ class Page(QSplitter):
         if self.scroll_pos_string:
             text += '\n::script\n  const SCROLLRESTO = {}\n'.format(self.scroll_pos_string)
             text += SCROLL_RESTO_SCRIPT
+        text += EXTRA_CSS
         return text
 
     def update_html(self) -> None:
