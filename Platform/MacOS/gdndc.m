@@ -1279,6 +1279,20 @@ BOOL show_stats;
                 for(let a of anchors){
                     add_interceptor(a);
                 }
+                function add_scroller(h){
+                    if(!h.id) return;
+                    h.style.cursor = "pointer";
+                    h.onclick = function(e){
+                        e.preventDefault();
+                        e.stopPropagation();
+                        fetch("dnd:///scrolltoid", {method:"POST", body:h.id});
+                        return false;
+                    };
+                }
+                for(let h of document.getElementsByTagName("h2"))
+                    add_scroller(h);
+                for(let h of document.getElementsByTagName("h3"))
+                    add_scroller(h);
             });)
             "\n"
         ];

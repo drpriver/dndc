@@ -1,0 +1,10 @@
+Changelog::kv
+  created:  2022-07-13T19:48:29Z
+  resolved: 2022-07-13T23:38:47Z
+Created Jul 13, 2022, 12:48PM::md .update
+Summary::md .summary
+  It’d be nice that if you click a heading in the preview, it scrolls that
+  section into view in the text editor.
+
+Resolved Jul 13, 2022, 04:38PM::md .update
+  ez
