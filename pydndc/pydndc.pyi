@@ -54,8 +54,10 @@ class Flags(IntFlag):
     DONT_READ: int
     DONT_IMPORT: int
     NO_COMPILETIME_JS: int
+    SUPPRESS_WARNINGS: int
     PRINT_STATS: int
     DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP: int
+    NO_CSS: int
 
 class SyntaxRegion(NamedTuple):
     type: SynType
@@ -83,6 +85,18 @@ def expand(
     jsargs:Optional[Union[dict, list, str]] = None
 ) -> str:
     ...
+
+def to_markdown(
+    text:str,
+    base_dir:str='.',
+    logger:Optional[Logger]=None,
+    file_cache:Optional[FileCache]=None,
+    flags:Flags=Flags.NONE,
+    jsargs:Optional[Union[dict, list, str]]=None,
+    deps:Optional[Set[str]]=None,
+) -> str:
+    ...
+
 
 def reformat(text:str, logger:Optional[Logger]=None) -> str:
     ...
