@@ -139,7 +139,11 @@ class NodeType(IntEnum):
     INVALID      = 30
 
 class Context:
-    def __new__(cls, flags:Flags=Flags.NONE, filename:Optional[str]=None, filecache:Optional[FileCache]=None) -> Context:
+    def __new__(cls, flags:Flags=Flags.NONE, filename:str=None, filecache:FileCache=None) -> Context:
+        ...
+    # This is wrong, it defines __new__ instead, but whatever
+    # Autocomplete doesn't work withoout this.
+    def __init__(cls, flags:Flags=Flags.NONE, filename:str=None, filecache:FileCache=None) -> Context:
         ...
     errors: List[str]
     filename: Optional[str]
@@ -150,6 +154,8 @@ class Context:
     def node_from_int(self, handle:int) -> Node:
         ...
     def node_by_id(self, id:str) -> Optional[Node]:
+        ...
+    def node_by_approximate_location(self, filename:str, row:int, column:int=0) -> Optional[Node]:
         ...
     def format_tree(self) -> str:
         ...

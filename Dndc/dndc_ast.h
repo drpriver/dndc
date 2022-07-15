@@ -542,7 +542,7 @@ enum DndcNodeType {
     DNDC_NODE_TYPE_TABLE_ROW    =  7,
     DNDC_NODE_TYPE_STYLESHEETS  =  8,
     DNDC_NODE_TYPE_LINKS        =  9,
-    DNDC_NODE_TYPE_SCRIPTS      = 10,
+    DNDC_NODE_TYPE_SCRIPTS      = 10, // NOTE: This is for <script> tags in the rendered doc
     DNDC_NODE_TYPE_IMPORT       = 11,
     DNDC_NODE_TYPE_IMAGE        = 12,
     DNDC_NODE_TYPE_BULLETS      = 13,
@@ -557,7 +557,7 @@ enum DndcNodeType {
     DNDC_NODE_TYPE_COMMENT      = 22,
     DNDC_NODE_TYPE_CONTAINER    = 23,
     DNDC_NODE_TYPE_QUOTE        = 24,
-    DNDC_NODE_TYPE_JS           = 25,
+    DNDC_NODE_TYPE_JS           = 25, // NOTE: This is for compiletime scripting.
     DNDC_NODE_TYPE_DETAILS      = 26,
     DNDC_NODE_TYPE_META         = 27,
     DNDC_NODE_TYPE_DEFLIST      = 28,
@@ -1026,8 +1026,8 @@ dndc_ctx_node_by_approximate_location(DndcContext*, DndcStringView filename, int
 // column:
 //      While column in the row the node is from. 1-based, but 0 is allowed.
 //
-// Returns
-// -----
+// Returns:
+// --------
 // Returns the node's handle on successful lookup and `DNDC_NODE_HANDLE_INVALID`
 // if the node cannot be found.
 //
@@ -1039,7 +1039,8 @@ dndc_ctx_node_by_id(DndcContext*, DndcStringView);
 // Retrieves the node with the given string id.
 //
 // Note that the id will be normalized (kebabed) before lookup.
-// "Hello World" becomes "hello-world".
+// "Hello World" becomes "hello-world". You do not need to call `dndc_kebab`
+// beforehand.
 //
 // Returns the node's handle on successful lookup and `DNDC_NODE_HANDLE_INVALID`
 // if the node cannot be found.
@@ -1242,9 +1243,38 @@ dndc_ctx_add_link(DndcContext* ctx, DndcStringView k, DndcStringView v);
 
 DNDC_API
 int
-dndc_kebab(DndcStringView, char* buff, size_t bufflen, size_t* used);
-// kebabs a string
-// pass sv.length+2 at least for bufflen.
+dndc_kebab(DndcStringView sv, char* buff, size_t bufflen, size_t* used);
+// ------------------
+// "Kebabs" a string, which is what is used for the generated ids in the html
+// document. Use this function if you need the id of a node in the generated
+// html document
+//
+// Note that a nul terminator is not written into the buffer.
+//
+// Arguments:
+// ----------
+// sv:
+//      The string to be kebabed.
+//
+// buff:
+//      Pointer to a char array to write the kebabed string into.
+//      The character array must be at least of length sv.length+2.
+//      I don't know why this is and it might be reduced in the future,
+//      but that is a safe value.
+//
+//      Note that a nul terminator is not written into the buffer.
+//
+// bufflen:
+//      The size of the char array pointed to by buff.
+//
+// used:
+//      The actual number of characters written into buff will be stored
+//      here.
+//
+// Returns:
+// --------
+// 0 on success, non-zero if there is an error.
+// Errors occur due to zero length sv or insufficiently sized buff.
 
 #ifdef __cplusplus
 }
