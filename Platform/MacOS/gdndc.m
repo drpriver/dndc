@@ -514,6 +514,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     }
     [super keyDown:event];
 }
+
 -(void)indent:(id _Nullable)sender{
     auto r = self.selectedRange;
     NSRange currentLineRange = [self.string lineRangeForRange:r];
@@ -653,28 +654,34 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     [result addItem:item];
     item = [[NSMenuItem alloc] initWithTitle:@"Dedent" action:@selector(dedent:) keyEquivalent:@""];
     [result addItem:item];
+
     [result addItem:[NSMenuItem separatorItem]];
 
     item = [[NSMenuItem alloc] initWithTitle:@"Insert Image" action:@selector(insert_file:) keyEquivalent:@""];
     item.tag = GDND_INSERT_IMG;
-
     [result addItem:item];
+
     item = [[NSMenuItem alloc] initWithTitle:@"Insert Imglinks" action:@selector(insert_file:) keyEquivalent:@""];
     item.tag = GDND_INSERT_IMGLINKS;
-
     [result addItem:item];
+
     item = [[NSMenuItem alloc] initWithTitle:@"Insert CSS" action:@selector(insert_file:) keyEquivalent:@""];
     item.tag = GDND_INSERT_CSS;
-
     [result addItem:item];
+
     item = [[NSMenuItem alloc] initWithTitle:@"Insert Script" action:@selector(insert_file:) keyEquivalent:@""];
     item.tag = GDND_INSERT_SCRIPT;
-
     [result addItem:item];
+
     item = [[NSMenuItem alloc] initWithTitle:@"Insert Import" action:@selector(insert_file:) keyEquivalent:@""];
     item.tag = GDND_INSERT_DND;
-
     [result addItem:item];
+
+    [result addItem:[NSMenuItem separatorItem]];
+
+    item = [[NSMenuItem alloc] initWithTitle:@"Scroll Into View" action:@selector(scroll_selection_into_view:) keyEquivalent:@""];
+    [result addItem:item];
+
     [result addItem:[NSMenuItem separatorItem]];
     return result;
 }
@@ -1178,6 +1185,65 @@ BOOL show_stats;
 }
 - (void)viewDidLoad {
     [super viewDidLoad];
+}
+
+-(void)scroll_selection_into_view:(id _Nullable) sender{
+    NSRange r = self->text.selectedRange;
+    // this is ridiculous
+    int lineno = 1;
+    {
+        NSString* s = self->text.string;
+        for(NSUInteger i = 0; i < r.location; i++){
+            unichar c = [s characterAtIndex:i];
+            if(c == u'\n') lineno++;
+        }
+    }
+    DndcContext* ctx = dndc_create_ctx(0, NULL, NULL);
+    dndc_ctx_set_logger(ctx, dndc_stderr_log_func, NULL);
+    DndcNodeHandle root = dndc_ctx_make_root(ctx, SV(""));
+    int err;
+    NSString* doc_string = self->text.string;
+    err = dndc_ctx_parse_string(ctx, root, SV("a"), ns_borrow_sv(doc_string));
+    if(err) goto cleanup;
+    DndcNodeHandle nh = dndc_ctx_node_by_approximate_location(ctx, SV("a"), lineno, 0);
+    // fprintf(stderr, "%d nh: %zu, root: %zu\n", __LINE__, (size_t)nh, (size_t)root);
+    while(nh != DNDC_NODE_HANDLE_INVALID && nh != root && !dndc_node_has_id(ctx, nh)){
+        nh = dndc_node_get_parent(ctx, nh);
+    }
+    // fprintf(stderr, "%d nh: %zu, root: %zu\n", __LINE__, (size_t)nh, (size_t)root);
+    if(nh == DNDC_NODE_HANDLE_INVALID) goto cleanup;
+    if(nh == root) goto cleanup;
+
+    DndcStringView idstr;
+    err = dndc_node_get_id(ctx, nh, &idstr);
+    if(err) goto cleanup;
+    // fprintf(stderr, "idstr: '%.*s'\n", (int)idstr.length, idstr.text);
+    if(idstr.length > 509) goto cleanup;
+    char buff[512];
+    size_t buffused = 0;
+    err = dndc_kebab(idstr, buff, sizeof buff, &buffused);
+    if(err) goto cleanup;
+    if(!buffused) goto cleanup;
+    buff[buffused] = 0;
+    // fprintf(stderr, "buff: '%.*s'\n", (int)buffused, buff);
+    if(0){
+        cleanup:
+        // fprintf(stderr, "lineno: %d\n", lineno);
+        dndc_ctx_destroy(ctx);
+        return;
+    }
+    dndc_ctx_destroy(ctx);
+    NSString* script = [NSString stringWithFormat:@""
+        "(function(){\n"
+        "  let node = document.getElementById('%.*s');\n"
+        "  if(!node) return;\n"
+        "  node.scrollIntoView(true);\n"
+        "})();\n"
+        , (int)buffused, buff];
+    [webview evaluateJavaScript:script completionHandler:^(id object, NSError* error){
+        if(error) LOGIT(error);
+        (void)object;
+    }];
 }
 
 -(void)format_dnd:(id)sender {
@@ -2004,11 +2070,11 @@ do_menus(void){
         [menu addItemWithTitle:@"Flop Editor" action:@selector(flop_editors:) keyEquivalent:@""];
         [menu addItem:[NSMenuItem separatorItem]];
         [menu addItemWithTitle:@"Refresh" action:@selector(refresh) keyEquivalent:@"r"];
+        [menu addItemWithTitle:@"Scroll Into View" action:@selector(scroll_selection_into_view:) keyEquivalent:@"\r"];
         [menu addItem:[NSMenuItem separatorItem]];
         [menu addItemWithTitle:@"Zoom Out" action:@selector(zoom_out:) keyEquivalent:@"-"];
         [menu addItemWithTitle:@"Zoom In" action:@selector(zoom_in:) keyEquivalent:@"+"];
         [menu addItemWithTitle:@"Actual Size" action:@selector(zoom_normal:) keyEquivalent:@"0"];
-
 
         NSMenuItem* menu_item = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
         [menu_item setSubmenu:menu];

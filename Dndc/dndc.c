@@ -2668,12 +2668,88 @@ dndc_ctx_node_by_id(DndcContext* ctx, DndcStringView sv){
 }
 
 DNDC_API
+DndcNodeHandle
+dndc_ctx_node_by_approximate_location(DndcContext* ctx, DndcStringView filename, int row, int column){
+    row--;
+    column--;
+    size_t filename_idx = -1;
+    for(size_t i = 0; i < ctx->filenames.count; i++){
+        if(SV_equals(filename, ctx->filenames.data[i])){
+            filename_idx = i;
+            break;
+        }
+    }
+    if(filename_idx == (size_t)-1){
+        return DNDC_NODE_HANDLE_INVALID;
+    }
+    DndcNodeHandle best_handle = DNDC_NODE_HANDLE_INVALID;
+    int best_row = INT32_MAX;
+    int best_col = INT32_MAX;
+    for(size_t i = 0; i < ctx->nodes.count; i++){
+        Node* node = &ctx->nodes.data[i];
+        if(node->filename_idx != filename_idx)
+            continue;
+        if(node->row > row)
+            continue;
+        if(best_row == INT32_MAX){
+            best_row = node->row;
+            best_col = node->col;
+            best_handle = (DndcNodeHandle)i;
+            continue;
+        }
+        if(node->row < best_row)
+            continue;
+        if(node->row > best_row){
+            best_row = node->row;
+            best_col = node->col;
+            best_handle = (DndcNodeHandle)i;
+            continue;
+        }
+        assert(node->row == best_row);
+        int col_dist = abs(node->col - column);
+        if(col_dist > abs(best_col - column))
+            continue;
+        if(col_dist == best_col){
+            // This is in the same location apparently.
+            // arbitrarily pick the first one.
+            continue;
+        }
+        best_row = node->row;
+        best_col = node->col;
+        best_handle = (DndcNodeHandle)i;
+        continue;
+    }
+    return best_handle;
+}
+
+
+DNDC_API
 int
 dndc_node_get_id(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView* outsv){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
     *outsv = node_get_id(ctx, handle);
+    return 0;
+}
+
+DNDC_API
+int
+dndc_node_has_id(DndcContext* ctx, DndcNodeHandle dnh){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    // fprintf(stderr, "dnh: %zu\n", (size_t)dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 0;
+    Node* node = get_node(ctx, handle);
+    // fprintf(stderr, "node: %p\n", node);
+    if(node->flags & NODEFLAG_NOID)
+        return 0;
+    if(node->type == NODE_STRING)
+        return 0;
+    if(node->header.length)
+        return 1;
+    if(node->flags & NODEFLAG_ID)
+        return 1;
     return 0;
 }
 
@@ -3217,6 +3293,21 @@ dndc_ctx_to_json(DndcContext* ctx, DndcLongString*out){
     *out = msb_detach_ls(&sb);
     return 0;
 }
+
+DNDC_API
+int
+dndc_kebab(DndcStringView sv, char* buff, size_t bufflen, size_t* used){
+    if(bufflen < sv.length+2)
+        return 1;
+    MStringBuilder msb = {0};
+    msb.data = buff;
+    msb.cursor = 0;
+    msb.capacity = bufflen;
+    msb_write_kebab(&msb, sv.text, sv.length);
+    *used = msb.cursor;
+    return 0;
+}
+
 
 
 static inline

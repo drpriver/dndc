@@ -1,3 +1,4 @@
+#ifdef LS
 LongString examples[] = {
     [ 0] = LS("Examples/Calendar/calendar.dnd"),
     [ 1] = LS("Examples/KrugsBasement/krugs-basement.dnd"),
@@ -46,3 +47,4 @@ StringView base_dirs[] = {
     [20] = SV("Examples/HobswellManor"),
     [21] = SV("Examples/HobswellManor"),
 };
+#endif

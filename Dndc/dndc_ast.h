@@ -361,6 +361,12 @@ void print_attributes(FILE* fp, DndcContext* ctx, DndcNodeHandle dnh){
 
 DNDC_API
 int
+dndc_node_has_id(DndcContext*, DndcNodeHandle);
+// --------------
+// Returns 1 if the node has an id (explicit or implicit), otherwise 0.
+
+DNDC_API
+int
 dndc_node_get_id(DndcContext*, DndcNodeHandle, DndcStringView* id);
 // ---------------
 // Retrieves the string id associated with the given node.
@@ -992,6 +998,39 @@ dndc_node_location(DndcContext*, DndcNodeHandle, DndcNodeLocation*);
 // Returns 0 on success and non-zero on error.
 //
 
+DNDC_API
+DndcNodeHandle
+dndc_ctx_node_by_approximate_location(DndcContext*, DndcStringView filename, int row, int column);
+// ---------------------
+// Retrieves the node closest to the given location.
+// Closest is only in regards to row and column - filename has to be exact.
+//
+// Note: the current implementation of this function just scans every node
+// in the context, so it is O(N) with the number of nodes.
+//
+// Note that not every line of a file has a corresponding node.  This can come
+// up for blank lines. In this case, this function will return the closest node
+// before the blank line.
+//
+// Arguments:
+// ----------
+// ctx:
+//      The parsing context.
+//
+// filename:
+//      Which file the node originated from.
+//
+// row:
+//      Which line in the file the node is from. 1-based.
+//
+// column:
+//      While column in the row the node is from. 1-based, but 0 is allowed.
+//
+// Returns
+// -----
+// Returns the node's handle on successful lookup and `DNDC_NODE_HANDLE_INVALID`
+// if the node cannot be found.
+//
 
 DNDC_API
 DndcNodeHandle
@@ -1002,7 +1041,7 @@ dndc_ctx_node_by_id(DndcContext*, DndcStringView);
 // Note that the id will be normalized (kebabed) before lookup.
 // "Hello World" becomes "hello-world".
 //
-// Returns the node's handle on success lookup and DNDC_NODE_HANDLE_INVALID
+// Returns the node's handle on successful lookup and `DNDC_NODE_HANDLE_INVALID`
 // if the node cannot be found.
 //
 // Note: in some circumstances, two nodes can have the same string id. Which
@@ -1015,7 +1054,7 @@ dndc_ctx_node_invalid(DndcContext* ctx, DndcNodeHandle);
 // ---------------------
 // Returns whether the node handle is invalid.
 //
-// The obvious case is DNDC_NODE_HANDLE_INVALID, but also this allows you to
+// The obvious case is `DNDC_NODE_HANDLE_INVALID`, but also this allows you to
 // the check the validity of a handle that you deserialized from disk, stuffed
 // into an integer somewhere, taken from user input, etc.
 //
@@ -1030,7 +1069,7 @@ dndc_ctx_make_node(DndcContext*, int type, DndcStringView header, DndcNodeHandle
 // Arguments:
 // ----------
 // ctx:
-//     The parsing context.
+//      The parsing context.
 //
 //  type:
 //      The type of the new node. Must be a valid value of DndcNodeType.
@@ -1043,9 +1082,9 @@ dndc_ctx_make_node(DndcContext*, int type, DndcStringView header, DndcNodeHandle
 //      child to that parent node. If invalid, then this new node will be an
 //      orphan.
 //
-//  Returns:
-//  --------
-//  The handle to the new node on success and DNDC_NODE_HANDLE_INVALID on error.
+// Returns:
+// --------
+// The handle to the new node on success and `DNDC_NODE_HANDLE_INVALID` on error.
 //
 
 DNDC_API
@@ -1200,6 +1239,12 @@ int
 dndc_ctx_add_link(DndcContext* ctx, DndcStringView k, DndcStringView v);
 // -----------------
 // Adds an explicit link to the link table.
+
+DNDC_API
+int
+dndc_kebab(DndcStringView, char* buff, size_t bufflen, size_t* used);
+// kebabs a string
+// pass sv.length+2 at least for bufflen.
 
 #ifdef __cplusplus
 }

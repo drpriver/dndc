@@ -1681,6 +1681,27 @@ DndcContextPy_node_from_int(PyObject* s, PyObject* arg){
 
 static
 PyObject*_Nullable
+DndcContextPy_node_by_approximate_location(PyObject* s, PyObject* args, PyObject* kwargs){
+    PyObject* filename;
+    int row;
+    int column = 0;
+    DndcContextPy* self = (DndcContextPy*)s;
+    const char* const keywords[] = {"filename", "row", "column", NULL};
+    PushDiagnostic();
+    SuppressCastQual();
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!i|i:node_by_approximate_location", (char**)keywords, &PyUnicode_Type, &filename, &row, &column)){
+        return NULL;
+    }
+    PopDiagnostic();
+    DndcStringView sv = pystring_borrow_stringview(filename);
+    DndcNodeHandle id = dndc_ctx_node_by_approximate_location(self->ctx, sv, row, column);
+    if(id == DNDC_NODE_HANDLE_INVALID)
+        Py_RETURN_NONE;
+    return DndcNode_make(self, id);
+}
+
+static
+PyObject*_Nullable
 DndcContextPy_node_by_id(PyObject* s, PyObject* arg){
     if(!PyUnicode_Check(arg))
         return PyErr_Format(PyExc_TypeError, "node_by_id takes a str.");
@@ -2204,6 +2225,17 @@ static PyMethodDef DndcContextPy_methods[] = {
             "\n"
             "Convert context to a json string.",
     },
+    {
+        .ml_name="node_by_approximate_location",
+        .ml_meth=(PyCFunction)DndcContextPy_node_by_approximate_location,
+        .ml_flags=METH_VARARGS|METH_KEYWORDS,
+        .ml_doc=PYSIG(
+            "node_by_approximate_location(self, filename:str, row:int, column:int=0) -> Optional[Node]\n",
+            "node_by_approximate_location(self, filename, row, column=0)\n")
+            "--\n"
+            "\n"
+            "Gets a node by its by approximate location.\n",
+    },
     {0} // Sentinel
 };
 
@@ -2530,7 +2562,7 @@ DndcNodePy_parse_file(PyObject* s, PyObject* args, PyObject* kwargs){
     const char* const keywords[] = { "path", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|:parse", (char**)keywords, &PyUnicode_Type, &path)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|:parse_file", (char**)keywords, &PyUnicode_Type, &path)){
         return NULL;
     }
     PopDiagnostic();
