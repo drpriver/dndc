@@ -2288,8 +2288,8 @@ dndc_ctx_make_root(DndcContext* ctx, DndcStringView filename){
     Node* root = get_node(ctx, root_handle);
     root->col = 0;
     root->row = 0;
-    Marray_push(StringView)(&ctx->filenames, main_allocator(ctx), filename);
-    root->filename_idx = ctx->filenames.count-1;
+    int copy_it = 1;
+    root->filename_idx = ctx_add_filename(ctx, filename, copy_it);
     root->type = NODE_MD;
     root->parent = root_handle;
     return root_handle._value;

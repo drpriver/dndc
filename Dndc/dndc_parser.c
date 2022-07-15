@@ -404,8 +404,9 @@ dndc_parse(DndcContext* ctx, NodeHandle root_handle, StringView filename, const 
     ctx->line_end = NULL;
     ctx->nspaces = 0;
     ctx->lineno = 0;
-    ctx->filename = filename;
-    Marray_push(StringView)(&ctx->filenames, main_allocator(ctx), filename);
+    int dont_copy_it = 0;
+    size_t fn_idx = ctx_add_filename(ctx, filename, dont_copy_it);
+    ctx->filename = ctx->filenames.data[fn_idx];
     NodeType type = get_node(ctx, root_handle)->type;
     int e = parse_node(ctx, root_handle, type, -1, NODEFLAG_NONE);
     if(e) return e;

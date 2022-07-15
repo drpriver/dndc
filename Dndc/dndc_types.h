@@ -332,8 +332,19 @@ temp_allocator(DndcContext* ctx){
     return allocator_from_la(&ctx->temp);
 }
 
-
-
+static inline
+size_t
+ctx_add_filename(DndcContext* ctx, StringView filename, int copy){
+    for(size_t i = 0; i < ctx->filenames.count; i++){
+        if(SV_equals(filename, ctx->filenames.data[i]))
+            return i;
+    }
+    if(copy && filename.length){
+        filename.text = Allocator_dupe(string_allocator(ctx), filename.text, filename.length);
+    }
+    Marray_push(StringView)(&ctx->filenames, main_allocator(ctx), filename);
+    return ctx->filenames.count-1;
+}
 
 typedef union DndcDependsArg DependsArg;
 #ifdef __clang__
