@@ -207,6 +207,7 @@ public:
     void display_dndc_error(int error_type, const QString& filename, int row, int col, const QString& message);
     void add_dependencies(size_t count, DndcStringView* paths);
     void keyPressEvent(QKeyEvent* event) override;
+    void scroll_selection_into_view(void);
 
 };
 

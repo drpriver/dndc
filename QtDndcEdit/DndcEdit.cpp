@@ -39,6 +39,11 @@ QRegularExpression* WHITESPACE_RE;
 QFile* LOGFILE;
 QTextStream* LOGSTREAM;
 
+struct CtxWrapper {
+    DndcContext* ctx;
+    ~CtxWrapper(){ if(ctx) dndc_ctx_destroy(ctx); }
+};
+
 void
 DNDC_LOGIT(QtMsgType type, const QMessageLogContext& context, const QString& msg){
     static const QString Unknown =  QS("[UNKNOWN]");
@@ -441,6 +446,15 @@ MainWindow::add_menus(void){
         if(!page) return;
         page->textedit->highlight->rehighlight();
         });
+    viewmenu->addAction(action);
+
+    action = new QAction("Scroll Into View", this);
+    connect(action, &QAction::triggered, [this](){
+        auto page = get_current_page();
+        if(!page) return;
+        page->scroll_selection_into_view();
+        });
+    action->setShortcut(QKeySequence("Ctrl+\r"));
     viewmenu->addAction(action);
 
     auto helpmenu = menubar->addMenu("Help");
@@ -939,10 +953,6 @@ create_caches(void){
 
 void
 change_coord(int id, int x, int y){
-    struct CtxWrapper {
-        DndcContext* ctx;
-        ~CtxWrapper(){ if(ctx) dndc_ctx_destroy(ctx); }
-    };
 
     auto page = get_current_page();
     if(!page) return;
@@ -979,11 +989,6 @@ append_room_with_name_at(const QString& name, int x, int y){
 void
 scroll_to_id(QString nid){
     // qDebug() << "nid: " << nid << "\n";
-    struct CtxWrapper {
-        DndcContext* ctx;
-        ~CtxWrapper(){ if(ctx) dndc_ctx_destroy(ctx); }
-    };
-
     auto page = get_current_page();
     if(!page) return;
     if(page->textedit->isReadOnly()) return;
@@ -1229,6 +1234,40 @@ Page::update_html(void){
     webpage->runJavaScript(GET_SCROLL_POSITION_SCRIPT, 0, [this](const QVariant& x){
         set_scroll_pos(std::move(x.toString()));
     });
+}
+
+void
+Page::scroll_selection_into_view(void){
+    int line = textedit->textCursor().blockNumber();
+    line++;
+    QString text = textedit->toPlainText() + QS("\n");
+    auto textbytes = text.toUtf8();
+    DndcStringView textsv = {(size_t)textbytes.size(), textbytes.data()};
+    CtxWrapper ctx = {dndc_create_ctx(0, NULL, NULL)};
+    DndcStringView fn = {1, "a"};
+    DndcNodeHandle root = dndc_ctx_make_root(ctx.ctx, {});
+    int err = dndc_ctx_parse_string(ctx.ctx, root, fn, textsv);
+    if(err) return;
+    DndcNodeHandle nh = dndc_ctx_node_by_approximate_location(ctx.ctx, fn, line, 0);
+    while(nh != DNDC_NODE_HANDLE_INVALID && nh != root && !dndc_node_has_id(ctx.ctx, nh)){
+        nh = dndc_node_get_parent(ctx.ctx, nh);
+    }
+    if(nh == DNDC_NODE_HANDLE_INVALID) return;
+    if(nh == root) return;
+    DndcStringView idstr;
+    if(dndc_node_get_id(ctx.ctx, nh, &idstr) != 0) return;
+    if(idstr.length > 509) return;
+    char buff[512];
+    size_t buffused = 0;
+    if(dndc_kebab(idstr, buff, sizeof buff, &buffused) != 0) return;
+    if(!buffused) return;
+    buff[buffused] = 0;
+    webpage->runJavaScript(QS(
+            "(function(){\n"
+            "  let node = document.getElementById('%1');\n"
+            "  if(!node) return;\n"
+            "  node.scrollIntoView(true);\n"
+            "})();\n").arg(QString(buff)));
 }
 
 void

@@ -1,0 +1,10 @@
+Changelog::kv
+  created:  2022-07-13T19:49:20Z
+  resolved: 2022-07-15T06:29:26Z
+Created Jul 13, 2022, 12:49PM::md .update
+Summary::md .summary
+  It’d be nice if you could scroll the corresponding section from the text
+  editor into view in the preview.
+
+Resolved Jul 14, 2022, 11:29PM::md .update
+  Done!

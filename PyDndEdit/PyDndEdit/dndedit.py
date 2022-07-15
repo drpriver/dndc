@@ -3,7 +3,7 @@
 #
 # Copyright © 2021-2022, David Priver
 #
-PYGDNDC_VERSION = '0.20.1'
+PYGDNDC_VERSION = '0.24.0'
 __version__ = PYGDNDC_VERSION
 import os
 # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
@@ -859,6 +859,31 @@ class Page(QSplitter):
             self.hide_error()
         self.handle(1).installEventFilter(SplitterHandler(self))
 
+    def scroll_into_view(self) -> None:
+        line = self.textedit.textCursor().blockNumber()
+        line += 1
+        text = self.textedit.toPlainText()
+        try:
+            ctx = pydndc.Context(filename='')
+            ctx.root.parse(text, filename='a')
+            node: pydndc.Node = ctx.node_by_approximate_location('a', line)
+            if not node:
+                return
+            while node and node.handle != ctx.root.handle and not node.id:
+                node = node.parent
+            if not node or node.handle == ctx.root.handle:
+                return
+            script=('''
+            (function(){
+              let node = document.getElementById('%s');
+              if(!node) return;
+              node.scrollIntoView(true);
+            })();
+            ''' % node.id)
+            self.webpage.runJavaScript(script)
+        except:
+            LOGGER.exception('Problem while doing change scroll into view')
+
     def contents_changed(self) -> None:
         if self.auto_apply:
             self.update_html()
@@ -1426,6 +1451,18 @@ def add_menus() -> None:
     action.triggered.connect(flop_editors)
     viewmenu.addAction(action)
 
+    def scroll_into_view(*args) -> None:
+        current_tab: Optional[Page] = TABWIDGET.currentWidget()
+        LOGGER.debug('scrolling into view')
+        if not current_tab:
+            return
+        current_tab.scroll_into_view()
+
+    action = QAction('Scroll Into View', WINDOW)
+    action.triggered.connect(scroll_into_view)
+    action.setShortcut(QKeySequence('Ctrl+\r'))
+    viewmenu.addAction(action)
+
     def refresh_highlight(*args) -> None:
         current_tab: Optional[Page] = TABWIDGET.currentWidget()
         if not current_tab:
@@ -1437,7 +1474,7 @@ def add_menus() -> None:
     viewmenu.addAction(action)
 
     helpmenu = menubar.addMenu('Help')
-    
+
     thisdir = os.path.dirname(os.path.abspath(__file__))
     def add_help(fn:str, title:str) -> None:
         def open_fn(*args) -> None:
