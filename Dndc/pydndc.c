@@ -794,13 +794,13 @@ PyInit_pydndc(void){
         goto fail;
 
     PyModule_AddStringConstant(mod, "__version__",     DNDC_VERSION);
-    SyntaxRegion = PyStructSequence_NewType(&syntax_desc);
+    SyntaxRegion = dndc_PyStructSequence_NewType(&syntax_desc);
     // pydoc basically shits the bed if a class doesn't have a __module__ or a __doc__.
     PyObject_SetAttrString((PyObject*)SyntaxRegion, "__module__", modname);
     if(PyModule_AddObjectRef(mod, "SyntaxRegion", (PyObject*)SyntaxRegion) < 0)
         goto fail;
 
-    Location = PyStructSequence_NewType(&location_desc);
+    Location = dndc_PyStructSequence_NewType(&location_desc);
     // pydoc basically shits the bed if a class doesn't have a __module__ or a __doc__.
     PyObject_SetAttrString((PyObject*)Location, "__module__", modname);
     if(PyModule_AddObjectRef(mod, "Location", (PyObject*)Location) < 0)
@@ -1449,11 +1449,23 @@ pydndc_collect_syntax_tokens(void*_Nullable user_data, int type, int line, int c
     struct CollectData* cd = user_data;
     PyObject* d = cd->dict;
     PyObject* key = PyLong_FromLong(line);
+#if PY_MINOR_VERSION <= 7
+    PyObject* args = Py_BuildValue("llnn",
+        (long)type,
+        (long)col,
+        (Py_ssize_t)(begin - cd->begin),
+        (Py_ssize_t)length
+    );
+    if(!args) return;
+    PyObject* value = PyObject_CallObject( (PyObject*)SyntaxRegion, args);
+    Py_XDECREF(args);
+#else
     PyObject* value = PyStructSequence_New(SyntaxRegion);
     PyStructSequence_SET_ITEM(value, 0, PyLong_FromLong(type));
     PyStructSequence_SET_ITEM(value, 1, PyLong_FromLong(col));
     PyStructSequence_SET_ITEM(value, 2, PyLong_FromSsize_t(begin - cd->begin));
     PyStructSequence_SET_ITEM(value, 3, PyLong_FromSize_t(length));
+#endif
     // PyObject* value = Py_BuildValue("iinn", type, col, (Py_ssize_t)(begin - cd->begin), (Py_ssize_t)length);
     if(!key) goto Lfail;
     if(!value) goto Lfail;
@@ -2737,10 +2749,17 @@ DndcNodePy_get_location(PyObject* s, void*_Nullable p){
     DndcNodeLocation loc;
     int err = dndc_node_location(ctx, self->handle, &loc);
     if(err) return PyErr_Format(PyExc_RuntimeError, "Invalid node");
+#if PY_MINOR_VERSION <= 7
+    PyObject* args = Py_BuildValue("s#ll", loc.filename.text, (Py_ssize_t)loc.filename.length, (long)loc.row, (long)loc.column);
+    if(!args) return NULL;
+    PyObject* result = PyObject_CallObject((PyObject*)Location, args);
+    Py_XDECREF(args);
+#else
     PyObject* result = PyStructSequence_New(Location);
     PyStructSequence_SET_ITEM(result, 0, PyUnicode_FromStringAndSize(loc.filename.text, loc.filename.length)); // steals the newly created ref
     PyStructSequence_SET_ITEM(result, 1, PyLong_FromLong(loc.row));
     PyStructSequence_SET_ITEM(result, 2, PyLong_FromLong(loc.column));
+#endif
 
     return result;
 }

@@ -37,12 +37,60 @@
 #if PY_MAJOR_VERSION < 3
 #error "Only python3 or better is supported"
 #endif
-// Python 3.7 has a bug in PyStructSequence_NewType and isn't worth supporting
-// at this point:
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 6
+#error "Only python 3.6 or better is supported"
+#endif
+
+#if PY_MINOR_VERSION <= 7
+// Python 3.7 has a bug in PyStructSequence_NewType, so just use
+// a namedtuple instead.
 //   https://bugs.python.org/issue28709
-// So, just support 3.8 or better
-#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 8
-#error "Only python 3.8 or better is supported"
+static inline
+PyTypeObject*
+dndc_PyStructSequence_NewType(PyStructSequence_Desc* desc){
+    PyObject* collections = NULL;
+    PyObject* namedtup = NULL;
+    PyObject* fieldnames = NULL;
+    PyObject* args = NULL;
+    PyObject* result = NULL;
+    collections = PyImport_ImportModule("collections");
+    if(!collections) return NULL;
+     namedtup = PyObject_GetAttrString(collections, "namedtuple");
+    if(!namedtup) goto fail;
+    fieldnames = PyList_New(0);
+    if(!fieldnames) goto fail;
+    for(PyStructSequence_Field* field = desc->fields;field->doc; field++){
+        PyObject* fieldname = PyUnicode_FromString(field->name);
+        if(!fieldname) goto fail;
+        int err = PyList_Append(fieldnames, fieldname);
+        Py_XDECREF(fieldname);
+        if(err) goto fail;
+    }
+    args = Py_BuildValue("(sO)", desc->name, fieldnames);
+    if(!args) goto fail;
+    result = PyObject_CallObject(namedtup, args);
+    if(!result) goto fail;
+    assert(PyType_Check(result));
+
+    Py_XDECREF(collections);
+    Py_XDECREF(namedtup);
+    Py_XDECREF(fieldnames);
+    Py_XDECREF(args);
+    return (PyTypeObject*)result;
+
+fail:
+    Py_XDECREF(collections);
+    Py_XDECREF(namedtup);
+    Py_XDECREF(fieldnames);
+    Py_XDECREF(args);
+    return NULL;
+}
+#else
+static inline
+PyTypeObject*
+dndc_PyStructSequence_NewType(PyStructSequence_Desc *desc){
+    return PyStructSequence_NewType(desc);
+}
 #endif
 
 // inspect.py doesn't support native functions having type annotations in the
