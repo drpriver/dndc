@@ -279,5 +279,10 @@ This can be invoked by `make strip` or `make convert`.
 
 </dl>
 
+<h2>Docs</h2>
+Using the makefile, you can generate a dash/zeal docset. Simply do `make
+docset`.
 
 
+Additionally, `make docs` will generate some html files in the
+RenderedDocs folder which you can browse.

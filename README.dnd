@@ -184,6 +184,13 @@ Scripts::deflist
 
     This can be invoked by <code>make strip</code> or <code>make convert</code>.
 
+Docs::md
+  Using the makefile, you can generate a dash/zeal docset. Simply do <code>make
+  docset</code>.
+
+  Additionally, <code>make docs</code> will generate some html files in the
+  RenderedDocs folder which you can browse.
+
 ::comment
   Obtained from https://github.com/sindresorhus/github-markdown-css/blob/main/github-markdown.css
 
