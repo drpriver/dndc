@@ -168,20 +168,15 @@ HEAD='''<!DOCTYPE html>
   box-sizing: border-box;
 }
 html {
-  background-color: #272822;
-  color: #D2D39A;
   height: 100%;
   width: 100%;
 }
-body {
-  height: 100%;
-  width: 100%;
-  display: grid;
-  grid-template-columns: max-content auto;
-  gird-column-gap: 3em;
-  margin: 0;
+body{
+  background-color: #272822 !important;
+  color: #D2D39A;
 }
 .h {
+  font-weight: bold;
   color: #eee;
 }
 .param {
@@ -199,8 +194,82 @@ body {
 .underline {
   color: #888;
 }
+.type {
+  color: #87FFAF;
+}
+.func {
+  color: #FAC185;
+}
+.global {
+  color: #ccc;
+}
+.enum, .anonenum {
+  color: #FFC137;
+}
+.macro {
+  color: #c89ad2;
+}
+.preproc {
+  color: #a89ad2;
+}
 a {
   color: #D2D39A;
+}
+@media (prefers-color-scheme: light) {
+body{
+  background-color: #fff !important;
+  color: #000;
+}
+.h {
+  color: #111;
+}
+.param {
+  color: #28d006;
+}
+.keyword {
+  color: #fa8f16;
+}
+.comment {
+  color: #338;
+}
+.literal {
+  color: #ee5866;
+}
+.underline {
+  color: #888;
+}
+.type {
+  color: #519a4e;
+}
+.func {
+  color: #e67600;
+}
+.global {
+  color: #ccc;
+}
+.enum, .anonenum {
+  color: #191816;
+}
+.macro {
+  color: #000;
+}
+.preproc {
+  color: #777;
+}
+a {
+  color: #D2D39A;
+}
+}
+
+body {
+  height: 100%;
+  width: 100%;
+  display: grid;
+  grid-template-columns: max-content auto;
+  grid-column-gap: 3em;
+  margin: 0;
+}
+a {
   font-family: ui-monospace, "Cascadia Mono", Consolas, mono;
 }
 #toc {
@@ -220,24 +289,6 @@ pre {
   padding-bottom: 80vh;
   padding-top: 2ex;
   padding-left: 2em;
-}
-.type {
-  color: #87FFAF;
-}
-.func {
-  color: #FAC185;
-}
-.global {
-  color: #ccc;
-}
-.enum, .anonenum {
-  color: #FFC137;
-}
-.macro {
-  color: #c89ad2;
-}
-.preproc {
-  color: #a89ad2;
 }
 a.type, a.macro, a.func, a.enum, a.anonenum, a.global, a.literal {
   text-decoration: none;

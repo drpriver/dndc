@@ -253,7 +253,7 @@ dndc_analyze_syntax(DndcStringView source_text,
 //
 // When the function recognizes an entire syntactic region, it will invoke the
 // syntax func on that region. You can do whatever you want with the syntax.
-// This syntax func will never be invoked with DNDC_SYNTAX_NONE. The function
+// This syntax func will never be invoked with `DNDC_SYNTAX_NONE`. The function
 // is not invoked on every single piece of the string - "regular" string nodes
 // and such will not be called on (as implicitly everything is a string node
 // unless otherwise).

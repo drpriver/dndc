@@ -367,14 +367,14 @@ JS Api Documentation::title #hide
     font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
   }
   html {
-    background-color: #272822;
-    color: #D2D39A;
     height: 100%;
     width: 100%;
   }
   body {
     width: 100%;
     height: 100%;
+    background-color: #272822;
+    color: #D2D39A;
     display: grid;
     grid-template-columns: max-content auto;
     grid-column-gap: 4em;

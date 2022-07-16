@@ -136,5 +136,13 @@ cdocs: $(CDOCS) $(DOCDIR)/cdocindex.html
 $(DOCDIR)/cdocindex.html: | $(CDOCS)
 	$(PYTHON) -m Scripts.make_cdoc_index $(DOCDIR)
 
+.PHONY: docset
+docset: dndc.docset
+
+docsetfiles=$(DOCDIR)/Dndc/dndc_ast.h.html $(DOCDIR)/Dndc/dndc.h.html $(DOCDIR)/jsdoc.html
+
+dndc.docset: $(docsetfiles)
+	$(PYTHON) -m Scripts.make_docset $(docsetfiles) -o $@
+
 README.md: README.dnd | $(BINDIR)/dndc$(EXE)
 	$(BINDIR)/dndc$(EXE) $< -o $@ --md --no-css
