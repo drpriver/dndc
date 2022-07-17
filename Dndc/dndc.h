@@ -413,7 +413,7 @@ typedef int DndcDependencyFunc(DNDC_NULLABLE(void*) dependency_user_data,
 // Returns:
 // --------
 // 0 on success and non-zero on failure. The value you return will be returned
-// from dndc_compile_dnd_file if non-zero.
+// from `dndc_compile_dnd_file` if non-zero.
 //
 
 typedef struct DndcFileCache DndcFileCache;
