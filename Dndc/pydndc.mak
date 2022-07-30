@@ -67,7 +67,7 @@ dndedit-wheel: civenv dndeditfolder
 endif
 
 
-.PHONY: ci-upload
+.PHONY: pypi-upload
 pypi-upload: archive-wheels
 	. civenv/bin/activate && python3 -m twine upload wheelhouse/* --verbose
 
