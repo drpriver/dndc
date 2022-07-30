@@ -299,9 +299,12 @@ a.type:hover, a.macro:hover, a.func:hover, a.enum:hover, a.anonenum:hover, a.glo
 </style>
 </head>
 <body>'''
+# NOTE: The DocWriter has to examine the end of all lines in the sourcefile as
+#       clang swallows the \ in multiline macros.
+#       Very annoying!
 class DocWriter:
     backticpat = re.compile(r'`(.+?)`')
-    def __init__(self, idents:Dict[str, Ident], sourcefile:str) -> None:
+    def __init__(self, idents:Dict[str, Ident], sourcefile:str, sourcetext:str) -> None:
         self.name_to_ident = idents
         self.idents = list(idents.values())
         self.lines: List = ['']
@@ -309,9 +312,13 @@ class DocWriter:
         self.sourcefile = sourcefile
         self.include = False
         self.include_buff = []
+        self.sourcelines = sourcetext.split('\n')
 
     def do_token(self, token:cindex.Token) -> None:
         if token.location.line != self.prev[0]:
+            sourceline = self.sourcelines[self.prev[0]-1]
+            if sourceline.rstrip().endswith('\\'):
+                self.lines[-1] += ' \\'
             self.include = False
             for _ in range(max(0, token.location.line-self.prev[0])):
                 self.lines.append('')
@@ -455,9 +462,11 @@ def do_tags(arguments:List[str], source_file:str, compiler:str) -> DocWriter:
 
     for c in tu.cursor.get_children():
         do_cursor(c, source_files, identifiers)
-    writer = DocWriter(identifiers, source_file)
+    with open(source_file) as fp:
+        text = fp.read()
+    writer = DocWriter(identifiers, source_file, text)
     prev = (1, 1)
-    for token in tu.get_tokens(locations=(cindex.SourceLocation.from_offset(tu, tu.get_file(source_file),0), cindex.SourceLocation.from_offset(tu, tu.get_file(source_file), len(open(source_file).read())))):
+    for token in tu.get_tokens(locations=(cindex.SourceLocation.from_offset(tu, tu.get_file(source_file),0), cindex.SourceLocation.from_offset(tu, tu.get_file(source_file), len(text)))):
         writer.do_token(token)
     return writer
 
