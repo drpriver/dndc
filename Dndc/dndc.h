@@ -18,17 +18,17 @@
 #define DNDC_VERSION DNDC_STRINGIFY(DNDC_MAJOR) "." DNDC_STRINGIFY(DNDC_MINOR) "." DNDC_STRINGIFY(DNDC_MICRO)
 
 #define DNDC_MAJOR 0
-#define DNDC_MINOR 24
+#define DNDC_MINOR 25
 #define DNDC_MICRO 0
 #define DNDC_STRINGIFY_IMPL(x) #x
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
 
-#define DNDC_INT_VERSION(major, minor, micro) ((major) << 20 | (minor) << 10 | (micro))
+#define DNDC_INT_VERSION(major, minor, micro) (1000000*(major) + 1000*(minor) + (micro))
 // ----------------
 // The version as a single number. Comparable.
-// 11 bits for major
-// 10 bits for minor
-// 10 bits for micro
+// many digits for major
+// 3 digits for minor
+// 3 digits for micro
 
 enum {DNDC_NUMERIC_VERSION = DNDC_INT_VERSION(DNDC_MAJOR, DNDC_MINOR, DNDC_MICRO)};
 
@@ -385,37 +385,6 @@ dndc_stderr_log_func(DNDC_NULLABLE(void*) log_user_data,
 // `dndc_compile_dnd_file`.
 //
 
-typedef int DndcDependencyFunc(DNDC_NULLABLE(void*) dependency_user_data,
-        size_t dependency_paths_count,
-        DndcStringView* dependency_paths);
-// ------------------
-//
-// A function type for reporting dependencies. For use with
-// `dndc_compile_dnd_file`.
-//
-// Arguments:
-// ----------
-// dependency_user_data:
-//    A pointer to user-defined data. The pointer will be the same one provided
-//    to `dndc_compile_dnd_file`.
-//
-// dependency_paths_count:
-//    The length of the array dependency_paths points to.
-//
-// dependency_paths:
-//    A pointer to an array of string views of the paths to the files that the
-//    file depends on. Note these are string views and so not guaranteed to be
-//    nul-terminated. Files that were loaded in the usual way will have the
-//    base dir prepended, but javascript blocks can introduce arbitrary strings
-//    as dependencies, which may or may not be absolute paths, or valid paths
-//    at all.
-//
-// Returns:
-// --------
-// 0 on success and non-zero on failure. The value you return will be returned
-// from `dndc_compile_dnd_file` if non-zero.
-//
-
 typedef struct DndcFileCache DndcFileCache;
 // -------------
 // A cache for storing files across repeated invocations.
@@ -686,8 +655,6 @@ dndc_compile_dnd_file(
   DNDC_NULLABLE(DndcFileCache*) textcache,
   DNDC_NULLABLE(DndcLogFunc*) log_func,
   DNDC_NULLABLE(void*) log_user_data,
-  DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
-  DNDC_NULLABLE(void*) dependency_user_data,
   DNDC_NULLABLE(DndcWorkerThread*) worker_thread,
   DndcLongString jsargs
 );
@@ -829,8 +796,6 @@ dndc_expand_to_dnd(
   DNDC_NULLABLE(DndcFileCache*) textcache,
   DNDC_NULLABLE(DndcLogFunc*) log_func,
   DNDC_NULLABLE(void*) log_user_data,
-  DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
-  DNDC_NULLABLE(void*) dependency_user_data,
   DndcLongString jsargs
 );
 // ---------------------
@@ -881,13 +846,6 @@ dndc_expand_to_dnd(
 //    `dndc_stderr_log_func`, this should be NULL. For a function you've
 //    defined, pass an appropriate pointer!
 //
-// dependency_func:
-//    A function for reporting the dependencies of the generated file. See
-//    `DndcDependencyFunc` above.
-//
-// dependency_user_data:
-//   A pointer that will be passed to the dependency_func.
-//
 // jsargs:
 //   A json string literal that will be available to JS blocks as Args. May be
 //   the empty string. Should be an object literal or an array literal. An
@@ -909,8 +867,6 @@ dndc_expand_to_md(
   DNDC_NULLABLE(DndcFileCache*) textcache,
   DNDC_NULLABLE(DndcLogFunc*) log_func,
   DNDC_NULLABLE(void*) log_user_data,
-  DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
-  DNDC_NULLABLE(void*) dependency_user_data,
   DndcLongString jsargs
 );
 // ---------------------

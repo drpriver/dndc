@@ -1242,6 +1242,75 @@ dndc_ctx_add_link(DndcContext* ctx, DndcStringView k, DndcStringView v);
 // Adds an explicit link to the link table.
 
 DNDC_API
+size_t
+dndc_ctx_get_dependencies(DndcContext*, DndcStringView* buff, size_t bufflen, size_t* cookie);
+// ---------------------
+// Copies the filepaths that are the files the context depends on into a buffer.
+// This always you to do things like watch these files and re-create and
+// recalculate the outputted html whenever those files change.
+//
+// Arguments:
+// ----------
+// ctx:
+//      The parsing context.
+// buff:
+//      The buffer to copy the paths into.
+// bufflen:
+//      How long the buffer is (in items).
+// cookie:
+//      A pointer to an opaque value used for remembering where in the
+//      dependencies this function is. Initialize the cookie to 0 before
+//      calling this function.
+//
+// Returns:
+// --------
+// The number of items copied into buff. If 0 is returned, no items were copied
+// into buff and there are no more items to copy.
+//
+// Example:
+// --------
+#ifdef DNDC_AST_EXAMPLE
+// This example writes a make-style dependency file, which is the de-facto
+// standard format used by most tools.
+void
+write_mk_escaped_char(char c, FILE* fp){
+    // some characters need to be escaped in makefiles
+    // Not all paths can be represented properly in a makefile.
+    switch(c){
+        case ' ': case '#':
+            fputc('\\', fp);
+            break;
+        case '$':
+            fputc('$', fp);
+            break;
+        default: break;
+    }
+    fputc(c, fp);
+}
+void
+write_dependencies(DndcContext* ctx, FILE* fp, const char* targetname){
+    for(const char* p = targetname; *p; p++)
+        write_mk_escaped_char(*p, fp);
+    fputc(':', fp);
+    size_t cookie = 0;
+    size_t n;
+    enum {bufflen=32};
+    DndcStringView buff[bufflen];
+    while((n=dndc_ctx_get_dependencies(ctx, buff, bufflen, &cookie))){
+        for(size_t i = 0; i < n; i++){
+            DndcStringView sv = buff[i];
+            fputc(' ', fp);
+            for(size_t j = 0; j < sv.length; j++)
+                write_mk_escaped_char(sv.text[j], fp);
+        }
+    }
+    fputc('\n', fp);
+}
+
+#endif
+
+
+DNDC_API
 int
 dndc_kebab(DndcStringView sv, char* buff, size_t bufflen, size_t* used);
 // ------------------

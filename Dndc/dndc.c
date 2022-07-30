@@ -306,6 +306,9 @@ execute_user_scripts_and_load_images(DndcContext* ctx, WorkerThread*_Nullable wo
     return result;
 }
 
+// This function is an optimization - you could recreate it using the public
+// ast API, but this gives the optimizer a better chance for optimizations like
+// de-virtualization of the allocator.
 static
 int
 run_the_dndc(
@@ -1908,8 +1911,6 @@ dndc_compile_dnd_file(
     DNDC_NULLABLE(DndcFileCache*) textcache,
     DNDC_NULLABLE(DndcLogFunc*) log_func,
     DNDC_NULLABLE(void*) log_user_data,
-    DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
-    DNDC_NULLABLE(void*) dependency_user_data,
     DNDC_NULLABLE(DndcWorkerThread*) worker_thread,
     DndcLongString jsargs
 ){
@@ -1939,7 +1940,7 @@ dndc_compile_dnd_file(
         return DNDC_ERROR_VALUE;
     if(!outstring)
         return DNDC_ERROR_VALUE;
-    int err = run_the_dndc(OUTPUT_HTML, flags, base_directory, source_text, source_path, outstring, base64cache, textcache, log_func, log_user_data, dependency_func, dependency_user_data, NULL, NULL, (WorkerThread*)worker_thread, jsargs);
+    int err = run_the_dndc(OUTPUT_HTML, flags, base_directory, source_text, source_path, outstring, base64cache, textcache, log_func, log_user_data, NULL, NULL, NULL, NULL, (WorkerThread*)worker_thread, jsargs);
     return err;
 }
 
@@ -1954,8 +1955,6 @@ dndc_expand_to_dnd(
   DNDC_NULLABLE(DndcFileCache*) textcache,
   DNDC_NULLABLE(DndcLogFunc*) log_func,
   DNDC_NULLABLE(void*) log_user_data,
-  DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
-  DNDC_NULLABLE(void*) dependency_user_data,
   DndcLongString jsargs
 ){
     enum {
@@ -1983,7 +1982,7 @@ dndc_expand_to_dnd(
         return DNDC_ERROR_VALUE;
     if(!outstring)
         return DNDC_ERROR_VALUE;
-    int err = run_the_dndc(OUTPUT_EXPAND, flags, base_directory, source_text, source_path, outstring, NULL, textcache, log_func, log_user_data, dependency_func, dependency_user_data, NULL, NULL, NULL, jsargs);
+    int err = run_the_dndc(OUTPUT_EXPAND, flags, base_directory, source_text, source_path, outstring, NULL, textcache, log_func, log_user_data, NULL, NULL, NULL, NULL, NULL, jsargs);
     return err;
 }
 
@@ -1998,8 +1997,6 @@ dndc_expand_to_md(
   DNDC_NULLABLE(DndcFileCache*) textcache,
   DNDC_NULLABLE(DndcLogFunc*) log_func,
   DNDC_NULLABLE(void*) log_user_data,
-  DNDC_NULLABLE(DndcDependencyFunc*) dependency_func,
-  DNDC_NULLABLE(void*) dependency_user_data,
   DndcLongString jsargs
 ){
     enum {
@@ -2027,7 +2024,7 @@ dndc_expand_to_md(
         return DNDC_ERROR_VALUE;
     if(!outstring)
         return DNDC_ERROR_VALUE;
-    int err = run_the_dndc(OUTPUT_MD, flags, base_directory, source_text, source_path, outstring, NULL, textcache, log_func, log_user_data, dependency_func, dependency_user_data, NULL, NULL, NULL, jsargs);
+    int err = run_the_dndc(OUTPUT_MD, flags, base_directory, source_text, source_path, outstring, NULL, textcache, log_func, log_user_data, NULL, NULL, NULL, NULL, NULL, jsargs);
     return err;
 }
 
@@ -3292,6 +3289,19 @@ dndc_ctx_to_json(DndcContext* ctx, DndcLongString*out){
     ctx_to_json(ctx, &sb);
     *out = msb_detach_ls(&sb);
     return 0;
+}
+
+DNDC_API
+size_t
+dndc_ctx_get_dependencies(DndcContext* ctx, DndcStringView* buff, size_t bufflen, size_t* cookie){
+    size_t idx = *cookie;
+    if(idx >= ctx->dependencies.count)
+        return 0;
+    size_t nremain = ctx->dependencies.count - idx;
+    size_t nwrit = nremain > bufflen? bufflen : nremain;
+    memcpy(buff, ctx->dependencies.data+idx, nwrit*sizeof(*ctx->dependencies.data));
+    *cookie += nwrit;
+    return nwrit;
 }
 
 DNDC_API

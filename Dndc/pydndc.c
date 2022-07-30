@@ -1115,20 +1115,6 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
 }
 
 static
-int
-pydndc_add_dependencies(void*_Nullable user_data, size_t npaths, StringView* paths){
-    PyObject* set = user_data;
-    for(size_t i = 0; i < npaths; i++){
-        StringView path = paths[i];
-        PyObject* str = PyUnicode_FromStringAndSize(path.text, path.length);
-        int fail = PySet_Add(set, str);
-        Py_XDECREF(str);
-        if(fail) return 1;
-    }
-    return 0;
-}
-
-static
 PyObject*_Nullable
 pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     (void)mod;
@@ -1138,7 +1124,6 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     PyObject* file_cache = NULL;
     PyObject* jsargs = NULL;
     PyObject* filename = NULL;
-    PyObject* deps = NULL;
     unsigned long long flags = 0;
     _Static_assert(sizeof(flags) == sizeof(uint64_t), "");
     enum {WHITELIST = 0
@@ -1154,10 +1139,10 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_NO_CSS
     };
-    const char* const keywords[] = {"text", "base_dir", "filename", "logger", "file_cache", "flags", "jsargs", "deps", NULL};
+    const char* const keywords[] = {"text", "base_dir", "filename", "logger", "file_cache", "flags", "jsargs", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O!OOKOO!:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &logger, &file_cache, &flags, &jsargs, &PySet_Type, &deps)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O!OOKO:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &logger, &file_cache, &flags, &jsargs)){
         return NULL;
     }
     PopDiagnostic();
@@ -1206,7 +1191,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         b64cache = cache->b64_cache;
     }
     StringView source_path = filename?pystring_borrow_stringview(filename): SV("(string input)");
-    int e = dndc_compile_dnd_file(flags, base_str, source, source_path, &output, b64cache, textcache, func, error_list, deps?pydndc_add_dependencies:NULL, deps, NULL, jsargs_ls);
+    int e = dndc_compile_dnd_file(flags, base_str, source, source_path, &output, b64cache, textcache, func, error_list, NULL, jsargs_ls);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
@@ -1305,7 +1290,7 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         DndcPyFileCache* cache = (DndcPyFileCache*)file_cache;
         textcache = cache->text_cache;
     }
-    int e = dndc_expand_to_dnd(flags, base_str, source, SV(""), &output, textcache, func, error_list, NULL, NULL, jsargs_ls);
+    int e = dndc_expand_to_dnd(flags, base_str, source, SV(""), &output, textcache, func, error_list, jsargs_ls);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
@@ -1406,7 +1391,7 @@ pydndc_md(PyObject* mod, PyObject* args, PyObject* kwargs){
         DndcPyFileCache* cache = (DndcPyFileCache*)file_cache;
         textcache = cache->text_cache;
     }
-    int e = dndc_expand_to_md(flags, base_str, source, SV(""), &output, textcache, func, error_list, NULL, NULL, jsargs_ls);
+    int e = dndc_expand_to_md(flags, base_str, source, SV(""), &output, textcache, func, error_list, jsargs_ls);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
@@ -2317,10 +2302,39 @@ DndcContextPy_set_base(PyObject* s, PyObject*_Nullable args, void*_Nullable p){
     return 0;
 }
 
+static
+PyObject*_Nullable
+DndcContextPy_get_dependencies(PyObject* s, void*_Nullable p){
+    (void)p;
+    DndcContextPy* self = (DndcContextPy*)s;
+    DndcStringView deps[64];
+    size_t cookie = 0;
+    PyObject* result = PyFrozenSet_New(NULL);
+    if(!result) goto fail;
+    size_t ndeps = 0;
+    while((ndeps = dndc_ctx_get_dependencies(self->ctx, deps, arrlen(deps), &cookie))){
+        for(size_t i = 0; i < ndeps; i++){
+            DndcStringView* d = &deps[i];
+            if(!d->length) continue;
+            PyObject* s = PyUnicode_FromStringAndSize(d->text, d->length);
+            if(!s) goto fail;
+            int err = PySet_Add(result, s);
+            Py_DECREF(s);
+            if(err) goto fail;
+        }
+    }
+    return result;
+
+    fail:
+    Py_XDECREF(result);
+    return NULL;
+}
+
 
 static PyGetSetDef DndcContextPy_getset[] = {
     {"root", DndcContextPy_get_root, DndcContextPy_set_root, "The root node of the tree (may be None).", NULL},
     {"base_dir", DndcContextPy_get_base, DndcContextPy_set_base, "Files are imported relative to this path (may be empty string which means .)", NULL},
+    {"dependencies", DndcContextPy_get_dependencies, NULL, "Files that this context depends on (either by loading the file or by explicitly marking them). Use this to populate Make-style dependency filess, etc.", NULL},
     {0} // Sentinel
 };
 

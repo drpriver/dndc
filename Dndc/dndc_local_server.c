@@ -178,7 +178,7 @@ compile_file(const DndLogger* logger, LongString directory, uint64_t flags, Stri
     }
     StringView filename = {.length=path.length-(p-path.text), .text=p};
     LongString result = {0};
-    *error = dndc_compile_dnd_file(flags, base, LS_to_SV(text), filename, &result, NULL, NULL, logger->func, logger->p, NULL, NULL, NULL, LS(""));
+    *error = dndc_compile_dnd_file(flags, base, LS_to_SV(text), filename, &result, NULL, NULL, logger->func, logger->p, NULL, LS(""));
     return result;
 }
 

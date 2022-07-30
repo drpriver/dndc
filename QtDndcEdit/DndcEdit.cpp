@@ -42,6 +42,13 @@ QTextStream* LOGSTREAM;
 struct CtxWrapper {
     DndcContext* ctx;
     ~CtxWrapper(){ if(ctx) dndc_ctx_destroy(ctx); }
+    static CtxWrapper
+    create(
+        unsigned long long flags = 0,
+        DndcFileCache* b64  = nullptr,
+        DndcFileCache* text = nullptr){
+        return {dndc_create_ctx(flags, b64, text)};
+    }
 };
 
 void
@@ -1271,19 +1278,6 @@ Page::scroll_selection_into_view(void){
 }
 
 void
-Page::add_dependencies(size_t count, DndcStringView* paths){
-    QSet<QString> new_deps;
-    for(size_t i = 0; i < count; i++){
-        auto sv = paths[i];
-        QString str = QString::fromUtf8(sv.text, sv.length);
-        if(!dependencies.contains(str)){
-            watcher->addPath(str);
-        }
-        new_deps.insert(std::move(str));
-    }
-    dependencies = std::move(new_deps);
-}
-void
 Page::set_scroll_pos(QString&& x){
     // This whole set up is kind of janksville.
     // qDebug() << "Set scroll pos\n";;
@@ -1322,36 +1316,49 @@ Page::set_scroll_pos(QString&& x){
 
             page->display_dndc_error(type, QString::fromUtf8(filename, filename_len), line, col, QString::fromUtf8(message, message_len));
         };
-    DndcDependencyFunc* depfunc = [](
-            void* user_data,
-            size_t count,
-            DndcStringView* paths
-        )->int {
-            auto page = (Page*)user_data;
-            page->add_dependencies(count, paths);
-            return 0;
-        };
+    CtxWrapper ctx = CtxWrapper::create(flags, b64cache, textcache);
+    dndc_ctx_set_logger(ctx.ctx, errfunc, this);
+    dndc_ctx_set_base(ctx.ctx, basedir);
+    DndcNodeHandle root = dndc_ctx_make_root(ctx.ctx, srcpath);
+    int err = 0;
+    err = dndc_ctx_parse_string(ctx.ctx, root, srcpath, textsv);
+    if(err) return;
+    err = dndc_ctx_resolve_imports(ctx.ctx);
+    if(err) return;
+    err = dndc_ctx_execute_js(ctx.ctx, {0, ""});
+    if(err) return;
+    err = dndc_ctx_resolve_links(ctx.ctx);
+    if(err) return;
+    err = dndc_ctx_build_toc(ctx.ctx);
+    if(err) return;
+    err = dndc_ctx_render_to_html(ctx.ctx, &outstring);
+    if(err) return;
 
-    int err = dndc_compile_dnd_file(
-            flags,
-            basedir,
-            textsv,
-            srcpath,
-            &outstring,
-            b64cache, textcache,
-            errfunc, this,
-            depfunc, this,
-            dndc_worker,
-            {0, ""});
-    // qDebug() << "err:" << err;
-    if(err) {
-        return;
+    {
+        QSet<QString> new_deps;
+        constexpr size_t deplen = 64;
+        DndcStringView deps[deplen];
+        size_t n = 0;
+        size_t cookie = 0;
+        while((n=dndc_ctx_get_dependencies(ctx.ctx, deps, deplen, &cookie))){
+            for(size_t i = 0; i < n; i++){
+                auto dep = deps[i];
+                QString str = QString::fromUtf8(dep.text, dep.length);
+                if(!dependencies.contains(str))
+                    watcher->addPath(str);
+                new_deps.insert(std::move(str));
+            }
+        }
+        dependencies = std::move(new_deps);
     }
+
+    // qDebug() << "err:" << err;
     auto url = QUrl(QS("https://") + APPHOST + QS("/") + filename);
     // qDebug() << "url: " << url;
     webpage->setHtml(QString::fromUtf8(outstring.text, outstring.length), url);
     dndc_free_string(outstring);
-    }
+}
+
 void
 Page::format(void){
     auto text = get_text_for_preview();
@@ -1379,7 +1386,6 @@ Page::format(void){
             &outstring,
             nullptr,
             errfunc, this,
-            nullptr, nullptr,
             {0, ""});
     if(err) return;
     textedit->setPlainText(QString::fromUtf8(outstring.text, outstring.length));
@@ -1515,7 +1521,6 @@ Page::export_as_html(void){
             &outstring,
             b64cache, textcache,
             errfunc, this,
-            nullptr, nullptr,
             dndc_worker, {0, ""});
     if(err) {
         QMessageBox mbox;

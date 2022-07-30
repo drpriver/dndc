@@ -275,9 +275,11 @@ class TestFileCache(TestCase):
             "  " + __file__
         )
         cache = pydndc.FileCache()
-        deps = set()
-        _ = pydndc.htmlgen(input, file_cache=cache, deps=deps)
-        deps = list(deps)
+        ctx = pydndc.Context(filecache=cache)
+        ctx.root.parse(input)
+        ctx.logger = pydndc.stderr_logger
+        _  = ctx.render()
+        deps = list(ctx.dependencies)
         self.assertListEqual(deps, [__file__])
         self.assertListEqual(cache.paths(), [__file__])
     def test_store(self) -> None:

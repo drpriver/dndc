@@ -27,7 +27,7 @@ extension = Extension(
 # Fields marked as 'Optional' may be commented out.
 setup(
     name='pydndc',  # Required
-    version='0.24.0',  # Required
+    version='0.25.0',  # Required
     license='Proprietary',
     description='dndc, but from python',  # Optional
     # url='https://github.com/pypa/sampleproject',  # Optional

@@ -55,6 +55,48 @@ struct Attribute {
 #define RARRAY_T Attribute
 #include "Utils/Rarray.h"
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
+// In the pre-alpha, this was in the public API. It's still
+// used in a few internal spots.
+// dndc_cli uses it.
+typedef int DndcDependencyFunc(DNDC_NULLABLE(void*) dependency_user_data,
+        size_t dependency_paths_count,
+        DndcStringView* dependency_paths);
+// ------------------
+//
+// A function type for reporting dependencies. For use with
+// `run_the_dndc`.
+//
+// Arguments:
+// ----------
+// dependency_user_data:
+//    A pointer to user-defined data. The pointer will be the same one provided
+//    to `dndc_compile_dnd_file`.
+//
+// dependency_paths_count:
+//    The length of the array dependency_paths points to.
+//
+// dependency_paths:
+//    A pointer to an array of string views of the paths to the files that the
+//    file depends on. Note these are string views and so not guaranteed to be
+//    nul-terminated. Files that were loaded in the usual way will have the
+//    base dir prepended, but javascript blocks can introduce arbitrary strings
+//    as dependencies, which may or may not be absolute paths, or valid paths
+//    at all.
+//
+// Returns:
+// --------
+// 0 on success and non-zero on failure. The value you return will be returned
+// from `dndc_compile_dnd_file` if non-zero.
+//
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
+
+
 //
 // NodeHandle
 // ----------

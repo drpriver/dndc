@@ -142,7 +142,7 @@ class Context:
     def __new__(cls, flags:Flags=Flags.NONE, filename:str=None, filecache:FileCache=None) -> Context:
         ...
     # This is wrong, it defines __new__ instead, but whatever
-    # Autocomplete doesn't work withoout this.
+    # Autocomplete doesn't work without this.
     def __init__(cls, flags:Flags=Flags.NONE, filename:str=None, filecache:FileCache=None) -> Context:
         ...
     errors: List[str]
@@ -150,6 +150,7 @@ class Context:
     root: Node
     base_dir: str
     logger: Optional[Logger]
+    dependencies: Set[str]
 
     def node_from_int(self, handle:int) -> Node:
         ...

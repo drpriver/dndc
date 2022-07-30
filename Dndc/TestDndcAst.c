@@ -64,7 +64,7 @@ TestFunction(TestAstExample){
         TestAssertSuccess(data);
         {
             int e;
-            e = dndc_compile_dnd_file(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &dnd_output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, LS(""));
+            e = dndc_compile_dnd_file(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &dnd_output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, LS(""));
             if(e){
                 TestPrintValue("dndc_compile_dnd failed, example:", examples[i]);
                 TestPrintValue("Base dir:", base_dirs[i]);

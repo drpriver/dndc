@@ -1010,21 +1010,23 @@ class Page(QSplitter):
         self.clear_errors()
         before_paths = set(FILE_CACHE.paths())
         Flags = pydndc.Flags
+        flags = Flags.USE_DND_URL_SCHEME
+        if PRINT_STATS:
+            flags |= Flags.PRINT_STATS
+        flags |= Flags.DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+        ctx = pydndc.Context(flags=flags, filename=self.filename, filecache=FILE_CACHE)
+        ctx.logger = self.display_dndc_error
+        ctx.base_dir = self.dirname
         try:
-            flags = Flags.USE_DND_URL_SCHEME
-            if PRINT_STATS:
-                flags |= Flags.PRINT_STATS
-            flags |= Flags.DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
-            depends = set()
-            html = pydndc.htmlgen(
-                self.get_text_for_preview(),
-                base_dir=self.dirname,
-                logger=self.display_dndc_error,
-                file_cache=FILE_CACHE,
-                flags=flags,
-                deps=depends,
-            )
+            ctx.root.parse(self.get_text_for_preview())
+            ctx.resolve_imports()
+            ctx.execute_js()
+            ctx.resolve_links()
+            ctx.build_toc()
+            html = ctx.render()
         except ValueError:
+            # I am not sure if this comment is still valid.
+
             # On error, the file cache can have loaded things, but we don't get those
             # dependencies.
             before = time.time()
@@ -1035,6 +1037,9 @@ class Page(QSplitter):
             after = time.time()
             # print(f'addPaths: {(after-before)*1000:.3f}ms')
             return
+        depends = ctx.dependencies
+        del ctx
+
         # t1 = time.time()
         BACKSLASH = '\\'
         u = QUrl(f'https://{APPHOST}/{self.filename.replace(BACKSLASH, "/")}')
