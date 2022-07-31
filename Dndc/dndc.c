@@ -2780,6 +2780,20 @@ dndc_node_append_child(DndcContext* ctx, DndcNodeHandle parent_, DndcNodeHandle 
 
 DNDC_API
 int
+dndc_node_append_string(DndcContext* ctx, DndcNodeHandle parent_, DndcStringView sv){
+    NodeHandle parent = check_api_handle(ctx, parent_);
+    if(NodeHandle_eq(parent, INVALID_NODE_HANDLE))
+        return DNDC_ERROR_VALUE;
+    NodeHandle child = alloc_handle(ctx);
+    Node* node = get_node(ctx, child);
+    node->type = NODE_STRING;
+    node->header = sv;
+    append_child(ctx, parent, child);
+    return 0;
+}
+
+DNDC_API
+int
 dndc_node_insert_child(DndcContext* ctx, DndcNodeHandle parent_, size_t i, DndcNodeHandle child_){
     NodeHandle child = check_api_handle(ctx, child_);
     NodeHandle parent = check_api_handle(ctx, parent_);
@@ -2794,6 +2808,19 @@ dndc_node_insert_child(DndcContext* ctx, DndcNodeHandle parent_, size_t i, DndcN
     return 0;
 }
 
+DNDC_API
+int
+dndc_node_insert_string(DndcContext* ctx, DndcNodeHandle parent_, size_t i, DndcStringView sv){
+    NodeHandle parent = check_api_handle(ctx, parent_);
+    if(NodeHandle_eq(parent, INVALID_NODE_HANDLE))
+        return DNDC_ERROR_VALUE;
+    NodeHandle child = alloc_handle(ctx);
+    Node* node = get_node(ctx, child);
+    node->type = NODE_STRING;
+    node->header = sv;
+    node_insert_child(ctx, parent, i, child);
+    return 0;
+}
 DNDC_API
 int
 dndc_node_remove_child(DndcContext* ctx, DndcNodeHandle parent_, size_t i){

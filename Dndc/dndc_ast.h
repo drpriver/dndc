@@ -408,6 +408,36 @@ dndc_node_append_child(DndcContext* ctx, DndcNodeHandle parent, DndcNodeHandle c
 // --------
 // Returns 0 on success, a non-zero error code otherwise.
 //
+//
+
+DNDC_API
+int
+dndc_node_append_string(DndcContext* ctx, DndcNodeHandle parent, DndcStringView sv);
+// ----------------------
+// Creates a string node with the given string and immediately appends that new
+// node as a child to parent.
+//
+// This is a convenience function, to spare creating a node, setting its header
+// and appending it.
+//
+// Arguments:
+// ----------
+// ctx:
+//     The parsing context.
+//
+// parent:
+//     The (valid) node to append to.
+//
+// sv:
+//     The string to set as the header of the new STRING node.
+//
+//     NOTE: the string view needs to live as long as the node or ctx. Call
+//     `dndc_ctx_dup_sv` if that cannot be guaranteed.
+//
+// Returns:
+// --------
+// Returns 0 on success, a non-zero error code otherwise.
+//
 
 DNDC_API
 int
@@ -433,6 +463,40 @@ dndc_node_insert_child(DndcContext* ctx, DndcNodeHandle parent, size_t i, DndcNo
 //     be an orphan (no parent node) and must not be equal to the parent.
 //
 //     Call `dndc_node_detach` to make a node an orphan.
+//
+// Returns:
+// --------
+// Returns 0 on success, a non-zero error code otherwise.
+//
+
+DNDC_API
+int
+dndc_node_insert_string(DndcContext* ctx, DndcNodeHandle parent, size_t i, DndcStringView sv);
+// ---------------------
+// Creates a new STRING node, with the header set to `sv`. Inserts the new node
+// as the `i`th child of the parent.
+//
+// This is a convenience function, to spare creating a node, setting its header
+// and inserting it.
+//
+// Arguments:
+// ----------
+// ctx:
+//     The parsing context.
+//
+// parent:
+//     The (valid) node to insert into.
+//
+// i:
+//     The index to insert the child at. If this is greater than the number of
+//     nodes that are children of the parent, then the child is inserted at the
+//     end, making this function like `dndc_node_append_child` instead.
+//
+// sv:
+//     The string to set as the header of the new STRING node.
+//
+//     NOTE: the string view needs to live as long as the node or ctx. Call
+//     `dndc_ctx_dup_sv` if that cannot be guaranteed.
 //
 // Returns:
 // --------
@@ -675,8 +739,11 @@ dndc_node_set_header(DndcContext*, DndcNodeHandle, DndcStringView);
 // --------------------
 // Sets the "header" associated with a node. Note that for a STRING node this
 // is actually that node's value. For most nodes, this is the heading that will
-// be generated at the start of that content in the html. For some ndoes this
+// be generated at the start of that content in the html. For some nodes this
 // is ignored.
+//
+// NOTE: the string view needs to live as long as the node or ctx. Call
+// `dndc_ctx_dup_sv` if that cannot be guaranteed.
 //
 // Returns 0 on success and non-zero on error.
 //
