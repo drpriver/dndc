@@ -143,7 +143,7 @@ class Context:
         ...
     # This is wrong, it defines __new__ instead, but whatever
     # Autocomplete doesn't work without this.
-    def __init__(cls, flags:Flags=Flags.NONE, filename:str=None, filecache:FileCache=None) -> Context:
+    def __init__(cls, flags:Flags=Flags.NONE, filename:str=None, filecache:FileCache=None) -> None:
         ...
     errors: List[str]
     filename: Optional[str]
