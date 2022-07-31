@@ -398,7 +398,6 @@ run_the_dndc(
         Marray_push(StringView)(&ctx.filenames, main_allocator(&ctx), source_path);
         root->filename_idx = ctx.filenames.count-1;
         root->type = NODE_MD;
-        root->parent = root_handle;
     }
     // Parse the initial document.
     {
@@ -2288,7 +2287,6 @@ dndc_ctx_make_root(DndcContext* ctx, DndcStringView filename){
     int copy_it = 1;
     root->filename_idx = ctx_add_filename(ctx, filename, copy_it);
     root->type = NODE_MD;
-    root->parent = root_handle;
     return root_handle._value;
 }
 
@@ -2300,14 +2298,18 @@ dndc_ctx_get_root(DndcContext* ctx){
 
 DNDC_API
 int
-dndc_ctx_set_root(DndcContext* ctx, DndcNodeHandle handle){
-    if(handle != DNDC_NODE_HANDLE_INVALID && handle >= ctx->nodes.count) return DNDC_ERROR_VALUE;
+dndc_ctx_set_root(DndcContext* ctx, DndcNodeHandle dnh){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return DNDC_ERROR_VALUE;
     if(!NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)){
         Node* root = get_node(ctx, ctx->root_handle);
         root->parent = INVALID_NODE_HANDLE;
     }
-    // FIXME: should fail if this node is not an orphan.
-    ctx->root_handle._value = handle;
+    Node* node = get_node(ctx, handle);
+    if(!NodeHandle_eq(node->parent, INVALID_NODE_HANDLE))
+        return DNDC_ERROR_VALUE;
+    ctx->root_handle = handle;
     return 0;
 }
 

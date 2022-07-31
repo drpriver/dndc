@@ -2148,6 +2148,9 @@ js_dndc_context_set_root(QJSContext* jsctx, QJSValueConst thisValue, QJSValueCon
         return QJS_EXCEPTION;
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return QJS_NULL;
+    Node* n = get_node(ctx, handle);
+    if(!NodeHandle_eq(n->parent, INVALID_NODE_HANDLE))
+        return QJS_ThrowTypeError(jsctx, "Node must be an orphan to be root");
     ctx->root_handle = handle;
     return QJS_UNDEFINED;
 }
