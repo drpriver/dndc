@@ -152,7 +152,7 @@ TextFileResult
 read_relative_file_with_suffix_conversion(LongString directory, StringView path, StringView suffix){
     char buff[1024];
     snprintf(buff, sizeof buff, "%s/%.*s%.*s", directory.text, (int)path.length, path.text, (int)suffix.length, suffix.text);
-    return read_file(buff, get_mallocator());
+    return read_file(buff, MALLOCATOR);
 }
 
 static
@@ -455,7 +455,7 @@ static
 int
 handle_request(DndLogger* logger, uint64_t flags, LongString directory, SOCKET accsd, LongString request){
     // just assume everything is a GET, lol.
-    MStringBuilder urlsb = {.allocator=get_mallocator()};
+    MStringBuilder urlsb = {.allocator=MALLOCATOR};
     StringView path = SV("index.dnd");
     StringView suffix = SV("");
     if(request.length > 6){

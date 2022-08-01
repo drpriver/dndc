@@ -484,14 +484,14 @@ choose_open_file(HWND textedit){
                     BOOL read_success = ReadFile(handle, text, size.QuadPart*sizeof(*text), &nread, NULL);
                     if(read_success){
                         text[size.QuadPart] = '\0';
-                        auto ws = utf8_to_wstring(get_mallocator(), text);
+                        auto ws = utf8_to_wstring(MALLOCATOR, text);
                         if(ws.text)
                             SetWindowTextW(textedit, ws.text);
                         else
                             SetWindowTextW(textedit, L"\0");
                         static_assert(sizeof(filepath) == sizeof(filestr));
                         memcpy(filepath, filestr, sizeof(filestr));
-                        Allocator_free(get_mallocator(), ws.text, ws.length);
+                        Allocator_free(MALLOCATOR, ws.text, ws.length);
                     }
                 }
                 free(text);

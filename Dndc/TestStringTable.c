@@ -7,7 +7,7 @@
 
 TestFunction(TestStringTable){
     TESTBEGIN();
-    StringTable table = {.allocator = get_mallocator()};
+    StringTable table = {.allocator = MALLOCATOR};
     string_table_set(&table, SV("hello"), SV("world"));
     {
         const StringView* v = string_table_get(&table, SV("hello"));

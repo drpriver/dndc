@@ -1,6 +1,7 @@
 //
 // Copyright © 2021-2022, David Priver
 //
+#define USE_RECORDED_ALLOCATOR
 #include <stdint.h>
 #include "long_string.h"
 #include "testing.h"

@@ -12,7 +12,7 @@
 #include "string_table.h"
 #include "Allocators/allocator.h"
 #include "Allocators/arena_allocator.h"
-#include "Allocators/linear_allocator.h"
+// #include "Allocators/linear_allocator.h"
 #include "Utils/long_string.h"
 
 //
@@ -287,7 +287,7 @@ struct DndcContext {
     // Allocator for strings (strings are almost never freed)
     ArenaAllocator string_arena;
     // Allocator for scratch allocations
-    LinearAllocator temp;
+    ArenaAllocator temp;
 
     // current parsing location
     struct {
@@ -371,7 +371,7 @@ string_allocator(DndcContext* ctx){
 static inline force_inline
 Allocator
 temp_allocator(DndcContext* ctx){
-    return allocator_from_la(&ctx->temp);
+    return allocator_from_arena(&ctx->temp);
 }
 
 static inline

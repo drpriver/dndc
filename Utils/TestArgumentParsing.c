@@ -1,6 +1,7 @@
 //
 // Copyright © 2021-2022, David Priver
 //
+#define USE_RECORDED_ALLOCATOR
 #include <string.h>
 #include "testing.h"
 #include "argument_parsing.h"

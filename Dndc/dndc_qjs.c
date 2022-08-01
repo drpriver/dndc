@@ -1921,8 +1921,8 @@ QJSMETHOD(js_dndc_context_select_nodes){
     QJSValueConst arg = argv[0];
     if(!QJS_IsObject(arg))
         return QJS_ThrowTypeError(jsctx, "Need 1 obj argument to select_nodes");
-    LinearAllocator la = new_linear_storage(1024*1024, "select_nodes allocator");
-    Allocator tmp = allocator_from_la(&la);
+    ArenaAllocator aa = {0};
+    Allocator tmp = allocator_from_arena(&aa);
     int32_t type = -1;
     Marray(StringView) attributes_array = {0};
     Marray(StringView) classes_array = {0};
@@ -2054,13 +2054,13 @@ QJSMETHOD(js_dndc_context_select_nodes){
         }
     }
     done:
-    destroy_linear_storage(&la);
+    Allocator_free_all(tmp);
     QJS_FreeValue(jsctx, classes);
     QJS_FreeValue(jsctx, attributes);
     return result;
 
     fail:
-    destroy_linear_storage(&la);
+    Allocator_free_all(tmp);
     QJS_FreeValue(jsctx, classes);
     QJS_FreeValue(jsctx, attributes);
     return failure;

@@ -240,7 +240,7 @@ main(int argc, char** argv){
     for(size_t i = 0; i < entries.count; i++){
         if(SV_equals(entries.data[i], SV("index.dnd"))) goto LHasIndex;
     }
-    Marray_push__StringView(&entries, get_mallocator(), SV("index.dnd"));
+    Marray_push__StringView(&entries, MALLOCATOR, SV("index.dnd"));
     LHasIndex:
     print_entries(entries);
     struct ByteDistanceCompleterContext tabctx = {
@@ -257,7 +257,7 @@ main(int argc, char** argv){
     #elif defined(_WIN32)
         opencmd = "start";
     #endif
-    MStringBuilder opensb = {.allocator = get_mallocator()};
+    MStringBuilder opensb = {.allocator = MALLOCATOR};
     MSB_FORMAT(&opensb, opencmd, " ", url, ":", port, "/");
     size_t before_entry = opensb.cursor;
     for(;;){

@@ -70,7 +70,7 @@ enum NodeType{
     NODE_META         = 27,
     NODE_DEFLIST      = 28,
     NODE_DEF          = 29,
-    NODE_INVALID      = 30,
+    NODE_INVALID      = 30, // maybe this should be 0.
 };
 
 typedef enum NodeType NodeType;

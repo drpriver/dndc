@@ -5,13 +5,6 @@
 #define ALLOCATOR_H
 // size_t
 #include <stddef.h>
-// free
-#include <stdlib.h>
-#include <assert.h>
-
-#ifdef __APPLE__
-#include <malloc/malloc.h>
-#endif
 
 #ifndef warn_unused
 
@@ -81,11 +74,12 @@
 
 
 enum AllocatorType {
-    ALLOCATOR_UNSET = 0,
-    ALLOCATOR_MALLOC = 1,
-    ALLOCATOR_LINEAR = 2,
-    ALLOCATOR_RECORDED = 3,
-    ALLOCATOR_ARENA = 4,
+    ALLOCATOR_UNSET  = 0,
+    ALLOCATOR_MALLOC,
+    ALLOCATOR_ARENA,
+#ifdef USE_RECORDED_ALLOCATOR
+    ALLOCATOR_RECORDED,
+#endif
 };
 
 typedef struct Allocator Allocator;

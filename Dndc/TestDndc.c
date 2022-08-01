@@ -1,6 +1,7 @@
 //
 // Copyright © 2021-2022, David Priver
 //
+#define USE_RECORDED_ALLOCATOR
 #define DNDC_EXAMPLE
 #include <stdio.h>
 #define DNDC_API static inline
@@ -499,7 +500,7 @@ TestFunction(TestCrashesFixed){
     };
     for(size_t i = 0; i < arrlen(cases); i++){
         LongString output = {0};
-        Allocator allocator = get_mallocator();
+        Allocator allocator = MALLOCATOR;
         // Read as binary to avoid appending a nul terminator
         // which can mask off-by-one read errors.
         BinaryFileResult data = read_bin_file(cases[i].name.text, allocator);
@@ -536,7 +537,7 @@ TestFunction(TestEscapedFixed){
     };
     for(size_t i = 0; i < arrlen(cases); i++){
         LongString output = {0};
-        Allocator allocator = get_mallocator();
+        Allocator allocator = MALLOCATOR;
         // Read as binary to avoid appending a nul terminator
         // which can mask off-by-one read errors.
         BinaryFileResult data = read_bin_file(cases[i].name.text, allocator);
@@ -572,7 +573,7 @@ TestFunction(TestExamplesWork){
     DndcWorkerThread* worker = dndc_worker_thread_create();
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString output = {0};
-        Allocator allocator = get_mallocator();
+        Allocator allocator = MALLOCATOR;
         TextFileResult data = read_file(examples[i].text, allocator);
         if(data.errored){
             TestPrintValue("Unable to open: examples[i]", examples[i]);
@@ -637,7 +638,7 @@ TestFunction(TestUntrusted){
     _Static_assert(arrlen(base_dirs) == arrlen(examples), "");
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString output = {0};
-        Allocator allocator = get_mallocator();
+        Allocator allocator = MALLOCATOR;
         TextFileResult data = read_file(examples[i].text, allocator);
         TestAssertSuccess(data);
         int e = run_the_dndc(OUTPUT_HTML, flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
@@ -981,9 +982,9 @@ TestFunction(TestJs){
 
 TestFunction(TestFileCache){
     TESTBEGIN();
-    RecordingAllocator* ra = calloc(1, sizeof(*ra));
+    RecordingAllocator ra = {0};
     Allocator allocator = {
-        ._data = ra,
+        ._data = &ra,
         .type = ALLOCATOR_RECORDED,
     };
     FileCache cache = {
@@ -997,12 +998,19 @@ TestFunction(TestFileCache){
     uint64_t flags = 0;
     DndcLongString output;
     int e = run_the_dndc(OUTPUT_HTML, flags, SV(""), input, SV(""), &output, &cache, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    TestExpectEquals(FileCache_has_file(&cache, SV("Makefile")), true);
+    TestExpectEquals(FileCache_n_paths(&cache), 1);
+    int removed = FileCache_maybe_remove(&cache, SV("Makefile"));
+    TestExpectEquals(removed, 1);
+    TestExpectEquals(FileCache_has_file(&cache, SV("Makefile")), false);
+    TestExpectEquals(FileCache_n_paths(&cache), 0);
     FileCache_clear(&cache);
-    for(size_t i = 0; i < ra->count; i++){
-        TestExpectEquals((void*)ra->allocations[i], NULL);
-        TestExpectEquals(ra->allocation_sizes[i], 0);
+    for(size_t i = 0; i < ra.count; i++){
+        TestExpectEquals((void*)ra.allocations[i], NULL);
+        TestExpectEquals(ra.allocation_sizes[i], 0);
     }
     TestAssertFalse(e);
+    recording_cleanup(&ra);
     TESTEND();
 }
 

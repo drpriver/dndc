@@ -1,6 +1,7 @@
 //
 // Copyright © 2021-2022, David Priver
 //
+#define USE_RECORDED_ALLOCATOR
 #include "testing.h"
 #include "Allocators/recording_allocator.h"
 #define RARRAY_T int

@@ -5,10 +5,9 @@
 #define MALLOCATOR_H
 #include "allocator.h"
 
-static inline
-force_inline
-Allocator
-get_mallocator(void){
-    return (Allocator){.type=ALLOCATOR_MALLOC};
-}
+// This can be overriden
+#ifndef MALLOCATOR
+#define MALLOCATOR ((Allocator){.type=ALLOCATOR_MALLOC})
+#endif
+
 #endif

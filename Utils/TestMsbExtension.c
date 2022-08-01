@@ -25,7 +25,7 @@ TestFunction(TestKebab){
     };
     for(size_t i = 0; i < arrlen(testcases); i++){
         struct test_case* tc = &testcases[i];
-        MStringBuilder sb = {.allocator=get_mallocator()};
+        MStringBuilder sb = {.allocator=MALLOCATOR};
         msb_write_kebab(&sb, tc->before.text, tc->before.length);
         StringView str = msb_borrow_sv(&sb);
         TestExpectEquals2(SV_equals, str, tc->after);
@@ -46,7 +46,7 @@ TestFunction(TestTitle){
     };
     for(size_t i = 0; i < sizeof(testcases)/sizeof(testcases[0]);i++){
         struct test_case* tc = &testcases[i];
-        MStringBuilder sb = {.allocator=get_mallocator()};
+        MStringBuilder sb = {.allocator=MALLOCATOR};
         msb_write_title(&sb, tc->before.text, tc->before.length);
         StringView str = msb_borrow_sv(&sb);
         TestExpectEquals2(SV_equals, str, tc->after);

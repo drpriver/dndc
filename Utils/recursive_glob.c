@@ -24,7 +24,7 @@ static
 void
 recursive_glob_suffix_inner(StringView original, StringView directory, StringView suffix, Marray(StringView)* entries, int max_depth){
     if(max_depth <= 0) return;
-    MStringBuilder sb = {.allocator = get_mallocator()};
+    MStringBuilder sb = {.allocator = MALLOCATOR};
     msb_write_str(&sb, directory.text, directory.length);
     msb_write_char(&sb, '/');
     msb_write_char(&sb, '*');
@@ -42,8 +42,8 @@ recursive_glob_suffix_inner(StringView original, StringView directory, StringVie
             msb_write_char(&sb, '/');
             msb_write_str(&sb, findd.cFileName, strlen(findd.cFileName));
             StringView text = msb_borrow_sv(&sb);
-            char* s = Allocator_strndup(get_mallocator(), text.text+original.length+1, text.length-original.length-1);
-            StringView* it = Marray_alloc__StringView(entries, get_mallocator());
+            char* s = Allocator_strndup(MALLOCATOR, text.text+original.length+1, text.length-original.length-1);
+            StringView* it = Marray_alloc__StringView(entries, MALLOCATOR);
             *it = (StringView){.text=s, .length=text.length-original.length-1};
             sb.cursor = cursor;
         }while(FindNextFileA(handle, &findd));
@@ -123,8 +123,8 @@ recursive_glob_suffix(LongString directory, StringView suffix, Marray(StringView
                 continue;
             char* p = ent->fts_path + directory.length+1;
             size_t len = strlen(p);
-            char* t = Allocator_strndup(get_mallocator(), p, len);
-            StringView* it = Marray_alloc__StringView(entries, get_mallocator());
+            char* t = Allocator_strndup(MALLOCATOR, p, len);
+            StringView* it = Marray_alloc__StringView(entries, MALLOCATOR);
             *it = (StringView){.length = len, .text = t};
         }
     }

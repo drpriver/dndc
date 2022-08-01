@@ -127,11 +127,11 @@ iterate_children(DndcContext* ctx, DndcNodeHandle node, Marray__Tag* tags, Strin
         e = dndc_node_get_header(ctx, node, &header);
         if(e) return 1;
         if(header.length){
-            StringView head = {.length=header.length, .text=Allocator_strndup(get_mallocator(), header.text, header.length)};
+            StringView head = {.length=header.length, .text=Allocator_strndup(MALLOCATOR, header.text, header.length)};
             DndcNodeLocation loc;
             e = dndc_node_location(ctx, node, &loc);
             if(e) return 1;
-            *Marray_alloc__Tag(tags, get_mallocator()) = (Tag){
+            *Marray_alloc__Tag(tags, MALLOCATOR) = (Tag){
                 .filename = filename,
                 .tagname = head,
                 .row = loc.row,
@@ -154,16 +154,16 @@ tag_dnd_files(StringView* filenames, size_t filename_count, LongString outfile, 
     if(n_threads > 128)
         n_threads = 128;
     for(size_t i = 0; i < filename_count; i++)
-        *Marray_alloc__WorkItem(&items, get_mallocator()) = (WorkItem){.filename = filenames[i]};
+        *Marray_alloc__WorkItem(&items, MALLOCATOR) = (WorkItem){.filename = filenames[i]};
     Marray__ThreadHandle threads = {0};
     for(size_t i = 0; i < n_threads; i++)
-        create_thread(Marray_alloc__ThreadHandle(&threads, get_mallocator()), worker_func, NULL);
+        create_thread(Marray_alloc__ThreadHandle(&threads, MALLOCATOR), worker_func, NULL);
     worker_func(NULL); // use this thread as well
     for(size_t i = 0; i < threads.count; i++)
         join_thread(threads.data[i]);
     Marray__Tag tags = {0};
     for(size_t i = 0; i < items.count; i++)
-        Marray_extend__Tag(&tags, get_mallocator(), items.data[i].tags.data, items.data[i].tags.count);
+        Marray_extend__Tag(&tags, MALLOCATOR, items.data[i].tags.data, items.data[i].tags.count);
     qsort(tags.data, tags.count, sizeof(Tag), StringView_cmp);
     FILE* fp = outfile.length? fopen(outfile.text, "w") : stdout;
     fprintf(fp, "!_TAG_FILE_FORMAT\t1\t/basic format; no extension fields/\n");
@@ -184,7 +184,7 @@ int
 sv_append(void* p, const void* sv_){
     Marray__StringView* m = p;
     const StringView* sv = sv_;
-    Marray_push__StringView(m, get_mallocator(), *sv);
+    Marray_push__StringView(m, MALLOCATOR, *sv);
     return 0;
 }
 
@@ -293,9 +293,9 @@ main(int argc, char** argv){
         while(fgets(buff, sizeof buff, stdin)){
             size_t len = strlen(buff);
             if(!len || len == 1) continue;
-            *Marray_alloc__StringView(&dnd_files, get_mallocator()) = (StringView){
+            *Marray_alloc__StringView(&dnd_files, MALLOCATOR) = (StringView){
                 .length = len-1,
-                .text = Allocator_strndup(get_mallocator(), buff, len-1),
+                .text = Allocator_strndup(MALLOCATOR, buff, len-1),
             };
         }
     if(!dnd_files.count)

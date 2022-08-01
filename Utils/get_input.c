@@ -244,7 +244,7 @@ enable_raw(struct TermState*ts){
     // Unread input will be discarded.
     if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &ts->raw) < 0)
         return;
-    }
+}
 static
 void
 disable_raw(struct TermState*ts){

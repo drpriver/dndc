@@ -56,7 +56,7 @@ TestFunction(TestAstExample){
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString ast_output = {0};
         LongString dnd_output = {0};
-        Allocator allocator = get_mallocator();
+        Allocator allocator = MALLOCATOR;
         TextFileResult data = read_file(examples[i].text, allocator);
         if(data.errored){
             TestPrintValue("Unable to open: examples[i]", examples[i]);

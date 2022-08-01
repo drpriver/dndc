@@ -116,7 +116,7 @@ main(int argc, char**argv){
     bool expand = false;
     enum OutputTarget output_target = OUTPUT_HTML;
     LongString jsargs = LS("");
-    MStringBuilder argbuilder = {.allocator = get_mallocator()};
+    MStringBuilder argbuilder = {.allocator = MALLOCATOR};
     {
         ArgToParse pos_args[] = {
             [0] = {
@@ -483,7 +483,7 @@ main(int argc, char**argv){
         if(!original_source_path.text){
             source_path = SV("(stdin)");
             // read from stdin
-            MStringBuilder sb = {.allocator=get_mallocator()};
+            MStringBuilder sb = {.allocator=MALLOCATOR};
             if(isatty(fileno(stdin))){
                 GetInputCtx history = {.prompt = SV("> ")};
                 history.tab_completion_func = indent_completer;
@@ -513,7 +513,7 @@ main(int argc, char**argv){
             source_text = msb_detach_sv(&sb);
         }
         else {
-            Allocator allocator = get_mallocator();
+            Allocator allocator = MALLOCATOR;
             TextFileResult load_err = read_file(original_source_path.text, allocator);
             if(load_err.errored){
                 fprintf(stderr, "Unable to read: '%s'\n", original_source_path.text);
@@ -644,7 +644,7 @@ dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths){
     struct DependencyUserData* ud = user_data;
     if(!ud->depfile.length || !ud->outfile.length)
         return 0;
-    MStringBuilder msb = {.allocator=get_mallocator()};
+    MStringBuilder msb = {.allocator=MALLOCATOR};
     msb_reset(&msb);
     msb_write_str(&msb, ud->outfile.text, ud->outfile.length);
     msb_write_char(&msb, ':');
@@ -702,7 +702,7 @@ dndc_main_ast_func(void*_Nullable user_data, DndcContext*_Nonnull ctx){
         return -1;
     }
     if(flags & DNDC_MAIN_DUMP_JSON){
-        MStringBuilder sb = {.allocator=get_mallocator()};
+        MStringBuilder sb = {.allocator=MALLOCATOR};
         ctx_to_json(ctx, &sb);
         fputs(msb_borrow_ls(&sb).text, fp);
         msb_destroy(&sb);

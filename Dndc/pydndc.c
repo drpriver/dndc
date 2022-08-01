@@ -1161,7 +1161,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         return NULL;
     }
     LongString jsargs_ls = LS("");
-    MStringBuilder jsbuilder = {.allocator = get_mallocator()};
+    MStringBuilder jsbuilder = {.allocator = MALLOCATOR};
     if(jsargs && PyUnicode_Check(jsargs)){
         jsargs_ls = pystring_borrow_longstring(jsargs);
     }
@@ -1262,7 +1262,7 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         return NULL;
     }
     LongString jsargs_ls = LS("");
-    MStringBuilder jsbuilder = {.allocator = get_mallocator()};
+    MStringBuilder jsbuilder = {.allocator = MALLOCATOR};
     if(jsargs && PyUnicode_Check(jsargs)){
         jsargs_ls = pystring_borrow_longstring(jsargs);
     }
@@ -1363,7 +1363,7 @@ pydndc_md(PyObject* mod, PyObject* args, PyObject* kwargs){
         return NULL;
     }
     LongString jsargs_ls = LS("");
-    MStringBuilder jsbuilder = {.allocator = get_mallocator()};
+    MStringBuilder jsbuilder = {.allocator = MALLOCATOR};
     if(jsargs && PyUnicode_Check(jsargs)){
         jsargs_ls = pystring_borrow_longstring(jsargs);
     }
@@ -1814,7 +1814,7 @@ DndcContextPy_execute_js(PyObject* s, PyObject* args, PyObject* kwargs){
     PopDiagnostic();
     DndcLongString jsargs_ls = LS("");
 
-    MStringBuilder jsbuilder = {.allocator=get_mallocator()};
+    MStringBuilder jsbuilder = {.allocator=MALLOCATOR};
 
     if(jsargs && PyUnicode_Check(jsargs)){
         jsargs_ls = pystring_borrow_longstring(jsargs);
@@ -1867,7 +1867,7 @@ DndcContextPy_select_nodes(PyObject* s, PyObject* args, PyObject* kwargs){
     size_t cls_count = 0;
     size_t attr_count = 0;
     DndcStringView *classes = NULL, *attributes = NULL;
-    Allocator allocator = get_mallocator();
+    Allocator allocator = MALLOCATOR;
     const char* const keywords[] = {"type", "attributes", "classes", NULL};
     PushDiagnostic();
     SuppressCastQual();
@@ -2334,7 +2334,7 @@ DndcContextPy_get_dependencies(PyObject* s, void*_Nullable p){
 static PyGetSetDef DndcContextPy_getset[] = {
     {"root", DndcContextPy_get_root, DndcContextPy_set_root, "The root node of the tree (may be None).", NULL},
     {"base_dir", DndcContextPy_get_base, DndcContextPy_set_base, "Files are imported relative to this path (may be empty string which means .)", NULL},
-    {"dependencies", DndcContextPy_get_dependencies, NULL, "Files that this context depends on (either by loading the file or by explicitly marking them). Use this to populate Make-style dependency filess, etc.", NULL},
+    {"dependencies", DndcContextPy_get_dependencies, NULL, "Files that this context depends on (either by loading the file or by explicitly marking them). Use this to populate Make-style dependency files, etc.", NULL},
     {0} // Sentinel
 };
 
@@ -2695,7 +2695,7 @@ DndcNodePy_get_id(PyObject *s, void *_Nullable p){
     int err = dndc_node_get_id(ctx, self->handle, &sv);
     assert(!err);
     if(!sv.length) return PyUnicode_FromString("");
-    MStringBuilder temp = {.allocator = get_mallocator()};
+    MStringBuilder temp = {.allocator = MALLOCATOR};
     msb_write_kebab(&temp, sv.text, sv.length);
     StringView b = msb_borrow_sv(&temp);
     PyObject* result = PyUnicode_FromStringAndSize(b.text, b.length);

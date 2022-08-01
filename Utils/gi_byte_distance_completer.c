@@ -47,7 +47,7 @@ byte_distance_completer(GetInputCtx* ctx, size_t original_cursor, size_t origina
         }
         qsort(distances, n, sizeof *distances, bdc_pair_cmp);
         for(size_t i = 0; i < n; i++){
-            StringView* sv = Marray_alloc__StringView(&bdcctx->ordered, get_mallocator());
+            StringView* sv = Marray_alloc__StringView(&bdcctx->ordered, MALLOCATOR);
             *sv = bdcctx->original->data[distances[i].idx];
         }
         free(distances);

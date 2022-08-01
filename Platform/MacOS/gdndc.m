@@ -411,7 +411,7 @@ gdndc_ast_func(void*_Nullable data, DndcContext* ctx){
     if(!NodeHandle_eq(ctx->titlenode, INVALID_NODE_HANDLE)){
         Node* node = get_node(ctx, ctx->titlenode);
         if(node->header.length){
-            MStringBuilder sb = {.allocator = get_mallocator()};
+            MStringBuilder sb = {.allocator = MALLOCATOR};
             msb_write_str(&sb, node->header.text, node->header.length);
             NSString* str = msb_detach_as_ns_string(&sb);
             DndViewController* vc = (__bridge DndViewController*)data;
@@ -426,7 +426,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     if(!data)
         return;
     NSTextView* tv = (__bridge NSTextView*)data;
-    MStringBuilder builder = {.allocator=get_mallocator()};
+    MStringBuilder builder = {.allocator=MALLOCATOR};
     StringView fn = {
         .text = filename,
         .length = filename_len,
@@ -600,7 +600,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 }
 
 -(void)insert_block:(NSString*)path at:(NSRange)r indent_amount:(NSInteger)indent_amount name:(StringView)blockname{
-    MStringBuilder sb = {.allocator=get_mallocator()};
+    MStringBuilder sb = {.allocator=MALLOCATOR};
     msb_ensure_additional(&sb, 256);
     msb_write_str(&sb, blockname.text, blockname.length);
     msb_write_nchar(&sb, ' ', indent_amount+2);
@@ -611,7 +611,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     [self insertText:to_insert replacementRange:r];
 }
 -(void)insert_imglinks_block:(NSString*)path at:(NSRange)r indent_amount:(NSInteger)indent_amount size:(NSSize)size{
-    MStringBuilder sb = {.allocator = get_mallocator()};
+    MStringBuilder sb = {.allocator = MALLOCATOR};
     msb_ensure_additional(&sb, 256);
     msb_write_literal(&sb, "::imglinks\n");
 #define INDENT() msb_write_nchar(&sb, ' ', indent_amount+2)

@@ -35,10 +35,7 @@
 
 #endif
 
-// Gets the length of an array, while avoiding the problem of pointers.  The
-// problem of pointers is when you have `int* x` and write
-// sizeof(x)/sizeof(x[0]) which is not at all what you want, yet still
-// compiles!
+// Gets the length of an array.
 #ifndef arrlen
 #define arrlen(arr) (sizeof(arr) / sizeof((arr)[0]))
 #endif

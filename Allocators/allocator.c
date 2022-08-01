@@ -4,13 +4,21 @@
 #ifndef ALLOCATOR_C
 #define ALLOCATOR_C
 #include <stddef.h>
-// abort
+// abort, free, malloc, calloc
 #include <stdlib.h>
+#include <assert.h>
+
+#ifdef __APPLE__
+#include <malloc/malloc.h>
+#endif
+
 #include "allocator.h"
-#include "linear_allocator.h"
 #include "mallocator.h"
-#include "recording_allocator.h"
 #include "arena_allocator.h"
+
+#ifdef USE_RECORDED_ALLOCATOR
+#include "recording_allocator.h"
+#endif
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -24,6 +32,18 @@
 #endif
 #endif
 
+#ifndef sane_realloc
+// Realloc's signature is silly which makes it hard to
+// reimplement in a sane way. So in order to accomodate
+// platforms where we need to implement it ourselves
+// (aka WASM), we use this compatibility macro.
+#ifndef WASM
+#define sane_realloc(ptr, orig_size, size) realloc(ptr, size)
+#else
+static void* sane_realloc(void* ptr, size_t orig_size, size_t size);
+#endif
+#endif
+
 static inline
 void
 Allocator_free_all(Allocator a){
@@ -34,15 +54,14 @@ Allocator_free_all(Allocator a){
         case ALLOCATOR_MALLOC:
             abort();
             return;
-        case ALLOCATOR_LINEAR:
-            linear_reset(a._data);
-            return;
-        case ALLOCATOR_RECORDED:
-            recording_free_all(a._data);
-            return;
         case ALLOCATOR_ARENA:
             ArenaAllocator_free_all(a._data);
             return;
+#ifdef USE_RECORDED_ALLOCATOR
+        case ALLOCATOR_RECORDED:
+            recording_free_all(a._data);
+            return;
+#endif
     }
     abort();
 }
@@ -57,14 +76,14 @@ Allocator_alloc(Allocator a, size_t size){
         case ALLOCATOR_UNSET:
             abort();
             break;
-        case ALLOCATOR_LINEAR:
-            return linear_alloc(a._data, size);
         case ALLOCATOR_MALLOC:
             return malloc(size);
-        case ALLOCATOR_RECORDED:
-            return recording_alloc(a._data, size);
         case ALLOCATOR_ARENA:
             return ArenaAllocator_alloc(a._data, size);
+#ifdef USE_RECORDED_ALLOCATOR
+        case ALLOCATOR_RECORDED:
+            return recording_alloc(a._data, size);
+#endif
     }
     abort();
     unreachable();
@@ -80,14 +99,14 @@ Allocator_zalloc(Allocator a, size_t size){
         case ALLOCATOR_UNSET:
             abort();
             break;
-        case ALLOCATOR_LINEAR:
-            return linear_zalloc(a._data, size);
         case ALLOCATOR_MALLOC:
             return calloc(1, size);
-        case ALLOCATOR_RECORDED:
-            return recording_zalloc(a._data, size);
         case ALLOCATOR_ARENA:
             return ArenaAllocator_zalloc(a._data, size);
+#ifdef USE_RECORDED_ALLOCATOR
+        case ALLOCATOR_RECORDED:
+            return recording_zalloc(a._data, size);
+#endif
     }
     abort();
     unreachable();
@@ -102,14 +121,14 @@ Allocator_realloc(Allocator a, void*_Nullable data, size_t orig_size, size_t siz
         case ALLOCATOR_UNSET:
             abort();
             break;
-        case ALLOCATOR_LINEAR:
-            return linear_realloc(a._data, data, orig_size, size);
         case ALLOCATOR_MALLOC:
             return sane_realloc(data, orig_size, size);
-        case ALLOCATOR_RECORDED:
-            return recording_realloc(a._data, data, orig_size, size);
         case ALLOCATOR_ARENA:
             return (void*)ArenaAllocator_realloc(a._data, data, orig_size, size);
+#ifdef USE_RECORDED_ALLOCATOR
+        case ALLOCATOR_RECORDED:
+            return recording_realloc(a._data, data, orig_size, size);
+#endif
     }
     abort();
     unreachable();
@@ -123,17 +142,17 @@ Allocator_free(Allocator a, const void*_Nullable data, size_t size){
         case ALLOCATOR_UNSET:
             abort();
             return;
-        case ALLOCATOR_LINEAR:
-            linear_free(a._data, data, size);
-            return;
         case ALLOCATOR_MALLOC:
             const_free(data);
             return;
+        case ALLOCATOR_ARENA:
+            ArenaAllocator_free(a._data, data, size);
+            return;
+#ifdef USE_RECORDED_ALLOCATOR
         case ALLOCATOR_RECORDED:
             recording_free(a._data, data, size);
             return;
-        case ALLOCATOR_ARENA:
-            return;
+#endif
     }
     abort();
 }
@@ -146,18 +165,22 @@ Allocator_good_size(Allocator a, size_t size){
         case ALLOCATOR_UNSET:
             abort();
             return size;
-        case ALLOCATOR_LINEAR:
-            return size;
-        case ALLOCATOR_RECORDED:
-            // fall-through
         case ALLOCATOR_MALLOC:
-        #ifdef __APPLE__
-            return malloc_good_size(size);
-        #else
-            return size;
-        #endif
+            #ifdef __APPLE__
+                return malloc_good_size(size);
+            #else
+                return size;
+            #endif
         case ALLOCATOR_ARENA:
             return ArenaAllocator_round_size_up(size);
+#ifdef USE_RECORDED_ALLOCATOR
+        case ALLOCATOR_RECORDED:
+            #ifdef __APPLE__
+                return malloc_good_size(size);
+            #else
+                return size;
+            #endif
+#endif
     }
     abort();
 }

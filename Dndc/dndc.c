@@ -26,8 +26,6 @@
 #include "Utils/msb_format.h"
 #include "Allocators/allocator.h"
 #include "Allocators/mallocator.h"
-#include "Allocators/linear_allocator.h"
-#include "Allocators/recording_allocator.h"
 #include "Allocators/arena_allocator.h"
 #include "Utils/measure_time.h"
 #include "Utils/thread_utils.h"
@@ -370,7 +368,6 @@ run_the_dndc(
 
     DndcContext ctx = {
         .flags = flags,
-        .temp = new_linear_storage(1024*1024, "temp storage"),
         .titlenode = INVALID_NODE_HANDLE,
         .tocnode = INVALID_NODE_HANDLE,
         .base_directory = base_directory,
@@ -412,7 +409,7 @@ run_the_dndc(
     }
     // Do reformatting if requested.
     if(unlikely(output_target == OUTPUT_REFORMAT)){
-        MStringBuilder outsb = {.allocator = get_mallocator()};
+        MStringBuilder outsb = {.allocator = MALLOCATOR};
         uint64_t before = get_t();
         int format_error = format_tree(&ctx, &outsb);
         if(format_error){
@@ -531,7 +528,7 @@ run_the_dndc(
     switch(output_target){
         case OUTPUT_EXPAND: {
             // Render as a .dnd file if requested.
-            MStringBuilder output_sb = {.allocator = get_mallocator()};
+            MStringBuilder output_sb = {.allocator = MALLOCATOR};
             uint64_t before_render = get_t();
             result = expand_to_dnd(&ctx, &output_sb);
             if(result){
@@ -552,7 +549,7 @@ run_the_dndc(
         } break;
         case OUTPUT_MD: {
             // Render as markdown.
-            MStringBuilder output_sb = {.allocator = get_mallocator()};
+            MStringBuilder output_sb = {.allocator = MALLOCATOR};
             uint64_t before_render = get_t();
             int e = render_md(&ctx, &output_sb);
             if(e){
@@ -574,7 +571,7 @@ run_the_dndc(
         }break;
         case OUTPUT_HTML:{
             // Render the actual document into a string as html.
-            MStringBuilder output_sb = {.allocator = get_mallocator()};
+            MStringBuilder output_sb = {.allocator = MALLOCATOR};
             uint64_t before_render = get_t();
             int e = render_tree(&ctx, &output_sb);
 
@@ -613,7 +610,8 @@ run_the_dndc(
     success:;
     cleanup:;
     report_size(&ctx, SV("source_text.length = "), source_text.length);
-    report_size(&ctx, SV("la_.high_water = "), ctx.temp.high_water);
+    // TODO: temp arena stats
+    // report_size(&ctx, SV("la_.high_water = "), ctx.temp.high_water);
     if(!wasm && !(flags & DNDC_NO_CLEANUP)){
         uint64_t before_cleanup = get_t();
         if(ctx.flags & DNDC_PRINT_STATS){
@@ -637,9 +635,9 @@ run_the_dndc(
                 report_size(&ctx, SV("Arena size: "), ARENA_BUFFER_SIZE);
                 arena = arena->prev;
             }
-            BigAllocation* ba = ctx.main_arena.big_allocations;
+            BigListNode* ba = ctx.main_arena.big_allocations.next;
             while(ba){
-                report_size(&ctx, SV("Big allocation: "), ba->size);
+                report_size(&ctx, SV("Big allocation: "), ((BigAllocation*)ba)->size);
                 ba = ba->next;
             }
             #endif
@@ -648,19 +646,6 @@ run_the_dndc(
         }
         {
             uint64_t before = get_t();
-            #if 0
-            Arena* arena = ctx.string_arena.arena;
-            while(arena){
-                report_size(&ctx, SV("String Arena used: "), arena->used);
-                report_size(&ctx, SV("String Arena size: "), ARENA_BUFFER_SIZE);
-                arena = arena->prev;
-            }
-            BigAllocation* ba = ctx.string_arena.big_allocations;
-            while(ba){
-                report_size(&ctx, SV("String Big allocation: "), ba->size);
-                ba = ba->next;
-            }
-            #endif
             Allocator_free_all(string_allocator(&ctx));
             uint64_t after = get_t();
             report_time(&ctx, SV("Cleaning string allocator: "), after-before);
@@ -668,9 +653,14 @@ run_the_dndc(
         {
             uint64_t before = get_t();
             Allocator_free_all(main_allocator(&ctx));
-            // shallow_free_recorded_mallocator(allocator);
             uint64_t after = get_t();
             report_time(&ctx, SV("Cleaning allocator: "), after-before);
+        }
+        {
+            uint64_t before = get_t();
+            Allocator_free_all(temp_allocator(&ctx));
+            uint64_t after = get_t();
+            report_time(&ctx, SV("Cleaning temp allocator: "), after-before);
         }
         uint64_t after = get_t();
         report_time(&ctx, SV("Cleaning up memory took: "), after-before_cleanup);
@@ -683,8 +673,6 @@ run_the_dndc(
         dndc_filecache_destroy(ctx.jsb64cache);
     uint64_t t1 = get_t();
     report_time(&ctx, SV("Execution took: "), t1-t0);
-    if(!wasm && !(flags & DNDC_NO_CLEANUP))
-        destroy_linear_storage(&ctx.temp);
     return result;
 }
 
@@ -1838,7 +1826,7 @@ DNDC_API
 DndcFileCache*
 dndc_create_filecache(void){
     struct DndcFileCache* result = malloc(sizeof(*result));
-    Allocator al = get_mallocator();
+    Allocator al = MALLOCATOR;
     *result = (struct DndcFileCache){.allocator = al, .scratch=al};
     return result;
 }
@@ -2070,7 +2058,6 @@ dndc_create_ctx(unsigned long long flags, DndcFileCache*_Nullable base64cache, D
     ctx->titlenode = INVALID_NODE_HANDLE;
     ctx->tocnode = INVALID_NODE_HANDLE;
     ctx->root_handle = INVALID_NODE_HANDLE;
-    ctx->temp = new_linear_storage(1024*1024, "temporary storage");
     ctx->links.allocator = main_allocator(ctx);
     return ctx;
 }
@@ -2095,7 +2082,6 @@ dndc_ctx_destroy(DndcContext* ctx){
     Allocator_free_all(temp_allocator(ctx));
     Allocator_free_all(main_allocator(ctx));
     Allocator_free_all(string_allocator(ctx));
-    destroy_linear_storage(&ctx->temp);
     free(ctx);
 }
 
@@ -2558,7 +2544,7 @@ DNDC_API
 int
 dndc_ctx_expand_to_dnd(DndcContext* ctx, DndcLongString* ls){
     if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return DNDC_ERROR_VALUE;
-    MStringBuilder output_sb = {.allocator = get_mallocator()};
+    MStringBuilder output_sb = {.allocator = MALLOCATOR};
     int e = expand_to_dnd(ctx, &output_sb);
     if(e) {msb_destroy(&output_sb); return e;}
     msb_nul_terminate(&output_sb);
@@ -2569,7 +2555,7 @@ DNDC_API
 int
 dndc_ctx_render_to_md(DndcContext* ctx, DndcLongString* ls){
     if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return DNDC_ERROR_VALUE;
-    MStringBuilder output_sb = {.allocator = get_mallocator()};
+    MStringBuilder output_sb = {.allocator = MALLOCATOR};
     int e = render_md(ctx, &output_sb);
     if(e) {msb_destroy(&output_sb); return e;}
     msb_nul_terminate(&output_sb);
@@ -2579,7 +2565,7 @@ dndc_ctx_render_to_md(DndcContext* ctx, DndcLongString* ls){
 DNDC_API
 int
 dndc_ctx_render_to_html(DndcContext* ctx, DndcLongString* ls){
-    MStringBuilder output_sb = {.allocator = get_mallocator()};
+    MStringBuilder output_sb = {.allocator = MALLOCATOR};
     if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return DNDC_ERROR_VALUE;
     int e = render_tree(ctx, &output_sb);
     if(e) {msb_destroy(&output_sb); return e;}
@@ -2594,7 +2580,7 @@ dndc_node_render_to_html(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString* l
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
-    MStringBuilder output_sb = {.allocator = get_mallocator()};
+    MStringBuilder output_sb = {.allocator = MALLOCATOR};
     int e = render_node(ctx, &output_sb, handle, 1, 0);
     if(e) {msb_destroy(&output_sb); return e;}
     msb_nul_terminate(&output_sb);
@@ -2606,7 +2592,7 @@ DNDC_API
 int
 dndc_ctx_format_tree(DndcContext* ctx, DndcLongString* ls){
     if(NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)) return DNDC_ERROR_VALUE;
-    MStringBuilder output_sb = {.allocator = get_mallocator()};
+    MStringBuilder output_sb = {.allocator = MALLOCATOR};
     int e = format_tree(ctx, &output_sb);
     if(e) {
         msb_destroy(&output_sb);
@@ -2625,7 +2611,7 @@ dndc_node_format(DndcContext* ctx, DndcNodeHandle dnh, int indent, DndcLongStrin
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
     Node* node = get_node(ctx, handle);
-    MStringBuilder output_sb = {.allocator = get_mallocator()};
+    MStringBuilder output_sb = {.allocator = MALLOCATOR};
     int e = format_node(ctx, &output_sb, node, indent);
     if(e){
         msb_destroy(&output_sb);
@@ -3050,7 +3036,7 @@ dndc_node_cat_string_children(DndcContext* ctx, DndcNodeHandle dnh, DndcLongStri
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
-    MStringBuilder msb = {.allocator=get_mallocator()};
+    MStringBuilder msb = {.allocator=MALLOCATOR};
     Node* n = get_node(ctx, handle);
     NODE_CHILDREN_FOR_EACH(c, n){
         Node* child = get_node(ctx, *c);
@@ -3252,7 +3238,7 @@ dndc_node_tree_repr(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString* outstr
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
-    MStringBuilder msb = {.allocator = get_mallocator()};
+    MStringBuilder msb = {.allocator = MALLOCATOR};
     dndc_node_tree_repr_inner(ctx, handle, 0, &msb);
     *outstring = msb_detach_ls(&msb);
     return 0;
@@ -3301,7 +3287,7 @@ dndc_node_to_json(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString*out){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
-    MStringBuilder sb = {.allocator=get_mallocator()};
+    MStringBuilder sb = {.allocator=MALLOCATOR};
     node_to_json(ctx, handle, &sb);
     *out = msb_detach_ls(&sb);
     return 0;
@@ -3314,7 +3300,7 @@ ctx_to_json(DndcContext* ctx, MStringBuilder* sb);
 DNDC_API
 int
 dndc_ctx_to_json(DndcContext* ctx, DndcLongString*out){
-    MStringBuilder sb = {.allocator=get_mallocator()};
+    MStringBuilder sb = {.allocator=MALLOCATOR};
     ctx_to_json(ctx, &sb);
     *out = msb_detach_ls(&sb);
     return 0;
