@@ -1,7 +1,7 @@
 ::comment
-  Some of this text looks pretty ugly due to all the <code>tags. This document
+  Some of this text looks pretty ugly due to all the <tt>tags. This document
   format is not optimized for rendering code, so that is an acceptable tradeoff.
-  Some spots have this weird <code>:</code><code>:nodename</code> pattern going
+  Some spots have this weird <tt>:</tt><tt>:nodename</tt> pattern going
   on. That is so that the parser doesn't see a double colon and issue an error
   due to an illegal node. Again, it is extremely rare to actually talk about the
   nodes themselves in your code, so it is not really a problem.
@@ -9,10 +9,10 @@
 ::md .right
   Reference::title
   General::md .node
-    Nodes are defined by lines that contain a double colon (<code>:​:</code>).
+    Nodes are defined by lines that contain a double colon (<tt>:​:</tt>).
     Immediately following the node is the node type. The text preceding the
     double colon is the "header". For most nodes, this header will be
-    represented in the document as a heading that is a child of the tag that
+    represented in the document as a headhello that is a child of the tag that
     contains that node. The node type can be followed by classes, which are
     indicated by a leading dot (.), attributes, which are indicated by a leading
     at (@), or a directive, which are indicated by a leading pound sign (#).
@@ -25,8 +25,8 @@
     will be parsed as follows:
 
     * "Hello World" is the header
-    * <code>[md]</code> is the node type.
-    * The node has one class, "greeting"
+    * <tt>[md]</tt> is the node type.
+    * The node has one class, "hello"
     * The node has two attributes.
       - The first attribute is "greeting", with no associated value
       - The second attribute is "bonjour" with an associated value of "monde"
@@ -46,7 +46,7 @@
     ::pre #noid
       [link text | some-link]
     The contents inside the square brackets are split by the pipe character,
-    <code>|</code>. The contents to the left is the text that will be rendered
+    <tt>|</tt>. The contents to the left is the text that will be rendered
     into the document. The stuff to the right is where the link will go. This
     text is used to look up what the link will resolve to. Therefore the
     following won't work:
@@ -90,32 +90,32 @@
 
 
   Attributes::md .node #id(attributes)
-    Nodes can have attributes, designated by the <code>@</code>. Attributes are
+    Nodes can have attributes, designated by the <tt>@</tt>. Attributes are
     generally for the use of the author as they can be checked and accessed from
-    <code>[:​:js| js]</code> nodes. All attributes are available for the user.
+    <tt>[:​:js| js]</tt> nodes. All attributes are available for the user.
 
   Directives::md .node #id(directive)
-    Nodes can have directives, designated by the <code>#</code>. Directives can
+    Nodes can have directives, designated by the <tt>#</tt>. Directives can
     affect the parsing of a node, its behavior or its rendered output. The
     current ones are described in the table below.
 
     ::table
       Attribute              | Description
-      <code>#import</code>   | Treat the lines of the node as filepaths to be
+      <tt>#import</tt>   | Treat the lines of the node as filepaths to be
                                imported and parsed, as children of this node.
-      <code>#noid</code>     | Do not generate an id for this node.
-      <code>#hide</code>     | Don't render the node in the html output. The
+      <tt>#noid</tt>     | Do not generate an id for this node.
+      <tt>#hide</tt>     | Don't render the node in the html output. The
                                node is still normally parsed and is available
                                from js.
-      <code>#noinline</code> | [img] and [imglinks] nodes normally "inline" the
+      <tt>#noinline</tt> | [img] and [imglinks] nodes normally "inline" the
                                image as a base64 string into the final document.
                                This disables that behaviour for that node.
-      <code>#id</code>       | This directive takes an argument. This directive
+      <tt>#id</tt>       | This directive takes an argument. This directive
                                overrides the normal generation of ids for this
                                node and instead uses the argument as the id.
   :​:md::md .node #id(md)
-    <code>md</code> nodes are inspired by markdown, while not exactly being the
-    same. <code>md</code> nodes accept any other nodes as children, as well as 3
+    <tt>md</tt> nodes are inspired by markdown, while not exactly being the
+    same. <tt>md</tt> nodes accept any other nodes as children, as well as 3
     special forms for more convenient writing. Plain lines are treated as
     paragraphs. Include a blank line between them to separate paragraphs. For
     example:
@@ -141,8 +141,8 @@
         Another paragraph
 
     Lists, both ordered and unordered are supported. Unordered lists begin with
-    a <code>*</code>, <code>-</code>, or <code>+</code> and one or more spaces.
-    Ordered lists begin with a number, a <code>.</code> and a space. For
+    a <tt>*</tt>, <tt>-</tt>, or <tt>+</tt> and one or more spaces.
+    Ordered lists begin with a number, a <tt>.</tt> and a space. For
     example:
 
     ::div .side-by-side
@@ -171,14 +171,14 @@
         This is a new paragraph as it is not indented and does not start with a
         list. This is a little confusing, so avoid this stylistically.
 
-    Note that the top level of the document is implicitly an <code>md</code>
+    Note that the top level of the document is implicitly an <tt>md</tt>
     node.
 
   :​:deflist and:​:def::md .node #id(deflist)
-    <code>deflist</code> nodes form a definition list, which corresponds to the
-    <dl> html tag. The contents of a <code>deflist</code> should be
-    <code>def</code> nodes. The contents of a <code>def</code> node is parsed in
-    the same manner as the <code>md</code> node.
+    <tt>deflist</tt> nodes form a definition list, which corresponds to the
+    <dl> html tag. The contents of a <tt>deflist</tt> should be
+    <tt>def</tt> nodes. The contents of a <tt>def</tt> node is parsed in
+    the same manner as the <tt>md</tt> node.
 
     ::div .side-by-side
       Input::pre .leftside #noid
@@ -203,7 +203,7 @@
             the board.
 
   :​:div::md .node #id(div)
-    The <code>div</code> node is useful for creating wrapper nodes. Plain lines
+    The <tt>div</tt> node is useful for creating wrapper nodes. Plain lines
     within the div node are not parsed specially and are outputted as plain
     lines within the div element. This is useful if you specifically do not want
     paragraphs (<p> tags) or special processing. It is also can express the
@@ -220,9 +220,9 @@
         * This is not a list. - Still not a list. 1. Not a nested list. This is
         not a paragraph
   :​:import::md .node #id(import)
-    <code>:​:import</code> nodes are used to reuse the contents of other
-    <code>.dnd</code> files. Every line of an import is treated as a filepath of
-    another <code>.dnd</code>. That file is loaded and parsed and the resulting
+    <tt>:​:import</tt> nodes are used to reuse the contents of other
+    <tt>.dnd</tt> files. Every line of an import is treated as a filepath of
+    another <tt>.dnd</tt>. That file is loaded and parsed and the resulting
     contents added as elements of the import node. The import node itself is
     then converted to xxx what actualy happens to imports.
 
@@ -238,7 +238,7 @@
     This node can't be used in untrusted input.
 
   :​:js::md .node #id(js)
-    <code>:​:js</code> nodes are used to script the document. See the
+    <tt>:​:js</tt> nodes are used to script the document. See the
     [js documentation] for more information on what js nodes can do.
 
     ::links
@@ -261,7 +261,7 @@
     This node can't be used in untrusted input.
 
   :​:title::md .node #id(title)
-    The <code>:​:title</code> node is used to set the title of the document.
+    The <tt>:​:title</tt> node is used to set the title of the document.
     The title node is also rendered as an <h1>. This node can have no children.
     The text before the double colon is all that is considered.
 
@@ -274,7 +274,7 @@
           <h1>My Document</h1>
           <p>This is my document</h1>
   :​:h::md .node #id(h)
-    The <code>:​:h</code> node creates a heading. Generally, a nested md block
+    The <tt>:​:h</tt> node creates a heading. Generally, a nested md block
     is more useful, but sometimes you want to avoid overly indented documents.
 
     ::div .side-by-side
@@ -291,8 +291,8 @@
           Blah Blah
 
   :​:table::md .node #id(table)
-    The <code>:​:table</code> node is for tables! Columns are separted by the
-    pipe character: <code>|</code>. The first row is the table heading. The last
+    The <tt>:​:table</tt> node is for tables! Columns are separted by the
+    pipe character: <tt>|</tt>. The first row is the table heading. The last
     column of each row is allowed to continue on the next line if it is
     indented. This allows you to have larger amounts of text in the last column.
 
@@ -317,7 +317,7 @@
           5  | Ghost of christmas past.
           6  | Roll again twice
   :​:css::md .node #id(css)
-    The <code>:​:css</code> node allows adding styling information to the
+    The <tt>:​:css</tt> node allows adding styling information to the
     final rendered document. The contents will be placed in a <style> tag in the
     resulting html.
 
@@ -334,9 +334,9 @@
         ::css
           .angry {color: red;}
   :​:links::md .node #id(links)
-    The <code>:​:links</code> node allows adding information on what links in
+    The <tt>:​:links</tt> node allows adding information on what links in
     the text should resolve to. Each line is parsed in the following way: the
-    line is split on the '<code>=</code>' character. The left hand side is the
+    line is split on the '<tt>=</tt>' character. The left hand side is the
     text as you refer to it in the document and the right hand side is what the
     link should resolve to. The left hand side is normalized so that
     punctuation, spaces and upper vs lower case doesn't matter.
@@ -352,8 +352,8 @@
         ::links
           krug's basement = https://krugsbasement.com
   :​:script::md .node #id(script)
-    The <code>:​:script</code> node allows adding javascript that will be in
-    the final output document. Don't confuse this with the <code>:​:js</code>
+    The <tt>:​:script</tt> node allows adding javascript that will be in
+    the final output document. Don't confuse this with the <tt>:​:js</tt>
     node, which is used to script the document at compile time. These scripts
     will be run when you open the document in a browser. See the copious
     documentation on the web for what you can do with javascript in a webpage.
@@ -369,7 +369,7 @@
     This node can't be used in untrusted input.
 
   :​:img::md .node #id(img)
-    The <code>:​:img</code> node is for adding an image to the document.
+    The <tt>:​:img</tt> node is for adding an image to the document.
 
     The first line of the block is the path to the image. Lines after that are
     rendered as strings.
@@ -386,7 +386,7 @@
         TODO
 
   :​:raw::md .node #id(raw)
-    The <code>:​:raw</code> node allows adding unescaped content into the
+    The <tt>:​:raw</tt> node allows adding unescaped content into the
     document, without being parsed specially in any way. Double colons don't
     introduce nodes, tags won't be escaped, etc. This allows you to add content
     that can't be expressed via another node.
@@ -415,7 +415,7 @@
     This node can't be used in untrusted input.
 
   :​:pre::md .node #id(pre)
-    The <code>:​:pre</code> node is for pre-formatted text. It's like the
+    The <tt>:​:pre</tt> node is for pre-formatted text. It's like the
     <pre> tag in html.
 
     ::div .side-by-side
@@ -429,7 +429,7 @@
         * These are parsed as-is.
         <tags> are still escaped though.
   :​:kv::md .node #id(kv)
-    The <code>:​:kv</code> node allows for a display of key-value data. It is
+    The <tt>:​:kv</tt> node allows for a display of key-value data. It is
     rendered as a two column table and is typically used for things like monster
     statistics. You can programmatically access the values as well.
 
@@ -477,7 +477,7 @@
     You could also add it back via javascript, but this feels more elegant.
 
   :​:comment::md .node #id(comment)
-    The <code>:​</code> node is for describing potentially confusing sections
+    The <tt>:​:comment</tt> node is for describing potentially confusing sections
     of your document to editors of your document. It is not rendered in the
     final html.
 
@@ -503,26 +503,26 @@
             el.appendChild(document.createTextNode('Hello'));
           });
   :​:imglinks::md .node #id(imglinks)
-    The <code>:​:imglinks</code> node is really awesome and is one of the
+    The <tt>:​:imglinks</tt> node is really awesome and is one of the
     reasons dnd files are really nice for writing up your dungeons. They have a
     very specific syntax.
 
     1. The first line is the path to the image.
-    2. The second line is the width. It is in the form <code>width =
-       300</code>(or whatever width).
-    3. The third line is the height. It is in the form <code>height =
-       400</code>(or whatever height).
-    4. The fourth line is the viewBox. It is in the form of<code>viewBox = 0 0
-       600 800</code>. The 800 600 should be the original width of the image.
+    2. The second line is the width. It is in the form <tt>width =
+       300</tt>(or whatever width).
+    3. The third line is the height. It is in the form <tt>height =
+       400</tt>(or whatever height).
+    4. The fourth line is the viewBox. It is in the form of<tt>viewBox = 0 0
+       600 800</tt>. The 800 600 should be the original width of the image.
        GUI editors will fill in this and the other above lines in for you.
-    5. The remaining lines are in the form of <code> text = href @ x,y</code>.
-       <code>text</code> is the text that will appear on the image.
-       <code>href</code> is what the link should target when clicked. Use anchor
-       links (aka <code>#id</code>) for internal links, otherwise provide the
-       url. <code>x,y</code> is the coordinates (in the units of the viewBox) of
+    5. The remaining lines are in the form of <tt> text = href @ x,y</tt>.
+       <tt>text</tt> is the text that will appear on the image.
+       <tt>href</tt> is what the link should target when clicked. Use anchor
+       links (aka <tt>#id</tt>) for internal links, otherwise provide the
+       url. <tt>x,y</tt> is the coordinates (in the units of the viewBox) of
        where the text should be centered. GUI editors can help automate this and
        you probably want to derive these lines from your document via
-       javascript. The <code>krugs-basement.dnd</code> example is an example of
+       javascript. The <tt>krugs-basement.dnd</tt> example is an example of
        how to do this.
     Really, just look at the krug's basement example dnd file.
 
@@ -538,7 +538,7 @@
         TODO
 
   :​:toc::md .node #id(toc)
-    The <code>:​:toc</code> node is a special kind of node. It renders into
+    The <tt>:​:toc</tt> node is a special kind of node. It renders into
     effectively a table of contents of the document, grabbing all h2s and h3s
     and putting them into an unordered list.
 
@@ -548,7 +548,7 @@
       Rendered::md .rightside #noid
         ::toc
   :​:quote::md .node #id(quote)
-    The <code>:​:quote</code> node is for block quotes. It's like a div, but
+    The <tt>:​:quote</tt> node is for block quotes. It's like a div, but
     wraps in a <blockquote> instead of a div.
 
     ::div .side-by-side
@@ -570,7 +570,7 @@
             content: "> ";
           }
   :​:details::md .node #id(details)
-    The <code>:​:details</code> node is parsed like a <code>md</code> node,
+    The <tt>:​:details</tt> node is parsed like a <tt>md</tt> node,
     but the final output will be in a <details> tag. The header will be put in
     the summary instead of as a heading.
 
@@ -586,7 +586,7 @@
           raw brawn to overcome problems, like smashing open a door.
 
   :​:meta::md .node #id(meta)
-    The <code>:​:meta</code> node is parsed as a raw node. Each line is
+    The <tt>:​:meta</tt> node is parsed as a raw node. Each line is
     wrapped in a <meta> tag and placed verbatim into the <head> of the document.
     This allows you to set specific meta-attributes. Search online for what can
     be done with <meta> tags. This functionality is rarely needed.
@@ -656,10 +656,10 @@
     grid-template-columns: max-content auto;
     grid-column-gap: 3em;
   }
-  code, pre {
+  tt, pre {
     font-family: "SF Mono", ui-mono, "Cascadia Mono", Consolas, monospace;
   }
-  code {
+  tt {
     background-color: #f0f0f0;
     padding: 0 8px;
     border-radius: 8px;

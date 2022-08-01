@@ -1,6 +1,7 @@
 Version 0.25.0::md
   - Changes to Internal API
   - Added <tt><tt</tt><tt>></tt>, which is shorter than <tt>code</tt>.
+  - Added the <tt><u</tt><tt>></tt> tag.
 Version 0.21 - 0.24::md
   These are fake versions.
 Version 0.20.0::md

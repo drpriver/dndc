@@ -500,7 +500,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                 msb_write_literal(sb, "&amp;");
             }break;
             case '<':{
-                // we allow inline <b>, <s>, <i>, </b>, </s>, </i>, <br>, <code>, </code>, <hr>, <tt>, </tt>
+                // we allow inline <b>, <s>, <i>, </b>, </s>, </i>, <br>, <code>, </code>, <hr>, <tt>, </tt>, <u>, </u>
                 // This is a big mess and should be done in an easier to do way.
                 if(length - i >= 2){
                     char peek1 = text[i+1];
@@ -551,6 +551,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                         case 'b':
                         case 's':
                         case 'i':
+                        case 'u':
                         case '/':
                             break;
                         default:
@@ -581,6 +582,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                             case 'b':
                             case 's':
                             case 'i':
+                            case 'u':
                                 break;
                             default:
                                 msb_write_literal(sb, "&lt;");
