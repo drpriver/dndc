@@ -162,13 +162,14 @@ for(type \
 #define MARRAY Marray(MARRAY_T) // slightly less typing in the function signature
 
 #ifndef MARRAY_IMPL_ONLY
-typedef struct Marray(MARRAY_T) {
+typedef struct MARRAY MARRAY;
+struct MARRAY {
     size_t count; // First so you can pun this structure with small buffers.
     size_t capacity;
     // This will be NULL if capacity is 0, otherwise it is a valid pointer.
     // Labeling that as nullable is too annoying though.
     MARRAY_T*_Null_unspecified data;
-} Marray(MARRAY_T);
+};
 
 //
 // Allocation Note
@@ -300,8 +301,9 @@ Marray_ensure_additional(MARRAY_T)(MARRAY* marray, Allocator a, size_t n_additio
     }
     size_t old_size = marray->capacity*sizeof(MARRAY_T);
     size_t new_size = new_capacity*sizeof(MARRAY_T);
-    marray->data = Allocator_realloc(a, marray->data, old_size, new_size);
-    unhandled_error_condition(!marray->data);
+    void* p = Allocator_realloc(a, marray->data, old_size, new_size);
+    unhandled_error_condition(!p);
+    marray->data = p;
     marray->capacity = new_capacity;
 }
 

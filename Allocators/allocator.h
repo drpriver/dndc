@@ -94,23 +94,23 @@ struct Allocator {
 MALLOC_FUNC
 static inline
 warn_unused
-void*
+void*_Nullable
 Allocator_alloc(Allocator allocator, size_t size);
 
 MALLOC_FUNC
 static inline
 warn_unused
-void*
+void*_Nullable
 Allocator_zalloc(Allocator allocator, size_t size);
 
 static inline
 warn_unused
-void*
+void*_Nullable
 Allocator_realloc(Allocator allocator, void*_Nullable data, size_t orig_size, size_t size);
 
 static inline
 warn_unused
-void*
+void*_Nullable
 Allocator_dupe(Allocator allocator, const void* data, size_t size);
 
 static inline
@@ -118,13 +118,17 @@ void
 Allocator_free(Allocator allocator, const void*_Nullable data, size_t size);
 
 static inline
+int
+Allocator_supports_free_all(Allocator a);
+
+static inline
 void
-Allocator_free_all(const Allocator a);
+Allocator_free_all(Allocator a);
 
 MALLOC_FUNC
 static inline
 warn_unused
-char*
+char*_Nullable
 Allocator_strndup(Allocator allocator, const char* str, size_t length);
 
 static inline

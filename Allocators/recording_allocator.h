@@ -83,7 +83,7 @@ recording_ensure_capacity(RecordingAllocator* r){
 MALLOC_FUNC
 static
 warn_unused
-void*
+void*_Nullable
 recording_alloc(RecordingAllocator* r, size_t size){
     RA_LOGIT("Allocation for %zu requested.", size);
     void* result = malloc(size);
@@ -100,7 +100,7 @@ recording_alloc(RecordingAllocator* r, size_t size){
 MALLOC_FUNC
 static
 warn_unused
-void*
+void*_Nullable
 recording_zalloc(RecordingAllocator* r, size_t size){
     RA_LOGIT("ZAllocation for %zu requested.", size);
     void* result = calloc(1, size);
@@ -165,7 +165,7 @@ recording_free_all(RecordingAllocator* r){
 }
 
 static inline
-void*
+void*_Nullable
 recording_realloc(RecordingAllocator* r, void*_Nullable data, size_t orig_size, size_t new_size){
     RA_LOGIT("realloc request: old ptr: %p, orig_size: %zu, new_size: %zu", data, orig_size, new_size);
     if(!data)

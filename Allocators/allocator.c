@@ -40,9 +40,26 @@
 #ifndef WASM
 #define sane_realloc(ptr, orig_size, size) realloc(ptr, size)
 #else
-static void* sane_realloc(void* ptr, size_t orig_size, size_t size);
+static void*_Nullable sane_realloc(void* ptr, size_t orig_size, size_t size);
 #endif
 #endif
+
+static inline
+int
+Allocator_supports_free_all(Allocator a){
+    switch(a.type){
+        case ALLOCATOR_UNSET:
+        case ALLOCATOR_MALLOC:
+            return 0;
+        case ALLOCATOR_ARENA:
+            return 1;
+#ifdef USE_RECORDED_ALLOCATOR
+        case ALLOCATOR_RECORDED:
+            return 1;
+#endif
+    }
+    abort();
+}
 
 static inline
 void
@@ -70,7 +87,7 @@ MALLOC_FUNC
 static inline
 warn_unused
 // force_inline
-void*
+void*_Nullable
 Allocator_alloc(Allocator a, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
@@ -93,7 +110,7 @@ MALLOC_FUNC
 static inline
 warn_unused
 // force_inline
-void*
+void*_Nullable
 Allocator_zalloc(Allocator a, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
@@ -115,7 +132,7 @@ Allocator_zalloc(Allocator a, size_t size){
 static inline
 // force_inline
 warn_unused
-void*
+void*_Nullable
 Allocator_realloc(Allocator a, void*_Nullable data, size_t orig_size, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
@@ -124,7 +141,7 @@ Allocator_realloc(Allocator a, void*_Nullable data, size_t orig_size, size_t siz
         case ALLOCATOR_MALLOC:
             return sane_realloc(data, orig_size, size);
         case ALLOCATOR_ARENA:
-            return (void*)ArenaAllocator_realloc(a._data, data, orig_size, size);
+            return ArenaAllocator_realloc(a._data, data, orig_size, size);
 #ifdef USE_RECORDED_ALLOCATOR
         case ALLOCATOR_RECORDED:
             return recording_realloc(a._data, data, orig_size, size);
@@ -188,20 +205,24 @@ Allocator_good_size(Allocator a, size_t size){
 static inline
 warn_unused
 // force_inline
-void*
+void*_Nullable
 Allocator_dupe(Allocator allocator, const void* data, size_t size){
     void* result = Allocator_alloc(allocator, size);
-    memcpy(result, data, size);
+    unhandled_error_condition(!result);
+    if(!result) return NULL;
+    if(size)
+        memcpy(result, data, size);
     return result;
 }
 
 MALLOC_FUNC
 static inline
 warn_unused
-char*
+char*_Nullable
 Allocator_strndup(Allocator allocator, const char* str, size_t length){
     char* result = Allocator_alloc(allocator, length+1);
     unhandled_error_condition(!result);
+    if(!result) return NULL;
     if(length)
         memcpy(result, str, length);
     result[length] = '\0';
