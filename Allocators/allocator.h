@@ -37,10 +37,6 @@
 #endif
 #endif
 
-#ifndef unhandled_error_condition
-#define unhandled_error_condition(cond) assert(!(cond))
-#endif
-
 #ifndef force_inline
 #if defined(__GNUC__) || defined(__clang__)
 #define force_inline __attribute__((always_inline))
@@ -73,12 +69,34 @@
 #endif
 
 
+
+#ifdef __clang__
+enum AllocatorType: int {
+#else
 enum AllocatorType {
+#endif
     ALLOCATOR_UNSET  = 0,
+    // aborts on any usage
+
     ALLOCATOR_MALLOC,
+    // wrapper around malloc, calloc, realloc, free
+
     ALLOCATOR_ARENA,
+    // Allocates from a linear section of memory, falls back to malloc
+
+    ALLOCATOR_NULL,
+    // always returns NULL, does not error on free
+
 #ifdef USE_RECORDED_ALLOCATOR
     ALLOCATOR_RECORDED,
+    // Stores allocations and sizes, catches double frees, leaks, etc.
+#endif
+
+#ifdef USE_TESTING_ALLOCATOR
+    ALLOCATOR_TESTING,
+    // Like recorded, but uses the global testing allocator.
+    // Call testing_allocator_init early on.
+    // Can also be configured to fail after a certain number of allocations.
 #endif
 };
 

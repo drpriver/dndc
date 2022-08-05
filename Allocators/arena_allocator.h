@@ -84,7 +84,7 @@ Big_init(BigListNode* prev, BigAllocation* ba){
 }
 
 static inline
-void*
+void*_Nullable
 Big_alloc(BigListNode* prev, size_t size){
     BigAllocation* ba = Allocator_alloc(MALLOCATOR, size + sizeof(*ba));
     Big_init(prev, ba);
@@ -93,7 +93,7 @@ Big_alloc(BigListNode* prev, size_t size){
 }
 
 static inline
-void*
+void*_Nullable
 Big_zalloc(BigListNode* prev, size_t size){
     BigAllocation* ba = Allocator_zalloc(MALLOCATOR, size + sizeof(*ba));
     Big_init(prev, ba);
@@ -116,7 +116,8 @@ Big_realloc(void* a, size_t old, size_t size){
 
 static inline
 void
-Big_free(const void* a, size_t size){
+Big_free(const void*_Nullable a, size_t size){
+    if(!a) return;
     const BigAllocation* ba = (const BigAllocation*)a-1;
     BigListNode* prev = ba->prev;
     BigListNode* next = ba->next;

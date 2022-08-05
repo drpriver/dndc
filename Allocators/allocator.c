@@ -20,6 +20,10 @@
 #include "recording_allocator.h"
 #endif
 
+#ifdef USE_TESTING_ALLOCATOR
+#include "testing_allocator.h"
+#endif
+
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
@@ -44,12 +48,21 @@ static void*_Nullable sane_realloc(void* ptr, size_t orig_size, size_t size);
 #endif
 #endif
 
+#ifdef DEBUGGING_H
+#define bad() bt(), abort()
+#else
+#define bad() abort()
+#endif
+
+
 static inline
 int
 Allocator_supports_free_all(Allocator a){
     switch(a.type){
         case ALLOCATOR_UNSET:
+            bad();
         case ALLOCATOR_MALLOC:
+        case ALLOCATOR_NULL:
             return 0;
         case ALLOCATOR_ARENA:
             return 1;
@@ -57,8 +70,12 @@ Allocator_supports_free_all(Allocator a){
         case ALLOCATOR_RECORDED:
             return 1;
 #endif
+#ifdef USE_TESTING_ALLOCATOR
+        case ALLOCATOR_TESTING:
+            return 1;
+#endif
     }
-    abort();
+    bad();
 }
 
 static inline
@@ -66,21 +83,29 @@ void
 Allocator_free_all(Allocator a){
     switch(a.type){
         case ALLOCATOR_UNSET:
-            abort();
+            bad();
             return;
         case ALLOCATOR_MALLOC:
-            abort();
+            bad();
             return;
         case ALLOCATOR_ARENA:
             ArenaAllocator_free_all(a._data);
+            return;
+        case ALLOCATOR_NULL:
+            bad();
             return;
 #ifdef USE_RECORDED_ALLOCATOR
         case ALLOCATOR_RECORDED:
             recording_free_all(a._data);
             return;
 #endif
+#ifdef USE_TESTING_ALLOCATOR
+        case ALLOCATOR_TESTING:
+            testing_free_all(a._data);
+            return;
+#endif
     }
-    abort();
+    bad();
 }
 
 MALLOC_FUNC
@@ -91,18 +116,24 @@ void*_Nullable
 Allocator_alloc(Allocator a, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
-            abort();
+            bad();
             break;
         case ALLOCATOR_MALLOC:
             return malloc(size);
         case ALLOCATOR_ARENA:
             return ArenaAllocator_alloc(a._data, size);
+        case ALLOCATOR_NULL:
+            return NULL;
 #ifdef USE_RECORDED_ALLOCATOR
         case ALLOCATOR_RECORDED:
             return recording_alloc(a._data, size);
 #endif
+#ifdef USE_TESTING_ALLOCATOR
+        case ALLOCATOR_TESTING:
+            return testing_alloc(a._data, size);
+#endif
     }
-    abort();
+    bad();
     unreachable();
 }
 
@@ -114,18 +145,24 @@ void*_Nullable
 Allocator_zalloc(Allocator a, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
-            abort();
+            bad();
             break;
         case ALLOCATOR_MALLOC:
             return calloc(1, size);
         case ALLOCATOR_ARENA:
             return ArenaAllocator_zalloc(a._data, size);
+        case ALLOCATOR_NULL:
+            return NULL;
 #ifdef USE_RECORDED_ALLOCATOR
         case ALLOCATOR_RECORDED:
             return recording_zalloc(a._data, size);
 #endif
+#ifdef USE_TESTING_ALLOCATOR
+        case ALLOCATOR_TESTING:
+            return testing_zalloc(a._data, size);
+#endif
     }
-    abort();
+    bad();
     unreachable();
 }
 
@@ -136,18 +173,24 @@ void*_Nullable
 Allocator_realloc(Allocator a, void*_Nullable data, size_t orig_size, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
-            abort();
+            bad();
             break;
         case ALLOCATOR_MALLOC:
             return sane_realloc(data, orig_size, size);
         case ALLOCATOR_ARENA:
             return ArenaAllocator_realloc(a._data, data, orig_size, size);
+        case ALLOCATOR_NULL:
+            return NULL;
 #ifdef USE_RECORDED_ALLOCATOR
         case ALLOCATOR_RECORDED:
             return recording_realloc(a._data, data, orig_size, size);
 #endif
+#ifdef USE_TESTING_ALLOCATOR
+        case ALLOCATOR_TESTING:
+            return testing_realloc(a._data, data, orig_size, size);
+#endif
     }
-    abort();
+    bad();
     unreachable();
 }
 
@@ -157,7 +200,7 @@ void
 Allocator_free(Allocator a, const void*_Nullable data, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
-            abort();
+            bad();
             return;
         case ALLOCATOR_MALLOC:
             const_free(data);
@@ -165,13 +208,20 @@ Allocator_free(Allocator a, const void*_Nullable data, size_t size){
         case ALLOCATOR_ARENA:
             ArenaAllocator_free(a._data, data, size);
             return;
+        case ALLOCATOR_NULL:
+            return;
 #ifdef USE_RECORDED_ALLOCATOR
         case ALLOCATOR_RECORDED:
             recording_free(a._data, data, size);
             return;
 #endif
+#ifdef USE_TESTING_ALLOCATOR
+        case ALLOCATOR_TESTING:
+            testing_free(a._data, data, size);
+            return;
+#endif
     }
-    abort();
+    bad();
 }
 
 static inline
@@ -180,7 +230,7 @@ size_t
 Allocator_good_size(Allocator a, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
-            abort();
+            bad();
             return size;
         case ALLOCATOR_MALLOC:
             #ifdef __APPLE__
@@ -190,6 +240,8 @@ Allocator_good_size(Allocator a, size_t size){
             #endif
         case ALLOCATOR_ARENA:
             return ArenaAllocator_round_size_up(size);
+        case ALLOCATOR_NULL:
+            return size;
 #ifdef USE_RECORDED_ALLOCATOR
         case ALLOCATOR_RECORDED:
             #ifdef __APPLE__
@@ -198,8 +250,16 @@ Allocator_good_size(Allocator a, size_t size){
                 return size;
             #endif
 #endif
+#ifdef USE_TESTING_ALLOCATOR
+        case ALLOCATOR_TESTING:
+            #ifdef __APPLE__
+                return malloc_good_size(size);
+            #else
+                return size;
+            #endif
+#endif
     }
-    abort();
+    bad();
 }
 
 static inline
@@ -208,7 +268,6 @@ warn_unused
 void*_Nullable
 Allocator_dupe(Allocator allocator, const void* data, size_t size){
     void* result = Allocator_alloc(allocator, size);
-    unhandled_error_condition(!result);
     if(!result) return NULL;
     if(size)
         memcpy(result, data, size);
@@ -221,7 +280,6 @@ warn_unused
 char*_Nullable
 Allocator_strndup(Allocator allocator, const char* str, size_t length){
     char* result = Allocator_alloc(allocator, length+1);
-    unhandled_error_condition(!result);
     if(!result) return NULL;
     if(length)
         memcpy(result, str, length);

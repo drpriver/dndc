@@ -5,7 +5,9 @@
 #define RECORDING_ALLOCATOR_H
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "allocator.h"
+#include "Utils/debugging.h"
 
 // This stuff is for debugging alloc/free errors.
 #if 0
@@ -59,6 +61,9 @@ struct RecordingAllocator{
     size_t* allocation_sizes;
     size_t count;
     size_t capacity;
+#ifdef HEAVY_RECORDING
+    BacktraceArray*_Null_unspecified*_Null_unspecified backtraces;
+#endif
 };
 
 static inline
@@ -71,12 +76,18 @@ recording_ensure_capacity(RecordingAllocator* r){
         r->capacity = INITIAL_CAPACITY;
         r->allocations = malloc(INITIAL_CAPACITY*sizeof(*r->allocations));
         r->allocation_sizes = malloc(INITIAL_CAPACITY*sizeof(*r->allocation_sizes));
+        #ifdef HEAVY_RECORDING
+        r->backtraces = malloc(INITIAL_CAPACITY*sizeof(*r->backtraces));
+        #endif
         return;
     }
     size_t old_cap = r->capacity;
     size_t new_cap = old_cap * 2;
     r->allocations = sane_realloc(r->allocations, old_cap * sizeof(*r->allocations), new_cap*sizeof(*r->allocations));
     r->allocation_sizes = sane_realloc(r->allocation_sizes, old_cap*sizeof(*r->allocation_sizes), new_cap*sizeof(*r->allocation_sizes));
+    #ifdef HEAVY_RECORDING
+    r->backtraces = sane_realloc(r->backtraces, old_cap*sizeof(*r->backtraces), new_cap*sizeof(*r->backtraces));
+    #endif
     r->capacity = new_cap;
 }
 
@@ -94,6 +105,9 @@ recording_alloc(RecordingAllocator* r, size_t size){
     size_t index = r->count++;
     r->allocations[index] = result;
     r->allocation_sizes[index] = size;
+#ifdef HEAVY_RECORDING
+    r->backtraces[index] = get_bt();
+#endif
     return result;
 }
 
@@ -111,6 +125,9 @@ recording_zalloc(RecordingAllocator* r, size_t size){
     size_t index = r->count++;
     r->allocations[index] = result;
     r->allocation_sizes[index] = size;
+#ifdef HEAVY_RECORDING
+    r->backtraces[index] = get_bt();
+#endif
     return result;
 }
 
@@ -122,31 +139,28 @@ recording_free(RecordingAllocator* r, const void*_Nullable data, size_t size){
         return;
     }
     RA_LOGIT("Free: %p, %zu", data, size);
-    size_t count = r->count;
-    if(!count)
-        goto Lerror;
-    if(data == r->allocations[count-1]){
-        RA_LOGIT("Found the allocation");
-        unhandled_error_condition(r->allocation_sizes[count-1] != size);
-        const_free(data);
-        r->count--;
-        return;
-    }
     // inefficient, but whatever
-    for(size_t i = 0; i < count-1; i++){
+    size_t count = r->count;
+    for(size_t i = count; i--;){
         if(data == r->allocations[i]){
             RA_LOGIT("old ptr, size: %p, %zu", r->allocations[i], r->allocation_sizes[i]);
-            unhandled_error_condition(size != r->allocation_sizes[i]);
+            if(size != r->allocation_sizes[i]){
+                bt();
+                assert(!(_Bool)"Freeing with the wrong size");
+            }
             const_free(data);
+            r->allocations[i] = NULL;
+            r->allocation_sizes[i] = 0;
+            #ifdef HEAVY_RECORDING
+                free(r->backtraces[i]);
+                r->backtraces[i] = 0;
+            #endif
             RA_LOGIT("Free succeeded: %p, %zu", data, size);
-            // compact
-            r->allocations[i] = r->allocations[count-1];
-            r->allocation_sizes[i] = r->allocation_sizes[count-1];
-            r->count--;
+            while(r->count && r->allocation_sizes[r->count-1] == 0)
+                r->count--;
             return;
         }
     }
-    Lerror:;
     assert(!(_Bool)"Freeing pointer not tracked by this allocator.");
 }
 
@@ -160,6 +174,9 @@ recording_free_all(RecordingAllocator* r){
         if(!r->allocations[i])
             continue;
         free(r->allocations[i]);
+#ifdef HEAVY_RECORDING
+        free(r->backtraces[i]);
+#endif
     }
     r->count = 0;
 }
@@ -171,25 +188,23 @@ recording_realloc(RecordingAllocator* r, void*_Nullable data, size_t orig_size, 
     if(!data)
         goto Lrealloc;
     size_t count = r->count;
-    if(!count)
-        goto Lrealloc;
-    // check to see if we are reallocing in a loop.
-    if(data == r->allocations[count-1]){
-        RA_LOGIT("Was the last allocation");
-        unhandled_error_condition(orig_size != r->allocation_sizes[count-1]);
-        r->count--;
-        goto Lrealloc;
-    }
-    for(size_t i = 0; i < count-1; i++){
+    for(size_t i = count; i--;){
+        assert(i < count);
         if(data == r->allocations[i]){
-            unhandled_error_condition(orig_size != r->allocation_sizes[i]);
-            // compact
-            r->allocations[i] = r->allocations[count-1];
-            r->allocation_sizes[i] = r->allocation_sizes[count-1];
-            r->count--;
-            break;
+            assert(orig_size == r->allocation_sizes[i]);
+            r->allocations[i] = NULL;
+            r->allocation_sizes[i] = 0;
+            #ifdef HEAVY_RECORDING
+                free(r->backtraces[i]);
+                r->backtraces[i] = 0;
+            #endif
+            while(r->count && r->allocation_sizes[r->count-1] == 0)
+                r->count--;
+            goto Lrealloc;
         }
     }
+    assert(!(_Bool)"Reallocing an unknown pointer");
+
     Lrealloc:;
     RA_LOGIT("Falling back to actual realloc");
     void* result = sane_realloc(data, orig_size, new_size);
@@ -197,6 +212,9 @@ recording_realloc(RecordingAllocator* r, void*_Nullable data, size_t orig_size, 
     size_t index = r->count++;
     r->allocations[index] = result;
     r->allocation_sizes[index] = new_size;
+#ifdef HEAVY_RECORDING
+    r->backtraces[index] = get_bt();
+#endif
     RA_LOGIT("Realloced %p, size %zu into %p, size %zu", data, orig_size, result, new_size);
     return result;
 }
@@ -207,6 +225,9 @@ recording_cleanup(RecordingAllocator* r){
     RA_LOGIT("Cleaning up the recorder itself");
     free(r->allocation_sizes);
     free(r->allocations);
+#ifdef HEAVY_RECORDING
+    free(r->backtraces);
+#endif
     memset(r, 0, sizeof(*r));
 }
 
@@ -226,6 +247,20 @@ new_recorded_mallocator(void){
         ._data = ra,
         .type = ALLOCATOR_RECORDED,
     };
+}
+
+static inline
+void
+recording_assert_all_freed(RecordingAllocator* r){
+    for(size_t i = 0; i < r->count; i++){
+    #ifdef HEAVY_RECORDING
+        if(r->allocation_sizes[i]){
+            dump_bt(r->backtraces[i]);
+        }
+    #else
+        assert(r->allocation_sizes[i] == 0);
+    #endif
+    }
 }
 
 #ifdef __clang__
