@@ -3475,7 +3475,8 @@ dndc_ctx_add_link(DndcContext* ctx, DndcStringView k, DndcStringView v){
         return DNDC_ERROR_OOM;
     }
     k = msb_detach_sv(&kebab);
-    add_link_from_pair(ctx, k, v);
+    err = add_link_from_pair(ctx, k, v);
+    if(unlikely(err)) return DNDC_ERROR_OOM;
     return 0;
 }
 

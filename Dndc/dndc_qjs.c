@@ -2159,7 +2159,9 @@ QJSMETHOD(js_dndc_context_add_link){
     StringView value = jsstring_to_stringview(jsctx, argv[1], string_allocator(ctx));
     if(!value.text)
         return QJS_EXCEPTION;
-    add_link_from_pair(ctx, kebabed, value);
+    int err = add_link_from_pair(ctx, kebabed, value);
+    if(unlikely(err))
+        return QJS_ThrowTypeError(jsctx, "oom");
     return QJS_UNDEFINED;
 }
 

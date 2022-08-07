@@ -12,6 +12,26 @@
 #include "Utils/hash_func.h"
 #include "Allocators/allocator.h"
 
+#if !defined(likely) && !defined(unlikely)
+#if defined(__GNUC__) || defined(__clang__)
+#define likely(x)      __builtin_expect(!!(x), 1)
+#define unlikely(x)    __builtin_expect(!!(x), 0)
+#else
+#define likely(x) (x)
+#define unlikely(x) (x)
+#endif
+#endif
+
+#ifndef warn_unused
+#if defined(__GNUC__) || defined(__clang__)
+#define warn_unused __attribute__((warn_unused_result))
+#elif defined(_MSC_VER)
+#define warn_unused
+#else
+#define warn_unused
+#endif
+#endif
+
 typedef struct StringTable StringTable;
 struct StringTable {
     Allocator allocator;
@@ -31,13 +51,15 @@ fast_reduce32(uint32_t x, uint32_t y){
 #endif
 
 static
-void
+warn_unused
+int
 string_table_set(StringTable* table, StringView key, StringView value){
-    if(!key.length) return;
+    if(!key.length) return 1;
     if(table->count_ *2 >= table->capacity_){
         size_t old_cap = table->capacity_;
         size_t new_cap = old_cap?old_cap*2:128;
         StringView* new_keys = Allocator_zalloc(table->allocator, sizeof(*new_keys) * new_cap*2);
+        if(unlikely(!new_keys)) return 1;
         StringView* new_values = new_keys+new_cap;
         if(old_cap){
             StringView* old_keys = table->keys;
@@ -74,12 +96,12 @@ string_table_set(StringTable* table, StringView key, StringView value){
             keys[idx] = key;
             values[idx] = value;
             table->count_++;
-            return;
+            return 0;
         }
         else {
             if(SV_equals(key, keys[idx])){
                 values[idx] = value;
-                return;
+                return 0;
             }
         }
         idx++;

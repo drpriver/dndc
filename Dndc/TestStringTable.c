@@ -8,13 +8,15 @@
 TestFunction(TestStringTable){
     TESTBEGIN();
     StringTable table = {.allocator = MALLOCATOR};
-    string_table_set(&table, SV("hello"), SV("world"));
+    int err = string_table_set(&table, SV("hello"), SV("world"));
+    TestAssertFalse(err);
     {
         const StringView* v = string_table_get(&table, SV("hello"));
         TestAssert(v);
         TestExpectEquals2(SV_equals, SV("world"), *v);
     }
-    string_table_set(&table, SV("hello"), SV("world!"));
+    err = string_table_set(&table, SV("hello"), SV("world!"));
+    TestAssertFalse(err);
     {
         const StringView* v = string_table_get(&table, SV("hello"));
         TestAssert(v);

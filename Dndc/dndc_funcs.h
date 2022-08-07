@@ -521,7 +521,8 @@ build_toc_block(DndcContext*);
   add_link_from_header(DndcContext* ctx, StringView str);
 
   static inline
-  void
+  warn_unused
+  int
   add_link_from_pair(DndcContext* ctx, StringView kebabed, StringView value);
 
 

@@ -290,7 +290,8 @@ add_link_from_sv(DndcContext* ctx, Node* node){
         return DNDC_ERROR_LINK;
         foundit:;
     }
-    string_table_set(&ctx->links, key, value);
+    int err = string_table_set(&ctx->links, key, value);
+    if(unlikely(err)) return DNDC_ERROR_OOM;
     return 0;
 }
 
@@ -310,14 +311,18 @@ add_link_from_header(DndcContext* ctx, StringView str){
         return 1;
     LongString anchor = msb_detach_ls(&sb);
     StringView kebabed = {.text = anchor.text+1, .length=anchor.length-1};
-    string_table_set(&ctx->links, kebabed, LS_to_SV(anchor));
+    int err = string_table_set(&ctx->links, kebabed, LS_to_SV(anchor));
+    if(unlikely(err)) return DNDC_ERROR_OOM;
     return 0;
 }
 
 static inline
-void
+warn_unused
+int
 add_link_from_pair(DndcContext* ctx, StringView kebabed, StringView value){
-    string_table_set(&ctx->links, kebabed, value);
+    int err = string_table_set(&ctx->links, kebabed, value);
+    if(err) return DNDC_ERROR_OOM;
+    return 0;
 }
 
 static inline
