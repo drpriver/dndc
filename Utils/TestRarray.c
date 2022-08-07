@@ -11,7 +11,8 @@ TestFunction(TestCheckSizeExample){
     TESTBEGIN();
     Allocator al = new_recorded_mallocator();
     Rarray(int)* myarray = NULL;
-    myarray = Rarray_check_size(int)(myarray, al);
+    int err = Rarray_check_size(int)(&myarray, al);
+    TestAssertFalse(err);
     TestAssert(myarray);
     TestAssertEquals(myarray->capacity > 0, 1);
     Allocator_free(al, myarray, sizeof(*myarray)+sizeof(*myarray->data)*myarray->capacity);
@@ -23,11 +24,14 @@ TestFunction(TestPushExample){
     TESTBEGIN();
     Allocator al = new_recorded_mallocator();
     Rarray(int)* myarray = NULL;
-    myarray = Rarray_push(int)(myarray, al, 1);
+    int err = Rarray_push(int)(&myarray, al, 1);
+    TestAssertFalse(err);
     TestAssert(myarray);
-    myarray = Rarray_push(int)(myarray, al, 2);
+    err = Rarray_push(int)(&myarray, al, 2);
+    TestAssertFalse(err);
     TestAssert(myarray);
-    myarray = Rarray_push(int)(myarray, al, 3);
+    err = Rarray_push(int)(&myarray, al, 3);
+    TestAssertFalse(err);
     TestAssert(myarray);
     TestAssertEquals(myarray->count, 3);
     TestAssertEquals(myarray->data[0], 1);
@@ -44,13 +48,15 @@ TestFunction(TestAllocExample){
     Rarray(int)* myarray = NULL;
     // Use a block to scope the allocation as the returned pointer is unstable
     {
-        int* a = Rarray_alloc(int)(&myarray, al);
+        int* a; int err = Rarray_alloc(int)(&myarray, al, &a);
+        TestAssertFalse(err);
         TestAssert(myarray);
         TestAssert(a);
         *a = 3;
     }
     {
-        int* b = Rarray_alloc(int)(&myarray, al);
+        int* b; int err = Rarray_alloc(int)(&myarray, al, &b);
+        TestAssertFalse(err);
         TestAssert(myarray);
         TestAssert(b);
         *b = 4;
@@ -67,16 +73,21 @@ TestFunction(TestRemoveExample){
     TESTBEGIN();
     Allocator al = new_recorded_mallocator();
     Rarray(int)* myarray = NULL;
-    myarray = Rarray_push(int)(myarray,al, 1);
+    int err = Rarray_push(int)(&myarray,al, 1);
+    TestAssertFalse(err);
     TestAssert(myarray);
-    myarray = Rarray_push(int)(myarray, al, 2);
+    err = Rarray_push(int)(&myarray, al, 2);
+    TestAssertFalse(err);
     TestAssert(myarray);
-    myarray = Rarray_push(int)(myarray, al, 3);
+    err = Rarray_push(int)(&myarray, al, 3);
+    TestAssertFalse(err);
     TestAssert(myarray);
-    myarray = Rarray_push(int)(myarray, al, 4);
+    err = Rarray_push(int)(&myarray, al, 4);
+    TestAssertFalse(err);
     TestAssert(myarray);
     // the 5th one is important to trigger a reallocation.
-    myarray = Rarray_push(int)(myarray, al, 5);
+    err = Rarray_push(int)(&myarray, al, 5);
+    TestAssertFalse(err);
     TestAssert(myarray);
     Rarray_remove(int)(myarray, 1);
     TestAssertEquals(myarray->count, 4);

@@ -8,6 +8,36 @@
 #include <assert.h> // assert
 #include "Allocators/allocator.h" // Allocator functions
 
+
+
+#if defined(__GNUC__) || defined(__clang__)
+#define ra_memmove __builtin_memmove
+#define ra_memcpy __builtin_memcpy
+#else
+#define ra_memmove memmove
+#define ra_memcpy memcpy
+#endif
+
+#if !defined(likely) && !defined(unlikely)
+#if defined(__GNUC__) || defined(__clang__)
+#define likely(x)      __builtin_expect(!!(x), 1)
+#define unlikely(x)    __builtin_expect(!!(x), 0)
+#else
+#define likely(x) (x)
+#define unlikely(x) (x)
+#endif
+#endif
+
+#ifndef warn_unused
+#if defined(__GNUC__) || defined(__clang__)
+#define warn_unused __attribute__((warn_unused_result))
+#elif defined(_MSC_VER)
+#define warn_unused
+#else
+#define warn_unused
+#endif
+#endif
+
 //
 // Rarrays
 // -------
@@ -48,6 +78,9 @@ for(type *iter=((rarray)?(rarray)->data:NULL), \
       *iter##end__=((rarray)?(rarray)->data+(rarray)->count:NULL); \
     iter!=iter##end__;\
     ++iter)
+
+
+
 #endif
 
 #ifndef RARRAY_T
@@ -88,38 +121,57 @@ typedef struct Rarray(RARRAY_T){
 //   assert(myarray->capacity > 0);
 //
 static inline
-RARRAY*
-Rarray_check_size(RARRAY_T)(RARRAY*_Nullable rarray, Allocator a){
+warn_unused
+int
+Rarray_check_size(RARRAY_T)(RARRAY*_Nullable*_Nonnull ra, Allocator a){
+    RARRAY*rarray = *ra;
     if(!rarray){
         enum {INITIAL_CAPACITY=4};
         enum {INITIAL_SIZE=INITIAL_CAPACITY*sizeof(RARRAY_T)+sizeof(RARRAY)};
         rarray = Allocator_alloc(a, INITIAL_SIZE);
+        if(unlikely(!rarray))
+            return 1;
         rarray->count = 0;
         rarray->capacity = INITIAL_CAPACITY;
+        *ra = rarray;
     }
-    if(rarray->count == rarray->capacity){
+    else if(rarray->count == rarray->capacity){
         size_t datasize = rarray->capacity*sizeof(RARRAY_T);
         size_t old_size = datasize + sizeof(RARRAY);
         size_t new_size = datasize*2 + sizeof(RARRAY);
         void* new_array = Allocator_realloc(a, rarray, old_size, new_size);
+        if(unlikely(!new_array))
+            return 1;
         rarray = new_array;
         rarray->capacity *= 2;
+        *ra = rarray;
     }
-    return (Rarray(RARRAY_T)*)rarray;
+    return 0;
 }
 
 static inline
-RARRAY*_Null_unspecified
-Rarray_clone(RARRAY_T)(RARRAY*_Nullable rarray, Allocator a){
-    if(!rarray) return NULL;
+warn_unused
+int
+Rarray_clone(RARRAY_T)(RARRAY*_Nullable rarray, Allocator a, RARRAY*_Nullable*_Nonnull result){
+    if(!rarray) {
+        *result = NULL;
+        return 0;
+    }
     size_t count = rarray->count;
-    if(!count) return NULL;
+    if(!count) {
+        *result = NULL;
+        return 0;
+    }
 
     RARRAY* new_rarray = Allocator_alloc(a, sizeof(RARRAY)+sizeof(RARRAY_T)*count);
+    if(unlikely(!new_rarray)){
+        return 1;
+    }
     new_rarray->count = count;
     new_rarray->capacity = count;
-    memcpy(new_rarray->data, rarray->data, sizeof(RARRAY_T)*count);
-    return new_rarray;
+    ra_memcpy(new_rarray->data, rarray->data, sizeof(RARRAY_T)*count);
+    *result = new_rarray;
+    return 0;
 }
 
 //
@@ -142,11 +194,14 @@ Rarray_clone(RARRAY_T)(RARRAY*_Nullable rarray, Allocator a){
 //   assert(myarray->data[2] == 3);
 //
 static inline
-RARRAY*
-Rarray_push(RARRAY_T)(RARRAY*_Nullable rarray, Allocator a, RARRAY_T item){
-    rarray = Rarray_check_size(RARRAY_T)(rarray,a);
+warn_unused
+int
+Rarray_push(RARRAY_T)(RARRAY*_Nullable*_Nonnull ra, Allocator a, RARRAY_T item){
+    int err = Rarray_check_size(RARRAY_T)(ra, a);
+    if(unlikely(err)) return err;
+    RARRAY* rarray = *ra;
     rarray->data[rarray->count++] = item;
-    return (RARRAY*)rarray; // cast away nullability
+    return 0;
 }
 
 //
@@ -177,10 +232,14 @@ Rarray_push(RARRAY_T)(RARRAY*_Nullable rarray, Allocator a, RARRAY_T item){
 //   assert(myarray->data[1] == 4);
 //
 static inline
-RARRAY_T*
-Rarray_alloc(RARRAY_T)(RARRAY*_Nullable*_Nonnull rarray, Allocator a){
-    *rarray = Rarray_check_size(RARRAY_T)(*rarray, a);
-    return &(*rarray)->data[(*rarray)->count++];
+warn_unused
+int
+Rarray_alloc(RARRAY_T)(RARRAY*_Nullable*_Nonnull ra, Allocator a, RARRAY_T*_Nullable*_Nonnull result){
+    int err = Rarray_check_size(RARRAY_T)(ra, a);
+    if(unlikely(err)) return err;
+    RARRAY* rarray = *ra;
+    *result = &rarray->data[rarray->count++];
+    return 0;
 }
 
 //
@@ -203,13 +262,14 @@ Rarray_alloc(RARRAY_T)(RARRAY*_Nullable*_Nonnull rarray, Allocator a){
 static inline
 void
 Rarray_remove(RARRAY_T)(RARRAY* rarray, size_t i){
+    assert(rarray);
     assert(i < rarray->count);
     if(i == rarray->count-1){
         rarray->count--;
         return;
     }
     size_t n_move = rarray->count - i - 1;
-    (memmove)(rarray->data+i, rarray->data+i+1, n_move*(sizeof(RARRAY_T)));
+    ra_memmove(rarray->data+i, rarray->data+i+1, n_move*(sizeof(RARRAY_T)));
     rarray->count--;
 }
 

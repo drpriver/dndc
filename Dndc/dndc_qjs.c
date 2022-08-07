@@ -1818,7 +1818,11 @@ QJSMETHOD(js_dndc_context_make_node){
                 failure = QJS_EXCEPTION;
                 goto fail;
             }
-            node->classes = Rarray_push(StringView)(node->classes, main_allocator(ctx), sv);
+            int err = Rarray_push(StringView)(&node->classes, main_allocator(ctx), sv);
+            if(unlikely(err)){
+                failure = QJS_ThrowTypeError(jsctx, "oom");
+                goto fail;
+            }
         }
     }
     if(!QJS_IsUndefined(attributes)){
@@ -2453,7 +2457,10 @@ QJSMETHOD(js_dndc_classlist_append){
     StringView c = jsstring_to_stringview(jsctx, arg, string_allocator(ctx));
     if(!c.text)
         return QJS_EXCEPTION;
-    node->classes = Rarray_push(StringView)(node->classes, main_allocator(ctx), c);
+    int err =  Rarray_push(StringView)(&node->classes, main_allocator(ctx), c);
+    if(unlikely(err)){
+        return QJS_ThrowTypeError(jsctx, "oom");
+    }
     return QJS_UNDEFINED;
 }
 

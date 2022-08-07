@@ -108,12 +108,14 @@ marray_resize_to_some_weird_number(size_t x){
 #endif
 #endif
 
+#ifndef warn_unused
 #if defined(__GNUC__) || defined(__clang__)
 #define warn_unused __attribute__((warn_unused_result))
 #elif defined(_MSC_VER)
 #define warn_unused
 #else
 #define warn_unused
+#endif
 #endif
 
 #define MARRAYIMPL(meth, type) Marray##_##meth##__##type // Macros require level of indirection

@@ -72,7 +72,9 @@ node_set_attribute(Node* node, Allocator allocator, StringView attr, StringView 
             return;
         }
     }
-    Attribute* a = Rarray_alloc(Attribute)(&node->attributes, allocator);
+    Attribute* a;
+    int err = Rarray_alloc(Attribute)(&node->attributes, allocator, &a);
+    unhandled_error_condition(err);
     a->key = attr;
     a->value = value;
     return;
@@ -140,13 +142,15 @@ node_clone(DndcContext* ctx, NodeHandle handle){
     else {
         int err = Marray_extend(NodeHandle)(&dstnode->children, main_allocator(ctx), node_children(srcnode), node_children_count(srcnode));
         if(unlikely(err))
-            return INVALID_NODE_HANDLE;
+            return INVALID_NODE_HANDLE; // this is weird
     }
     RARRAY_FOR_EACH(Attribute, at, srcnode->attributes){
-        dstnode->attributes = Rarray_push(Attribute)(dstnode->attributes, main_allocator(ctx), *at);
+        int err = Rarray_push(Attribute)(&dstnode->attributes, main_allocator(ctx), *at);
+        if(unlikely(err)) return INVALID_NODE_HANDLE; // this is weird
     }
     RARRAY_FOR_EACH(StringView, cls, srcnode->classes){
-        dstnode->classes = Rarray_push(StringView)(dstnode->classes, main_allocator(ctx), *cls);
+        int err = Rarray_push(StringView)(&dstnode->classes, main_allocator(ctx), *cls);
+        if(unlikely(err)) return INVALID_NODE_HANDLE; // this is weird
     }
     dstnode->filename_idx = srcnode->filename_idx;
     dstnode->row = srcnode->row;

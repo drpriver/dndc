@@ -657,7 +657,9 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                     return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                 }
                 StringView class_ = {.length = class_length, .text = class_start};
-                node->classes = Rarray_push(StringView)(node->classes, main_allocator(ctx), class_);
+                int err = Rarray_push(StringView)(&node->classes, main_allocator(ctx), class_);
+                if(unlikely(err))
+                    return (ErrorableNodeFlags){.errored=DNDC_ERROR_OOM};
             }break;
             case '@':{
                 advance_sv(&aftertype);
@@ -708,7 +710,8 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                             break;
                         }
                 }
-                Attribute* attr = Rarray_alloc(Attribute)(&node->attributes, main_allocator(ctx));
+                Attribute* attr; int err = Rarray_alloc(Attribute)(&node->attributes, main_allocator(ctx), &attr);
+                if(unlikely(err)) return (ErrorableNodeFlags){.errored=DNDC_ERROR_OOM};
                 attr->key = attr_name;
                 attr->value = SV("");
                 if(aftertype.length){

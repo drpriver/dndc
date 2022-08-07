@@ -2253,7 +2253,8 @@ dndc_ctx_clone(DndcContext* ctx){
             if(unlikely(err)) goto fail;
         }
         if(node->attributes){
-            newnode->attributes = Rarray_clone(Attribute)(node->attributes, main_allocator(result));
+            int err = Rarray_clone(Attribute)(node->attributes, main_allocator(result), &newnode->attributes);
+            if(unlikely(err)) goto fail;
             RARRAY_FOR_EACH(Attribute, attr, newnode->attributes){
                 int err = dndc_ctx_dup_sv(result, attr->key, &attr->key);
                 if(unlikely(err)) goto fail;
@@ -2262,7 +2263,8 @@ dndc_ctx_clone(DndcContext* ctx){
             }
         }
         if(node->classes){
-            newnode->classes = Rarray_clone(StringView)(node->classes, main_allocator(result));
+            int err = Rarray_clone(StringView)(node->classes, main_allocator(result), &newnode->classes);
+            if(unlikely(err)) goto fail;
             RARRAY_FOR_EACH(StringView, cls, newnode->classes){
                 int err = dndc_ctx_dup_sv(result, *cls, cls);
                 if(unlikely(err)) goto fail;
@@ -2336,10 +2338,14 @@ dndc_ctx_shallow_clone(DndcContext* ctx){
             int err = Marray_extend(NodeHandle)(&newnode->children, main_allocator(result), node->children.data, node->children.count);
             if(unlikely(err)) goto fail;
         }
-        if(node->attributes)
-            newnode->attributes = Rarray_clone(Attribute)(node->attributes, main_allocator(result));
-        if(node->classes)
-            newnode->classes = Rarray_clone(StringView)(node->classes, main_allocator(result));
+        if(node->attributes){
+            int err = Rarray_clone(Attribute)(node->attributes, main_allocator(result), &newnode->attributes);
+            if(unlikely(err)) goto fail;
+        }
+        if(node->classes){
+            int err = Rarray_clone(StringView)(node->classes, main_allocator(result), &newnode->classes);
+            if(unlikely(err)) goto fail;
+        }
     }
     // success:
     return result;
@@ -2543,8 +2549,8 @@ dndc_node_add_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView cls){
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
     Node* node = get_node(ctx, handle);
-    node->classes = Rarray_push(StringView)(node->classes, main_allocator(ctx), cls);
-    return 0;
+    int err = Rarray_push(StringView)(&node->classes, main_allocator(ctx), cls);
+    return err?DNDC_ERROR_OOM: 0;
 }
 
 DNDC_API
@@ -3113,7 +3119,8 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
                 newnode->type = NODE_MD;
                 was_import = true;
             }
-            newnode->attributes = Rarray_clone(Attribute)(node->attributes, main_allocator(ctx));
+            int err = Rarray_clone(Attribute)(node->attributes, main_allocator(ctx), &newnode->attributes);
+            if(unlikely(err)) return DNDC_ERROR_OOM;
         }
         if(ctx->imports.count > 1000){
             NODE_LOG_ERROR(ctx, node, LS("More than 1000 imports. Aborting parsing (did you accidentally create an import cycle?)"));
