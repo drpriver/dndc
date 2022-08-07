@@ -86,7 +86,7 @@ PopDiagnostic(); // unused function
 //
 // Wrappers a python callable so that it can be called as a DndcLogger
 // user_data is actually a pointer to the  PyObject*, so it needs to be a static PyObject*
-// or be in some object that is guranteed to live long enough.
+// or be in some object that is guaranteed to live long enough.
 static
 void
 pylogger(void*_Nullable user_data, int type_, const char* filename, int filename_len, int line, int col, const char* message, int message_len){

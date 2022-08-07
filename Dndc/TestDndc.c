@@ -1,7 +1,12 @@
 //
 // Copyright © 2021-2022, David Priver
 //
+
+// #define HEAVY_RECORDING
+#define USE_TESTING_ALLOCATOR
+#define REPLACE_MALLOCATOR
 #define USE_RECORDED_ALLOCATOR
+#include "Allocators/testing_allocator.h"
 #define DNDC_EXAMPLE
 #include <stdio.h>
 #define DNDC_API static inline
@@ -33,6 +38,7 @@ static TestFunc TestMd;
 static TestFunc TestUtf16Syntax;
 
 int main(int argc, char** argv){
+    testing_allocator_init();
     RegisterTest(TestDndc1);
     RegisterTest(TestDndc2);
     RegisterTest(TestDndc3);
@@ -54,6 +60,7 @@ int main(int argc, char** argv){
     RegisterTest(TestMd);
     RegisterTest(TestUtf16Syntax);
     int ret = test_main(argc, argv);
+    testing_assert_all_freed();
     return ret;
 }
 
@@ -977,6 +984,7 @@ TestFunction(TestJs){
     DndcLongString output;
     int e = run_the_dndc(OUTPUT_HTML, flags, SV(""),input, SV(""), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, post_js_ast_func, &TEST_stats, NULL, LS(""));
     TestAssertFalse(e);
+    dndc_free_string(output);
     TESTEND();
 }
 
@@ -1010,6 +1018,7 @@ TestFunction(TestFileCache){
         TestExpectEquals(ra.allocation_sizes[i], 0);
     }
     TestAssertFalse(e);
+    dndc_free_string(output);
     recording_cleanup(&ra);
     TESTEND();
 }

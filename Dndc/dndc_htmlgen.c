@@ -87,7 +87,8 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
     size_t imgcount = ctx->img_nodes.count + ctx->imglinks_nodes.count;
     // estimate memory usage as 120 characters per node and 200 kb images.
     size_t reserve_amount = ctx->nodes.count*120 + imgcount*200*1024;
-    msb_ensure_additional(msb, reserve_amount);
+    int err = msb_ensure_additional(msb, reserve_amount);
+    if(err) return DNDC_ERROR_OOM;
     uint64_t flags = ctx->flags;
     bool complete_document = !(flags & DNDC_FRAGMENT_ONLY);
     if(complete_document){
@@ -645,7 +646,9 @@ print_u8x16(const char* prefix, uint8x16_t v){
 static inline
 int
 write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, NodeHandle nh){
-    msb_ensure_additional(sb, length);
+    int err = msb_ensure_additional(sb, length);
+    if(unlikely(err))
+        return DNDC_ERROR_OOM;
 #if 1 && !defined(NO_SIMD) && defined(__x86_64__)
     size_t cursor = sb->cursor;
     char* sbdata = sb->data + cursor;

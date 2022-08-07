@@ -863,6 +863,18 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
             .help = "Do a getchar() before running the tests to give time to attach or whatever",
             .dest = ARGDEST(&should_wait),
         },
+        // NOTE(dpriver): This is for testing allocation failure.
+        // This is not normally part of this header, but I didn't feel like copy-pasting
+        // this main just for this.
+        // Maybe we should allow chained argparsers?
+        #ifdef USE_TESTING_ALLOCATOR
+        {
+            .name = SV("-F"),
+            .altname1 = SV("--fail-at"),
+            .help = "Fail after this many allocations",
+            .dest = ARGDEST(&THE_TestingAllocator.fail_at),
+        }
+        #endif
     };
     enum {HELP=0, LIST=1};
     ArgToParse early_args[] = {

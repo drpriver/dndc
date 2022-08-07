@@ -11,6 +11,10 @@
 #include <assert.h>
 #include <stdbool.h>
 
+#if 0
+#include "Utils/debugging.h"
+#endif
+
 #ifndef force_inline
 #if defined(__GNUC__) || defined(__clang__)
 #define force_inline __attribute__((always_inline))
@@ -52,7 +56,11 @@
 // are for invariants and are left in after development is done, whereas
 // these represent defects in the code that needs to be re-written.
 #ifndef unhandled_error_condition
-#define unhandled_error_condition(cond) assert(!(cond))
+#ifdef DEBUGGING_H // debugging.h was included
+#define unhandled_error_condition(cond) do {if(cond)bt(); assert(!(cond));}while(0)
+#else
+#define unhandled_error_condition(cond) do {assert(!(cond));}while(0)
+#endif
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)

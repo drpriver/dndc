@@ -1,6 +1,13 @@
 //
 // Copyright © 2021-2022, David Priver
 //
+
+// #define HEAVY_RECORDING
+#define USE_TESTING_ALLOCATOR
+#define REPLACE_MALLOCATOR
+#define USE_RECORDED_ALLOCATOR
+#include "common_macros.h"
+#include "Allocators/testing_allocator.h"
 #include <stdio.h>
 #define DNDC_API static inline
 #include "dndc.h"
@@ -15,9 +22,11 @@ static TestFunc TestDndcAst;
 static TestFunc TestAstExample;
 
 int main(int argc, char** argv){
+    testing_allocator_init();
     RegisterTest(TestDndcAst);
     RegisterTest(TestAstExample);
     int ret = test_main(argc, argv);
+    testing_assert_all_freed();
     return ret;
 }
 
@@ -37,6 +46,7 @@ TestFunction(TestDndcAst){
     e = dndc_ctx_parse_string(ctx, root, SV("yolo"), SV("::import\n  hello\n"));
     TestExpectFalse(e);
     dndc_ctx_destroy(ctx);
+    dndc_filecache_destroy(textcache);
     TESTEND();
 }
 

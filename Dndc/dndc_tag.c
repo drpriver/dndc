@@ -162,8 +162,10 @@ tag_dnd_files(StringView* filenames, size_t filename_count, LongString outfile, 
     for(size_t i = 0; i < threads.count; i++)
         join_thread(threads.data[i]);
     Marray__Tag tags = {0};
-    for(size_t i = 0; i < items.count; i++)
-        Marray_extend__Tag(&tags, MALLOCATOR, items.data[i].tags.data, items.data[i].tags.count);
+    for(size_t i = 0; i < items.count; i++){
+        int err = Marray_extend__Tag(&tags, MALLOCATOR, items.data[i].tags.data, items.data[i].tags.count);
+        unhandled_error_condition(err);
+    }
     qsort(tags.data, tags.count, sizeof(Tag), StringView_cmp);
     FILE* fp = outfile.length? fopen(outfile.text, "w") : stdout;
     fprintf(fp, "!_TAG_FILE_FORMAT\t1\t/basic format; no extension fields/\n");
@@ -184,7 +186,8 @@ int
 sv_append(void* p, const void* sv_){
     Marray__StringView* m = p;
     const StringView* sv = sv_;
-    Marray_push__StringView(m, MALLOCATOR, *sv);
+    int err = Marray_push__StringView(m, MALLOCATOR, *sv);
+    unhandled_error_condition(err);
     return 0;
 }
 

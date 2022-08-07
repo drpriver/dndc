@@ -320,13 +320,15 @@ QJSCFunctionListEntry QJS_DNDC_CLASSLIST_FUNCS[] = {
 };
 
 static
-void*
+void*_Nullable
 js_arena_malloc(QJSMallocState*s, size_t size){
     // This is stupid that we have to store the size in
     // the pointer, but how else are we going to
     // support realloc.
     size_t true_size = size + sizeof(size_t);
     size_t* p = ArenaAllocator_alloc(s->opaque, true_size);
+    if(unlikely(!p))
+        return NULL;
     *p = true_size;
     return p+1;
 }
@@ -340,14 +342,16 @@ js_arena_free(QJSMallocState*s, void* ptr){
 // This is so dumb. They know what size of allocation
 // they have, why don't they tell us?
 static
-void*_Nullable js_arena_realloc(QJSMallocState*s, void* pointer, size_t size){
-    if(!size)
+void*_Nullable
+js_arena_realloc(QJSMallocState*s, void* pointer, size_t size){
+    if(!size && !pointer)
         return NULL;
     void* result;
     if(pointer){
         size_t* true_pointer = ((size_t*)pointer)-1;
         size_t true_size = size + sizeof(size_t);
         size_t* new_pointer = ArenaAllocator_realloc(s->opaque, true_pointer, *true_pointer, true_size);
+        if(!new_pointer) return NULL;
         *new_pointer = true_size;
         result = new_pointer+1;
     }
@@ -366,6 +370,7 @@ new_qjs_rt(ArenaAllocator* aa){
     };
     QJSRuntime* rt = NULL;
     rt = QJS_NewRuntime2(&mf, aa);
+    if(unlikely(!rt)) return NULL;
     QJS_NewClassID(&QJS_DNDC_CONTEXT_CLASS_ID);
     if(QJS_NewClass(rt, QJS_DNDC_CONTEXT_CLASS_ID, &QJS_DNDC_CONTEXT_CLASS) < 0){
         goto fail;
@@ -910,7 +915,13 @@ js_list_dnd_files(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValue
             msb_write_str(&sb, ".", 1);
         }
     }
+    msb_nul_terminate(&sb);
+    if(unlikely(sb.errored)){
+        msb_destroy(&sb);
+        return QJS_ThrowTypeError(jsctx, "oom");
+    }
     if(unlikely(!sb.cursor)){
+        msb_destroy(&sb);
         return QJS_ThrowTypeError(jsctx, "Invalid directory argument");
     }
     msb_nul_terminate(&sb);
@@ -1303,6 +1314,7 @@ js_dndc_node_set_type(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst 
         return QJS_ThrowTypeError(jsctx, "Expected an integer when trying to set node type");
     if(type < 0 || type >= NODE_INVALID)
         return QJS_ThrowTypeError(jsctx, "Integer out of range for valid node types.");
+    int err = 0;
     switch(type){
         case NODE_TOC:
             ctx->tocnode = handle;
@@ -1311,16 +1323,16 @@ js_dndc_node_set_type(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst 
             ctx->titlenode = handle;
             break;
         case NODE_STYLESHEETS:
-            Marray_push(NodeHandle)(&ctx->stylesheets_nodes, main_allocator(ctx), handle);
+            err = Marray_push(NodeHandle)(&ctx->stylesheets_nodes, main_allocator(ctx), handle);
             break;
         case NODE_LINKS:
-            Marray_push(NodeHandle)(&ctx->link_nodes, main_allocator(ctx), handle);
+            err = Marray_push(NodeHandle)(&ctx->link_nodes, main_allocator(ctx), handle);
             break;
         case NODE_SCRIPTS:
-            Marray_push(NodeHandle)(&ctx->script_nodes, main_allocator(ctx), handle);
+            err = Marray_push(NodeHandle)(&ctx->script_nodes, main_allocator(ctx), handle);
             break;
         case NODE_META:
-            Marray_push(NodeHandle)(&ctx->meta_nodes, main_allocator(ctx), handle);
+            err = Marray_push(NodeHandle)(&ctx->meta_nodes, main_allocator(ctx), handle);
             break;
         case NODE_JS:
             return QJS_ThrowTypeError(jsctx, "Setting a node to QJS is not supported");
@@ -1348,6 +1360,8 @@ js_dndc_node_set_type(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst 
         case NODE_QUOTE:
             break;
     }
+    if(unlikely(err))
+        return QJS_ThrowTypeError(jsctx, "oom");
     node->type = type;
     return QJS_UNDEFINED;
 }
@@ -1491,6 +1505,10 @@ QJSGETTER(js_dndc_node_get_id){
     }
     MStringBuilder msb = {.allocator = temp_allocator(ctx)};
     msb_write_kebab(&msb, id.text, id.length);
+    if(unlikely(msb.errored)){
+        msb_destroy(&msb);
+        return QJS_ThrowTypeError(jsctx, "oom");
+    }
     StringView keb = msb_borrow_sv(&msb);
     QJSValue result = QJS_NewStringLen(jsctx, keb.text, keb.length);
     msb_destroy(&msb);
@@ -1535,6 +1553,10 @@ js_dndc_node_to_string(QJSContext* jsctx, QJSValueConst thisValue, int argc, QJS
     if(node->flags & NODEFLAG_NOINLINE)
         msb_write_literal(&msb, " #noinline");
     MSB_FORMAT(&msb, ", '", node->header, "', [", (int)node_children_count(node), " children])");
+    if(unlikely(msb.errored)){
+        msb_destroy(&msb);
+        return QJS_ThrowTypeError(jsctx, "oom");
+    }
     StringView text = msb_borrow_sv(&msb);
     QJSValue result = QJS_NewStringLen(jsctx, text.text, text.length);
     msb_destroy(&msb);
@@ -1632,6 +1654,8 @@ QJSMETHOD(js_dndc_node_clone){
     DndcContext* ctx = QJS_GetContextOpaque(jsctx);
     assert(ctx);
     NodeHandle newnode = node_clone(ctx, handle);
+    if(NodeHandle_eq(newnode, INVALID_NODE_HANDLE))
+        return QJS_ThrowTypeError(jsctx, "oom");
     return js_make_dndc_node(jsctx, newnode);
 }
 QJSMETHOD(js_dndc_node_get){
@@ -1849,8 +1873,13 @@ QJSMETHOD(js_dndc_context_make_node){
         default:
             break;
     }
-    if(node_store)
-        Marray_push(NodeHandle)(node_store, main_allocator(ctx), handle);
+    if(node_store){
+        int err = Marray_push(NodeHandle)(node_store, main_allocator(ctx), handle);
+        if(unlikely(err)){
+            failure = QJS_ThrowTypeError(jsctx, "oom");
+            goto fail;
+        }
+    }
     QJS_FreeValue(jsctx, header);
     QJS_FreeValue(jsctx, classes);
     QJS_FreeValue(jsctx, attributes);
@@ -1872,7 +1901,10 @@ QJSMETHOD(js_dndc_context_add_dependency){
     StringView sv = jsstring_to_stringview(jsctx, argv[0], string_allocator(ctx));
     if(!sv.text)
         return QJS_EXCEPTION;
-    Marray_push(StringView)(&ctx->dependencies, main_allocator(ctx), sv);
+    int err = Marray_push(StringView)(&ctx->dependencies, main_allocator(ctx), sv);
+    if(unlikely(err)){
+        return QJS_ThrowTypeError(jsctx, "oom");
+    }
     return QJS_UNDEFINED;
 }
 
@@ -1887,6 +1919,11 @@ QJSMETHOD(js_dndc_context_kebab){
         return QJS_EXCEPTION;
     MStringBuilder msb = {.allocator = temp_allocator(ctx)};
     msb_write_kebab(&msb, sv.text, sv.length);
+    if(unlikely(msb.errored)){
+        msb_destroy(&msb);
+        Allocator_free(temp_allocator(ctx), sv.text, sv.length+1);
+        return QJS_ThrowTypeError(jsctx, "oom");
+    }
     StringView keb = msb_borrow_sv(&msb);
     QJSValue result = QJS_NewStringLen(jsctx, keb.text, keb.length);
     msb_destroy(&msb);
@@ -1905,6 +1942,11 @@ QJSMETHOD(js_dndc_context_html_escape){
         return QJS_EXCEPTION;
     MStringBuilder msb = {.allocator = temp_allocator(ctx)};
     msb_write_tag_escaped_str(&msb, sv.text, sv.length);
+    if(unlikely(msb.errored)){
+        msb_destroy(&msb);
+        Allocator_free(temp_allocator(ctx), sv.text, sv.length+1);
+        return QJS_ThrowTypeError(jsctx, "oom");
+    }
     StringView esc = msb_borrow_sv(&msb);
     QJSValue result = QJS_NewStringLen(jsctx, esc.text, esc.length);
     msb_destroy(&msb);
@@ -1966,8 +2008,14 @@ QJSMETHOD(js_dndc_context_select_nodes){
             failure = QJS_EXCEPTION;
             goto fail;
         }
-        if(length > 0)
-            Marray_ensure_total(StringView)(&classes_array, tmp, length);
+        if(length > 0){
+            int err = Marray_ensure_total(StringView)(&classes_array, tmp, length);
+            if(unlikely(err)){
+                QJS_FreeValue(jsctx, length_);
+                failure = QJS_ThrowTypeError(jsctx, "OOM when allocating memory");
+                goto fail;
+            }
+        }
         for(int32_t i = 0; i < length; i++){
             QJSValue s = QJS_GetPropertyUint32(jsctx, classes, i);
             StringView sv = jsstring_to_stringview(jsctx, s, tmp);
@@ -1991,8 +2039,14 @@ QJSMETHOD(js_dndc_context_select_nodes){
             failure = QJS_EXCEPTION;
             goto fail;
         }
-        if(length > 0)
-            Marray_ensure_total(StringView)(&attributes_array, tmp, length);
+        if(length > 0){
+            int err = Marray_ensure_total(StringView)(&attributes_array, tmp, length);
+            if(unlikely(err)){
+                QJS_FreeValue(jsctx, length_);
+                failure = QJS_ThrowTypeError(jsctx, "OOM when allocating memory");
+                goto fail;
+            }
+        }
         for(int32_t i = 0; i < length; i++){
             QJSValue s = QJS_GetPropertyUint32(jsctx, attributes, i);
             StringView sv = jsstring_to_stringview(jsctx, s, tmp);

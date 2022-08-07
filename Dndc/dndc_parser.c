@@ -498,35 +498,36 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
         if(NODEALIASES[i].name.length == boundary){
             if(memcmp(NODEALIASES[i].name.text, postcolon.text, boundary)==0){
                 NodeType type = NODEALIASES[i].type;
+                int err = 0;
                 switch(type){
                     // case NODE_COMMENT:
                         // result.result |= NODEFLAG_COMMENT;
                         // break;
                     case NODE_JS:
-                        Marray_push(NodeHandle)(&ctx->user_script_nodes, main_allocator(ctx), node_handle);
+                        err = Marray_push(NodeHandle)(&ctx->user_script_nodes, main_allocator(ctx), node_handle);
                         break;
                     case NODE_IMPORT:
                         // This is pushed later.
-                        // Marray_push(NodeHandle)(&ctx->imports, main_allocator(ctx), node_handle);
+                        // err = Marray_push(NodeHandle)(&ctx->imports, main_allocator(ctx), node_handle);
                         result.result |= NODEFLAG_IMPORT;
                         break;
                     case NODE_STYLESHEETS:
-                        Marray_push(NodeHandle)(&ctx->stylesheets_nodes, main_allocator(ctx), node_handle);
+                        err = Marray_push(NodeHandle)(&ctx->stylesheets_nodes, main_allocator(ctx), node_handle);
                         break;
                     case NODE_LINKS:
-                        Marray_push(NodeHandle)(&ctx->link_nodes, main_allocator(ctx), node_handle);
+                        err = Marray_push(NodeHandle)(&ctx->link_nodes, main_allocator(ctx), node_handle);
                         break;
                     case NODE_SCRIPTS:
-                        Marray_push(NodeHandle)(&ctx->script_nodes, main_allocator(ctx), node_handle);
+                        err = Marray_push(NodeHandle)(&ctx->script_nodes, main_allocator(ctx), node_handle);
                         break;
                     case NODE_META:
-                        Marray_push(NodeHandle)(&ctx->meta_nodes, main_allocator(ctx), node_handle);
+                        err = Marray_push(NodeHandle)(&ctx->meta_nodes, main_allocator(ctx), node_handle);
                         break;
                     case NODE_IMAGE:
-                        Marray_push(NodeHandle)(&ctx->img_nodes, main_allocator(ctx), node_handle);
+                        err = Marray_push(NodeHandle)(&ctx->img_nodes, main_allocator(ctx), node_handle);
                         break;
                     case NODE_IMGLINKS:
-                        Marray_push(NodeHandle)(&ctx->imglinks_nodes, main_allocator(ctx), node_handle);
+                        err = Marray_push(NodeHandle)(&ctx->imglinks_nodes, main_allocator(ctx), node_handle);
                         break;
                     case NODE_TITLE:
                         ctx->titlenode = node_handle;
@@ -536,6 +537,8 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                         break;
                     default: break;
                 }
+                if(unlikely(err))
+                    return (ErrorableNodeFlags){.errored=DNDC_ERROR_OOM};
                 node->type = type;
                 goto foundit;
             }
@@ -742,7 +745,9 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
         }
     }
     if(result.result & NODEFLAG_IMPORT){
-        Marray_push(NodeHandle)(&ctx->imports, main_allocator(ctx), node_handle);
+        int err = Marray_push(NodeHandle)(&ctx->imports, main_allocator(ctx), node_handle);
+        if(unlikely(err))
+            return (ErrorableNodeFlags){.errored=DNDC_ERROR_OOM};
     }
     node->flags = result.result;
     return result;

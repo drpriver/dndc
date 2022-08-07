@@ -38,6 +38,14 @@
 #include "Utils/bit_util.h" //
 #include "Allocators/allocator.h" // Allocator
 
+#if defined(__GNUC__) || defined(__clang__)
+#define ma_memmove __builtin_memmove
+#define ma_memcpy __builtin_memcpy
+#else
+#define ma_memmove memmove
+#define ma_memcpy memcpy
+#endif
+
 static inline
 size_t
 marray_resize_to_some_weird_number(size_t x){
@@ -89,6 +97,24 @@ marray_resize_to_some_weird_number(size_t x){
     return result;
 #endif
 }
+
+#if !defined(likely) && !defined(unlikely)
+#if defined(__GNUC__) || defined(__clang__)
+#define likely(x)      __builtin_expect(!!(x), 1)
+#define unlikely(x)    __builtin_expect(!!(x), 0)
+#else
+#define likely(x) (x)
+#define unlikely(x) (x)
+#endif
+#endif
+
+#if defined(__GNUC__) || defined(__clang__)
+#define warn_unused __attribute__((warn_unused_result))
+#elif defined(_MSC_VER)
+#define warn_unused
+#else
+#define warn_unused
+#endif
 
 #define MARRAYIMPL(meth, type) Marray##_##meth##__##type // Macros require level of indirection
 #define Marray(type) MarrayI(type)
@@ -145,6 +171,9 @@ for(type \
 #ifndef _Null_unspecified
 #define _Null_unspecified
 #endif
+#ifndef _Nullable
+#define _Nullable
+#endif
 #endif
 
 #if defined(MARRAY_IMPL_ONLY) && defined(MARRAY_DECL_ONLY)
@@ -190,85 +219,88 @@ struct MARRAY {
 // and it would just turn into `item = marray.data[--marray.count];`
 //
 
-//
-// Marray_push
+MARRAY_LINKAGE
+warn_unused
+int
+Marray_push(MARRAY_T)(MARRAY*, Allocator, MARRAY_T);
 // -----------
 // Appends to the end of the marray, reallocating if necessary.
-MARRAY_LINKAGE
-void
-Marray_push(MARRAY_T)(MARRAY*, Allocator, MARRAY_T);
-
 //
-// Marray_cleanup
-// --------------
-// Frees the array and zeros out the members. The marray can then be re-used.
+// Returns 0 on success and 1 on out of memory.
+
 MARRAY_LINKAGE
 void
 Marray_cleanup(MARRAY_T)(MARRAY*, Allocator);
+// --------------
+// Frees the array and zeros out the members. The marray can then be re-used.
 
-//
-// Marray_ensure_total
+MARRAY_LINKAGE
+warn_unused
+int
+Marray_ensure_total(MARRAY_T)(MARRAY*, Allocator, size_t);
 // -------------------
 // Makes the marray at least this capacity.
-MARRAY_LINKAGE
-void
-Marray_ensure_total(MARRAY_T)(MARRAY*, Allocator, size_t);
-
 //
-// Marray_ensure_additional
+// Returns 0 on success and 1 on out of memory.
+
+MARRAY_LINKAGE
+warn_unused
+int
+Marray_ensure_additional(MARRAY_T)(MARRAY*, Allocator, size_t);
 // ------------------------
 // Ensures space for n additional items.
-MARRAY_LINKAGE
-void
-Marray_ensure_additional(MARRAY_T)(MARRAY*, Allocator, size_t);
+//
+// Returns 0 on success, 1 on oom.
 
 //
 // Marray_extend
 // -------------
 // Appends the n items at the given pointer to the end of the marray,
 // reallocing if necessary.
+//
 MARRAY_LINKAGE
-void
+warn_unused
+int
 Marray_extend(MARRAY_T)(MARRAY*, Allocator, const MARRAY_T*, size_t);
 
-//
-// Marray_insert
+MARRAY_LINKAGE
+warn_unused
+int
+Marray_insert(MARRAY_T)(MARRAY*, Allocator, size_t, MARRAY_T);
 // --------------
 // Inserts the element at the given index, shifting the remaining elements
 // backwards.
-MARRAY_LINKAGE
-void
-Marray_insert(MARRAY_T)(MARRAY*, Allocator, size_t, MARRAY_T);
-
 //
-// Marray_remove
-// -------------
-// Removes an element by index and shifts the remaining elements forward.
+// Returns 0 on success, 1 on oom.
+
 MARRAY_LINKAGE
 void
 Marray_remove(MARRAY_T)(MARRAY*, size_t);
+// -------------
+// Removes an element by index and shifts the remaining elements forward.
 
-//
-// Marray_alloc
+MARRAY_LINKAGE
+warn_unused
+MARRAY_T*_Nullable
+Marray_alloc(MARRAY_T)(MARRAY*, Allocator);
 // ------------
 // Returns a pointer to an uninitialized element at the end of the marray,
 // reallocing if space is needed.
 // Conceptually similar to push.
-MARRAY_LINKAGE
-warn_unused
-MARRAY_T*
-Marray_alloc(MARRAY_T)(MARRAY*, Allocator);
+//
+// Returns NULL on oom.
 
 //
-// Marray_alloc_index
-// ------------------
-// Returns an index to an uninitialized element at the end of the marray,
-// reallocing if space is needed.
-// Conceptually similar to push.
 MARRAY_LINKAGE
 warn_unused
 size_t
 Marray_alloc_index(MARRAY_T)(MARRAY*, Allocator);
+// ------------------
+// Returns an index to an uninitialized element at the end of the marray,
+// reallocing if space is needed.
+// Conceptually similar to push.
+//
+// Returns (size_t)-1 on oom.
 
 #endif
 
@@ -285,11 +317,12 @@ Marray_alloc_index(MARRAY_T)(MARRAY*, Allocator);
 #endif
 
 MARRAY_LINKAGE
-void
+warn_unused
+int
 Marray_ensure_additional(MARRAY_T)(MARRAY* marray, Allocator a, size_t n_additional){
     size_t required_capacity = marray->count + n_additional;
     if(marray->capacity >= required_capacity)
-        return;
+        return 0;
     size_t new_capacity;
     if(required_capacity < 8)
         new_capacity = 8;
@@ -302,46 +335,59 @@ Marray_ensure_additional(MARRAY_T)(MARRAY* marray, Allocator a, size_t n_additio
     size_t old_size = marray->capacity*sizeof(MARRAY_T);
     size_t new_size = new_capacity*sizeof(MARRAY_T);
     void* p = Allocator_realloc(a, marray->data, old_size, new_size);
-    unhandled_error_condition(!p);
+    if(unlikely(!p))
+        return 1;
     marray->data = p;
     marray->capacity = new_capacity;
+    return 0;
 }
 
 MARRAY_LINKAGE
-void
+warn_unused
+int
 Marray_push(MARRAY_T)(MARRAY* marray, Allocator a, MARRAY_T value){
-    Marray_ensure_additional(MARRAY_T)(marray, a, 1);
+    int err = Marray_ensure_additional(MARRAY_T)(marray, a, 1);
+    if(unlikely(err))
+        return err;
     marray->data[marray->count++] = value;
+    return 0;
 }
 
 MARRAY_LINKAGE
-MARRAY_T*
+warn_unused
+MARRAY_T*_Nullable
 Marray_alloc(MARRAY_T)(MARRAY* marray, Allocator a){
-    Marray_ensure_additional(MARRAY_T)(marray, a, 1);
+    int err = Marray_ensure_additional(MARRAY_T)(marray, a, 1);
+    if(unlikely(err)) return NULL;
     MARRAY_T* result = &marray->data[marray->count++];
     return result;
 }
 
 MARRAY_LINKAGE
+warn_unused
 size_t
 Marray_alloc_index(MARRAY_T)(MARRAY* marray, Allocator a){
-    Marray_ensure_additional(MARRAY_T)(marray, a, 1);
+    int err = Marray_ensure_additional(MARRAY_T)(marray, a, 1);
+    if(unlikely(err)) return -1;
     return marray->count++;
 }
 
 MARRAY_LINKAGE
-void
+warn_unused
+int
 Marray_insert(MARRAY_T)(MARRAY* marray, Allocator a, size_t index, MARRAY_T value){
     assert(index < marray->count+1);
     if(index == marray->count){
-        Marray_push(MARRAY_T)(marray, a, value);
-        return;
+        return Marray_push(MARRAY_T)(marray, a, value);
     }
-    Marray_ensure_additional(MARRAY_T)(marray, a, 1);
+    int err = Marray_ensure_additional(MARRAY_T)(marray, a, 1);
+    if(unlikely(err))
+        return err;
     size_t n_move = marray->count - index;
-    (memmove)(marray->data+index+1, marray->data+index, n_move*sizeof(marray->data[0]));
+    ma_memmove(marray->data+index+1, marray->data+index, n_move*sizeof(marray->data[0]));
     marray->data[index] = value;
     marray->count++;
+    return 0;
 }
 
 MARRAY_LINKAGE
@@ -353,29 +399,36 @@ Marray_remove(MARRAY_T)(MARRAY* marray, size_t index){
         return;
     }
     size_t n_move = marray->count - index - 1;
-    (memmove)(marray->data+index, marray->data+index+1, n_move*(sizeof(marray->data[0])));
+    ma_memmove(marray->data+index, marray->data+index+1, n_move*(sizeof(marray->data[0])));
     marray->count--;
 }
 
 MARRAY_LINKAGE
-void
+warn_unused
+int
 Marray_extend(MARRAY_T)(MARRAY* marray, Allocator a, const MARRAY_T* values, size_t n_values){
-    Marray_ensure_additional(MARRAY_T)(marray, a, n_values);
-    (memcpy)(marray->data+marray->count, values, n_values*(sizeof(MARRAY_T)));
+    int err = Marray_ensure_additional(MARRAY_T)(marray, a, n_values);
+    if(unlikely(err))
+        return err;
+    ma_memcpy(marray->data+marray->count, values, n_values*(sizeof(MARRAY_T)));
     marray->count+=n_values;
+    return 0;
 }
 
 MARRAY_LINKAGE
-void
+warn_unused
+int
 Marray_ensure_total(MARRAY_T)(MARRAY* marray, Allocator a, size_t total_capacity){
     if (total_capacity <= marray->capacity)
-        return;
+        return 0;
     size_t old_size = marray->capacity * sizeof(MARRAY_T);
     size_t new_size = total_capacity * sizeof(MARRAY_T);
-    marray->data = Allocator_realloc(a, marray->data, old_size, new_size);
+    void* p = Allocator_realloc(a, marray->data, old_size, new_size);
+    if(unlikely(!p))
+        return 1;
     marray->capacity = total_capacity;
-    // I should really return success or failure or something here.
-    unhandled_error_condition(!marray->data);
+    marray->data = p;
+    return 0;
 }
 
 MARRAY_LINKAGE

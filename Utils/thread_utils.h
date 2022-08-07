@@ -153,6 +153,25 @@ struct ThreadHandle {
     pthread_t thread;
 };
 
+typedef pthread_mutex_t LOCK_T;
+static inline
+void
+LOCK_T_init(LOCK_T* lock){
+    pthread_mutex_init(lock, NULL);
+}
+
+static inline
+void
+LOCK_T_lock(LOCK_T* lock){
+    pthread_mutex_lock(lock);
+}
+
+static inline
+void
+LOCK_T_unlock(LOCK_T* lock){
+    pthread_mutex_unlock(lock);
+}
+
 typedef struct WorkerThread WorkerThread;
 struct WorkerThread {
     ThreadHandle thrd;
@@ -274,6 +293,25 @@ join_thread(ThreadHandle handle){
 }
 
 #elif defined(_WIN32)
+
+typedef CRITICAL_SECTION LOCK_T;
+static inline
+void
+LOCK_T_init(LOCK_T* lock){
+    InitializeCriticalSection(lock);
+}
+
+static inline
+void
+LOCK_T_lock(LOCK_T* lock){
+    EnterCriticalSection(lock);
+}
+
+static inline
+void
+LOCK_T_unlock(LOCK_T* lock){
+    LeaveCriticalSection(lock);
+}
 
 typedef struct ThreadHandle ThreadHandle;
 struct ThreadHandle {

@@ -138,7 +138,9 @@ node_clone(DndcContext* ctx, NodeHandle handle){
         dstnode->children = srcnode->children;
     }
     else {
-        Marray_extend(NodeHandle)(&dstnode->children, main_allocator(ctx), node_children(srcnode), node_children_count(srcnode));
+        int err = Marray_extend(NodeHandle)(&dstnode->children, main_allocator(ctx), node_children(srcnode), node_children_count(srcnode));
+        if(unlikely(err))
+            return INVALID_NODE_HANDLE;
     }
     RARRAY_FOR_EACH(Attribute, at, srcnode->attributes){
         dstnode->attributes = Rarray_push(Attribute)(dstnode->attributes, main_allocator(ctx), *at);
@@ -164,16 +166,24 @@ node_clone(DndcContext* ctx, NodeHandle handle){
 }
 
 static inline
-void
+warn_unused
+int
 ctx_note_dependency(DndcContext* ctx, StringView path){
     // FIXME: O(n^2) deduplication
     MARRAY_FOR_EACH(StringView, dep, ctx->dependencies){
         if(SV_equals(*dep, path))
-            return;
+            return 0;
     }
     // This is weird that I am doing strndup, but then storing in a stringview
     StringView pathcpy = {.text = Allocator_strndup(string_allocator(ctx), path.text, path.length), .length=path.length};
-    Marray_push(StringView)(&ctx->dependencies, main_allocator(ctx), pathcpy);
+    if(unlikely(!pathcpy.text))
+        return DNDC_ERROR_OOM;
+    int err = Marray_push(StringView)(&ctx->dependencies, main_allocator(ctx), pathcpy);
+    if(err){
+        Allocator_free(string_allocator(ctx), pathcpy.text, pathcpy.length+1);
+        return DNDC_ERROR_OOM;
+    }
+    return 0;
 }
 
 static
@@ -188,14 +198,22 @@ ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
     if(! path_is_abspath(sourcepath) && ctx->base_directory.length){
         msb_write_str(&temp_builder, ctx->base_directory.text, ctx->base_directory.length);
         msb_append_path(&temp_builder, sourcepath.text, sourcepath.length);
+        if(unlikely(temp_builder.errored)){
+            msb_destroy(&temp_builder);
+            return (StringViewResult){.errored=DNDC_ERROR_OOM};
+        }
         sourcepath = msb_borrow_sv(&temp_builder);
     }
-    ctx_note_dependency(ctx, sourcepath);
+    int err = ctx_note_dependency(ctx, sourcepath);
+    if(err){
+        msb_destroy(&temp_builder);
+        return (StringViewResult){.errored=err};
+    }
     uint64_t before = get_t();
     StringResult cache_result = FileCache_read_file(ctx->textcache, sourcepath, !!(ctx->flags & DNDC_DONT_READ));
     msb_destroy(&temp_builder);
     if(cache_result.errored){
-        return (StringViewResult){.errored = DNDC_ERROR_FILE_READ};
+        return (StringViewResult){.errored = cache_result.errored};
     }
     uint64_t after = get_t();
     report_time(ctx, SV("Loading a file took "), after-before);
@@ -209,9 +227,17 @@ ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath){
     if(! path_is_abspath(binarypath) && ctx->base_directory.length){
         msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
         msb_append_path(&path_builder, binarypath.text, binarypath.length);
+        if(unlikely(path_builder.errored)){
+            msb_destroy(&path_builder);
+            return (StringViewResult){.errored=DNDC_ERROR_OOM};
+        }
         binarypath = msb_borrow_sv(&path_builder);
     }
-    ctx_note_dependency(ctx, binarypath);
+    int err = ctx_note_dependency(ctx, binarypath);
+    if(unlikely(err)){
+        msb_destroy(&path_builder);
+        return (StringViewResult){.errored=err};
+    }
     StringResult cache_result = FileCache_read_and_b64_file(ctx->b64cache, binarypath, !!(ctx->flags & DNDC_DONT_READ));
     msb_destroy(&path_builder);
     if(cache_result.errored) return (StringViewResult){.errored=cache_result.errored};
@@ -265,19 +291,23 @@ add_link_from_sv(DndcContext* ctx, Node* node){
 }
 
 static inline
-void
+warn_unused
+int
 add_link_from_header(DndcContext* ctx, StringView str){
     MStringBuilder sb = {.allocator=string_allocator(ctx)};
     msb_write_char(&sb, '#');
     msb_write_kebab(&sb, str.text, str.length);
     if(sb.cursor==1){
         msb_destroy(&sb);
-        return;
+        return 0;
     }
+    msb_nul_terminate(&sb);
+    if(unlikely(sb.errored))
+        return 1;
     LongString anchor = msb_detach_ls(&sb);
     StringView kebabed = {.text = anchor.text+1, .length=anchor.length-1};
     string_table_set(&ctx->links, kebabed, LS_to_SV(anchor));
-    return;
+    return 0;
 }
 
 static inline
@@ -291,6 +321,8 @@ force_inline
 NodeHandle
 alloc_handle(DndcContext* ctx){
     size_t index = Marray_alloc_index(Node)(&ctx->nodes, main_allocator(ctx));
+    if(unlikely(index == (size_t)-1))
+        return INVALID_NODE_HANDLE;
     ctx->nodes.data[index] = (Node){0};
     // debug to help find nodes without parents
     ctx->nodes.data[index].parent = INVALID_NODE_HANDLE;
@@ -326,12 +358,16 @@ append_child(DndcContext* ctx, NodeHandle parent_handle, NodeHandle child_handle
     }
     if(parent->children.count == 4){
         Marray(NodeHandle) children = {0};
-        Marray_ensure_total(NodeHandle)(&children, main_allocator(ctx), 4);
+        int err = Marray_ensure_total(NodeHandle)(&children, main_allocator(ctx), 4);
+        unhandled_error_condition(err);
+        // if(unlikely(err))
+            // return DNDC_ERROR_OOM;
         memcpy(children.data, parent->inline_children, sizeof(parent->inline_children));
         children.count = 4;
         parent->children = children;
     }
-    Marray_push(NodeHandle)(&parent->children, main_allocator(ctx), child_handle);
+    int err = Marray_push(NodeHandle)(&parent->children, main_allocator(ctx), child_handle);
+    unhandled_error_condition(err);
 }
 
 static inline
@@ -355,19 +391,21 @@ node_insert_child(DndcContext* ctx, NodeHandle parent, size_t i, NodeHandle chil
     data[i] = child;
 }
 
-static void gather_anchor(DndcContext* ctx, NodeHandle handle, int node_depth);
+static warn_unused int gather_anchor(DndcContext* ctx, NodeHandle handle, int node_depth);
 
 static
-void
+warn_unused
+int
 gather_anchors(DndcContext* ctx){
     NodeHandle root = ctx->root_handle;
-    gather_anchor(ctx, root, 0);
+    return gather_anchor(ctx, root, 0);
 }
 
 static
-void
+warn_unused
+int
 gather_anchor(DndcContext* ctx, NodeHandle handle, int node_depth){
-    if(node_depth > DNDC_MAX_NODE_DEPTH) return;
+    if(node_depth > DNDC_MAX_NODE_DEPTH) return 0;
     Node* node = get_node(ctx, handle);
     switch(node->type){
         case NODE_BULLETS:
@@ -388,7 +426,9 @@ gather_anchor(DndcContext* ctx, NodeHandle handle, int node_depth){
         case NODE_CONTAINER:{
             StringView id = node_get_id(ctx, handle);
             if(id.length){
-                add_link_from_header(ctx, id);
+                int err = add_link_from_header(ctx, id);
+                if(unlikely(err))
+                    return DNDC_ERROR_OOM;
             }
         }
         // fall-through
@@ -396,7 +436,9 @@ gather_anchor(DndcContext* ctx, NodeHandle handle, int node_depth){
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:{
             NODE_CHILDREN_FOR_EACH(it, node){
-                gather_anchor(ctx, *it, node_depth+1);
+                int err = gather_anchor(ctx, *it, node_depth+1);
+                if(unlikely(err))
+                    return DNDC_ERROR_OOM;
             }
         }break;
         case NODE_META:
@@ -414,10 +456,13 @@ gather_anchor(DndcContext* ctx, NodeHandle handle, int node_depth){
         case NODE_RAW:{
             StringView id = node_get_id(ctx, handle);
             if(id.length){
-                add_link_from_header(ctx, id);
+                int err = add_link_from_header(ctx, id);
+                if(unlikely(err))
+                    return DNDC_ERROR_OOM;
             }
         }break;
     }
+    return 0;
 }
 
 static

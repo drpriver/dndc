@@ -500,7 +500,11 @@ main(int argc, char**argv){
             else {
                 for(;;){
                     enum {N = 4096};
-                    msb_ensure_additional(&sb, N);
+                    int err = msb_ensure_additional(&sb, N);
+                    if(unlikely(err)) {
+                        fprintf(stderr, "OOM when allocating input buffer\n");
+                        return 1;
+                    }
                     char* buff = sb.data + sb.cursor;
                     size_t numread = fread(buff, 1, N, stdin);
                     sb.cursor += numread;

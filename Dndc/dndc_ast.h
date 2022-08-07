@@ -52,7 +52,7 @@ dndc_ctx_dup_sv(DndcContext* ctx, DndcStringView text);
 //
 
 DNDC_API
-DndcContext*
+DNDC_NULLABLE(DndcContext*)
 dndc_create_ctx(unsigned long long flags, DNDC_NULLABLE(DndcFileCache*) base64cache, DNDC_NULLABLE(DndcFileCache*) textcache);
 // ------------
 // Creates an ast context.
@@ -112,7 +112,7 @@ dndc_ctx_destroy(DndcContext*);
 //
 
 DNDC_API
-DndcContext*
+DNDC_NULLABLE(DndcContext*)
 dndc_ctx_clone(DndcContext*);
 // --------------
 // Performs a deep copy of the given context. This copies everything, including
@@ -120,9 +120,11 @@ dndc_ctx_clone(DndcContext*);
 // thing that is not deep copied are the file caches if you passed your own
 // file caches into `dndc_create_ctx` instead of passing NULL.
 //
+// When done, pass it to `dndc_ctx_destroy`.
 //
+// Returns NULL on oom.
 DNDC_API
-DndcContext*
+DNDC_NULLABLE(DndcContext*)
 dndc_ctx_shallow_clone(DndcContext*);
 // --------------
 // This is similar to `dndc_ctx_clone`, but it does not copy things that
@@ -132,6 +134,10 @@ dndc_ctx_shallow_clone(DndcContext*);
 // make some modifications and render the results, etc. which can have
 // significant performance benefits if you need to dynamically render off
 // a shared base.
+//
+// When done, pass it to `dndc_ctx_destroy`.
+//
+// Returns NULL on oom.
 //
 
 DNDC_API
@@ -221,6 +227,8 @@ dndc_ctx_make_root(DndcContext* ctx, DndcStringView filename);
 //
 // If the root already exists, returns DNDC_NODE_HANDLE_INVALID.  Otherwise,
 // returns a handle to the new node.
+//
+// This can also return DNDC_NODE_HANDLE_INVALID in an oom situtation.
 //
 
 DNDC_API

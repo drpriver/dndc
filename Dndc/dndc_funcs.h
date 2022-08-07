@@ -374,7 +374,8 @@ build_toc_block(DndcContext*);
   // Marks a file as being a dependency of the document. Deduplicates.
   //
   static inline
-  void
+  warn_unused
+  int
   ctx_note_dependency(DndcContext* ctx, StringView path);
 
 // Output Functions
@@ -480,7 +481,8 @@ build_toc_block(DndcContext*);
   // Populates the link-target mapping.
   //
   static
-  void
+  warn_unused
+  int
   gather_anchors(DndcContext*);
 
 
@@ -514,7 +516,8 @@ build_toc_block(DndcContext*);
   //   kebabed(str) = #kebabed(str)
   //
   static inline
-  void
+  warn_unused
+  int
   add_link_from_header(DndcContext* ctx, StringView str);
 
   static inline

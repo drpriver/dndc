@@ -669,8 +669,7 @@ append_short(void* dest, const void* arg){
         return 1;
     if(value > INT16_MAX)
         return 1;
-    Marray_push(short)(marray, ctx->a, value);
-    return 0;
+    return Marray_push(short)(marray, ctx->a, value);
 }
 TestFunction(TestAppender){
     TESTBEGIN();

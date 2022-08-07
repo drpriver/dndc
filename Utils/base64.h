@@ -307,7 +307,8 @@ msb_write_b64(MStringBuilder* restrict sb, const void* data, size_t length){
     size_t size_needed = base64_encode_size(length);
     if(unlikely(!size_needed))
         return;
-    _check_msb_remaining_size(sb, size_needed);
+    int err = _check_msb_remaining_size(sb, size_needed);
+    if(unlikely(err)) return;
     size_t size_used = base64_encode(sb->data + sb->cursor, size_needed, data, length);
     assert(size_used == size_needed);
     sb->cursor += size_used;

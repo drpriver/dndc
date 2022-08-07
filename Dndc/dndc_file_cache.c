@@ -133,15 +133,18 @@ FileCache_has_file(const FileCache* cache, StringView path){
 }
 
 static inline
-FileCachePath
-FileCache_alloc_path(FileCache* cache, FileCacheLookupKey key){
+warn_unused
+int
+FileCache_alloc_path(FileCache* cache, FileCacheLookupKey key, FileCachePath* out){
     char* path = Allocator_strndup(cache->allocator, key.text, key.length);
-    return (FileCachePath){
+    if(!path) return DNDC_ERROR_OOM;
+    *out = (FileCachePath){
             .text = path,
             .length = key.length,
             .hash = key.hash,
             .last_eight_chars = key.last_eight_chars,
         };
+    return 0;
 }
 
 static inline
@@ -151,6 +154,10 @@ FileCache_read_file_(FileCache* cache, FileCachePath path){
     TextFileResult fr = read_file(path.text, cache->allocator);
     if(!fr.errored){
         LoadedSource* ls = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator);
+        if(!ls){
+            Allocator_free(cache->allocator, fr.result.text, fr.result.length+1);
+            return (StringResult){.errored=DNDC_ERROR_OOM};
+        }
         ls->sourcepath = path;
         ls->sourcetext = fr.result;
     }
@@ -172,7 +179,10 @@ FileCache_read_file(FileCache* cache, StringView spath, bool cached_only){
     if(unlikely(cached_only)){
         return (StringResult){.errored = DNDC_ERROR_FILE_READ};
     }
-    FileCachePath path = FileCache_alloc_path(cache, key);
+    FileCachePath path;
+    int err = FileCache_alloc_path(cache, key, &path);
+    if(unlikely(err))
+        return (StringResult){.errored = err};
     StringResult result = FileCache_read_file_(cache, path);
     if(result.errored){
         FileCache_free_path(cache, path);
@@ -192,10 +202,12 @@ FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only
             };
         }
     }
-    if(unlikely(cached_only)){
+    if(unlikely(cached_only))
         return (StringResult){.errored = DNDC_ERROR_FILE_READ};
-    }
-    FileCachePath path = FileCache_alloc_path(cache, key);
+    FileCachePath path;
+    int err = FileCache_alloc_path(cache, key, &path);
+    if(unlikely(err))
+        return (StringResult){.errored = err};
     StringResult base64ed_e = read_and_base64_bin_file(cache->scratch, cache->allocator, path.text);
     if(unlikely(base64ed_e.errored)){
         FileCache_free_path(cache, path);
@@ -203,6 +215,11 @@ FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only
     }
     else {
         LoadedSource* ls = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator);
+        if(unlikely(!ls)){
+            FileCache_free_path(cache, path);
+            Allocator_free(cache->allocator, base64ed_e.result.text, base64ed_e.result.length+1);
+            return (StringResult){.errored=DNDC_ERROR_OOM};
+        }
         ls->sourcepath = path;
         ls->sourcetext = base64ed_e.result;
         return (StringResult){.result=base64ed_e.result};
@@ -266,6 +283,12 @@ read_and_base64_bin_file(Allocator scratch, Allocator outallocator, const char* 
     MStringBuilder sb = {.allocator=outallocator};
     msb_write_b64(&sb, buff.buff, buff.n_bytes);
     Allocator_free(scratch, buff.buff, buff.n_bytes);
+    msb_nul_terminate(&sb);
+    if(sb.errored){
+        msb_destroy(&sb);
+        result.errored = DNDC_ERROR_OOM;
+        return result;
+    }
     result.result = msb_detach_ls(&sb);
     return result;
 }
@@ -275,6 +298,9 @@ int
 FileCache_store_text_file(FileCache* cache, StringView spath, StringView data, bool overwrite){
     FileCacheLookupKey key = FileCache_make_key(spath);
     char* d = Allocator_strndup(cache->allocator, data.text, data.length);
+    if(!d)
+        return DNDC_ERROR_OOM;
+    
     LongString ds = {.text=d, .length=data.length};
     MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
         if(FileCache_key_eq(key, src->sourcepath)){
@@ -284,8 +310,18 @@ FileCache_store_text_file(FileCache* cache, StringView spath, StringView data, b
             return 0;
         }
     }
-    FileCachePath path = FileCache_alloc_path(cache, key);
+    FileCachePath path;
+    int err = FileCache_alloc_path(cache, key, &path);
+    if(unlikely(err)){
+        Allocator_free(cache->allocator, d, data.length+1);
+        return err;
+    }
     LoadedSource* ls = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator);
+    if(unlikely(!ls)){
+        Allocator_free(cache->allocator, d, data.length+1);
+        FileCache_free_path(cache, path);
+        return DNDC_ERROR_OOM;
+    }
     ls->sourcepath = path;
     ls->sourcetext = ds;
     return 0;

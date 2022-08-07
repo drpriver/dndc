@@ -240,7 +240,8 @@ main(int argc, char** argv){
     for(size_t i = 0; i < entries.count; i++){
         if(SV_equals(entries.data[i], SV("index.dnd"))) goto LHasIndex;
     }
-    Marray_push__StringView(&entries, MALLOCATOR, SV("index.dnd"));
+    int err = Marray_push__StringView(&entries, MALLOCATOR, SV("index.dnd"));
+    unhandled_error_condition(err);
     LHasIndex:
     print_entries(entries);
     struct ByteDistanceCompleterContext tabctx = {

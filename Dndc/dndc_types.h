@@ -384,7 +384,8 @@ ctx_add_filename(DndcContext* ctx, StringView filename, int copy){
     if(copy && filename.length){
         filename.text = Allocator_dupe(string_allocator(ctx), filename.text, filename.length);
     }
-    Marray_push(StringView)(&ctx->filenames, main_allocator(ctx), filename);
+    int err = Marray_push(StringView)(&ctx->filenames, main_allocator(ctx), filename);
+    unhandled_error_condition(err);
     return ctx->filenames.count-1;
 }
 
