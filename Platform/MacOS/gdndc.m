@@ -1667,8 +1667,9 @@ completionHandler:(void (^)(NSString *result))completionHandler{
                 char buffer[512];
                 int length = snprintf(buffer, sizeof buffer, "%.*s@ %.*s", (int)(at - header.text), header.text, (int)c.length, c.text);
                 StringView h = {.text=buffer, .length=length};
-
-                dndc_node_set_header(ctx, internal_id, dndc_ctx_dup_sv(ctx, h));
+                err = dndc_ctx_dup_sv(ctx, h, &h);
+                if(err) goto fail;
+                dndc_node_set_header(ctx, internal_id, h);
             }
         }
     }

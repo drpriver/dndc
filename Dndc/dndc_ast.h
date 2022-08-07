@@ -43,13 +43,15 @@ typedef struct DndcContext DndcContext;
 //
 
 DNDC_API
-DndcStringView
-dndc_ctx_dup_sv(DndcContext* ctx, DndcStringView text);
+DNDC_WARN_UNUSED
+int
+dndc_ctx_dup_sv(DndcContext* ctx, DndcStringView text, DndcStringView* result);
 // ------------
 // Functions taking string views potentially hold onto them for the lifetime of
 // ctx. If you can't guarantee they last that long, then call this function to
 // get a copy that will last as long as the ctx.
 //
+// Returns DNDC_ERROR_OOM on oom, else 0.
 
 DNDC_API
 DNDC_NULLABLE(DndcContext*)
@@ -152,6 +154,7 @@ dndc_ctx_set_base(DndcContext*, DndcStringView);
 //
 
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_ctx_get_base(DndcContext*, DndcStringView*);
 // -----------------
@@ -253,6 +256,7 @@ dndc_ctx_set_root(DndcContext*, DndcNodeHandle);
 
 
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_node_get_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView key, DndcStringView* value);
 // -----------------------
@@ -374,6 +378,7 @@ dndc_node_has_id(DndcContext*, DndcNodeHandle);
 // Returns 1 if the node has an id (explicit or implicit), otherwise 0.
 
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_node_get_id(DndcContext*, DndcNodeHandle, DndcStringView* id);
 // ---------------
@@ -883,6 +888,7 @@ dndc_node_remove_class(DndcContext*, DndcNodeHandle, DndcStringView);
 
 
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_ctx_expand_to_dnd(DndcContext*, DndcLongString*);
 // ---------------------
@@ -902,6 +908,7 @@ dndc_ctx_expand_to_dnd(DndcContext*, DndcLongString*);
 //
 
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_ctx_render_to_md(DndcContext*, DndcLongString*);
 // ---------------------
@@ -919,6 +926,7 @@ dndc_ctx_render_to_md(DndcContext*, DndcLongString*);
 //
 
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_ctx_render_to_html(DndcContext*, DndcLongString*);
 // -----------------------
@@ -938,6 +946,7 @@ dndc_ctx_render_to_html(DndcContext*, DndcLongString*);
 //
 
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_node_render_to_html(DndcContext*, DndcNodeHandle, DndcLongString*);
 // ------------------------
@@ -956,6 +965,7 @@ dndc_node_render_to_html(DndcContext*, DndcNodeHandle, DndcLongString*);
 //
 
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_ctx_format_tree(DndcContext*, DndcLongString*);
 // ----------------------
@@ -977,6 +987,7 @@ dndc_ctx_format_tree(DndcContext*, DndcLongString*);
 //
 
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_node_format(DndcContext*, DndcNodeHandle, int indent, DndcLongString*);
 // ----------------
@@ -1064,6 +1075,7 @@ struct DndcNodeLocation {
 //
 
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_node_location(DndcContext*, DndcNodeHandle, DndcNodeLocation*);
 // --------------------
@@ -1296,6 +1308,7 @@ dndc_ctx_select_nodes(DndcContext* ctx, size_t* cookie,
 //
 
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_node_tree_repr(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString*);
 // --------------------
@@ -1386,6 +1399,7 @@ write_dependencies(DndcContext* ctx, FILE* fp, const char* targetname){
 
 
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_kebab(DndcStringView sv, char* buff, size_t bufflen, size_t* used);
 // ------------------

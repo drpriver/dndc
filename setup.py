@@ -1,4 +1,3 @@
-# Always prefer setuptools over distutils
 from setuptools import setup, find_packages, Extension
 import sys
 if sys.platform == 'win32':
@@ -23,20 +22,15 @@ extension = Extension(
     define_macros=[('BUILDING_PYTHON_EXTENSION', '1')]
 )
 
-# Arguments marked as 'Required' below must be included for upload to PyPI.
-# Fields marked as 'Optional' may be commented out.
 setup(
-    name='pydndc',  # Required
-    version='0.25.0',  # Required
+    name='pydndc',
+    version='0.26.0',
     license='Proprietary',
-    description='dndc, but from python',  # Optional
-    # url='https://github.com/pypa/sampleproject',  # Optional
-    author='David Priver',  # Optional
-    # author_email='author@example.com',  # Optional
-    # Classifiers help users find your project by categorizing it.
-    #
-    # For a list of valid classifiers, see https://pypi.org/classifiers/
-    classifiers=[  # Optional
+    description='dndc, but from python',
+    # url='https://github.com/pypa/sampleproject',
+    author='David Priver',
+    author_email='david@davidpriver.com',
+    classifiers=[
         # How mature is this project? Common values are
         #   3 - Alpha
         #   4 - Beta
@@ -73,10 +67,6 @@ setup(
     #
     packages=['pydndc'],  # Required
     ext_modules = [extension],
-    # Specify which Python versions you support. In contrast to the
-    # 'Programming Language' classifiers above, 'pip install' will check this
-    # and refuse to install the project if the version does not match. See
-    # https://packaging.python.org/guides/distributing-packages-using-setuptools/#python-requires
     python_requires='>=3.6, <4',
     package_data={
         'pydndc': ['py.typed', 'pydndc.pyi'],

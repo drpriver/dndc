@@ -29,57 +29,57 @@ PushDiagnostic();
 PushDiagnostic();
 SuppressUnusedFunction();
 static inline
-LongString
+DndcLongString
 pystring_to_longstring(PyObject* pyobj, Allocator a){
     const char* text;
     Py_ssize_t length;
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
     unhandled_error_condition(!text);
     if(!length){
-        return (LongString){0};
+        return (DndcLongString){0};
     }
     char* copy = Allocator_dupe(a, text, length+1);
-    return (LongString){
+    return (DndcLongString){
         .text = copy,
         .length = length,
     };
 }
 
 static inline
-StringView
+DndcStringView
 pystring_to_stringview(PyObject* pyobj, Allocator a){
     const char* text;
     Py_ssize_t length;
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
     unhandled_error_condition(!text);
     if(!length){
-        return (StringView){0};
+        return (DndcStringView){0};
     }
     char* copy = Allocator_dupe(a, text, length);
-    return (StringView){
+    return (DndcStringView){
         .text = copy,
         .length = length,
     };
 }
 
 static inline
-StringView
+DndcStringView
 pystring_borrow_stringview(PyObject* pyobj){
     const char* text;
     Py_ssize_t length;
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
     unhandled_error_condition(!text);
-    return (StringView){.text=text, .length=length};
+    return (DndcStringView){.text=text, .length=length};
 }
 
 static inline
-LongString
+DndcLongString
 pystring_borrow_longstring(PyObject* pyobj){
     const char* text;
     Py_ssize_t length;
     text = PyUnicode_AsUTF8AndSize(pyobj, &length);
     unhandled_error_condition(!text);
-    return (LongString){.text=text, .length=length};
+    return (DndcLongString){.text=text, .length=length};
 }
 PopDiagnostic(); // unused function
 
@@ -116,7 +116,7 @@ DndcPyFileCache_remove(PyObject* self, PyObject* str){
         PyErr_SetString(PyExc_TypeError, "Argument to remove must be a string");
         return NULL;
     }
-    StringView path = pystring_borrow_stringview(str);
+    DndcStringView path = pystring_borrow_stringview(str);
     DndcPyFileCache* cache = (DndcPyFileCache*)self;
     dndc_filecache_remove(cache->text_cache, path);
     dndc_filecache_remove(cache->b64_cache, path);
@@ -141,7 +141,7 @@ DndcPyFileCache_paths(PyObject* self){
     if(!result)
         goto error;
     Py_ssize_t index = 0;
-    StringView buff[100];
+    DndcStringView buff[100];
     DndcFileCache* caches[2] = {cache->b64_cache, cache->text_cache};
     for(size_t c = 0; c < arrlen(caches); c++){
         DndcFileCache* ch = caches[c];
@@ -150,7 +150,7 @@ DndcPyFileCache_paths(PyObject* self){
             n = dndc_filecache_cached_paths(ch, buff, arrlen(buff), &cookie)
         ){
             for(size_t i = 0; i < n; i++){
-                StringView path = buff[i];
+                DndcStringView path = buff[i];
                 PyObject* s = PyUnicode_FromStringAndSize(path.text, path.length);
                 if(!s)
                     goto error;
@@ -198,8 +198,8 @@ DndcPyFileCache_store(PyObject* self, PyObject* args, PyObject* kwargs){
         return NULL;
     }
     PopDiagnostic();
-    StringView path = pystring_borrow_stringview(opath);
-    StringView data = pystring_borrow_stringview(odata);
+    DndcStringView path = pystring_borrow_stringview(opath);
+    DndcStringView data = pystring_borrow_stringview(odata);
     DndcPyFileCache* cache = (DndcPyFileCache*)self;
     int result = dndc_filecache_store_text(cache->text_cache, path, data, overwrite);
     if(!result)
@@ -1059,8 +1059,8 @@ pydndc_stderr_logger(PyObject* mod, PyObject* args, PyObject* kwargs){
         return NULL;
     }
     PopDiagnostic();
-    LongString mess = pystring_borrow_longstring(message);
-    StringView fn = pystring_borrow_stringview(filename);
+    DndcLongString mess = pystring_borrow_longstring(message);
+    DndcStringView fn = pystring_borrow_stringview(filename);
     dndc_stderr_log_func(NULL, type, fn.text, fn.length, line, col, mess.text, mess.length);
     Py_RETURN_NONE;
 }
@@ -1084,8 +1084,8 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
         PyErr_SetString(PyExc_TypeError, "logger must be a callable");
         return NULL;
     }
-    StringView source = pystring_borrow_stringview(text);
-    LongString output = {0};
+    DndcStringView source = pystring_borrow_stringview(text);
+    DndcLongString output = {0};
     DndcLogFunc* func = logger?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
@@ -1160,7 +1160,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         PyErr_SetString(PyExc_TypeError, "file_cache must be a DndcFileCache");
         return NULL;
     }
-    LongString jsargs_ls = LS("");
+    DndcLongString jsargs_ls = LS("");
     MStringBuilder jsbuilder = {.allocator = MALLOCATOR};
     if(jsargs && PyUnicode_Check(jsargs)){
         jsargs_ls = pystring_borrow_longstring(jsargs);
@@ -1174,12 +1174,12 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         }
         jsargs_ls = msb_borrow_ls(&jsbuilder);
     }
-    StringView source = pystring_borrow_stringview(text);
-    StringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
+    DndcStringView source = pystring_borrow_stringview(text);
+    DndcStringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
     // flags |= DNDC_DONT_PRINT_ERRORS;
     // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
-    LongString output = {0};
+    DndcLongString output = {0};
     DndcLogFunc* func = logger?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
@@ -1190,7 +1190,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         textcache = cache->text_cache;
         b64cache = cache->b64_cache;
     }
-    StringView source_path = filename?pystring_borrow_stringview(filename): SV("(string input)");
+    DndcStringView source_path = filename?pystring_borrow_stringview(filename): SV("(string input)");
     int e = dndc_compile_dnd_file(flags, base_str, source, source_path, &output, b64cache, textcache, func, error_list, NULL, jsargs_ls);
     if(PyErr_Occurred()){
         result = NULL;
@@ -1261,7 +1261,7 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         PyErr_SetString(PyExc_TypeError, "file_cache must be a DndcFileCache");
         return NULL;
     }
-    LongString jsargs_ls = LS("");
+    DndcLongString jsargs_ls = LS("");
     MStringBuilder jsbuilder = {.allocator = MALLOCATOR};
     if(jsargs && PyUnicode_Check(jsargs)){
         jsargs_ls = pystring_borrow_longstring(jsargs);
@@ -1275,13 +1275,13 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         }
         jsargs_ls = msb_borrow_ls(&jsbuilder);
     }
-    StringView source = pystring_borrow_stringview(text);
-    StringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
+    DndcStringView source = pystring_borrow_stringview(text);
+    DndcStringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
     // flags |= DNDC_DONT_PRINT_ERRORS;
     // flags |= DNDC_SUPPRESS_WARNINGS;
     // flags |= DNDC_OUTPUT_EXPANDED_DND;
     flags |= DNDC_ALLOW_BAD_LINKS;
-    LongString output = {0};
+    DndcLongString output = {0};
     DndcLogFunc* func = logger?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
@@ -1362,7 +1362,7 @@ pydndc_md(PyObject* mod, PyObject* args, PyObject* kwargs){
         PyErr_SetString(PyExc_TypeError, "file_cache must be a DndcFileCache");
         return NULL;
     }
-    LongString jsargs_ls = LS("");
+    DndcLongString jsargs_ls = LS("");
     MStringBuilder jsbuilder = {.allocator = MALLOCATOR};
     if(jsargs && PyUnicode_Check(jsargs)){
         jsargs_ls = pystring_borrow_longstring(jsargs);
@@ -1376,13 +1376,13 @@ pydndc_md(PyObject* mod, PyObject* args, PyObject* kwargs){
         }
         jsargs_ls = msb_borrow_ls(&jsbuilder);
     }
-    StringView source = pystring_borrow_stringview(text);
-    StringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
+    DndcStringView source = pystring_borrow_stringview(text);
+    DndcStringView base_str = base_dir? pystring_borrow_stringview(base_dir): SV("");
     // flags |= DNDC_DONT_PRINT_ERRORS;
     // flags |= DNDC_SUPPRESS_WARNINGS;
     // flags |= DNDC_OUTPUT_EXPANDED_DND;
     flags |= DNDC_ALLOW_BAD_LINKS;
-    LongString output = {0};
+    DndcLongString output = {0};
     DndcLogFunc* func = logger?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
@@ -1486,7 +1486,7 @@ pydndc_anaylze_syntax_for_highlight(PyObject* mod, PyObject* args, PyObject* kwa
         return NULL;
     }
     PopDiagnostic();
-    StringView source = pystring_borrow_stringview(text);
+    DndcStringView source = pystring_borrow_stringview(text);
     struct CollectData cd = {
         .dict = PyDict_New(),
         .begin = source.text,
@@ -1520,7 +1520,7 @@ pyobj_to_json(PyObject* o, MStringBuilder* msb, int depth){
     int result = 0;
     if(PyUnicode_Check(o)){
         msb_write_char(msb, '"');
-        StringView sv = pystring_borrow_stringview(o);
+        DndcStringView sv = pystring_borrow_stringview(o);
         msb_write_json_escaped_str(msb, sv.text, sv.length);
         msb_write_char(msb, '"');
         return 0;
@@ -1574,7 +1574,7 @@ pyobj_to_json(PyObject* o, MStringBuilder* msb, int depth){
             PyObject* value = PyTuple_GET_ITEM(item, 1); // borrowed reference
             msb_write_char(msb, '"');
             if(PyUnicode_Check(key)){
-                StringView sv = pystring_borrow_stringview(key);
+                DndcStringView sv = pystring_borrow_stringview(key);
                 msb_write_json_escaped_str(msb, sv.text, sv.length);
             }
             else {
@@ -1583,7 +1583,7 @@ pyobj_to_json(PyObject* o, MStringBuilder* msb, int depth){
                     result = 1;
                     goto finish_dict;
                 }
-                StringView sv = pystring_borrow_stringview(rkey);
+                DndcStringView sv = pystring_borrow_stringview(rkey);
                 msb_write_json_escaped_str(msb, sv.text, sv.length);
                 Py_XDECREF(rkey);
             }
@@ -1600,7 +1600,7 @@ pyobj_to_json(PyObject* o, MStringBuilder* msb, int depth){
     }
     PyObject* r = PyObject_Repr(o); // new ref
     if(!r) return 1;
-    StringView sv = pystring_borrow_stringview(r);
+    DndcStringView sv = pystring_borrow_stringview(r);
     msb_write_str(msb, sv.text, sv.length);
     // finish_arbitrary:
     Py_XDECREF(r);
@@ -1781,7 +1781,11 @@ DndcContextPy_make_node(PyObject* s, PyObject* args, PyObject* kwargs){
     PopDiagnostic();
     if(!PyLong_Check(type))
         return PyErr_Format(PyExc_TypeError, "Type must be integral");
-    StringView h = header?dndc_ctx_dup_sv(self->ctx, pystring_borrow_stringview(header)): SV("");
+    DndcStringView h = SV("");
+    if(header){
+        int err = dndc_ctx_dup_sv(self->ctx, pystring_borrow_stringview(header), &h);
+        unhandled_error_condition(err);
+    }
     DndcNodeHandle n = dndc_ctx_make_node(self->ctx, PyLong_AsLong(type), h, DNDC_NODE_HANDLE_INVALID);
     if(n == DNDC_NODE_HANDLE_INVALID)
         return header?PyErr_Format(PyExc_ValueError, "Unable to make a node with type: %R, header: %R", type, header):PyErr_Format(PyExc_ValueError, "Unable to make a node with type: %R", type);
@@ -2005,8 +2009,8 @@ DndcContextPy_add_link(PyObject* s, PyObject* args, PyObject* kwargs){
         return NULL;
     }
     PopDiagnostic();
-    StringView k = pystring_borrow_stringview(key);
-    StringView v = pystring_borrow_stringview(value);
+    DndcStringView k = pystring_borrow_stringview(key);
+    DndcStringView v = pystring_borrow_stringview(value);
     int e  = dndc_ctx_add_link(ctx, k, v);
     if(e) return PyErr_Format(PyExc_ValueError, "Invalid link pair: %R, %R", key, value);
     Py_RETURN_NONE;
@@ -2020,7 +2024,7 @@ PyObject* _Nullable
 DndcContextPy_to_json(PyObject* s, PyObject* arg){
     (void)arg;
     DndcContextPy* self = (DndcContextPy*)s;
-    LongString string;
+    DndcLongString string;
     int err = dndc_ctx_to_json(self->ctx, &string);
     if(err) return PyErr_Format(PyExc_ValueError, "Problem converting to json.");
     PyObject* result = PyUnicode_FromStringAndSize(string.text, string.length);
@@ -2274,7 +2278,7 @@ DndcContextPy_get_base(PyObject* s, void*_Nullable p){
     (void)p;
     DndcContextPy* self = (DndcContextPy*)s;
     DndcContext* ctx = self->ctx;
-    StringView base;
+    DndcStringView base;
     int err = dndc_ctx_get_base(ctx, &base);
     if(err){
         return PyErr_Format(PyExc_RuntimeError, "wtf");
@@ -2293,12 +2297,12 @@ DndcContextPy_set_base(PyObject* s, PyObject*_Nullable args, void*_Nullable p){
     DndcContextPy* self = (DndcContextPy*)s;
     DndcContext* ctx = self->ctx;
     PushDiagnostic(); SuppressNullableConversion();
-    StringView sv = pystring_borrow_stringview(args);
+    DndcStringView sv = pystring_borrow_stringview(args);
     PopDiagnostic();
-    sv = dndc_ctx_dup_sv(ctx, sv);
-    int err = dndc_ctx_set_base(ctx, sv);
-    if(err)
-        return (void)PyErr_Format(PyExc_RuntimeError, "wtf"), -1;
+    int err = dndc_ctx_dup_sv(ctx, sv, &sv);
+    if(err) return (void)PyErr_Format(PyExc_RuntimeError, "wtf"), -1;
+    err = dndc_ctx_set_base(ctx, sv);
+    if(err) return (void)PyErr_Format(PyExc_RuntimeError, "wtf"), -1;
     return 0;
 }
 
@@ -2402,9 +2406,17 @@ DndcNodePy_set_attribute(PyObject* s, PyObject* args, PyObject* kwargs){
     PopDiagnostic();
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
-    dndc_node_set_attribute(ctx, self->handle,
-            dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(key)),
-            value?dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(value)):SV(""));
+    DndcStringView k;
+    {
+        int err = dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(key), &k);
+        unhandled_error_condition(err);
+    }
+    DndcStringView v = SV("");
+    if(value){
+        int err = dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(value), &v);
+        unhandled_error_condition(err);
+    }
+    dndc_node_set_attribute(ctx, self->handle, k, v);
     Py_RETURN_NONE;
 }
 static
@@ -2526,9 +2538,11 @@ DndcNodePy_add_class(PyObject* s, PyObject* args){
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
     DndcNodeHandle handle = self->handle;
-    int err = dndc_node_add_class(ctx, handle, dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(args)));
-    if(err)
-        return PyErr_Format(PyExc_RuntimeError, "Problem adding %R", args);
+    DndcStringView cls;
+    int err = dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(args), &cls);
+    if(err) return PyErr_Format(PyExc_RuntimeError, "Problem adding %R", args);
+    err = dndc_node_add_class(ctx, handle, cls);
+    if(err) return PyErr_Format(PyExc_RuntimeError, "Problem adding %R", args);
     Py_RETURN_NONE;
 }
 
@@ -2541,9 +2555,8 @@ DndcNodePy_remove_class(PyObject* s, PyObject* args){
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
     DndcNodeHandle handle = self->handle;
-    int err = dndc_node_remove_class(ctx, handle, dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(args)));
-    if(err)
-        return PyErr_Format(PyExc_RuntimeError, "Problem removing %R", args);
+    int err = dndc_node_remove_class(ctx, handle, pystring_borrow_stringview(args));
+    if(err) return PyErr_Format(PyExc_RuntimeError, "Problem removing %R", args);
     Py_RETURN_NONE;
 }
 
@@ -2551,7 +2564,7 @@ static
 PyObject*_Nullable
 DndcNodePy_execute_js(PyObject* s, PyObject* args){
     if(!PyUnicode_Check(args)) return PyErr_Format(PyExc_TypeError, "js script must be a string");
-    LongString script = pystring_borrow_longstring(args);
+    DndcLongString script = pystring_borrow_longstring(args);
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
     DndcNodeHandle handle = self->handle;
@@ -2575,10 +2588,16 @@ DndcNodePy_parse(PyObject* s, PyObject* args, PyObject* kwargs){
     PopDiagnostic();
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
-    int err = dndc_ctx_parse_string(ctx, self->handle, filename?dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(filename)):SV("(string input)"), dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(text)));
-    if(err){
-        return PyErr_Format(PyExc_ValueError, "Error while parsing");
+    DndcStringView fn = SV("(string input)");
+    if(filename){
+        int err = dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(filename), &fn);
+        unhandled_error_condition(err);
     }
+    DndcStringView txt;
+    int err = dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(text), &txt);
+    unhandled_error_condition(err);
+    err = dndc_ctx_parse_string(ctx, self->handle, fn, txt);
+    if(err) return PyErr_Format(PyExc_ValueError, "Error while parsing");
     Py_RETURN_NONE;
 }
 static
@@ -2594,10 +2613,11 @@ DndcNodePy_parse_file(PyObject* s, PyObject* args, PyObject* kwargs){
     PopDiagnostic();
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
-    int err = dndc_ctx_parse_file(ctx, self->handle, dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(path)));
-    if(err){
-        return PyErr_Format(PyExc_ValueError, "Error while parsing");
-    }
+    DndcStringView sv;
+    int err = dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(path), &sv);
+    if(err) return PyErr_Format(PyExc_ValueError, "Error while parsing");
+    err = dndc_ctx_parse_file(ctx, self->handle, sv);
+    if(err) return PyErr_Format(PyExc_ValueError, "Error while parsing");
     Py_RETURN_NONE;
 }
 static
@@ -2616,7 +2636,11 @@ DndcNodePy_make_child(PyObject* s, PyObject* args, PyObject* kwargs){
     if(!PyLong_Check(type))
         return PyErr_Format(PyExc_TypeError, "Type must be integral");
     DndcContext* ctx = self->pyctx->ctx;
-    StringView h = header?dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(header)): SV("");
+    DndcStringView h = SV("");
+    if(header){
+        int err = dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(header), &h);
+        unhandled_error_condition(err);
+    }
     DndcNodeHandle n = dndc_ctx_make_node(ctx, PyLong_AsLong(type), h, self->handle);
     if(n == DNDC_NODE_HANDLE_INVALID)
         return header?PyErr_Format(PyExc_ValueError, "Unable to make a node with type: %R, header: %R", type, header):PyErr_Format(PyExc_ValueError, "Unable to make a node with type: %R", type);
@@ -2647,7 +2671,10 @@ DndcNodePy_set_header(PyObject * s, PyObject * o, void * p){
         return 0;
     }
     if(!PyUnicode_Check(o)) return 0;
-    dndc_node_set_header(ctx, self->handle, dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(o)));
+    DndcStringView sv;
+    int err =  dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(o), &sv);
+    unhandled_error_condition(err);
+    dndc_node_set_header(ctx, self->handle, sv);
     return 0;
 }
 
@@ -2697,7 +2724,7 @@ DndcNodePy_get_id(PyObject *s, void *_Nullable p){
     if(!sv.length) return PyUnicode_FromString("");
     MStringBuilder temp = {.allocator = MALLOCATOR};
     msb_write_kebab(&temp, sv.text, sv.length);
-    StringView b = msb_borrow_sv(&temp);
+    DndcStringView b = msb_borrow_sv(&temp);
     PyObject* result = PyUnicode_FromStringAndSize(b.text, b.length);
     msb_destroy(&temp);
     return result;
@@ -2713,7 +2740,10 @@ DndcNodePy_set_id(PyObject * s, PyObject * o, void * p){
         return 0;
     }
     if(!PyUnicode_Check(o)) return 0;
-    dndc_node_set_id(ctx, self->handle, dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(o)));
+    DndcStringView sv;
+    int err = dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(o), &sv);
+    unhandled_error_condition(err);
+    dndc_node_set_id(ctx, self->handle, sv);
     return 0;
 }
 
@@ -2821,7 +2851,7 @@ DndcNodePy_format(PyObject* s, PyObject* arg){
     if(!PyLong_Check(arg)) return PyErr_Format(PyExc_TypeError, "Need an int argument for indent");
     long indent = PyLong_AsLong(arg);
     if(indent < 0 || indent > 50) return PyErr_Format(PyExc_ValueError, "Indent value invalid: %R", arg);
-    LongString ls;
+    DndcLongString ls;
     DndcNodePy* self = (DndcNodePy*)s;
     int err = dndc_node_format(self->pyctx->ctx, self->handle, indent, &ls);
     if(err){
@@ -2836,7 +2866,7 @@ PyObject* _Nullable
 DndcNodePy_render(PyObject* s, PyObject* arg){
     (void)arg;
     DndcNodePy* self = (DndcNodePy*)s;
-    LongString html;
+    DndcLongString html;
     int e = dndc_node_render_to_html(self->pyctx->ctx, self->handle, &html);
     if(e){
         return PyErr_Format(PyExc_ValueError, "Unable to render node to html.");
@@ -2852,7 +2882,9 @@ DndcNodePy_append_child(PyObject* s, PyObject* arg){
     if(PyUnicode_Check(arg)){
         // special case for strings
         DndcNodePy* self = (DndcNodePy*)s;
-        DndcStringView content = dndc_ctx_dup_sv(self->pyctx->ctx, pystring_borrow_stringview(arg));
+        DndcStringView content;
+        int err = dndc_ctx_dup_sv(self->pyctx->ctx, pystring_borrow_stringview(arg), &content);
+        unhandled_error_condition(err);
         DndcNodeHandle child = dndc_ctx_make_node(self->pyctx->ctx, DNDC_NODE_TYPE_STRING, content, self->handle);
         (void)child;
         Py_RETURN_NONE;
@@ -2883,7 +2915,7 @@ PyObject* _Nullable
 DndcNodePy_tree_repr(PyObject* s, PyObject* arg){
     (void)arg;
     DndcNodePy* self = (DndcNodePy*)s;
-    LongString string;
+    DndcLongString string;
     int err = dndc_node_tree_repr(self->pyctx->ctx, self->handle, &string);
     if(err) return PyErr_Format(PyExc_ValueError, "Problem printing tree");
     PyObject* result = PyUnicode_FromStringAndSize(string.text, string.length);
@@ -2900,7 +2932,7 @@ PyObject* _Nullable
 DndcNodePy_to_json(PyObject* s, PyObject* arg){
     (void)arg;
     DndcNodePy* self = (DndcNodePy*)s;
-    LongString string;
+    DndcLongString string;
     int err = dndc_node_to_json(self->pyctx->ctx, self->handle, &string);
     if(err) return PyErr_Format(PyExc_ValueError, "Problem converting to json.");
     PyObject* result = PyUnicode_FromStringAndSize(string.text, string.length);
@@ -3175,7 +3207,7 @@ DndcNodePy_repr(PyObject* s){
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
     DndcNodeHandle handle = self->handle;
-    StringView sv;
+    DndcStringView sv;
     int err = dndc_node_get_header(ctx, handle, &sv);
     if(err) return PyErr_Format(PyExc_ValueError, "Repr of invalid node");
     int type = dndc_node_get_type(ctx, handle);

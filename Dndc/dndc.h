@@ -18,7 +18,7 @@
 #define DNDC_VERSION DNDC_STRINGIFY(DNDC_MAJOR) "." DNDC_STRINGIFY(DNDC_MINOR) "." DNDC_STRINGIFY(DNDC_MICRO)
 
 #define DNDC_MAJOR 0
-#define DNDC_MINOR 25
+#define DNDC_MINOR 26
 #define DNDC_MICRO 0
 #define DNDC_STRINGIFY_IMPL(x) #x
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
@@ -48,6 +48,25 @@ enum {DNDC_NUMERIC_VERSION = DNDC_INT_VERSION(DNDC_MAJOR, DNDC_MINOR, DNDC_MICRO
 #else
 #define DNDC_NULLABLE(x) x
 #define DNDC_NULLDEP(x) x
+#endif
+
+#ifndef DNDC_WARN_UNUSED
+// ------------
+// You can define this to nothing to turn off warnings.
+//
+// This is used to warn for functions that take an out-param and return an
+// error code. Ignoring those would be unsafe as you would be doing things
+// like reading uninitialized data structures.
+//
+// While you should check the return value of almost all of these functions,
+// these in particular would be unsafe to not check.
+#if defined(__GNUC__) || defined(__clang__)
+#define DNDC_WARN_UNUSED __attribute__((warn_unused_result))
+#elif defined(_MSC_VER)
+#define DNDC_WARN_UNUSED
+#else
+#define DNDC_WARN_UNUSED
+#endif
 #endif
 
 #ifndef DNDC_API
@@ -645,6 +664,7 @@ enum DndcFlags {
 // ===============
 
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_compile_dnd_file(
   unsigned long long flags,
@@ -742,6 +762,7 @@ dndc_compile_dnd_file(
 //
 
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_format(DndcStringView source_text,
       DndcLongString* output,
@@ -787,6 +808,7 @@ dndc_format(DndcStringView source_text,
 
 
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_expand_to_dnd(
   unsigned long long flags,
@@ -858,6 +880,7 @@ dndc_expand_to_dnd(
 //
 //
 DNDC_API
+DNDC_WARN_UNUSED
 int
 dndc_expand_to_md(
   unsigned long long flags,
