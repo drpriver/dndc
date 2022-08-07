@@ -95,7 +95,7 @@ int main(int argc, char** argv){
     RegisterTest(TestPushExample);
     RegisterTest(TestAllocExample);
     RegisterTest(TestRemoveExample);
-    return test_main(argc, argv);
+    return test_main(argc, argv, NULL);
 }
 
 #include "Allocators/allocator.c"

@@ -144,7 +144,7 @@ int main(int argc, char** argv){
     RegisterTestFlags(TestSortRandoms, TEST_CASE_FLAGS_SKIP_UNLESS_NAMED);
     RegisterTest(TestStringSorts);
     RegisterTest(TestExample);
-    return test_main(argc, argv);
+    return test_main(argc, argv, NULL);
 }
 
 #ifdef __clang__

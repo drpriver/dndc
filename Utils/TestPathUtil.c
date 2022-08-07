@@ -113,5 +113,5 @@ int main(int argc, char** argv){
     RegisterTest(TestBaseName);
     RegisterTest(TestDirName);
     RegisterTest(TestStripExtension);
-    return test_main(argc, argv);
+    return test_main(argc, argv, NULL);
 }

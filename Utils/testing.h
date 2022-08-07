@@ -773,7 +773,7 @@ run_the_tests(size_t*_Nullable which_tests, int test_count){
 //
 static
 int
-test_main(int argc, char*_Nonnull *_Nonnull argv){
+test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullable extra_kwargs){
 #ifdef _WIN32
     // unclear if this is actually needed or if argv is utf8.
     if(get_main_args(&argc, &argv) != 0) return 1;
@@ -863,18 +863,6 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
             .help = "Do a getchar() before running the tests to give time to attach or whatever",
             .dest = ARGDEST(&should_wait),
         },
-        // NOTE(dpriver): This is for testing allocation failure.
-        // This is not normally part of this header, but I didn't feel like copy-pasting
-        // this main just for this.
-        // Maybe we should allow chained argparsers?
-        #ifdef USE_TESTING_ALLOCATOR
-        {
-            .name = SV("-F"),
-            .altname1 = SV("--fail-at"),
-            .help = "Fail after this many allocations",
-            .dest = ARGDEST(&THE_TestingAllocator.fail_at),
-        }
-        #endif
     };
     enum {HELP=0, LIST=1};
     ArgToParse early_args[] = {
@@ -894,6 +882,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv){
         .description = "A test runner.",
         .keyword.args = kw_args,
         .keyword.count = arrlen(kw_args),
+        .keyword.next = extra_kwargs,
         .early_out.args = early_args,
         .early_out.count = arrlen(early_args),
         .styling.plain = !isatty(fileno(stdout)),

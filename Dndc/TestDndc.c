@@ -12,8 +12,9 @@
 #define DNDC_API static inline
 #include "dndc.h"
 #include "dndc_long_string.h"
-#include "Utils/testing.h"
 #include "dndc.c"
+#include "Utils/testing.h"
+#include "Utils/argument_parsing.h"
 
 // These are forward function decls
 static TestFunc TestDndc1;
@@ -59,7 +60,19 @@ int main(int argc, char** argv){
     RegisterTest(TestExpand);
     RegisterTest(TestMd);
     RegisterTest(TestUtf16Syntax);
-    int ret = test_main(argc, argv);
+    ArgToParse kw_args[] = {
+        {
+            .name = SV("-F"),
+            .altname1 = SV("--fail-at"),
+            .help = "Fail after this many allocations",
+            .dest = ARGDEST(&THE_TestingAllocator.fail_at),
+        }
+    };
+    ArgParseKwParams extra_kwargs = {
+        .args = kw_args,
+        .count = arrlen(kw_args),
+    };
+    int ret = test_main(argc, argv, &extra_kwargs);
     testing_assert_all_freed();
     return ret;
 }

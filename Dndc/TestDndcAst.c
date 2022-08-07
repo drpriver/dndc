@@ -25,7 +25,19 @@ int main(int argc, char** argv){
     testing_allocator_init();
     RegisterTest(TestDndcAst);
     RegisterTest(TestAstExample);
-    int ret = test_main(argc, argv);
+    ArgToParse kw_args[] = {
+        {
+            .name = SV("-F"),
+            .altname1 = SV("--fail-at"),
+            .help = "Fail after this many allocations",
+            .dest = ARGDEST(&THE_TestingAllocator.fail_at),
+        }
+    };
+    ArgParseKwParams extra_kwargs = {
+        .args = kw_args,
+        .count = arrlen(kw_args),
+    };
+    int ret = test_main(argc, argv, &extra_kwargs);
     testing_assert_all_freed();
     return ret;
 }

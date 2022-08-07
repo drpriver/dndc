@@ -754,7 +754,7 @@ int main(int argc, char** argv){
     RegisterTest(TestParseEnum);
     RegisterTest(TestBitFlags);
     RegisterTest(TestAppender);
-    return test_main(argc, argv);
+    return test_main(argc, argv, NULL);
 }
 #ifdef __clang__
 #pragma clang assume_nonnull end

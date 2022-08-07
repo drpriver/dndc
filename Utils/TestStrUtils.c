@@ -57,5 +57,5 @@ TestFunction(TestCmp){
 int main(int argc, char** argv){
     RegisterTest(TestStrip);
     RegisterTest(TestCmp);
-    return test_main(argc, argv);
+    return test_main(argc, argv, NULL);
 }

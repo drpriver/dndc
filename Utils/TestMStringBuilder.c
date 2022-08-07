@@ -103,6 +103,6 @@ main(int argc, char** argv){
     RegisterTest(TestMStringBuilder1);
     RegisterTest(TestMStringBuilder2);
     RegisterTest(TestMStringBuilder3);
-    return test_main(argc, argv);
+    return test_main(argc, argv, NULL);
 }
 #include "Allocators/allocator.c"
