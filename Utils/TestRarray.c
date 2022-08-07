@@ -1,7 +1,6 @@
 //
 // Copyright © 2021-2022, David Priver
 //
-#define USE_RECORDED_ALLOCATOR
 #define REPLACE_MALLOCATOR
 #define USE_TESTING_ALLOCATOR
 #include "testing.h"

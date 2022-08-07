@@ -1,28 +1,29 @@
 //
 // Copyright © 2021-2022, David Priver
 //
-#define USE_RECORDED_ALLOCATOR
+#define HEAVY_RECORDING
+#define USE_TESTING_ALLOCATOR
+#define REPLACE_MALLOCATOR
 #include <stdint.h>
 #include "long_string.h"
 #include "testing.h"
 #include "MStringBuilder.h"
-#include "Allocators/recording_allocator.h"
+#include "Allocators/testing_allocator.h"
 #include "msb_format.h"
 
 TestFunction(TestMStringBuilder1){
     TESTBEGIN();
-    Allocator a = new_recorded_mallocator();
+    Allocator a = THE_TESTING_ALLOCATOR;
     MStringBuilder sb = {.allocator=a};
     MSB_FORMAT(&sb, "hello there", " = ", 5, "\n");
     StringView s = msb_borrow_sv(&sb);
     TestExpectEquals2(SV_equals, s, SV("hello there = 5\n"));
     msb_destroy(&sb);
-    shallow_free_recorded_mallocator(a);
     TESTEND();
 }
 TestFunction(TestMStringBuilder2){
     TESTBEGIN();
-    Allocator a = new_recorded_mallocator();
+    Allocator a = THE_TESTING_ALLOCATOR;
     MStringBuilder sb = {.allocator=a};
     struct test_case {
         int integer;
@@ -66,12 +67,11 @@ TestFunction(TestMStringBuilder2){
         }
     }
     msb_destroy(&sb);
-    shallow_free_recorded_mallocator(a);
     TESTEND();
 }
 TestFunction(TestMStringBuilder3){
     TESTBEGIN();
-    Allocator a = new_recorded_mallocator();
+    Allocator a = THE_TESTING_ALLOCATOR;
     MStringBuilder sb = {.allocator=a};
     MSB_FORMAT(&sb, "I have ", 2, " apples!");
     {
@@ -93,16 +93,19 @@ TestFunction(TestMStringBuilder3){
         msb_write_char(&x, 'a');
         msb_erase(&x, 5);
         TestExpectEquals(msb_peek(&x), 0);
+        msb_destroy(&x);
     }
-    shallow_free_recorded_mallocator(a);
     TESTEND();
 }
 
 int
 main(int argc, char** argv){
+    testing_allocator_init();
     RegisterTest(TestMStringBuilder1);
     RegisterTest(TestMStringBuilder2);
     RegisterTest(TestMStringBuilder3);
-    return test_main(argc, argv, NULL);
+    int ret = test_main(argc, argv, NULL);
+    testing_assert_all_freed();
+    return ret;
 }
 #include "Allocators/allocator.c"

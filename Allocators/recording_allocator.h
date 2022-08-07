@@ -231,9 +231,11 @@ recording_cleanup(RecordingAllocator* r){
     memset(r, 0, sizeof(*r));
 }
 
+#ifdef USE_RECORDED_ALLOCATOR
 static inline
 void
 shallow_free_recorded_mallocator(Allocator a){
+    assert(a.type == ALLOCATOR_RECORDED);
     RecordingAllocator* r = a._data;
     recording_cleanup(r);
     const_free(r);
@@ -248,19 +250,23 @@ new_recorded_mallocator(void){
         .type = ALLOCATOR_RECORDED,
     };
 }
+#endif
 
 static inline
 void
 recording_assert_all_freed(RecordingAllocator* r){
+    int leaked = 0;
     for(size_t i = 0; i < r->count; i++){
     #ifdef HEAVY_RECORDING
         if(r->allocation_sizes[i]){
             dump_bt(r->backtraces[i]);
+            leaked = 1;
         }
     #else
         assert(r->allocation_sizes[i] == 0);
     #endif
     }
+    assert(leaked == 0);
 }
 
 #ifdef __clang__

@@ -1,10 +1,12 @@
 //
 // Copyright © 2021-2022, David Priver
 //
+#define USE_TESTING_ALLOCATOR
+#define REPLACE_MALLOCATOR
+#include "Allocators/testing_allocator.h"
 #include "long_string.h"
 #include "testing.h"
 #include "MStringBuilder.h"
-#include "Allocators/mallocator.h"
 #include "msb_extensions.h"
 
 TestFunction(TestKebab){
@@ -56,8 +58,11 @@ TestFunction(TestTitle){
 }
 
 int main(int argc, char** argv){
+    testing_allocator_init();
     RegisterTest(TestKebab);
     RegisterTest(TestTitle);
-    return test_main(argc, argv, NULL);
+    int ret = test_main(argc, argv, NULL);
+    testing_assert_all_freed();
+    return ret;
 }
 #include "Allocators/allocator.c"

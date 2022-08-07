@@ -1,14 +1,15 @@
 //
 // Copyright © 2021-2022, David Priver
 //
-#define USE_RECORDED_ALLOCATOR
+#define USE_TESTING_ALLOCATOR
+#define REPLACE_MALLOCATOR
 #include <string.h>
 #include "testing.h"
 #include "argument_parsing.h"
 
 #define MARRAY_T short
 #include "Marray.h"
-#include "Allocators/recording_allocator.h"
+#include "Allocators/testing_allocator.h"
 #include "str_util.h"
 
 #ifdef __clang__
@@ -676,7 +677,7 @@ TestFunction(TestAppender){
     Marray(short) shorts = {0};
     struct ShortContext ctx = {
         .marray = &shorts,
-        .a = new_recorded_mallocator(),
+        .a = THE_TESTING_ALLOCATOR,
     };
     ArgToParse pos_args[] = {
         [0] = {
@@ -738,11 +739,11 @@ TestFunction(TestAppender){
         Marray_cleanup(short)(&shorts, ctx.a);
         clear_parser(&argparser);
     }
-    shallow_free_recorded_mallocator(ctx.a);
     TESTEND();
 }
 
 int main(int argc, char** argv){
+    testing_allocator_init();
     RegisterTest(TestArgumentParsing1);
     RegisterTest(TestArgumentParsing2);
     RegisterTest(TestArgumentParsing3);
@@ -754,7 +755,9 @@ int main(int argc, char** argv){
     RegisterTest(TestParseEnum);
     RegisterTest(TestBitFlags);
     RegisterTest(TestAppender);
-    return test_main(argc, argv, NULL);
+    int ret = test_main(argc, argv, NULL);
+    testing_assert_all_freed();
+    return ret;
 }
 #ifdef __clang__
 #pragma clang assume_nonnull end

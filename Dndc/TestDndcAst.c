@@ -5,7 +5,6 @@
 // #define HEAVY_RECORDING
 #define USE_TESTING_ALLOCATOR
 #define REPLACE_MALLOCATOR
-#define USE_RECORDED_ALLOCATOR
 #include "common_macros.h"
 #include "Allocators/testing_allocator.h"
 #include <stdio.h>

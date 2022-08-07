@@ -1,15 +1,16 @@
 //
 // Copyright © 2021-2022, David Priver
 //
-#define USE_RECORDED_ALLOCATOR
+#define USE_TESTING_ALLOCATOR
+#define REPLACE_MALLOCATOR
 #include "testing.h"
 #include "long_string.h"
 #include "base64.h"
-#include "Allocators/recording_allocator.h"
+#include "Allocators/testing_allocator.h"
 
 TestFunction(TestBase64){
     TESTBEGIN();
-    Allocator a = new_recorded_mallocator();
+    Allocator a = THE_TESTING_ALLOCATOR;
     MStringBuilder sb = {.allocator=a};
     {
         StringView text = SV("any carnal pleasur");
@@ -53,13 +54,12 @@ TestFunction(TestBase64){
         TestExpectNotEquals((int)e2, BASE64_NO_ERROR);
     }
     msb_destroy(&sb);
-    shallow_free_recorded_mallocator(a);
     TESTEND();
-    }
+}
 
 TestFunction(TestBase64_2){
     TESTBEGIN();
-    Allocator a = new_recorded_mallocator();
+    Allocator a = THE_TESTING_ALLOCATOR;
     {
         StringView data = SV("YW55IGNhcm5hbCBwbGVhc3Vy");
         size_t size = base64_decode_size(data.length);
@@ -82,13 +82,15 @@ TestFunction(TestBase64_2){
         TestExpectEquals(memcmp(decoded, data, sizeof(data)), 0);
         msb_destroy(&sb);
     }
-    shallow_free_recorded_mallocator(a);
     TESTEND();
-    }
+}
 
 int main(int argc, char** argv){
+    testing_allocator_init();
     RegisterTest(TestBase64);
     RegisterTest(TestBase64_2);
-    return test_main(argc, argv, NULL);
-    }
+    int ret = test_main(argc, argv, NULL);
+    testing_assert_all_freed();
+    return ret;
+}
 #include "Allocators/allocator.c"
