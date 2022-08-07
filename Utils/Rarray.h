@@ -65,6 +65,7 @@
 #define Rarray_clone(type) RARRAYIMPL(clone, type)
 #define Rarray_alloc(type) RARRAYIMPL(alloc, type)
 #define Rarray_remove(type) RARRAYIMPL(remove, type)
+#define Rarray_sizeof(type) RARRAYIMPL(sizeof, type)
 
 //
 // RARRAY_FOR_EACH
@@ -78,8 +79,6 @@ for(type *iter=((rarray)?(rarray)->data:NULL), \
       *iter##end__=((rarray)?(rarray)->data+(rarray)->count:NULL); \
     iter!=iter##end__;\
     ++iter)
-
-
 
 #endif
 
@@ -271,6 +270,13 @@ Rarray_remove(RARRAY_T)(RARRAY* rarray, size_t i){
     size_t n_move = rarray->count - i - 1;
     ra_memmove(rarray->data+i, rarray->data+i+1, n_move*(sizeof(RARRAY_T)));
     rarray->count--;
+}
+
+static inline
+size_t
+Rarray_sizeof(RARRAY_T)(RARRAY*_Nullable rarray){
+    if(!rarray) return 0;
+    return sizeof(*rarray) + sizeof(*rarray->data)*rarray->capacity;
 }
 
 #undef RARRAY
