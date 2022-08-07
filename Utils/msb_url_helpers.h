@@ -78,7 +78,8 @@ msb_url_percent_encode_filepath(MStringBuilder* sb, const char* text, size_t len
 static inline
 int
 msb_url_percent_decode(MStringBuilder* sb, const char* text, size_t length){
-    msb_ensure_additional(sb, length);
+    int err = msb_ensure_additional(sb, length);
+    if(unlikely(err)) return 1;
     for(size_t i = 0; i < length; i++){
         char c = text[i];
         if(c == '%'){

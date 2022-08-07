@@ -317,7 +317,8 @@ msb_write_int32(MStringBuilder* sb, int32_t value){
     }
     char* p = uint32_to_str_buffer(buff, value);
     ptrdiff_t size = (buff+10) - p;
-    _check_msb_remaining_size(sb, size);
+    int err = _check_msb_remaining_size(sb, size);
+    if(unlikely(err)) return;
     memcpy(sb->data+sb->cursor, p, size);
     sb->cursor += size;
 }
@@ -336,7 +337,8 @@ msb_write_int64(MStringBuilder* sb, int64_t value){
     char buff[20];
     char* p = uint64_to_str_buffer(buff, value);
     ptrdiff_t size = (buff+20) - p;
-    _check_msb_remaining_size(sb, size);
+    int err = _check_msb_remaining_size(sb, size);
+    if(unlikely(err)) return;
     memcpy(sb->data+sb->cursor, p, size);
     sb->cursor += size;
 }
@@ -365,11 +367,13 @@ msb_write_int_space_padded(MStringBuilder* sb, int32_t value, int width){
     size_t cursor = sb->cursor;
     char* data;
     if(needed_size >= (unsigned)width){
-        _check_msb_remaining_size(sb, needed_size);
+        int err = _check_msb_remaining_size(sb, needed_size);
+        if(unlikely(err)) return;
         data = sb->data;
     }
     else {
-        _check_msb_remaining_size(sb, width);
+        int err = _check_msb_remaining_size(sb, width);
+        if(unlikely(err)) return;
         data = sb->data;
         intptr_t pad = width - needed_size;
         memset(data+cursor, ' ', pad);
@@ -388,7 +392,8 @@ msb_write_uint32(MStringBuilder* sb, uint32_t value){
     char buff[10];
     char* p = uint32_to_str_buffer(buff, value);
     ptrdiff_t size = (buff+10) - p;
-    _check_msb_remaining_size(sb, size);
+    int err = _check_msb_remaining_size(sb, size);
+    if(unlikely(err)) return;
     memcpy(sb->data+sb->cursor, p, size);
     sb->cursor += size;
 }
@@ -399,7 +404,8 @@ msb_write_uint64(MStringBuilder* sb, uint64_t value){
     char buff[20];
     char* p = uint64_to_str_buffer(buff, value);
     ptrdiff_t size = (buff+20) - p;
-    _check_msb_remaining_size(sb, size);
+    int err = _check_msb_remaining_size(sb, size);
+    if(unlikely(err)) return;
     memcpy(sb->data+sb->cursor, p, size);
     sb->cursor += size;
 }

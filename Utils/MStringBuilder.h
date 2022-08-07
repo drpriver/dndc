@@ -9,6 +9,10 @@
 #include "long_string.h"
 #include "Allocators/allocator.h"
 
+#if 0
+#include "debugging.h"
+#endif
+
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #else
@@ -25,6 +29,16 @@
 #endif
 #endif
 
+#if !defined(likely) && !defined(unlikely)
+#if defined(__GNUC__) || defined(__clang__)
+#define likely(x)      __builtin_expect(!!(x), 1)
+#define unlikely(x)    __builtin_expect(!!(x), 0)
+#else
+#define likely(x) (x)
+#define unlikely(x) (x)
+#endif
+#endif
+
 //
 // A type for building up a string without having to deal with things like sprintf
 // or strcat.
@@ -34,6 +48,7 @@ struct MStringBuilder {
     size_t capacity;
     char*_Null_unspecified data;
     const Allocator allocator;
+    int errored;
 };
 
 //
@@ -50,11 +65,13 @@ msb_destroy(MStringBuilder* msb){
 
 static inline
 force_inline
-void
+warn_unused
+int
 _check_msb_remaining_size(MStringBuilder*, size_t);
 
 static inline
-void
+warn_unused
+int
 _msb_resize(MStringBuilder*, size_t);
 
 
@@ -64,7 +81,8 @@ _msb_resize(MStringBuilder*, size_t);
 static inline
 void
 msb_nul_terminate(MStringBuilder* msb){
-    _check_msb_remaining_size(msb, 1);
+    int err = _check_msb_remaining_size(msb, 1);
+    if(unlikely(err)) return;
     msb->data[msb->cursor] = '\0';
 }
 
@@ -73,9 +91,10 @@ msb_nul_terminate(MStringBuilder* msb){
 // Ensures additional capacity is present in the builder.
 // Avoids re-allocs and thus potential copies
 static inline
-void
+warn_unused
+int
 msb_ensure_additional(MStringBuilder* msb, size_t additional_capacity){
-    _check_msb_remaining_size(msb, additional_capacity);
+    return _check_msb_remaining_size(msb, additional_capacity);
 }
 
 //
@@ -85,9 +104,15 @@ msb_ensure_additional(MStringBuilder* msb, size_t additional_capacity){
 static inline
 LongString
 msb_detach_ls(MStringBuilder* msb){
+#ifdef DEBUGGING_H
+    if(msb->errored) bt();
+    if(!msb->data) bt();
+#endif
     assert(msb->data);
+    assert(!msb->errored);
     msb_nul_terminate(msb);
-    _msb_resize(msb, msb->cursor+1);
+    int err = _msb_resize(msb, msb->cursor+1);
+    assert(!err);
     LongString result = {0};
     result.text = msb->data;
     result.length = msb->cursor;
@@ -100,8 +125,13 @@ msb_detach_ls(MStringBuilder* msb){
 static inline
 StringView
 msb_detach_sv(MStringBuilder* msb){
+#ifdef DEBUGGING_H
+    if(msb->errored) bt();
+#endif
+    assert(!msb->errored);
     StringView result = {0};
-    _msb_resize(msb, msb->cursor);
+    int err = _msb_resize(msb, msb->cursor);
+    assert(!err);
     result.text = msb->data;
     result.length = msb->cursor;
     msb->data = NULL;
@@ -118,6 +148,10 @@ msb_detach_sv(MStringBuilder* msb){
 static inline
 StringView
 msb_borrow_sv(MStringBuilder* msb){
+#ifdef DEBUGGING_H
+    if(msb->errored) bt();
+#endif
+    assert(!msb->errored);
     return (StringView) {
         .text = msb->data,
         .length = msb->cursor,
@@ -129,6 +163,10 @@ static inline
 LongString
 msb_borrow_ls(MStringBuilder* msb){
     msb_nul_terminate(msb);
+#ifdef DEBUGGING_H
+    if(msb->errored) bt();
+#endif
+    assert(!msb->errored);
     assert(msb->data);
     return (LongString) {
         .text = msb->data,
@@ -151,18 +189,24 @@ msb_reset(MStringBuilder* msb){
 
 // Internal function, resizes the builder to the new size.
 static inline
-void
+warn_unused
+int
 _msb_resize(MStringBuilder* msb, size_t size){
     char* new_data = Allocator_realloc(msb->allocator, msb->data, msb->capacity, size);
-    unhandled_error_condition(!new_data);
+    if(!new_data){
+        msb->errored = 1;
+        return 1;
+    }
     msb->data = new_data;
     msb->capacity = size;
+    return 0;
 }
 
 // Internal function, ensures there is enough additional capacity.
 static inline
 force_inline
-void
+warn_unused
+int
 _check_msb_remaining_size(MStringBuilder* msb, size_t len){
     if(msb->cursor + len > msb->capacity){
         size_t new_size = msb->capacity?(msb->capacity*3)/2:16;
@@ -172,8 +216,9 @@ _check_msb_remaining_size(MStringBuilder* msb, size_t len){
         if(new_size & 15){
             new_size += (16- (new_size&15));
         }
-        _msb_resize(msb, new_size);
+        return _msb_resize(msb, new_size);
     }
+    return 0;
 }
 
 //
@@ -184,7 +229,9 @@ void
 msb_write_str(MStringBuilder* restrict msb, const char*_Null_unspecified restrict str, size_t len){
     if(!len)
         return;
-    _check_msb_remaining_size(msb, len);
+    int err = _check_msb_remaining_size(msb, len);
+    if(unlikely(err))
+        return;
     (memcpy)(msb->data + msb->cursor, str, len);
     msb->cursor += len;
 }
@@ -199,7 +246,9 @@ static inline
 force_inline
 void
 msb_write_char(MStringBuilder* msb, char c){
-    _check_msb_remaining_size(msb, 1);
+    int err = _check_msb_remaining_size(msb, 1);
+    if(unlikely(err))
+        return;
     msb->data[msb->cursor++] = c;
 }
 
@@ -213,7 +262,9 @@ void
 msb_write_nchar(MStringBuilder* msb, char c, size_t n){
     if(n == 0)
         return;
-    _check_msb_remaining_size(msb, n);
+    int err = _check_msb_remaining_size(msb, n);
+    if(unlikely(err))
+        return;
     memset(msb->data + msb->cursor, c, n);
     msb->cursor += n;
 }

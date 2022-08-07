@@ -76,7 +76,8 @@ msb_write_kebab(MStringBuilder* msb, const char* text, size_t length){
     // an ascii '1'. Those are unprintable characters anyway.  Could also mask
     // out the unprintables in the simd version.
 
-    msb_ensure_additional(msb, length+2);
+    int err = msb_ensure_additional(msb, length+2);
+    if(unlikely(err)) return;
     char* data = msb->data;
     size_t cursor = msb->cursor;
     // A bit of explanation is in order.
@@ -135,7 +136,8 @@ void
 msb_write_title(MStringBuilder* restrict msb, const char* restrict str, size_t len){
     if(!len)
         return;
-    _check_msb_remaining_size(msb, len);
+    int err = _check_msb_remaining_size(msb, len);
+    if(unlikely(err)) return;
     bool wants_cap = true;
     for(size_t i = 0; i < len; i++){
         char c = str[i];
@@ -166,7 +168,8 @@ static inline
 void
 msb_write_json_escaped_str(MStringBuilder* restrict sb, const char* restrict str, size_t length){
     size_t datalength = length*2;
-    _check_msb_remaining_size(sb, datalength);
+    int err = _check_msb_remaining_size(sb, datalength);
+    if(unlikely(err)) return;
     char* data = sb->data;
     size_t cursor = sb->cursor;
     const char* const hex = "0123456789abcdef";
@@ -189,7 +192,8 @@ msb_write_json_escaped_str(MStringBuilder* restrict sb, const char* restrict str
             case 30: case 31:
                 // These are rare, so only reserve more space when we actually hit them.
                 datalength += 4;
-                _check_msb_remaining_size(sb, datalength);
+                err = _check_msb_remaining_size(sb, datalength);
+                if(unlikely(err)) return;
                 // re-acquire the invalidated pointer.
                 data = sb->data;
                 data[cursor++] = '\\';
@@ -239,7 +243,8 @@ msb_write_json_escaped_str(MStringBuilder* restrict sb, const char* restrict str
 static inline
 void
 msb_write_str_with_backslashes_as_forward_slashes(MStringBuilder* sb, const char* restrict str, size_t length){
-    _check_msb_remaining_size(sb, length);
+    int err = _check_msb_remaining_size(sb, length);
+    if(unlikely(err)) return;
     char* data = sb->data;
     size_t cursor = sb->cursor;
     for(size_t i = 0; i < length; i++){
@@ -254,7 +259,8 @@ msb_write_str_with_backslashes_as_forward_slashes(MStringBuilder* sb, const char
 static inline
 void
 msb_write_html_quote_escaped_string(MStringBuilder*sb, const char* restrict str, size_t length){
-    _check_msb_remaining_size(sb, length);
+    int err = _check_msb_remaining_size(sb, length);
+    if(unlikely(err)) return;
     for(;;){
         const char* quote = memchr(str, '"', length);
         if(!quote)
@@ -275,7 +281,8 @@ msb_write_html_quote_escaped_string(MStringBuilder*sb, const char* restrict str,
 static inline
 void
 msb_write_stripped_lines(MStringBuilder* sb, const char* restrict str, size_t length){
-    _check_msb_remaining_size(sb, length);
+    int err = _check_msb_remaining_size(sb, length);
+    if(unlikely(err)) return;
     char* data = sb->data;
     size_t cursor = sb->cursor;
     const char* remainder = str;
@@ -312,7 +319,8 @@ msb_write_stripped_lines(MStringBuilder* sb, const char* restrict str, size_t le
 static inline
 void
 msb_append_path(MStringBuilder* sb, const char* restrict path, size_t length){
-    _check_msb_remaining_size(sb, length+1);
+    int err = _check_msb_remaining_size(sb, length+1);
+    if(unlikely(err)) return;
     if(sb->cursor)
         sb->data[sb->cursor++] = '/';
     memcpy(sb->data + sb->cursor, path, length);
