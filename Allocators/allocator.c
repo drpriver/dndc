@@ -48,10 +48,12 @@ static void*_Nullable sane_realloc(void* ptr, size_t orig_size, size_t size);
 #endif
 #endif
 
+#ifndef ALLOC_BAD
 #ifdef DEBUGGING_H
-#define bad() bt(), abort()
+#define ALLOC_BAD() bt(), abort()
 #else
-#define bad() abort()
+#define ALLOC_BAD() abort()
+#endif
 #endif
 
 
@@ -60,7 +62,7 @@ int
 Allocator_supports_free_all(Allocator a){
     switch(a.type){
         case ALLOCATOR_UNSET:
-            bad();
+            ALLOC_BAD();
         case ALLOCATOR_MALLOC:
         case ALLOCATOR_NULL:
             return 0;
@@ -75,7 +77,7 @@ Allocator_supports_free_all(Allocator a){
             return 1;
 #endif
     }
-    bad();
+    ALLOC_BAD();
 }
 
 static inline
@@ -83,16 +85,16 @@ void
 Allocator_free_all(Allocator a){
     switch(a.type){
         case ALLOCATOR_UNSET:
-            bad();
+            ALLOC_BAD();
             return;
         case ALLOCATOR_MALLOC:
-            bad();
+            ALLOC_BAD();
             return;
         case ALLOCATOR_ARENA:
             ArenaAllocator_free_all(a._data);
             return;
         case ALLOCATOR_NULL:
-            bad();
+            ALLOC_BAD();
             return;
 #ifdef USE_RECORDED_ALLOCATOR
         case ALLOCATOR_RECORDED:
@@ -105,7 +107,7 @@ Allocator_free_all(Allocator a){
             return;
 #endif
     }
-    bad();
+    ALLOC_BAD();
 }
 
 MALLOC_FUNC
@@ -116,7 +118,7 @@ void*_Nullable
 Allocator_alloc(Allocator a, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
-            bad();
+            ALLOC_BAD();
             break;
         case ALLOCATOR_MALLOC:
             return malloc(size);
@@ -133,7 +135,7 @@ Allocator_alloc(Allocator a, size_t size){
             return testing_alloc(a._data, size);
 #endif
     }
-    bad();
+    ALLOC_BAD();
     unreachable();
 }
 
@@ -145,7 +147,7 @@ void*_Nullable
 Allocator_zalloc(Allocator a, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
-            bad();
+            ALLOC_BAD();
             break;
         case ALLOCATOR_MALLOC:
             return calloc(1, size);
@@ -162,7 +164,7 @@ Allocator_zalloc(Allocator a, size_t size){
             return testing_zalloc(a._data, size);
 #endif
     }
-    bad();
+    ALLOC_BAD();
     unreachable();
 }
 
@@ -173,7 +175,7 @@ void*_Nullable
 Allocator_realloc(Allocator a, void*_Nullable data, size_t orig_size, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
-            bad();
+            ALLOC_BAD();
             break;
         case ALLOCATOR_MALLOC:
             return sane_realloc(data, orig_size, size);
@@ -190,7 +192,7 @@ Allocator_realloc(Allocator a, void*_Nullable data, size_t orig_size, size_t siz
             return testing_realloc(a._data, data, orig_size, size);
 #endif
     }
-    bad();
+    ALLOC_BAD();
     unreachable();
 }
 
@@ -200,7 +202,7 @@ void
 Allocator_free(Allocator a, const void*_Nullable data, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
-            bad();
+            ALLOC_BAD();
             return;
         case ALLOCATOR_MALLOC:
             const_free(data);
@@ -221,7 +223,7 @@ Allocator_free(Allocator a, const void*_Nullable data, size_t size){
             return;
 #endif
     }
-    bad();
+    ALLOC_BAD();
 }
 
 static inline
@@ -230,7 +232,7 @@ size_t
 Allocator_good_size(Allocator a, size_t size){
     switch(a.type){
         case ALLOCATOR_UNSET:
-            bad();
+            ALLOC_BAD();
             return size;
         case ALLOCATOR_MALLOC:
             #ifdef __APPLE__
@@ -259,7 +261,7 @@ Allocator_good_size(Allocator a, size_t size){
             #endif
 #endif
     }
-    bad();
+    ALLOC_BAD();
 }
 
 static inline
