@@ -283,20 +283,20 @@ Marray_remove(MARRAY_T)(MARRAY*, size_t);
 
 MARRAY_LINKAGE
 warn_unused
-MARRAY_T*_Nullable
-Marray_alloc(MARRAY_T)(MARRAY*, Allocator);
+int
+Marray_alloc(MARRAY_T)(MARRAY*, Allocator, MARRAY_T*_Nullable*_Nonnull);
 // ------------
-// Returns a pointer to an uninitialized element at the end of the marray,
-// reallocing if space is needed.
+// Writers a pointer via the out param to an uninitialized element at the end
+// of the marray, reallocing if space is needed.
 // Conceptually similar to push.
 //
-// Returns NULL on oom.
+// Returns 1 on oom, 0 otherwise.
 
 //
 MARRAY_LINKAGE
 warn_unused
-size_t
-Marray_alloc_index(MARRAY_T)(MARRAY*, Allocator);
+int
+Marray_alloc_index(MARRAY_T)(MARRAY*, Allocator, size_t*);
 // ------------------
 // Returns an index to an uninitialized element at the end of the marray,
 // reallocing if space is needed.
@@ -357,21 +357,22 @@ Marray_push(MARRAY_T)(MARRAY* marray, Allocator a, MARRAY_T value){
 
 MARRAY_LINKAGE
 warn_unused
-MARRAY_T*_Nullable
-Marray_alloc(MARRAY_T)(MARRAY* marray, Allocator a){
+int
+Marray_alloc(MARRAY_T)(MARRAY* marray, Allocator a, MARRAY_T*_Nullable*_Nonnull result){
     int err = Marray_ensure_additional(MARRAY_T)(marray, a, 1);
-    if(unlikely(err)) return NULL;
-    MARRAY_T* result = &marray->data[marray->count++];
-    return result;
+    if(unlikely(err)) return 1;
+    *result = &marray->data[marray->count++];
+    return 0;
 }
 
 MARRAY_LINKAGE
 warn_unused
-size_t
-Marray_alloc_index(MARRAY_T)(MARRAY* marray, Allocator a){
+int
+Marray_alloc_index(MARRAY_T)(MARRAY* marray, Allocator a, size_t* result){
     int err = Marray_ensure_additional(MARRAY_T)(marray, a, 1);
-    if(unlikely(err)) return -1;
-    return marray->count++;
+    if(unlikely(err)) return err;
+    *result =  marray->count++;
+    return 0;
 }
 
 MARRAY_LINKAGE

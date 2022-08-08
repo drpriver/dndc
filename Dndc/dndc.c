@@ -223,8 +223,9 @@ dndc_ctx_create_preload_img_job(DndcContext* ctx){
                 // Already absolute or we're relative to cwd, so
                 // keep it as is.
                 if(! FileCache_has_file(ctx->b64cache, child->header)){
-                    StringView* sv = Marray_alloc(StringView)(&sourcepaths, main_allocator(ctx));
-                    assert(sv); // this shouldn't fail as we did the ensure.
+                    StringView* sv;
+                    int err = Marray_alloc(StringView)(&sourcepaths, main_allocator(ctx), &sv);
+                    assert(!err); // this shouldn't fail as we did the ensure.
                     *sv = child->header;
                 }
             }
@@ -239,8 +240,9 @@ dndc_ctx_create_preload_img_job(DndcContext* ctx){
                     return NULL;
                 StringView path = msb_borrow_sv(&path_builder);
                 if(! FileCache_has_file(ctx->b64cache, path)){
-                    StringView* sv = Marray_alloc(StringView)(&sourcepaths, main_allocator(ctx));
-                    assert(sv); // this shouldn't fail as we did the ensure
+                    StringView* sv;
+                    int err = Marray_alloc(StringView)(&sourcepaths, main_allocator(ctx), &sv);
+                    assert(!err); // this shouldn't fail as we did the ensure
                     if(unlikely(path_builder.errored)){
                         // Just leak it. It'll all get cleaned up at the end.
                         return NULL;
@@ -2239,8 +2241,8 @@ dndc_ctx_clone(DndcContext* ctx){
         if(unlikely(err)) goto fail;
     }
     MARRAY_FOR_EACH(Node, node, ctx->nodes){
-        Node* newnode = Marray_alloc(Node)(&result->nodes, main_allocator(result));
-        if(unlikely(!newnode))
+        Node* newnode; int err = Marray_alloc(Node)(&result->nodes, main_allocator(result), &newnode);
+        if(unlikely(err))
             goto fail;
         *newnode = *node;
         if(node->header.length){
@@ -2330,8 +2332,8 @@ dndc_ctx_shallow_clone(DndcContext* ctx){
     if(ctx->renderedtoc.text)
         result->renderedtoc = ctx->renderedtoc;
     MARRAY_FOR_EACH(Node, node, ctx->nodes){
-        Node* newnode = Marray_alloc(Node)(&result->nodes, main_allocator(result));
-        if(unlikely(!newnode)) goto fail;
+        Node* newnode; int err = Marray_alloc(Node)(&result->nodes, main_allocator(result), &newnode);
+        if(unlikely(err)) goto fail;
         *newnode = *node;
         if(node_children_count(node) > 4){
             memset(&newnode->children, 0, sizeof(newnode->children));

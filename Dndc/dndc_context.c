@@ -122,7 +122,8 @@ node_set_id(DndcContext* ctx, NodeHandle handle, StringView sv){
             }
         }
     }
-    IdItem* item = Marray_alloc(IdItem)(&ctx->explicit_node_ids, main_allocator(ctx));
+    IdItem* item; int err = Marray_alloc(IdItem)(&ctx->explicit_node_ids, main_allocator(ctx), &item);
+    unhandled_error_condition(err);
     item->node = handle;
     item->text = sv;
     node->flags |= NODEFLAG_ID;
@@ -330,8 +331,8 @@ static inline
 force_inline
 NodeHandle
 alloc_handle(DndcContext* ctx){
-    size_t index = Marray_alloc_index(Node)(&ctx->nodes, main_allocator(ctx));
-    if(unlikely(index == (size_t)-1))
+    size_t index; int err = Marray_alloc_index(Node)(&ctx->nodes, main_allocator(ctx), &index);
+    if(unlikely(err))
         return INVALID_NODE_HANDLE;
     ctx->nodes.data[index] = (Node){0};
     // debug to help find nodes without parents

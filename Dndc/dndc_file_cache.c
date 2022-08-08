@@ -153,8 +153,8 @@ StringResult
 FileCache_read_file_(FileCache* cache, FileCachePath path){
     TextFileResult fr = read_file(path.text, cache->allocator);
     if(!fr.errored){
-        LoadedSource* ls = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator);
-        if(!ls){
+        LoadedSource* ls; int err = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator, &ls);
+        if(unlikely(err)){
             Allocator_free(cache->allocator, fr.result.text, fr.result.length+1);
             return (StringResult){.errored=DNDC_ERROR_OOM};
         }
@@ -214,8 +214,8 @@ FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only
         return (StringResult){.errored=base64ed_e.errored};
     }
     else {
-        LoadedSource* ls = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator);
-        if(unlikely(!ls)){
+        LoadedSource* ls; int err = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator, &ls);
+        if(unlikely(err)){
             FileCache_free_path(cache, path);
             Allocator_free(cache->allocator, base64ed_e.result.text, base64ed_e.result.length+1);
             return (StringResult){.errored=DNDC_ERROR_OOM};
@@ -316,8 +316,8 @@ FileCache_store_text_file(FileCache* cache, StringView spath, StringView data, b
         Allocator_free(cache->allocator, d, data.length+1);
         return err;
     }
-    LoadedSource* ls = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator);
-    if(unlikely(!ls)){
+    LoadedSource* ls; err = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator, &ls);
+    if(unlikely(err)){
         Allocator_free(cache->allocator, d, data.length+1);
         FileCache_free_path(cache, path);
         return DNDC_ERROR_OOM;
