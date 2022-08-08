@@ -10,6 +10,7 @@
 #include "Utils/debugging.h"
 
 // This stuff is for debugging alloc/free errors.
+// Probably worse than using HEAVY_RECORDING and dumping the stack traces
 #if 0
 #define DEBUG_ALLOCATIONS
 #endif

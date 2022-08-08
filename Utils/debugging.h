@@ -95,6 +95,19 @@ bt(void){
 #pragma clang assume_nonnull begin
 #endif
 
+static int Dbg_sym_is_init = 0;
+static HANDLE Dbg_process;
+
+static inline
+dbg_noinline
+void
+dbg_ensure_init(void){
+    if(Dbg_sym_is_init) return;
+    Dbg_sym_is_init = 1;
+    Dbg_process = GetCurrentProcess();
+    SymInitialize(Dbg_process, NULL, TRUE);
+}
+
 static inline
 dbg_noinline
 void
@@ -104,8 +117,7 @@ bt(void){
     // Idk.
     enum {bufflen=256};
     void* array[bufflen];
-    HANDLE process = GetCurrentProcess();
-    SymInitialize(process, NULL, TRUE);
+    dbg_ensure_init();
 
     unsigned frames = CaptureStackBackTrace(0, bufflen, array, NULL);
     struct {
@@ -121,13 +133,13 @@ bt(void){
     DWORD disp;
 
     for(unsigned i = 0; i < frames; i++ ){
-        BOOL addrsuccess = SymFromAddr(process, (DWORD64)array[i], 0, &sym.symbol);
+        BOOL addrsuccess = SymFromAddr(Dbg_process, (DWORD64)array[i], 0, &sym.symbol);
         if(!addrsuccess){
             fprintf(stderr, "%2d  %-24s  0x%p\n",
                 frames-i-1, "???", array[i]);
             continue;
         }
-        BOOL linesuccess = SymGetLineFromAddr64(process, (DWORD64)array[i], &disp, &line);
+        BOOL linesuccess = SymGetLineFromAddr64(Dbg_process, (DWORD64)array[i], &disp, &line);
         if(linesuccess){
             fprintf(stderr, "%2d  %-24s  from %s:%-4lu\n",
                 frames-i-1, sym.symbol.Name,
@@ -144,16 +156,68 @@ static inline
 dbg_noinline
 BacktraceArray*
 get_bt(void){
-    static BacktraceArray bta;
-    return &bta;
+    enum {bufflen=256};
+    void* array[bufflen];
+    char* strs[bufflen];
+    char txtbuff[bufflen];
+    int txtlens[bufflen];
+    dbg_ensure_init();
+    unsigned frames = CaptureStackBackTrace(0, bufflen, array, NULL);
+    struct {
+        SYMBOL_INFO symbol;
+        char buff[256];
+    } sym = {0};
+    sym.symbol.MaxNameLen   = 255;
+    sym.symbol.SizeOfStruct = sizeof(SYMBOL_INFO);
+
+    IMAGEHLP_LINE64 line = {
+        .SizeOfStruct = sizeof(IMAGEHLP_LINE64),
+    };
+    DWORD disp;
+
+    size_t str_total = 0;
+    for(unsigned i = 0; i < frames; i++ ){
+        BOOL addrsuccess = SymFromAddr(Dbg_process, (DWORD64)array[i], 0, &sym.symbol);
+        if(!addrsuccess){
+            txtlens[i] = snprintf(txtbuff, sizeof txtbuff, "%2d  %-24s  0x%p",
+                frames-i-1, "???", array[i]);
+            continue;
+        }
+        BOOL linesuccess = SymGetLineFromAddr64(Dbg_process, (DWORD64)array[i], &disp, &line);
+        if(linesuccess){
+            txtlens[i] = snprintf(txtbuff, sizeof txtbuff, "%2d  %-24s  from %s:%-4lu",
+                frames-i-1, sym.symbol.Name,
+                line.FileName, line.LineNumber);
+        }
+        else {
+            txtlens[i] = snprintf(txtbuff, sizeof txtbuff, "%2d  %-24s  0x%p",
+                frames-i-1, sym.symbol.Name,
+                (void*)sym.symbol.Address);
+        }
+        strs[i] = malloc(txtlens[i]+1);
+        memcpy(strs[i], txtbuff, txtlens[i]+1);
+        str_total += txtlens[i]+1;
+    }
+    void* mem = malloc(sizeof(BacktraceArray)+sizeof(void*)*frames+str_total);
+    BacktraceArray* result = mem;
+    result->count = frames;
+    char* c = (char*)mem + sizeof(BacktraceArray)+sizeof(void*)*frames;
+    for(unsigned i = 0; i < frames; i++){
+        result->symbols[i] = c;
+        memcpy(c, strs[i], txtlens[i]+1);
+        c += txtlens[i] + 1;
+        free(strs[i]);
+    }
+    return result;
 }
 
 static inline
 dbg_noinline
 void
 dump_bt(BacktraceArray* bta){
-    // TODO
-    (void)bta;
+    for(int i = 0; i < bta->count; i++){
+        fprintf(stderr, "%s\n", (char*)bta->symbols[i]);
+    }
 }
 
 
