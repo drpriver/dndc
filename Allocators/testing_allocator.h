@@ -4,6 +4,7 @@
 #ifndef TESTING_ALLOCATOR_H
 #define TESTING_ALLOCATOR_H
 #include <stddef.h>
+#include <stdint.h>
 #include "allocator.h"
 #include "recording_allocator.h"
 #include "Utils/thread_utils.h"

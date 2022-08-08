@@ -144,14 +144,14 @@ static inline
 dbg_noinline
 BacktraceArray*
 get_bt(void){
-    static BackTraceArray bta;
+    static BacktraceArray bta;
     return &bta;
 }
 
 static inline
 dbg_noinline
 void
-dump_bt(BackTraceArray* bta){
+dump_bt(BacktraceArray* bta){
     // TODO
     (void)bta;
 }
@@ -168,14 +168,14 @@ static inline
 dbg_noinline
 BacktraceArray*
 get_bt(void){
-    static BackTraceArray bta;
+    static BacktraceArray bta;
     return &bta;
 }
 
 static inline
 dbg_noinline
 void
-dump_bt(BackTraceArray* bta){
+dump_bt(BacktraceArray* bta){
     (void)bta;
 }
 

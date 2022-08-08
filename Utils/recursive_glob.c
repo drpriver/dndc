@@ -5,6 +5,7 @@
 #define RECURSIVE_GLOB_C
 #if defined(_WIN32)
 #include <direct.h>
+#include <assert.h>
 #else
 #include <fts.h>
 #endif
@@ -43,7 +44,8 @@ recursive_glob_suffix_inner(StringView original, StringView directory, StringVie
             msb_write_str(&sb, findd.cFileName, strlen(findd.cFileName));
             StringView text = msb_borrow_sv(&sb);
             char* s = Allocator_strndup(MALLOCATOR, text.text+original.length+1, text.length-original.length-1);
-            StringView* it = Marray_alloc__StringView(entries, MALLOCATOR);
+            StringView* it; int err = Marray_alloc__StringView(entries, MALLOCATOR, &it);
+            assert(!err);
             *it = (StringView){.text=s, .length=text.length-original.length-1};
             sb.cursor = cursor;
         }while(FindNextFileA(handle, &findd));

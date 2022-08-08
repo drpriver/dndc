@@ -131,11 +131,12 @@ iterate_children(DndcContext* ctx, DndcNodeHandle node, Marray__Tag* tags, Strin
             DndcNodeLocation loc;
             e = dndc_node_location(ctx, node, &loc);
             if(e) return 1;
-            *Marray_alloc__Tag(tags, MALLOCATOR) = (Tag){
+            e = Marray_push__Tag(tags, MALLOCATOR,  (Tag){
                 .filename = filename,
                 .tagname = head,
                 .row = loc.row,
-            };
+            });
+            if(e) return 1;
         }
     }
     DndcNodeHandle handles[32] = {0};
@@ -153,11 +154,16 @@ void
 tag_dnd_files(StringView* filenames, size_t filename_count, LongString outfile, size_t n_threads){
     if(n_threads > 128)
         n_threads = 128;
-    for(size_t i = 0; i < filename_count; i++)
-        *Marray_alloc__WorkItem(&items, MALLOCATOR) = (WorkItem){.filename = filenames[i]};
+    for(size_t i = 0; i < filename_count; i++){
+        int err = Marray_push__WorkItem(&items, MALLOCATOR,  (WorkItem){.filename = filenames[i]});
+        unhandled_error_condition(err);
+    }
     Marray__ThreadHandle threads = {0};
-    for(size_t i = 0; i < n_threads; i++)
-        create_thread(Marray_alloc__ThreadHandle(&threads, MALLOCATOR), worker_func, NULL);
+    for(size_t i = 0; i < n_threads; i++){
+        ThreadHandle* th; int err = Marray_alloc__ThreadHandle(&threads, MALLOCATOR, &th);
+        unhandled_error_condition(err);
+        create_thread(th, worker_func, NULL);
+    }
     worker_func(NULL); // use this thread as well
     for(size_t i = 0; i < threads.count; i++)
         join_thread(threads.data[i]);
@@ -296,10 +302,11 @@ main(int argc, char** argv){
         while(fgets(buff, sizeof buff, stdin)){
             size_t len = strlen(buff);
             if(!len || len == 1) continue;
-            *Marray_alloc__StringView(&dnd_files, MALLOCATOR) = (StringView){
+            int err = Marray_push__StringView(&dnd_files, MALLOCATOR, (StringView){
                 .length = len-1,
                 .text = Allocator_strndup(MALLOCATOR, buff, len-1),
-            };
+            });
+            unhandled_error_condition(err);
         }
     if(!dnd_files.count)
         recursive_glob_suffix(directory, SV(".dnd"), &dnd_files, 100);

@@ -265,7 +265,7 @@ ArenaAllocator_realloc(ArenaAllocator* aa, void*_Nullable ptr, size_t old_size, 
     if(old_size == new_size) return ptr;
     if(old_size > BIG_ALLOC_THRESH){
         if(new_size > BIG_ALLOC_THRESH)
-            return Big_realloc(ptr, old_size, new_size);
+            return Big_realloc((void*)ptr, old_size, new_size);
         // reallocing from a big allocation to an arena allocation.
         void* result = ArenaAllocator_alloc(aa, new_size);
         if(!result) return NULL;

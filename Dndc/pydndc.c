@@ -1647,7 +1647,10 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
     };
     // Allow sloppy flags.
     fl &= WHITELIST;
+    PushDiagnostic();
+    SuppressNullableConversion();
     self->ctx = dndc_create_ctx(fl | DNDC_ALLOW_BAD_LINKS, cache?cache->b64_cache:NULL, cache?cache->text_cache:NULL);
+    PopDiagnostic();
     dndc_ctx_set_logger(self->ctx, pylogger, &self->logger);
     self->filename = filename;
     if(filename) Py_INCREF(filename);
@@ -2320,10 +2323,10 @@ DndcContextPy_get_dependencies(PyObject* s, void*_Nullable p){
         for(size_t i = 0; i < ndeps; i++){
             DndcStringView* d = &deps[i];
             if(!d->length) continue;
-            PyObject* s = PyUnicode_FromStringAndSize(d->text, d->length);
-            if(!s) goto fail;
-            int err = PySet_Add(result, s);
-            Py_DECREF(s);
+            PyObject* str = PyUnicode_FromStringAndSize(d->text, d->length);
+            if(!str) goto fail;
+            int err = PySet_Add(result, str);
+            Py_DECREF(str);
             if(err) goto fail;
         }
     }

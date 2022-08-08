@@ -206,8 +206,10 @@ dndc_ctx_create_preload_img_job(DndcContext* ctx){
     size_t pathcount = ctx->img_nodes.count + ctx->imglinks_nodes.count;
     if(!pathcount) return ZERO_WORK_JOB;
 
-    int err = Marray_ensure_total(StringView)(&sourcepaths, main_allocator(ctx), pathcount);
-    if(unlikely(err)) return NULL;
+    {
+        int err = Marray_ensure_total(StringView)(&sourcepaths, main_allocator(ctx), pathcount);
+        if(unlikely(err)) return NULL;
+    }
     DndcPreloadImageJob* job = Allocator_alloc(temp_allocator(ctx), sizeof(*job));
     if(unlikely(!job)) return NULL;
     for(size_t n = 0; n < arrlen(img_nodes); n++){
@@ -2246,29 +2248,29 @@ dndc_ctx_clone(DndcContext* ctx){
             goto fail;
         *newnode = *node;
         if(node->header.length){
-            int err = dndc_ctx_dup_sv(result, node->header, &newnode->header);
+            err = dndc_ctx_dup_sv(result, node->header, &newnode->header);
             if(unlikely(err)) goto fail;
         }
         if(node_children_count(node) > 4){
             memset(&newnode->children, 0, sizeof(newnode->children));
-            int err = Marray_extend(NodeHandle)(&newnode->children, main_allocator(result), node->children.data, node->children.count);
+            err = Marray_extend(NodeHandle)(&newnode->children, main_allocator(result), node->children.data, node->children.count);
             if(unlikely(err)) goto fail;
         }
         if(node->attributes){
-            int err = Rarray_clone(Attribute)(node->attributes, main_allocator(result), &newnode->attributes);
+            err = Rarray_clone(Attribute)(node->attributes, main_allocator(result), &newnode->attributes);
             if(unlikely(err)) goto fail;
             RARRAY_FOR_EACH(Attribute, attr, newnode->attributes){
-                int err = dndc_ctx_dup_sv(result, attr->key, &attr->key);
+                err = dndc_ctx_dup_sv(result, attr->key, &attr->key);
                 if(unlikely(err)) goto fail;
                 err = dndc_ctx_dup_sv(result, attr->value, &attr->value);
                 if(unlikely(err)) goto fail;
             }
         }
         if(node->classes){
-            int err = Rarray_clone(StringView)(node->classes, main_allocator(result), &newnode->classes);
+            err = Rarray_clone(StringView)(node->classes, main_allocator(result), &newnode->classes);
             if(unlikely(err)) goto fail;
             RARRAY_FOR_EACH(StringView, cls, newnode->classes){
-                int err = dndc_ctx_dup_sv(result, *cls, cls);
+                err = dndc_ctx_dup_sv(result, *cls, cls);
                 if(unlikely(err)) goto fail;
             }
         }
@@ -2337,15 +2339,15 @@ dndc_ctx_shallow_clone(DndcContext* ctx){
         *newnode = *node;
         if(node_children_count(node) > 4){
             memset(&newnode->children, 0, sizeof(newnode->children));
-            int err = Marray_extend(NodeHandle)(&newnode->children, main_allocator(result), node->children.data, node->children.count);
+            err = Marray_extend(NodeHandle)(&newnode->children, main_allocator(result), node->children.data, node->children.count);
             if(unlikely(err)) goto fail;
         }
         if(node->attributes){
-            int err = Rarray_clone(Attribute)(node->attributes, main_allocator(result), &newnode->attributes);
+            err = Rarray_clone(Attribute)(node->attributes, main_allocator(result), &newnode->attributes);
             if(unlikely(err)) goto fail;
         }
         if(node->classes){
-            int err = Rarray_clone(StringView)(node->classes, main_allocator(result), &newnode->classes);
+            err = Rarray_clone(StringView)(node->classes, main_allocator(result), &newnode->classes);
             if(unlikely(err)) goto fail;
         }
     }

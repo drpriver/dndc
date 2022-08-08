@@ -214,7 +214,7 @@ FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only
         return (StringResult){.errored=base64ed_e.errored};
     }
     else {
-        LoadedSource* ls; int err = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator, &ls);
+        LoadedSource* ls; err = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator, &ls);
         if(unlikely(err)){
             FileCache_free_path(cache, path);
             Allocator_free(cache->allocator, base64ed_e.result.text, base64ed_e.result.length+1);
