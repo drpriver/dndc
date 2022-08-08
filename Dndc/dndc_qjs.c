@@ -1159,7 +1159,8 @@ QJSMETHOD(js_dndc_node_make_child){
         return QJS_EXCEPTION;
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
     assert(!NodeHandle_eq(child, INVALID_NODE_HANDLE));
-    append_child(ctx, handle, child);
+    int e = append_child(ctx, handle, child);
+    if(e) return QJS_ThrowTypeError(jsctx, "oom");
     return child_js;
 }
 
@@ -1193,7 +1194,8 @@ QJSMETHOD(js_dndc_node_add_child){
     }
     if(NodeHandle_eq(handle, child))
         return QJS_ThrowTypeError(jsctx, "Node can't be a child of itself");
-    append_child(ctx, handle, child);
+    int e = append_child(ctx, handle, child);
+    if(unlikely(e)) return QJS_ThrowTypeError(jsctx, "oom");
     return QJS_UNDEFINED;
 }
 
@@ -1285,7 +1287,8 @@ QJSMETHOD(js_dndc_node_insert_child){
     }
     if(NodeHandle_eq(handle, new_child))
         return QJS_ThrowTypeError(jsctx, "Node can't be a child of itself");
-    node_insert_child(ctx, handle, index, new_child);
+    int e = node_insert_child(ctx, handle, index, new_child);
+    if(unlikely(e)) return QJS_ThrowTypeError(jsctx, "oom");
     return QJS_UNDEFINED;
 }
 
@@ -1719,13 +1722,15 @@ QJSMETHOD(js_dndc_node_set){
     }
     NodeHandle kvh = alloc_handle(ctx);
     {
-        append_child(ctx, handle, kvh);
+        int e = append_child(ctx, handle, kvh);
+        if(unlikely(e)) return QJS_ThrowTypeError(jsctx, "oom");
         Node* n = get_node(ctx, kvh);
         n->type = NODE_KEYVALUEPAIR;
     }
     {
         NodeHandle kh = alloc_handle(ctx);
-        append_child(ctx, kvh, kh);
+        int e = append_child(ctx, kvh, kh);
+        if(unlikely(e)) return QJS_ThrowTypeError(jsctx, "oom");
         Node* n = get_node(ctx, kh);
         n->type = NODE_STRING;
         StringView key_s = {.text=Allocator_strndup(string_allocator(ctx), key_arg.text, key_arg.length), .length=key_arg.length};
@@ -1733,7 +1738,8 @@ QJSMETHOD(js_dndc_node_set){
     }
     {
         NodeHandle vh = alloc_handle(ctx);
-        append_child(ctx, kvh, vh);
+        int e = append_child(ctx, kvh, vh);
+        if(unlikely(e)) return QJS_ThrowTypeError(jsctx, "oom");
         Node* n = get_node(ctx, vh);
         n->type = NODE_STRING;
         n->header = value_arg;

@@ -356,49 +356,56 @@ get_node_e(DndcContext* ctx, NodeHandle handle){
 }
 
 static inline
-void
 force_inline
+warn_unused
+int
 append_child(DndcContext* ctx, NodeHandle parent_handle, NodeHandle child_handle){
     Node* parent = get_node(ctx, parent_handle);
     Node* child = get_node(ctx, child_handle);
     child->parent = parent_handle;
     if(parent->children.count < 4){
         parent->inline_children[parent->children.count++] = child_handle;
-        return;
+        return 0;
     }
     if(parent->children.count == 4){
         Marray(NodeHandle) children = {0};
         int err = Marray_ensure_total(NodeHandle)(&children, main_allocator(ctx), 4);
-        unhandled_error_condition(err);
-        // if(unlikely(err))
-            // return DNDC_ERROR_OOM;
+        // unhandled_error_condition(err);
+        if(unlikely(err))
+            return DNDC_ERROR_OOM;
         memcpy(children.data, parent->inline_children, sizeof(parent->inline_children));
         children.count = 4;
         parent->children = children;
     }
     int err = Marray_push(NodeHandle)(&parent->children, main_allocator(ctx), child_handle);
-    unhandled_error_condition(err);
+    // unhandled_error_condition(err);
+    if(unlikely(err))
+        return DNDC_ERROR_OOM;
+    return 0;
 }
 
 static inline
-void
+warn_unused
+int
 node_insert_child(DndcContext* ctx, NodeHandle parent, size_t i, NodeHandle child){
     Node* node = get_node(ctx, parent);
     if(i >= node_children_count(node)){
-        append_child(ctx, parent, child);
-        return;
+        int e = append_child(ctx, parent, child);
+        return e;
     }
     // This is a sloppy way of doing things, but appending
     // a child means we already have the right amount of
     // space.
     // It's sloppy as we could end up memmoving twice in a row.
-    append_child(ctx, parent, child);
+    int e = append_child(ctx, parent, child);
+    if(unlikely(e)) return e;
     NodeHandle* data = node_children(node);
     size_t count = node_children_count(node);
     size_t nmove = count - i - 1;
     if(nmove)
         memmove(data+i+1, data+i, nmove*sizeof(*data));
     data[i] = child;
+    return 0;
 }
 
 static warn_unused int gather_anchor(DndcContext* ctx, NodeHandle handle, int node_depth);

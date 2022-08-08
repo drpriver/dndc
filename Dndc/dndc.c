@@ -2947,8 +2947,8 @@ dndc_node_append_child(DndcContext* ctx, DndcNodeHandle parent_, DndcNodeHandle 
         return DNDC_ERROR_VALUE;
     if(NodeHandle_eq(child, parent)) // can't append to itself
         return DNDC_ERROR_VALUE;
-    append_child(ctx, parent, child);
-    return 0;
+    int e = append_child(ctx, parent, child);
+    return e;
 }
 
 DNDC_API
@@ -2961,8 +2961,8 @@ dndc_node_append_string(DndcContext* ctx, DndcNodeHandle parent_, DndcStringView
     Node* node = get_node(ctx, child);
     node->type = NODE_STRING;
     node->header = sv;
-    append_child(ctx, parent, child);
-    return 0;
+    int e = append_child(ctx, parent, child);
+    return e;
 }
 
 DNDC_API
@@ -2977,8 +2977,8 @@ dndc_node_insert_child(DndcContext* ctx, DndcNodeHandle parent_, size_t i, DndcN
         return DNDC_ERROR_VALUE;
     if(NodeHandle_eq(child, parent)) // can't append to itself
         return DNDC_ERROR_VALUE;
-    node_insert_child(ctx, parent, i, child);
-    return 0;
+    int e = node_insert_child(ctx, parent, i, child);
+    return e;
 }
 
 DNDC_API
@@ -2991,8 +2991,8 @@ dndc_node_insert_string(DndcContext* ctx, DndcNodeHandle parent_, size_t i, Dndc
     Node* node = get_node(ctx, child);
     node->type = NODE_STRING;
     node->header = sv;
-    node_insert_child(ctx, parent, i, child);
-    return 0;
+    int e = node_insert_child(ctx, parent, i, child);
+    return e;
 }
 DNDC_API
 int
@@ -3082,14 +3082,21 @@ dndc_ctx_make_node(DndcContext* ctx, int type, DndcStringView header, DndcNodeHa
     }
     if(node_store){
         int err = Marray_push(NodeHandle)(node_store, main_allocator(ctx), handle);
-        if(unlikely(err))
+        if(unlikely(err)){
+            node->type = NODE_INVALID;
             return DNDC_NODE_HANDLE_INVALID;
+        }
     }
     node->type = type;
     node->parent = parent;
     node->header = header;
-    if(!NodeHandle_eq(parent, INVALID_NODE_HANDLE))
-        append_child(ctx, parent, handle);
+    if(!NodeHandle_eq(parent, INVALID_NODE_HANDLE)){
+        int e = append_child(ctx, parent, handle);
+        if(unlikely(e)) {
+            node->type = NODE_INVALID;
+            return DNDC_NODE_HANDLE_INVALID;
+        }
+    }
     if(type == NODE_IMPORT)
         node->flags |= NODEFLAG_IMPORT;
     return handle._value;

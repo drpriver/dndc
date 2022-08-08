@@ -303,7 +303,8 @@ build_toc_block(DndcContext*);
   // children array.
   //
   static
-  void
+  warn_unused
+  int
   append_child(DndcContext*, NodeHandle parent, NodeHandle child);
 
   //
@@ -313,7 +314,8 @@ build_toc_block(DndcContext*);
   // If i >= count, just appends to the end.
   //
   static inline
-  void
+  warn_unused
+  int
   node_insert_child(DndcContext* ctx, NodeHandle parent, size_t i, NodeHandle child);
 
   // node_clone

@@ -63,10 +63,20 @@
 #endif
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
-#define unimplemented() do{assert(!"This code not implemented yet.");__builtin_unreachable();} while(0)
-#else
-#define unimplemented() assert(!"This code not implemented yet.")
+#ifndef unimplemented
+  #if defined(__GNUC__) || defined(__clang__)
+    #ifdef DEBUGGING_H
+      #define unimplemented() do{bt(); assert(!"This code not implemented yet.");__builtin_unreachable();} while(0)
+    #else
+      #define unimplemented() do{assert(!"This code not implemented yet.");__builtin_unreachable();} while(0)
+    #endif
+  #else
+    #ifdef DEBUGGING_H
+      #define unimplemented() do{bt(); assert(!"This code not implemented yet.");}while(0)
+    #else
+      #define unimplemented() assert(!"This code not implemented yet.")
+    #endif
+  #endif
 #endif
 
 #ifdef __clang__

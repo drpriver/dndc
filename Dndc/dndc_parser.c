@@ -431,7 +431,8 @@ parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
         }
         flags = e.result;
     }
-    append_child(ctx, parent_handle, new_node_handle);
+    int e = append_child(ctx, parent_handle, new_node_handle);
+    if(unlikely(e)) return e;
     NodeType type;
     {
         Node* node = get_node(ctx, new_node_handle);
@@ -445,7 +446,7 @@ parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
     }
     int new_indent = ctx->nspaces;
     advance_row(ctx);
-    int e = parse_node(ctx, new_node_handle, type, new_indent, flags);
+    e = parse_node(ctx, new_node_handle, type, new_indent, flags);
     if(e) return e;
     return 0;
 }
@@ -829,7 +830,8 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
             (ctx->line_end - ctx->linestart)-ctx->nspaces);
         NodeHandle new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
-        append_child(ctx, parent_handle, new_node_handle);
+        int e = append_child(ctx, parent_handle, new_node_handle);
+        if(unlikely(e)) return e;
         advance_row(ctx);
     }
     return 0;
@@ -968,7 +970,8 @@ PARSEFUNC(parse_raw_node){
             content = lstripped_view(content.text, content.length);
         NodeHandle new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
-        append_child(ctx, parent_handle, new_node_handle);
+        int e = append_child(ctx, parent_handle, new_node_handle);
+        if(unlikely(e)) return e;
         advance_row(ctx);
     }
     return 0;
@@ -1013,7 +1016,8 @@ PARSEFUNC(parse_table_node){
                         }
                         NodeHandle str_handle = alloc_handle(ctx);
                         init_string_node(ctx, str_handle, content);
-                        append_child(ctx, last_cell_handle, str_handle);
+                        int e = append_child(ctx, last_cell_handle, str_handle);
+                        if(unlikely(e)) return e;
                     }
                     advance_row(ctx);
                     continue;
@@ -1022,7 +1026,8 @@ PARSEFUNC(parse_table_node){
         }
         NodeHandle new_node_handle = alloc_handle(ctx);
         init_node(ctx, new_node_handle, ctx->linestart+ctx->nspaces, NODE_TABLE_ROW);
-        append_child(ctx, parent_handle, new_node_handle);
+        int e = append_child(ctx, parent_handle, new_node_handle);
+        if(unlikely(e)) return e;
         previous_row_indentation = ctx->nspaces;
         // last_cell_handle = INVALID_NODE_HANDLE;
         converted = false;
@@ -1031,7 +1036,8 @@ PARSEFUNC(parse_table_node){
             size_t length = pipe - cursor;
             StringView content = stripped_view(cursor,length);
             init_string_node(ctx, cell_index, content);
-            append_child(ctx, new_node_handle, cell_index);
+            e = append_child(ctx, new_node_handle, cell_index);
+            if(unlikely(e)) return e;
             cursor = pipe+1;
             pipe = memchr(cursor, '|', ctx->line_end - cursor);
         }
@@ -1039,7 +1045,8 @@ PARSEFUNC(parse_table_node){
         last_cell_handle = cell_index;
         StringView content = stripped_view(cursor, ctx->line_end-cursor);
         init_string_node(ctx, cell_index, content);
-        append_child(ctx, new_node_handle, cell_index);
+        e = append_child(ctx, new_node_handle, cell_index);
+        if(unlikely(e)) return e;
         advance_row(ctx);
     }
     return 0;
@@ -1075,14 +1082,16 @@ PARSEFUNC(parse_keyvalue_node){
                 StringView content = stripped_view(ctx->linestart+ctx->nspaces, ctx->line_end-(ctx->linestart+ctx->nspaces));
                 NodeHandle str_handle = alloc_handle(ctx);
                 init_string_node(ctx, str_handle, content);
-                append_child(ctx, previous_value, str_handle);
+                int e = append_child(ctx, previous_value, str_handle);
+                if(unlikely(e)) return e;
                 advance_row(ctx);
                 continue;
             }
         }
         NodeHandle new_node_handle = alloc_handle(ctx);
         init_node(ctx, new_node_handle, ctx->linestart + ctx->nspaces, NODE_KEYVALUEPAIR);
-        append_child(ctx, parent_handle, new_node_handle);
+        int e = append_child(ctx, parent_handle, new_node_handle);
+        if(unlikely(e)) return e;
         const char* cursor = ctx->linestart+ctx->nspaces;
         const char* colon = memchr(cursor, ':', ctx->line_end - cursor);
         if(!colon){
@@ -1097,8 +1106,10 @@ PARSEFUNC(parse_keyvalue_node){
         init_string_node(ctx, key_idx, pre);
         NodeHandle val_idx = alloc_handle(ctx);
         init_string_node(ctx, val_idx, post);
-        append_child(ctx, new_node_handle, key_idx);
-        append_child(ctx, new_node_handle, val_idx);
+        e = append_child(ctx, new_node_handle, key_idx);
+        if(unlikely(e)) return e;
+        e = append_child(ctx, new_node_handle, val_idx);
+        if(unlikely(e)) return e;
         advance_row(ctx);
         previous_value = val_idx;
         previous_kv_indentation = ctx->nspaces;
@@ -1281,7 +1292,8 @@ PARSEFUNC(parse_md_node){
                 s->indentation = ctx->nspaces;
                 s->state = newstate;
                 init_node(ctx, s->list, ctx->linestart+ctx->nspaces, newstate==BULLET?NODE_BULLETS:NODE_LIST);
-                append_child(ctx, parent_handle, s->list);
+                int e = append_child(ctx, parent_handle, s->list);
+                if(unlikely(e)) return e;
             }
             else {
                 // new level of list
@@ -1298,7 +1310,8 @@ PARSEFUNC(parse_md_node){
                     s->state = newstate;
                     init_node(ctx, s->list, ctx->linestart+ctx->nspaces, newstate==BULLET?NODE_BULLETS:NODE_LIST);
                     assert(si > 0);
-                    append_child(ctx, stack[si-1].item, s->list);
+                    int e = append_child(ctx, stack[si-1].item, s->list);
+                    if(unlikely(e)) return e;
                 }
                 // neighbors
                 else if(ctx->nspaces == stack[si].indentation){
@@ -1311,7 +1324,8 @@ PARSEFUNC(parse_md_node){
                         s->indentation = ctx->nspaces;
                         s->state = newstate;
                         init_node(ctx, s->list, ctx->linestart+ctx->nspaces, newstate==BULLET?NODE_BULLETS:NODE_LIST);
-                        append_child(ctx, prev, s->list);
+                        int e = append_child(ctx, prev, s->list);
+                        if(unlikely(e)) return e;
                     }
                     else {
                         // Neighbor of same type, do nothing
@@ -1343,21 +1357,25 @@ PARSEFUNC(parse_md_node){
                         s->indentation = ctx->nspaces;
                         s->state = newstate;
                         init_node(ctx, s->list, ctx->linestart+ctx->nspaces, newstate==BULLET?NODE_BULLETS:NODE_LIST);
+                        int e;
                         if(si)
-                            append_child(ctx, stack[si-1].item, s->list);
+                            e = append_child(ctx, stack[si-1].item, s->list);
                         else
-                            append_child(ctx, parent_handle, s->list);
+                            e = append_child(ctx, parent_handle, s->list);
+                        if(unlikely(e)) return e;
                     }
                 }
             }
             struct StackItem* s = &stack[si];
             s->item = alloc_handle(ctx);
             init_node(ctx, s->item, ctx->linestart+ctx->nspaces, NODE_LIST_ITEM);
-            append_child(ctx, s->list, s->item);
+            int e = append_child(ctx, s->list, s->item);
+            if(unlikely(e)) return e;
             StringView content = stripped_view(ctx->linestart + ctx->nspaces+prefix_length, (ctx->line_end - ctx->linestart)-ctx->nspaces-prefix_length);
             NodeHandle new_node_handle = alloc_handle(ctx);
             init_string_node(ctx, new_node_handle, content);
-            append_child(ctx, s->item, new_node_handle);
+            e = append_child(ctx, s->item, new_node_handle);
+            if(unlikely(e)) return e;
             advance_row(ctx);
             state = newstate;
             continue;
@@ -1367,12 +1385,15 @@ PARSEFUNC(parse_md_node){
             if(state != PARA){
                 para_handle = alloc_handle(ctx);
                 init_node(ctx, para_handle, ctx->linestart+ctx->nspaces, NODE_PARA);
-                append_child(ctx, parent_handle, para_handle);
+                int e = append_child(ctx, parent_handle, para_handle);
+                if(unlikely(e)) return e;
+
             }
             StringView content = stripped_view( ctx->linestart + ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);
             NodeHandle new_node_handle = alloc_handle(ctx);
             init_string_node(ctx, new_node_handle, content);
-            append_child(ctx, para_handle, new_node_handle);
+            int e = append_child(ctx, para_handle, new_node_handle);
+            if(unlikely(e)) return e;
             advance_row(ctx);
             si = -1;
             state = newstate;
@@ -1386,7 +1407,8 @@ PARSEFUNC(parse_md_node){
         StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);
         NodeHandle new_node_handle = alloc_handle(ctx);
         init_string_node(ctx, new_node_handle, content);
-        append_child(ctx, stack[si].item, new_node_handle);
+        int e = append_child(ctx, stack[si].item, new_node_handle);
+        if(unlikely(e)) return e;
         advance_row(ctx);
         continue;
     }
