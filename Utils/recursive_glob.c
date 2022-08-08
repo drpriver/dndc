@@ -126,7 +126,8 @@ recursive_glob_suffix(LongString directory, StringView suffix, Marray(StringView
             char* p = ent->fts_path + directory.length+1;
             size_t len = strlen(p);
             char* t = Allocator_strndup(MALLOCATOR, p, len);
-            StringView* it = Marray_alloc__StringView(entries, MALLOCATOR);
+            StringView* it; int err = Marray_alloc__StringView(entries, MALLOCATOR, &it);
+            assert(!err);
             *it = (StringView){.length = len, .text = t};
         }
     }
