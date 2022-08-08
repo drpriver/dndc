@@ -2412,7 +2412,8 @@ dndc_ctx_make_root(DndcContext* ctx, DndcStringView filename){
     root->col = 0;
     root->row = 0;
     int copy_it = 1;
-    root->filename_idx = ctx_add_filename(ctx, filename, copy_it);
+    int err = ctx_add_filename(ctx, filename, copy_it, &root->filename_idx);
+    (void)err; // just swallow the error, who cares.
     root->type = NODE_MD;
     return root_handle._value;
 }

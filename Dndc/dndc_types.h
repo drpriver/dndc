@@ -375,18 +375,24 @@ temp_allocator(DndcContext* ctx){
 }
 
 static inline
-size_t
-ctx_add_filename(DndcContext* ctx, StringView filename, int copy){
+warn_unused
+int
+ctx_add_filename(DndcContext* ctx, StringView filename, int copy, uint32_t* result){
     for(size_t i = 0; i < ctx->filenames.count; i++){
-        if(SV_equals(filename, ctx->filenames.data[i]))
-            return i;
+        if(SV_equals(filename, ctx->filenames.data[i])){
+            *result =  (uint32_t)i;
+            return 0;
+        }
     }
+    if(unlikely(ctx->filenames.count >= UINT32_MAX))
+        return DNDC_ERROR_OOM;
     if(copy && filename.length){
         filename.text = Allocator_dupe(string_allocator(ctx), filename.text, filename.length);
     }
     int err = Marray_push(StringView)(&ctx->filenames, main_allocator(ctx), filename);
-    unhandled_error_condition(err);
-    return ctx->filenames.count-1;
+    if(unlikely(err)) return DNDC_ERROR_OOM;
+    *result = (uint32_t)(ctx->filenames.count-1);
+    return 0;
 }
 
 typedef union DndcDependsArg DependsArg;
