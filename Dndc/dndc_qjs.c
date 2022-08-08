@@ -1845,7 +1845,11 @@ QJSMETHOD(js_dndc_context_make_node){
                 failure = QJS_EXCEPTION;
                 goto fail;
             }
-            node_set_attribute(node, main_allocator(ctx), sv, SV(""));
+            int err = node_set_attribute(node, main_allocator(ctx), sv, SV(""));
+            if(unlikely(err)){
+                failure = QJS_ThrowTypeError(jsctx, "oom");
+                goto fail;
+            }
         }
     }
     Marray(NodeHandle)* node_store = NULL;
@@ -2369,15 +2373,17 @@ QJSMETHOD(js_dndc_attributes_set){
     if(!key.text)
         return QJS_EXCEPTION;
     Node* node = get_node(ctx, handle);
+    int err = 0;
     if(argc == 2){
         StringView value = jsstring_to_stringview(jsctx, argv[1], string_allocator(ctx));
         if(!value.text)
             return QJS_EXCEPTION;
-        node_set_attribute(node, main_allocator(ctx), key, value);
+        err = node_set_attribute(node, main_allocator(ctx), key, value);
     }
     else {
-        node_set_attribute(node, main_allocator(ctx), key, SV(""));
+        err = node_set_attribute(node, main_allocator(ctx), key, SV(""));
     }
+    if(unlikely(err)) return QJS_ThrowTypeError(jsctx, "oom");
     return QJS_UNDEFINED;
 }
 

@@ -2447,7 +2447,9 @@ dndc_node_set_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView key
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
     Node* node = get_node(ctx, handle);
-    node_set_attribute(node, main_allocator(ctx), key, value);
+    int err = node_set_attribute(node, main_allocator(ctx), key, value);
+    if(unlikely(err))
+        return DNDC_ERROR_OOM;
     return 0;
 }
 

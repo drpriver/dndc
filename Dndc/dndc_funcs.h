@@ -263,7 +263,8 @@ build_toc_block(DndcContext*);
   // Sets an attribute on the node.
   //
   static inline
-  void
+  warn_unused
+  int
   node_set_attribute(Node* node, Allocator allocator, StringView attr, StringView value);
 
   //

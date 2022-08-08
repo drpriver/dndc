@@ -64,20 +64,21 @@ node_get_attribute(const Node* node, StringView attr){
 }
 
 static inline
-void
+warn_unused
+int
 node_set_attribute(Node* node, Allocator allocator, StringView attr, StringView value){
     RARRAY_FOR_EACH(Attribute, a, node->attributes){
         if(SV_equals(a->key, attr)){
             a->value = value;
-            return;
+            return 0;
         }
     }
     Attribute* a;
     int err = Rarray_alloc(Attribute)(&node->attributes, allocator, &a);
-    unhandled_error_condition(err);
+    if(unlikely(err)) return DNDC_ERROR_OOM;
     a->key = attr;
     a->value = value;
-    return;
+    return 0;
 }
 
 // Don't call this function unless you really need what was explicitly set
