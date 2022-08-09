@@ -153,15 +153,26 @@ test('dndc-ast',
   ),
   args:['-C', meson.source_root()]
 )
-test('dndc-alloc',
-  executable('TestDndcAlloc',
-    'Dndc/TestDndcAlloc.c',
-    include_directories:includes,
-    dependencies:[thread_dep],
-    c_args: ['-DQJS_SHARED_LIBRARY']+ignore_bogus_deprecations,
-    link_with: quickjs_dylib,
-  ),
-  args:['-C', meson.source_root()]
+dndc_alloc = executable('TestDndcAlloc',
+  'Dndc/TestDndcAlloc.c',
+  include_directories:includes,
+  dependencies:[thread_dep],
+  c_args: ['-DQJS_SHARED_LIBRARY']+ignore_bogus_deprecations,
+  link_with: quickjs_dylib,
+)
+
+# Run the same test with different args for parallelism
+test('dndc-alloc-html', dndc_alloc,
+  args:['-C', meson.source_root(), '--html']
+)
+test('dndc-alloc-md', dndc_alloc,
+  args:['-C', meson.source_root(), '--md']
+)
+test('dndc-alloc-reformat', dndc_alloc,
+  args:['-C', meson.source_root(), '--reformat']
+)
+test('dndc-alloc-expand', dndc_alloc,
+  args:['-C', meson.source_root(), '--expand']
 )
 
 test('pydndc', pyinstall, args:['Dndc/testpydndc.py', '--extension-directory', meson.build_root()], workdir:meson.source_root(), depends:pydndc)

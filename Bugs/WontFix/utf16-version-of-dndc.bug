@@ -1,6 +1,7 @@
 Changelog::kv
   created: 2022-05-05T22:01:25Z
   wontfix: 2022-05-05T22:53:17Z
+  updated: 2022-08-09T01:47:00Z
 Created May 05, 2022, 06:01PM::md .update
 Summary::md .summary
   for ease of inter-operating with native gui toolkits, it’d be nice to have a
@@ -17,3 +18,12 @@ WontFix May 05, 2022, 06:53PM::md .update
   Eh maybe this is wrong approach anyway and you want to use utf-8 everywhere. I
   only have the utf16 syntax funcs because those apis require it to be in utf16
   code unit ranges.
+
+Updated Aug 08, 2022, 06:47PM::md .update
+  There’s some argument for reviving this as having to convert is annoying. I
+  could do a shim version first where I do the conversion internally and keep
+  the core in utf-8. Although that defeats the performance benefit. Since the
+  significant characters are all ascii anyway I wouldn’t even have to do any
+  real conversion for processing utf16.
+
+  If I did this I’d convert it to D or something first.

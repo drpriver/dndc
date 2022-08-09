@@ -54,12 +54,30 @@ $(BINDIR)/TestDndcAlloc_fast$(EXE): Dndc/TestDndcAlloc.c $(DEPDIR)/TestDndcAlloc
 $(BINDIR)/TestDndcAlloc_debug$(EXE): Dndc/TestDndcAlloc.c $(DEPDIR)/TestDndcAlloc_debug.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndcAlloc_debug.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
 
-$(TESTDIR)/TestDndcAlloc_debug: $(BINDIR)/TestDndcAlloc_debug$(EXE)
-	$< --tee $@
-tests: $(TESTDIR)/TestDndcAlloc_debug
-$(TESTDIR)/TestDndcAlloc_fast: $(BINDIR)/TestDndcAlloc_fast$(EXE)
-	$< --tee $@
-tests: $(TESTDIR)/TestDndcAlloc_fast
+$(TESTDIR)/TestDndcAlloc_debug_html: $(BINDIR)/TestDndcAlloc_debug$(EXE)
+	$< --tee $@ --html
+$(TESTDIR)/TestDndcAlloc_debug_md: $(BINDIR)/TestDndcAlloc_debug$(EXE)
+	$< --tee $@ --md
+$(TESTDIR)/TestDndcAlloc_debug_reformat: $(BINDIR)/TestDndcAlloc_debug$(EXE)
+	$< --tee $@ --reformat
+$(TESTDIR)/TestDndcAlloc_debug_expand: $(BINDIR)/TestDndcAlloc_debug$(EXE)
+	$< --tee $@ --expand
+tests: $(TESTDIR)/TestDndcAlloc_debug_html
+tests: $(TESTDIR)/TestDndcAlloc_debug_md
+tests: $(TESTDIR)/TestDndcAlloc_debug_reformat
+tests: $(TESTDIR)/TestDndcAlloc_debug_expand
+$(TESTDIR)/TestDndcAlloc_fast_html: $(BINDIR)/TestDndcAlloc_fast$(EXE)
+	$< --tee $@ --html
+$(TESTDIR)/TestDndcAlloc_fast_md: $(BINDIR)/TestDndcAlloc_fast$(EXE)
+	$< --tee $@ --md
+$(TESTDIR)/TestDndcAlloc_fast_reformat: $(BINDIR)/TestDndcAlloc_fast$(EXE)
+	$< --tee $@ --reformat
+$(TESTDIR)/TestDndcAlloc_fast_expand: $(BINDIR)/TestDndcAlloc_fast$(EXE)
+	$< --tee $@ --expand
+tests: $(TESTDIR)/TestDndcAlloc_fast_html
+tests: $(TESTDIR)/TestDndcAlloc_fast_md
+tests: $(TESTDIR)/TestDndcAlloc_fast_reformat
+tests: $(TESTDIR)/TestDndcAlloc_fast_expand
 
 TestDndcAlloc: $(TESTDIR)/TestDndcAlloc_debug $(TESTDIR)/TestDndcAlloc_fast
 .PHONY: TestDndcAlloc

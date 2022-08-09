@@ -207,11 +207,14 @@ target_link_libraries(TestDndcAst
 
 add_executable(TestDndcAlloc Dndc/TestDndcAlloc.c)
 target_compile_definitions(TestDndcAlloc PRIVATE QJS_SHARED_LIBRARY)
-add_test(dndc-alloc TestDndcAlloc -C ${CMAKE_SOURCE_DIR})
 target_link_libraries(TestDndcAlloc
     quickjs-dylib
     Threads::Threads
 )
+add_test(dndc-alloc-html TestDndcAlloc -C ${CMAKE_SOURCE_DIR} --html)
+add_test(dndc-alloc-md TestDndcAlloc -C ${CMAKE_SOURCE_DIR} --md)
+add_test(dndc-alloc-reformat TestDndcAlloc -C ${CMAKE_SOURCE_DIR} --reformat)
+add_test(dndc-alloc-expand TestDndcAlloc -C ${CMAKE_SOURCE_DIR} --expand)
 
 
 # installs
