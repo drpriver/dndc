@@ -1156,7 +1156,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     }
     if(file_cache && file_cache == Py_None)
         file_cache = NULL;
-    if(file_cache && !PyObject_IsInstance(file_cache, (PyObject*)&DndcPyFileCache_Type)){
+    if(file_cache && !Py_IS_TYPE(file_cache, &DndcPyFileCache_Type)){
         PyErr_SetString(PyExc_TypeError, "file_cache must be a DndcFileCache");
         return NULL;
     }
@@ -1257,7 +1257,7 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
     }
     if(file_cache && file_cache == Py_None)
         file_cache = NULL;
-    if(file_cache && !PyObject_IsInstance(file_cache, (PyObject*)&DndcPyFileCache_Type)){
+    if(file_cache && !Py_IS_TYPE(file_cache, &DndcPyFileCache_Type)){
         PyErr_SetString(PyExc_TypeError, "file_cache must be a DndcFileCache");
         return NULL;
     }
@@ -1358,7 +1358,7 @@ pydndc_md(PyObject* mod, PyObject* args, PyObject* kwargs){
     }
     if(file_cache && file_cache == Py_None)
         file_cache = NULL;
-    if(file_cache && !PyObject_IsInstance(file_cache, (PyObject*)&DndcPyFileCache_Type)){
+    if(file_cache && !Py_IS_TYPE(file_cache, &DndcPyFileCache_Type)){
         PyErr_SetString(PyExc_TypeError, "file_cache must be a DndcFileCache");
         return NULL;
     }
@@ -2278,7 +2278,7 @@ DndcContextPy_set_root(PyObject * s, PyObject * o, void * p){
     if(PyLong_Check(o)){
         handle = PyLong_AsLong(o);
     }
-    else if(PyObject_IsInstance(o, (PyObject*)&DndcNodePyType)){
+    else if(Py_IS_TYPE(o, &DndcNodePyType)){
         DndcNodePy* n = (DndcNodePy*)o;
         if((PyObject*)n->pyctx != s){
             PyErr_SetString(PyExc_TypeError, "Invalid node: from a different context");
