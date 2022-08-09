@@ -379,7 +379,8 @@ class TestAst(TestCase):
         ctx.root.execute_js('''
             console.log(1);
         ''')
-        ctx.logger = pydndc.stderr_logger
+        ctx.logger = None
+        #ctx.logger = pydndc.stderr_logger # do this for coverage
         r = repr(ctx.root)
         ctx.root.execute_js('''
             ctx.add_dependency('foo');
