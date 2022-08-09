@@ -1607,13 +1607,22 @@ pyobj_to_json(PyObject* o, MStringBuilder* msb, int depth){
     return result;
 }
 
-typedef struct {
+typedef struct DndcContextPy DndcContextPy;
+struct DndcContextPy {
     PyObject_HEAD
     PyObject* logger;
     DndcContext* ctx;
     PyObject* _Nullable filename;
     PyObject* prev;
-} DndcContextPy;
+};
+
+typedef struct DndcNodePy DndcNodePy;
+struct DndcNodePy {
+    PyObject_HEAD
+    DndcContextPy* pyctx;
+    DndcNodeHandle handle;
+};
+
 
 static
 PyObject* _Nullable
@@ -2266,12 +2275,29 @@ DndcContextPy_set_root(PyObject * s, PyObject * o, void * p){
     DndcContextPy* self = (DndcContextPy*)s;
     DndcContext* ctx = self->ctx;
     DndcNodeHandle handle;
-    if(PyLong_Check(o))
+    if(PyLong_Check(o)){
         handle = PyLong_AsLong(o);
-    else
+    }
+    else if(PyObject_IsInstance(o, (PyObject*)&DndcNodePyType)){
+        DndcNodePy* n = (DndcNodePy*)o;
+        if((PyObject*)n->pyctx != s){
+            PyErr_SetString(PyExc_TypeError, "Invalid node: from a different context");
+            return -1;
+        }
+        handle = n->handle;
+    }
+    else if(o == Py_None){
         handle = DNDC_NODE_HANDLE_INVALID;
+    }
+    else{
+        PyErr_SetString(PyExc_TypeError, "Invalid type: must be int or DndcNode");
+        return -1;
+    }
     int ret = dndc_ctx_set_root(ctx, handle);
-    (void) ret;
+    if(ret){
+        PyErr_SetString(PyExc_ValueError, "Invalid handle");
+        return -1;
+    }
     return 0;
 }
 
@@ -2283,9 +2309,7 @@ DndcContextPy_get_base(PyObject* s, void*_Nullable p){
     DndcContext* ctx = self->ctx;
     DndcStringView base;
     int err = dndc_ctx_get_base(ctx, &base);
-    if(err){
-        return PyErr_Format(PyExc_RuntimeError, "wtf");
-    }
+    if(err) return PyErr_Format(PyExc_RuntimeError, "wtf");
     return PyUnicode_FromStringAndSize(base.text, base.length);
 }
 
@@ -2378,13 +2402,6 @@ static PyTypeObject DndcContextPyType  = {
     .tp_methods = DndcContextPy_methods,
     .tp_getset = DndcContextPy_getset,
     .tp_dealloc = DndcContextPy_dealloc,
-};
-
-typedef struct DndcNodePy DndcNodePy;
-struct DndcNodePy {
-    PyObject_HEAD
-    DndcContextPy* pyctx;
-    DndcNodeHandle handle;
 };
 
 static

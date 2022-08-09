@@ -2431,16 +2431,17 @@ dndc_ctx_get_root(DndcContext* ctx){
 DNDC_API
 int
 dndc_ctx_set_root(DndcContext* ctx, DndcNodeHandle dnh){
-    NodeHandle handle = check_api_handle(ctx, dnh);
-    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return DNDC_ERROR_VALUE;
-    if(!NodeHandle_eq(ctx->root_handle, INVALID_NODE_HANDLE)){
-        Node* root = get_node(ctx, ctx->root_handle);
-        root->parent = INVALID_NODE_HANDLE;
+    NodeHandle handle = {.index=dnh};
+    if(dnh != DNDC_NODE_HANDLE_INVALID){
+        handle = check_api_handle(ctx, dnh);
+        if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+            return DNDC_ERROR_VALUE;
     }
-    Node* node = get_node(ctx, handle);
-    if(!NodeHandle_eq(node->parent, INVALID_NODE_HANDLE))
-        return DNDC_ERROR_VALUE;
+    if(!NodeHandle_eq(handle, INVALID_NODE_HANDLE)){
+        Node* node = get_node(ctx, handle);
+        if(!NodeHandle_eq(node->parent, INVALID_NODE_HANDLE))
+            return DNDC_ERROR_VALUE;
+    }
     ctx->root_handle = handle;
     return 0;
 }

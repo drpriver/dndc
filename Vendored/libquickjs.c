@@ -71,13 +71,10 @@ QJS_API
 int
 QJS_get_caller_location(QJSContext* ctx, const char** filename, const char** funcname, int* line_num){
     QJSStackFrame* sf = ctx->rt->current_stack_frame;
-    if(sf == NULL)
-        return -1;
+    if(sf == NULL) return -1;
     sf = sf->prev_frame;
-    if(sf == NULL)
-        return -1;
-    if(funcname)
-        *funcname = get_func_name(ctx, sf->cur_func);
+    if(sf == NULL) return -1;
+    if(funcname) *funcname = get_func_name(ctx, sf->cur_func);
     QJSObject* p = QJS_VALUE_GET_OBJ(sf->cur_func);
     if(js_class_has_bytecode(p->class_id)){
         QJSFunctionBytecode* b = p->u.func.function_bytecode;

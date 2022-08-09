@@ -1,0 +1,16 @@
+Changelog::kv
+  created:  2022-08-07T22:07:44Z
+  resolved: 2022-08-09T01:37:04Z
+Created Aug 07, 2022, 03:07PM::md .update
+Summary::md .summary
+  coverage, especially of fallible code paths
+
+Resolved Aug 08, 2022, 06:37PM::md .update
+  ::table
+               | Exec | Total | Coverage
+    Lines:     | 7279 | 8820  | 82.5%
+    Functions: | 384  | 407   | 94.3%
+    Branches:  | 3199 | 5078  | 63.0%
+  Good enough for now. Probably some of those should be excluded as they’re
+  things like python running out of memory and that is hard to trigger from the
+  tests.

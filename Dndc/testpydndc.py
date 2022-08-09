@@ -165,6 +165,39 @@ class TestHtmlGen(TestCase):
         output = pydndc.htmlgen(input)
         self.assertEqual(output, expected)
 
+class TestMdGen(TestCase):
+    def test_it(self) -> None:
+        input = (
+        "Markdown!::md\n"
+        "  This is some markdown\n"
+        "::table\n"
+        "  a | b\n"
+        "  1 | 2\n"
+        )
+        expected = (
+            "<!-- This md file was generated from a dnd file. -->\n"
+            "<h2>Markdown!</h2>\n"
+            "This is some markdown\n"
+            "\n"
+            "\n"
+            "<table>\n"
+            "<thead>\n"
+            "<tr>\n"
+            "<th>a</th>\n"
+            "<th>b</th>\n"
+            "</tr>\n"
+            "</thead>\n"
+            "<tbody>\n"
+            "<tr>\n"
+            "<td>1</td>\n"
+            "<td>2</td>\n"
+            "</tr>\n"
+            "</tbody>\n"
+            "</table>\n"
+        ).strip()
+        output = pydndc.to_markdown(input, logger=pydndc.stderr_logger, jsargs={'foo':[1,2,3], 'a':True, 'b':False, 'c':None}).strip()
+        self.assertEqual(output, expected)
+
 class TestReformat(TestCase):
     def test_format_table(self) -> None:
         input = (
@@ -252,7 +285,8 @@ class TestExamples(TestCase):
 
 class TestAst(TestCase):
     def test_select(self) -> None:
-        ctx = pydndc.Context()
+        ctx = pydndc.Context(filename='hello')
+        self.assertEqual(ctx.filename, 'hello')
         ctx.root.parse('''
         Hello::raw .hi @english
         Bonjour::raw .hi @french
@@ -265,6 +299,99 @@ class TestAst(TestCase):
         # no args selects all
         self.assertEqual(len(ctx.select_nodes()), 5) # 4 + 1 for root
         self.assertEqual(len(ctx.select_nodes(classes={'hi', 'hello'})), 0) # is an AND
+        self.assertEqual(ctx.root.handle, ctx.node_from_int(ctx.root.handle).handle)
+        self.assertEqual(ctx.node_by_approximate_location(ctx.root.location.filename, 1).children[0].header, 'Hello')
+        n = ctx.make_node(pydndc.NodeType.DIV, 'woo')
+        ctx.root.append_child(n)
+        self.assertEqual(ctx.expand(),
+            "Hello::raw .hi @english\n"
+            "Bonjour::raw .hi @french\n"
+            "Hola::raw .hi @spanish\n"
+            "Aloha::div .hi @hawaiian\n"
+            "woo::div\n"
+        )
+        self.assertEqual(ctx.to_md(), 
+            "<!-- This md file was generated from a dnd file. -->\n"
+            "\n"
+            "\n"
+            "\n"
+            "<h2>Aloha</h2><div>\n"
+            "</div>\n"
+            "\n"
+            "<h2>woo</h2><div>\n"
+            "</div>\n"
+            "\n")
+        ctx.add_link(key='hi', value='goodbye')
+        import json
+        s = ctx._to_json()
+        data = json.loads(s)
+        self.assertIn('links', data)
+        self.assertIn('hi', data['links'])
+        self.assertEqual('goodbye', data['links']['hi'])
+        self.assertEqual(ctx.base_dir, '')
+        n.detach()
+        ctx.root = n
+        self.assertEqual(ctx.root.handle, n.handle)
+        ctx.root.set_attribute('foo', 'bar')
+        self.assertTrue(ctx.root.has_attribute('foo'))
+        self.assertEqual(ctx.root.get_attribute('foo'), 'bar')
+        self.assertEqual(ctx.root.attributes, (('foo', 'bar'),))
+        n.add_class('chicken')
+        self.assertIn('chicken', n.classes)
+        self.assertIn('chicken', ctx.root.classes)
+        n.remove_class('chicken')
+        self.assertNotIn('chicken', ctx.root.classes)
+        with self.assertRaises(ValueError):
+            ctx.root = 9999
+        ctx.root = -1
+        self.assertEqual(len(ctx.root.children), 0)
+        ctx.root.execute_js('''
+        node.header = "hello world"
+        ''')
+        self.assertEqual(ctx.root.header, 'hello world')
+        ch = ctx.root.make_child(pydndc.NodeType.DIV, "child");
+        self.assertEqual(ch.header, "child");
+        self.assertEqual(ch.parent.handle, ctx.root.handle)
+        self.assertEqual(ch.type, pydndc.NodeType.DIV)
+        ch.type = pydndc.NodeType.MD
+        self.assertEqual(ch.type, pydndc.NodeType.MD)
+        self.assertEqual(ch.id, 'child')
+        ch.id = 'hola mundo'
+        self.assertEqual(ch.id, 'hola-mundo')
+        self.assertEqual(ch.noid, False)
+        self.assertEqual(ch.noinline, False)
+        self.assertEqual(ch.import_, False)
+        ch.noid = True
+        self.assertEqual(ch.id, '')
+        self.assertEqual(ctx.root.format(2), '  hello world::md\n    child::md #id(hola mundo) #noid\n')
+        self.assertEqual(ctx.root.render(), '<div>\n<h2 id="hello-world">hello world</h2>\n<div>\n<h3>child</h3>\n</div>\n</div>\n')
+        ch.append_child('grandchild')
+        self.assertEqual(len(ch.children), 1)
+        self.assertEqual(ch.children[0].type, pydndc.NodeType.STRING)
+        self.assertEqual(ch.children[0].header, 'grandchild')
+        # not testing exact values here
+        self.assertTrue(ch._to_json())
+        self.assertTrue(ch.tree_repr())
+        def logger(*args):
+            self.assertEqual(args[-1], '1')
+
+        ctx.logger = logger
+        ctx.root.execute_js('''
+            console.log(1);
+        ''')
+        ctx.logger = pydndc.stderr_logger
+        r = repr(ctx.root)
+        ctx.root.execute_js('''
+            ctx.add_dependency('foo');
+            console.log(node.location);
+            console.log(node.location.filename);
+            console.log(node.location.row);
+            console.log(node.location.column);
+        ''')
+        self.assertIn('foo', json.loads(ctx._to_json())['dependencies'])
+
+
+
 
 
 
@@ -356,6 +483,10 @@ class TestJsVars(TestCase):
                 "3",
                 "[object Object]",
                 "3",
+                "true",
+                "false",
+                "null",
+                '"{"3":3,"hello":"world","goodbye":"goodbye","data":[1,2,3],"y":{},"z":true,"zz":false,"zzz":null}"',
             ]
             self.assertEqual(expected[line], mess)
         input = (
@@ -368,13 +499,17 @@ class TestJsVars(TestCase):
             "  console.log(Args.data[2]);\n"
             "  console.log(Args.y);\n"
             "  console.log(Args['3']);\n"
+            "  console.log(Args.z);\n"
+            "  console.log(Args.zz);\n"
+            "  console.log(Args.zzz);\n"
+            "  console.log(JSON.stringify(Args));\n"
         )
-        d = dict(hello="world", goodbye='goodbye', data=[1,2,3], y={})
+        d = dict(hello="world", goodbye='goodbye', data=[1,2,3], y={}, z=True, zz=False, zzz=None)
         d[3] = 3
         _ = pydndc.htmlgen(input,
                 jsargs=d,
                 logger=testout)
-        d = '{hello:"world", goodbye:"goodbye", data:[1, 2, 3], y:{}, "3":3}'
+        d = '{hello:"world", goodbye:"goodbye", data:[1, 2, 3], y:{}, "3":3, "z":true, "zz":false, "zzz":null}'
         _ = pydndc.htmlgen(input,
                 jsargs=d,
                 logger=testout)

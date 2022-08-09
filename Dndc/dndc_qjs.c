@@ -778,6 +778,7 @@ js_console_log(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
 //
 // FileSystem stuff
 //
+// GCOV_EXCL_START
 static
 QJSValue
 js_load_file_as_base64(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst *argv){
@@ -1085,6 +1086,7 @@ js_path_exists(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
     else
         return QJS_FALSE;
 }
+// GCOV_EXCL_STOP
 
 //
 // DndcNode methods

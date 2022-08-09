@@ -83,14 +83,14 @@ write_generic_header(DndcContext* ctx, Node* n, int indent, MStringBuilder*msb){
     if(n->flags & NODEFLAG_NOINLINE){
         msb_write_literal(msb, " #noinline");
     }
+    RARRAY_FOR_EACH(StringView, cls, n->classes){
+        MSB_FORMAT(msb, " .", *cls);
+    }
     RARRAY_FOR_EACH(Attribute, at, n->attributes){
         MSB_FORMAT(msb, " @", at->key);
         if(at->value.length){
             MSB_FORMAT(msb, "(", at->value, ")");
         }
-    }
-    RARRAY_FOR_EACH(StringView, cls, n->classes){
-        MSB_FORMAT(msb, " .", *cls);
     }
     msb_write_char(msb, '\n');
 }

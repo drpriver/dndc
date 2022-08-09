@@ -73,8 +73,7 @@ string_table_set(StringTable* table, StringView key, StringView value){
                     // We know that none of the keys are equal, so just find an empty slot.
                     while(new_keys[idx].length){
                         idx++;
-                        if(idx >= new_cap)
-                            idx = 0;
+                        if(idx >= new_cap) idx = 0;
                     }
                     new_keys[idx] = k;
                     new_values[idx] = v;
