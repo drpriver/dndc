@@ -1,9 +1,0 @@
-Changelog::kv
-  updated: 2022-01-01T19:27:35.141098
-  updated: 2022-04-18T16:56:06Z
-Summary::md.summary
-  There needs to be an example showing non-trivial usage of
-  every feature, as well as advanced non-obvious combinations
-  of features.
-Updated Apr 18, 2022, 12:56PM::md.update
-  If I can’t make a good example, that’s a hint it should maybe be removed.
