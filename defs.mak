@@ -140,7 +140,7 @@ FLAGS=$(INCLUDE_FLAGS) $(WARNING_FLAGS) $(PLATFORM_FLAGS)
 
 # TestDndc needs special link arguments, so define it manually.
 # TestDsort hangs gcc for some reason.
-TESTS:=$(filter-out Dndc/TestDndc.c Dndc/TestDndcAst.c Utils/TestDsort.c,$(wildcard **/Test*.c))
+TESTS:=$(filter-out Dndc/TestDndc.c Dndc/TestDndcAst.c Dndc/TestDndcAlloc.c Utils/TestDsort.c,$(wildcard **/Test*.c))
 
 # This template defines how to build and run a test. Tests are automatically
 # discovered by convention: a test program is a C file starting with 'Test'.

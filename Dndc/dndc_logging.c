@@ -6,6 +6,7 @@
 #include "dndc_logging.h"
 #include "dndc_funcs.h"
 #include "common_macros.h"
+#include "Allocators/nullacator.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -40,6 +41,8 @@ log_warning(DndcContext* ctx, StringView filename, int line, int col, size_t nar
     MStringBuilder sb = {.allocator=temp_allocator(ctx)};
     for(size_t i = 0; i < nargs; i++)
         msb_apply_format(&sb, args[i]);
+    msb_nul_terminate(&sb);
+    if(unlikely(sb.errored)) return;
     LongString mess = msb_borrow_ls(&sb);
     ctx->log_func(ctx->log_user_data, DNDC_WARNING_MESSAGE, filename.text, filename.length, line, col, mess.text, mess.length);
     msb_destroy(&sb);
@@ -55,6 +58,8 @@ log_info(DndcContext* ctx, StringView filename, int line, int col, size_t nargs,
     MStringBuilder sb = {.allocator=temp_allocator(ctx)};
     for(size_t i = 0; i < nargs; i++)
         msb_apply_format(&sb, args[i]);
+    msb_nul_terminate(&sb);
+    if(unlikely(sb.errored)) return;
     LongString mess = msb_borrow_ls(&sb);
     ctx->log_func(ctx->log_user_data, DNDC_STATISTIC_MESSAGE, filename.text, filename.length, line, col, mess.text, mess.length);
     msb_destroy(&sb);
@@ -68,6 +73,8 @@ log_debug(DndcContext* ctx, StringView filename, int line, int col, size_t nargs
     MStringBuilder sb = {.allocator=temp_allocator(ctx)};
     for(size_t i = 0; i < nargs; i++)
         msb_apply_format(&sb, args[i]);
+    msb_nul_terminate(&sb);
+    if(unlikely(sb.errored)) return;
     LongString mess = msb_borrow_ls(&sb);
     ctx->log_func(ctx->log_user_data, DNDC_DEBUG_MESSAGE, filename.text, filename.length, line, col, mess.text, mess.length);
     msb_destroy(&sb);
@@ -83,6 +90,10 @@ node_log_error(DndcContext* ctx, const Node* node, size_t nargs, FormatArg* args
     MStringBuilder sb = {.allocator=temp_allocator(ctx)};
     for(size_t i = 0; i < nargs; i++)
         msb_apply_format(&sb, args[i]);
+    msb_nul_terminate(&sb);
+    if(sb.errored) return;
+    msb_nul_terminate(&sb);
+    if(unlikely(sb.errored)) return;
     LongString mess = msb_borrow_ls(&sb);
     StringView filename = ctx->filenames.data[node->filename_idx];
     int line = node->row;
@@ -130,6 +141,8 @@ node_log_warning(DndcContext* ctx, const Node* node, size_t nargs, FormatArg* ar
     MStringBuilder sb = {.allocator=temp_allocator(ctx)};
     for(size_t i = 0; i < nargs; i++)
         msb_apply_format(&sb, args[i]);
+    msb_nul_terminate(&sb);
+    if(unlikely(sb.errored)) return;
     LongString mess = msb_borrow_ls(&sb);
     StringView filename = ctx->filenames.data[node->filename_idx];
     int line = node->row;
@@ -148,6 +161,8 @@ node_log_info(DndcContext* ctx, const Node* node, size_t nargs, FormatArg* args)
     MStringBuilder sb = {.allocator=temp_allocator(ctx)};
     for(size_t i = 0; i < nargs; i++)
         msb_apply_format(&sb, args[i]);
+    msb_nul_terminate(&sb);
+    if(unlikely(sb.errored)) return;
     LongString mess = msb_borrow_ls(&sb);
     StringView filename = ctx->filenames.data[node->filename_idx];
     int line = node->row;
@@ -164,6 +179,8 @@ node_log_debug(DndcContext* ctx, const Node* node, size_t nargs, FormatArg* args
     MStringBuilder sb = {.allocator=temp_allocator(ctx)};
     for(size_t i = 0; i < nargs; i++)
         msb_apply_format(&sb, args[i]);
+    msb_nul_terminate(&sb);
+    if(unlikely(sb.errored)) return;
     LongString mess = msb_borrow_ls(&sb);
     StringView filename = ctx->filenames.data[node->filename_idx];
     int line = node->row;
@@ -183,6 +200,8 @@ handle_log_error(DndcContext* ctx, NodeHandle handle, size_t nargs, FormatArg* a
     MStringBuilder sb = {.allocator=temp_allocator(ctx)};
     for(size_t i = 0; i < nargs; i++)
         msb_apply_format(&sb, args[i]);
+    msb_nul_terminate(&sb);
+    if(unlikely(sb.errored)) return;
     LongString mess = msb_borrow_ls(&sb);
     StringView filename = ctx->filenames.data[node->filename_idx];
     int line = node->row;
@@ -204,6 +223,8 @@ handle_log_warning(DndcContext* ctx, NodeHandle handle, size_t nargs, FormatArg*
     MStringBuilder sb = {.allocator=temp_allocator(ctx)};
     for(size_t i = 0; i < nargs; i++)
         msb_apply_format(&sb, args[i]);
+    msb_nul_terminate(&sb);
+    if(unlikely(sb.errored)) return;
     LongString mess = msb_borrow_ls(&sb);
     StringView filename = ctx->filenames.data[node->filename_idx];
     int line = node->row;
@@ -223,6 +244,8 @@ handle_log_info(DndcContext* ctx, NodeHandle handle, size_t nargs, FormatArg* ar
     MStringBuilder sb = {.allocator=temp_allocator(ctx)};
     for(size_t i = 0; i < nargs; i++)
         msb_apply_format(&sb, args[i]);
+    msb_nul_terminate(&sb);
+    if(unlikely(sb.errored)) return;
     LongString mess = msb_borrow_ls(&sb);
     StringView filename = ctx->filenames.data[node->filename_idx];
     int line = node->row;
@@ -240,6 +263,8 @@ handle_log_debug(DndcContext* ctx, NodeHandle handle, size_t nargs, FormatArg* a
     MStringBuilder sb = {.allocator=temp_allocator(ctx)};
     for(size_t i = 0; i < nargs; i++)
         msb_apply_format(&sb, args[i]);
+    msb_nul_terminate(&sb);
+    if(unlikely(sb.errored)) return;
     LongString mess = msb_borrow_ls(&sb);
     StringView filename = ctx->filenames.data[node->filename_idx];
     int line = node->row;
@@ -251,16 +276,20 @@ handle_log_debug(DndcContext* ctx, NodeHandle handle, size_t nargs, FormatArg* a
 static
 void
 report_time(DndcContext* ctx, StringView msg, uint64_t microseconds){
+    // This is called after freeing the allocators, thus the stack allocation.
     if(! (ctx->flags & DNDC_PRINT_STATS))
         return;
     if(! ctx->log_func)
         return;
-    MStringBuilder temp = {.allocator=temp_allocator(ctx)};
+    char buff[512];
+    MStringBuilder temp = {.allocator=NULLACATOR, .capacity=sizeof buff, .data=buff};
     msb_write_str(&temp, msg.text, msg.length);
     msb_write_us_as_ms(&temp, microseconds);
+    msb_nul_terminate(&temp);
+    if(unlikely(temp.errored))
+        return;
     LongString str = msb_borrow_ls(&temp);
     ctx->log_func(ctx->log_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, str.text, str.length);
-    msb_destroy(&temp);
 }
 
 static
@@ -273,6 +302,8 @@ report_size(DndcContext* ctx, StringView msg, uint64_t size){
     MStringBuilder temp = {.allocator=temp_allocator(ctx)};
     msb_write_str(&temp, msg.text, msg.length);
     msb_write_uint64(&temp, size);
+    msb_nul_terminate(&temp);
+    if(unlikely(temp.errored)) return;
     LongString str = msb_borrow_ls(&temp);
     ctx->log_func(ctx->log_user_data, DNDC_STATISTIC_MESSAGE, "", 0, 0, 0, str.text, str.length);
     msb_destroy(&temp);

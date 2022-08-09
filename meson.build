@@ -143,6 +143,26 @@ test('dndc',
   ),
   args:['-C', meson.source_root()]
 )
+test('dndc-ast',
+  executable('TestDndcAst',
+    'Dndc/TestDndcAst.c',
+    include_directories:includes,
+    dependencies:[thread_dep],
+    c_args: ['-DQJS_SHARED_LIBRARY']+ignore_bogus_deprecations,
+    link_with: quickjs_dylib,
+  ),
+  args:['-C', meson.source_root()]
+)
+test('dndc-alloc',
+  executable('TestDndcAlloc',
+    'Dndc/TestDndcAlloc.c',
+    include_directories:includes,
+    dependencies:[thread_dep],
+    c_args: ['-DQJS_SHARED_LIBRARY']+ignore_bogus_deprecations,
+    link_with: quickjs_dylib,
+  ),
+  args:['-C', meson.source_root()]
+)
 
 test('pydndc', pyinstall, args:['Dndc/testpydndc.py', '--extension-directory', meson.build_root()], workdir:meson.source_root(), depends:pydndc)
 

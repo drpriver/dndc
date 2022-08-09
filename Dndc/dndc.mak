@@ -48,6 +48,23 @@ tests: $(TESTDIR)/TestDndc_fast
 TestDndc: $(TESTDIR)/TestDndc_debug $(TESTDIR)/TestDndc_fast
 .PHONY: TestDndc
 
+
+$(BINDIR)/TestDndcAlloc_fast$(EXE): Dndc/TestDndcAlloc.c $(DEPDIR)/TestDndcAlloc_fast.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
+	$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndcAlloc_fast.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
+$(BINDIR)/TestDndcAlloc_debug$(EXE): Dndc/TestDndcAlloc.c $(DEPDIR)/TestDndcAlloc_debug.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
+	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndcAlloc_debug.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
+
+$(TESTDIR)/TestDndcAlloc_debug: $(BINDIR)/TestDndcAlloc_debug$(EXE)
+	$< --tee $@
+tests: $(TESTDIR)/TestDndcAlloc_debug
+$(TESTDIR)/TestDndcAlloc_fast: $(BINDIR)/TestDndcAlloc_fast$(EXE)
+	$< --tee $@
+tests: $(TESTDIR)/TestDndcAlloc_fast
+
+TestDndcAlloc: $(TESTDIR)/TestDndcAlloc_debug $(TESTDIR)/TestDndcAlloc_fast
+.PHONY: TestDndcAlloc
+
+
 $(BINDIR)/TestDndcAst_fast$(EXE): Dndc/TestDndcAst.c $(DEPDIR)/TestDndcAst_fast.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndcAst_fast.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
 $(BINDIR)/TestDndcAst_debug$(EXE): Dndc/TestDndcAst.c $(DEPDIR)/TestDndcAst_debug.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)

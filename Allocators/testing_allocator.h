@@ -124,6 +124,15 @@ testing_assert_all_freed(void){
 
 static inline
 void
+testing_reset(void){
+    LOCK_T_lock(&THE_TestingAllocator.lock);
+    recording_cleanup(&THE_TestingAllocator.recorder);
+    THE_TestingAllocator.nallocs = 0;
+    LOCK_T_unlock(&THE_TestingAllocator.lock);
+}
+
+static inline
+void
 testing_allocator_init(void){
     LOCK_T_init(&THE_TestingAllocator.lock);
 }

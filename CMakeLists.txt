@@ -197,6 +197,23 @@ target_link_libraries(TestDndc
     Threads::Threads
 )
 
+add_executable(TestDndcAst Dndc/TestDndcAst.c)
+target_compile_definitions(TestDndcAst PRIVATE QJS_SHARED_LIBRARY)
+add_test(dndc-ast TestDndcAst -C ${CMAKE_SOURCE_DIR})
+target_link_libraries(TestDndcAst
+    quickjs-dylib
+    Threads::Threads
+)
+
+add_executable(TestDndcAlloc Dndc/TestDndcAlloc.c)
+target_compile_definitions(TestDndcAlloc PRIVATE QJS_SHARED_LIBRARY)
+add_test(dndc-alloc TestDndcAlloc -C ${CMAKE_SOURCE_DIR})
+target_link_libraries(TestDndcAlloc
+    quickjs-dylib
+    Threads::Threads
+)
+
+
 # installs
 install(TARGETS dndc DESTINATION bin)
 install(TARGETS dndc-lib DESTINATION lib)

@@ -687,6 +687,8 @@ log_js_traceback(DndcContext* ctx, QJSContext* jsctx, NodeHandle handle){
     }
     QJS_FreeValue(jsctx, exception_val);
     msb_erase(&msb, 2); // XXX: I get the one, but why two?
+    msb_nul_terminate(&msb);
+    if(unlikely(msb.errored)) return;
     LongString msg = msb_borrow_ls(&msb);
     handle_log_error(ctx, handle, 1, (FormatArg[]){FMT(msg)});
     msb_destroy(&msb);
@@ -763,6 +765,8 @@ js_console_log(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
         if(i != 0) msb_write_char(&msb, ' ');
         js_console_inner(jsctx, argv[i], &msb);
     }
+    msb_nul_terminate(&msb);
+    if(unlikely(msb.errored)) return QJS_UNDEFINED;
     LongString msg = msb_borrow_ls(&msb);
     ctx->log_func(ctx->log_user_data, DNDC_DEBUG_MESSAGE, filename?filename:"js", filename?strlen(filename):2, line_num-1, -1, msg.text, msg.length);
     msb_destroy(&msb);

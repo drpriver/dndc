@@ -42771,7 +42771,7 @@ static QJSValue js_regexp_exec(QJSContext *ctx, QJSValueConst this_val,
                     goto fail;
             }
         } else {
-            QJS_ThrowInternalError(ctx, "out of memory in regexp execution");
+            QJS_ThrowOutOfMemory(ctx); //, "out of memory in regexp execution");
             goto fail;
         }
         QJS_FreeValue(ctx, str_val);
