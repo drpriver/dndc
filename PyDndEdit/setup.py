@@ -6,6 +6,7 @@ setup(
     license='Proprietary',
     description='Qt based editor for the dnd file format',
     author = 'David Priver',
+    author_email='david@davidpriver.com',
     classifiers = [
         'Development Status :: 4 - Beta',
         'License :: Other/Proprietary License',
