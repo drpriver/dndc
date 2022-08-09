@@ -3,6 +3,10 @@
 //
 #ifndef DNDC_FORMAT_C
 #define DNDC_FORMAT_C
+
+#ifdef __linux__
+#include <sys/types.h> // ssize_t
+#endif
 #include "dndc_node_types.h"
 #include "dndc_types.h"
 #include "dndc_funcs.h"

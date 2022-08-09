@@ -23,17 +23,17 @@ struct BacktraceArray {
     void*_Nonnull symbols[];
 };
 
-static inline
+static
 dbg_noinline
 BacktraceArray*
 get_bt(void);
 
-static inline
+static
 dbg_noinline
 void
 dump_bt(BacktraceArray* a);
 
-static inline
+static
 dbg_noinline
 void
 bt(void);
@@ -50,7 +50,7 @@ bt(void);
 #pragma clang assume_nonnull begin
 #endif
 
-static inline
+static
 dbg_noinline
 BacktraceArray*
 get_bt(void){
@@ -63,14 +63,14 @@ get_bt(void){
     return result;
 }
 
-static inline
+static
 dbg_noinline
 void
 dump_bt(BacktraceArray*_Nonnull a){
     backtrace_symbols_fd(a->symbols, a->count, 2);
 }
 
-static inline
+static
 dbg_noinline
 void
 bt(void){
@@ -98,7 +98,7 @@ bt(void){
 static int Dbg_sym_is_init = 0;
 static HANDLE Dbg_process;
 
-static inline
+static
 dbg_noinline
 void
 dbg_ensure_init(void){
@@ -108,7 +108,7 @@ dbg_ensure_init(void){
     SymInitialize(Dbg_process, NULL, TRUE);
 }
 
-static inline
+static
 dbg_noinline
 void
 bt(void){
@@ -152,7 +152,7 @@ bt(void){
         }
     }
 }
-static inline
+static
 dbg_noinline
 BacktraceArray*
 get_bt(void){
@@ -211,7 +211,7 @@ get_bt(void){
     return result;
 }
 
-static inline
+static
 dbg_noinline
 void
 dump_bt(BacktraceArray* bta){
@@ -222,13 +222,13 @@ dump_bt(BacktraceArray* bta){
 
 
 #else
-static inline
+static
 dbg_noinline
 void
 bt(void){
     // do nothing
 }
-static inline
+static
 dbg_noinline
 BacktraceArray*
 get_bt(void){
@@ -236,7 +236,7 @@ get_bt(void){
     return &bta;
 }
 
-static inline
+static
 dbg_noinline
 void
 dump_bt(BacktraceArray* bta){

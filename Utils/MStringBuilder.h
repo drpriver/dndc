@@ -192,6 +192,7 @@ static inline
 warn_unused
 int
 _msb_resize(MStringBuilder* msb, size_t size){
+    if(msb->errored) return 1;
     char* new_data = Allocator_realloc(msb->allocator, msb->data, msb->capacity, size);
     if(!new_data){
         msb->errored = 1;
