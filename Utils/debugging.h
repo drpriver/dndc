@@ -11,9 +11,13 @@
 
 #ifndef dbg_noinline
 #if defined(__GNUC__) || defined(__clang__)
+#if !defined(__clang__)
 #define dbg_noinline __attribute__((__noinline__))
 #else
-#define dbg_noinline
+#define dbg_noinline inline __attribute__((__noinline__))
+#endif
+#else
+#define dbg_noinline inline
 #endif
 #endif
 
