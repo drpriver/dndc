@@ -39,6 +39,27 @@ node_has_attribute(const Node* node, StringView attr){
 
 static inline
 bool
+node_del_attribute(const Node* node, StringView attr){
+    // TODO: maybe use a dict? Idk how many attributes we actually use.
+    // Maybe if count is greater than some N we sort and do a binary search?
+    // In using this program, I don't think I've ever exceeded 2 attributes.
+    if(!node->attributes)
+        return false;
+    RARRAY_FOR_EACH(Attribute, a, node->attributes){
+        if(SV_equals(a->key, attr)){
+            if(node->attributes->count == 1){
+                node->attributes->count--;
+                return true;
+            }
+            *a = node->attributes->data[--node->attributes->count];
+            return true;
+        }
+    }
+    return false;
+}
+
+static inline
+bool
 node_has_class(const Node* node, StringView c){
     if(!node->classes)
         return false;

@@ -420,6 +420,19 @@ class TestAst(TestCase):
         }
         ''')
         self.assertEqual(arg, '"hello"')
+        del ctx.root.attributes['hello']
+        self.assertEqual(len(ctx.root.attributes), 0)
+        with self.assertRaises(KeyError):
+            del ctx.root.attributes['hello']
+        ctx.root.attributes['hello'] = '1'
+        self.assertIn('hello', ctx.root.attributes)
+        ctx.root.execute_js('''
+        node.attributes.del('hello');
+        ''')
+        with self.assertRaises(KeyError):
+            del ctx.root.attributes['hello']
+        self.assertEqual(ctx.root.attributes.node.handle, ctx.root.handle)
+        self.assertIs(ctx.root.attributes.ctx, ctx)
         ctx.root.add_class('foo')
         # ctx.logger = pydndc.stderr_logger
         ctx.root.execute_js('''

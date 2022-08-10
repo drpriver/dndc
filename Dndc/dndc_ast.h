@@ -296,6 +296,17 @@ dndc_node_set_attribute(DndcContext*, DndcNodeHandle, DndcStringView key, DndcSt
 //
 
 DNDC_API
+int
+dndc_node_del_attribute(DndcContext*, DndcNodeHandle, DndcStringView key);
+// -----------------------
+// Deletes a specific attribute set on a node.
+//
+// Returns 1 if it does, 0 otherwise.
+//
+// This function does not distinguish between not having an attribute and an error.
+//
+
+DNDC_API
 size_t
 dndc_node_attributes_count(DndcContext*, DndcNodeHandle);
 // --------------------------

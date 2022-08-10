@@ -2487,6 +2487,17 @@ dndc_node_has_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView key
 }
 
 DNDC_API
+int
+dndc_node_del_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView key){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    // ambiguous - error or does it not have one?
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 0;
+    Node* node = get_node(ctx, handle);
+    return node_del_attribute(node, key);
+}
+
+DNDC_API
 size_t
 dndc_node_attributes_count(DndcContext* ctx, DndcNodeHandle dnh){
     NodeHandle handle = check_api_handle(ctx, dnh);

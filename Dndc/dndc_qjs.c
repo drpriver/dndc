@@ -280,6 +280,7 @@ QJSClassDef QJS_DNDC_ATTRIBUTES_CLASS = {
 QJSMETHOD(js_dndc_attributes_get);
 QJSMETHOD(js_dndc_attributes_has);
 QJSMETHOD(js_dndc_attributes_set);
+QJSMETHOD(js_dndc_attributes_del);
 QJSMETHOD(js_dndc_attributes_to_string);
 QJSMETHOD(js_dndc_attributes_entries);
 
@@ -288,7 +289,8 @@ const
 QJSCFunctionListEntry QJS_DNDC_ATTRIBUTES_FUNCS[] = {
     QJS_CFUNC_DEF("get", 1, js_dndc_attributes_get),
     QJS_CFUNC_DEF("has", 1, js_dndc_attributes_has),
-    QJS_CFUNC_DEF("set", 1, js_dndc_attributes_set),
+    QJS_CFUNC_DEF("set", 2, js_dndc_attributes_set),
+    QJS_CFUNC_DEF("del", 1, js_dndc_attributes_del),
     QJS_CFUNC_DEF("toString", 0, js_dndc_attributes_to_string),
     QJS_CFUNC_DEF("entries", 0, js_dndc_attributes_entries),
     QJS_ALIAS_DEF("[Symbol.iterator]", "entries" ),
@@ -2367,6 +2369,29 @@ QJSMETHOD(js_dndc_attributes_has){
         return QJS_FALSE;
     else
         return QJS_TRUE;
+}
+QJSMETHOD(js_dndc_attributes_del){
+    if(argc != 1)
+        return QJS_ThrowTypeError(jsctx, "get takes 1 argument");
+    QJSValueConst arg = argv[0];
+    if(!QJS_IsString(arg))
+        return QJS_ThrowTypeError(jsctx, "get takes 1 string argument");
+    DndcContext* ctx = QJS_GetContextOpaque(jsctx);
+    assert(ctx);
+    NodeHandle handle;
+    if(!js_dndc_get_attributes_handle(jsctx, thisValue, &handle))
+        return QJS_EXCEPTION;
+    assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
+    StringView key = jsstring_make_stringview_js_allocated(jsctx, arg);
+    if(!key.text)
+        return QJS_EXCEPTION;
+    Node* node = get_node(ctx, handle);
+    int deleted = node_del_attribute(node, key);
+    QJS_FreeCString(jsctx, key.text);
+    if(deleted)
+        return QJS_TRUE;
+    else
+        return QJS_FALSE;
 }
 
 QJSMETHOD(js_dndc_attributes_set){

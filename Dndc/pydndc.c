@@ -3249,8 +3249,12 @@ DndcAttributesPy_setitem(PyObject* s, PyObject* key, PyObject* value){
     DndcContext* ctx = self->pyctx->ctx;
     DndcNodeHandle handle = self->handle;
     if(!value){
-        PyErr_SetString(PyExc_NotImplementedError, "woopsie");
-        return -1;
+        int deleted = dndc_node_del_attribute(ctx, handle, pystring_borrow_stringview(key));
+        if(!deleted){
+            PyErr_SetString(PyExc_KeyError, "Attribute not present");
+            return -1;
+        }
+        return 0;
     }
     if(!PyUnicode_Check(value) && value != Py_None){
         PyErr_SetString(PyExc_TypeError, "values must be strings or None");
