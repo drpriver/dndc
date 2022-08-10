@@ -2414,7 +2414,7 @@ QJSMETHOD(js_dndc_attributes_to_string){
     MStringBuilder msb = {.allocator = temp_allocator(ctx)};
     msb_write_literal(&msb, "{ ");
     RARRAY_FOR_EACH(Attribute, kv, node->attributes){
-        MSB_FORMAT(&msb, "\n  ", kv->key, ": \"", kv->value, "\",");
+        MSB_FORMAT(&msb, "\n  \"", kv->key, "\": \"", kv->value, "\",");
     }
     msb_erase(&msb, 1);
     msb_write_literal(&msb, "\n}");

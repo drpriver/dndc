@@ -807,6 +807,32 @@ dndc_node_get_children(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, Dnd
 // copied is equal to the result of `dndc_node_children_count`.
 
 DNDC_API
+DndcNodeHandle
+dndc_node_get_child(DndcContext* ctx, DndcNodeHandle dnh, long i);
+// ---------------------
+// Retrieves the handle of the `i`th child of the given node.
+//
+// If this is out of bounds, DNDC_NODE_HANDLE_INVALID is returned.
+//
+// Arguments:
+// ----------
+// ctx:
+//     The parsing context.
+//
+// dnh:
+//     Handle to the node that is the parent of the return value.
+//
+// i:
+//     Index of the child. This can be negative, which means to index from the back.
+//
+//
+// Returns:
+// --------
+// The handle of the `i`th child or DNDC_NODE_HANDLE_INVALID if out of bounds.
+//
+// DNDC_NODE_HANDLE_INVALID can also be return if `dnh` is an invalid handle.
+
+DNDC_API
 int
 dndc_node_cat_string_children(DndcContext*, DndcNodeHandle, DndcLongString* out);
 // -------------------------------

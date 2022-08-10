@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Dict, Tuple, List, NamedTuple, Union, Any, Sequence, Set
+from typing import Callable, Optional, Dict, Tuple, List, NamedTuple, Union, Any, Sequence, Set, Iterable
 from enum import IntEnum, IntFlag
 
 class FileCache:
@@ -68,6 +68,7 @@ class SyntaxRegion(NamedTuple):
 def htmlgen(
     text:str,
     base_dir:str='.',
+    filename:str='',
     logger:Optional[Logger]=None,
     file_cache:Optional[FileCache]=None,
     flags:Flags=Flags.NONE,
@@ -178,7 +179,7 @@ class Context:
         ...
     def resolve_data_blocks(self) -> None:
         ...
-    def select_nodes(self, type:NodeType=None, attributes:Sequence[str]=None, classes:Sequence[str]=None) -> List[Node]:
+    def select_nodes(self, type:NodeType=None, attributes:Iterable[str]=None, classes:Iterable[str]=None) -> List[Node]:
         ...
     def clone(self) -> Context:
         ...
@@ -201,9 +202,9 @@ class Node:
     type: NodeType
     id: str
     parent: Node
-    children: List[Node]
+    children: Sequence[Node]
     location: Location
-    classes: Tuple[str]
+    classes: Sequence[str]
     attributes: Tuple[Tuple[str, str], ...]
     import_: bool
     noid: bool
@@ -241,6 +242,14 @@ class Node:
         ...
     def _to_json(self) -> str:
         ...
+    def __contains__(self, o:Union[int, Node]) -> bool:
+        ...
+    def __getitem__(self, idx:int) -> Node:
+        ...
+    def __len__(self) -> int:
+        ...
     ...
 
 __version__: str
+version: Tuple[int, int, int]
+INT_VERSION: int

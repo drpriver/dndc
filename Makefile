@@ -146,3 +146,11 @@ dndc.docset: $(docsetfiles)
 
 README.md: README.dnd | $(BINDIR)/dndc$(EXE)
 	$(BINDIR)/dndc$(EXE) $< -o $@ --md --no-css
+
+.PHONY: coverage
+coverage:
+	$(RM) -r covdir
+	meson setup covdir -Db_coverage=true
+	meson compile -C covdir
+	meson test -C covdir
+	ninja coverage -C covdir

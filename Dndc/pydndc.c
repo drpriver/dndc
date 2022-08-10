@@ -1046,6 +1046,7 @@ pydndc_collect_errors(void*_Nullable user_data, int type, const char* filename, 
     Py_DECREF(tup);
 }
 
+// GCOV_EXCL_START
 static
 PyObject*_Nullable
 pydndc_stderr_logger(PyObject* mod, PyObject* args, PyObject* kwargs){
@@ -1064,6 +1065,7 @@ pydndc_stderr_logger(PyObject* mod, PyObject* args, PyObject* kwargs){
     dndc_stderr_log_func(NULL, type, fn.text, fn.length, line, col, mess.text, mess.length);
     Py_RETURN_NONE;
 }
+// GCOV_EXCL_STOP
 
 static
 PyObject*_Nullable
@@ -2960,6 +2962,56 @@ DndcNodePy_to_json(PyObject* s, PyObject* arg){
     return result;
 }
 
+static
+Py_ssize_t
+DndcNodePy_len(PyObject* s){
+    DndcNodePy* self = (DndcNodePy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    return dndc_node_children_count(ctx, handle);
+}
+
+static
+PyObject* _Nullable
+DndcNodePy_getitem(PyObject* s, Py_ssize_t idx){
+    DndcNodePy* self = (DndcNodePy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    DndcNodeHandle child = dndc_node_get_child(ctx, handle, idx);
+    if(child == DNDC_NODE_HANDLE_INVALID)
+        return PyErr_Format(PyExc_IndexError, "idx %zd is out of bounds", idx);
+    return DndcNode_make(self->pyctx, child);
+}
+
+static
+int
+DndcNodePy_contains(PyObject* s, PyObject* o){
+    DndcNodeHandle qhandle;
+    if(Py_IS_TYPE(o, &DndcNodePyType)){
+        DndcNodePy* query = (DndcNodePy*)o;
+        qhandle = query->handle;
+    }
+    else if(PyLong_Check(o)){
+        qhandle = (DndcNodeHandle)PyLong_AsUnsignedLongLong(o);
+    }
+    else{
+        PyErr_SetString(PyExc_TypeError, "Nodes contain other nodes");
+        return -1;
+    }
+    DndcNodePy* self = (DndcNodePy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    DndcNodeHandle handles[32];
+    size_t cookie = 0;
+    size_t n = 0;
+    while((n = dndc_node_get_children(ctx, handle, &cookie, handles, 32))){
+        for(size_t i = 0; i < n; i++){
+            if(handles[i] == qhandle) return 1;
+        }
+    }
+    return 0;
+}
+
 
 static PyGetSetDef DndcNodePy_getset[] = {
     {
@@ -3221,6 +3273,12 @@ static PyMethodDef DndcNodePy_methods[] = {
     {0} // Sentinel
 };
 
+static PySequenceMethods DndcNodePy_sequence_methods = {
+    .sq_contains = DndcNodePy_contains,
+    .sq_item = DndcNodePy_getitem,
+    .sq_length = DndcNodePy_len,
+};
+
 static
 PyObject*_Nullable
 DndcNodePy_repr(PyObject* s){
@@ -3258,6 +3316,7 @@ static PyTypeObject DndcNodePyType  = {
     .tp_dealloc = DndcNode_dealloc,
     .tp_getset = DndcNodePy_getset,
     .tp_repr = DndcNodePy_repr,
+    .tp_as_sequence = &DndcNodePy_sequence_methods,
 };
 
 

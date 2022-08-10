@@ -956,20 +956,7 @@ RENDERFUNC(SCRIPTS){
     (void)header_depth;
     return 0;
 }
-RENDERFUNC(IMPORT){
-    Node* node = get_node(ctx, handle);
-    // An imports members are replaced with containers that were the things
-    // they imported.
-    // Don't render the import itself though.
-    if(unlikely(node->header.length)){
-        NODE_LOG_WARNING(ctx, node, SV("Ignoring import header"));
-    }
-    NODE_CHILDREN_FOR_EACH(it, node){
-        int e = render_node(ctx, sb, *it, header_depth, node_depth);
-        if(e) return e;
-    }
-    return 0;
-}
+
 RENDERFUNC(IMAGE){
     Node* node = get_node(ctx, handle);
     msb_write_literal(sb, "<div");
@@ -1091,14 +1078,6 @@ RENDERFUNC(QUOTE){
         if(e) return e;
     }
     msb_write_literal(sb, "</blockquote>\n</div>\n");
-    return 0;
-}
-RENDERFUNC(JS){
-    // intentionally not outputting this
-    (void)ctx;
-    (void)sb;
-    (void)handle;
-    (void)header_depth;
     return 0;
 }
 RENDERFUNC(RAW){
@@ -1507,15 +1486,6 @@ RENDERFUNC(CONTAINER){
     }
     return 0;
 }
-RENDERFUNC(INVALID){
-    Node* node = get_node(ctx, handle);
-    NODE_LOG_ERROR(ctx, node, LS("Invalid node when rendering."));
-    (void)ctx;
-    (void)sb;
-    (void)handle;
-    (void)header_depth;
-    return DNDC_ERROR_INVALID_TREE;
-}
 RENDERFUNC(DETAILS){
     Node* node = get_node(ctx, handle);
     msb_write_literal(sb, "<details");
@@ -1594,6 +1564,8 @@ RENDERFUNC(DEF){
     msb_write_literal(sb, "</dd>\n");
     return 0;
 }
+
+// GCOV_EXCL_START
 RENDERFUNC(META){
     (void)ctx;
     (void)sb;
@@ -1601,6 +1573,42 @@ RENDERFUNC(META){
     (void)header_depth;
     return 0;
 }
+
+RENDERFUNC(INVALID){
+    Node* node = get_node(ctx, handle);
+    NODE_LOG_ERROR(ctx, node, LS("Invalid node when rendering."));
+    (void)ctx;
+    (void)sb;
+    (void)handle;
+    (void)header_depth;
+    return DNDC_ERROR_INVALID_TREE;
+}
+RENDERFUNC(IMPORT){
+    Node* node = get_node(ctx, handle);
+    // An imports members are replaced with containers that were the things
+    // they imported.
+    // Don't render the import itself though.
+    //
+    // Is it even possible to hit this codepath anymore without a script
+    // creating an invalid tree?
+    if(unlikely(node->header.length)){
+        NODE_LOG_WARNING(ctx, node, SV("Ignoring import header"));
+    }
+    NODE_CHILDREN_FOR_EACH(it, node){
+        int e = render_node(ctx, sb, *it, header_depth, node_depth);
+        if(e) return e;
+    }
+    return 0;
+}
+RENDERFUNC(JS){
+    // intentionally not outputting this
+    (void)ctx;
+    (void)sb;
+    (void)handle;
+    (void)header_depth;
+    return 0;
+}
+// GCOV_EXCL_STOP
 #undef RENDERFUNC
 #undef RENDERFUNCNAME
 

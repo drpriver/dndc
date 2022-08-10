@@ -3,7 +3,7 @@ import argparse
 import sys
 import os
 import textwrap
-from typing import Optional, List, TYPE_CHECKING, TextIO
+from typing import Optional, List, TYPE_CHECKING, TextIO, Any
 import subprocess
 if TYPE_CHECKING:
     import pydndc
@@ -293,6 +293,7 @@ class TestAst(TestCase):
         Hola::raw .hi @spanish
         Aloha::div .hi @hawaiian
         ''')
+        self.assertIn(ctx.root[0], ctx.root)
         self.assertEqual(len(ctx.select_nodes(type=pydndc.NodeType.RAW)), 3)
         self.assertEqual(len(ctx.select_nodes(classes=['hi'])), 4)
         self.assertEqual(len(ctx.select_nodes(attributes=('english',))), 1)
@@ -300,7 +301,10 @@ class TestAst(TestCase):
         self.assertEqual(len(ctx.select_nodes()), 5) # 4 + 1 for root
         self.assertEqual(len(ctx.select_nodes(classes={'hi', 'hello'})), 0) # is an AND
         self.assertEqual(ctx.root.handle, ctx.node_from_int(ctx.root.handle).handle)
-        self.assertEqual(ctx.node_by_approximate_location(ctx.root.location.filename, 1).children[0].header, 'Hello')
+        aprox = ctx.node_by_approximate_location(ctx.root.location.filename, 1)
+        self.assertIsNotNone(aprox)
+        assert aprox is not None
+        self.assertEqual(aprox.children[0].header, 'Hello')
         n = ctx.make_node(pydndc.NodeType.DIV, 'woo')
         ctx.root.append_child(n)
         self.assertEqual(ctx.expand(),
@@ -310,7 +314,7 @@ class TestAst(TestCase):
             "Aloha::div .hi @hawaiian\n"
             "woo::div\n"
         )
-        self.assertEqual(ctx.to_md(), 
+        self.assertEqual(ctx.to_md(),
             "<!-- This md file was generated from a dnd file. -->\n"
             "\n"
             "\n"
@@ -342,9 +346,9 @@ class TestAst(TestCase):
         n.remove_class('chicken')
         self.assertNotIn('chicken', ctx.root.classes)
         with self.assertRaises(ValueError):
-            ctx.root = 9999
-        ctx.root = -1
-        self.assertEqual(len(ctx.root.children), 0)
+            ctx.root = 9999 # type: ignore
+        ctx.root = -1 # type: ignore
+        self.assertEqual(len(ctx.root), 0)
         ctx.root.execute_js('''
         node.header = "hello world"
         ''')
@@ -367,8 +371,8 @@ class TestAst(TestCase):
         self.assertEqual(ctx.root.render(), '<div>\n<h2 id="hello-world">hello world</h2>\n<div>\n<h3>child</h3>\n</div>\n</div>\n')
         ch.append_child('grandchild')
         self.assertEqual(len(ch.children), 1)
-        self.assertEqual(ch.children[0].type, pydndc.NodeType.STRING)
-        self.assertEqual(ch.children[0].header, 'grandchild')
+        self.assertEqual(ch[0].type, pydndc.NodeType.STRING)
+        self.assertEqual(ch[0].header, 'grandchild')
         # not testing exact values here
         self.assertTrue(ch._to_json())
         self.assertTrue(ch.tree_repr())
@@ -390,10 +394,42 @@ class TestAst(TestCase):
             console.log(node.location.column);
         ''')
         self.assertIn('foo', json.loads(ctx._to_json())['dependencies'])
-
-
-
-
+        arg: Any = -1
+        def logger(*args):
+            nonlocal arg
+            arg = args[-1]
+        ctx.logger = logger
+        ctx.root.execute_js('''
+        console.log(node.internal_id);
+        ''');
+        self.assertEqual(int(arg), ctx.root.handle)
+        ctx.root.execute_js('''
+        console.log(ctx.all_nodes.length);
+        ''');
+        self.assertEqual(int(arg), len(ctx.select_nodes()))
+        ctx.root.set_attribute('hello', 'world')
+        ctx.root.execute_js('''
+        console.log(""+node.attributes)
+        console.log(JSON.stringify(JSON.parse(""+node.attributes)));
+        ''')
+        self.assertEqual(json.loads(arg[1:-1]), dict(ctx.root.attributes))
+        ctx.root.execute_js('''
+        for(let [k,v] of node.attributes){
+            console.log(k);
+        }
+        ''')
+        self.assertEqual(arg, '"hello"')
+        ctx.root.add_class('foo')
+        # ctx.logger = pydndc.stderr_logger
+        ctx.root.execute_js('''
+        console.log(node.classes);
+        ''')
+        self.assertEqual(json.loads(arg), ['foo'])
+        ctx.root.execute_js('''
+        for(let cls of node.classes)
+            console.log(cls);
+        ''')
+        self.assertEqual(json.loads(arg), 'foo')
 
 
 class TestFileCache(TestCase):
@@ -505,14 +541,14 @@ class TestJsVars(TestCase):
             "  console.log(Args.zzz);\n"
             "  console.log(JSON.stringify(Args));\n"
         )
-        d = dict(hello="world", goodbye='goodbye', data=[1,2,3], y={}, z=True, zz=False, zzz=None)
+        d:dict = dict(hello="world", goodbye='goodbye', data=[1,2,3], y={}, z=True, zz=False, zzz=None)
         d[3] = 3
         _ = pydndc.htmlgen(input,
                 jsargs=d,
                 logger=testout)
-        d = '{hello:"world", goodbye:"goodbye", data:[1, 2, 3], y:{}, "3":3, "z":true, "zz":false, "zzz":null}'
+        d2 = '{hello:"world", goodbye:"goodbye", data:[1, 2, 3], y:{}, "3":3, "z":true, "zz":false, "zzz":null}'
         _ = pydndc.htmlgen(input,
-                jsargs=d,
+                jsargs=d2,
                 logger=testout)
 class TestScriptExample(TestCase):
     def test_add(self) -> None:

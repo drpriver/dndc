@@ -810,6 +810,7 @@ dndc_free_string(LongString str){
     Allocator_free(MALLOCATOR, str.text, str.length+1);
 }
 
+// GCOV_EXCL_START
 DNDC_API
 void
 dndc_stderr_log_func(void*_Nullable unused, int type, const char* filename, int filename_len, int line, int col, const char*_Nonnull message, int message_len){
@@ -882,6 +883,7 @@ dndc_stderr_log_func(void*_Nullable unused, int type, const char* filename, int 
     }
     return;
 }
+// GCOV_EXCL_STOP
 #endif
 
 
@@ -3276,6 +3278,19 @@ dndc_node_get_children(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, Dnd
 }
 
 DNDC_API
+DndcNodeHandle
+dndc_node_get_child(DndcContext* ctx, DndcNodeHandle dnh, long i){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 0;
+    Node* node = get_node(ctx, handle);
+    size_t idx = i < 0? i + node_children_count(node) : i;
+    if(idx >= node_children_count(node)) return DNDC_NODE_HANDLE_INVALID;
+    return node_children(node)[idx]._value;
+}
+
+
+DNDC_API
 DNDC_WARN_UNUSED
 int
 dndc_node_location(DndcContext* ctx, DndcNodeHandle dnh, DndcNodeLocation* loc){
@@ -3499,6 +3514,7 @@ static inline
 void
 node_to_json(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
 
+// secret API
 DNDC_API
 int
 dndc_node_to_json(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString*out){
@@ -3507,6 +3523,11 @@ dndc_node_to_json(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString*out){
         return DNDC_ERROR_VALUE;
     MStringBuilder sb = {.allocator=MALLOCATOR};
     node_to_json(ctx, handle, &sb);
+    msb_nul_terminate(&sb);
+    if(unlikely(sb.errored)){
+        msb_destroy(&sb);
+        return 1;
+    }
     *out = msb_detach_ls(&sb);
     return 0;
 }
@@ -3515,11 +3536,17 @@ static inline
 void
 ctx_to_json(DndcContext* ctx, MStringBuilder* sb);
 
+// secret API
 DNDC_API
 int
 dndc_ctx_to_json(DndcContext* ctx, DndcLongString*out){
     MStringBuilder sb = {.allocator=MALLOCATOR};
     ctx_to_json(ctx, &sb);
+    msb_nul_terminate(&sb);
+    if(unlikely(sb.errored)){
+        msb_destroy(&sb);
+        return 1;
+    }
     *out = msb_detach_ls(&sb);
     return 0;
 }

@@ -79,7 +79,15 @@ tests: $(TESTDIR)/TestDndcAlloc_fast_md
 tests: $(TESTDIR)/TestDndcAlloc_fast_reformat
 tests: $(TESTDIR)/TestDndcAlloc_fast_expand
 
-TestDndcAlloc: $(TESTDIR)/TestDndcAlloc_debug $(TESTDIR)/TestDndcAlloc_fast
+TestDndcAlloc: \
+	$(TESTDIR)/TestDndcAlloc_debug_html \
+	$(TESTDIR)/TestDndcAlloc_debug_md \
+	$(TESTDIR)/TestDndcAlloc_debug_reformat \
+	$(TESTDIR)/TestDndcAlloc_debug_expand \
+	$(TESTDIR)/TestDndcAlloc_fast_html \
+	$(TESTDIR)/TestDndcAlloc_fast_md \
+	$(TESTDIR)/TestDndcAlloc_fast_reformat \
+	$(TESTDIR)/TestDndcAlloc_fast_expand
 .PHONY: TestDndcAlloc
 
 
