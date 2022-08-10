@@ -66,7 +66,7 @@ def change_coord(id:int, x:int, y:int) -> None:
     try:
         ctx = pydndc.Context()
         ctx.root.parse(text)
-        ctx.node_from_int(id).set_attribute('coord', f'{x},{y}')
+        ctx.node_from_int(id).attributes['coord'] =  f'{x},{y}'
         text = ctx.format_tree()
         page.textedit.setPlainText(text)
     except:

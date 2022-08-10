@@ -293,7 +293,7 @@ class TestAst(TestCase):
         Hola::raw .hi @spanish
         Aloha::div .hi @hawaiian
         ''')
-        self.assertIn(ctx.root[0], ctx.root)
+        self.assertIn(ctx.root[0], ctx.root) # type: ignore
         self.assertEqual(len(ctx.select_nodes(type=pydndc.NodeType.RAW)), 3)
         self.assertEqual(len(ctx.select_nodes(classes=['hi'])), 4)
         self.assertEqual(len(ctx.select_nodes(attributes=('english',))), 1)
@@ -336,10 +336,10 @@ class TestAst(TestCase):
         n.detach()
         ctx.root = n
         self.assertEqual(ctx.root.handle, n.handle)
-        ctx.root.set_attribute('foo', 'bar')
-        self.assertTrue(ctx.root.has_attribute('foo'))
-        self.assertEqual(ctx.root.get_attribute('foo'), 'bar')
-        self.assertEqual(ctx.root.attributes, (('foo', 'bar'),))
+        ctx.root.attributes['foo'] = 'bar'
+        self.assertIn('foo', ctx.root.attributes)
+        self.assertEqual(ctx.root.attributes['foo'], 'bar')
+        self.assertEqual(tuple(ctx.root.attributes), (('foo', 'bar'),))
         n.add_class('chicken')
         self.assertIn('chicken', n.classes)
         self.assertIn('chicken', ctx.root.classes)
@@ -395,7 +395,7 @@ class TestAst(TestCase):
         ''')
         self.assertIn('foo', json.loads(ctx._to_json())['dependencies'])
         arg: Any = -1
-        def logger(*args):
+        def logger(*args): # type: ignore
             nonlocal arg
             arg = args[-1]
         ctx.logger = logger
@@ -407,12 +407,13 @@ class TestAst(TestCase):
         console.log(ctx.all_nodes.length);
         ''');
         self.assertEqual(int(arg), len(ctx.select_nodes()))
-        ctx.root.set_attribute('hello', 'world')
+        ctx.root.attributes['hello'] = 'world'
         ctx.root.execute_js('''
         console.log(""+node.attributes)
         console.log(JSON.stringify(JSON.parse(""+node.attributes)));
         ''')
         self.assertEqual(json.loads(arg[1:-1]), dict(ctx.root.attributes))
+        self.assertEqual(json.loads(str(ctx.root.attributes)), dict(ctx.root.attributes))
         ctx.root.execute_js('''
         for(let [k,v] of node.attributes){
             console.log(k);

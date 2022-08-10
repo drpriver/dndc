@@ -24,7 +24,7 @@ extension = Extension(
 
 setup(
     name='pydndc',
-    version='0.26.1',
+    version='0.27.0',
     license='Proprietary',
     description='dndc, but from python',
     # url='https://github.com/pypa/sampleproject',

@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Dict, Tuple, List, NamedTuple, Union, Any, Sequence, Set, Iterable
+from typing import Callable, Optional, Dict, Tuple, List, NamedTuple, Union, Any, Sequence, Set, Iterable, Iterator
 from enum import IntEnum, IntFlag
 
 class FileCache:
@@ -197,6 +197,22 @@ class Location(NamedTuple):
     row: int
     column: int
 
+class Attributes:
+    def __getitem__(self, key:str) -> str:
+        ...
+    def __setitem__(self, key:str, value:str) -> None:
+        ...
+    def __delitem__(self, key:str) -> None:
+        ...
+    def __iter__(self) -> Iterator[Tuple[str, str]]:
+        ...
+    def __len__(self) -> int:
+        ...
+    def __contains__(self, key:str) -> bool:
+        ...
+    ctx: Context
+    node: Node
+
 class Node:
     header: str
     type: NodeType
@@ -205,7 +221,7 @@ class Node:
     children: Sequence[Node]
     location: Location
     classes: Sequence[str]
-    attributes: Tuple[Tuple[str, str], ...]
+    attributes: Attributes
     import_: bool
     noid: bool
     hide: bool

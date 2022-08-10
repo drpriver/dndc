@@ -269,6 +269,7 @@ PyTypeObject DndcPyFileCache_Type = {
     .tp_methods = DndcPyFileCache_methods,
 };
 
+
 static
 PyObject*_Nullable
 pydndc_reformat(PyObject* , PyObject* , PyObject*);
@@ -734,7 +735,7 @@ doc_member(PyObject* obj, const char* member, const char* text){
     return err;
 }
 
-static PyTypeObject DndcContextPyType, DndcNodePyType;
+static PyTypeObject DndcContextPyType, DndcNodePyType, DndcAttributesPyType;
 
 static PyObject* node_type_enum;
 
@@ -755,6 +756,7 @@ PyInit_pydndc(void){
     PyObject* filecache_type = NULL;
     PyObject* ctx_type = NULL;
     PyObject* node_type = NULL;
+    PyObject* attributes_type = NULL;
     PyObject* synenum = NULL;
     PyObject* msgenum = NULL;
     PyObject* ntenum = NULL;
@@ -791,6 +793,13 @@ PyInit_pydndc(void){
     Py_INCREF(&DndcNodePyType);
     node_type = (PyObject*)&DndcNodePyType;
     if(PyModule_AddObjectRef(mod, "Node", node_type) < 0)
+        goto fail;
+
+    if(PyType_Ready(&DndcAttributesPyType) < 0)
+        return NULL;
+    Py_INCREF(&DndcAttributesPyType);
+    attributes_type = (PyObject*)&DndcAttributesPyType;
+    if(PyModule_AddObjectRef(mod, "Attributes", attributes_type) < 0)
         goto fail;
 
     PyModule_AddStringConstant(mod, "__version__",     DNDC_VERSION);
@@ -1022,6 +1031,7 @@ PyInit_pydndc(void){
     Py_XDECREF(filecache_type);
     Py_XDECREF(ctx_type);
     Py_XDECREF(node_type);
+    Py_XDECREF(attributes_type);
     Py_XDECREF(synenum);
     Py_XDECREF(msgenum);
     Py_XDECREF(flagenum);
@@ -1624,7 +1634,6 @@ struct DndcNodePy {
     DndcContextPy* pyctx;
     DndcNodeHandle handle;
 };
-
 
 static
 PyObject* _Nullable
@@ -2406,6 +2415,11 @@ static PyTypeObject DndcContextPyType  = {
     .tp_dealloc = DndcContextPy_dealloc,
 };
 
+
+static
+PyObject* _Nullable
+DndcAttributes_make(DndcContextPy* ctx, DndcNodeHandle handle);
+
 static
 void
 DndcNode_dealloc(PyObject* o){
@@ -2415,111 +2429,13 @@ DndcNode_dealloc(PyObject* o){
     Py_TYPE(self)->tp_free((PyObject *) self);
 }
 
-static
-PyObject* _Nullable
-DndcNodePy_set_attribute(PyObject* s, PyObject* args, PyObject* kwargs){
-    PyObject* key, * value=NULL;
-    const char* const keywords[] = { "key", "value", NULL};
-    PushDiagnostic();
-    SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!:set_attribute", (char**)keywords, &PyUnicode_Type, &key, &PyUnicode_Type, &value)){
-        return NULL;
-    }
-    PopDiagnostic();
-    DndcNodePy* self = (DndcNodePy*)s;
-    DndcContext* ctx = self->pyctx->ctx;
-    DndcStringView k;
-    {
-        int err = dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(key), &k);
-        unhandled_error_condition(err);
-    }
-    DndcStringView v = SV("");
-    if(value){
-        int err = dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(value), &v);
-        unhandled_error_condition(err);
-    }
-    dndc_node_set_attribute(ctx, self->handle, k, v);
-    Py_RETURN_NONE;
-}
-static
-PyObject* _Nullable
-DndcNodePy_get_attribute(PyObject* s, PyObject* args, PyObject* kwargs){
-    PyObject* key;
-    const char* const keywords[] = { "key", NULL};
-    PushDiagnostic();
-    SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|:get_attribute", (char**)keywords, &PyUnicode_Type, &key)){
-        return NULL;
-    }
-    PopDiagnostic();
-    DndcNodePy* self = (DndcNodePy*)s;
-    DndcContext* ctx = self->pyctx->ctx;
-    DndcStringView attr = {0};
-    int err = dndc_node_get_attribute(ctx, self->handle, pystring_borrow_stringview(key), &attr);
-    if(err)
-        return PyErr_Format(PyExc_KeyError, "No attribute for %R", key);
-    if(!attr.length)
-        Py_RETURN_NONE;
-    return PyUnicode_FromStringAndSize(attr.text, attr.length);
-}
 
-static
-PyObject* _Nullable
-DndcNodePy_has_attribute(PyObject* s, PyObject* args, PyObject* kwargs){
-    PyObject* key;
-    const char* const keywords[] = { "key", NULL};
-    PushDiagnostic();
-    SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|:has_attribute", (char**)keywords, &PyUnicode_Type, &key)){
-        return NULL;
-    }
-    PopDiagnostic();
-    DndcNodePy* self = (DndcNodePy*)s;
-    DndcContext* ctx = self->pyctx->ctx;
-    int has_it = dndc_node_has_attribute(ctx, self->handle, pystring_borrow_stringview(key));
-    if(has_it)
-        Py_RETURN_TRUE;
-    else
-        Py_RETURN_FALSE;
-}
 static
 PyObject* _Nullable
 DndcNodePy_attributes(PyObject* s, void* args){
     (void)args;
     DndcNodePy* self = (DndcNodePy*)s;
-    DndcContext* ctx = self->pyctx->ctx;
-    DndcNodeHandle handle = self->handle;
-    size_t nattrs = dndc_node_attributes_count(ctx, handle);
-    if(!nattrs)
-        return PyTuple_New(0);
-    DndcAttributePair buff[16];
-    size_t cookie = 0;
-    size_t tup_idx = 0;
-    PyObject* result = PyTuple_New(nattrs);
-    while(tup_idx < nattrs){
-        size_t n = dndc_node_attributes(ctx, handle, &cookie, buff, arrlen(buff));
-        if(!n){
-            Py_DECREF(result);
-            return PyErr_Format(PyExc_RuntimeError, "Wtf");
-        }
-        for(size_t buf_idx = 0; buf_idx < n; buf_idx++){
-            DndcStringView k = buff[buf_idx].key;
-            DndcStringView v = buff[buf_idx].value;
-            PyObject* key = PyUnicode_FromStringAndSize(k.text, k.length); // new ref
-            PyObject* value; // will be new ref
-            if(v.length)
-                value = PyUnicode_FromStringAndSize(v.text, v.length);
-            else{
-                value = Py_None;
-                Py_INCREF(value);
-            }
-            PyObject* item = PyTuple_Pack(2, key, value); // new ref
-            Py_DECREF(key);
-            Py_DECREF(value);
-            PyTuple_SetItem(result, tup_idx++, item); // steals ref
-        }
-    }
-    return result;
+    return DndcAttributes_make(self->pyctx, self->handle);
 }
 
 static
@@ -3109,36 +3025,6 @@ static PyMemberDef DndcNodePy_members[] = {
 
 static PyMethodDef DndcNodePy_methods[] = {
     {
-        .ml_name="set_attribute",
-        .ml_meth=(PyCFunction)DndcNodePy_set_attribute,
-        .ml_flags=METH_VARARGS|METH_KEYWORDS,
-        .ml_doc="set_attribute(self, key, value)\n"
-            "--\n"
-            "\n"
-            "Set an attribute.",
-    },
-    {
-        .ml_name="get_attribute",
-        .ml_meth=(PyCFunction)DndcNodePy_get_attribute,
-        .ml_flags=METH_VARARGS|METH_KEYWORDS,
-        .ml_doc="get_attribute(self, key)\n"
-            "--\n"
-            "\n"
-            "Get an attribute.",
-    },
-    {
-        .ml_name="has_attribute",
-        .ml_meth=(PyCFunction)DndcNodePy_has_attribute,
-        .ml_flags=METH_VARARGS|METH_KEYWORDS,
-        .ml_doc=PYSIG(
-            "has_attribute(self, key:str) -> bool\n",
-            "has_attribute(self, key)\n"
-            )
-            "--\n"
-            "\n"
-            "If it has an attribute.",
-    },
-    {
         .ml_name="remove_class",
         .ml_meth=DndcNodePy_remove_class,
         .ml_flags=METH_O,
@@ -3329,6 +3215,232 @@ DndcNode_make(DndcContextPy* ctx, DndcNodeHandle handle){
     o->pyctx = ctx;
     return (PyObject*)o;
 }
+
+
+typedef struct DndcAttributesPy DndcAttributesPy;
+struct DndcAttributesPy {
+    PyObject_HEAD
+    DndcContextPy* pyctx;
+    DndcNodeHandle handle;
+};
+
+static
+PyObject* _Nullable
+DndcAttributesPy_getitem(PyObject* s, PyObject* key){
+    if(!PyUnicode_Check(key)) return PyErr_Format(PyExc_TypeError, "only strings");
+    DndcAttributesPy* self = (DndcAttributesPy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    DndcStringView value;
+    int err = dndc_node_get_attribute(ctx, handle, pystring_borrow_stringview(key), &value);
+    if(err)
+        return PyErr_Format(PyExc_KeyError, "no such attribute: %R", key);
+    return PyUnicode_FromStringAndSize(value.text, value.length);
+}
+
+static
+int
+DndcAttributesPy_setitem(PyObject* s, PyObject* key, PyObject* value){
+    if(!PyUnicode_Check(key)) {
+        PyErr_SetString(PyExc_TypeError, "only strings");
+        return -1;
+    }
+    DndcAttributesPy* self = (DndcAttributesPy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    if(!value){
+        PyErr_SetString(PyExc_NotImplementedError, "woopsie");
+        return -1;
+    }
+    if(!PyUnicode_Check(value) && value != Py_None){
+        PyErr_SetString(PyExc_TypeError, "values must be strings or None");
+        return -1;
+    }
+    if(!PyObject_Length(key)){
+        PyErr_SetString(PyExc_ValueError, "keys must be non-zero length");
+        return -1;
+    }
+    DndcStringView k = pystring_borrow_stringview(key);
+    if(k.length){
+        int e = dndc_ctx_dup_sv(ctx, k, &k);
+        (void)e;
+    }
+    DndcStringView v;
+    if(value == Py_None)
+        v = SV("");
+    else{
+        v = pystring_borrow_stringview(value);
+        if(v.length){
+            int e = dndc_ctx_dup_sv(ctx, v, &v);
+            (void)e;
+        }
+    }
+    int err = dndc_node_set_attribute(ctx, handle, k, v);
+    if(err){
+        PyErr_SetString(PyExc_IndexError, "???");
+        return -1;
+    }
+    return 0;
+}
+
+static 
+int
+DndcAttributesPy_contains(PyObject* s, PyObject* key){
+    if(!PyUnicode_Check(key)) return 0;
+    DndcAttributesPy* self = (DndcAttributesPy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    return dndc_node_has_attribute(ctx, handle, pystring_borrow_stringview(key));
+}
+
+static
+Py_ssize_t
+DndcAttributesPy_size(PyObject* s){
+    DndcAttributesPy* self = (DndcAttributesPy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    return dndc_node_attributes_count(ctx, handle);
+}
+
+static
+PyObject*_Nullable
+DndcAttributesPy_repr(PyObject* s){
+    DndcAttributesPy* self = (DndcAttributesPy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    MStringBuilder msb = {.allocator=MALLOCATOR};
+    msb_write_literal(&msb, "{");
+    size_t cookie = 0;
+    size_t n = 0;
+    enum {bufflen=32};
+    DndcAttributePair pairs[bufflen];
+    int comma = 0;
+    while((n = dndc_node_attributes(ctx, handle, &cookie, pairs, bufflen))){
+        for(size_t i = 0; i < n; i++){
+            DndcAttributePair p = pairs[i];
+            msb_write_char(&msb, '"');
+            msb_write_json_escaped_str(&msb, p.key.text, p.key.length);
+            msb_write_char(&msb, '"');
+            msb_write_char(&msb, ':');
+            msb_write_char(&msb, '"');
+            msb_write_json_escaped_str(&msb, p.value.text, p.value.length);
+            msb_write_char(&msb, '"');
+            msb_write_char(&msb, ',');
+        }
+        comma = 1;
+    }
+    if(comma) msb_erase(&msb, 1);
+    msb_write_literal(&msb, "}");
+    if(msb.errored){
+        msb_destroy(&msb);
+        return PyErr_Format(PyExc_RuntimeError, "oom I guess??");
+    }
+    DndcStringView sv = msb_borrow_sv(&msb);
+    PyObject* result = PyUnicode_FromStringAndSize(sv.text, sv.length);
+    msb_destroy(&msb);
+    return result;
+}
+
+static
+void
+DndcAttributesPy_dealloc(PyObject* o){
+    // fprintf(stderr, "Deallocing node: %p\n", o);
+    DndcAttributesPy* self = (DndcAttributesPy*)o;
+    Py_CLEAR(self->pyctx);
+    Py_TYPE(self)->tp_free((PyObject *) self);
+}
+
+static
+PyObject*_Nullable
+DndcAttributesPy_iter(PyObject* o){
+    DndcNodePy* self = (DndcNodePy*)o;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    PyObject* lst = PyList_New(0);
+    if(!lst) return NULL;
+    size_t cookie = 0;
+    size_t n = 0;
+    enum {bufflen=32};
+    DndcAttributePair pairs[bufflen];
+    while((n = dndc_node_attributes(ctx, handle, &cookie, pairs, bufflen))){
+        for(size_t i = 0; i < n; i++){
+            DndcAttributePair pair = pairs[i];
+            PyObject* tup = Py_BuildValue("s#s#", pair.key.text, (Py_ssize_t)pair.key.length, pair.value.text, (Py_ssize_t)pair.value.length);
+            if(!tup){
+                Py_XDECREF(lst);
+                return NULL;
+            }
+            int err = PyList_Append(lst, tup);
+            Py_XDECREF(tup);
+            if(err < 0) {
+                Py_XDECREF(lst);
+                return NULL;
+            }
+        }
+    }
+    PyObject* result = PyObject_GetIter(lst);
+    Py_XDECREF(lst);
+    return result;
+}
+
+static
+PyObject* _Nullable
+DndcAttributesPy_getnode(PyObject* s, void*_Nullable closure){
+    (void)closure;
+    DndcAttributesPy* self = (DndcAttributesPy*)s;
+    return DndcNode_make(self->pyctx, self->handle);
+}
+static
+PyObject* _Nullable
+DndcAttributesPy_getctx(PyObject* s, void*_Nullable closure){
+    (void)closure;
+    DndcAttributesPy* self = (DndcAttributesPy*)s;
+    Py_XINCREF(self->pyctx);
+    return (PyObject*)self->pyctx;
+}
+
+static PySequenceMethods DndcAttributesPy_sequence_methods = {
+    .sq_contains = DndcAttributesPy_contains,
+};
+static PyMappingMethods DndcAttributesPy_mapping_methods = {
+    .mp_length = DndcAttributesPy_size,
+    .mp_subscript = DndcAttributesPy_getitem,
+    .mp_ass_subscript = DndcAttributesPy_setitem,
+};
+static PyGetSetDef DndcAttributesPy_getset[] = {
+    {"node", DndcAttributesPy_getnode, NULL, "", NULL},
+    {"ctx", DndcAttributesPy_getctx, NULL, "", NULL},
+    {0},
+};
+
+static PyTypeObject DndcAttributesPyType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "pydndc.Attributes",
+    .tp_doc = "Attributes",
+    .tp_basicsize = sizeof(DndcAttributesPy),
+    .tp_itemsize = 0,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_dealloc = DndcAttributesPy_dealloc,
+    .tp_repr = DndcAttributesPy_repr,
+    .tp_as_sequence = &DndcAttributesPy_sequence_methods,
+    .tp_as_mapping = &DndcAttributesPy_mapping_methods,
+    .tp_iter = DndcAttributesPy_iter,
+    .tp_getset = DndcAttributesPy_getset,
+};
+
+
+
+
+static
+PyObject* _Nullable
+DndcAttributes_make(DndcContextPy* ctx, DndcNodeHandle handle){
+    Py_INCREF(ctx);
+    DndcAttributesPy* o = PyObject_New(DndcAttributesPy, &DndcAttributesPyType);
+    o->pyctx = ctx;
+    o->handle = handle;
+    return (PyObject*)o;
+}
+
 
 
 

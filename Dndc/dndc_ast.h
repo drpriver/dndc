@@ -292,6 +292,8 @@ dndc_node_set_attribute(DndcContext*, DndcNodeHandle, DndcStringView key, DndcSt
 //
 // Returns 0 on success, non-zero on error.
 //
+// This does not copy key nor value.
+//
 
 DNDC_API
 size_t
