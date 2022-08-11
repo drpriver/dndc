@@ -552,20 +552,6 @@ dndc_node_remove_child(DndcContext* ctx, DndcNodeHandle parent, size_t i);
 //
 
 DNDC_API
-int
-dndc_node_has_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView cls);
-// -------------------
-// Queries if the node has the given class in its classes array.
-//
-// Note: this function does not distinguish between an error and a node not
-// having a class.
-//
-// Returns 0 if it does not or if an error occurs. 1 if it does have that
-// class.
-//
-
-
-DNDC_API
 DndcNodeHandle
 dndc_node_get_parent(DndcContext*, DndcNodeHandle);
 // -------------------
@@ -914,6 +900,23 @@ dndc_node_add_class(DndcContext*, DndcNodeHandle, DndcStringView);
 //
 // Returns 0 on success and non-zero on error.
 //
+// Note: this does not copy the class.
+//
+
+DNDC_API
+int
+dndc_node_has_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView cls);
+// -------------------
+// Queries if the node has the given class in its classes array.
+//
+// Note: this function does not distinguish between an error and a node not
+// having a class.
+//
+// Returns 0 if it does not or if an error occurs. 1 if it does have that
+// class.
+//
+
+
 
 DNDC_API
 int

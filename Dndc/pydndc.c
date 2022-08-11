@@ -735,7 +735,7 @@ doc_member(PyObject* obj, const char* member, const char* text){
     return err;
 }
 
-static PyTypeObject DndcContextPyType, DndcNodePyType, DndcAttributesPyType;
+static PyTypeObject DndcContextPyType, DndcNodePyType, DndcAttributesPyType, DndcClassesPyType;
 
 static PyObject* node_type_enum;
 
@@ -757,6 +757,7 @@ PyInit_pydndc(void){
     PyObject* ctx_type = NULL;
     PyObject* node_type = NULL;
     PyObject* attributes_type = NULL;
+    PyObject* classes_type = NULL;
     PyObject* synenum = NULL;
     PyObject* msgenum = NULL;
     PyObject* ntenum = NULL;
@@ -800,6 +801,13 @@ PyInit_pydndc(void){
     Py_INCREF(&DndcAttributesPyType);
     attributes_type = (PyObject*)&DndcAttributesPyType;
     if(PyModule_AddObjectRef(mod, "Attributes", attributes_type) < 0)
+        goto fail;
+
+    if(PyType_Ready(&DndcClassesPyType) < 0)
+        return NULL;
+    Py_INCREF(&DndcClassesPyType);
+    classes_type = (PyObject*)&DndcClassesPyType;
+    if(PyModule_AddObjectRef(mod, "Classes", classes_type) < 0)
         goto fail;
 
     PyModule_AddStringConstant(mod, "__version__",     DNDC_VERSION);
@@ -1032,6 +1040,7 @@ PyInit_pydndc(void){
     Py_XDECREF(ctx_type);
     Py_XDECREF(node_type);
     Py_XDECREF(attributes_type);
+    Py_XDECREF(classes_type);
     Py_XDECREF(synenum);
     Py_XDECREF(msgenum);
     Py_XDECREF(flagenum);
@@ -2419,6 +2428,9 @@ static PyTypeObject DndcContextPyType  = {
 static
 PyObject* _Nullable
 DndcAttributes_make(DndcContextPy* ctx, DndcNodeHandle handle);
+static
+PyObject* _Nullable
+DndcClasses_make(DndcContextPy* ctx, DndcNodeHandle handle);
 
 static
 void
@@ -2443,28 +2455,7 @@ PyObject*_Nullable
 DndcNodePy_classes(PyObject* s, void* args){
     (void)args;
     DndcNodePy* self = (DndcNodePy*)s;
-    DndcContext* ctx = self->pyctx->ctx;
-    DndcNodeHandle handle = self->handle;
-    size_t nclasses = dndc_node_classes_count(ctx, handle);
-    if(!nclasses)
-        return PyTuple_New(0);
-    DndcStringView buff[16];
-    size_t cookie = 0;
-    size_t tup_idx = 0;
-    PyObject* result = PyTuple_New(nclasses);
-    while(tup_idx < nclasses){
-        size_t n = dndc_node_classes(ctx, handle, &cookie, buff, arrlen(buff));
-        if(!n){
-            Py_DECREF(result);
-            return PyErr_Format(PyExc_RuntimeError, "Wtf");
-        }
-        for(size_t buf_idx = 0; buf_idx < n; buf_idx++){
-            DndcStringView c = buff[buf_idx];
-            PyObject* cls = PyUnicode_FromStringAndSize(c.text, c.length); // new ref
-            PyTuple_SetItem(result, tup_idx++, cls); // steals ref
-        }
-    }
-    return result;
+    return DndcClasses_make(self->pyctx, self->handle);
 }
 
 static
@@ -3287,7 +3278,7 @@ DndcAttributesPy_setitem(PyObject* s, PyObject* key, PyObject* value){
     return 0;
 }
 
-static 
+static
 int
 DndcAttributesPy_contains(PyObject* s, PyObject* key){
     if(!PyUnicode_Check(key)) return 0;
@@ -3446,7 +3437,215 @@ DndcAttributes_make(DndcContextPy* ctx, DndcNodeHandle handle){
 }
 
 
+typedef struct DndcClassesPy DndcClassesPy;
+struct DndcClassesPy {
+    PyObject_HEAD
+    DndcContextPy* pyctx;
+    DndcNodeHandle handle;
+};
 
+
+static
+PyObject* _Nullable
+DndcClasses_make(DndcContextPy* ctx, DndcNodeHandle handle){
+    Py_INCREF(ctx);
+    DndcClassesPy* o = PyObject_New(DndcClassesPy, &DndcClassesPyType);
+    o->pyctx = ctx;
+    o->handle = handle;
+    return (PyObject*)o;
+}
+
+static
+int
+DndcClassesPy_contains(PyObject* s, PyObject* key){
+    if(!PyUnicode_Check(key)) return 0;
+    DndcClassesPy* self = (DndcClassesPy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    return dndc_node_has_class(ctx, handle, pystring_borrow_stringview(key));
+}
+
+static
+Py_ssize_t
+DndcClassesPy_size(PyObject* s){
+    DndcClassesPy* self = (DndcClassesPy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    return dndc_node_classes_count(ctx, handle);
+}
+
+static
+PyObject*_Nullable
+DndcClassesPy_repr(PyObject* s){
+    DndcClassesPy* self = (DndcClassesPy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    MStringBuilder msb = {.allocator=MALLOCATOR};
+    msb_write_literal(&msb, "{");
+    size_t cookie = 0;
+    size_t n = 0;
+    enum {bufflen=32};
+    DndcStringView classes[bufflen];
+    int comma = 0;
+    while((n = dndc_node_classes(ctx, handle, &cookie, classes, bufflen))){
+        for(size_t i = 0; i < n; i++){
+            DndcStringView cls = classes[i];
+            msb_write_char(&msb, '"');
+            msb_write_json_escaped_str(&msb, cls.text, cls.length);
+            msb_write_char(&msb, '"');
+            msb_write_char(&msb, ',');
+        }
+        comma = 1;
+    }
+    if(comma) msb_erase(&msb, 1);
+    msb_write_literal(&msb, "}");
+    if(msb.errored){
+        msb_destroy(&msb);
+        return PyErr_Format(PyExc_RuntimeError, "oom I guess??");
+    }
+    DndcStringView sv = msb_borrow_sv(&msb);
+    PyObject* result = PyUnicode_FromStringAndSize(sv.text, sv.length);
+    msb_destroy(&msb);
+    return result;
+}
+
+static
+void
+DndcClassesPy_dealloc(PyObject* o){
+    // fprintf(stderr, "Deallocing node: %p\n", o);
+    DndcClassesPy* self = (DndcClassesPy*)o;
+    Py_CLEAR(self->pyctx);
+    Py_TYPE(self)->tp_free((PyObject *) self);
+}
+
+static
+PyObject*_Nullable
+DndcClassesPy_iter(PyObject* o){
+    DndcNodePy* self = (DndcNodePy*)o;
+    DndcContext* ctx = self->pyctx->ctx;
+    DndcNodeHandle handle = self->handle;
+    PyObject* result = PyFrozenSet_New(NULL);
+    if(!result) goto fail;
+    size_t cookie = 0;
+    size_t n = 0;
+    enum {bufflen=32};
+    DndcStringView classes[bufflen];
+    while((n = dndc_node_classes(ctx, handle, &cookie, classes, bufflen))){
+        for(size_t i = 0; i < n; i++){
+            DndcStringView cls = classes[i];
+            PyObject* u = PyUnicode_FromStringAndSize(cls.text, cls.length);
+            if(!u) goto fail;
+            int err = PySet_Add(result, u);
+            Py_XDECREF(u);
+            if(err < 0) goto fail;
+        }
+    }
+    PyObject* iter = PyObject_GetIter(result);
+    Py_XDECREF(result);
+    return iter;
+
+    fail:
+    Py_XDECREF(result);
+    return NULL;
+}
+
+static
+PyObject* _Nullable
+DndcClassesPy_getnode(PyObject* s, void*_Nullable closure){
+    (void)closure;
+    DndcClassesPy* self = (DndcClassesPy*)s;
+    return DndcNode_make(self->pyctx, self->handle);
+}
+static
+PyObject* _Nullable
+DndcClassesPy_getctx(PyObject* s, void*_Nullable closure){
+    (void)closure;
+    DndcClassesPy* self = (DndcClassesPy*)s;
+    Py_XINCREF(self->pyctx);
+    return (PyObject*)self->pyctx;
+}
+
+static
+PyObject* _Nullable
+DndcClassesPy_add(PyObject* s, PyObject* arg){
+    if(!PyUnicode_Check(arg))
+        return PyErr_Format(PyExc_TypeError, "cls must be a str");
+    DndcStringView sv = pystring_borrow_stringview(arg);
+    if(!sv.length)
+        return PyErr_Format(PyExc_TypeError, "Can't add a zero-length string");
+    DndcClassesPy* self = (DndcClassesPy*)s;
+    DndcContext* ctx = self->pyctx->ctx;
+    int err = dndc_ctx_dup_sv(ctx, sv, &sv);
+    if(err) return PyErr_Format(PyExc_RuntimeError, "oom when duping string??");
+    err = dndc_node_add_class(ctx, self->handle, sv);
+    if(err) return PyErr_Format(PyExc_RuntimeError, "oom when adding class??");
+    Py_RETURN_NONE;
+}
+static
+PyObject* _Nullable
+DndcClassesPy_discard(PyObject* s, PyObject* arg){
+    if(!PyUnicode_Check(arg))
+        return PyErr_Format(PyExc_TypeError, "cls must be a str");
+    DndcClassesPy* self = (DndcClassesPy*)s;
+    int err = dndc_node_remove_class(self->pyctx->ctx, self->handle, pystring_borrow_stringview(arg));
+    if(err) return PyErr_Format(PyExc_RuntimeError, "Error?");
+    Py_RETURN_NONE;
+}
+
+static PySequenceMethods DndcClassesPy_sequence_methods = {
+    .sq_contains = DndcClassesPy_contains,
+};
+static PyMappingMethods DndcClassesPy_mapping_methods = {
+    .mp_length = DndcClassesPy_size,
+};
+static PyGetSetDef DndcClassesPy_getset[] = {
+    {"node", DndcClassesPy_getnode, NULL, "", NULL},
+    {"ctx", DndcClassesPy_getctx, NULL, "", NULL},
+    {0},
+};
+
+static
+PyMethodDef DndcClasses_methods[] = {
+    {
+        .ml_name = "add",
+        .ml_meth = (PyCFunction)DndcClassesPy_add,
+        .ml_flags = METH_O,
+        .ml_doc = PYSIG(
+            "add(self, cls:str) -> None\n",
+            "add(self, cls)\n")
+            "--\n"
+            "\n"
+            "Add the given class (str) to the node.\n"
+    },
+    {
+        .ml_name = "discard",
+        .ml_meth = (PyCFunction)DndcClassesPy_discard,
+        .ml_flags = METH_O,
+        .ml_doc = PYSIG(
+            "discard(self, cls:str) -> None\n",
+            "discard(self, cls)\n")
+            "--\n"
+            "\n"
+            "Removes the given class (str) from the node.\n"
+    },
+    {0},
+};
+
+static PyTypeObject DndcClassesPyType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "pydndc.Classes",
+    .tp_doc = "Classes",
+    .tp_basicsize = sizeof(DndcClassesPy),
+    .tp_itemsize = 0,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_dealloc = DndcClassesPy_dealloc,
+    .tp_repr = DndcClassesPy_repr,
+    .tp_as_sequence = &DndcClassesPy_sequence_methods,
+    .tp_as_mapping = &DndcClassesPy_mapping_methods,
+    .tp_iter = DndcClassesPy_iter,
+    .tp_getset = DndcClassesPy_getset,
+    .tp_methods = DndcClasses_methods,
+};
 
 
 

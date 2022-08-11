@@ -116,6 +116,19 @@ node_get_explicit_id(DndcContext* ctx, NodeHandle handle, StringView* out){
     return false;
 }
 
+static inline
+warn_unused
+int
+node_add_class(DndcContext* ctx, NodeHandle handle, StringView cls){
+    Node* node = get_node(ctx, handle);
+    RARRAY_FOR_EACH(StringView, c, node->classes){
+        if(SV_equals(cls, *c)) return 0;
+    }
+    int err  = Rarray_push(StringView)(&node->classes, main_allocator(ctx), cls);
+    if(err) return DNDC_ERROR_OOM;
+    return 0;
+}
+
 // Returns a zero-length string if noid
 static inline
 StringView

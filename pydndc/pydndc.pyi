@@ -190,13 +190,12 @@ class Context:
     def _to_json(self) -> str:
         ...
 
-
-
 class Location(NamedTuple):
     filename: str
     row: int
     column: int
 
+# has dict-like semantics
 class Attributes:
     def __getitem__(self, key:str) -> str:
         ...
@@ -213,6 +212,22 @@ class Attributes:
     ctx: Context
     node: Node
 
+# has set-like semantics
+class Classes:
+    def __contains__(self, cls:str) -> bool:
+        ...
+    def __len__(self) -> int:
+        ...
+    def __iter__(self) -> Iterator[str]:
+        ...
+    def add(self, cls:str) -> None:
+        ...
+    def discard(self, cls:str) -> None:
+        ...
+    ctx: Context
+    node: Node
+
+
 class Node:
     header: str
     type: NodeType
@@ -220,7 +235,7 @@ class Node:
     parent: Node
     children: Sequence[Node]
     location: Location
-    classes: Sequence[str]
+    classes: Classes
     attributes: Attributes
     import_: bool
     noid: bool

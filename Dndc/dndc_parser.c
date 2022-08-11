@@ -659,7 +659,7 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                     return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                 }
                 StringView class_ = {.length = class_length, .text = class_start};
-                int err = Rarray_push(StringView)(&node->classes, main_allocator(ctx), class_);
+                int err = node_add_class(ctx, node_handle, class_);
                 if(unlikely(err))
                     return (ErrorableNodeFlags){.errored=DNDC_ERROR_OOM};
             }break;

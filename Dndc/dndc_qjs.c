@@ -1832,7 +1832,7 @@ QJSMETHOD(js_dndc_context_make_node){
                 failure = QJS_EXCEPTION;
                 goto fail;
             }
-            int err = Rarray_push(StringView)(&node->classes, main_allocator(ctx), sv);
+            int err = node_add_class(ctx, handle, sv);
             if(unlikely(err)){
                 failure = QJS_ThrowTypeError(jsctx, "oom");
                 goto fail;
@@ -2498,11 +2498,10 @@ QJSMETHOD(js_dndc_classlist_append){
     NodeHandle handle;
     if(!js_dndc_get_classlist_handle(jsctx, thisValue, &handle))
         return QJS_EXCEPTION;
-    Node* node = get_node(ctx, handle);
     StringView c = jsstring_to_stringview(jsctx, arg, string_allocator(ctx));
     if(!c.text)
         return QJS_EXCEPTION;
-    int err =  Rarray_push(StringView)(&node->classes, main_allocator(ctx), c);
+    int err = node_add_class(ctx, handle, c);
     if(unlikely(err)){
         return QJS_ThrowTypeError(jsctx, "oom");
     }

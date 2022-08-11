@@ -242,6 +242,16 @@ build_toc_block(DndcContext*);
   node_has_class(const Node* node, StringView class);
 
   //
+  // node_add_class
+  // --------------
+  // Adds a class to the node, removing duplicates.
+  //
+  static inline
+  warn_unused
+  int
+  node_add_class(DndcContext* ctx, NodeHandle handle, StringView cls);
+
+  //
   // node_get_attribute
   // ------------------
   // Retrieves the value associate with attr key.

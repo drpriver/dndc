@@ -2549,6 +2549,7 @@ dndc_node_classes(DndcContext*ctx, DndcNodeHandle dnh, size_t * cookie, DndcStri
     if(n_copy > buff_len)
         n_copy = buff_len;
     memcpy(buff, data+start, n_copy*sizeof(*buff));
+    *cookie = start + n_copy;
     return n_copy;
 }
 
@@ -2569,9 +2570,7 @@ dndc_node_add_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView cls){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
-    Node* node = get_node(ctx, handle);
-    int err = Rarray_push(StringView)(&node->classes, main_allocator(ctx), cls);
-    return err?DNDC_ERROR_OOM: 0;
+    return node_add_class(ctx, handle, cls);
 }
 
 DNDC_API
