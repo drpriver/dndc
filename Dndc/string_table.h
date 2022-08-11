@@ -40,12 +40,6 @@ struct StringTable {
     StringView*_Null_unspecified keys;
 };
 
-static inline
-uint32_t
-fast_reduce32(uint32_t x, uint32_t y){
-    return ((uint64_t)x * (uint64_t)y) >> 32;
-}
-
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif

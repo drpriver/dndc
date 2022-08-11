@@ -231,6 +231,18 @@ hash_align8(const void* key, size_t len){
 
 #endif
 
+#define hash_alignany(key, len) \
+      (sizeof(*key)&7) == 0? hash_align8(key, len) \
+    : (sizeof(*key)&3) == 0? hash_align4(key, len) \
+    : (sizeof(*key)&1) == 0? hash_align2(key, len) \
+    :                        hash_align1(key, len)
+
+static inline
+uint32_t
+fast_reduce32(uint32_t x, uint32_t y){
+    return ((uint64_t)x * (uint64_t)y) >> 32;
+}
+
 #ifdef __clang__
 #pragma clang assume_nonnull end
 #endif
