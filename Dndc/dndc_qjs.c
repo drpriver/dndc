@@ -2097,8 +2097,8 @@ QJSMETHOD(js_dndc_context_select_nodes){
 
         }
     }
-    // put them all in
     else if(!classes_array.count && !attributes_array.count && type < 0){
+        // put them all in
         for(size_t i = 0; i < ctx->nodes.count; i++){
             if(ctx->nodes.data[i].type == NODE_INVALID)
                 continue;

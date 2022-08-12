@@ -38,6 +38,13 @@
 // For small numbers of items it is just a dynamic array and does a linear
 // scan to ensure uniqueness.
 //
+// If you can afford the size, it's probably worth having a fatter data
+// structure so count, capacity, etc.  don't have to be accessed through a
+// pointer.
+//
+// If expect a larger amount of data, you can skip the "start as an array"
+// stage.  Lots of things to tweak in hash table design.
+//
 // Note that this file doesn't #include any Dndc files, so it is easy
 // to use in another project using the Allocators and Utils.
 
