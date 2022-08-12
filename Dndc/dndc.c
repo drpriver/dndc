@@ -2259,11 +2259,16 @@ dndc_ctx_clone(DndcContext* ctx){
             if(unlikely(err)) goto fail;
         }
         if(node->attributes){
-            err = Rarray_clone(Attribute)(node->attributes, main_allocator(result), &newnode->attributes);
+            err = AttrTable_dup(node->attributes, main_allocator(result), &newnode->attributes);
             if(unlikely(err)) goto fail;
-            RARRAY_FOR_EACH(Attribute, attr, newnode->attributes){
-                err = dndc_ctx_dup_sv(result, attr->key, &attr->key);
+            size_t count = newnode->attributes->count;
+            Attribute* items = AttrTable_items(newnode->attributes);
+            for(size_t i = 0; i < count; i++){
+                Attribute* attr = items + i;
+                StringView key = {attr->key.length, attr->key.text};
+                err = dndc_ctx_dup_sv(result, key, &key);
                 if(unlikely(err)) goto fail;
+                attr->key.text = key.text;
                 err = dndc_ctx_dup_sv(result, attr->value, &attr->value);
                 if(unlikely(err)) goto fail;
             }
@@ -2345,7 +2350,7 @@ dndc_ctx_shallow_clone(DndcContext* ctx){
             if(unlikely(err)) goto fail;
         }
         if(node->attributes){
-            err = Rarray_clone(Attribute)(node->attributes, main_allocator(result), &newnode->attributes);
+            err = AttrTable_dup(node->attributes, main_allocator(result), &newnode->attributes);
             if(unlikely(err)) goto fail;
         }
         if(node->classes){
@@ -2469,9 +2474,8 @@ dndc_node_get_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView key
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
     Node* node = get_node(ctx, handle);
-    StringView* value = node_get_attribute(node, key);
-    if(!value) return DNDC_ERROR_NOT_FOUND;
-    *outvalue = *value;
+    int err = node_get_attribute(node, key, outvalue);
+    if(err) return DNDC_ERROR_NOT_FOUND;
     return 0;
 }
 
@@ -2505,7 +2509,7 @@ dndc_node_attributes_count(DndcContext* ctx, DndcNodeHandle dnh){
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return 0;
     Node* node = get_node(ctx, handle);
-    return node->attributes? node->attributes->count:0;
+    return node->attributes? node->attributes->count - node->attributes->tombs:0;
 }
 
 DNDC_API
@@ -2516,19 +2520,21 @@ dndc_node_attributes(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, DndcA
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return 0;
     Node* node = get_node(ctx, handle);
-    const Rarray(Attribute)* attributes = node->attributes;
-    size_t n = attributes?attributes->count: 0;
+    if(!node->attributes) return 0;
+    Attribute* data = AttrTable_items(node->attributes);
+    size_t n = node->attributes->count;
     size_t start = *cookie;
     if(start >= n) return 0;
-    assert(attributes);
-    const Attribute* data = attributes->data;
-    _Static_assert(sizeof(Attribute) == sizeof(DndcAttributePair), "");
-    size_t n_copy = n - start;
-    if(n_copy > bufflen)
-        n_copy = bufflen;
-    memcpy(buff, data+start, sizeof(*buff)*n_copy);
-    *cookie = start + n_copy;
-    return n_copy;
+    size_t copied = 0;;
+    size_t i = start;
+    for(; i < n; i++){
+        if(copied >= bufflen) break;
+        Attribute* attr = &data[i];
+        if(!attr->key.length) continue;
+        buff[copied++] = (DndcAttributePair){.key=attr->key, .value=attr->value};
+    }
+    *cookie = i;
+    return copied;
 }
 
 DNDC_API
@@ -3146,7 +3152,7 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
                 newnode->type = NODE_MD;
                 was_import = true;
             }
-            int err = Rarray_clone(Attribute)(node->attributes, main_allocator(ctx), &newnode->attributes);
+            int err = AttrTable_dup(node->attributes, main_allocator(ctx), &newnode->attributes);
             if(unlikely(err)) return DNDC_ERROR_OOM;
         }
         if(ctx->imports.count > 1000){
@@ -3438,12 +3444,18 @@ dndc_node_tree_repr_inner(DndcContext* ctx, NodeHandle handle, int depth, MStrin
             RARRAY_FOR_EACH(StringView, c, node->classes){
                 MSB_FORMAT(sb, ".", *c, " ");
             }
-            RARRAY_FOR_EACH(Attribute, a, node->attributes){
-                MSB_FORMAT(sb, "@", a->key);
-                if(a->value.length)
-                    MSB_FORMAT(sb, "(", a->value, ") ");
-                else
-                    msb_write_char(sb, ' ');
+            if(node->attributes){
+                Attribute* attrs = AttrTable_items(node->attributes);
+                size_t count = node->attributes->count;
+                for(size_t i = 0; i < count; i++){
+                    Attribute* a = attrs+i;
+                    if(!a->key.length) continue;
+                    MSB_FORMAT(sb, "@", a->key);
+                    if(a->value.length)
+                        MSB_FORMAT(sb, "(", a->value, ") ");
+                    else
+                        msb_write_char(sb, ' ');
+                }
             }
             if(node->flags & NODEFLAG_IMPORT)
                 msb_write_literal(sb, "#import ");
@@ -3613,17 +3625,23 @@ node_to_json(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
         msb_erase(sb, 1);
     msb_write_char(sb, ']');
     msb_write_literal(sb, ",\"attributes\":{");
-    RARRAY_FOR_EACH(Attribute, attr, node->attributes){
-        msb_write_char(sb, '"');
-        msb_write_json_escaped_str(sb, attr->key.text, attr->key.length);
-        msb_write_char(sb, '"');
-        msb_write_char(sb, ':');
-        msb_write_char(sb, '"');
-        if(attr->value.length){
-            msb_write_json_escaped_str(sb, attr->value.text, attr->value.length);
+    if(node->attributes){
+        Attribute* attrs = AttrTable_items(node->attributes);
+        size_t count = node->attributes->count;
+        for(size_t i = 0; i < count; i++){
+            Attribute* attr = attrs+i;
+            if(!attr->key.length) continue;
+            msb_write_char(sb, '"');
+            msb_write_json_escaped_str(sb, attr->key.text, attr->key.length);
+            msb_write_char(sb, '"');
+            msb_write_char(sb, ':');
+            msb_write_char(sb, '"');
+            if(attr->value.length){
+                msb_write_json_escaped_str(sb, attr->value.text, attr->value.length);
+            }
+            msb_write_char(sb, '"');
+            msb_write_char(sb, ',');
         }
-        msb_write_char(sb, '"');
-        msb_write_char(sb, ',');
     }
     if(node->attributes && node->attributes->count)
         msb_erase(sb, 1);

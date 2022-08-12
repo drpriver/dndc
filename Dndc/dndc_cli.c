@@ -760,12 +760,18 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth, FILE* ou
             RARRAY_FOR_EACH(StringView, c, node->classes){
                 fprintf(out, ".%.*s ", (int)c->length, c->text);
             }
-            RARRAY_FOR_EACH(Attribute, a, node->attributes){
-                fprintf(out, "@%.*s", (int)a->key.length, a->key.text);
-                if(a->value.length)
-                    fprintf(out, "(%.*s) ", (int)a->value.length, a->value.text);
-                else
-                    fputc(' ', out);
+            if(node->attributes){
+                Attribute* items = AttrTable_items(node->attributes);
+                size_t count = node->attributes->count;
+                for(size_t i = 0; i < count; i++){
+                    Attribute* a = items+i;
+                    if(!a->key.length) continue;
+                    fprintf(out, "@%.*s", (int)a->key.length, a->key.text);
+                    if(a->value.length)
+                        fprintf(out, "(%.*s) ", (int)a->value.length, a->value.text);
+                    else
+                        fputc(' ', out);
+                }
             }
         }break;
         case NODE_STRING:{

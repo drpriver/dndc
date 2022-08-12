@@ -86,10 +86,16 @@ write_generic_header(DndcContext* ctx, Node* n, int indent, MStringBuilder*msb){
     RARRAY_FOR_EACH(StringView, cls, n->classes){
         MSB_FORMAT(msb, " .", *cls);
     }
-    RARRAY_FOR_EACH(Attribute, at, n->attributes){
-        MSB_FORMAT(msb, " @", at->key);
-        if(at->value.length){
-            MSB_FORMAT(msb, "(", at->value, ")");
+    if(n->attributes){
+        Attribute* items = AttrTable_items(n->attributes);
+        size_t count = n->attributes->count;
+        for(size_t i = 0; i < count; i++){
+            Attribute* at = items + i;
+            if(!at->key.length) continue;
+            MSB_FORMAT(msb, " @", at->key);
+            if(at->value.length){
+                MSB_FORMAT(msb, "(", at->value, ")");
+            }
         }
     }
     msb_write_char(msb, '\n');

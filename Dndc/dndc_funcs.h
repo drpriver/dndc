@@ -256,16 +256,12 @@ build_toc_block(DndcContext*);
   // ------------------
   // Retrieves the value associate with attr key.
   //
-  // If the node does not have that attribute, returns NULL. Many attributes
-  // will have empty strings. In that case, a pointer to an empty string view is
-  // returned.
-  //
-  // Note that this pointer returned by this function is unstable. Adding
-  // attributes can invalidate the pointer.
+  // If the node does not have that attribute, returns non-zero. Many attributes
+  // will have empty strings. In that case, value is set to the empty string.
   //
   static inline
-  StringView*_Nullable
-  node_get_attribute(const Node* node, StringView attr);
+  int
+  node_get_attribute(const Node* node, StringView attr, StringView* value);
 
   //
   // node_set_attribute

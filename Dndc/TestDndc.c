@@ -931,7 +931,8 @@ post_js_ast_func(void* user_data, DndcContext*ctx){
             TestExpectTrue(node->attributes);
             if(node->attributes){
                 TestExpectEquals(node->attributes->count, 1);
-                RARRAY_FOR_EACH(Attribute, attr, node->attributes){
+                if(node->attributes->count == 1){
+                    Attribute* attr = AttrTable_items(node->attributes);
                     TestExpectEquals2(SV_equals, attr->key, SV("1"));
                     TestExpectEquals2(SV_equals, attr->value, SV("1"));
                 }

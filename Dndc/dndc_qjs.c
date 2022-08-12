@@ -2339,12 +2339,12 @@ QJSMETHOD(js_dndc_attributes_get){
     if(!key.text)
         return QJS_EXCEPTION;
     Node* node = get_node(ctx, handle);
-    StringView* value = node_get_attribute(node, key);
+    StringView value; int err = node_get_attribute(node, key, &value);
     QJS_FreeCString(jsctx, key.text);
-    if(!value)
+    if(err)
         return QJS_UNDEFINED;
     else
-        return QJS_NewStringLen(jsctx, value->text, value->length);
+        return QJS_NewStringLen(jsctx, value.text, value.length);
 }
 
 QJSMETHOD(js_dndc_attributes_has){
@@ -2363,9 +2363,9 @@ QJSMETHOD(js_dndc_attributes_has){
     if(!key.text)
         return QJS_EXCEPTION;
     Node* node = get_node(ctx, handle);
-    StringView* value = node_get_attribute(node, key);
+    int has_it = node_has_attribute(node, key);
     QJS_FreeCString(jsctx, key.text);
-    if(!value)
+    if(!has_it)
         return QJS_FALSE;
     else
         return QJS_TRUE;
@@ -2438,8 +2438,14 @@ QJSMETHOD(js_dndc_attributes_to_string){
     Node* node = get_node(ctx, handle);
     MStringBuilder msb = {.allocator = temp_allocator(ctx)};
     msb_write_literal(&msb, "{ ");
-    RARRAY_FOR_EACH(Attribute, kv, node->attributes){
-        MSB_FORMAT(&msb, "\n  \"", kv->key, "\": \"", kv->value, "\",");
+    if(node->attributes){
+        Attribute* items = AttrTable_items(node->attributes);
+        size_t count = node->attributes->count;
+        for(size_t i = 0; i < count; i++){
+            Attribute kv = items[i];
+            if(!kv.key.length) continue;
+            MSB_FORMAT(&msb, "\n  \"", kv.key, "\": \"", kv.value, "\",");
+        }
     }
     msb_erase(&msb, 1);
     msb_write_literal(&msb, "\n}");
@@ -2462,19 +2468,25 @@ QJSMETHOD(js_dndc_attributes_entries){
     assert(!NodeHandle_eq(handle, INVALID_NODE_HANDLE));
     Node* node = get_node(ctx, handle);
     QJSValue result = QJS_NewArray(jsctx);
-    RARRAY_FOR_EACH(Attribute, kv, node->attributes){
-        QJSValue pair = QJS_NewArray(jsctx);
-        QJSValue js_kv[2] = {
-            QJS_NewStringLen(jsctx, kv->key.text, kv->key.length),
-            QJS_NewStringLen(jsctx, kv->value.text, kv->value.length),
-        };
-        QJSValue call = QJS_ArrayPush(jsctx, pair, 2, js_kv);
-        assert(!QJS_IsException(call));
-        QJS_FreeValue(jsctx, js_kv[0]);
-        QJS_FreeValue(jsctx, js_kv[1]);
-        QJSValue v = QJS_ArrayPush(jsctx, result, 1, &pair);
-        QJS_FreeValue(jsctx, v);
-        QJS_FreeValue(jsctx, pair);
+    if(node->attributes){
+        Attribute* attrs = AttrTable_items(node->attributes);
+        size_t count = node->attributes->count;
+        for(size_t i = 0; i < count; i++){
+            Attribute* kv = &attrs[i];
+            if(!kv->key.length) continue;
+            QJSValue pair = QJS_NewArray(jsctx);
+            QJSValue js_kv[2] = {
+                QJS_NewStringLen(jsctx, kv->key.text, kv->key.length),
+                QJS_NewStringLen(jsctx, kv->value.text, kv->value.length),
+            };
+            QJSValue call = QJS_ArrayPush(jsctx, pair, 2, js_kv);
+            assert(!QJS_IsException(call));
+            QJS_FreeValue(jsctx, js_kv[0]);
+            QJS_FreeValue(jsctx, js_kv[1]);
+            QJSValue v = QJS_ArrayPush(jsctx, result, 1, &pair);
+            QJS_FreeValue(jsctx, v);
+            QJS_FreeValue(jsctx, pair);
+        }
     }
     QJSValue values = QJS_GetPropertyStr(jsctx, result, "values");
     QJSValue realresult = QJS_Call(jsctx, values, result, 0, NULL);

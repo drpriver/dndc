@@ -10,6 +10,7 @@
 #include "dndc_node_types.h"
 #include "dndc_file_cache.h"
 #include "string_table.h"
+#include "AttrTable.h"
 #include "Allocators/allocator.h"
 #include "Allocators/arena_allocator.h"
 // #include "Allocators/linear_allocator.h"
@@ -46,14 +47,6 @@
 #define RARRAY_T StringView
 #include "Utils/Rarray.h"
 
-
-typedef struct Attribute Attribute;
-struct Attribute {
-    StringView key;
-    StringView value; // often null
-};
-#define RARRAY_T Attribute
-#include "Utils/Rarray.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -204,7 +197,7 @@ struct Node{
             NodeHandle inline_children[4];
         };
     };
-    Rarray(Attribute)*_Nullable attributes;  // 8 bytes
+    AttrTable*_Nullable attributes; // 8 bytes
     Rarray(StringView)*_Nullable classes;    // 8 bytes
     // Source filename (used for reporting errors)
     uint32_t filename_idx; // 4 bytes

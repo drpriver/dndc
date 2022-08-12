@@ -712,10 +712,8 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                             break;
                         }
                 }
-                Attribute* attr; int err = Rarray_alloc(Attribute)(&node->attributes, main_allocator(ctx), &attr);
+                StringView* value; int err = AttrTable_alloc(&node->attributes, main_allocator(ctx), attr_name, &value);
                 if(unlikely(err)) return (ErrorableNodeFlags){.errored=DNDC_ERROR_OOM};
-                attr->key = attr_name;
-                attr->value = SV("");
                 if(aftertype.length){
                     eat_leading_tabspaces(&aftertype);
                     if(aftertype.length && aftertype.text[0] == '('){
@@ -739,8 +737,8 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                         size_t vallength = aftertype.text - valstart;
                         assert(aftertype.length);
                         advance_sv(&aftertype);
-                        attr->value.text = valstart;
-                        attr->value.length = vallength;
+                        value->text = valstart;
+                        value->length = vallength;
                     }
                 }
             }break;

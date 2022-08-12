@@ -234,15 +234,18 @@ format_header(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
         msb_write_literal(sb, " .");
         msb_write_str(sb, cls->text, cls->length);
     }
-    RARRAY_FOR_EACH(Attribute, attr, node->attributes){
-        msb_write_literal(sb, " @");
-        msb_write_str(sb, attr->key.text, attr->key.length);
-        if(attr->value.length){
-            msb_write_char(sb, '(');
-            msb_write_str(sb, attr->value.text, attr->value.length);
-            msb_write_char(sb, ')');
+    if(node->attributes)
+        for(size_t i = 0; i < node->attributes->count; i++){
+            Attribute* attr = AttrTable_items(node->attributes)+i;
+            if(!attr->key.length) continue;
+            msb_write_literal(sb, " @");
+            msb_write_str(sb, attr->key.text, attr->key.length);
+            if(attr->value.length){
+                msb_write_char(sb, '(');
+                msb_write_str(sb, attr->value.text, attr->value.length);
+                msb_write_char(sb, ')');
+            }
         }
-    }
     NodeFlags flags = node->flags;
     if(node->type != NODE_IMPORT && (flags & NODEFLAG_IMPORT))
         msb_write_literal(sb, " #import");

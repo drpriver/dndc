@@ -25,37 +25,29 @@
 static inline
 bool
 node_has_attribute(const Node* node, StringView attr){
-    // TODO: maybe use a dict? Idk how many attributes we actually use.
-    // Maybe if count is greater than some N we sort and do a binary search?
-    // In using this program, I don't think I've ever exceeded 2 attributes.
-    if(!node->attributes)
-        return false;
-    RARRAY_FOR_EACH(Attribute, a, node->attributes){
-        if(SV_equals(a->key, attr))
-            return true;
-    }
-    return false;
+    return AttrTable_has(node->attributes, attr);
 }
 
 static inline
 bool
 node_del_attribute(const Node* node, StringView attr){
-    // TODO: maybe use a dict? Idk how many attributes we actually use.
-    // Maybe if count is greater than some N we sort and do a binary search?
-    // In using this program, I don't think I've ever exceeded 2 attributes.
-    if(!node->attributes)
-        return false;
-    RARRAY_FOR_EACH(Attribute, a, node->attributes){
-        if(SV_equals(a->key, attr)){
-            if(node->attributes->count == 1){
-                node->attributes->count--;
-                return true;
-            }
-            *a = node->attributes->data[--node->attributes->count];
-            return true;
-        }
-    }
-    return false;
+    return AttrTable_del(node->attributes, attr);
+}
+
+static inline
+warn_unused
+int
+node_get_attribute(const Node* node, StringView attr, StringView* value){
+    return AttrTable_get(node->attributes, attr, value);
+}
+
+static inline
+warn_unused
+int
+node_set_attribute(Node* node, Allocator allocator, StringView attr, StringView value){
+    int err =  AttrTable_set(&node->attributes, allocator, attr, value);
+    if(unlikely(err)) return DNDC_ERROR_OOM;
+    return 0;
 }
 
 static inline
@@ -66,52 +58,6 @@ node_has_class(const Node* node, StringView c){
     RARRAY_FOR_EACH(StringView, cls, node->classes){
         if(SV_equals(*cls, c))
             return true;
-    }
-    return false;
-}
-static inline
-StringView*_Nullable
-node_get_attribute(const Node* node, StringView attr){
-    // TODO: maybe use a dict? Idk how many attributes we actually use.
-    // Maybe if count is greater than some N we sort and do a binary search?
-    // In using this program, I don't think I've ever exceeded 2 attributes.
-    if(!node->attributes)
-        return NULL;
-    RARRAY_FOR_EACH(Attribute, a, node->attributes){
-        if(SV_equals(a->key, attr))
-            return &a->value;
-    }
-    return NULL;
-}
-
-static inline
-warn_unused
-int
-node_set_attribute(Node* node, Allocator allocator, StringView attr, StringView value){
-    RARRAY_FOR_EACH(Attribute, a, node->attributes){
-        if(SV_equals(a->key, attr)){
-            a->value = value;
-            return 0;
-        }
-    }
-    Attribute* a;
-    int err = Rarray_alloc(Attribute)(&node->attributes, allocator, &a);
-    if(unlikely(err)) return DNDC_ERROR_OOM;
-    a->key = attr;
-    a->value = value;
-    return 0;
-}
-
-// Don't call this function unless you really need what was explicitly set
-// by a #id() directive.
-static inline
-bool
-node_get_explicit_id(DndcContext* ctx, NodeHandle handle, StringView* out){
-    MARRAY_FOR_EACH(IdItem, item, ctx->explicit_node_ids){
-        if(NodeHandle_eq(item->node, handle)){
-            *out = item->text;
-            return true;
-        }
     }
     return false;
 }
@@ -128,6 +74,23 @@ node_add_class(DndcContext* ctx, NodeHandle handle, StringView cls){
     if(err) return DNDC_ERROR_OOM;
     return 0;
 }
+
+
+
+// Don't call this function unless you really need what was explicitly set
+// by a #id() directive.
+static inline
+bool
+node_get_explicit_id(DndcContext* ctx, NodeHandle handle, StringView* out){
+    MARRAY_FOR_EACH(IdItem, item, ctx->explicit_node_ids){
+        if(NodeHandle_eq(item->node, handle)){
+            *out = item->text;
+            return true;
+        }
+    }
+    return false;
+}
+
 
 // Returns a zero-length string if noid
 static inline
@@ -180,10 +143,8 @@ node_clone(DndcContext* ctx, NodeHandle handle){
         if(unlikely(err))
             return INVALID_NODE_HANDLE; // this is weird
     }
-    RARRAY_FOR_EACH(Attribute, at, srcnode->attributes){
-        int err = Rarray_push(Attribute)(&dstnode->attributes, main_allocator(ctx), *at);
-        if(unlikely(err)) return INVALID_NODE_HANDLE; // this is weird
-    }
+    int err = AttrTable_dup(srcnode->attributes, main_allocator(ctx), &dstnode->attributes);
+    if(unlikely(err)) return INVALID_NODE_HANDLE;
     RARRAY_FOR_EACH(StringView, cls, srcnode->classes){
         int err = Rarray_push(StringView)(&dstnode->classes, main_allocator(ctx), *cls);
         if(unlikely(err)) return INVALID_NODE_HANDLE; // this is weird
