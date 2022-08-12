@@ -340,10 +340,10 @@ class TestAst(TestCase):
         self.assertIn('foo', ctx.root.attributes)
         self.assertEqual(ctx.root.attributes['foo'], 'bar')
         self.assertEqual(tuple(ctx.root.attributes), (('foo', 'bar'),))
-        n.add_class('chicken')
+        n.classes.add('chicken')
         self.assertIn('chicken', n.classes)
         self.assertIn('chicken', ctx.root.classes)
-        n.remove_class('chicken')
+        n.classes.discard('chicken')
         self.assertNotIn('chicken', ctx.root.classes)
         with self.assertRaises(ValueError):
             ctx.root = 9999 # type: ignore
@@ -433,7 +433,7 @@ class TestAst(TestCase):
             del ctx.root.attributes['hello']
         self.assertEqual(ctx.root.attributes.node.handle, ctx.root.handle)
         self.assertIs(ctx.root.attributes.ctx, ctx)
-        ctx.root.add_class('foo')
+        ctx.root.classes.add('foo')
         # ctx.logger = pydndc.stderr_logger
         ctx.root.execute_js('''
         console.log(node.classes);

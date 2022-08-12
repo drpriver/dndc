@@ -2458,36 +2458,6 @@ DndcNodePy_classes(PyObject* s, void* args){
     return DndcClasses_make(self->pyctx, self->handle);
 }
 
-static
-PyObject*_Nullable
-DndcNodePy_add_class(PyObject* s, PyObject* args){
-    if(!PyUnicode_Check(args)){
-        return PyErr_Format(PyExc_TypeError, "Expected a string, got %R", args);
-    }
-    DndcNodePy* self = (DndcNodePy*)s;
-    DndcContext* ctx = self->pyctx->ctx;
-    DndcNodeHandle handle = self->handle;
-    DndcStringView cls;
-    int err = dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(args), &cls);
-    if(err) return PyErr_Format(PyExc_RuntimeError, "Problem adding %R", args);
-    err = dndc_node_add_class(ctx, handle, cls);
-    if(err) return PyErr_Format(PyExc_RuntimeError, "Problem adding %R", args);
-    Py_RETURN_NONE;
-}
-
-static
-PyObject*_Nullable
-DndcNodePy_remove_class(PyObject* s, PyObject* args){
-    if(!PyUnicode_Check(args)){
-        return PyErr_Format(PyExc_TypeError, "Expected a string, got %R", args);
-    }
-    DndcNodePy* self = (DndcNodePy*)s;
-    DndcContext* ctx = self->pyctx->ctx;
-    DndcNodeHandle handle = self->handle;
-    int err = dndc_node_remove_class(ctx, handle, pystring_borrow_stringview(args));
-    if(err) return PyErr_Format(PyExc_RuntimeError, "Problem removing %R", args);
-    Py_RETURN_NONE;
-}
 
 static
 PyObject*_Nullable
@@ -3016,28 +2986,6 @@ static PyMemberDef DndcNodePy_members[] = {
 
 static PyMethodDef DndcNodePy_methods[] = {
     {
-        .ml_name="remove_class",
-        .ml_meth=DndcNodePy_remove_class,
-        .ml_flags=METH_O,
-        .ml_doc=PYSIG(
-            "remove_class(self, class_:str)->None\n",
-            "remove_class(self, class_)\n")
-            "--\n"
-            "\n"
-            "Removes a class from the class list.",
-    },
-    {
-        .ml_name="add_class",
-        .ml_meth=DndcNodePy_add_class,
-        .ml_flags=METH_O,
-        .ml_doc=PYSIG(
-            "add_class(self, class_:str) -> None\n",
-            "add_class(self, class_)\n")
-            "--\n"
-            "\n"
-            "Adds a class to the class list.",
-    },
-    {
         .ml_name="execute_js",
         .ml_meth=DndcNodePy_execute_js,
         .ml_flags=METH_O,
@@ -3071,7 +3019,6 @@ static PyMethodDef DndcNodePy_methods[] = {
             "\n"
             "Parse a dnd file.\n"
             "This method can call the logger.\n",
-
     },
     {
         .ml_name="format",
