@@ -976,7 +976,7 @@ TestFunction(TestJs){
             "        m.attributes.set('1', '1');\n"
             "        m.attributes.set('1', '1');\n"
             "        m.attributes.get('2');\n"
-            "        m.classes.append('hello');\n"
+            "        m.classes.add('hello');\n"
             "    }\n"
             "    if(!m.has_class('hello')) m.err('oh noes');\n"
             "    m.clone();\n"

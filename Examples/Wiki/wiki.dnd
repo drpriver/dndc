@@ -16,7 +16,7 @@
 ::js
   let root = ctx.root; // lmao
   root.detach();
-  root.classes.append('right');
+  root.classes.add('right');
   let new_root = ctx.make_node(NodeType.DIV);
   new_root.add_child(root);
   let left = ctx.make_node(NodeType.MD, {classes:['left']});

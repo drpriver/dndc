@@ -208,7 +208,7 @@ type CtxType = {
     // -------
     //   let rooms = ctx.select_nodes({classes:['room']});
     //   for(let room of rooms)
-    //     room.classes.append('dungeon');
+    //     room.classes.add('dungeon');
     // -------
     select_nodes(args:{type:number?, classes:Array<string>?,
                        attributes:Array<string>?, id:string?}): Array<Node>;
@@ -684,9 +684,9 @@ type Node = {
     //   old_root.detach();
     //   let clone = old_root.clone();
     //   let container = ctx.make_node(NodeType.DIV, classes:['container']);
-    //   old_root.classes.append('left');
+    //   old_root.classes.add('left');
     //   container.add_child(old_root);
-    //   clone.classes.append('right');
+    //   clone.classes.add('right');
     //   container.add_child(clone);
     //   ctx.root = container;
     // --------

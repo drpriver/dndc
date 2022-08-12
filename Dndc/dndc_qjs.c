@@ -308,7 +308,8 @@ QJSClassDef QJS_DNDC_CLASSLIST_CLASS = {
 //
 // DndcNodeCassList methods
 //
-QJSMETHOD(js_dndc_classlist_append);
+QJSMETHOD(js_dndc_classlist_add);
+QJSMETHOD(js_dndc_classlist_discard);
 QJSMETHOD(js_dndc_classlist_to_string);
 QJSMETHOD(js_dndc_classlist_values);
 
@@ -316,7 +317,8 @@ static
 const
 QJSCFunctionListEntry QJS_DNDC_CLASSLIST_FUNCS[] = {
     QJS_CFUNC_DEF("toString", 0, js_dndc_classlist_to_string),
-    QJS_CFUNC_DEF("append", 1, js_dndc_classlist_append),
+    QJS_CFUNC_DEF("add", 1, js_dndc_classlist_add),
+    QJS_CFUNC_DEF("discard", 1, js_dndc_classlist_discard),
     QJS_CFUNC_DEF("values", 0, js_dndc_classlist_values),
     QJS_ALIAS_DEF("[Symbol.iterator]", "values" ),
 };
@@ -2499,12 +2501,12 @@ QJSMETHOD(js_dndc_attributes_entries){
 // DndcNodeClassList methods
 //
 
-QJSMETHOD(js_dndc_classlist_append){
+QJSMETHOD(js_dndc_classlist_add){
     if(argc != 1)
-        return QJS_ThrowTypeError(jsctx, "append takes 1 string argument");
+        return QJS_ThrowTypeError(jsctx, "add takes 1 string argument");
     QJSValueConst arg = argv[0];
     if(!QJS_IsString(arg))
-        return QJS_ThrowTypeError(jsctx, "append takes 1 string argument");
+        return QJS_ThrowTypeError(jsctx, "add takes 1 string argument");
     DndcContext* ctx = QJS_GetContextOpaque(jsctx);
     assert(ctx);
     NodeHandle handle;
@@ -2520,9 +2522,28 @@ QJSMETHOD(js_dndc_classlist_append){
     return QJS_UNDEFINED;
 }
 
+QJSMETHOD(js_dndc_classlist_discard){
+    if(argc != 1)
+        return QJS_ThrowTypeError(jsctx, "add takes 1 string argument");
+    QJSValueConst arg = argv[0];
+    if(!QJS_IsString(arg))
+        return QJS_ThrowTypeError(jsctx, "add takes 1 string argument");
+    DndcContext* ctx = QJS_GetContextOpaque(jsctx);
+    assert(ctx);
+    NodeHandle handle;
+    if(!js_dndc_get_classlist_handle(jsctx, thisValue, &handle))
+        return QJS_EXCEPTION;
+    StringView c = jsstring_to_stringview(jsctx, arg, string_allocator(ctx));
+    if(!c.text)
+        return QJS_EXCEPTION;
+    node_remove_class(get_node(ctx, handle), c);
+    Allocator_free(string_allocator(ctx), c.text, c.length);
+    return QJS_UNDEFINED;
+}
+
 QJSMETHOD(js_dndc_classlist_to_string){
     if(argc != 0)
-        return QJS_ThrowTypeError(jsctx, "append takes no argument");
+        return QJS_ThrowTypeError(jsctx, "tostring takes no arguments");
     (void)argv;
     DndcContext* ctx = QJS_GetContextOpaque(jsctx);
     assert(ctx);

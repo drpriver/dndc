@@ -441,7 +441,7 @@ But Wait, There's More::md
   // we actually temporarily detach the root node from the context
   let root = ctx.root;
   root.type = NodeType.DIV;
-  root.classes.append('container');
+  root.classes.add('container');
   let new_root = ctx.make_node(NodeType.DIV, {classes:['root']});
   root.detach();
   new_root.add_child(root);
