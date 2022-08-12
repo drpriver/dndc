@@ -288,8 +288,8 @@ static
 const
 QJSCFunctionListEntry QJS_DNDC_ATTRIBUTES_FUNCS[] = {
     QJS_CFUNC_DEF("get", 1, js_dndc_attributes_get),
-    QJS_CFUNC_DEF("has", 1, js_dndc_attributes_has),
     QJS_CFUNC_DEF("set", 2, js_dndc_attributes_set),
+    QJS_CFUNC_DEF("has", 1, js_dndc_attributes_has),
     QJS_CFUNC_DEF("del", 1, js_dndc_attributes_del),
     QJS_CFUNC_DEF("toString", 0, js_dndc_attributes_to_string),
     QJS_CFUNC_DEF("entries", 0, js_dndc_attributes_entries),
@@ -1142,7 +1142,7 @@ QJSMETHOD(js_dndc_node_detach){
     node->parent = INVALID_NODE_HANDLE;
     for(size_t i = 0; i < node_children_count(parent); i++){
         if(NodeHandle_eq(handle, node_children(parent)[i])){
-            node_remove_child(parent, i, main_allocator(ctx));
+            node_remove_child(parent, i);
             goto after;
         }
     }

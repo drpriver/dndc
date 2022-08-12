@@ -175,7 +175,7 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
             node->parent = INVALID_NODE_HANDLE;
             for(size_t j = 0; j < node_children_count(parent); j++){
                 if(NodeHandle_eq(handle, node_children(parent)[j])){
-                    node_remove_child(parent, j, main_allocator(ctx));
+                    node_remove_child(parent, j);
                     goto after;
                 }
             }
@@ -2253,9 +2253,8 @@ dndc_ctx_clone(DndcContext* ctx){
             err = dndc_ctx_dup_sv(result, node->header, &newnode->header);
             if(unlikely(err)) goto fail;
         }
-        if(node_children_count(node) > 4){
-            memset(&newnode->children, 0, sizeof(newnode->children));
-            err = Marray_extend(NodeHandle)(&newnode->children, main_allocator(result), node->children.data, node->children.count);
+        if(node->children){
+            err = Rarray_clone(NodeHandle)(node->children, main_allocator(result), &newnode->children);
             if(unlikely(err)) goto fail;
         }
         if(node->attributes){
@@ -2344,9 +2343,8 @@ dndc_ctx_shallow_clone(DndcContext* ctx){
         Node* newnode; int err = Marray_alloc(Node)(&result->nodes, main_allocator(result), &newnode);
         if(unlikely(err)) goto fail;
         *newnode = *node;
-        if(node_children_count(node) > 4){
-            memset(&newnode->children, 0, sizeof(newnode->children));
-            err = Marray_extend(NodeHandle)(&newnode->children, main_allocator(result), node->children.data, node->children.count);
+        if(node->children){
+            err = Rarray_clone(NodeHandle)(node->children, main_allocator(result), &newnode->children);
             if(unlikely(err)) goto fail;
         }
         if(node->attributes){
@@ -2586,16 +2584,19 @@ dndc_node_remove_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView cls)
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
     Node* node = get_node(ctx, handle);
-    RARRAY_FOR_EACH(StringView, c, node->classes){
-        if(SV_equals(*c, cls)){
-            PushDiagnostic(); SuppressNullableConversion();
-            Rarray_remove(StringView)(node->classes, c-node->classes->data);
-            PopDiagnostic();
-            break;
-        }
-    }
+    node_remove_class(node, cls);
     return 0;
 }
+
+DNDC_API
+int
+dndc_node_has_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sv){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return 0;
+    return node_has_class(get_node(ctx, handle), sv);
+}
+
 
 DNDC_API
 DndcNodeHandle
@@ -3024,19 +3025,10 @@ dndc_node_remove_child(DndcContext* ctx, DndcNodeHandle parent_, size_t i){
     if(NodeHandle_eq(parent, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
     Node* node = get_node(ctx, parent);
-    if(i >= node->children_count)
+    if(i >= node_children_count(node))
         return DNDC_ERROR_VALUE;
-    node_remove_child(node, i, main_allocator(ctx));
+    node_remove_child(node, i);
     return 0;
-}
-
-DNDC_API
-int
-dndc_node_has_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sv){
-    NodeHandle handle = check_api_handle(ctx, dnh);
-    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
-        return 0;
-    return node_has_class(get_node(ctx, handle), sv);
 }
 
 DNDC_API
@@ -3058,7 +3050,7 @@ dndc_node_detach(DndcContext* ctx, DndcNodeHandle dnh){
     node->parent = INVALID_NODE_HANDLE;
     for(size_t i = 0; i < node_children_count(parent); i++){
         if(NodeHandle_eq(handle, node_children(parent)[i])){
-            node_remove_child(parent, i, main_allocator(ctx));
+            node_remove_child(parent, i);
             return;
         }
     }
@@ -3147,7 +3139,8 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
         {
             Node* newnode = get_node(ctx, newhandle);
             *newnode = *node;
-            newnode->children.count = 0;
+            newnode->children = NULL;
+            newnode->classes = NULL; // why didn't I do this before?
             if(newnode->type == NODE_IMPORT){
                 newnode->type = NODE_MD;
                 was_import = true;
@@ -3202,7 +3195,7 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
             node = get_node(ctx, handle);
             node->type = NODE_INVALID;
             node->parent = INVALID_NODE_HANDLE;
-            node->children.count = 0;
+            node->children = NULL;
         }
         Marray(NodeHandle*) handles = NULL;
         switch(newnode->type){

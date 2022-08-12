@@ -233,25 +233,6 @@ build_toc_block(DndcContext*);
   node_has_attribute(const Node* node, StringView attr);
 
   //
-  // node_has_class
-  // --------------
-  // Checks if the node has a class or not.
-  //
-  static inline
-  bool
-  node_has_class(const Node* node, StringView class);
-
-  //
-  // node_add_class
-  // --------------
-  // Adds a class to the node, removing duplicates.
-  //
-  static inline
-  warn_unused
-  int
-  node_add_class(DndcContext* ctx, NodeHandle handle, StringView cls);
-
-  //
   // node_get_attribute
   // ------------------
   // Retrieves the value associate with attr key.
@@ -272,6 +253,29 @@ build_toc_block(DndcContext*);
   warn_unused
   int
   node_set_attribute(Node* node, Allocator allocator, StringView attr, StringView value);
+
+  //
+  // node_has_class
+  // --------------
+  // Checks if the node has a class or not.
+  //
+  static inline
+  bool
+  node_has_class(const Node* node, StringView class);
+
+  //
+  // node_add_class
+  // --------------
+  // Adds a class to the node, removing duplicates.
+  //
+  static inline
+  warn_unused
+  int
+  node_add_class(DndcContext* ctx, NodeHandle handle, StringView cls);
+
+  static inline
+  void
+  node_remove_class(Node* node, StringView cls);
 
   //
   // node_get_id

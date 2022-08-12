@@ -75,6 +75,19 @@ node_add_class(DndcContext* ctx, NodeHandle handle, StringView cls){
     return 0;
 }
 
+static inline
+void
+node_remove_class(Node* node, StringView cls){
+    RARRAY_FOR_EACH(StringView, c, node->classes){
+        if(SV_equals(*c, cls)){
+            PushDiagnostic(); SuppressNullableConversion();
+            Rarray_remove(StringView)(node->classes, c-node->classes->data);
+            PopDiagnostic();
+            return;
+        }
+    }
+}
+
 
 
 // Don't call this function unless you really need what was explicitly set
@@ -135,15 +148,9 @@ node_clone(DndcContext* ctx, NodeHandle handle){
     dstnode->type = srcnode->type;
     dstnode->parent = INVALID_NODE_HANDLE;
     dstnode->header = srcnode->header;
-    if(node_children_count(srcnode) <= 4){
-        dstnode->children = srcnode->children;
-    }
-    else {
-        int err = Marray_extend(NodeHandle)(&dstnode->children, main_allocator(ctx), node_children(srcnode), node_children_count(srcnode));
-        if(unlikely(err))
-            return INVALID_NODE_HANDLE; // this is weird
-    }
-    int err = AttrTable_dup(srcnode->attributes, main_allocator(ctx), &dstnode->attributes);
+    int err = Rarray_clone(NodeHandle)(srcnode->children, main_allocator(ctx), &dstnode->children);
+    if(unlikely(err)) return INVALID_NODE_HANDLE;
+    err = AttrTable_dup(srcnode->attributes, main_allocator(ctx), &dstnode->attributes);
     if(unlikely(err)) return INVALID_NODE_HANDLE;
     RARRAY_FOR_EACH(StringView, cls, srcnode->classes){
         err = Rarray_push(StringView)(&dstnode->classes, main_allocator(ctx), *cls);
@@ -359,22 +366,7 @@ append_child(DndcContext* ctx, NodeHandle parent_handle, NodeHandle child_handle
     Node* parent = get_node(ctx, parent_handle);
     Node* child = get_node(ctx, child_handle);
     child->parent = parent_handle;
-    if(parent->children.count < 4){
-        parent->inline_children[parent->children.count++] = child_handle;
-        return 0;
-    }
-    if(parent->children.count == 4){
-        Marray(NodeHandle) children = {0};
-        int err = Marray_ensure_total(NodeHandle)(&children, main_allocator(ctx), 4);
-        // unhandled_error_condition(err);
-        if(unlikely(err))
-            return DNDC_ERROR_OOM;
-        memcpy(children.data, parent->inline_children, sizeof(parent->inline_children));
-        children.count = 4;
-        parent->children = children;
-    }
-    int err = Marray_push(NodeHandle)(&parent->children, main_allocator(ctx), child_handle);
-    // unhandled_error_condition(err);
+    int err = Rarray_push(NodeHandle)(&parent->children, main_allocator(ctx), child_handle);
     if(unlikely(err))
         return DNDC_ERROR_OOM;
     return 0;
@@ -483,17 +475,21 @@ inline
 void
 convert_node_to_container_containing_clone_of_former_self(DndcContext* ctx, NodeHandle handle){
     NodeHandle new_handle = alloc_handle(ctx);
+    unhandled_error_condition(NodeHandle_eq(new_handle, INVALID_NODE_HANDLE));
     Node* new_node = get_node(ctx, new_handle);
     Node* old_node = get_node(ctx, handle);
     assert(!node_children_count(old_node));
     memcpy(new_node, old_node, sizeof(*new_node));
     new_node->parent = handle;
-    old_node->children.count = 1;
-    old_node->inline_children[0] = new_handle;
+    old_node->children = NULL;
+    int err = Rarray_push(NodeHandle)(&old_node->children, main_allocator(ctx), new_handle);
+    unhandled_error_condition(err);
     old_node->header = SV("");
     old_node->type = NODE_CONTAINER;
     if(old_node->attributes)
-        old_node->attributes->count = 0;
+        old_node->attributes = NULL;
+    if(old_node->classes)
+        old_node->classes = NULL;
 }
 
 #ifdef __clang__

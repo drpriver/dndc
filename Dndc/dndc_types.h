@@ -127,6 +127,9 @@ NodeHandle_eq(NodeHandle a, NodeHandle b){
     return a._value == b._value;
 }
 
+#define RARRAY_T NodeHandle
+#include "Utils/Rarray.h"
+
 #define MARRAY_T NodeHandle
 #include "Utils/Marray.h"
 
@@ -190,13 +193,7 @@ struct Node{
     // For NODE_STRING, this is instead the contents of that node
     StringView header;            // 16 bytes
     // Handles to child nodes.
-    union {
-        Marray(NodeHandle) children;   // 24 bytes
-        struct {
-            size_t children_count;
-            NodeHandle inline_children[4];
-        };
-    };
+    Rarray(NodeHandle)*_Nullable children; // 8 bytes
     AttrTable*_Nullable attributes; // 8 bytes
     Rarray(StringView)*_Nullable classes;    // 8 bytes
     // Source filename (used for reporting errors)
@@ -209,11 +206,11 @@ struct Node{
 };
 
 #if UINTPTR_MAX != 0xFFFFFFFF
-_Static_assert(sizeof(Node) == 10*sizeof(size_t), "");
+_Static_assert(sizeof(Node) == 8*sizeof(size_t), "");
 // Damn these are fat.
 // As a huge number of nodes are string nodes, we need a different scheme
 // for storing children attributes and classes.
-_Static_assert(sizeof(Node) == 80, "");
+_Static_assert(sizeof(Node) == 64, "");
 #endif
 
 #define MARRAY_T Node
@@ -225,48 +222,31 @@ _Static_assert(sizeof(Node) == 80, "");
 
 static inline
 force_inline
-NodeHandle*
+NodeHandle*_Nullable
 node_children(Node* node){
-    if(node->children.count > 4)
-        return node->children.data;
-    return node->inline_children;
+    if(node->children)
+        return node->children->data;
+    else
+        return NULL;
 }
 static inline
 force_inline
 size_t
 node_children_count(Node* node){
-    return node->children.count;
+    return node->children?node->children->count:0;
 }
 
 static inline
 force_inline
 void
-node_remove_child(Node* node, size_t i, const Allocator a){
-    assert(i < node->children.count);
-    if(node->children.count > 4){
-        Marray_remove__NodeHandle(&node->children, i);
-        if(node->children.count <= 4){
-            NodeHandle children[4];
-            memcpy(children, node->children.data, sizeof(children));
-            Allocator_free(a, node->children.data, node->children.capacity*sizeof(NodeHandle));
-            memcpy(node->inline_children, children, sizeof(children));
-        }
-    }
-    else {
-        node->children.count--;
-        // early out for last one.
-        if(i == node->children.count)
-            return;
-        // Need to preserve order of children.
-        size_t n_moved = node->children.count - i;
-        size_t size_moved = sizeof(node->inline_children[0]) * n_moved;
-        NodeHandle* hole = &node->inline_children[i];
-        memmove(hole, hole+1, size_moved);
-    }
+node_remove_child(Node* node, size_t i){
+    if(!node->children) return;
+    if(i >= node->children->count) return;
+    Rarray_remove(NodeHandle)(node->children, i);
 }
 
 
-#define NODE_CHILDREN_FOR_EACH(iter, n) for(NodeHandle *iter = node_children(n), *iter##end__=node_children(n)+node_children_count(n);iter != iter##end__;++iter)
+#define NODE_CHILDREN_FOR_EACH(iter, n) RARRAY_FOR_EACH(NodeHandle, iter, (n)->children)
 
 typedef struct DndcContext DndcContext;
 struct DndcContext {
