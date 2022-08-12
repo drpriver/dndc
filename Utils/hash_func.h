@@ -52,7 +52,7 @@ struct __attribute__((packed)) packed_uint16 {
 
 
 
-#ifdef __ARM_ACLE
+#if defined(__ARM_ACLE) && __ARM_FEATURE_CRC32
 #include <arm_acle.h>
 
 #ifdef __clang__
