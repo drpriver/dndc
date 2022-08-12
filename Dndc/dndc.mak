@@ -107,7 +107,7 @@ TestDndcAst: $(TESTDIR)/TestDndcAst_debug $(TESTDIR)/TestDndcAst_fast
 .PHONY: TestDndcAst
 
 $(BINDIR)/pydndc$(PYEXTENSION): Dndc/pydndc.c $(VENDOBJDIR)/libquickjs.o
-	$(CC) $(FLAGS) $(PLATFORM_FLAGS) $(PYCFLAGS) -O3 -g $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@  $(VENDOBJDIR)/libquickjs.o $(PYLDFLAGS) $(LINK_FLAGS)
+	$(CC) $(FLAGS) $(PYCFLAGS) -O3 -g $(DEPFLAGS) $(DEPDIR)/pydndc.dep $(PYEXTFLAGS) $< -o $@  $(VENDOBJDIR)/libquickjs.o $(PYLDFLAGS) $(LINK_FLAGS)
 .PHONY: pydndc
 pydndc: pydndc/pydndc$(PYEXTENSION) $(BINDIR)/pydndc$(PYEXTENSION) Dndc/jsdoc.dnd
 
