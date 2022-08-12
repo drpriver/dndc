@@ -51,6 +51,24 @@ dndedit-wheel: civenv dndeditfolder
 	$(RM) -rf dndeditfolder
 endif
 
+ifeq ($(UNAME),Rpi)
+civenv:
+	$(PYTHON) -m venv civenv
+	. civenv/bin/activate && python3 -m pip install wheel && python3 -m pip install auditwheel
+
+wheels: civenv
+	$(RM) -rf dist build
+	$(RM) -f wheelhouse/*.whl
+	. civenv/bin/activate && python3 -m pip wheel . -w wheelhouse
+	# . civenv/bin/activate && auditwheel repair wheelhouse/*.whl -w wheelhouse
+
+
+dndedit-wheel: civenv dndeditfolder
+	. civenv/bin/activate && python3 -m pip install build && cd dndeditfolder && python3 -m build --wheel
+	$(CP) dndeditfolder/dist/PyDndEdit-*-py3-none-any.whl wheelhouse
+	$(RM) -rf dndeditfolder
+endif
+
 ifeq ($(UNAME),Windows)
 civenv:
 	$(PYTHON) -m venv civenv
@@ -75,3 +93,5 @@ pypi-upload: archive-wheels
 archive-wheels: | ArchivedWheels
 	$(CP) wheelhouse/*.whl ArchivedWheels
 ArchivedWheels: ; $(MKDIR) -p $@
+
+include $(wildcard gather.mak)
