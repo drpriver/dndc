@@ -19,10 +19,7 @@ endif
 PYLDFLAGS:=-undefined dynamic_lookup
 PYEXTENSION=$(shell python3-config --extension-suffix)
 PYEXTFLAGS=-bundle $(ARCHES)
-# I get codegen bugs in MStringBuilder with this flag
-# It isn't able to properly track the size of buffers
-PLATFORM_FLAGS=-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
-#PLATFORM_FLAGS=-U_FORTIFY_SOURCE
+PLATFORM_FLAGS=
 DEBUG_FLAGS=-DLOG_LEVEL=4\
 	 -DDEBUG\
 	 -fsanitize=nullability\
