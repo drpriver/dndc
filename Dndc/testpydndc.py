@@ -594,7 +594,7 @@ class Tee:
     """
     def __init__(self, *fps):
         self.fps = fps
-    def write(self, text:str, /) -> int:
+    def write(self, text:str) -> int:
         for fp in self.fps:
             result = fp.write(text)
         return result

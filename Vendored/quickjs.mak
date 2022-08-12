@@ -2,7 +2,7 @@ ifeq ($(UNAME), Windows)
 	QUICKJS_CEXTRA=-mrdseed
 	QUICKJS_LDEXTRA=
 else ifeq ($(UNAME), Rpi)
-	QUICKJS_CEXTRA=
+	QUICKJS_CEXTRA=-fPIC
 	QUICKJS_LDEXTRA=-lm -lpthread -fPIC
 else ifeq ($(UNAME), Linux)
 	QUICKJS_CEXTRA=-fPIC

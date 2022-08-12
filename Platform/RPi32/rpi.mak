@@ -9,6 +9,7 @@ DEBUG_FLAGS=-DDEBUG\
 	 -DLOG_LEVEL=4\
 	 -fsanitize=undefined\
 	 -fsanitize=address\
+	 -static-libasan\
 	 -O0\
 	 -g
 DEV_FLAGS=-DLOG_LEVEL=4\
