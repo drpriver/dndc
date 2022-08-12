@@ -430,7 +430,7 @@ AttrTable_get(AttrTable*_Nullable table, StringView key, StringView* value){
     if(!key.length) return 1;
     if(!table) return 1;
     if(unlikely(table->capacity > ATTRIBUTE_THRESH)){
-        return AttrTable_get_hash(table, key, value);
+        return AttrTable_get_hash((AttrTable*)table, key, value);
     }
     Attribute* items = (Attribute*)table->buff;
     size_t count = table->count;
@@ -476,7 +476,7 @@ AttrTable_has(AttrTable*_Nullable table, StringView key){
     if(unlikely(!key.length)) return 0;
     if(!table) return 0;
     if(unlikely(table->capacity > ATTRIBUTE_THRESH)){
-        return AttrTable_has_hash(table, key);
+        return AttrTable_has_hash((AttrTable*)table, key);
     }
     Attribute* items = (Attribute*)table->buff;
     size_t count = table->count;
@@ -523,7 +523,7 @@ AttrTable_del(AttrTable*_Nullable table, StringView key){
     if(!key.length) return 0;
     if(!table) return 0;
     if(unlikely(table->capacity > ATTRIBUTE_THRESH)){
-        return AttrTable_del_hash(table, key);
+        return AttrTable_del_hash((AttrTable*)table, key);
     }
     Attribute* items = (Attribute*)table->buff;
     if(!table->count) return 0;
@@ -552,7 +552,7 @@ AttrTable_dup(AttrTable*_Nullable table, Allocator a, AttrTable*_Nullable*_Nonnu
         *outtable = NULL;
         return 0;
     }
-    AttrTable* copy = Allocator_dupe(a, table, AttrTable_alloc_size(table));
+    AttrTable* copy = Allocator_dupe(a, (AttrTable*)table, AttrTable_alloc_size(table));
     if(!copy) return 1;
     *outtable = copy;
     return 0;

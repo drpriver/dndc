@@ -146,7 +146,7 @@ node_clone(DndcContext* ctx, NodeHandle handle){
     int err = AttrTable_dup(srcnode->attributes, main_allocator(ctx), &dstnode->attributes);
     if(unlikely(err)) return INVALID_NODE_HANDLE;
     RARRAY_FOR_EACH(StringView, cls, srcnode->classes){
-        int err = Rarray_push(StringView)(&dstnode->classes, main_allocator(ctx), *cls);
+        err = Rarray_push(StringView)(&dstnode->classes, main_allocator(ctx), *cls);
         if(unlikely(err)) return INVALID_NODE_HANDLE; // this is weird
     }
     dstnode->filename_idx = srcnode->filename_idx;
