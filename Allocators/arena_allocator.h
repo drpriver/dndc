@@ -73,6 +73,10 @@ struct BigAllocation {
         BigListNode node;
     };
     size_t size;
+    // Padding to align to a cache line.
+    // These are the header of a pretty big allocation anyway, so
+    // it's not actually that much waste.
+    uintptr_t pad[5];
 };
 
 static inline
