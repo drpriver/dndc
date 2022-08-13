@@ -4,7 +4,7 @@ PYTHON:=python3
 PYCFLAGS?=$(shell pkg-config --cflags python3)
 PYLDFLAGS?=$(shell pkg-config --libs python3)
 
-PLATFORM_FLAGS=-march=native
+PLATFORM_FLAGS=-march=native -fPIC
 DEBUG_FLAGS=-DDEBUG\
 	 -DLOG_LEVEL=4\
 	 -fsanitize=undefined\
@@ -31,3 +31,5 @@ SOLIB=.so
 INSTALL=install
 PYEXTENSION=.so
 PYEXTFLAGS=-shared -fPIC
+$(BINDIR)/libdndc.$(DNDCVERSION).so: $(OBJDIR)/dndc.o $(VENDOBJDIR)/libquickjs.o
+	$(CC) $^ -o $@ -Wl,-undefined,error -shared -g
