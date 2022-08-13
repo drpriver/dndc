@@ -2,6 +2,14 @@
 #define DEBUGGING_H
 
 #ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
+#ifdef __clang__
 #pragma clang assume_nonnull begin
 #else
 #ifndef _Nonnull
@@ -14,10 +22,10 @@
 #if !defined(__clang__)
 #define dbg_noinline __attribute__((__noinline__))
 #else
-#define dbg_noinline inline __attribute__((__noinline__))
+#define dbg_noinline __attribute__((__noinline__))
 #endif
 #else
-#define dbg_noinline inline
+#define dbg_noinline
 #endif
 #endif
 
@@ -237,6 +245,12 @@ dump_bt(BacktraceArray* bta){
 
 #ifdef __clang__
 #pragma clang assume_nonnull end
+#endif
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
 #endif
 
 #endif
