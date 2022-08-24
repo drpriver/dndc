@@ -1758,6 +1758,10 @@ fail:
     DndFontDelegate* fontdel;
     NSWindow* licenses_window;
 }
+- (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)app{
+    (void)app;
+    return YES;
+}
 -(void)applicationWillFinishLaunching:(NSNotification *)notification{
     do_syntax_colors();
     do_menus();
