@@ -242,7 +242,10 @@ void
 node_remove_child(Node* node, size_t i){
     if(!node->children) return;
     if(i >= node->children->count) return;
+    PushDiagnostic();
+    SuppressNullableConversion();
     Rarray_remove(NodeHandle)(node->children, i);
+    PopDiagnostic();
 }
 
 
