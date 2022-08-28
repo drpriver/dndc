@@ -395,6 +395,7 @@ asm(".global __app_icon\n"
             break;
         case DNDC_STATISTIC_MESSAGE:
             type_str = @"INFO ";
+            // systemCyanColor is macos 12.0+
             if([nc respondsToSelector:@selector(systemCyanColor)])
                 color = [nc performSelector:@selector(systemCyanColor)];
             else
@@ -402,10 +403,7 @@ asm(".global __app_icon\n"
             break;
         case DNDC_DEBUG_MESSAGE:
             type_str = @"DEBUG";
-            if([nc respondsToSelector:@selector(systemMintColor)])
-                color = [nc performSelector:@selector(systemMintColor)];
-            else
-                color = [NSColor systemIndigoColor];
+            color = [NSColor systemMintColor];
             break;
     }
     NSMutableAttributedString* m = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"[%@]", type_str]];
@@ -418,6 +416,7 @@ asm(".global __app_icon\n"
         [m appendAttributedString:fn];
     }
     [m appendAttributedString: [[NSAttributedString alloc] initWithString:[NSString stringWithFormat:@": %@\n", message]]];
+    // localizedAttributedStringWithFormat is macos12+
     // NSMutableAttributedString* m = [NSMutableAttributedString localizedAttributedStringWithFormat:[[NSAttributedString alloc] initWithString:@"[%@] %@: %@\n"], type_str, filename, message];
     // [m addAttribute:NSForegroundColorAttributeName value:color range: NSMakeRange(1, 5)];
     [m addAttribute:NSFontAttributeName value: [NSFont fontWithName:@"SF Mono" size:14] range:NSMakeRange(0, [m length])];
