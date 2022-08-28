@@ -28,6 +28,7 @@ def main() -> None:
     parser.add_argument('--format', action='store_true', help='Instead of rendering to html, render to .dnd with trailing spaces removed, text wrapped to 80 columns, etc. Scripts and imports are not resolved.')
     parser.add_argument('--expand', action='store_true', help='Render to .dnd, after scripts and imports are resolved. Some documents may not be representable in this way. This does not format the output.')
     parser.add_argument('--md', '--markdown', action='store_true', help='Render to markdown instead of html.')
+    parser.add_argument('--allow-js-write', action='store_true')
 
     args = parser.parse_args()
     run(**vars(args))
@@ -53,6 +54,7 @@ def run(
         print_stats:bool, 
         suppress_warnings:bool, 
         strip_spaces:bool,
+        allow_js_write:bool=False,
     ) -> None:
     jsstuff: Any
     if jsargs is not None:
@@ -81,6 +83,8 @@ def run(
         flags |= pydndc.Flags.SUPPRESS_WARNINGS
     if strip_spaces:
         flags |= pydndc.Flags.STRIP_WHITESPACE
+    if allow_js_write:
+        flags |= pydndc.Flags.ENABLE_JS_WRITE
 
     with open(source, 'r') as fp:
         source_text = fp.read()

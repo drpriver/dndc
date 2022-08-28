@@ -412,6 +412,8 @@ PyMethodDef pydndc_methods[] = {
         "                        in separate namespaces, but that can be confusing.\n"
         "                        Set this flag to disallow that.\n"
         "\n"
+        "    ENABLE_JS_WRITE:     Allow javascript to write to the filesystem.\n"
+        "\n"
         "jsargs: dict, list or str\n"
         "    A dict or json literal that will be exposed to js blocks as Args.\n"
         "\n"
@@ -902,6 +904,7 @@ PyInit_pydndc(void){
     ADDFLAGCONSTANT(PRINT_STATS);
     ADDFLAGCONSTANT(DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP);
     ADDFLAGCONSTANT(NO_CSS);
+    ADDFLAGCONSTANT(ENABLE_JS_WRITE);
     {
         PyObject* v = PyLong_FromLong(0);
         if(!v) goto fail;

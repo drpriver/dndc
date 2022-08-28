@@ -58,6 +58,7 @@ class Flags(IntFlag):
     PRINT_STATS: int
     DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP: int
     NO_CSS: int
+    ENABLE_JS_WRITE: int
 
 class SyntaxRegion(NamedTuple):
     type: SynType
