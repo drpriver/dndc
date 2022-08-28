@@ -146,6 +146,8 @@ dndc.docset: $(docsetfiles)
 
 README.md: README.dnd | $(BINDIR)/dndc$(EXE)
 	$(BINDIR)/dndc$(EXE) $< -o $@ --md --no-css
+Documentation/OVERVIEW.md: Documentation/OVERVIEW.dnd | $(BINDIR)/dndc$(EXE)
+	$(BINDIR)/dndc$(EXE) $< -o $@ --md --no-css
 
 .PHONY: coverage
 coverage:

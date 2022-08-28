@@ -21,7 +21,7 @@ civenv:
 	. civenv/bin/activate && python -m pip install cibuildwheel && python -m pip install twine
 
 # macos you need to build multiple times
-wheels: civenv
+wheels: civenv Documentation/OVERVIEW.md
 	$(RM) -rf dist build
 	$(RM) -f wheelhouse/*.whl
 	. civenv/bin/activate && CIBW_SKIP='{pp*,cp36*,cp37*}' cibuildwheel --platform macos --archs x86_64 .
@@ -40,7 +40,7 @@ civenv:
 	$(PYTHON) -m venv civenv
 	. civenv/bin/activate && python -m pip install cibuildwheel && python -m pip install twine
 
-wheels: civenv
+wheels: civenv Documentation/OVERVIEW.md
 	$(RM) -rf dist build
 	$(RM) -f wheelhouse/*.whl
 	. civenv/bin/activate && CIBW_SKIP='{pp*,*musl*}' cibuildwheel --platform linux --archs x86_64 .
@@ -56,7 +56,7 @@ civenv:
 	$(PYTHON) -m venv civenv
 	. civenv/bin/activate && python3 -m pip install wheel && python3 -m pip install auditwheel
 
-wheels: civenv
+wheels: civenv Documentation/OVERVIEW.md
 	$(RM) -rf dist build
 	$(RM) -f wheelhouse/*.whl
 	. civenv/bin/activate && python3 -m pip wheel . -w wheelhouse
@@ -74,7 +74,7 @@ civenv:
 	$(PYTHON) -m venv civenv
 	civenv\Scripts\activate && py -m pip install cibuildwheel && py -m pip install twine
 
-wheels: civenv
+wheels: civenv Documentation/OVERVIEW.md
 	$(RM) -rf dist build
 	civenv\Scripts\activate && cmd /V /C "SET CIBW_SKIP={pp*,cp36*,cp37*} && cibuildwheel --platform windows --archs AMD64 ."
 

@@ -21,30 +21,25 @@ extension = Extension(
     include_dirs=['.'],
     define_macros=[('BUILDING_PYTHON_EXTENSION', '1')]
 )
+with open('Documentation/OVERVIEW.md', encoding='utf-8') as fp:
+    LONG_DESCRIPTION = fp.read()
 
 setup(
     name='pydndc',
     version='0.28.0',
     license='Proprietary',
     description='dndc, but from python',
-    # url='https://github.com/pypa/sampleproject',
+    long_description=LONG_DESCRIPTION,
+    long_description_content_type='text/markdown',
+    # url='',
     author='David Priver',
     author_email='david@davidpriver.com',
     classifiers=[
-        # How mature is this project? Common values are
-        #   3 - Alpha
-        #   4 - Beta
-        #   5 - Production/Stable
+        # 3 - Alpha
+        # 4 - Beta
+        # 5 - Production/Stable
         'Development Status :: 4 - Beta',
-        # Indicate who your project is intended for
-        # 'Intended Audience :: Developers',
-        # 'Topic :: Software Development :: Build Tools',
-        # Pick your license as you wish
         'License :: Other/Proprietary License',
-        # 'License :: OSI Approved :: MIT License',
-        # Specify the Python versions you support here. In particular, ensure
-        # that you indicate you support Python 3. These classifiers are *not*
-        # checked by 'pip install'. See instead 'python_requires' below.
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
@@ -53,18 +48,6 @@ setup(
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3 :: Only',
     ],
-    # When your source code is in a subdirectory under the project root, e.g.
-    # `src/`, it is necessary to specify the `package_dir` argument.
-    # package_dir={'': '..'},  # Optional
-    # You can just specify package directories manually here if your project is
-    # simple. Or you can use find_packages().
-    #
-    # Alternatively, if you just want to distribute a single Python file, use
-    # the `py_modules` argument instead as follows, which will expect a file
-    # called `my_module.py` to exist:
-    #
-    #   py_modules=['my_module'],
-    #
     packages=['pydndc'],  # Required
     ext_modules = [extension],
     python_requires='>=3.6, <4',
