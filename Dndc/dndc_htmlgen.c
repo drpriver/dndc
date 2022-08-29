@@ -696,7 +696,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
     size_t cursor = sb->cursor;
     unsigned char* sbdata = (unsigned char*)sb->data + cursor;
     uint8x16_t lsquare = vdupq_n_u8('[');
-    uint8x16_t hyphen = vdupq_n_u8('-');
+    uint8x16_t hyphen  = vdupq_n_u8('-');
     uint8x16_t langle  = vdupq_n_u8('<');
     uint8x16_t rangle  = vdupq_n_u8('>');
     uint8x16_t amp     = vdupq_n_u8('&');
@@ -716,9 +716,10 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
         uint8x16_t Ored3 = vorrq_u8(test_amp, test_control);
         uint8x16_t Ored4 = vorrq_u8(Ored, Ored2);
         uint8x16_t Ored5 = vorrq_u8(Ored3, Ored4);
-        uint64x2_t had_it = vreinterpretq_u64_u8(Ored5);
+        uint8x8_t shifted = vshrn_n_u16(vreinterpretq_u16_u8(Ored5), 4);
+        uint64x1_t had_it = vreinterpret_u64_u8(shifted);
 
-        if(vgetq_lane_u64(had_it, 0) | vgetq_lane_u64(had_it, 1)){
+        if(vget_lane_u64(had_it, 0)){
             #if 0
             fprintf(stdout, "'%.*s'\n", 16, text);
             print_u8x16("data", data);

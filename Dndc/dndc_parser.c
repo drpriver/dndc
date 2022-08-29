@@ -85,10 +85,10 @@ parse_log_err_q(DndcContext* ctx, const char*_Null_unspecified errchar, StringVi
 }
 
 #if 1 &&!defined(NO_SIMD) && defined(__ARM_NEON)
+
+// leaving this as reference, it is inefficient compared to the shrn trick
+#if 0
 // Copied from https://stackoverflow.com/a/68694558
-// Is there a better way to do this?
-// It's pretty simple.
-// So annoying that there is no movemask for arm!
 static inline
 uint32_t
 _mm_movemask_aarch64(uint8x16_t input){
@@ -104,6 +104,20 @@ _mm_movemask_aarch64(uint8x16_t input){
     out += vaddv_u8(vget_high_u8(vmask)) << 8;
 
     return out;
+}
+#endif
+
+//  shrn trick from
+//  https://community.arm.com/arm-community-blogs/b/infrastructure-solutions-blog/posts/porting-x86-vector-bitmask-optimizations-to-arm-neon
+// Allows you to achieve a similar effect to _mm_movemask, but you get 4 bits set instead of 1 per 8 bit lane (thus it's a fat mask).
+// Usually need to divide by 4 when you count bits or whatever.
+static inline
+force_inline
+uint64_t
+vector128_to_fatmask(uint8x16_t input){
+    uint8x8_t shifted = vshrn_n_u16(vreinterpretq_u16_u8(input), 4);
+    uint64_t fatmask = vget_lane_u64(vreinterpret_u64_u8(shifted), 0);
+    return fatmask;
 }
 #endif
 
@@ -151,9 +165,8 @@ analyze_line(DndcContext* ctx){
         uint8x16_t test_tabs  = vceqq_u8(data, tabs);
         uint8x16_t spacecr    = vorrq_u8(test_space, test_cr);
         uint8x16_t whitespace = vorrq_u8(spacecr, test_tabs);
-        // uint64x2_t had_it     = vreinterpretq_u64_u8(whitespace);
-        unsigned mask = _mm_movemask_aarch64(whitespace);
-        int n = ctz_32(~mask);
+        uint64_t fatmask = vector128_to_fatmask(whitespace);
+        int n = ctz_64(~fatmask)/4;
         nspace += n;
         if(n != 16){
             cursor += n;
@@ -244,19 +257,19 @@ analyze_line(DndcContext* ctx){
         uint8x16_t testnl = vceqq_u8(data0, newline);
         uint8x16_t testzed = vceqq_u8(data0, zed);
         uint8x16_t testend = vorrq_u8(testnl, testzed);
-        unsigned colon0 = _mm_movemask_aarch64(testcolon0);
-        unsigned colon1 = _mm_movemask_aarch64(testcolon1);
-        unsigned end    = _mm_movemask_aarch64(testend);
+        uint64_t colon0 = vector128_to_fatmask(testcolon0);
+        uint64_t colon1 = vector128_to_fatmask(testcolon1);
+        uint64_t end    = vector128_to_fatmask(testend);
         if(end){
-            unsigned endoff = ctz_32(end);
+            unsigned endoff = ctz_64(end)/4;
             unsigned colonoff = -1;
             if(colon0){
-                unsigned off = ctz_32(colon0);
+                unsigned off = ctz_64(colon0)/4;
                 if(off < endoff && off < colonoff)
                     colonoff = off;
             }
             if(colon1){
-                unsigned off = ctz_32(colon1)+1;
+                unsigned off = ctz_64(colon1)/4+1;
                 if(off < endoff && off < colonoff)
                     colonoff = off;
             }
@@ -269,11 +282,11 @@ analyze_line(DndcContext* ctx){
         if(colon0 || colon1){
             unsigned colonoff = -1;
             if(colon0){
-                unsigned off = ctz_32(colon0);
+                unsigned off = ctz_64(colon0)/4;
                 colonoff = off;
             }
             if(colon1){
-                unsigned off = ctz_32(colon1)+1;
+                unsigned off = ctz_64(colon1)/4+1;
                 if(off < colonoff)
                     colonoff = off;
             }
@@ -328,9 +341,9 @@ analyze_line(DndcContext* ctx){
         uint8x16_t testnl  = vceqq_u8(data, newline);
         uint8x16_t testzed = vceqq_u8(data, zed);
         uint8x16_t testend = vorrq_u8(testnl, testzed);
-        unsigned end       = _mm_movemask_aarch64(testend);
+        uint64_t end       = vector128_to_fatmask(testend);
         if(end){
-            unsigned endoff = ctz_32(end);
+            unsigned endoff = ctz_64(end)/4;
             endline = cursor + endoff;
             goto Lfinish;
         }
