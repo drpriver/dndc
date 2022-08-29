@@ -2,7 +2,7 @@
 # Copyright © 2021-2022, David Priver
 #
 import sys
-pydndcver = '0.28.0'
+pydndcver = '0.28.1'
 def win_install_deps() -> bool:
     import sys
     assert sys.platform == 'win32'

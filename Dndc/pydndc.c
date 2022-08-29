@@ -1162,6 +1162,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_NO_CSS
+        | DNDC_ENABLE_JS_WRITE
     };
     const char* const keywords[] = {"text", "base_dir", "filename", "logger", "file_cache", "flags", "jsargs", NULL};
     PushDiagnostic();
@@ -1676,6 +1677,7 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
         | DNDC_PRINT_STATS
         | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
         | DNDC_NO_CSS
+        | DNDC_ENABLE_JS_WRITE
     };
     // Allow sloppy flags.
     fl &= WHITELIST;
