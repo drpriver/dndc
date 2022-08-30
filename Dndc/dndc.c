@@ -2145,6 +2145,13 @@ dndc_ctx_set_logger(DndcContext*ctx, DndcLogFunc*_Nullable func, void*_Nullable 
     ctx->log_user_data = data;
 }
 
+DNDC_API
+unsigned long long
+dndc_ctx_get_flags(DndcContext* ctx){
+    if(!ctx) return 0;
+    return ctx->flags;
+}
+
 
 DNDC_API
 void

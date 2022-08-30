@@ -153,6 +153,7 @@ class Context:
     base_dir: str
     logger: Optional[Logger]
     dependencies: Set[str]
+    flags: Flags
 
     def node_from_int(self, handle:int) -> Node:
         ...

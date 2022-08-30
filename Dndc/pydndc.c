@@ -83,6 +83,22 @@ pystring_borrow_longstring(PyObject* pyobj){
 }
 PopDiagnostic(); // unused function
 
+enum {CONTEXTPY_WHITELIST = 0
+    | DNDC_INPUT_IS_UNTRUSTED
+    | DNDC_FRAGMENT_ONLY
+    | DNDC_DONT_INLINE_IMAGES
+    | DNDC_NO_THREADS
+    | DNDC_USE_DND_URL_SCHEME
+    | DNDC_STRIP_WHITESPACE
+    | DNDC_DONT_READ
+    | DNDC_DONT_IMPORT
+    | DNDC_NO_COMPILETIME_JS
+    | DNDC_PRINT_STATS
+    | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+    | DNDC_NO_CSS
+    | DNDC_ENABLE_JS_WRITE
+};
+
 //
 // Wrappers a python callable so that it can be called as a DndcLogger
 // user_data is actually a pointer to the  PyObject*, so it needs to be a static PyObject*
@@ -740,6 +756,7 @@ doc_member(PyObject* obj, const char* member, const char* text){
 static PyTypeObject DndcContextPyType, DndcNodePyType, DndcAttributesPyType, DndcClassesPyType;
 
 static PyObject* node_type_enum;
+static PyObject* pydndc_mod;
 
 PyMODINIT_FUNC _Nullable
 PyInit_pydndc(void){
@@ -964,6 +981,7 @@ PyInit_pydndc(void){
       "However, to allow for future changes we do not error on that. Set this\n"
       "flag to turn that into an error so you can migrate your collisions.");
     DOCFLAG(NO_CSS, "Don't include css or style tags in output");
+    DOCFLAG(ENABLE_JS_WRITE, "Allow JavaScript to write files.");
     #undef DOCFLAG
     if(PyModule_AddObjectRef(mod, "Flags", flagenum) < 0)
         goto fail;
@@ -1053,6 +1071,8 @@ PyInit_pydndc(void){
     Py_XDECREF(kwargs);
     Py_XDECREF(name);
     Py_XDECREF(modname);
+    pydndc_mod = mod;
+    if(mod) Py_INCREF(mod);
     return mod;
 }
 
@@ -1664,23 +1684,8 @@ DndcContextPy_new(PyTypeObject* type, PyObject* args, PyObject* kwargs){
     DndcContextPy* self = (DndcContextPy*)type->tp_alloc(type, 0);
     if(!self) return NULL;
     unsigned long long fl = flags?PyLong_AsUnsignedLongLong(flags):0;
-    enum {WHITELIST = 0
-        | DNDC_INPUT_IS_UNTRUSTED
-        | DNDC_FRAGMENT_ONLY
-        | DNDC_DONT_INLINE_IMAGES
-        | DNDC_NO_THREADS
-        | DNDC_USE_DND_URL_SCHEME
-        | DNDC_STRIP_WHITESPACE
-        | DNDC_DONT_READ
-        | DNDC_DONT_IMPORT
-        | DNDC_NO_COMPILETIME_JS
-        | DNDC_PRINT_STATS
-        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
-        | DNDC_NO_CSS
-        | DNDC_ENABLE_JS_WRITE
-    };
     // Allow sloppy flags.
-    fl &= WHITELIST;
+    fl &= CONTEXTPY_WHITELIST;
     PushDiagnostic();
     SuppressNullableConversion();
     self->ctx = dndc_create_ctx(fl | DNDC_ALLOW_BAD_LINKS, cache?cache->b64_cache:NULL, cache?cache->text_cache:NULL);
@@ -2386,11 +2391,29 @@ DndcContextPy_get_dependencies(PyObject* s, void*_Nullable p){
     return NULL;
 }
 
+static
+PyObject*_Nullable
+DndcContextPy_get_flags(PyObject* s, void*_Nullable p){
+    (void)p;
+    DndcContextPy* self = (DndcContextPy*)s;
+    unsigned long long flags = dndc_ctx_get_flags(self->ctx);
+    flags &= CONTEXTPY_WHITELIST;
+    PyObject* Flags = PyObject_GetAttrString(pydndc_mod, "Flags"); // new ref
+    if(!Flags) return NULL;
+    PyObject* arg = PyLong_FromUnsignedLongLong(flags);
+    PyObject* result = NULL;
+    if(arg) result = PyObject_CallOneArg(Flags, arg);
+    Py_XDECREF(Flags);
+    Py_XDECREF(arg);
+    return result;
+}
+
 
 static PyGetSetDef DndcContextPy_getset[] = {
     {"root", DndcContextPy_get_root, DndcContextPy_set_root, "The root node of the tree (may be None).", NULL},
     {"base_dir", DndcContextPy_get_base, DndcContextPy_set_base, "Files are imported relative to this path (may be empty string which means .)", NULL},
     {"dependencies", DndcContextPy_get_dependencies, NULL, "Files that this context depends on (either by loading the file or by explicitly marking them). Use this to populate Make-style dependency files, etc.", NULL},
+    {"flags", DndcContextPy_get_flags, NULL, "The flags that were intially passed into the Context"},
     {0} // Sentinel
 };
 

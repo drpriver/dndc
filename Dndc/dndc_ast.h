@@ -85,6 +85,10 @@ dndc_create_ctx(unsigned long long flags, DNDC_NULLABLE(DndcFileCache*) base64ca
 // A valid context on success, NULL on failure.
 
 DNDC_API
+unsigned long long
+dndc_ctx_get_flags(DndcContext*);
+
+DNDC_API
 void
 dndc_ctx_set_logger(DndcContext*, DNDC_NULLABLE(DndcLogFunc*), DNDC_NULLABLE(void*));
 // ------------------
