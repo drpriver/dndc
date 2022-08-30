@@ -2413,7 +2413,7 @@ static PyGetSetDef DndcContextPy_getset[] = {
     {"root", DndcContextPy_get_root, DndcContextPy_set_root, "The root node of the tree (may be None).", NULL},
     {"base_dir", DndcContextPy_get_base, DndcContextPy_set_base, "Files are imported relative to this path (may be empty string which means .)", NULL},
     {"dependencies", DndcContextPy_get_dependencies, NULL, "Files that this context depends on (either by loading the file or by explicitly marking them). Use this to populate Make-style dependency files, etc.", NULL},
-    {"flags", DndcContextPy_get_flags, NULL, "The flags that were intially passed into the Context"},
+    {"flags", DndcContextPy_get_flags, NULL, "The flags that were intially passed into the Context", NULL},
     {0} // Sentinel
 };
 
