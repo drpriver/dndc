@@ -253,9 +253,9 @@ ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath){
 }
 
 static inline
-const StringView*_Nullable
-find_link_target(DndcContext* ctx, StringView kebabed){
-    return string_table_get(&ctx->links, kebabed);
+int
+find_link_target(DndcContext* ctx, StringView kebabed, StringView* value){
+    return AttrTable_get(ctx->links, kebabed, value);
 }
 
 static inline
@@ -285,16 +285,19 @@ add_link_from_sv(DndcContext* ctx, Node* node){
             NODE_LOG_ERROR(ctx, node, LS("link target is empty after the '#'"));
             return DNDC_ERROR_PARSE;
         }
-        const StringView* values = ctx->links.keys + ctx->links.capacity_;
-        for(size_t i = 0; i < ctx->links.capacity_; i++){
-            if(SV_equals(values[i], value))
-                goto foundit;
+        if(ctx->links){
+            Attribute* items = AttrTable_items(ctx->links);
+            for(size_t i = 0; i < ctx->links->count; i++){
+                StringView v = items[i].value;
+                if(SV_equals(v, value))
+                    goto foundit;
+            }
         }
         NODE_LOG_ERROR(ctx, node, LS("Anchor does not correspond to any link"));
         return DNDC_ERROR_LINK;
         foundit:;
     }
-    int err = string_table_set(&ctx->links, key, value);
+    int err = AttrTable_set(&ctx->links, main_allocator(ctx), key, value);
     if(unlikely(err)) return DNDC_ERROR_OOM;
     return 0;
 }
@@ -315,7 +318,7 @@ add_link_from_header(DndcContext* ctx, StringView str){
         return 1;
     LongString anchor = msb_detach_ls(&sb);
     StringView kebabed = {.text = anchor.text+1, .length=anchor.length-1};
-    int err = string_table_set(&ctx->links, kebabed, LS_to_SV(anchor));
+    int err = AttrTable_set(&ctx->links, main_allocator(ctx), kebabed, LS_to_SV(anchor));
     if(unlikely(err)) return DNDC_ERROR_OOM;
     return 0;
 }
@@ -324,7 +327,7 @@ static inline
 warn_unused
 int
 add_link_from_pair(DndcContext* ctx, StringView kebabed, StringView value){
-    int err = string_table_set(&ctx->links, kebabed, value);
+    int err = AttrTable_set(&ctx->links, main_allocator(ctx), kebabed, value);
     if(err) return DNDC_ERROR_OOM;
     return 0;
 }

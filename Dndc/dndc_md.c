@@ -264,13 +264,13 @@ write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
                         StringView sv = stripped_view(text+i+1, text_length);
                         msb_write_str(sb, sv.text, sv.length);
                         msb_write_literal(sb, "](");
-                        const StringView* value = find_link_target(ctx, temp_str);
-                        if(unlikely(!value)){
+                        StringView value;
+                        int missing = find_link_target(ctx, temp_str, &value);
+                        if(unlikely(missing)){
                             msb_write_str(sb, temp_str.text, temp_str.length);
                         }
                         else {
-                            const StringView* val = value;
-                            msb_write_str(sb, val->text, val->length);
+                            msb_write_str(sb, value.text, value.length);
                         }
                         msb_write_literal(sb, ")");
                     }

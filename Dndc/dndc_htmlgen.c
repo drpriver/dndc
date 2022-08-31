@@ -398,9 +398,9 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                         }
                         else {
                             msb_write_literal(sb, "<a href=\"");
-                            const StringView* value = find_link_target(ctx, temp_str);
                             StringView href;
-                            if(unlikely(!value)){
+                            int missing = find_link_target(ctx, temp_str, &href);
+                            if(unlikely(missing)){
                                 if(ctx->flags & DNDC_ALLOW_BAD_LINKS){
                                     HANDLE_LOG_WARNING(ctx, handle, "Unable to resolve link: ", quoted(temp_str));
                                     href = temp_str;
@@ -410,9 +410,6 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                                     msb_destroy(&temp);
                                     return DNDC_ERROR_LINK;
                                 }
-                            }
-                            else {
-                                href = *value;
                             }
                             href = stripped_view(href.text, href.length);
                             if(!href.length){

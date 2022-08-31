@@ -504,10 +504,12 @@ build_toc_block(DndcContext*);
   // ----------------
   // Find the target that the kebabed string view is actually a link to.
   // Can return NULL if the link can't be resolved.
+  // 
+  // Returns 1 if the link is missing.
   //
   static inline
-  const StringView*_Nullable
-  find_link_target(DndcContext* ctx, StringView kebabed);
+  int
+  find_link_target(DndcContext* ctx, StringView kebabed, StringView*);
 
   //
   // add_link_from_sv

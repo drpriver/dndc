@@ -404,7 +404,6 @@ run_the_dndc(
         .log_func = log_func,
         .log_user_data = log_user_data,
     };
-    ctx.links.allocator = main_allocator(&ctx);
     if(!source_text.text){
         report_system_error(&ctx, SV("String with no data given as input"));
         result = DNDC_ERROR_PARSE;
@@ -544,7 +543,7 @@ run_the_dndc(
         if(result) goto cleanup;
         uint64_t after = get_t();
         report_time(&ctx, SV("Link resolving took: "), after-before);
-        report_size(&ctx, SV("ctx.links.count = "), ctx.links.count_);
+        report_size(&ctx, SV("ctx.links.count = "), !ctx.links?0:ctx.links->count-ctx.links->tombs);
     }
 
     // Render the toc block if we have one.
@@ -2134,7 +2133,6 @@ dndc_create_ctx(unsigned long long flags, DndcFileCache*_Nullable base64cache, D
     ctx->titlenode = INVALID_NODE_HANDLE;
     ctx->tocnode = INVALID_NODE_HANDLE;
     ctx->root_handle = INVALID_NODE_HANDLE;
-    ctx->links.allocator = main_allocator(ctx);
     return ctx;
 }
 
@@ -2214,26 +2212,18 @@ dndc_ctx_clone(DndcContext* ctx){
         err = Marray_push(StringView)(&result->dependencies, main_allocator(result), sv);
         if(unlikely(err)) goto fail;
     }
-    if(ctx->links.count_){
-        size_t cap = ctx->links.capacity_;
-        result->links.keys = Allocator_zalloc(result->links.allocator, sizeof(*result->links.keys)*cap*2);
-        if(unlikely(!result->links.keys))
-            goto fail;
-        result->links.capacity_ = cap;
-        result->links.count_ = ctx->links.count_;
-        for(size_t i = 0; i < cap; i++){
-            StringView k = ctx->links.keys[i];
-            if(!k.length) continue;
-            StringView v = ctx->links.keys[i+cap];
-            int err = dndc_ctx_dup_sv(result, k, &result->links.keys[i]);
+    {
+        int err = AttrTable_dup(ctx->links, main_allocator(result), &result->links);
+        if(unlikely(err)) goto fail;
+    }
+    if(result->links){
+        Attribute* items = AttrTable_items(result->links);
+        for(size_t i = 0; i < result->links->count; i++){
+            if(!items[i].key.length) continue;
+            int err = dndc_ctx_dup_sv(result, items[i].key, &items[i].key);
             if(unlikely(err)) goto fail;
-            if(v.length){
-                err = dndc_ctx_dup_sv(result, v, &result->links.keys[i+cap]);
-                if(unlikely(err)) goto fail;
-            }
-            else {
-                result->links.keys[i+cap] = v;
-            }
+            err = dndc_ctx_dup_sv(result, items[i].value, &items[i].value);
+            if(unlikely(err)) goto fail;
         }
     }
     MARRAY_FOR_EACH(IdItem, s, ctx->explicit_node_ids){
@@ -2333,12 +2323,9 @@ dndc_ctx_shallow_clone(DndcContext* ctx){
         int err = Marray_extend(StringView)(&result->dependencies, main_allocator(result), ctx->dependencies.data, ctx->dependencies.count);
         if(unlikely(err)) goto fail;
     }
-    if(ctx->links.count_){
-        size_t cap = ctx->links.capacity_;
-        result->links.keys = Allocator_dupe(result->links.allocator, ctx->links.keys, sizeof(*result->links.keys)*cap*2);
-        if(unlikely(!result->links.keys)) goto fail;
-        result->links.capacity_ = cap;
-        result->links.count_ = ctx->links.count_;
+    {
+        int err = AttrTable_dup(ctx->links, main_allocator(result), &result->links);
+        if(unlikely(err)) goto fail;
     }
     if(ctx->explicit_node_ids.count){
         int err = Marray_extend(IdItem)(&result->explicit_node_ids, main_allocator(result), ctx->explicit_node_ids.data, ctx->explicit_node_ids.count);
@@ -3733,18 +3720,21 @@ ctx_to_json(DndcContext* ctx, MStringBuilder* sb){
         msb_erase(sb, 1);
     msb_write_char(sb, '}');
     msb_write_literal(sb, ",\"links\":{");
-    for(size_t i = 0; i < ctx->links.capacity_; i++){
-        StringView key = ctx->links.keys[i];
-        if(!key.length) continue;
-        StringView value = ctx->links.keys[i+ctx->links.capacity_];
-        msb_write_char(sb, '"');
-        msb_write_json_escaped_str(sb, key.text, key.length);
-        msb_write_literal(sb, "\":\"");
-        msb_write_json_escaped_str(sb, value.text, value.length);
-        msb_write_char(sb, '"');
-        msb_write_char(sb, ',');
+    if(ctx->links){
+        Attribute* items = AttrTable_items(ctx->links);
+        for(size_t i = 0; i < ctx->links->count; i++){
+            StringView key = items[i].key;
+            if(!key.length) continue;
+            StringView value = items[i].value;
+            msb_write_char(sb, '"');
+            msb_write_json_escaped_str(sb, key.text, key.length);
+            msb_write_literal(sb, "\":\"");
+            msb_write_json_escaped_str(sb, value.text, value.length);
+            msb_write_char(sb, '"');
+            msb_write_char(sb, ',');
+        }
     }
-    if(ctx->links.count_)
+    if(ctx->links && ctx->links->count != ctx->links->tombs)
         msb_erase(sb, 1);
     msb_write_char(sb, '}');
     MSB_FORMAT(sb, ",\"flags\":", ctx->flags);

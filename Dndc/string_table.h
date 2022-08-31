@@ -32,101 +32,131 @@
 #endif
 #endif
 
-typedef struct StringTable StringTable;
-struct StringTable {
-    Allocator allocator;
-    uint32_t count_;
-    uint32_t capacity_;
-    StringView*_Null_unspecified keys;
-};
-
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
 
+typedef struct StringTable StringTable;
+struct StringTable {
+    uint32_t count_;
+    uint32_t capacity_;
+    char*_Null_unspecified data;
+};
+
+static inline 
+size_t
+string_table_alloc_size(size_t capacity){
+    return capacity * sizeof(StringView2) + capacity * sizeof(uint32_t);
+}
+
+static inline
+StringView2*
+string_table_items(const StringTable* table){
+    return (StringView2*)table->data;
+}
+
+static inline
+uint32_t*
+string_table_indexes(const StringTable* table){
+    return (uint32_t*)(table->data + table->capacity_ * sizeof(StringView2));
+}
+
+
 static
 warn_unused
 int
-string_table_set(StringTable* table, StringView key, StringView value){
-    if(!key.length) return 1;
-    if(table->count_ *2 >= table->capacity_){
+string_table_set(StringTable* table, Allocator a, StringView key, StringView value){
+    if(unlikely(!key.length)) return 1;
+    if(unlikely(table->count_ *2 >= table->capacity_)){
         size_t old_cap = table->capacity_;
         size_t new_cap = old_cap?old_cap*2:128;
-        StringView* new_keys = Allocator_zalloc(table->allocator, sizeof(*new_keys) * new_cap*2);
-        if(unlikely(!new_keys)) return 1;
-        StringView* new_values = new_keys+new_cap;
-        if(old_cap){
-            StringView* old_keys = table->keys;
-            StringView* old_values = table->keys + old_cap;
-            for(size_t i = 0; i < old_cap; i++){
-                if(old_keys[i].length){
-                    StringView k = old_keys[i];
-                    StringView v = old_values[i];
-                    uint32_t hash = hash_align1(k.text, k.length);
-                    uint32_t idx = fast_reduce32(hash, new_cap);
-                    // We know that none of the keys are equal, so just find an empty slot.
-                    while(new_keys[idx].length){
-                        idx++;
-                        if(idx >= new_cap) idx = 0;
-                    }
-                    new_keys[idx] = k;
-                    new_values[idx] = v;
-                }
-            }
-            assert(old_keys);
-            Allocator_free(table->allocator, old_keys, sizeof(*old_keys)*old_cap*2);
-        }
-        table->keys = new_keys;
+        char* new_data = Allocator_realloc(a, table->data, string_table_alloc_size(old_cap), string_table_alloc_size(new_cap));
+        if(unlikely(!new_data)) return 1;
+        table->data = new_data;
         table->capacity_ = new_cap;
+        uint32_t* indexes = string_table_indexes(table);
+        memset(indexes, 0xff, sizeof(*indexes)*new_cap);
+        StringView2* items = string_table_items(table);
+        for(size_t i = 0; i < old_cap; i++){
+            StringView key = items[i].key;
+            uint32_t hash = hash_align1(key.text, key.length);
+            uint32_t idx = fast_reduce32(hash, (uint32_t)new_cap);
+            while(indexes[idx] != UINT32_MAX){
+                idx++;
+                if(unlikely(idx >= new_cap)) idx = 0;
+            }
+            indexes[idx] = i;
+        }
     }
     size_t cap = table->capacity_;
     uint32_t hash = hash_align1(key.text, key.length);
-    StringView* keys = table->keys;
-    StringView* values = keys + cap;
+    StringView2* items = string_table_items(table);
+    uint32_t* indexes = string_table_indexes(table);
     uint32_t idx = fast_reduce32(hash, cap);
     for(;;){
-        if(!keys[idx].length){
-            keys[idx] = key;
-            values[idx] = value;
+        uint32_t i = indexes[idx];
+        if(i == UINT32_MAX){ // empty slot
+            indexes[idx] = table->count_;
+            items[table->count_] = (StringView2){key, value};
             table->count_++;
             return 0;
         }
-        else {
-            if(SV_equals(key, keys[idx])){
-                values[idx] = value;
-                return 0;
-            }
+        if(SV_equals(items[i].key, key)){
+            items[i].value = value;
+            return 0;
         }
         idx++;
-        if(idx >= cap) idx = 0;
+        if(unlikely(idx >= cap)) idx = 0;
     }
 
 }
 
 static
-const StringView* _Nullable
-string_table_get(StringTable* table, StringView key){
-    if(!table->count_) return NULL;
+warn_unused
+int
+string_table_get(StringTable* table, StringView key, StringView* outvalue){
+    if(!table->count_) return 1;
     size_t cap = table->capacity_;
     uint32_t hash = hash_align1(key.text, key.length);
-    const StringView* keys = table->keys;
-    const StringView* values = keys + cap;
+    const StringView2* items = string_table_items(table);
+    const uint32_t* indexes = string_table_indexes(table);
     uint32_t idx = fast_reduce32(hash, cap);
-    while(keys[idx].length){
-        if(SV_equals(key, keys[idx]))
-            return &values[idx];
+    for(;;){
+        uint32_t i = indexes[idx];
+        if(i == UINT32_MAX) return 1;
+        if(SV_equals(items[i].key, key)){
+            *outvalue = items[i].value;
+            return 0;
+        }
         idx++;
-        if(idx >= cap) idx = 0;
+        if(unlikely(idx >= cap)) idx = 0;
     }
-    return NULL;
+    return 1; // unreachable
 }
 
 static inline
 void
-string_table_destroy(StringTable* table){
-    if(table->keys)
-        Allocator_free(table->allocator, table->keys, sizeof(*table->keys)*2*table->capacity_);
+string_table_destroy(StringTable* table, Allocator a){
+    if(table->data)
+        Allocator_free(a, table->data, string_table_alloc_size(table->capacity_));
+    memset(table, 0, sizeof *table);
 }
+
+static inline
+warn_unused
+int
+string_table_dup(const StringTable* table, Allocator a, StringTable*outtable){
+    char* dupkeys = NULL;
+    if(table->data){
+        dupkeys = Allocator_dupe(a, table->data, string_table_alloc_size(table->capacity_));
+        if(unlikely(!dupkeys))
+            return 1;
+    }
+    *outtable = *table;
+    outtable->data = dupkeys;
+    return 0;
+}
+
 
 
 #ifdef __clang__

@@ -310,7 +310,8 @@ struct DndcContext {
     };
     Marray(StringView) dependencies;
     // Mapping of shorthand for a link to its actual link.
-    StringTable links;
+    AttrTable*_Nullable links;
+    // StringTable links;
     // TODO: use an adaptive table (linear at small N, hashmap
     //       at large N).
     Marray(IdItem) explicit_node_ids;
