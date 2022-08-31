@@ -241,7 +241,7 @@ worker_create(thread_func* job){
     pthread_mutex_init(&w->mutex, NULL);
     #ifdef __APPLE__
     kern_return_t ret = semaphore_create(mach_task_self(), &w->sem, SYNC_POLICY_FIFO, 0);
-    unhandled_error_condition(ret != 0);
+    (void)ret;
     #else
     sem_init(&w->sem, 0, 0);
     #endif

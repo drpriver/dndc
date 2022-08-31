@@ -7,22 +7,27 @@
 
 TestFunction(TestStringTable){
     TESTBEGIN();
-    StringTable table = {.allocator = MALLOCATOR};
-    int err = string_table_set(&table, SV("hello"), SV("world"));
+    Allocator a = MALLOCATOR;
+    StringTable table = {0};
+    int err = string_table_set(&table, a, SV("hello"), SV("world"));
     TestAssertFalse(err);
     {
-        const StringView* v = string_table_get(&table, SV("hello"));
-        TestAssert(v);
-        TestExpectEquals2(SV_equals, SV("world"), *v);
+        StringView v;
+        int missing = string_table_get(&table, SV("hello"), &v);
+        TestAssertFalse(missing);
+        TestAssert(v.length);
+        TestExpectEquals2(SV_equals, SV("world"), v);
     }
-    err = string_table_set(&table, SV("hello"), SV("world!"));
+    err = string_table_set(&table, a, SV("hello"), SV("world!"));
     TestAssertFalse(err);
     {
-        const StringView* v = string_table_get(&table, SV("hello"));
-        TestAssert(v);
-        TestExpectEquals2(SV_equals, SV("world!"), *v);
+        StringView v;
+        int missing = string_table_get(&table, SV("hello"), &v);
+        TestAssertFalse(missing);
+        TestAssert(v.length);
+        TestExpectEquals2(SV_equals, SV("world!"), v);
     }
-    string_table_destroy(&table);
+    string_table_destroy(&table, a);
     TESTEND();
 }
 

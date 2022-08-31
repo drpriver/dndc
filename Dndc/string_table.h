@@ -77,7 +77,7 @@ string_table_set(StringTable* table, Allocator a, StringView key, StringView val
         uint32_t* indexes = string_table_indexes(table);
         memset(indexes, 0xff, sizeof(*indexes)*new_cap);
         StringView2* items = string_table_items(table);
-        for(size_t i = 0; i < old_cap; i++){
+        for(size_t i = 0; i < table->count_; i++){
             StringView key = items[i].key;
             uint32_t hash = hash_align1(key.text, key.length);
             uint32_t idx = fast_reduce32(hash, (uint32_t)new_cap);
@@ -97,7 +97,7 @@ string_table_set(StringTable* table, Allocator a, StringView key, StringView val
         uint32_t i = indexes[idx];
         if(i == UINT32_MAX){ // empty slot
             indexes[idx] = table->count_;
-            items[table->count_] = (StringView2){key, value};
+            items[table->count_] = (StringView2){.key=key, .value=value};
             table->count_++;
             return 0;
         }

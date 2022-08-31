@@ -64,6 +64,17 @@ struct StringViewUtf16 {
 
 #endif
 
+typedef struct StringView2 StringView2;
+struct StringView2 {
+    union {
+        StringView data[2];
+        struct {
+            StringView key;
+            StringView value;
+        };
+    };
+};
+
 static inline
 force_inline
 StringView

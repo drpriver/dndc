@@ -696,14 +696,11 @@ dndc_main_ast_func(void*_Nullable user_data, DndcContext*_Nonnull ctx){
     }
     if(flags & DNDC_MAIN_PRINT_LINKS){
         size_t print_idx = 0;
-        if(ctx->links){
-            Attribute* items = AttrTable_items(ctx->links);
-            for(size_t i = 0; i < ctx->links->count; i++){
-                StringView k = items[i].key;
-                if(!k.length) continue;
-                StringView v = items[i].value;
-                fprintf(fp, "[%zu] key: '%.*s', value: '%.*s'\n", print_idx++, (int)k.length, k.text, (int)v.length, v.text);
-            }
+        StringView2* items = string_table_items(&ctx->links);
+        for(size_t i = 0; i < ctx->links.count_; i++){
+            StringView k = items[i].key;
+            StringView v = items[i].value;
+            fprintf(fp, "[%zu] key: '%.*s', value: '%.*s'\n", print_idx++, (int)k.length, k.text, (int)v.length, v.text);
         }
         if(data->output_path.length) fclose(fp);
         return -1;

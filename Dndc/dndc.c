@@ -543,7 +543,7 @@ run_the_dndc(
         if(result) goto cleanup;
         uint64_t after = get_t();
         report_time(&ctx, SV("Link resolving took: "), after-before);
-        report_size(&ctx, SV("ctx.links.count = "), !ctx.links?0:ctx.links->count-ctx.links->tombs);
+        report_size(&ctx, SV("ctx.links.count = "), ctx.links.count_);
     }
 
     // Render the toc block if we have one.
@@ -687,12 +687,15 @@ run_the_dndc(
             report_size(&ctx, SV("N existing allocations: "), alloced);
             report_size(&ctx, SV("Allocations outstanding total (bytes): "), total);
             #else
+            size_t narenas = 0;
             Arena* arena = ctx.main_arena.arena;
             while(arena){
+                narenas++;
                 report_size(&ctx, SV("Arena used: "), arena->used);
                 report_size(&ctx, SV("Arena size: "), ARENA_BUFFER_SIZE);
                 arena = arena->prev;
             }
+            report_size(&ctx, SV("N Arenas: "), narenas);
             BigListNode* ba = ctx.main_arena.big_allocations.next;
             while(ba){
                 report_size(&ctx, SV("Big allocation: "), ((BigAllocation*)ba)->size);
@@ -2213,13 +2216,12 @@ dndc_ctx_clone(DndcContext* ctx){
         if(unlikely(err)) goto fail;
     }
     {
-        int err = AttrTable_dup(ctx->links, main_allocator(result), &result->links);
+        int err = string_table_dup(&ctx->links, main_allocator(result), &result->links);
         if(unlikely(err)) goto fail;
     }
-    if(result->links){
-        Attribute* items = AttrTable_items(result->links);
-        for(size_t i = 0; i < result->links->count; i++){
-            if(!items[i].key.length) continue;
+    {
+        StringView2* items = string_table_items(&result->links);
+        for(size_t i = 0; i < result->links.count_; i++){
             int err = dndc_ctx_dup_sv(result, items[i].key, &items[i].key);
             if(unlikely(err)) goto fail;
             err = dndc_ctx_dup_sv(result, items[i].value, &items[i].value);
@@ -2324,7 +2326,7 @@ dndc_ctx_shallow_clone(DndcContext* ctx){
         if(unlikely(err)) goto fail;
     }
     {
-        int err = AttrTable_dup(ctx->links, main_allocator(result), &result->links);
+        int err = string_table_dup(&ctx->links, main_allocator(result), &result->links);
         if(unlikely(err)) goto fail;
     }
     if(ctx->explicit_node_ids.count){
@@ -3720,11 +3722,10 @@ ctx_to_json(DndcContext* ctx, MStringBuilder* sb){
         msb_erase(sb, 1);
     msb_write_char(sb, '}');
     msb_write_literal(sb, ",\"links\":{");
-    if(ctx->links){
-        Attribute* items = AttrTable_items(ctx->links);
-        for(size_t i = 0; i < ctx->links->count; i++){
+    {
+        StringView2* items = string_table_items(&ctx->links);
+        for(size_t i = 0; i < ctx->links.count_; i++){
             StringView key = items[i].key;
-            if(!key.length) continue;
             StringView value = items[i].value;
             msb_write_char(sb, '"');
             msb_write_json_escaped_str(sb, key.text, key.length);
@@ -3734,7 +3735,7 @@ ctx_to_json(DndcContext* ctx, MStringBuilder* sb){
             msb_write_char(sb, ',');
         }
     }
-    if(ctx->links && ctx->links->count != ctx->links->tombs)
+    if(ctx->links.count_)
         msb_erase(sb, 1);
     msb_write_char(sb, '}');
     MSB_FORMAT(sb, ",\"flags\":", ctx->flags);
