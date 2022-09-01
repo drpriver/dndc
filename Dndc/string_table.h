@@ -1,8 +1,8 @@
 //
 // Copyright © 2021-2022, David Priver
 //
-#ifndef LINK_TABLE_H
-#define LINK_TABLE_H
+#ifndef STRING_TABLE_H
+#define STRING_TABLE_H
 // This is a basic hash table of sv to sv.
 // However! We only need to support set and get, which simplifies things
 // greatly (no tombs, easy to tell when you need to expand).

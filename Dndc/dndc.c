@@ -2951,7 +2951,8 @@ dndc_node_set_id(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sv){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
-    node_set_id(ctx, handle, sv);
+    int err = node_set_id(ctx, handle, sv);
+    if(err) return DNDC_ERROR_OOM;
     return 0;
 }
 

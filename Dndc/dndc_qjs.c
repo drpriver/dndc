@@ -1539,7 +1539,9 @@ QJSSETTER(js_dndc_node_set_id){
         return QJS_ThrowTypeError(jsctx, "id must be a string");
     }
     StringView new_id = jsstring_to_stringview(jsctx, arg, string_allocator(ctx));
-    node_set_id(ctx, handle, new_id);
+    int err = node_set_id(ctx, handle, new_id);
+    if(unlikely(err))
+        return QJS_ThrowTypeError(jsctx, "oom");
     return QJS_UNDEFINED;
 }
 

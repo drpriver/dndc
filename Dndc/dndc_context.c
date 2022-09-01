@@ -121,22 +121,24 @@ node_get_id(DndcContext* ctx, NodeHandle handle){
 }
 
 static inline
-void
+warn_unused
+int
 node_set_id(DndcContext* ctx, NodeHandle handle, StringView sv){
     Node* node = get_node(ctx, handle);
     if(node->flags & NODEFLAG_ID){
         MARRAY_FOR_EACH(IdItem, item, ctx->explicit_node_ids){
             if(NodeHandle_eq(item->node, handle)){
                 item->text = sv;
-                return;
+                return 0;
             }
         }
     }
     IdItem* item; int err = Marray_alloc(IdItem)(&ctx->explicit_node_ids, main_allocator(ctx), &item);
-    unhandled_error_condition(err);
+    if(unlikely(err)) return err;
     item->node = handle;
     item->text = sv;
     node->flags |= NODEFLAG_ID;
+    return 0;
 }
 
 static inline
@@ -162,8 +164,13 @@ node_clone(DndcContext* ctx, NodeHandle handle){
     dstnode->flags = srcnode->flags;
     if(srcnode->flags & NODEFLAG_ID){
         StringView sv;
-        if(node_get_explicit_id(ctx, handle, &sv))
-            node_set_id(ctx, result, sv);
+        if(node_get_explicit_id(ctx, handle, &sv)){
+            int err = node_set_id(ctx, result, sv);
+            if(unlikely(err)) {
+                dstnode->type = NODE_INVALID;
+                return INVALID_NODE_HANDLE;
+            }
+        }
         else {
             // Weird... This shouldn't happen really.
             // I guess just clear the id bit for destination.
@@ -471,12 +478,15 @@ gather_anchor(DndcContext* ctx, NodeHandle handle, int node_depth){
     return 0;
 }
 
+// This should only be called from the parser when we need to change a string
+// to a container.
 static
 inline
-void
+warn_unused
+int
 convert_node_to_container_containing_clone_of_former_self(DndcContext* ctx, NodeHandle handle){
     NodeHandle new_handle = alloc_handle(ctx);
-    unhandled_error_condition(NodeHandle_eq(new_handle, INVALID_NODE_HANDLE));
+    if(unlikely(NodeHandle_eq(new_handle, INVALID_NODE_HANDLE))) return DNDC_ERROR_OOM;
     Node* new_node = get_node(ctx, new_handle);
     Node* old_node = get_node(ctx, handle);
     assert(!node_children_count(old_node));
@@ -484,13 +494,14 @@ convert_node_to_container_containing_clone_of_former_self(DndcContext* ctx, Node
     new_node->parent = handle;
     old_node->children = NULL;
     int err = Rarray_push(NodeHandle)(&old_node->children, main_allocator(ctx), new_handle);
-    unhandled_error_condition(err);
+    if(unlikely(err)) return DNDC_ERROR_OOM;
     old_node->header = SV("");
     old_node->type = NODE_CONTAINER;
     if(old_node->attributes)
         old_node->attributes = NULL;
     if(old_node->classes)
         old_node->classes = NULL;
+    return 0;
 }
 
 #ifdef __clang__

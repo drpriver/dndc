@@ -608,7 +608,9 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                             parse_log_err(ctx, aftertype.text, LS("#id needs non-empty argument."));
                             return (ErrorableNodeFlags){.errored=DNDC_ERROR_PARSE};
                         }
-                        node_set_id(ctx, node_handle, contents);
+                        int err = node_set_id(ctx, node_handle, contents);
+                        if(unlikely(err))
+                            return (ErrorableNodeFlags){.errored=DNDC_ERROR_OOM};
                         result.result |= NODEFLAG_ID;
                         continue;
                     }
@@ -1022,8 +1024,9 @@ PARSEFUNC(parse_table_node){
                     StringView content = stripped_view(cursor, ctx->line_end-cursor);
                     if(content.length){
                         if(!converted){
-                            convert_node_to_container_containing_clone_of_former_self(ctx, last_cell_handle);
+                            int e = convert_node_to_container_containing_clone_of_former_self(ctx, last_cell_handle);
                             converted = true;
+                            if(unlikely(e)) return e;
                         }
                         NodeHandle str_handle = alloc_handle(ctx);
                         init_string_node(ctx, str_handle, content);
@@ -1087,7 +1090,8 @@ PARSEFUNC(parse_keyvalue_node){
         if(! NodeHandle_eq(previous_value, INVALID_NODE_HANDLE)){
             if(ctx->nspaces > previous_kv_indentation){
                 if(!previous_value_was_converted){
-                    convert_node_to_container_containing_clone_of_former_self(ctx, previous_value);
+                    int e = convert_node_to_container_containing_clone_of_former_self(ctx, previous_value);
+                    if(unlikely(e)) return e;
                     previous_value_was_converted = true;
                 }
                 StringView content = stripped_view(ctx->linestart+ctx->nspaces, ctx->line_end-(ctx->linestart+ctx->nspaces));

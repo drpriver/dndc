@@ -8,7 +8,6 @@
 // non-clang compilers. Oh well.
 // This header shouldn't leak into the public interface.
 
-#include <assert.h>
 #include <stdbool.h>
 
 #if 0
@@ -56,6 +55,7 @@
 // are for invariants and are left in after development is done, whereas
 // these represent defects in the code that needs to be re-written.
 #ifndef unhandled_error_condition
+#include <assert.h>
 #ifdef DEBUGGING_H // debugging.h was included
 #define unhandled_error_condition(cond) do {if(cond)bt(); assert(!(cond));}while(0)
 #else

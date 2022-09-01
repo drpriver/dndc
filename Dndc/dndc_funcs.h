@@ -302,7 +302,8 @@ build_toc_block(DndcContext*);
   // Overrides the id of the node.
   //
   static inline
-  void
+  warn_unused
+  int
   node_set_id(DndcContext* ctx, NodeHandle, StringView);
 
   //
@@ -342,8 +343,12 @@ build_toc_block(DndcContext*);
   // Makes a copy of the indicated node, turns the original node into a container
   // node and then adds the copy to the container.
   //
+  // This should only be called from the parser when we need to change a string
+  // to a container.
+  //
   static inline
-  void
+  warn_unused
+  int
   convert_node_to_container_containing_clone_of_former_self(DndcContext* ctx, NodeHandle);
 
 //
