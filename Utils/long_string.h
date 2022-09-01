@@ -66,12 +66,9 @@ struct StringViewUtf16 {
 
 typedef struct StringView2 StringView2;
 struct StringView2 {
-    union {
-        StringView data[2];
-        struct {
-            StringView key;
-            StringView value;
-        };
+    struct {
+        StringView key;
+        StringView value;
     };
 };
 
