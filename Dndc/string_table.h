@@ -78,8 +78,8 @@ string_table_set(StringTable* table, Allocator a, StringView key, StringView val
         memset(indexes, 0xff, sizeof(*indexes)*new_cap);
         StringView2* items = string_table_items(table);
         for(size_t i = 0; i < table->count_; i++){
-            StringView key = items[i].key;
-            uint32_t hash = hash_align1(key.text, key.length);
+            StringView k = items[i].key;
+            uint32_t hash = hash_align1(k.text, k.length);
             uint32_t idx = fast_reduce32(hash, (uint32_t)new_cap);
             while(indexes[idx] != UINT32_MAX){
                 idx++;
