@@ -50,7 +50,7 @@ TestFunction(TestAttrTable){
     TestExpectEquals(table->capacity, 8);
     TestExpectEquals(table->count, 3);
     for(size_t i = 0; i < table->count; i++){
-        Attribute* p = AttrTable_items(table)+i;
+        StringView2* p = AttrTable_items(table)+i;
         TestExpectNotEquals(p->key.length, 0);
         // remembers insertion order
         switch(i){

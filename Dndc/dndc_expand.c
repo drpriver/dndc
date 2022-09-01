@@ -87,10 +87,10 @@ write_generic_header(DndcContext* ctx, Node* n, int indent, MStringBuilder*msb){
         MSB_FORMAT(msb, " .", *cls);
     }
     if(n->attributes){
-        Attribute* items = AttrTable_items(n->attributes);
+        StringView2* items = AttrTable_items(n->attributes);
         size_t count = n->attributes->count;
         for(size_t i = 0; i < count; i++){
-            Attribute* at = items + i;
+            StringView2* at = items + i;
             if(!at->key.length) continue;
             MSB_FORMAT(msb, " @", at->key);
             if(at->value.length){

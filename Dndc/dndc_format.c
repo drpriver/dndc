@@ -236,7 +236,7 @@ format_header(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
     }
     if(node->attributes)
         for(size_t i = 0; i < node->attributes->count; i++){
-            Attribute* attr = AttrTable_items(node->attributes)+i;
+            StringView2* attr = AttrTable_items(node->attributes)+i;
             if(!attr->key.length) continue;
             msb_write_literal(sb, " @");
             msb_write_str(sb, attr->key.text, attr->key.length);

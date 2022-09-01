@@ -3283,11 +3283,11 @@ DndcAttributesPy_repr(PyObject* s){
     size_t cookie = 0;
     size_t n = 0;
     enum {bufflen=32};
-    DndcAttributePair pairs[bufflen];
+    DndcStringPair pairs[bufflen];
     int comma = 0;
     while((n = dndc_node_attributes(ctx, handle, &cookie, pairs, bufflen))){
         for(size_t i = 0; i < n; i++){
-            DndcAttributePair p = pairs[i];
+            DndcStringPair p = pairs[i];
             msb_write_char(&msb, '"');
             msb_write_json_escaped_str(&msb, p.key.text, p.key.length);
             msb_write_char(&msb, '"');
@@ -3331,10 +3331,10 @@ DndcAttributesPy_iter(PyObject* o){
     size_t cookie = 0;
     size_t n = 0;
     enum {bufflen=32};
-    DndcAttributePair pairs[bufflen];
+    DndcStringPair pairs[bufflen];
     while((n = dndc_node_attributes(ctx, handle, &cookie, pairs, bufflen))){
         for(size_t i = 0; i < n; i++){
-            DndcAttributePair pair = pairs[i];
+            DndcStringPair pair = pairs[i];
             PyObject* tup = Py_BuildValue("s#s#", pair.key.text, (Py_ssize_t)pair.key.length, pair.value.text, (Py_ssize_t)pair.value.length);
             if(!tup){
                 Py_XDECREF(lst);

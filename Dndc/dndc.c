@@ -2260,9 +2260,9 @@ dndc_ctx_clone(DndcContext* ctx){
             err = AttrTable_dup(node->attributes, main_allocator(result), &newnode->attributes);
             if(unlikely(err)) goto fail;
             size_t count = newnode->attributes->count;
-            Attribute* items = AttrTable_items(newnode->attributes);
+            StringView2* items = AttrTable_items(newnode->attributes);
             for(size_t i = 0; i < count; i++){
-                Attribute* attr = items + i;
+                StringView2* attr = items + i;
                 StringView key = {attr->key.length, attr->key.text};
                 err = dndc_ctx_dup_sv(result, key, &key);
                 if(unlikely(err)) goto fail;
@@ -2508,14 +2508,14 @@ dndc_node_attributes_count(DndcContext* ctx, DndcNodeHandle dnh){
 
 DNDC_API
 size_t
-dndc_node_attributes(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, DndcAttributePair* buff, size_t bufflen){
+dndc_node_attributes(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, DndcStringPair* buff, size_t bufflen){
     NodeHandle handle = check_api_handle(ctx, dnh);
     // ambiguous - error or does it not have one?
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return 0;
     Node* node = get_node(ctx, handle);
     if(!node->attributes) return 0;
-    Attribute* data = AttrTable_items(node->attributes);
+    StringView2* data = AttrTable_items(node->attributes);
     size_t n = node->attributes->count;
     size_t start = *cookie;
     if(start >= n) return 0;
@@ -2523,9 +2523,9 @@ dndc_node_attributes(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, DndcA
     size_t i = start;
     for(; i < n; i++){
         if(copied >= bufflen) break;
-        Attribute* attr = &data[i];
+        StringView2* attr = &data[i];
         if(!attr->key.length) continue;
-        buff[copied++] = (DndcAttributePair){.key=attr->key, .value=attr->value};
+        buff[copied++] = (DndcStringPair){.key=attr->key, .value=attr->value};
     }
     *cookie = i;
     return copied;
@@ -3434,10 +3434,10 @@ dndc_node_tree_repr_inner(DndcContext* ctx, NodeHandle handle, int depth, MStrin
                 MSB_FORMAT(sb, ".", *c, " ");
             }
             if(node->attributes){
-                Attribute* attrs = AttrTable_items(node->attributes);
+                StringView2* attrs = AttrTable_items(node->attributes);
                 size_t count = node->attributes->count;
                 for(size_t i = 0; i < count; i++){
-                    Attribute* a = attrs+i;
+                    StringView2* a = attrs+i;
                     if(!a->key.length) continue;
                     MSB_FORMAT(sb, "@", a->key);
                     if(a->value.length)
@@ -3615,10 +3615,10 @@ node_to_json(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
     msb_write_char(sb, ']');
     msb_write_literal(sb, ",\"attributes\":{");
     if(node->attributes){
-        Attribute* attrs = AttrTable_items(node->attributes);
+        StringView2* attrs = AttrTable_items(node->attributes);
         size_t count = node->attributes->count;
         for(size_t i = 0; i < count; i++){
-            Attribute* attr = attrs+i;
+            StringView2* attr = attrs+i;
             if(!attr->key.length) continue;
             msb_write_char(sb, '"');
             msb_write_json_escaped_str(sb, attr->key.text, attr->key.length);

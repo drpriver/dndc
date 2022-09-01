@@ -320,8 +320,8 @@ dndc_node_attributes_count(DndcContext*, DndcNodeHandle);
 // error.
 //
 
-typedef struct DndcAttributePair DndcAttributePair;
-struct DndcAttributePair {
+typedef struct DndcStringPair DndcStringPair;
+struct DndcStringPair {
     DndcStringView key;
     DndcStringView value;
 };
@@ -331,7 +331,7 @@ struct DndcAttributePair {
 
 DNDC_API
 size_t
-dndc_node_attributes(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, DndcAttributePair* buff, size_t bufflen);
+dndc_node_attributes(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, DndcStringPair* buff, size_t bufflen);
 // --------------------
 // Copies the set attributes and their values into the given buffer.
 //
@@ -368,7 +368,7 @@ dndc_node_attributes(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, DndcA
 #ifdef DNDC_AST_EXAMPLE
 void print_attributes(FILE* fp, DndcContext* ctx, DndcNodeHandle dnh){
     enum {buff_len=32};
-    DndcAttributePair buff[buff_len];
+    DndcStringPair buff[buff_len];
     size_t n_copied = 0;
     size_t print_idx = 0;
     size_t cookie = 0;

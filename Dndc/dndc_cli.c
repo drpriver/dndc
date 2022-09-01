@@ -761,10 +761,10 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth, FILE* ou
                 fprintf(out, ".%.*s ", (int)c->length, c->text);
             }
             if(node->attributes){
-                Attribute* items = AttrTable_items(node->attributes);
+                StringView2* items = AttrTable_items(node->attributes);
                 size_t count = node->attributes->count;
                 for(size_t i = 0; i < count; i++){
-                    Attribute* a = items+i;
+                    StringView2* a = items+i;
                     if(!a->key.length) continue;
                     fprintf(out, "@%.*s", (int)a->key.length, a->key.text);
                     if(a->value.length)

@@ -102,11 +102,11 @@ struct AttrTable {
     uint32_t capacity; // capacity <= ATTRIBUTE_THRESH means array, else hash table.
     uint32_t pad; // So buff is properly aligned.
     char buff[]; // This gets cast to the right thing.
-    // In array mode, this is just a buffer of `Attribute` of length
+    // In array mode, this is just a buffer of `StringView2` of length
     // capacity.
-    // In hash mode, it is also a buffer of `Attribute` of length capacity,
+    // In hash mode, it is also a buffer of `StringView2` of length capacity,
     // but then after it there is also a buffer of `uint32_t` of length
-    // capacity that are the indexes back into the `Attribute` buffer.
+    // capacity that are the indexes back into the `StringView2` buffer.
     // UINT32_MAX is the sentinel meaning an unused index.
 
     // This type has to be dynamically allocated (actually you can
@@ -119,19 +119,13 @@ struct AttrTable {
 enum {ATTRIBUTE_THRESH=8}; // capacity > this means hashtable
 #endif
 
-typedef struct Attribute Attribute;
-struct Attribute {
-    StringView key;
-    StringView value;
-};
-
 // Does the internal cast of buff for you.
 // Array mode and hash table mode are the same for just getting the items.
 static inline
-Attribute*_Nullable
+StringView2*_Nullable
 AttrTable_items(AttrTable*_Nullable table){
     if(!table) return NULL;
-    return (Attribute*)table->buff;
+    return (StringView2*)table->buff;
 }
 
 static inline
@@ -141,9 +135,9 @@ AttrTable_alloc_size(AttrTable*_Nullable table){
     size_t cap = table->capacity;
     size_t size;
     if(cap > ATTRIBUTE_THRESH)
-        size = cap*sizeof(Attribute) + cap*sizeof(uint32_t) + sizeof(AttrTable);
+        size = cap*sizeof(StringView2) + cap*sizeof(uint32_t) + sizeof(AttrTable);
     else
-        size = cap*sizeof(Attribute) + sizeof(AttrTable);
+        size = cap*sizeof(StringView2) + sizeof(AttrTable);
     return size;
 }
 
@@ -164,17 +158,17 @@ AttrTable_resize_hash(AttrTable*_Nonnull*_Nonnull t, Allocator a){
     size_t old_cap = table->capacity;
     size_t new_cap = old_cap*2;
     if(unlikely(new_cap >= UINT32_MAX)) return 1;
-    size_t new_size = new_cap * sizeof(Attribute)+new_cap*sizeof(uint32_t)+sizeof(AttrTable);
-    size_t old_size = old_cap * sizeof(Attribute)+old_cap*sizeof(uint32_t)+sizeof(AttrTable);
+    size_t new_size = new_cap * sizeof(StringView2)+new_cap*sizeof(uint32_t)+sizeof(AttrTable);
+    size_t old_size = old_cap * sizeof(StringView2)+old_cap*sizeof(uint32_t)+sizeof(AttrTable);
     table = Allocator_realloc(a, table, old_size, new_size);
     if(unlikely(!table)) return 1;
-    Attribute* items = (Attribute*)table->buff;
-    uint32_t* indexes = (uint32_t*)(table->buff + new_cap*sizeof(Attribute));
+    StringView2* items = (StringView2*)table->buff;
+    uint32_t* indexes = (uint32_t*)(table->buff + new_cap*sizeof(StringView2));
     memset(indexes, 0xff, new_cap*sizeof(*indexes));
     size_t old_count = table->count;
     size_t count = 0;
     for(size_t i = 0; i < old_count; i++){
-        Attribute* pair = items + i;
+        StringView2* pair = items + i;
         if(!pair->key.length) continue;
         uint32_t hash = hash_align1(pair->key.text, pair->key.length);
         uint32_t idx = fast_reduce32(hash, (uint32_t)new_cap);
@@ -204,17 +198,17 @@ AttrTable_resize_array(AttrTable*_Nonnull*_Nonnull t, Allocator a){
     size_t old_cap = table->capacity;
     size_t new_cap = old_cap*2;
     if(unlikely(new_cap > ATTRIBUTE_THRESH)){
-        size_t new_size = new_cap * sizeof(Attribute)+new_cap*sizeof(uint32_t)+sizeof(AttrTable);
-        size_t old_size = old_cap * sizeof(Attribute)+sizeof(AttrTable);
+        size_t new_size = new_cap * sizeof(StringView2)+new_cap*sizeof(uint32_t)+sizeof(AttrTable);
+        size_t old_size = old_cap * sizeof(StringView2)+sizeof(AttrTable);
         table = Allocator_realloc(a, table, old_size, new_size);
         if(unlikely(!table)) return 1;
-        Attribute* items = (Attribute*)table->buff;
-        uint32_t* indexes = (uint32_t*)(table->buff + new_cap*sizeof(Attribute));
+        StringView2* items = (StringView2*)table->buff;
+        uint32_t* indexes = (uint32_t*)(table->buff + new_cap*sizeof(StringView2));
         memset(indexes, 0xff, new_cap*sizeof(*indexes));
         size_t old_count = table->count;
         size_t count = 0;
         for(size_t i = 0; i < old_count; i++){
-            Attribute* pair = items + i;
+            StringView2* pair = items + i;
             if(!pair->key.length) continue;
             uint32_t hash = hash_align1(pair->key.text, pair->key.length);
             uint32_t idx = fast_reduce32(hash, (uint32_t)new_cap);
@@ -233,8 +227,8 @@ AttrTable_resize_array(AttrTable*_Nonnull*_Nonnull t, Allocator a){
         *t = table;
         return 0;
     }
-    size_t new_size = new_cap * sizeof(Attribute)+new_cap*sizeof(uint32_t)+sizeof(AttrTable);
-    size_t old_size = old_cap * sizeof(Attribute)+sizeof(AttrTable);
+    size_t new_size = new_cap * sizeof(StringView2)+new_cap*sizeof(uint32_t)+sizeof(AttrTable);
+    size_t old_size = old_cap * sizeof(StringView2)+sizeof(AttrTable);
     table = Allocator_realloc(a, table, old_size, new_size);
     if(unlikely(!table)) return 1;
     // just leave the tombs in whatever.
@@ -251,7 +245,7 @@ AttrTable_ensure_one(AttrTable*_Nullable*_Nonnull t, Allocator a){
     AttrTable* table = *t;
     if(!table){
         enum {INITIAL_CAPACITY=2};
-        enum {INITIAL_SIZE=INITIAL_CAPACITY*sizeof(Attribute)+sizeof(AttrTable)};
+        enum {INITIAL_SIZE=INITIAL_CAPACITY*sizeof(StringView2)+sizeof(AttrTable)};
         table = Allocator_alloc(a, INITIAL_SIZE);
         if(!table) return 1;
         table->count = 0;
@@ -284,14 +278,14 @@ int
 AttrTable_set_hash(AttrTable* table, StringView key, StringView value){
     uint32_t hash = hash_align1(key.text, key.length);
     size_t cap = table->capacity;
-    Attribute* items = (Attribute*)table->buff;
-    uint32_t* indexes = (uint32_t*)(table->buff + cap*sizeof(Attribute));
+    StringView2* items = (StringView2*)table->buff;
+    uint32_t* indexes = (uint32_t*)(table->buff + cap*sizeof(StringView2));
     uint32_t idx = fast_reduce32(hash, (uint32_t)cap);
     for(;;){
         uint32_t i = indexes[idx];
         if(i == UINT32_MAX){ // empty slot
             indexes[idx] = table->count;
-            items[table->count] = (Attribute){key, value};
+            items[table->count] = (StringView2){key, value};
             table->count++;
             return 0;
         }
@@ -319,7 +313,7 @@ AttrTable_set(AttrTable*_Nullable*_Nonnull t, Allocator a, StringView key, Strin
     if(unlikely(table->capacity > ATTRIBUTE_THRESH)){
         return AttrTable_set_hash(table, key, value);
     }
-    Attribute* items = (Attribute*)table->buff;
+    StringView2* items = (StringView2*)table->buff;
     size_t count = table->count;
     for(size_t i = 0; i < count; i++){
         if(SV_equals(items[i].key, key)){
@@ -327,7 +321,7 @@ AttrTable_set(AttrTable*_Nullable*_Nonnull t, Allocator a, StringView key, Strin
             return 0;
         }
     }
-    items[table->count++] = (Attribute){key, value};
+    items[table->count++] = (StringView2){key, value};
     return 0;
 }
 
@@ -339,14 +333,14 @@ int
 AttrTable_alloc_hash(AttrTable* table, StringView key, StringView*_Nullable*_Nonnull value){
     uint32_t hash = hash_align1(key.text, key.length);
     size_t cap = table->capacity;
-    Attribute* items = (Attribute*)table->buff;
-    uint32_t* indexes = (uint32_t*)(table->buff + cap*sizeof(Attribute));
+    StringView2* items = (StringView2*)table->buff;
+    uint32_t* indexes = (uint32_t*)(table->buff + cap*sizeof(StringView2));
     uint32_t idx = fast_reduce32(hash, (uint32_t)cap);
     for(;;){
         uint32_t i = indexes[idx];
         if(i == UINT32_MAX){ // empty slot
             indexes[idx] = table->count;
-            items[table->count] = (Attribute){key, SV("")};
+            items[table->count] = (StringView2){key, SV("")};
             *value = &items[table->count].value;
             table->count++;
             return 0;
@@ -378,7 +372,7 @@ AttrTable_alloc(AttrTable*_Nullable*_Nonnull t, Allocator a, StringView key, Str
     if(unlikely(table->capacity > ATTRIBUTE_THRESH)){
         return AttrTable_alloc_hash(table, key, value);
     }
-    Attribute* items = (Attribute*)table->buff;
+    StringView2* items = (StringView2*)table->buff;
     size_t count = table->count;
     for(size_t i = 0; i < count; i++){
         if(SV_equals(items[i].key, key)){
@@ -386,7 +380,7 @@ AttrTable_alloc(AttrTable*_Nullable*_Nonnull t, Allocator a, StringView key, Str
             return 0;
         }
     }
-    items[table->count] = (Attribute){key, SV("")};
+    items[table->count] = (StringView2){key, SV("")};
     *value = &items[table->count].value;
     table->count++;
     return 0;
@@ -402,8 +396,8 @@ int
 AttrTable_get_hash(AttrTable* table, StringView key, StringView* value){
     uint32_t hash = hash_align1(key.text, key.length);
     size_t cap = table->capacity;
-    Attribute* items = (Attribute*)table->buff;
-    uint32_t* indexes = (uint32_t*)(table->buff + cap*sizeof(Attribute));
+    StringView2* items = (StringView2*)table->buff;
+    uint32_t* indexes = (uint32_t*)(table->buff + cap*sizeof(StringView2));
     uint32_t idx = fast_reduce32(hash, (uint32_t)cap);
     for(;;){
         uint32_t i = indexes[idx];
@@ -432,7 +426,7 @@ AttrTable_get(AttrTable*_Nullable table, StringView key, StringView* value){
     if(unlikely(table->capacity > ATTRIBUTE_THRESH)){
         return AttrTable_get_hash((AttrTable*)table, key, value);
     }
-    Attribute* items = (Attribute*)table->buff;
+    StringView2* items = (StringView2*)table->buff;
     size_t count = table->count;
     for(size_t i = 0; i < count; i++){
         if(SV_equals(items[i].key, key)){
@@ -451,8 +445,8 @@ int
 AttrTable_has_hash(AttrTable* table, StringView key){
     uint32_t hash = hash_align1(key.text, key.length);
     size_t cap = table->capacity;
-    Attribute* items = (Attribute*)table->buff;
-    uint32_t* indexes = (uint32_t*)(table->buff + cap*sizeof(Attribute));
+    StringView2* items = (StringView2*)table->buff;
+    uint32_t* indexes = (uint32_t*)(table->buff + cap*sizeof(StringView2));
     uint32_t idx = fast_reduce32(hash, (uint32_t)cap);
     for(;;){
         uint32_t i = indexes[idx];
@@ -478,7 +472,7 @@ AttrTable_has(AttrTable*_Nullable table, StringView key){
     if(unlikely(table->capacity > ATTRIBUTE_THRESH)){
         return AttrTable_has_hash((AttrTable*)table, key);
     }
-    Attribute* items = (Attribute*)table->buff;
+    StringView2* items = (StringView2*)table->buff;
     size_t count = table->count;
     for(size_t i = 0; i < count; i++){
         if(SV_equals(items[i].key, key)){
@@ -496,8 +490,8 @@ int
 AttrTable_del_hash(AttrTable* table, StringView key){
     uint32_t hash = hash_align1(key.text, key.length);
     size_t cap = table->capacity;
-    Attribute* items = (Attribute*)table->buff;
-    uint32_t* indexes = (uint32_t*)(table->buff + cap*sizeof(Attribute));
+    StringView2* items = (StringView2*)table->buff;
+    uint32_t* indexes = (uint32_t*)(table->buff + cap*sizeof(StringView2));
     uint32_t idx = fast_reduce32(hash, (uint32_t)cap);
     for(;;){
         uint32_t i = indexes[idx];
@@ -525,7 +519,7 @@ AttrTable_del(AttrTable*_Nullable table, StringView key){
     if(unlikely(table->capacity > ATTRIBUTE_THRESH)){
         return AttrTable_del_hash((AttrTable*)table, key);
     }
-    Attribute* items = (Attribute*)table->buff;
+    StringView2* items = (StringView2*)table->buff;
     if(!table->count) return 0;
     size_t count = table->count;
     for(size_t i = 0; i < count; i++){

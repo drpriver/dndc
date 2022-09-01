@@ -2441,10 +2441,10 @@ QJSMETHOD(js_dndc_attributes_to_string){
     MStringBuilder msb = {.allocator = temp_allocator(ctx)};
     msb_write_literal(&msb, "{ ");
     if(node->attributes){
-        Attribute* items = AttrTable_items(node->attributes);
+        StringView2* items = AttrTable_items(node->attributes);
         size_t count = node->attributes->count;
         for(size_t i = 0; i < count; i++){
-            Attribute kv = items[i];
+            StringView2 kv = items[i];
             if(!kv.key.length) continue;
             MSB_FORMAT(&msb, "\n  \"", kv.key, "\": \"", kv.value, "\",");
         }
@@ -2471,10 +2471,10 @@ QJSMETHOD(js_dndc_attributes_entries){
     Node* node = get_node(ctx, handle);
     QJSValue result = QJS_NewArray(jsctx);
     if(node->attributes){
-        Attribute* attrs = AttrTable_items(node->attributes);
+        StringView2* attrs = AttrTable_items(node->attributes);
         size_t count = node->attributes->count;
         for(size_t i = 0; i < count; i++){
-            Attribute* kv = &attrs[i];
+            StringView2* kv = &attrs[i];
             if(!kv->key.length) continue;
             QJSValue pair = QJS_NewArray(jsctx);
             QJSValue js_kv[2] = {
