@@ -54,6 +54,7 @@
 static inline
 void
 msb_write_kebab(MStringBuilder* msb, const char* text, size_t length){
+    if(unlikely(!length)) return;
     // SPEED: Measurements show that this is ran on a lot of nodes as we need
     // to generate ids for every md node with a header for example.
     //
@@ -76,53 +77,49 @@ msb_write_kebab(MStringBuilder* msb, const char* text, size_t length){
     // an ascii '1'. Those are unprintable characters anyway.  Could also mask
     // out the unprintables in the simd version.
 
-    int err = msb_ensure_additional(msb, length+2);
+    int err = msb_ensure_additional(msb, length);
     if(unlikely(err)) return;
-    char* data = msb->data;
-    size_t cursor = msb->cursor;
-    // A bit of explanation is in order.
-    //
-    // Essentially, when a dash is called for, we first check if we have
-    // already written one into the buffer at the current location. If we have,
-    // then we advance the cursor by one. If we have not, then we don't advance
-    // the cursor.
-    //
-    // Now, that sounds weird, but notice that dashes only trail after
-    // characters, they are never at the beginning of the string. So, we just
-    // always write the character + a dash, but we don't advance the cursor for
-    // that dash until we actually need one.
-    //
-    // We need this sentinel not for it's value, but rather so that we will
-    // have a value past the dash that is not a dash, or at the beginning of
-    // the string. Without writing it, we would read uninitialized memory.
-#define BEGINSENTINEL '@'
-#define ENDSENTINEL '$'
-    data[cursor] = BEGINSENTINEL;
-    for(size_t i = 0; i < length; i++){
-        char c = text[i];
-        switch(c){
-            case CASE_A_Z:
-                c |= 0x20; // tolower
-                // fall-through
-            case CASE_a_z:
-            case CASE_0_9:
-                data[cursor++] = c;
-                data[cursor] = '-';
-                data[cursor+1] = ENDSENTINEL;
-                continue;
-            case ' ': case '\t': case '-': case '/':{ // this slash is kind of sus
-                int is_dash = data[cursor] == '-';
-                cursor += is_dash;
-                continue;
+    char* data = msb->data + msb->cursor;
+    size_t cursor = 0;
+    size_t i = 0;
+    for(; i + 8 <= length; i+=8){
+        uint64_t buff;
+        memcpy(&buff, text+i, 8);
+        buff |= 0x2020202020202020;
+        for(size_t j = 0; j < 8; j++){
+            char c = ((char*)&buff)[j];
+            switch(c){
+                case CASE_a_z: case CASE_0_9:
+                    data[cursor++] = c;
+                    continue;
+                case ' ': case '-': case '/':
+                    if(unlikely(!cursor)) continue;
+                    if(cursor && data[cursor-1] == '-') continue;
+                    data[cursor++] = '-';
+                    continue;
+                default:
+                    continue;
             }
+        }
+    }
+    for(; i < length; i++){
+        char c = text[i] | 0x20;
+        switch(c){
+            case CASE_a_z: case CASE_0_9:
+                data[cursor++] = c;
+                continue;
+            case ' ': case '-': case '/':
+                if(unlikely(!cursor)) continue;
+                if(cursor && data[cursor-1] == '-') continue;
+                data[cursor++] = '-';
+                continue;
             default:
                 continue;
         }
     }
-    cursor -= (data[cursor] == ENDSENTINEL);
-#undef BEGINSENTINEL
-#undef ENDSENTINEL
-    msb->cursor = cursor;
+    if(cursor && data[cursor-1] == '-')
+        cursor--;
+    msb->cursor += cursor;
     return;
 }
 
