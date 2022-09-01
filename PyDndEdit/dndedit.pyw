@@ -2,7 +2,7 @@
 # Copyright © 2021-2022, David Priver
 #
 import sys
-pydndcver = '0.28.3'
+pydndcver = '0.29.0'
 def win_install_deps() -> bool:
     import sys
     assert sys.platform == 'win32'
@@ -98,7 +98,7 @@ def ensure_deps() -> None:
     try:
         import PySide6
         import pydndc
-        if pydndc.version[:2] != (0, 28):
+        if pydndc.version[:2] != (0, 29):
             if not install_deps():
                 return
         import PyDndEdit

@@ -8,8 +8,6 @@
 // non-clang compilers. Oh well.
 // This header shouldn't leak into the public interface.
 
-#include <stdbool.h>
-
 #if 0
 #include "Utils/debugging.h"
 #endif

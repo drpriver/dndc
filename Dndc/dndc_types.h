@@ -4,6 +4,7 @@
 #ifndef DNDC_TYPES_H
 #define DNDC_TYPES_H
 #include <stdint.h>
+#include <stdbool.h>
 #include "dndc_long_string.h"
 #include "dndc.h"
 #include "common_macros.h"
