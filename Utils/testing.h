@@ -647,6 +647,42 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
     }while(0)
 #endif
 //
+// TestAssertNotEqual
+// ----------------
+// Asserts lhs is equal to rhs, using ==
+//
+#if defined (__GNUC__) || defined(__clang__)
+  #define TestAssertNotEqual(lhs, rhs) do{\
+        __auto_type _lhs = lhs; \
+        typeof(lhs) _rhs = rhs; \
+        TEST_stats.executed++;\
+        if (! (_lhs!=_rhs)){ \
+            TEST_stats.failures++; \
+            TEST_stats.assert_failures++; \
+            TestReport("Test condition failed");\
+            TestReport("%s prematurely ended", __func__);\
+            TestReport("%s != %s", #lhs, #rhs); \
+            TestPrintValue(#lhs, _lhs);\
+            TestPrintValue(#rhs, _rhs); \
+            return TEST_stats;\
+        }\
+    }while(0)
+#else
+  #define TestAssertNotEqual(lhs, rhs) do{\
+        TEST_stats.executed++;\
+        if (! ((lhs)!=(rhs))){ \
+            TEST_stats.failures++; \
+            TEST_stats.assert_failures++; \
+            TestReport("Test condition failed");\
+            TestReport("%s prematurely ended", __func__);\
+            TestReport("%s != %s", #lhs, #rhs); \
+            TestPrintValue(#lhs, lhs);\
+            TestPrintValue(#rhs, rhs); \
+            return TEST_stats;\
+        }\
+    }while(0)
+#endif
+//
 // TestAssertEquals2
 // ----------------
 // Asserts lhs is equal to rhs, using ==
