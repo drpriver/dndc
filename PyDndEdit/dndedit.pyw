@@ -3,6 +3,7 @@
 #
 import sys
 pydndcver = '0.29.0'
+pydndeditver = '0.29.0'
 def win_install_deps() -> bool:
     import sys
     assert sys.platform == 'win32'
@@ -50,7 +51,7 @@ def win_install_deps() -> bool:
             DispatchMessageW(pmsg)
 
     pb = ProgressBar()
-    command = [sys.executable, '-m', 'pip', 'install', 'PySide6', f'pydndc=={pydndcver}', f'PyDndEdit=={pydndcver}', '-U']
+    command = [sys.executable, '-m', 'pip', 'install', 'PySide6', f'pydndc=={pydndcver}', f'PyDndEdit=={pydndeditver}', '-U']
     process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     while process.poll() is None:
         time.sleep(0.01)
@@ -79,7 +80,7 @@ def unix_install_deps() -> bool:
         return False
     if response and not response.strip().lower().startswith('y'):
         return False
-    command = [sys.executable, '-m', 'pip', 'install', 'PySide6', f'pydndc=={pydndcver}', f'PyDndEdit=={pydndcver}', '-U']
+    command = [sys.executable, '-m', 'pip', 'install', 'PySide6', f'pydndc=={pydndcver}', f'PyDndEdit=={pydndeditver}', '-U']
     process = subprocess.run(command, check=True)
     return True
 
