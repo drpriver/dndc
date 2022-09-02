@@ -19,11 +19,13 @@
 
 static TestFunc TestDndcAst;
 static TestFunc TestAstExample;
+static TestFunc TestParseClasses;
 
 int main(int argc, char** argv){
     testing_allocator_init();
     RegisterTest(TestDndcAst);
     RegisterTest(TestAstExample);
+    RegisterTest(TestParseClasses);
     ArgToParse kw_args[] = {
         {
             .name = SV("-F"),
@@ -108,6 +110,37 @@ TestFunction(TestAstExample){
             dndc_free_string(dnd_output);
         }
         Allocator_free(allocator, data.result.text, data.result.length+1);
+    }
+    TESTEND();
+}
+
+TestFunction(TestParseClasses){
+    TESTBEGIN();
+    const struct {StringView input; StringView cls;} testclasses[] = {
+#define X(cls_) {.input=SV("::md #id(test) ." cls_), .cls=SV(cls_)}
+        X("foo"),
+        X("foo-bar"),
+        X("foo_bar"),
+        X("_bar"),
+        X("-bar"),
+        X("AYY"),
+#undef X
+    };
+    for(size_t i = 0; i < arrlen(testclasses); i++){
+        StringView input = testclasses[i].input;
+        StringView cls = testclasses[i].cls;
+        DndcContext* ctx = dndc_create_ctx(0, NULL, NULL);
+        dndc_ctx_set_logger(ctx, dndc_stderr_log_func, NULL);
+        TestAssert(ctx);
+        DndcNodeHandle root = dndc_ctx_make_root(ctx, SV("foo"));
+        TestAssertNotEqual(root, DNDC_NODE_HANDLE_INVALID);
+        int err = dndc_ctx_parse_string(ctx, root, SV("foo"), input);
+        TestAssertEquals(err, 0);
+        DndcNodeHandle handle = dndc_ctx_node_by_id(ctx, SV("test"));
+        TestAssertNotEqual(handle, DNDC_NODE_HANDLE_INVALID);
+        int has_it = dndc_node_has_class(ctx, handle, cls);
+        TestExpectTrue(has_it);
+        dndc_ctx_destroy(ctx);
     }
     TESTEND();
 }
