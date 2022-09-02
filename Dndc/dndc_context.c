@@ -165,7 +165,7 @@ node_clone(DndcContext* ctx, NodeHandle handle){
     if(srcnode->flags & NODEFLAG_ID){
         StringView sv;
         if(node_get_explicit_id(ctx, handle, &sv)){
-            int err = node_set_id(ctx, result, sv);
+            err = node_set_id(ctx, result, sv);
             if(unlikely(err)) {
                 dstnode->type = NODE_INVALID;
                 return INVALID_NODE_HANDLE;
