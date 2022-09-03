@@ -108,11 +108,14 @@ __builtin_add_overflow_64(uint64_t a, uint64_t b, uint64_t* dst){
 enum ParseNumberError {
     // No error.
     PARSENUMBER_NO_ERROR = 0,
+
     // Input ended when more input was expected.
     // For example, parsing '0x' as an unsigned, more data is expected after the 'x'.
     PARSENUMBER_UNEXPECTED_END = 1,
+
     // The result does not fit in the data type.
     PARSENUMBER_OVERFLOWED_VALUE = 2,
+
     // An invalid character was encountered, like the 'a' in '33a2' when
     // parsing an int.
     PARSENUMBER_INVALID_CHARACTER = 3,
@@ -171,21 +174,21 @@ struct IntResult {
 static
 inline
 warn_unused
-struct Uint64Result
+Uint64Result
 parse_uint64(const char* str, size_t length);
 
 //
 // Parses a decimal int64.
 static inline
 warn_unused
-struct Int64Result
+Int64Result
 parse_int64(const char* str, size_t length);
 
 //
 // Parses a decimal uint32.
 static inline
 warn_unused
-struct Uint32Result
+Uint32Result
 parse_uint32(const char*str, size_t length);
 
 
@@ -193,35 +196,35 @@ parse_uint32(const char*str, size_t length);
 // Parses a decimal int32.
 static inline
 warn_unused
-struct Int32Result
+Int32Result
 parse_int32(const char*str, size_t length);
 
 //
 // Parses a decimal int.
 static inline
 warn_unused
-struct IntResult
+IntResult
 parse_int(const char* str, size_t length);
 
 //
 // Parses hex format, but with a leading '#' instead of '0x'.
 static inline
 warn_unused
-struct Uint64Result
+Uint64Result
 parse_pound_hex(const char* str, size_t length);
 
 //
 // Parses traditional hex format, such as '0xf00dface'
 static inline
 warn_unused
-struct Uint64Result
+Uint64Result
 parse_hex(const char* str, size_t length);
 
 //
 // Parses binary notation, such as '0b1101'.
 static inline
 warn_unused
-struct Uint64Result
+Uint64Result
 parse_binary(const char* str, size_t length);
 
 //
@@ -229,16 +232,16 @@ parse_binary(const char* str, size_t length);
 // Accepts 0x hexes, 0b binary, plain decimals, and also # hexes.
 static inline
 warn_unused
-struct Uint64Result
+Uint64Result
 parse_unsigned_human(const char* str, size_t length);
 
 // Implementations after this point.
 
 static inline
 warn_unused
-struct Uint64Result
+Uint64Result
 parse_uint64(const char* str, size_t length){
-    struct Uint64Result result = {0};
+    Uint64Result result = {0};
     if(!length){
         result.errored = PARSENUMBER_UNEXPECTED_END;
         return result;
@@ -295,9 +298,9 @@ parse_uint64(const char* str, size_t length){
 
 static inline
 warn_unused
-struct Int64Result
+Int64Result
 parse_int64(const char* str, size_t length){
-    struct Int64Result result = {0};
+    Int64Result result = {0};
     if(!length){
         result.errored = PARSENUMBER_UNEXPECTED_END;
         return result;
@@ -371,9 +374,9 @@ parse_int64(const char* str, size_t length){
 
 static inline
 warn_unused
-struct Uint32Result
+Uint32Result
 parse_uint32(const char*str, size_t length){
-    struct Uint32Result result = {0};
+    Uint32Result result = {0};
     if(!length){
         result.errored = PARSENUMBER_UNEXPECTED_END;
         return result;
@@ -429,9 +432,9 @@ parse_uint32(const char*str, size_t length){
 
 static inline
 warn_unused
-struct Int32Result
+Int32Result
 parse_int32(const char*str, size_t length){
-    struct Int32Result result = {0};
+    Int32Result result = {0};
     if(!length){
         result.errored = PARSENUMBER_UNEXPECTED_END;
         return result;
@@ -505,10 +508,10 @@ parse_int32(const char*str, size_t length){
 
 static inline
 warn_unused
-struct IntResult
+IntResult
 parse_int(const char* str, size_t length){
-    struct IntResult result;
-    struct Int32Result e = parse_int32(str, length);
+    IntResult result;
+    Int32Result e = parse_int32(str, length);
     result.errored = e.errored;
     result.result = e.result;
     return result;
@@ -516,9 +519,9 @@ parse_int(const char* str, size_t length){
 
 static inline
 warn_unused
-struct Uint64Result
+Uint64Result
 parse_hex_inner(const char* str, size_t length){
-    struct Uint64Result result = {0};
+    Uint64Result result = {0};
     if(length > sizeof(result.result)*2){
         result.errored = PARSENUMBER_OVERFLOWED_VALUE;
         return result;
@@ -550,9 +553,9 @@ parse_hex_inner(const char* str, size_t length){
 
 static inline
 warn_unused
-struct Uint64Result
+Uint64Result
 parse_pound_hex(const char* str, size_t length){
-    struct Uint64Result result = {0};
+    Uint64Result result = {0};
     if(length < 2){
         result.errored = PARSENUMBER_UNEXPECTED_END;
         return result;
@@ -566,9 +569,9 @@ parse_pound_hex(const char* str, size_t length){
 
 static inline
 warn_unused
-struct Uint64Result
+Uint64Result
 parse_hex(const char* str, size_t length){
-    struct Uint64Result result = {0};
+    Uint64Result result = {0};
     if(length<3){
         result.errored = PARSENUMBER_UNEXPECTED_END;
         return result;
@@ -584,13 +587,13 @@ parse_hex(const char* str, size_t length){
     return parse_hex_inner(str+2, length-2);
 }
 
-static inline warn_unused struct Uint64Result parse_binary_inner(const char*, size_t);
+static inline warn_unused Uint64Result parse_binary_inner(const char*, size_t);
 
 static inline
 warn_unused
-struct Uint64Result
+Uint64Result
 parse_binary(const char* str, size_t length){
-    struct Uint64Result result = {0};
+    Uint64Result result = {0};
     if(length<3){
         result.errored = PARSENUMBER_UNEXPECTED_END;
         return result;
@@ -608,9 +611,9 @@ parse_binary(const char* str, size_t length){
 
 static inline
 warn_unused
-struct Uint64Result
+Uint64Result
 parse_binary_inner(const char* str, size_t length){
-    struct Uint64Result result = {0};
+    Uint64Result result = {0};
     unsigned long long mask = 1llu << 63;
     mask >>= (64 - length);
     // @speed
@@ -636,9 +639,9 @@ parse_binary_inner(const char* str, size_t length){
 
 static inline
 warn_unused
-struct Uint64Result
+Uint64Result
 parse_string_integer_inner(const char* str, size_t length){
-    struct Uint64Result result = {0};
+    Uint64Result result = {0};
     if(length > sizeof(uint64_t)){
         result.errored = PARSENUMBER_OVERFLOWED_VALUE;
         return result;
@@ -650,9 +653,9 @@ parse_string_integer_inner(const char* str, size_t length){
 
 static inline
 warn_unused
-struct Uint64Result
+Uint64Result
 parse_unsigned_human(const char* str, size_t length){
-    struct Uint64Result result = {0};
+    Uint64Result result = {0};
     if(!length){
         result.errored = PARSENUMBER_UNEXPECTED_END;
         return result;
