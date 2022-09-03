@@ -182,9 +182,9 @@ TestFunction(TestParseAttributes){
         TestExpectTrue(has_it);
         if(arg.length){
             StringView value;
-            int err = dndc_node_get_attribute(ctx, handle, attr, &value);
-            TestExpectFalse(err);
-            if(err){
+            int e = dndc_node_get_attribute(ctx, handle, attr, &value);
+            TestExpectFalse(e);
+            if(e){
                 TestPrintValue("attr", attr);
                 TestPrintValue("arg", arg);
                 TestPrintValue("input", input);
