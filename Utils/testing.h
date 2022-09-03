@@ -787,21 +787,20 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 // A `TestResults` structure with the number of passess, fails, etc.
 //
 static
-struct TestResults
-run_the_tests(size_t*_Nullable which_tests, int test_count){
-    struct TestResults result = {0};
+void
+run_the_tests(size_t*_Nullable which_tests, int test_count, struct TestResults* result){
     if(test_count){
         for(int i = 0; i < test_count; i++){
             size_t idx = which_tests[i];
             TestFunc* func = test_funcs[idx].test_func;
             assert(func);
             struct TestStats func_result = func();
-            result.funcs_executed++;
-            result.failures += func_result.failures;
-            result.executed += func_result.executed;
-            result.assert_failures += func_result.assert_failures;
+            result->funcs_executed++;
+            result->failures += func_result.failures;
+            result->executed += func_result.executed;
+            result->assert_failures += func_result.assert_failures;
             if(func_result.assert_failures || func_result.failures)
-                result.failed_tests[result.n_failed_tests++] = idx;
+                result->failed_tests[result->n_failed_tests++] = idx;
         }
     }
     else {
@@ -811,15 +810,14 @@ run_the_tests(size_t*_Nullable which_tests, int test_count){
             TestFunc* func = test_funcs[i].test_func;
             assert(func);
             struct TestStats func_result = func();
-            result.funcs_executed++;
-            result.failures += func_result.failures;
-            result.executed += func_result.executed;
-            result.assert_failures += func_result.assert_failures;
+            result->funcs_executed++;
+            result->failures += func_result.failures;
+            result->executed += func_result.executed;
+            result->assert_failures += func_result.assert_failures;
             if(func_result.assert_failures || func_result.failures)
-                result.failed_tests[result.n_failed_tests++] = i;
+                result->failed_tests[result->n_failed_tests++] = i;
         }
     }
-    return result;
 }
 
 #ifdef __clang__
@@ -871,6 +869,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
     _Bool append = 0;
     _Bool print_pid = 0;
     _Bool should_wait = 0;
+    int nreps = 1;
     enum {TEE_INDEX=6, TARGET_INDEX=3};
     ArgToParse kw_args[] = {
         {
@@ -935,6 +934,13 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
             .altname1 = SV("--wait"),
             .help = "Do a getchar() before running the tests to give time to attach or whatever",
             .dest = ARGDEST(&should_wait),
+        },
+        {
+            .name = SV("-r"),
+            .altname1 = SV("--repeat"),
+            .help = "Run all the tests this many times in a loop.",
+            .dest = ARGDEST(&nreps),
+            .show_default = 1,
         },
     };
     enum {HELP=0, LIST=1};
@@ -1055,7 +1061,13 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
     if(should_wait){
         getchar();
     }
-    struct TestResults result = run_the_tests(tests_to_run, num_to_run);
+    if(nreps < 0) nreps = 1;
+    struct TestResults result = {0};
+    for(int i = 0; i < nreps; i++){
+        run_the_tests(tests_to_run, num_to_run, &result);
+        if(result.assert_failures || result.failures)
+            break;
+    }
 
     const char* text = result.funcs_executed == 1?
         "test function executed"
