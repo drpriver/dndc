@@ -86,27 +86,6 @@
 #define breakpoint()  asm("int $3")
 #endif
 
-// There's a bug in the c spec that free's prototype is
-//
-// void free(void*);
-//
-// instead of
-//
-// void free(const void*);
-//
-// This is stupid as hell as it means you can't free pointers that you have
-// made const after allocation (for example, a string).
-// So, suppress the diagnostics and do it anyway.
-#ifndef const_free
-#define const_free(ptr) do{\
-    PushDiagnostic(); \
-    SuppressDiscardQualifiers(); \
-    SuppressCastQual(); \
-    free(ptr);\
-    PopDiagnostic(); \
-    }while(0)
-#endif
-
 //
 // Warning Suppression
 //

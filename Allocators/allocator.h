@@ -47,6 +47,17 @@
 #endif
 #endif
 
+// There's a bug in the c spec that free's prototype is
+//
+// void free(void*);
+//
+// instead of
+//
+// void free(const void*);
+//
+// This is stupid as hell as it means you can't free pointers that you have
+// made const after allocation (for example, a string).
+// So, suppress the diagnostics and do it anyway.
 #ifndef const_free
 #ifdef __clang__
 #define const_free(ptr) do{\
