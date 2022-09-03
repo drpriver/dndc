@@ -582,6 +582,7 @@ def mymain() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('-C', '--change-directory')
     parser.add_argument('-e', '--extension-directory')
+    parser.add_argument('-b', '--extension-binary')
     parser.add_argument('-t', '--tee')
     argz = sys.argv[0]
     args, remainder = parser.parse_known_args()
@@ -609,11 +610,16 @@ def run(
     argv:List[str],
     change_directory:Optional[str] = None,
     extension_directory:Optional[str]=None,
+    extension_binary:Optional[str]=None,
     tee:Optional[str]=None,
 ) -> None:
     global pydndc
     if change_directory:
         os.chdir(change_directory)
+    if extension_binary:
+        extension_directory = os.path.dirname(extension_binary)
+        if not extension_directory:
+            extension_directory = '.'
     if extension_directory:
         # Get the realpath as otherwise it throws a win32 error of "The parameter is incorrect" when you go to import.
         extension_directory = os.path.realpath(extension_directory)

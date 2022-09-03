@@ -42092,6 +42092,14 @@ static QJSValue js_math_random(QJSContext *ctx, QJSValueConst this_val,
     return __JS_NewFloat64(ctx, u.d - 1.0);
 }
 
+#if defined(_MSC_VER) && !defined(__clang__)
+// Bizarrely, these give the error "Initializer is not a constant"
+// if you don't use these pragmas in release mode. What a PoS...
+#pragma function(floor)
+#pragma function(ceil)
+#pragma function(log2)
+#endif
+
 static const QJSCFunctionListEntry js_math_funcs[] = {
     QJS_CFUNC_MAGIC_DEF("min", 2, js_math_min_max, 0 ),
     QJS_CFUNC_MAGIC_DEF("max", 2, js_math_min_max, 1 ),

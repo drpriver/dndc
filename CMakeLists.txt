@@ -185,7 +185,7 @@ add_test(strutil TestStrUtils)
 add_executable(TestMsbExtension Utils/TestMsbExtension.c)
 add_test(msbext TestMsbExtension)
 add_test(NAME testpydndc
-		COMMAND ${Python3_EXECUTABLE} Dndc/testpydndc.py --extension-directory ${CMAKE_BINARY_DIR}
+		COMMAND ${Python3_EXECUTABLE} Dndc/testpydndc.py --extension-binary $<TARGET_FILE:pydndc>
 		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 set_tests_properties(testpydndc PROPERTIES DEPENDS pydndc)
 

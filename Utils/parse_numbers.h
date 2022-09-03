@@ -33,21 +33,25 @@
 
 #if defined(_MSC_VER) && !defined(__clang__)
 // Shim the overflow intrinsics for MSVC
-// These are slow as they use division.
 static inline
 int
 __builtin_mul_overflow_32(uint32_t a, uint32_t b, uint32_t* dst){
-    uint64_t res = (uint64_t)a * (uint64_t)b;
-    if(res > (uint64_t)UINT32_MAX) return 1;
-    *dst = res;
+    uint64_t tmp = (uint64_t)a * (uint64_t)b;
+    if(tmp > UINT32_MAX) return 1;
+    *dst = (uint32_t)tmp;
     return 0;
 }
 static inline
 int
 __builtin_mul_overflow_64(uint64_t a, uint64_t b, uint64_t* dst){
-    if(a && b > UINT64_MAX / a) return 1;
-    *dst = a * b;
-    return 0;
+    uint64_t hi;
+    uint64_t lo;
+    lo = _umul128(a, b, &hi);
+    if(hi == 0){
+        *dst = lo;
+        return 0;
+    }
+    return 1;
 }
 #define __builtin_mul_overflow(a, b, dst) _Generic(a, \
     uint32_t: __builtin_mul_overflow_32, \
