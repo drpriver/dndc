@@ -54,7 +54,7 @@
     _Pragma("clang diagnostic ignored \"-Wcast-qual\"");\
     free((void*)ptr); \
     _Pragma("clang diagnostic pop");\
-    }while(0)
+}while(0)
 #elif defined(__GNUC__)
 #define const_free(ptr) do{\
     _Pragma("GCC diagnostic push");\
@@ -62,7 +62,14 @@
     _Pragma("GCC diagnostic ignored \"-Wcast-qual\"");\
     free((void*)ptr); \
     _Pragma("GCC diagnostic pop");\
-    }while(0)
+}while(0)
+#elif defined(_MSC_VER)
+#define const_free do {\
+    _Pragma("warning(disbale: 4090)"); \
+    _Pragma("warning(push)"); \
+    free((void*)ptr); \
+    _Pragma("warning(pop)"); \
+}while(0)
 #else
     #define const_free(ptr) free((void*)ptr)
 #endif
