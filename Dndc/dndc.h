@@ -23,12 +23,12 @@
 #define DNDC_STRINGIFY_IMPL(x) #x
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
 
-#define DNDC_INT_VERSION(major, minor, micro) (1000000*(major) + 1000*(minor) + (micro))
+#define DNDC_INT_VERSION(major, minor, micro) (10000000*(major) + 10000*(minor) + (micro))
 // ----------------
 // The version as a single number. Comparable.
 // many digits for major
 // 3 digits for minor
-// 3 digits for micro
+// 4 digits for micro
 
 enum {DNDC_NUMERIC_VERSION = DNDC_INT_VERSION(DNDC_MAJOR, DNDC_MINOR, DNDC_MICRO)};
 
