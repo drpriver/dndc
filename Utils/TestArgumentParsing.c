@@ -282,10 +282,10 @@ TestFunction(TestArgumentParsing4){
     }
     TESTEND();
 }
-
-typedef struct Point {
+typedef struct Point Point;
+struct Point {
     int x, y;
-} Point;
+};
 static
 int
 point_parse(void* _Null_unspecified ud, const char*s, size_t length, void* dest){
