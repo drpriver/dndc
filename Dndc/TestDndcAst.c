@@ -20,12 +20,14 @@
 static TestFunc TestDndcAst;
 static TestFunc TestAstExample;
 static TestFunc TestParseClasses;
+static TestFunc TestParseAttributes;
 
 int main(int argc, char** argv){
     testing_allocator_init();
     RegisterTest(TestDndcAst);
     RegisterTest(TestAstExample);
     RegisterTest(TestParseClasses);
+    RegisterTest(TestParseAttributes);
     ArgToParse kw_args[] = {
         {
             .name = SV("-F"),
@@ -140,6 +142,57 @@ TestFunction(TestParseClasses){
         TestAssertNotEqual(handle, DNDC_NODE_HANDLE_INVALID);
         int has_it = dndc_node_has_class(ctx, handle, cls);
         TestExpectTrue(has_it);
+        dndc_ctx_destroy(ctx);
+    }
+    TESTEND();
+}
+TestFunction(TestParseAttributes){
+    TESTBEGIN();
+    PushDiagnostic();
+    SuppressStringPlusInt();
+    const struct {StringView input; StringView attr; StringView arg;} testattrs[] = {
+#define X(attr_, arg_) {.input=SV("::md #id(test) @" attr_ arg_), .attr=SV(attr_), .arg=sizeof(arg_)>1?(StringView){sizeof(arg_)-3, arg_+1}:SV(arg_)}
+        X("foo", ""),
+        X("foo", "(1)"),
+        X("foo", "(ayy lmao)"),
+        X("foo", "(1, 2, 3, 4)"),
+        X("foo", "(1, 2, 3, 4)"),
+        X("foo-bar", ""),
+        X("foo_bar", ""),
+        X("_bar", ""),
+        X("-bar", ""),
+        X("AYY", ""),
+#undef X
+    };
+    PopDiagnostic();
+    for(size_t i = 0; i < arrlen(testattrs); i++){
+        StringView input = testattrs[i].input;
+        StringView attr = testattrs[i].attr;
+        StringView arg = testattrs[i].arg;
+        DndcContext* ctx = dndc_create_ctx(0, NULL, NULL);
+        dndc_ctx_set_logger(ctx, dndc_stderr_log_func, NULL);
+        TestAssert(ctx);
+        DndcNodeHandle root = dndc_ctx_make_root(ctx, SV("foo"));
+        TestAssertNotEqual(root, DNDC_NODE_HANDLE_INVALID);
+        int err = dndc_ctx_parse_string(ctx, root, SV("foo"), input);
+        TestAssertEquals(err, 0);
+        DndcNodeHandle handle = dndc_ctx_node_by_id(ctx, SV("test"));
+        TestAssertNotEqual(handle, DNDC_NODE_HANDLE_INVALID);
+        int has_it = dndc_node_has_attribute(ctx, handle, attr);
+        TestExpectTrue(has_it);
+        if(arg.length){
+            StringView value;
+            int err = dndc_node_get_attribute(ctx, handle, attr, &value);
+            TestExpectFalse(err);
+            if(err){
+                TestPrintValue("attr", attr);
+                TestPrintValue("arg", arg);
+                TestPrintValue("input", input);
+            }
+            else {
+                TestExpectEquals2(SV_equals, arg, value);
+            }
+        }
         dndc_ctx_destroy(ctx);
     }
     TESTEND();

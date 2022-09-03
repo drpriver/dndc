@@ -125,9 +125,10 @@
 #define SuppressDoublePromotion()       _Pragma("clang diagnostic ignored \"-Wdouble-promotion\"")
 #define SuppressCoveredSwitchDefault()  _Pragma("clang diagnostic ignored \"-Wcovered-switch-default\"")
 #define SuppressVisibility()            _Pragma("clang diagnostic ignored \"-Wvisibility\"")
-#define SuppressNullableConversion()    _Pragma("clang diagnostic ignored\"-Wnullable-to-nonnull-conversion\"")
-#define SuppressShadowing()             _Pragma("clang diagnostic ignored\"-Wshadow\"")
+#define SuppressNullableConversion()    _Pragma("clang diagnostic ignored \"-Wnullable-to-nonnull-conversion\"")
+#define SuppressShadowing()             _Pragma("clang diagnostic ignored \"-Wshadow\"")
 #define SuppressEnumCompare()
+#define SuppressStringPlusInt()         _Pragma("clang diagnostic ignored \"-Wstring-plus-int\"")
 
 #define PushDiagnostic()                _Pragma("clang diagnostic push")
 #define PopDiagnostic()                 _Pragma("clang diagnostic pop")
@@ -146,6 +147,7 @@
 #define SuppressNullableConversion()
 #define SuppressShadowing()             _Pragma("GCC diagnostic ignored \"-Wshadow\"")
 #define SuppressEnumCompare()           _Pragma("GCC diagnostic ignored \"-Wenum-compare\"")
+#define SuppressStringPlusInt()
 
 #define PushDiagnostic()                _Pragma("GCC diagnostic push")
 #define PopDiagnostic()                 _Pragma("GCC diagnostic pop")
@@ -164,6 +166,7 @@
 #define SuppressNullableConversion()
 #define SuppressShadowing()
 #define SuppressEnumCompare()
+#define SuppressStringPlusInt()
 
 #define PushDiagnostic()
 #define PopDiagnostic()
