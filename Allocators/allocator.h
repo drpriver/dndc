@@ -64,7 +64,7 @@
     _Pragma("GCC diagnostic pop");\
 }while(0)
 #elif defined(_MSC_VER)
-#define const_free do {\
+#define const_free(ptr) do {\
     _Pragma("warning(disbale: 4090)"); \
     _Pragma("warning(push)"); \
     free((void*)ptr); \
