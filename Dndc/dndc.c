@@ -1,11 +1,6 @@
 //
 // Copyright © 2021-2022, David Priver
 //
-#ifdef LOG_LEVEL
-#undef LOG_LEVEL
-#endif
-#define LOG_LEVEL LOG_LEVEL_INFO
-
 // define DNDC_API before including dndc.h
 #include "dndc_api_def.h"
 #include "dndc.h"

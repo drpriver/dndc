@@ -13,6 +13,4 @@
 #include <Windows.h>
 #endif
 
-#undef ERROR
-
 #endif
