@@ -49,7 +49,7 @@ STD:=-std=gnu17
 INCLUDE_FLAGS=-iquote .
 
 LINK_FLAGS=
-FAST_FLAGS=-Ofast
+FAST_FLAGS=-O3
 DEV_FLAGS=-O0 -g
 # DEBUG_FLAGS is set in the platform makefile as sanitizers vary per platform.
 

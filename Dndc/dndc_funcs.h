@@ -235,6 +235,15 @@ build_toc_block(DndcContext*);
   node_has_attribute(const Node* node, StringView attr);
 
   //
+  // node_del_attribute
+  // ------------------
+  // TODO: document me.
+
+  static inline
+  bool
+  node_del_attribute(const Node* node, StringView attr);
+
+  //
   // node_get_attribute
   // ------------------
   // Retrieves the value associate with attr key.

@@ -32,16 +32,28 @@
 #undef WORDS_BIGENDIAN
 
 #if defined(__GNUC__) || defined(__clang__)
+#ifndef likely
 #define likely(x)       __builtin_expect(!!(x), 1)
+#endif
+#ifndef unlikely
 #define unlikely(x)     __builtin_expect(!!(x), 0)
+#endif
+#ifndef force_inline
 #define force_inline inline __attribute__((always_inline))
+#endif
 #define no_inline __attribute__((noinline))
 #define __maybe_unused __attribute__((unused))
 #define printflike(a, b) __attribute__((format(printf, a, b)))
 #else
+#ifndef likely
 #define likely(x)       !!(x)
+#endif
+#ifndef unlikely
 #define unlikely(x)     !!(x)
+#endif
+#ifndef force_inline
 #define force_inline inline
+#endif
 #define no_inline
 #define __maybe_unused
 #define printflike(a, b)

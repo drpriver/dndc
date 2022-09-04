@@ -88,7 +88,7 @@ typedef intptr_t ssize_t;
 
 #undef CONFIG_ATOMICS
 
-#if !defined(EMSCRIPTEN)
+#if !defined(EMSCRIPTEN) && !defined(TESTING_QJS)
 /* enable stack limitation */
 #define CONFIG_STACK_CHECK
 #endif
@@ -10376,14 +10376,11 @@ static QJSValue js_atof(QJSContext *ctx, const char *str, const char **pp,
             } else
 #endif
             {
-                #if defined(_MSC_VER) && !defined(__clang__)
                 double d = INFINITY;
-                #else
-                double d = 1.0 / 0.0;
-                #endif
                 if (is_neg)
                     d = -d;
-                val = QJS_NewFloat64(ctx, d);
+                val = __JS_NewFloat64(ctx, d);
+                // val = QJS_NewFloat64(ctx, d);
             }
             goto done;
         }
@@ -16364,7 +16361,8 @@ static QJSValue QJS_CallInternal(QJSContext *caller_ctx, QJSValueConst func_obj,
     QJSFunctionBytecode *b;
     QJSStackFrame sf_s, *sf = &sf_s;
     const uint8_t *pc;
-    int opcode, arg_allocated_size, i;
+    unsigned opcode;
+    int arg_allocated_size, i;
     QJSValue *local_buf, *stack_buf, *var_buf, *arg_buf, *sp, ret_val, *pval;
     QJSVarRef **var_refs;
     size_t alloca_size;
@@ -16385,7 +16383,7 @@ static QJSValue QJS_CallInternal(QJSContext *caller_ctx, QJSValueConst func_obj,
 #include "quickjs-opcode.h"
         [ OP_COUNT ... 255 ] = &&case_default
     };
-#define SWITCH(pc)      goto *dispatch_table[opcode = *pc++];
+#define SWITCH(pc)      goto *dispatch_table[opcode = (unsigned)*pc++];
 #define CASE(op)        case_ ## op
 #define DEFAULT         case_default
 #define BREAK           SWITCH(pc)
@@ -30616,9 +30614,9 @@ typedef struct CodeContext {
     QJSAtom atom;
 } CodeContext;
 
-#define M2(op1, op2)            ((op1) | ((op2) << 8))
-#define M3(op1, op2, op3)       ((op1) | ((op2) << 8) | ((op3) << 16))
-#define M4(op1, op2, op3, op4)  ((op1) | ((op2) << 8) | ((op3) << 16) | ((op4) << 24))
+#define M2(op1, op2)            ((uint32_t)op1 | ((uint32_t)op2 << 8))
+#define M3(op1, op2, op3)       ((uint32_t)op1 | ((uint32_t)op2 << 8) | ((uint32_t)op3 << 16))
+#define M4(op1, op2, op3, op4)  ((uint32_t)op1 | ((uint32_t)op2 << 8) | ((uint32_t)op3 << 16) | (((uint32_t)op4) << 24))
 
 static BOOL code_match(CodeContext *s, int pos, ...)
 {
@@ -42035,7 +42033,9 @@ static double js_math_fround(double a)
 {
     return (float)a;
 }
-
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((no_sanitize("undefined")))
+#endif
 static QJSValue js_math_imul(QJSContext *ctx, QJSValueConst this_val,
                             int argc, QJSValueConst *argv)
 {
@@ -42046,6 +42046,7 @@ static QJSValue js_math_imul(QJSContext *ctx, QJSValueConst this_val,
     if (QJS_ToInt32(ctx, &b, argv[1]))
         return QJS_EXCEPTION;
     /* purposely ignoring overflow */
+    // hmmmmm...
     return QJS_NewInt32(ctx, a * b);
 }
 
@@ -48074,7 +48075,8 @@ static const QJSCFunctionListEntry js_global_funcs[] = {
     QJS_CFUNC_MAGIC_DEF("encodeURIComponent", 1, js_global_encodeURI, 1 ),
     QJS_CFUNC_DEF("escape", 1, js_global_escape ),
     QJS_CFUNC_DEF("unescape", 1, js_global_unescape ),
-    QJS_PROP_DOUBLE_DEF("Infinity", 1.0 / 0.0, 0 ),
+    // QJS_PROP_DOUBLE_DEF("Infinity", 1.0 / 0.0, 0 ),
+    QJS_PROP_DOUBLE_DEF("Infinity", INFINITY, 0 ),
     QJS_PROP_DOUBLE_DEF("NaN", NAN, 0 ),
     QJS_PROP_UNDEFINED_DEF("undefined", 0 ),
 

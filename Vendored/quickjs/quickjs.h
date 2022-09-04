@@ -571,6 +571,9 @@ static js_force_inline QJSValue QJS_NewUint32(QJSContext *ctx, uint32_t val)
 QJS_API QJSValue QJS_NewBigInt64(QJSContext *ctx, int64_t v);
 QJS_API QJSValue QJS_NewBigUint64(QJSContext *ctx, uint64_t v);
 
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((no_sanitize("undefined")))
+#endif
 static js_force_inline QJSValue QJS_NewFloat64(QJSContext *ctx, double d)
 {
     QJSValue v;
