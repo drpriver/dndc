@@ -777,14 +777,15 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 // ----------
 //   which_tests:
 //     A pointer to an array of indexes into the registered `test_funcs` table.
+//
 //   test_count:
 //     The length of the array pointed to by which_tests
 //
 //     As a special case, 0 means to run all the tests.
 //
-// Returns:
-// --------
-// A `TestResults` structure with the number of passess, fails, etc.
+//   result:
+//      A `TestResults` structure with the number of passess, fails, etc.
+//      Results will be written into these.
 //
 static
 void
