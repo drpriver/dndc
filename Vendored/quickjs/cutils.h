@@ -59,6 +59,10 @@
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 #endif
 
+#ifndef CUTIL_API
+#define CUTIL_API static __maybe_unused
+#endif
+
 typedef int BOOL;
 
 #ifndef FALSE
@@ -68,9 +72,13 @@ enum {
 };
 #endif
 
+CUTIL_API
 void pstrcpy(char *buf, int buf_size, const char *str);
+CUTIL_API
 char *pstrcat(char *buf, int buf_size, const char *s);
+CUTIL_API
 int strstart(const char *str, const char *val, const char **ptr);
+CUTIL_API
 int has_suffix(const char *str, const char *suffix);
 
 static inline int max_int(int a, int b)
@@ -286,13 +294,21 @@ typedef struct DynBuf {
     void *opaque; /* for realloc_func */
 } DynBuf;
 
+CUTIL_API
 void dbuf_init(DynBuf *s);
+CUTIL_API
 void dbuf_init2(DynBuf *s, void *opaque, DynBufReallocFunc *realloc_func);
+CUTIL_API
 int dbuf_realloc(DynBuf *s, size_t new_size);
+CUTIL_API
 int dbuf_write(DynBuf *s, size_t offset, const uint8_t *data, size_t len);
+CUTIL_API
 int dbuf_put(DynBuf *s, const uint8_t *data, size_t len);
+CUTIL_API
 int dbuf_put_self(DynBuf *s, size_t offset, size_t len);
+CUTIL_API
 int dbuf_putc(DynBuf *s, uint8_t c);
+CUTIL_API
 int dbuf_putstr(DynBuf *s, const char *str);
 static inline int dbuf_put_u16(DynBuf *s, uint16_t val)
 {
@@ -306,8 +322,10 @@ static inline int dbuf_put_u64(DynBuf *s, uint64_t val)
 {
     return dbuf_put(s, (uint8_t *)&val, 8);
 }
+CUTIL_API
 int printflike(2, 3) dbuf_printf(DynBuf *s,
                                                       const char *fmt, ...);
+CUTIL_API
 void dbuf_free(DynBuf *s);
 static inline BOOL dbuf_error(DynBuf *s) {
     return s->error;
@@ -319,7 +337,9 @@ static inline void dbuf_set_error(DynBuf *s)
 
 #define UTF8_CHAR_LEN_MAX 6
 
+CUTIL_API
 int unicode_to_utf8(uint8_t *buf, unsigned int c);
+CUTIL_API
 int unicode_from_utf8(const uint8_t *p, int max_len, const uint8_t **pp);
 
 static inline int from_hex(int c)
@@ -334,6 +354,7 @@ static inline int from_hex(int c)
         return -1;
 }
 
+CUTIL_API
 void rqsort(void *base, size_t nmemb, size_t size,
             int (*cmp)(const void *, const void *, void *),
             void *arg);

@@ -210,6 +210,7 @@ build_toc_block(DndcContext*);
   Node*
   get_node(DndcContext*, NodeHandle);
 
+#if 0
   //
   // get_node_e
   // ----------
@@ -219,6 +220,7 @@ build_toc_block(DndcContext*);
   DNDC_API
   Node*
   get_node_e(DndcContext*, NodeHandle);
+#endif
 
 
   //

@@ -359,12 +359,14 @@ get_node(DndcContext* ctx, NodeHandle handle){
     return result;
 }
 
+#if 0
 // for debugging
 DNDC_API
 Node*
 get_node_e(DndcContext* ctx, NodeHandle handle){
     return get_node(ctx, handle);
 }
+#endif
 
 static inline
 force_inline

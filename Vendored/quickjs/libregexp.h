@@ -28,6 +28,10 @@
 
 #include "libunicode.h"
 
+#ifndef LRE_API
+#define LRE_API LIBUNI_API
+#endif
+
 #define LRE_BOOL  int       /* for documentation purposes */
 
 #define LRE_FLAG_GLOBAL     (1 << 0)
@@ -39,26 +43,40 @@
 
 #define LRE_FLAG_NAMED_GROUPS (1 << 7) /* named groups are present in the regexp */
 
+LRE_API
 uint8_t *lre_compile(int *plen, char *error_msg, int error_msg_size,
                      const char *buf, size_t buf_len, int re_flags,
                      void *opaque);
+LRE_API
 int lre_get_capture_count(const uint8_t *bc_buf);
+LRE_API
 int lre_get_flags(const uint8_t *bc_buf);
+LRE_API
 const char *lre_get_groupnames(const uint8_t *bc_buf);
+LRE_API
 int lre_exec(uint8_t **capture,
              const uint8_t *bc_buf, const uint8_t *cbuf, int cindex, int clen,
              int cbuf_type, void *opaque);
 
+LRE_API
 int lre_parse_escape(const uint8_t **pp, int allow_utf16);
+LRE_API
 LRE_BOOL lre_is_space(int c);
 
 /* must be provided by the user */
+LRE_API
 LRE_BOOL lre_check_stack_overflow(void *opaque, size_t alloca_size);
+LRE_API
 void *lre_realloc(void *opaque, void *ptr, size_t size);
 
 /* JS identifier test */
+#if defined(__GNUC__) || defined(__clang__)
+extern uint32_t const lre_id_start_table_ascii[4] __attribute__((visibility("hidden")));
+extern uint32_t const lre_id_continue_table_ascii[4] __attribute__((visibility("hidden")));
+#else
 extern uint32_t const lre_id_start_table_ascii[4];
 extern uint32_t const lre_id_continue_table_ascii[4];
+#endif
 
 static inline int lre_js_is_ident_first(int c)
 {

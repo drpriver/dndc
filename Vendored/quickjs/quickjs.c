@@ -1276,7 +1276,7 @@ static QJSValue js_module_ns_autoinit(QJSContext *ctx, QJSObject *p, QJSAtom ato
                                  void *opaque);
 static QJSValue QJS_InstantiateFunctionListItem2(QJSContext *ctx, QJSObject *p,
                                                QJSAtom atom, void *opaque);
-void QJS_SetUncatchableError(QJSContext *ctx, QJSValueConst val, BOOL flag);
+static void QJS_SetUncatchableError(QJSContext *ctx, QJSValueConst val, BOOL flag);
 
 static const QJSClassExoticMethods js_arguments_exotic_methods;
 static const QJSClassExoticMethods js_string_exotic_methods;
@@ -9444,6 +9444,7 @@ int QJS_DefinePropertyValue(QJSContext *ctx, QJSValueConst this_obj,
     return ret;
 }
 
+static
 int QJS_DefinePropertyValueValue(QJSContext *ctx, QJSValueConst this_obj,
                                 QJSValue prop, QJSValue val, int flags)
 {
@@ -9468,6 +9469,7 @@ int QJS_DefinePropertyValueUint32(QJSContext *ctx, QJSValueConst this_obj,
                                        val, flags);
 }
 
+static
 int QJS_DefinePropertyValueInt64(QJSContext *ctx, QJSValueConst this_obj,
                                 int64_t idx, QJSValue val, int flags)
 {
@@ -9809,6 +9811,7 @@ int QJS_DeleteProperty(QJSContext *ctx, QJSValueConst obj, QJSAtom prop, int fla
     return FALSE;
 }
 
+static
 int QJS_DeletePropertyInt64(QJSContext *ctx, QJSValueConst obj, int64_t idx, int flags)
 {
     QJSAtom prop;
@@ -9843,6 +9846,7 @@ BOOL QJS_IsFunction(QJSContext *ctx, QJSValueConst val)
     }
 }
 
+static
 BOOL QJS_IsCFunction(QJSContext *ctx, QJSValueConst val, QJSCFunction *func, int magic)
 {
     QJSObject *p;
@@ -9887,6 +9891,7 @@ BOOL QJS_IsError(QJSContext *ctx, QJSValueConst val)
 }
 
 /* used to avoid catching interrupt exceptions */
+static
 BOOL QJS_IsUncatchableError(QJSContext *ctx, QJSValueConst val)
 {
     QJSObject *p;
@@ -9896,6 +9901,7 @@ BOOL QJS_IsUncatchableError(QJSContext *ctx, QJSValueConst val)
     return p->class_id == QJS_CLASS_ERROR && p->is_uncatchable_error;
 }
 
+static
 void QJS_SetUncatchableError(QJSContext *ctx, QJSValueConst val, BOOL flag)
 {
     QJSObject *p;
@@ -9906,6 +9912,7 @@ void QJS_SetUncatchableError(QJSContext *ctx, QJSValueConst val, BOOL flag)
         p->is_uncatchable_error = flag;
 }
 
+QJS_API
 void QJS_ResetUncatchableError(QJSContext *ctx)
 {
     QJS_SetUncatchableError(ctx, ctx->rt->current_exception, FALSE);
@@ -10829,11 +10836,13 @@ static int QJS_ToInt32SatFree(QJSContext *ctx, int *pres, QJSValue val)
     return 0;
 }
 
+static
 int QJS_ToInt32Sat(QJSContext *ctx, int *pres, QJSValueConst val)
 {
     return QJS_ToInt32SatFree(ctx, pres, QJS_DupValue(ctx, val));
 }
 
+static
 int QJS_ToInt32Clamp(QJSContext *ctx, int *pres, QJSValueConst val,
                     int min, int max, int min_offset)
 {
@@ -10901,11 +10910,13 @@ static int QJS_ToInt64SatFree(QJSContext *ctx, int64_t *pres, QJSValue val)
     }
 }
 
+static
 int QJS_ToInt64Sat(QJSContext *ctx, int64_t *pres, QJSValueConst val)
 {
     return QJS_ToInt64SatFree(ctx, pres, QJS_DupValue(ctx, val));
 }
 
+static
 int QJS_ToInt64Clamp(QJSContext *ctx, int64_t *pres, QJSValueConst val,
                     int64_t min, int64_t max, int64_t neg_offset)
 {
@@ -11680,6 +11691,7 @@ static QJSValue js_dtoa(QJSContext *ctx,
     return QJS_NewString(ctx, buf);
 }
 
+static
 QJSValue QJS_ToStringInternal(QJSContext *ctx, QJSValueConst val, BOOL is_ToPropertyKey)
 {
     uint32_t tag;
@@ -20381,6 +20393,7 @@ static void __maybe_unused dump_token(QJSParseState *s,
     }
 }
 
+static
 int printflike(2, 3) js_parse_error(QJSParseState *s, const char *fmt, ...)
 {
     QJSContext *ctx = s->ctx;

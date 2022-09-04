@@ -24,6 +24,14 @@
 #ifndef LIBUNICODE_H
 #define LIBUNICODE_H
 
+#ifndef LIBUNI_API
+#if defined(__GNUC__) || defined(__clang__)
+#define LIBUNI_API static __attribute__((unused))
+#else
+#define LIBUNI_API static
+#endif
+#endif
+
 #include <inttypes.h>
 
 #define LRE_BOOL  int       /* for documentation purposes */
@@ -40,8 +48,11 @@ typedef enum {
     UNICODE_NFKD,
 } UnicodeNormalizationEnum;
 
+LIBUNI_API
 int lre_case_conv(uint32_t *res, uint32_t c, int conv_type);
+LIBUNI_API
 LRE_BOOL lre_is_cased(uint32_t c);
+LIBUNI_API
 LRE_BOOL lre_is_case_ignorable(uint32_t c);
 
 /* char ranges */
@@ -60,9 +71,13 @@ typedef enum {
     CR_OP_XOR,
 } CharRangeOpEnum;
 
+LIBUNI_API
 void cr_init(CharRange *cr, void *mem_opaque, void *(*realloc_func)(void *opaque, void *ptr, size_t size));
+LIBUNI_API
 void cr_free(CharRange *cr);
+LIBUNI_API
 int cr_realloc(CharRange *cr, int size);
+LIBUNI_API
 int cr_copy(CharRange *cr, const CharRange *cr1);
 
 static inline int cr_add_point(CharRange *cr, uint32_t v)
@@ -86,6 +101,7 @@ static inline int cr_add_interval(CharRange *cr, uint32_t c1, uint32_t c2)
     return 0;
 }
 
+LIBUNI_API
 int cr_union1(CharRange *cr, const uint32_t *b_pt, int b_len);
 
 static inline int cr_union_interval(CharRange *cr, uint32_t c1, uint32_t c2)
@@ -96,25 +112,33 @@ static inline int cr_union_interval(CharRange *cr, uint32_t c1, uint32_t c2)
     return cr_union1(cr, b_pt, 2);
 }
 
+LIBUNI_API
 int cr_op(CharRange *cr, const uint32_t *a_pt, int a_len,
           const uint32_t *b_pt, int b_len, int op);
 
+LIBUNI_API
 int cr_invert(CharRange *cr);
 
 #ifdef CONFIG_ALL_UNICODE
 
+LIBUNI_API
 LRE_BOOL lre_is_id_start(uint32_t c);
+LIBUNI_API
 LRE_BOOL lre_is_id_continue(uint32_t c);
 
+LIBUNI_API
 int unicode_normalize(uint32_t **pdst, const uint32_t *src, int src_len,
                       UnicodeNormalizationEnum n_type,
                       void *opaque, void *(*realloc_func)(void *opaque, void *ptr, size_t size));
 
 /* Unicode character range functions */
 
+LIBUNI_API
 int unicode_script(CharRange *cr,
                    const char *script_name, LRE_BOOL is_ext);
+LIBUNI_API
 int unicode_general_category(CharRange *cr, const char *gc_name);
+LIBUNI_API
 int unicode_prop(CharRange *cr, const char *prop_name);
 
 #endif /* CONFIG_ALL_UNICODE */

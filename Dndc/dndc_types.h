@@ -117,7 +117,7 @@ enum {INVALID_NODE_HANDLE_VALUE = -1};
 // INVALID_NODE_HANDLE
 // -------------------
 // NOTE: not static so it is visible in the debugger.
-const NodeHandle INVALID_NODE_HANDLE = {._value=INVALID_NODE_HANDLE_VALUE};
+// const NodeHandle INVALID_NODE_HANDLE = {._value=INVALID_NODE_HANDLE_VALUE};
 // Shadow the above symbol intentionally.
 #define INVALID_NODE_HANDLE ((NodeHandle){._value=INVALID_NODE_HANDLE_VALUE})
 
