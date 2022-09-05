@@ -150,7 +150,6 @@ if(WIN32)
         # for rng
         target_compile_options(quickjs-lib PUBLIC "-mrdseed")
         target_compile_options(quickjs-dylib PUBLIC "-mrdseed")
-        target_compile_options(TestQJS PUBLIC "-mrdseed")
     endif()
 
 endif()
@@ -223,6 +222,12 @@ add_test(dndc-alloc-expand TestDndcAlloc -C ${CMAKE_SOURCE_DIR} --expand)
 
 add_executable(TestQJS Dndc/TestQJS.c)
 target_link_libraries(TestQJS ${LIBM_LIBRARIES})
+
+if(WIN32)
+    if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
+        target_compile_options(TestQJS PUBLIC "-mrdseed")
+    endif()
+endif()
 add_test(test-qjs TestQJS -C ${CMAKE_SOURCE_DIR})
 
 # installs

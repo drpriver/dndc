@@ -75,7 +75,8 @@ typedef intptr_t ssize_t;
 #define MALLOC_OVERHEAD  8
 #endif
 
-#if !defined(_WIN32)
+// WIN32 has changed maybe??
+#if 1 || !defined(_WIN32)
 /* define it if printf uses the RNDN rounding mode instead of RNDNA */
 #define CONFIG_PRINTF_RNDN
 #endif
