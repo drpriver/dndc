@@ -24051,7 +24051,7 @@ static int js_parse_destructuring_element(QJSParseState *s, int tok, int is_arg,
                                         int hasval, int has_ellipsis,
                                         BOOL allow_initializer)
 {
-    // AUDITME: 
+    // AUDITME:
     int label_parse, label_assign, label_done, label_lvalue=0, depth_lvalue;
     int start_addr, assign_addr;
     QJSAtom prop_name, var_name;
@@ -32765,8 +32765,10 @@ static QJSValue js_create_function(QJSContext *ctx, QJSFunctionDef *fd)
             }
         } else {
             b->vardefs = (void *)((uint8_t*)b + vardefs_offset);
-            memcpy(b->vardefs, fd->args, fd->arg_count * sizeof(fd->args[0]));
-            memcpy(b->vardefs + fd->arg_count, fd->vars, fd->var_count * sizeof(fd->vars[0]));
+            if(fd->arg_count)
+                memcpy(b->vardefs, fd->args, fd->arg_count * sizeof(fd->args[0]));
+            if(fd->var_count)
+                memcpy(b->vardefs + fd->arg_count, fd->vars, fd->var_count * sizeof(fd->vars[0]));
         }
         b->var_count = fd->var_count;
         b->arg_count = fd->arg_count;

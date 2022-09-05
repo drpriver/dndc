@@ -33,6 +33,7 @@
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 // Can be a real bug, but too annoying
 #pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wattributes"
 #endif
 
 
