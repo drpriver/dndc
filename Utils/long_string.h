@@ -66,10 +66,8 @@ struct StringViewUtf16 {
 
 typedef struct StringView2 StringView2;
 struct StringView2 {
-    struct {
-        StringView key;
-        StringView value;
-    };
+    StringView key;
+    StringView value;
 };
 
 static inline

@@ -222,6 +222,7 @@ add_test(dndc-alloc-reformat TestDndcAlloc -C ${CMAKE_SOURCE_DIR} --reformat)
 add_test(dndc-alloc-expand TestDndcAlloc -C ${CMAKE_SOURCE_DIR} --expand)
 
 add_executable(TestQJS Dndc/TestQJS.c)
+target_link_libraries(TestQJS ${LIBM_LIBRARIES})
 add_test(test-qjs TestQJS -C ${CMAKE_SOURCE_DIR})
 
 # installs
