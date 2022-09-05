@@ -35,17 +35,24 @@ int main(int argc, char** argv){
 #endif
 #endif
 
+typedef union SizeHeader SizeHeader;
+union SizeHeader {
+    size_t size;
+    double _f;
+    void* _p;
+};
+
 static
 void*_Nullable
 js_arena_malloc(QJSMallocState*s, size_t size){
     // This is stupid that we have to store the size in
     // the pointer, but how else are we going to
     // support realloc.
-    size_t true_size = size + sizeof(size_t);
-    size_t* p = ArenaAllocator_alloc(s->opaque, true_size);
+    size_t true_size = size + sizeof(SizeHeader);
+    SizeHeader* p = ArenaAllocator_alloc(s->opaque, true_size);
     if(unlikely(!p))
         return NULL;
-    *p = true_size;
+    p->size = true_size;
     return p+1;
 }
 
@@ -64,11 +71,11 @@ js_arena_realloc(QJSMallocState*s, void* pointer, size_t size){
         return NULL;
     void* result;
     if(pointer){
-        size_t* true_pointer = ((size_t*)pointer)-1;
-        size_t true_size = size + sizeof(size_t);
-        size_t* new_pointer = ArenaAllocator_realloc(s->opaque, true_pointer, *true_pointer, true_size);
+        SizeHeader* true_pointer = ((SizeHeader*)pointer)-1;
+        size_t true_size = size + sizeof(SizeHeader);
+        SizeHeader* new_pointer = ArenaAllocator_realloc(s->opaque, true_pointer, true_pointer->size, true_size);
         if(!new_pointer) return NULL;
-        *new_pointer = true_size;
+        new_pointer->size = true_size;
         result = new_pointer+1;
     }
     else
