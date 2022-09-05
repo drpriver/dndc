@@ -88,9 +88,6 @@ new_qjs_rt(ArenaAllocator* aa){
     rt = QJS_NewRuntime2(&mf, aa);
     if(unlikely(!rt)) return NULL;
     return rt;
-    fail:
-    ArenaAllocator_free_all(aa);
-    return NULL;
 }
 
 static
