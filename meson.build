@@ -175,6 +175,11 @@ test('dndc-alloc-expand', dndc_alloc,
   args:['-C', meson.source_root(), '--expand']
 )
 
+test('test-qjs',
+  executable('TestQJS', 'Dndc/TestQJS.c', include_directories: includes, c_args:ignore_bogus_deprecations),
+  args:['-C', meson.source_root()]
+)
+
 test('pydndc', pyinstall, args:['Dndc/testpydndc.py', '--extension-directory', meson.build_root()], workdir:meson.source_root(), depends:pydndc)
 
 qt6 = import('qt6')

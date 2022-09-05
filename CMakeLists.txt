@@ -150,6 +150,7 @@ if(WIN32)
         # for rng
         target_compile_options(quickjs-lib PUBLIC "-mrdseed")
         target_compile_options(quickjs-dylib PUBLIC "-mrdseed")
+        target_compile_options(TestQJS PUBLIC "-mrdseed")
     endif()
 
 endif()
@@ -220,6 +221,8 @@ add_test(dndc-alloc-md TestDndcAlloc -C ${CMAKE_SOURCE_DIR} --md)
 add_test(dndc-alloc-reformat TestDndcAlloc -C ${CMAKE_SOURCE_DIR} --reformat)
 add_test(dndc-alloc-expand TestDndcAlloc -C ${CMAKE_SOURCE_DIR} --expand)
 
+add_executable(TestQJS Dndc/TestQJS.c)
+add_test(test-qjs TestQJS -C ${CMAKE_SOURCE_DIR})
 
 # installs
 install(TARGETS dndc DESTINATION bin)
