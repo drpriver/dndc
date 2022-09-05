@@ -323,24 +323,37 @@ QJSCFunctionListEntry QJS_DNDC_CLASSLIST_FUNCS[] = {
     QJS_ALIAS_DEF("[Symbol.iterator]", "values" ),
 };
 
+typedef union SizeHeader SizeHeader;
+union SizeHeader {
+    size_t size;
+    double _f;
+    void* _p;
+};
+
 static
 void*_Nullable
 js_arena_malloc(QJSMallocState*s, size_t size){
     // This is stupid that we have to store the size in
     // the pointer, but how else are we going to
     // support realloc.
-    size_t true_size = size + sizeof(size_t);
-    size_t* p = ArenaAllocator_alloc(s->opaque, true_size);
+    if(!size) return NULL;
+    size_t true_size = size + sizeof(SizeHeader);
+    SizeHeader* p = ArenaAllocator_alloc(s->opaque, true_size);
     if(unlikely(!p))
         return NULL;
-    *p = true_size;
+    p->size = true_size;
     return p+1;
 }
 
 static
 void
-js_arena_free(QJSMallocState*s, void* ptr){
-    (void)ptr, (void)s;
+js_arena_free(QJSMallocState*s, void* pointer){
+    return;
+    // We crash in TestDndcAlloc if we actually free pointers here.  Maybe
+    // something in qjs is not checking the return value of malloc properly.
+    if(!pointer) return;
+    SizeHeader* true_pointer = ((SizeHeader*)pointer)-1;
+    ArenaAllocator_free(s->opaque, true_pointer, true_pointer->size);
 }
 
 // This is so dumb. They know what size of allocation
@@ -348,15 +361,16 @@ js_arena_free(QJSMallocState*s, void* ptr){
 static
 void*_Nullable
 js_arena_realloc(QJSMallocState*s, void* pointer, size_t size){
-    if(!size && !pointer)
+    if(!size && !pointer){
         return NULL;
+    }
     void* result;
     if(pointer){
-        size_t* true_pointer = ((size_t*)pointer)-1;
-        size_t true_size = size + sizeof(size_t);
-        size_t* new_pointer = ArenaAllocator_realloc(s->opaque, true_pointer, *true_pointer, true_size);
+        SizeHeader* true_pointer = ((SizeHeader*)pointer)-1;
+        size_t true_size = size + sizeof(SizeHeader);
+        SizeHeader* new_pointer = ArenaAllocator_realloc(s->opaque, true_pointer, true_pointer->size, true_size);
         if(!new_pointer) return NULL;
-        *new_pointer = true_size;
+        new_pointer->size = true_size;
         result = new_pointer+1;
     }
     else

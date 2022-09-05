@@ -3,7 +3,7 @@
 //
 
 // Run's qjs's tests to make sure my changes to quickjs haven't broken it.
-#define HEAVY_RECORDING
+// #define HEAVY_RECORDING
 #define USE_TESTING_ALLOCATOR
 #define REPLACE_MALLOCATOR
 #include "Allocators/testing_allocator.h"
