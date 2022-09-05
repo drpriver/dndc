@@ -176,7 +176,7 @@ test('dndc-alloc-expand', dndc_alloc,
 )
 
 test('test-qjs',
-  executable('TestQJS', 'Dndc/TestQJS.c', include_directories: includes, c_args:ignore_bogus_deprecations),
+  executable('TestQJS', 'Dndc/TestQJS.c', include_directories: includes, c_args:ignore_bogus_deprecations+qjs_extra_args),
   args:['-C', meson.source_root()]
 )
 
