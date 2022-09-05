@@ -48,6 +48,21 @@ tests: $(TESTDIR)/TestDndc_fast
 TestDndc: $(TESTDIR)/TestDndc_debug $(TESTDIR)/TestDndc_fast
 .PHONY: TestDndc
 
+$(BINDIR)/TestQJS_fast$(EXE): Dndc/TestQJS.c $(DEPDIR)/TestQJS_fast.dep| $(DIRECTORIES)
+	$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestQJS_fast.dep $< -o $@ -g  $(LINK_FLAGS) $(QUICKJS_CEXTRA)
+$(BINDIR)/TestQJS_debug$(EXE): Dndc/TestQJS.c $(DEPDIR)/TestQJS_debug.dep | $(DIRECTORIES)
+	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestQJS_debug.dep $< -o $@ -g  $(LINK_FLAGS) $(QUICKJS_CEXTRA)
+
+$(TESTDIR)/TestQJS_debug: $(BINDIR)/TestQJS_debug$(EXE)
+	$< --tee $@
+tests: $(TESTDIR)/TestQJS_debug
+$(TESTDIR)/TestQJS_fast: $(BINDIR)/TestQJS_fast$(EXE)
+	$< --tee $@
+tests: $(TESTDIR)/TestQJS_fast
+
+TestQJS: $(TESTDIR)/TestQJS_debug $(TESTDIR)/TestQJS_fast
+.PHONY: TestQJS
+
 
 $(BINDIR)/TestDndcAlloc_fast$(EXE): Dndc/TestDndcAlloc.c $(DEPDIR)/TestDndcAlloc_fast.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndcAlloc_fast.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
