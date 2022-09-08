@@ -19,9 +19,9 @@ struct PString {
 };
 
 static inline
-LongString
-PString_to_LongString(PString* pstr){
-    LongString text = {.text=(char*)pstr->text, .length=pstr->length};
+StringView
+PString_to_sv(PString* pstr){
+    StringView text = {.text=(char*)pstr->text, .length=pstr->length};
     return text;
 }
 

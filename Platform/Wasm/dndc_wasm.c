@@ -1,8 +1,10 @@
 //
 // Copyright © 2021-2022, David Priver
 //
+#define WASM 1
+#define DNDC_API static inline
 #include "Dndc/dndc.h"
-#include "Dndc/dndc.c"
+#include "Allocators/nullacator.h"
 #include "Utils/msb_format.h"
 #include "jsinter.h"
 
@@ -21,14 +23,10 @@ void dndc_log_func(void* log_user_data, int type, const char* filename, int file
         char buff[4096];
         msb.data = buff;
         msb.capacity = sizeof(buff);
-        msb_write_str(&msb, filename, filename_len);
-        msb_write_char(&msb, ':');
-        msb_write_int32(&msb, line);
-        msb_write_char(&msb, ':');
-        msb_write_int32(&msb, col);
-        msb_write_char(&msb, ':');
-        msb_write_str(&msb, message, message_len);
-        msb_nul_terminate(&msb);
+        msb.allocator = NULLACATOR;
+        StringView m = {message_len, message};
+        StringView f = {filename_len, filename};
+        MSB_FORMAT(&msb, f, ":", line, ":", col, ":", m);
         log_string(buff, msb.cursor);
     }
     else{
@@ -39,7 +37,7 @@ void dndc_log_func(void* log_user_data, int type, const char* filename, int file
 extern
 PString*
 make_html(PString* source){
-    LongString text = PString_to_LongString(source);
+    StringView text = PString_to_sv(source);
     StringView base = SV("");
     LongString output;
     uint64_t flags = DNDC_FLAGS_NONE
@@ -55,7 +53,7 @@ make_html(PString* source){
             OUTPUT_HTML,
             flags,
             base,                // base_directory
-            LS_to_SV(text),      // source
+            text,                // source
             SV("(string input"), // source_path
             &output,             // outstring
             NULL, NULL,          // caches
@@ -74,7 +72,7 @@ make_html(PString* source){
 extern
 PString*
 make_fragment(PString* source){
-    LongString text = PString_to_LongString(source);
+    StringView text = PString_to_sv(source);
     StringView base = SV("");
     LongString output;
     uint64_t flags = DNDC_FLAGS_NONE
@@ -90,7 +88,7 @@ make_fragment(PString* source){
     int e = run_the_dndc(
             flags,
             base,
-            LS_to_SV(text),
+            text,
             SV("(string input"),
             &output,               // outstring
             NULL, NULL,            // caches
@@ -108,7 +106,7 @@ make_fragment(PString* source){
 extern
 PString*
 format_dnd(PString* source){
-    LongString text = PString_to_LongString(source);
+    StringView text = PString_to_sv(source);
     StringView base = SV("");
     LongString output;
     uint64_t flags = DNDC_FLAGS_NONE
@@ -122,7 +120,7 @@ format_dnd(PString* source){
         ;
     int e = run_the_dndc(
             OUTPUT_REFORMAT,
-            flags, base, LS_to_SV(text), SV(""),
+            flags, base, text, SV(""),
             &output,
             NULL, NULL,          // caches
             dndc_log_func, NULL, // log func
@@ -136,19 +134,4 @@ format_dnd(PString* source){
     return result;
 }
 
-#if 0
-printf_func(5, 6)
-static
-void logfunc(int log_level, const char*_Nonnull file, const char*_Nonnull func, int line, const char*_Nonnull fmt, ...){
-    MStringBuilder msb = {0};
-    char buff[4096];
-    msb.data = buff;
-    msb.capacity = sizeof(buff);
-    msb_write_str(&msb, file, strlen(file));
-    msb_write_str(&msb, func, strlen(func));
-    msb_write_int32(&msb, line);
-    msb_write_str(&msb, fmt, strlen(fmt));
-    msb_nul_terminate(&msb);
-    log_string(buff, msb.cursor);
-}
-#endif
+#include "Dndc/dndc.c"
