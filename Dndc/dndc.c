@@ -2665,6 +2665,23 @@ CHECKNF(NOINLINE);
 
 DNDC_API
 int
+dndc_node_set_flag(DndcContext* ctx, DndcNodeHandle dnh, int flag, int on){
+    NodeHandle handle = check_api_handle(ctx, dnh);
+    if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
+        return DNDC_ERROR_VALUE;
+    if((flag & PUBLIC_NODE_FLAGS) != flag) return DNDC_ERROR_VALUE;
+    if(!flag) return DNDC_ERROR_VALUE;
+    if(on){
+        get_node(ctx, handle)->flags |= flag;
+    }
+    else {
+        get_node(ctx, handle)->flags &= ~flag;
+    }
+    return 0;
+}
+
+DNDC_API
+int
 dndc_node_get_flags(DndcContext* ctx, DndcNodeHandle dnh){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))

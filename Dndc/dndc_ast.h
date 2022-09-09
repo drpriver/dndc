@@ -711,6 +711,31 @@ enum DNDC_NODEFLAG{
 //     This will mean the resulting document is no longer self-contained.
 //
 
+DNDC_API
+int
+dndc_node_set_flag(DndcContext* ctx, DndcNodeHandle dnh, int flag, int on);
+// --------------------
+// Sets a given flag on the node (or clears it if `on` is false).
+// Other flags will be preserved.
+//
+// Arguments:
+// ----------
+// ctx:
+//     The parsing context.
+//
+// dnh:
+//     Handle to the node.
+//
+// flag:
+//     A `DNDC_NODEFLAG` to set (or clear) on the node.
+//
+// on:
+//     If 0, the flag will be cleared. If 1, the flag will be set.
+//
+// Returns:
+// --------
+// Returns 0 on success and non-zero on error.
+
 
 DNDC_API
 int
@@ -731,8 +756,8 @@ dndc_node_set_flags(DndcContext*, DndcNodeHandle, int);
 // Sets the flags on a node to the given value. This should be the bitwise-or
 // of the `DNDC_NODEFLAG`s you wish to set. Note that this will override all
 // of the flags already set on the node. Call `dndc_node_get_flags` first and
-// bit-twiddle them if you don't want to leave the values of those flags
-// undisturbed.
+// bit-twiddle them or use `dndc_node_set_flag` if you don't want to leave the
+// values of those flags undisturbed.
 //
 // Returns 0 on success and non-zero on error.
 //

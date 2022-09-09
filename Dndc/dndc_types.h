@@ -150,26 +150,28 @@ __attribute__((flag_enum))
 #endif
 NodeFlags {
     // -----
-    // Public flags
-    NODEFLAG_NONE = 0,
+    // Public flags: These flags are in the public api and so must stay
+    // the same.
+    NODEFLAG_NONE     = 0,
+
     // Import children
-    NODEFLAG_IMPORT = 0x1,
+    NODEFLAG_IMPORT   = 0x1,
 
     // Don't give an id to this node
-    NODEFLAG_NOID = 0x2,
+    NODEFLAG_NOID     = 0x2,
 
     // Hide this node from final output
-    NODEFLAG_HIDE = 0x4,
+    NODEFLAG_HIDE     = 0x4,
 
     // Don't inline the images from this node
     NODEFLAG_NOINLINE = 0x8,
 
     // -----
-    // Implementation detail flags
+    // Implementation detail flags: these can change.
 
     // ID is not derived from header -> it's stored elsewhere.
     // Look it up via the NodeHandle of the node.
-    NODEFLAG_ID = 0x10,
+    NODEFLAG_ID       = 0x10,
 } NodeFlags;
 
 enum {

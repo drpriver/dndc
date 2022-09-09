@@ -2759,12 +2759,7 @@ DndcNodePy_setflag(PyObject* s, PyObject*_Nullable a, void*_Nullable p){
     DndcNodePy* self = (DndcNodePy*)s;
     DndcContext* ctx = self->pyctx->ctx;
     DndcNodeHandle handle = self->handle;
-    int flags = dndc_node_get_flags(ctx, handle);
-    if(PyObject_IsTrue(a))
-        flags |= flag;
-    else
-        flags &= ~flag;
-    int err = dndc_node_set_flags(ctx, handle, flags);
+    int err = dndc_node_set_flag(ctx, handle, flag, PyObject_IsTrue(a));
     (void)err;
     return 0;
 }
