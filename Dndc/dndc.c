@@ -2393,9 +2393,10 @@ int
 dndc_ctx_parse_file(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sourcepath){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE)) return DNDC_ERROR_VALUE;
-    StringViewResult svr = ctx_load_source_file(ctx, sourcepath);
-    if(svr.errored) return DNDC_ERROR_FILE_READ;
-    int e = dndc_parse(ctx, handle, sourcepath, svr.result.text, svr.result.length);
+    StringView s;
+    int e = ctx_load_source_file(ctx, sourcepath, &s);
+    if(e) return DNDC_ERROR_FILE_READ;
+    e = dndc_parse(ctx, handle, sourcepath, s.text, s.length);
     return e;
 }
 
@@ -3172,16 +3173,16 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
                 goto cleanup;
             }
             StringView filename = child->header;
-            StringViewResult imp_e = ctx_load_source_file(ctx, filename);
-            if(imp_e.errored){
+            StringView imp_text;
+            int imp_e = ctx_load_source_file(ctx, filename, &imp_text);
+            if(imp_e){
                 if(ctx->base_directory.length)
                     NODE_LOG_ERROR(ctx, child, "Unable to open '", ctx->base_directory, "/", filename, "'");
                 else
                     NODE_LOG_ERROR(ctx, child, "Unable to open '", filename, "'");
-                result = imp_e.errored;
+                result = imp_e;
                 goto cleanup;
             }
-            StringView imp_text = imp_e.result;
             result = dndc_parse(ctx, newhandle, filename, imp_text.text, imp_text.length);
             if(result){
                 goto cleanup;

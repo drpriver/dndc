@@ -73,30 +73,31 @@ TestFunction(TestExamples){
             testing_reset();
             LongString output = {0};
             Allocator allocator = MALLOCATOR;
-            TextFileResult data = read_file(examples[i].text, allocator);
-            if(data.errored)
+            LongString data;
+            FileError ferr = read_file(examples[i].text, allocator, &data);
+            if(ferr.errored)
                 continue;
             if(RUNWHICH & RunWhich_HTML){
-                int e = run_the_dndc(OUTPUT_HTML, flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, null_log, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+                int e = run_the_dndc(OUTPUT_HTML, flags, base_dirs[i], LS_to_SV(data), LS_to_SV(examples[i]), &output, NULL, NULL, null_log, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
                 if(!e) dndc_free_string(output);
                 TestExpectTrue(1);
             }
             if(RUNWHICH & RunWhich_MD){
-                int e = run_the_dndc(OUTPUT_MD, flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, null_log, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+                int e = run_the_dndc(OUTPUT_MD, flags, base_dirs[i], LS_to_SV(data), LS_to_SV(examples[i]), &output, NULL, NULL, null_log, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
                 if(!e) dndc_free_string(output);
                 TestExpectTrue(1);
             }
             if(RUNWHICH & RunWhich_REFORMAT){
-                int e = run_the_dndc(OUTPUT_REFORMAT, flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, null_log, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+                int e = run_the_dndc(OUTPUT_REFORMAT, flags, base_dirs[i], LS_to_SV(data), LS_to_SV(examples[i]), &output, NULL, NULL, null_log, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
                 if(!e) dndc_free_string(output);
                 TestExpectTrue(1);
             }
             if(RUNWHICH & RunWhich_EXPAND){
-                int e = run_the_dndc(OUTPUT_EXPAND, flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, null_log, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+                int e = run_the_dndc(OUTPUT_EXPAND, flags, base_dirs[i], LS_to_SV(data), LS_to_SV(examples[i]), &output, NULL, NULL, null_log, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
                 if(!e) dndc_free_string(output);
                 TestExpectTrue(1);
             }
-            Allocator_free(allocator, data.result.text, data.result.length+1);
+            Allocator_free(allocator, data.text, data.length+1);
         }
     }
     dndc_worker_thread_destroy(worker);

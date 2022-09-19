@@ -523,9 +523,10 @@ TestFunction(TestCrashesFixed){
         Allocator allocator = MALLOCATOR;
         // Read as binary to avoid appending a nul terminator
         // which can mask off-by-one read errors.
-        BinaryFileResult data = read_bin_file(cases[i].name.text, allocator);
-        TestAssertSuccess(data);
-        StringView text = {.length=data.result.n_bytes, .text=data.result.buff};
+        ByteBuffer buff;
+        FileError ferr = read_bin_file(cases[i].name.text, allocator, &buff);
+        TestAssertSuccess(ferr);
+        StringView text = {.length=buff.n_bytes, .text=buff.buff};
         int e = run_the_dndc(cases[i].target, cases[i].flags, SV("TestCases"), text, LS_to_SV(cases[i].name), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
         if(cases[i].error){
             TestExpectTrue(e);
@@ -560,9 +561,10 @@ TestFunction(TestEscapedFixed){
         Allocator allocator = MALLOCATOR;
         // Read as binary to avoid appending a nul terminator
         // which can mask off-by-one read errors.
-        BinaryFileResult data = read_bin_file(cases[i].name.text, allocator);
-        TestAssertSuccess(data);
-        StringView text = {.length=data.result.n_bytes, .text=data.result.buff};
+        ByteBuffer buff;
+        FileError ferr = read_bin_file(cases[i].name.text, allocator, &buff);
+        TestAssertSuccess(ferr);
+        StringView text = {.length=buff.n_bytes, .text=buff.buff};
         int e = run_the_dndc(OUTPUT_HTML, cases[i].flags, SV("TestCases"), text, LS_to_SV(cases[i].name), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
         if(cases[i].error){
             TestExpectTrue(e);
@@ -594,13 +596,14 @@ TestFunction(TestExamplesWork){
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString output = {0};
         Allocator allocator = MALLOCATOR;
-        TextFileResult data = read_file(examples[i].text, allocator);
-        if(data.errored){
+        LongString data;
+        FileError ferr = read_file(examples[i].text, allocator, &data);
+        if(ferr.errored){
             TestPrintValue("Unable to open: examples[i]", examples[i]);
         }
-        TestAssertSuccess(data);
+        TestAssertSuccess(ferr);
         {
-            int e = run_the_dndc(OUTPUT_HTML, flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+            int e = run_the_dndc(OUTPUT_HTML, flags, base_dirs[i], LS_to_SV(data), LS_to_SV(examples[i]), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
             TestExpectFalse(e);
             if(e){
                 TestPrintValue("Example failed:", examples[i]);
@@ -611,7 +614,7 @@ TestFunction(TestExamplesWork){
             }
         }
         {
-            int e = run_the_dndc(OUTPUT_HTML, flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, (WorkerThread*)worker, LS(""));
+            int e = run_the_dndc(OUTPUT_HTML, flags, base_dirs[i], LS_to_SV(data), LS_to_SV(examples[i]), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, (WorkerThread*)worker, LS(""));
             TestExpectFalse(e);
             if(e){
                 TestPrintValue("Example failed:", examples[i]);
@@ -621,7 +624,7 @@ TestFunction(TestExamplesWork){
                 dndc_free_string(output);
             }
         }
-        Allocator_free(allocator, data.result.text, data.result.length+1);
+        Allocator_free(allocator, data.text, data.length+1);
     }
     dndc_worker_thread_destroy(worker);
     TESTEND();
@@ -659,15 +662,16 @@ TestFunction(TestUntrusted){
     for(size_t i = 0; i < arrlen(examples); i++){
         LongString output = {0};
         Allocator allocator = MALLOCATOR;
-        TextFileResult data = read_file(examples[i].text, allocator);
-        TestAssertSuccess(data);
-        int e = run_the_dndc(OUTPUT_HTML, flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        LongString data;
+        FileError ferr = read_file(examples[i].text, allocator, &data);
+        TestAssertSuccess(ferr);
+        int e = run_the_dndc(OUTPUT_HTML, flags, base_dirs[i], LS_to_SV(data), LS_to_SV(examples[i]), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
         TestExpectFalse(output.text);
         TestExpectTrue(e);
         if(!e){
             TestPrintValue("source file", examples[i]);
         }
-        Allocator_free(allocator, data.result.text, data.result.length+1);
+        Allocator_free(allocator, data.text, data.length+1);
     }
     StringView inline_examples[] = {
         SV(""

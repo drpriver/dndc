@@ -63,8 +63,7 @@ FormatArg
 padded_int_fmt(int value, int padding){
     return (FormatArg){
         .type = FORMATTYPE_INT_PADDED,
-        .padded_int.value=value,
-        .padded_int.padding=padding
+        .padded_int = {.value=value, .padding=padding},
     };
 }
 
@@ -134,8 +133,7 @@ FormatArg
 str_fmt(const char* value){
     return (FormatArg){
         .type=FORMATTYPE_STRING,
-        .string_value.text=value,
-        .string_value.length=strlen(value),
+        .string_value = {strlen(value), value},
     };
 }
 static inline
@@ -465,11 +463,11 @@ quotedls(LongString ls){
 }
 
 #define FMT(x) _Generic(x, \
+        int: long_fmt, \
+        unsigned: long_fmt, \
+        unsigned long: longlong_fmt, \
+        unsigned long long: longlong_fmt, \
         FormatArg: fmt_fmt,\
-        unsigned: uint_fmt,\
-        int: int_fmt,\
-        unsigned long: ulong_fmt,\
-        unsigned long long: ulonglong_fmt,\
         long: long_fmt,\
         long long: longlong_fmt,\
         char*: str_fmt,\

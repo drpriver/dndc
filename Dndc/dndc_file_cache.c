@@ -58,8 +58,9 @@ struct DndcFileCache {
 
 
 static
-StringResult
-read_and_base64_bin_file(Allocator scratch, Allocator outallocator, const char* filepath);
+warn_unused
+int
+read_and_base64_bin_file(Allocator scratch, Allocator outallocator, const char* filepath, LongString* outsv);
 
 static inline
 void
@@ -149,42 +150,46 @@ FileCache_alloc_path(FileCache* cache, FileCacheLookupKey key, FileCachePath* ou
 
 static inline
 warn_unused
-StringResult
-FileCache_read_file_(FileCache* cache, FileCachePath path){
-    TextFileResult fr = read_file(path.text, cache->allocator);
+int
+FileCache_read_file_(FileCache* cache, FileCachePath path, LongString* outstr){
+    LongString text;
+    FileError fr = read_file(path.text, cache->allocator, &text);
+    if(fr.errored){
+        return DNDC_ERROR_FILE_READ;
+    }
     if(!fr.errored){
         LoadedSource* ls; int err = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator, &ls);
         if(unlikely(err)){
-            Allocator_free(cache->allocator, fr.result.text, fr.result.length+1);
-            return (StringResult){.errored=DNDC_ERROR_OOM};
+            Allocator_free(cache->allocator, text.text, text.length+1);
+            return DNDC_ERROR_OOM;
         }
         ls->sourcepath = path;
-        ls->sourcetext = fr.result;
+        ls->sourcetext = text;
     }
-    return (StringResult){.result = fr.result, .errored=fr.errored};
+    *outstr = text;
+    return 0;
 }
 
 static inline
 warn_unused
-StringResult
-FileCache_read_file(FileCache* cache, StringView spath, bool cached_only){
+int
+FileCache_read_file(FileCache* cache, StringView spath, bool cached_only, LongString* outstr){
     FileCacheLookupKey key = FileCache_make_key(spath);
     MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
         if(FileCache_key_eq(key, src->sourcepath)){
-            return (StringResult){
-                .result = src->sourcetext,
-            };
+            *outstr = src->sourcetext;
+            return 0;
         }
     }
     if(unlikely(cached_only)){
-        return (StringResult){.errored = DNDC_ERROR_FILE_READ};
+        return DNDC_ERROR_FILE_READ;
     }
     FileCachePath path;
     int err = FileCache_alloc_path(cache, key, &path);
     if(unlikely(err))
-        return (StringResult){.errored = err};
-    StringResult result = FileCache_read_file_(cache, path);
-    if(result.errored){
+        return err;
+    int result = FileCache_read_file_(cache, path, outstr);
+    if(result){
         FileCache_free_path(cache, path);
     }
     return result;
@@ -192,38 +197,37 @@ FileCache_read_file(FileCache* cache, StringView spath, bool cached_only){
 
 static inline
 warn_unused
-StringResult
-FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only){
+int
+FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only, LongString* outstr){
     FileCacheLookupKey key = FileCache_make_key(spath);
     MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
         if(FileCache_key_eq(key, src->sourcepath)){
-            return (StringResult){
-                .result = src->sourcetext,
-            };
+            *outstr = src->sourcetext;
+            return 0;
         }
     }
     if(unlikely(cached_only))
-        return (StringResult){.errored = DNDC_ERROR_FILE_READ};
+        return DNDC_ERROR_FILE_READ;
     FileCachePath path;
     int err = FileCache_alloc_path(cache, key, &path);
     if(unlikely(err))
-        return (StringResult){.errored = err};
-    StringResult base64ed_e = read_and_base64_bin_file(cache->scratch, cache->allocator, path.text);
-    if(unlikely(base64ed_e.errored)){
+        return err;
+    LongString base64ed;
+    int base64ed_e = read_and_base64_bin_file(cache->scratch, cache->allocator, path.text, &base64ed);
+    if(unlikely(base64ed_e)){
         FileCache_free_path(cache, path);
-        return (StringResult){.errored=base64ed_e.errored};
+        return base64ed_e;
     }
-    else {
-        LoadedSource* ls; err = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator, &ls);
-        if(unlikely(err)){
-            FileCache_free_path(cache, path);
-            Allocator_free(cache->allocator, base64ed_e.result.text, base64ed_e.result.length+1);
-            return (StringResult){.errored=DNDC_ERROR_OOM};
-        }
-        ls->sourcepath = path;
-        ls->sourcetext = base64ed_e.result;
-        return (StringResult){.result=base64ed_e.result};
+    LoadedSource* ls; err = Marray_alloc(LoadedSource)(&cache->_files, cache->allocator, &ls);
+    if(unlikely(err)){
+        FileCache_free_path(cache, path);
+        Allocator_free(cache->allocator, base64ed.text, base64ed.length+1);
+        return DNDC_ERROR_OOM;
     }
+    ls->sourcepath = path;
+    ls->sourcetext = base64ed;
+    *outstr = base64ed;
+    return 0;
 }
 
 static
@@ -231,7 +235,9 @@ void
 FileCache_preload_b64_files(FileCache* cache, StringView* spaths, size_t count){
     for(size_t i = 0; i < count; i++){
         StringView spath = spaths[i];
-        StringResult e = FileCache_read_and_b64_file(cache, spath, false);
+        LongString unused;
+        int e = FileCache_read_and_b64_file(cache, spath, false, &unused);
+        (void)unused;
         (void)e;
     }
 }
@@ -271,26 +277,24 @@ FileCache_n_paths(const FileCache* cache){
 // The base64-ifying can't fail.
 //
 static
-StringResult
-read_and_base64_bin_file(Allocator scratch, Allocator outallocator, const char* filepath){
-    StringResult result = {0};
-    BinaryFileResult bfr = read_bin_file(filepath, scratch);
+warn_unused
+int
+read_and_base64_bin_file(Allocator scratch, Allocator outallocator, const char* filepath, LongString* outstr){
+    ByteBuffer buff;
+    FileError bfr = read_bin_file(filepath, scratch, &buff);
     if(bfr.errored){
-        result.errored = bfr.errored;
-        return result;
+        return DNDC_ERROR_FILE_READ;
     }
-    ByteBuffer buff = bfr.result;
     MStringBuilder sb = {.allocator=outallocator};
     msb_write_b64(&sb, buff.buff, buff.n_bytes);
     Allocator_free(scratch, buff.buff, buff.n_bytes);
     msb_nul_terminate(&sb);
     if(sb.errored){
         msb_destroy(&sb);
-        result.errored = DNDC_ERROR_OOM;
-        return result;
+        return DNDC_ERROR_OOM;
     }
-    result.result = msb_detach_ls(&sb);
-    return result;
+    *outstr = msb_detach_ls(&sb);
+    return 0;
 }
 
 static inline

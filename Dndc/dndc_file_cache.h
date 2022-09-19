@@ -7,7 +7,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "dndc_long_string.h"
-#include "errorable_long_string.h"
 #include "Allocators/allocator.h"
 
 #ifdef __clang__
@@ -30,13 +29,13 @@ FileCache_has_file(const FileCache* cache, StringView path);
 
 static inline
 warn_unused
-StringResult
-FileCache_read_file(FileCache* cache, StringView spath, bool cached_only);
+int
+FileCache_read_file(FileCache* cache, StringView spath, bool cached_only, LongString* outstr);
 
 static inline
 warn_unused
-StringResult
-FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only);
+int
+FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only, LongString* outstr);
 
 static
 void // preload only so no error code

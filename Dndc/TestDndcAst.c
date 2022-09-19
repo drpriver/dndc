@@ -82,20 +82,21 @@ TestFunction(TestAstExample){
         LongString ast_output = {0};
         LongString dnd_output = {0};
         Allocator allocator = MALLOCATOR;
-        TextFileResult data = read_file(examples[i].text, allocator);
-        if(data.errored){
+        LongString data;
+        FileError ferr = read_file(examples[i].text, allocator, &data);
+        if(ferr.errored){
             TestPrintValue("Unable to open: examples[i]", examples[i]);
         }
-        TestAssertSuccess(data);
+        TestAssertSuccess(ferr);
         {
             int e;
-            e = dndc_compile_dnd_file(flags, base_dirs[i], LS_to_SV(data.result), LS_to_SV(examples[i]), &dnd_output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, LS(""));
+            e = dndc_compile_dnd_file(flags, base_dirs[i], LS_to_SV(data), LS_to_SV(examples[i]), &dnd_output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, LS(""));
             if(e){
                 TestPrintValue("dndc_compile_dnd failed, example:", examples[i]);
                 TestPrintValue("Base dir:", base_dirs[i]);
             }
             TestAssertFalse(e);
-            e = compile_dnd_to_html(base_dirs[i], LS_to_SV(examples[i]), LS_to_SV(data.result), &ast_output);
+            e = compile_dnd_to_html(base_dirs[i], LS_to_SV(examples[i]), LS_to_SV(data), &ast_output);
             if(e){
                 TestPrintValue("compile_dnd_to_html failed, example:", examples[i]);
                 TestPrintValue("Base dir:", base_dirs[i]);
@@ -111,7 +112,7 @@ TestFunction(TestAstExample){
             dndc_free_string(ast_output);
             dndc_free_string(dnd_output);
         }
-        Allocator_free(allocator, data.result.text, data.result.length+1);
+        Allocator_free(allocator, data.text, data.length+1);
     }
     TESTEND();
 }

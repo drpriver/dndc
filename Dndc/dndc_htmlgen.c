@@ -1013,19 +1013,17 @@ RENDERFUNC(IMAGE){
             return DNDC_ERROR_PARSE;
         }
         StringView header = imgpath_node->header;
-        StringViewResult processed_e = ctx_load_processed_binary_file(ctx, header);
-        if(unlikely(processed_e.errored)){
+        StringView b64;
+        int processed_e = ctx_load_processed_binary_file(ctx, header, &b64);
+        if(unlikely(processed_e)){
             NODE_LOG_ERROR(ctx, imgpath_node, SV("Unable to read "), quoted(header));
-            return processed_e.errored;
+            return processed_e;
         }
-        else {
-            msb_write_literal(sb, "<img src=\"data:image/png;base64,");
-            uint64_t before = get_t();
-            StringView b64 = processed_e.result;
-            msb_write_str(sb, b64.text, b64.length);
-            uint64_t after = get_t();
-            report_time(ctx, SV("Copying the base64 data of an img took "), after-before);
-        }
+        msb_write_literal(sb, "<img src=\"data:image/png;base64,");
+        uint64_t before = get_t();
+        msb_write_str(sb, b64.text, b64.length);
+        uint64_t after = get_t();
+        report_time(ctx, SV("Copying the base64 data of an img took "), after-before);
         msb_write_char(sb, '"');
     }
     for(size_t i = 1; i < count; i++){
@@ -1223,12 +1221,11 @@ RENDERFUNC(IMGLINKS){
             return DNDC_ERROR_PARSE;
         }
         StringView header = imgpath_node->header;
-        StringViewResult processed_e = ctx_load_processed_binary_file(ctx, header);
-        if(unlikely(processed_e.errored)){
+        int processed_e = ctx_load_processed_binary_file(ctx, header, &imgdatab64);
+        if(unlikely(processed_e)){
             NODE_LOG_ERROR(ctx, imgpath_node, SV("Unable to read "), quoted(header));
-            return processed_e.errored;
+            return processed_e;
         }
-        imgdatab64 = processed_e.result;
     }
     int width;
     {

@@ -53,7 +53,7 @@ dndc_main_ast_func(void*_Nullable user_data, DndcContext*_Nonnull ctx);
 
 static
 void
-print_file_writing_error(const char* filename, FileWriteResult err);
+print_file_writing_error(const char* filename, FileError err);
 
 //
 // Prints out a representation of the final document tree.
@@ -518,12 +518,11 @@ main(int argc, char**argv){
         }
         else {
             Allocator allocator = MALLOCATOR;
-            TextFileResult load_err = read_file(original_source_path.text, allocator);
+            FileError load_err = read_file(original_source_path.text, allocator, (LongString*)&source_text);
             if(load_err.errored){
                 fprintf(stderr, "Unable to read: '%s'\n", original_source_path.text);
                 return 1;
             }
-            source_text = LS_to_SV(load_err.result);
             if(no_null_terminator){
                 // make a copy so we can remove the nul-terminator (for repro-ing
                 // fuzz crashes)
@@ -584,7 +583,7 @@ main(int argc, char**argv){
             assert(!e);
             if(!dont_write){
                 if(output_path.length){
-                    FileWriteResult write_err = write_file(output_path.text, output.text, output.length);
+                    FileError write_err = write_file(output_path.text, output.text, output.length);
                     print_file_writing_error(output_path.text, write_err);
                     if(write_err.errored) return write_err.errored;
                 }
@@ -619,7 +618,7 @@ main(int argc, char**argv){
         if(dont_write)
             return 0;
         if(output_path.length){
-            FileWriteResult write_err = write_file(output_path.text, output.text, output.length);
+            FileError write_err = write_file(output_path.text, output.text, output.length);
             print_file_writing_error(output_path.text, write_err);
             return write_err.errored;
         }
@@ -665,7 +664,7 @@ dndc_write_depends_file(void* user_data, size_t npaths, StringView* paths){
         msb_write_literal(&msb, ":\n");
     }
     StringView deptext = msb_borrow_sv(&msb);
-    FileWriteResult write_err = write_file(ud->depfile.text, deptext.text, deptext.length);
+    FileError write_err = write_file(ud->depfile.text, deptext.text, deptext.length);
     msb_destroy(&msb);
     if(write_err.errored){
         print_file_writing_error(ud->depfile.text, write_err);
@@ -888,7 +887,7 @@ dndc_print_out_syntax(StringView source_text){
 
 static
 void
-print_file_writing_error(const char* filename, FileWriteResult err){
+print_file_writing_error(const char* filename, FileError err){
     #if !defined(_WIN32)
     switch(err.errored){
         case FILE_NOT_OPENED:

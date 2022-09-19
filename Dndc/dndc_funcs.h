@@ -5,7 +5,6 @@
 #define DNDC_FUNCS_H
 #include "dndc_long_string.h"
 #include "dndc.h"
-#include "errorable_long_string.h"
 #include "common_macros.h"
 #include "dndc_types.h"
 #include "Utils/MStringBuilder.h"
@@ -379,8 +378,8 @@ build_toc_block(DndcContext*);
   //
   static
   warn_unused
-  StringViewResult
-  ctx_load_source_file(DndcContext* ctx, StringView sourcepath);
+  int
+  ctx_load_source_file(DndcContext* ctx, StringView sourcepath, StringView* outstr);
 
   //
   // ctx_load_processed_binary_file
@@ -394,8 +393,8 @@ build_toc_block(DndcContext*);
   //
   static
   warn_unused
-  StringViewResult
-  ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath);
+  int
+  ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath, StringView* outstr);
 
   //
   // ctx_note_dependency

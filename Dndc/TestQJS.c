@@ -189,9 +189,9 @@ run_test(const char* filename){
     ArenaAllocator aa = {0};
     QJSRuntime* rt = new_qjs_rt(&aa);
     TestAssert(rt);
-    TextFileResult fr = read_file(filename, MALLOCATOR);
+    LongString text;
+    FileError fr = read_file(filename, MALLOCATOR, &text);
     TestAssertSuccess(fr);
-    LongString text = fr.result;
     QJSContext* ctx = new_qjs_ctx(rt);
     TestAssert(ctx);
 

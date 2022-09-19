@@ -123,8 +123,8 @@ free_error_mess(const char* mess){
 #endif
 
 static
-TextFileResult
-read_relative_file_with_suffix_conversion(LongString directory, StringView path, StringView suffix);
+FileError
+read_relative_file_with_suffix_conversion(LongString directory, StringView path, StringView suffix, LongString* outstr);
 
 static
 LongString
@@ -148,11 +148,11 @@ __attribute__((__format__(__printf__, 2, 3)))
 static void error(const DndLogger* logger, const char* msg, ...);
 
 static
-TextFileResult
-read_relative_file_with_suffix_conversion(LongString directory, StringView path, StringView suffix){
+FileError
+read_relative_file_with_suffix_conversion(LongString directory, StringView path, StringView suffix, LongString* outstr){
     char buff[1024];
     snprintf(buff, sizeof buff, "%s/%.*s%.*s", directory.text, (int)path.length, path.text, (int)suffix.length, suffix.text);
-    return read_file(buff, MALLOCATOR);
+    return read_file(buff, MALLOCATOR, outstr);
 }
 
 static
@@ -492,8 +492,9 @@ handle_request(DndLogger* logger, uint64_t flags, LongString directory, SOCKET a
     }
     debug(logger, "path: '%.*s' suffix: '%.*s'", (int)path.length, path.text, (int)suffix.length, suffix.text);
     if(endswith(path, SV(".dnd")) || SV_equals(suffix, SV(".dnd"))){
-        TextFileResult tfr = read_relative_file_with_suffix_conversion(directory, path, suffix);
         LongString text = LS("");
+        LongString t = {0};
+        FileError tfr = read_relative_file_with_suffix_conversion(directory, path, suffix, &t);
         if(tfr.errored){
             StringView bn = path_basename(path);
             if(SV_equals(bn, SV("index")) || SV_equals(bn, SV("index.dnd"))){
@@ -507,7 +508,7 @@ handle_request(DndLogger* logger, uint64_t flags, LongString directory, SOCKET a
             }
         }
         else
-            text = tfr.result;
+            text = t;
         int err = 0;
         LongString html = compile_file(logger, directory, flags, path, text, &err);
         if(err){
@@ -524,12 +525,13 @@ handle_request(DndLogger* logger, uint64_t flags, LongString directory, SOCKET a
         int n = snprintf(buff, sizeof buff, "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\n\r\n", html.length);
         send(accsd, buff, n, 0);
         send(accsd, html.text, html.length, 0);
-        dndc_free_string(tfr.result);
+        if(t.length) dndc_free_string(t);
         dndc_free_string(html);
         goto LOk;
     }
     else {
-        TextFileResult tfr = read_relative_file_with_suffix_conversion(directory, path, suffix);
+        LongString t;
+        FileError tfr = read_relative_file_with_suffix_conversion(directory, path, suffix, &t);
         if(tfr.errored){
             const char* errmess = os_error_mess(tfr.native_error);
             error(logger, "Error reading '%.*s': %s", (int)path.length, path.text, errmess);
@@ -537,10 +539,10 @@ handle_request(DndLogger* logger, uint64_t flags, LongString directory, SOCKET a
             goto LNotFound;
         }
         char buff[1024];
-        int n = snprintf(buff, sizeof buff, "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\n\r\n", tfr.result.length);
+        int n = snprintf(buff, sizeof buff, "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\n\r\n", t.length);
         send(accsd, buff, n, 0);
-        send(accsd, tfr.result.text, tfr.result.length, 0);
-        dndc_free_string(tfr.result);
+        send(accsd, t.text, t.length, 0);
+        dndc_free_string(t);
         goto LOk;
     }
     LNotFound:

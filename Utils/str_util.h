@@ -180,15 +180,12 @@ string_split(const char* a, size_t length, char splitter){
     const char* split = memchr(a, splitter, length);
     if(!split){
         return (SplitPair){
-            .head.text = a,
-                .head.length = length,
+            .head = {length, a},
         };
     }
     return (SplitPair){
-        .head.text = a,
-            .head.length = split-a,
-            .tail.text = split+1,
-            .tail.length = (a+length)-(split+1),
+        .head = {split-a, a},
+        .tail = {(a+length)-(split+1), split+1},
     };
 }
 

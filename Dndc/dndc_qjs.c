@@ -818,12 +818,13 @@ js_load_file_as_base64(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJS
     if(!ctx->jsb64cache)
         ctx->jsb64cache = dndc_create_filecache();
 
-    StringResult e = FileCache_read_and_b64_file(ctx->jsb64cache, sv, false);
+    LongString base64ed;
+    int e = FileCache_read_and_b64_file(ctx->jsb64cache, sv, false, &base64ed);
     QJS_FreeCString(jsctx, sv.text);
-    if(e.errored){
+    if(e){
         return QJS_ThrowTypeError(jsctx, "Error when loading file: '%s'", sv.text);
     }
-    QJSValue result = QJS_NewString(jsctx, e.result.text);
+    QJSValue result = QJS_NewString(jsctx, base64ed.text);
     return result;
 }
 
@@ -844,12 +845,13 @@ js_load_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueConst
         return QJS_ThrowTypeError(jsctx, "File loading is disabled");
     }
     StringView sv = jsstring_make_stringview_js_allocated(jsctx, str);
-    StringViewResult e = ctx_load_source_file(ctx, sv);
+    StringView s;
+    int e = ctx_load_source_file(ctx, sv, &s);
     QJS_FreeCString(jsctx, sv.text);
-    if(e.errored){
+    if(e){
         return QJS_ThrowTypeError(jsctx, "load_file: Error when loading '%.*s'", (int)sv.length, sv.text);
     }
-    QJSValue result = QJS_NewString(jsctx, e.result.text);
+    QJSValue result = QJS_NewString(jsctx, s.text);
     return result;
 }
 
@@ -872,7 +874,7 @@ js_write_file(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCons
     }
     LongString filepath = jsstring_to_longstring(jsctx, filename_s, temp_allocator(ctx));
     StringView data = jsstring_make_stringview_js_allocated(jsctx, text_s);
-    FileWriteResult err = write_file(filepath.text, data.text, data.length);
+    FileError err = write_file(filepath.text, data.text, data.length);
     Allocator_free(temp_allocator(ctx), filepath.text, filepath.length+1);
     QJS_FreeCString(jsctx, data.text);
     if(err.errored){

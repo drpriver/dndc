@@ -202,11 +202,12 @@ ctx_note_dependency(DndcContext* ctx, StringView path){
 }
 
 static
-StringViewResult
-ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
+warn_unused
+int
+ctx_load_source_file(DndcContext* ctx, StringView sourcepath, StringView* outsv){
     MStringBuilder temp_builder = {.allocator=temp_allocator(ctx)};
     if(!sourcepath.length){
-        return (StringViewResult){.errored=DNDC_ERROR_FILE_READ};
+        return DNDC_ERROR_FILE_READ;
     }
     assert(sourcepath.length);
 
@@ -215,48 +216,53 @@ ctx_load_source_file(DndcContext* ctx, StringView sourcepath){
         msb_append_path(&temp_builder, sourcepath.text, sourcepath.length);
         if(unlikely(temp_builder.errored)){
             msb_destroy(&temp_builder);
-            return (StringViewResult){.errored=DNDC_ERROR_OOM};
+            return DNDC_ERROR_OOM;
         }
         sourcepath = msb_borrow_sv(&temp_builder);
     }
     int err = ctx_note_dependency(ctx, sourcepath);
     if(err){
         msb_destroy(&temp_builder);
-        return (StringViewResult){.errored=err};
+        return err;
     }
     uint64_t before = get_t();
-    StringResult cache_result = FileCache_read_file(ctx->textcache, sourcepath, !!(ctx->flags & DNDC_DONT_READ));
+    LongString cached;
+    int cache_result = FileCache_read_file(ctx->textcache, sourcepath, !!(ctx->flags & DNDC_DONT_READ), &cached);
     msb_destroy(&temp_builder);
-    if(cache_result.errored){
-        return (StringViewResult){.errored = cache_result.errored};
+    if(cache_result){
+        return cache_result;
     }
     uint64_t after = get_t();
     report_time(ctx, SV("Loading a file took "), after-before);
-    return (StringViewResult){.result =LS_to_SV(cache_result.result)};
+    *outsv = LS_to_SV(cached);
+    return 0;
 }
 
 static
-StringViewResult
-ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath){
+warn_unused
+int
+ctx_load_processed_binary_file(DndcContext* ctx, StringView binarypath, StringView* outsv){
     MStringBuilder path_builder = {.allocator=temp_allocator(ctx)};
     if(! path_is_abspath(binarypath) && ctx->base_directory.length){
         msb_write_str(&path_builder, ctx->base_directory.text, ctx->base_directory.length);
         msb_append_path(&path_builder, binarypath.text, binarypath.length);
         if(unlikely(path_builder.errored)){
             msb_destroy(&path_builder);
-            return (StringViewResult){.errored=DNDC_ERROR_OOM};
+            return DNDC_ERROR_OOM;
         }
         binarypath = msb_borrow_sv(&path_builder);
     }
     int err = ctx_note_dependency(ctx, binarypath);
     if(unlikely(err)){
         msb_destroy(&path_builder);
-        return (StringViewResult){.errored=err};
+        return err;
     }
-    StringResult cache_result = FileCache_read_and_b64_file(ctx->b64cache, binarypath, !!(ctx->flags & DNDC_DONT_READ));
+    LongString cached;
+    int cache_result = FileCache_read_and_b64_file(ctx->b64cache, binarypath, !!(ctx->flags & DNDC_DONT_READ), &cached);
     msb_destroy(&path_builder);
-    if(cache_result.errored) return (StringViewResult){.errored=cache_result.errored};
-    return (StringViewResult){.result=LS_to_SV(cache_result.result)};
+    if(cache_result) return cache_result;
+    *outsv = LS_to_SV(cached);
+    return 0;
 }
 
 static inline
