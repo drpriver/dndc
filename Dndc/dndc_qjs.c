@@ -705,10 +705,9 @@ log_js_traceback(DndcContext* ctx, QJSContext* jsctx, NodeHandle handle){
     }
     QJS_FreeValue(jsctx, exception_val);
     msb_erase(&msb, 2); // XXX: I get the one, but why two?
-    msb_nul_terminate(&msb);
     if(unlikely(msb.errored)) return;
-    LongString msg = msb_borrow_ls(&msb);
-    handle_log_error(ctx, handle, 1, (FormatArg[]){FMT(msg)});
+    FormatArg msg = sv_fmt(msb_borrow_sv(&msb));
+    handle_log_error(ctx, handle, 1, &msg);
     msb_destroy(&msb);
 }
 

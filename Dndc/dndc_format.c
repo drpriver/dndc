@@ -73,10 +73,14 @@ format_next_token(StringView sv){
             case '\v':
             case '\r':
                 return (FormatTokenized){
-                    .token.text = sv.text,
-                        .token.length = i,
-                        .rest.text = sv.text+i,
-                        .rest.length = sv.length - i,
+                    .token = {
+                        .text = sv.text,
+                        .length = i,
+                    },
+                    .rest = {
+                        .text = sv.text+i,
+                        .length = sv.length - i,
+                    },
                 };
             default:
                 continue;
