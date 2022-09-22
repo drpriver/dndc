@@ -42,7 +42,7 @@ stripped_view(const char* str, size_t len){
         }
         break;
     }
-    return (StringView){.text=str, .length=len};
+    return (StringView){.length=len, .text=str};
 }
 
 static inline
@@ -66,7 +66,7 @@ stripped_view_utf16(const uint16_t* str, size_t len){
         }
         break;
     }
-    return (StringViewUtf16){.text=str, .length=len};
+    return (StringViewUtf16){.length=len, .text=str};
 }
 //
 // Like stripped_view, but only strips from the right.
@@ -83,7 +83,7 @@ rstripped_view(const char* str, size_t len){
         }
         break;
     }
-    return (StringView){.text=str, .length=len};
+    return (StringView){.length=len, .text=str};
 }
 //
 // Like stripped_view, but only strips from the left.
@@ -100,7 +100,7 @@ lstripped_view(const char* str, size_t len){
         }
         break;
     }
-    return (StringView){.text=str, .length=len};
+    return (StringView){.length=len, .text=str};
 }
 
 static inline
@@ -115,7 +115,7 @@ lstripped_view_utf16(const uint16_t* str, size_t len){
         }
         break;
     }
-    return (StringViewUtf16){.text=str, .length=len};
+    return (StringViewUtf16){.length=len, .text=str};
 }
 typedef struct SplitPair SplitPair;
 struct SplitPair {
@@ -164,13 +164,13 @@ stripped_split(const char* a, size_t length, char splitter){
     const char* split = memchr(a, splitter, length);
     if(!split){
         return (SplitPair){
-            .head = {.text=a, .length=length},
-                .tail = {0},
+            .head = {length=length, .text=a},
+            .tail = {0},
         };
     }
     return (SplitPair){
         .head = stripped_view(a, split-a),
-            .tail = stripped_view(split+1, (a+length) - (split+1)),
+        .tail = stripped_view(split+1, (a+length) - (split+1)),
     };
 }
 
@@ -179,9 +179,7 @@ SplitPair
 string_split(const char* a, size_t length, char splitter){
     const char* split = memchr(a, splitter, length);
     if(!split){
-        return (SplitPair){
-            .head = {length, a},
-        };
+        return (SplitPair){ .head = {length, a} };
     }
     return (SplitPair){
         .head = {split-a, a},
@@ -203,8 +201,8 @@ sv_slice(StringView src, size_t begin, size_t length){
     assert(begin < src.length);
     assert(length <= src.length -begin);
     return (StringView){
-        .text = src.text+begin,
         .length = length,
+        .text = src.text+begin,
     };
 }
 
