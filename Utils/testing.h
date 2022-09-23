@@ -1086,11 +1086,6 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
             return changed;
         }
     }
-    if(run_all){
-        for(size_t i = 0; i < test_funcs_count; i++)
-            tests_to_run[i] = i;
-    }
-
     filename = strrchr(filename, '/')? strrchr(filename, '/')+1 : filename;
 #ifdef _WIN32
     filename = strrchr(filename, '\\')? strrchr(filename, '\\')+1 : filename;
@@ -1110,6 +1105,11 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
     _test_color_green = green;
     _test_color_red = red;
 #endif
+
+    if(run_all){
+        for(size_t i = 0; i < test_funcs_count; i++)
+            tests_to_run[i] = i;
+    }
 
     size_t num_to_run = run_all? test_funcs_count : (size_t)kw_args[TARGET_INDEX].num_parsed;
     if(!num_to_run){
