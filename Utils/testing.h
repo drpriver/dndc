@@ -781,43 +781,24 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 //   test_count:
 //     The length of the array pointed to by which_tests
 //
-//     As a special case, 0 means to run all the tests.
-//
 //   result:
 //      A `TestResults` structure with the number of passess, fails, etc.
 //      Results will be written into these.
 //
 static
 void
-run_the_tests(size_t*_Nullable which_tests, int test_count, struct TestResults* result){
-    if(test_count){
-        for(int i = 0; i < test_count; i++){
-            size_t idx = which_tests[i];
-            TestFunc* func = test_funcs[idx].test_func;
-            assert(func);
-            struct TestStats func_result = func();
-            result->funcs_executed++;
-            result->failures += func_result.failures;
-            result->executed += func_result.executed;
-            result->assert_failures += func_result.assert_failures;
-            if(func_result.assert_failures || func_result.failures)
-                result->failed_tests[result->n_failed_tests++] = idx;
-        }
-    }
-    else {
-        for(size_t i = 0; i < test_funcs_count; i++){
-            if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED)
-                continue;
-            TestFunc* func = test_funcs[i].test_func;
-            assert(func);
-            struct TestStats func_result = func();
-            result->funcs_executed++;
-            result->failures += func_result.failures;
-            result->executed += func_result.executed;
-            result->assert_failures += func_result.assert_failures;
-            if(func_result.assert_failures || func_result.failures)
-                result->failed_tests[result->n_failed_tests++] = i;
-        }
+run_the_tests(size_t*_Nonnull which_tests, int test_count, struct TestResults* result){
+    for(int i = 0; i < test_count; i++){
+        size_t idx = which_tests[i];
+        TestFunc* func = test_funcs[idx].test_func;
+        assert(func);
+        struct TestStats func_result = func();
+        result->funcs_executed++;
+        result->failures += func_result.failures;
+        result->executed += func_result.executed;
+        result->assert_failures += func_result.assert_failures;
+        if(func_result.assert_failures || func_result.failures)
+            result->failed_tests[result->n_failed_tests++] = idx;
     }
 }
 
@@ -835,6 +816,63 @@ run_the_tests(size_t*_Nullable which_tests, int test_count, struct TestResults* 
 #ifdef _WIN32
 #include "Platform/Windows/wincli.h"
 #endif
+#include <inttypes.h>
+
+#ifdef __linux__
+// getrandom
+#include <sys/random.h>
+#elif defined(__APPLE__)
+#include <stdlib.h> // arc4random
+#elif defined(_WIN32)
+#include <ntsecapi.h>
+#else
+#error "Don't know how to get entropy on this system"
+#endif
+uint64_t _testing_rng_inc;
+uint64_t _testing_rng_state;
+static inline
+uint32_t testing_rng_random(void){
+    uint64_t oldstate = _testing_rng_state;
+    _testing_rng_state = oldstate * 6364136223846793005ULL + _testing_rng_inc;
+    uint32_t xorshifted = (uint32_t) ( ((oldstate >> 18u) ^ oldstate) >> 27u);
+    uint32_t rot = oldstate >> 59u;
+    return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+}
+static inline
+void
+testing_seed_rng(uint64_t*_Nonnull seed_){
+    uint64_t seed = *seed_;
+    while(!seed){
+#if defined(__APPLE__)
+        arc4random_buf(&seed, sizeof seed);
+#elif defined(__linux__)
+        (void)getrandom(&seed, sizeof seed, 0);
+#elif defined(_WIN32)
+#error "TODO"
+#else
+#error "Don't know how to get entropy on this system"
+#endif
+    }
+    _testing_rng_inc = (16149396009930002229u<<1u)|1u;
+    _testing_rng_state = 0;
+    (void)testing_rng_random();
+    _testing_rng_state += seed;
+    (void)testing_rng_random();
+    *seed_ = seed;
+}
+
+static inline
+void
+shuffle_tests(size_t*_Nonnull which_tests, int test_count){
+    if(test_count < 2) return;
+    for(size_t i = 0; i < test_count; i++){
+        size_t j = (testing_rng_random() % (test_count-i)) + i;
+        size_t tmp = which_tests[i];
+        which_tests[i] = which_tests[j];
+        which_tests[j] = tmp;
+    }
+}
+
 //
 // test_main
 // ------------------
@@ -871,6 +909,8 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
     _Bool print_pid = 0;
     _Bool should_wait = 0;
     int nreps = 1;
+    _Bool shuffle = 0;
+    uint64_t seed = 0;
     enum {TEE_INDEX=6, TARGET_INDEX=3};
     ArgToParse kw_args[] = {
         {
@@ -943,6 +983,18 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
             .dest = ARGDEST(&nreps),
             .show_default = 1,
         },
+        {
+            .name = SV("--shuffle"),
+            .help = "Run the tests in a random order.",
+            .dest = ARGDEST(&shuffle),
+        },
+        {
+            .name = SV("--seed"),
+            .help = "Seed for the rng (only used if --shuffle is passed).\n"
+                    "0 means to seed using system rng.",
+            .dest = ARGDEST(&seed),
+            .show_default = 1,
+        },
     };
     enum {HELP=0, LIST=1};
     ArgToParse early_args[] = {
@@ -992,6 +1044,10 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
         print_argparse_error(&argparser, e);
         fprintf(stderr, "Use --help to see usage.\n");
         return (int)e;
+    }
+    if(nreps < 0){
+        fprintf(stderr, "Reps must be >= 0\n");
+        return 1;
     }
     // Register primary output file
     if(outfile.length){
@@ -1049,6 +1105,13 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
 #endif
 
     size_t num_to_run = run_all? test_funcs_count : (size_t)kw_args[TARGET_INDEX].num_parsed;
+    if(!num_to_run){
+        for(size_t i = 0; i < test_funcs_count; i++){
+            if(test_funcs[i].flags & TEST_CASE_FLAGS_SKIP_UNLESS_NAMED)
+                continue;
+            tests_to_run[num_to_run++] = i;
+        }
+    }
 
     assert(SV_equals(kw_args[TARGET_INDEX].name, SV("-t")));
 
@@ -1062,9 +1125,11 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
     if(should_wait){
         getchar();
     }
-    if(nreps < 0) nreps = 1;
+    if(shuffle)
+        testing_seed_rng(&seed);
     struct TestResults result = {0};
     for(int i = 0; i < nreps; i++){
+        if(shuffle) shuffle_tests(tests_to_run, num_to_run);
         run_the_tests(tests_to_run, num_to_run, &result);
         if(result.assert_failures || result.failures)
             break;
@@ -1109,9 +1174,14 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
     }
     if(result.n_failed_tests && argc){
         fprintf(stderr, "To rerun the failed test%s, run:\n", result.n_failed_tests==1?"":"s");
-        fprintf(stdout, "'%s' -t", argv[0]);
-        for(size_t i = 0; i < result.n_failed_tests; i++){
-            fprintf(stdout, " %zu", result.failed_tests[i]);
+        if(shuffle){
+            fprintf(stdout, "'%s' --shuffle --seed %"PRIu64, argv[0], seed);
+        }
+        else {
+            fprintf(stdout, "'%s' -t", argv[0]);
+            for(size_t i = 0; i < result.n_failed_tests; i++){
+                fprintf(stdout, " %zu", result.failed_tests[i]);
+            }
         }
         fprintf(stdout, "\n");
     }
