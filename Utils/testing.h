@@ -824,7 +824,8 @@ run_the_tests(size_t*_Nonnull which_tests, int test_count, struct TestResults* r
 #elif defined(__APPLE__)
 #include <stdlib.h> // arc4random
 #elif defined(_WIN32)
-#include <ntsecapi.h>
+//
+#include <ntsecapi.h> // RtlGenRandom
 #else
 #error "Don't know how to get entropy on this system"
 #endif
@@ -848,7 +849,13 @@ testing_seed_rng(uint64_t*_Nonnull seed_){
 #elif defined(__linux__)
         (void)getrandom(&seed, sizeof seed, 0);
 #elif defined(_WIN32)
-#error "TODO"
+        // Apparently this has to be dynamically loaded
+        HMODULE lib = LoadLibraryW(L"Advapi32.dll");
+        assert(lib);
+        typedef BOOLEAN(RtlGenRandomT)(PVOID, ULONG);
+        RtlGenRandomT* r = (RtlGenRandomT*)GetProcAddress(lib, "SystemFunction036"); // RtlGenRandom
+        (void)r(&seed, sizeof seed);
+        FreeLibrary(lib);
 #else
 #error "Don't know how to get entropy on this system"
 #endif
@@ -865,7 +872,7 @@ static inline
 void
 shuffle_tests(size_t*_Nonnull which_tests, int test_count){
     if(test_count < 2) return;
-    for(size_t i = 0; i < test_count; i++){
+    for(int i = 0; i < test_count; i++){
         size_t j = (testing_rng_random() % (test_count-i)) + i;
         size_t tmp = which_tests[i];
         which_tests[i] = which_tests[j];
