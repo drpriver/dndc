@@ -847,14 +847,16 @@ testing_seed_rng(uint64_t*_Nonnull seed_){
 #if defined(__APPLE__)
         arc4random_buf(&seed, sizeof seed);
 #elif defined(__linux__)
-        (void)getrandom(&seed, sizeof seed, 0);
+        ssize_t r = getrandom(&seed, sizeof seed, 0);
+        (void)r;
 #elif defined(_WIN32)
         // Apparently this has to be dynamically loaded
         HMODULE lib = LoadLibraryW(L"Advapi32.dll");
         assert(lib);
         typedef BOOLEAN(RtlGenRandomT)(PVOID, ULONG);
-        RtlGenRandomT* r = (RtlGenRandomT*)GetProcAddress(lib, "SystemFunction036"); // RtlGenRandom
-        (void)r(&seed, sizeof seed);
+        RtlGenRandomT* gr = (RtlGenRandomT*)GetProcAddress(lib, "SystemFunction036"); // RtlGenRandom
+        BOOLEAN r = gr(&seed, sizeof seed);
+        (void)r;
         FreeLibrary(lib);
 #else
 #error "Don't know how to get entropy on this system"

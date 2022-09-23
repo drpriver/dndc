@@ -260,6 +260,10 @@ memmove(void* dst, const void* src, size_t len){
         return memcpy(dst, src, len);
 }
 
+int abs(int i){
+    return i < 0 ? -i : i;
+}
+
 #define stdout (FILE*)0xcafebabe
 #define stdin (FILE*)0xcafebabe
 #define stderr (FILE*)0xcafebabe
