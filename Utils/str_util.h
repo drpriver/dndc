@@ -164,7 +164,7 @@ stripped_split(const char* a, size_t length, char splitter){
     const char* split = memchr(a, splitter, length);
     if(!split){
         return (SplitPair){
-            .head = {length=length, .text=a},
+            .head = {.length=length, .text=a},
             .tail = {0},
         };
     }
