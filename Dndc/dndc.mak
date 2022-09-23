@@ -39,10 +39,10 @@ $(BINDIR)/TestDndc_debug$(EXE): Dndc/TestDndc.c $(DEPDIR)/TestDndc_debug.dep $(B
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndc_debug.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
 
 $(TESTDIR)/TestDndc_debug: $(BINDIR)/TestDndc_debug$(EXE)
-	$< --tee $@
+	$< --tee $@ --shuffle
 tests: $(TESTDIR)/TestDndc_debug
 $(TESTDIR)/TestDndc_fast: $(BINDIR)/TestDndc_fast$(EXE)
-	$< --tee $@
+	$< --tee $@ --shuffle
 tests: $(TESTDIR)/TestDndc_fast
 
 TestDndc: $(TESTDIR)/TestDndc_debug $(TESTDIR)/TestDndc_fast
@@ -54,10 +54,10 @@ $(BINDIR)/TestQJS_debug$(EXE): Dndc/TestQJS.c $(DEPDIR)/TestQJS_debug.dep | $(DI
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestQJS_debug.dep $< -o $@ -g  $(LINK_FLAGS) $(QUICKJS_CEXTRA)
 
 $(TESTDIR)/TestQJS_debug: $(BINDIR)/TestQJS_debug$(EXE)
-	$< --tee $@
+	$< --tee $@ --shuffle
 tests: $(TESTDIR)/TestQJS_debug
 $(TESTDIR)/TestQJS_fast: $(BINDIR)/TestQJS_fast$(EXE)
-	$< --tee $@
+	$< --tee $@ --shuffle
 tests: $(TESTDIR)/TestQJS_fast
 
 TestQJS: $(TESTDIR)/TestQJS_debug $(TESTDIR)/TestQJS_fast

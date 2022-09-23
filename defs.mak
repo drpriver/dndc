@@ -161,10 +161,10 @@ $(BINDIR)/$(notdir $(basename $(1)))_debug$(EXE): $(DEPDIR)/$(notdir $(1))_debug
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(TDEPFLAGS) $(DEPDIR)/$(notdir $(1))_debug.dep $(1) -o $$@ -g  $(LINK_FLAGS)
 
 $(TESTDIR)/$(notdir $(basename $(1)))_debug: $(BINDIR)/$(notdir $(basename $(1)))_debug$(EXE)
-	$$< --tee $$@
+	$$< --tee $$@ --shuffle
 
 $(TESTDIR)/$(notdir $(basename $(1)))_fast: $(BINDIR)/$(notdir $(basename $(1)))_fast$(EXE)
-	$$< --tee $$@
+	$$< --tee $$@ --shuffle
 
 tests: $(TESTDIR)/$(notdir $(basename $(1)))_fast
 tests: $(TESTDIR)/$(notdir $(basename $(1)))_debug
