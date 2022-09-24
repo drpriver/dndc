@@ -818,6 +818,7 @@ run_the_tests(size_t*_Nonnull which_tests, int test_count, struct TestResults* r
 #endif
 #include <inttypes.h>
 
+// shuffling stuff
 #ifdef __linux__
 // getrandom
 #include <sys/random.h>
@@ -829,8 +830,9 @@ run_the_tests(size_t*_Nonnull which_tests, int test_count, struct TestResults* r
 #else
 #error "Don't know how to get entropy on this system"
 #endif
-uint64_t _testing_rng_inc;
-uint64_t _testing_rng_state;
+static uint64_t _testing_rng_inc;
+static uint64_t _testing_rng_state;
+
 static inline
 uint32_t testing_rng_random(void){
     uint64_t oldstate = _testing_rng_state;
