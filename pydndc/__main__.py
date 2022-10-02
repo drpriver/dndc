@@ -34,25 +34,25 @@ def main() -> None:
     run(**vars(args))
 
 def run(
-        format:bool, 
-        expand:bool, 
+        format:bool,
+        expand:bool,
         md:bool,
-        source:str, 
-        output:Optional[str], 
-        depends_path:Optional[str], 
-        base_directory:Optional[str], 
-        fragment:bool, 
-        dont_read:bool, 
-        dont_import:bool, 
-        no_js:bool, 
-        untrusted:bool, 
-        args:Optional[List[str]], 
-        jsargs:Optional[str], 
-        json_file_args:Optional[str], 
-        dont_write:bool, 
-        dont_inline:bool, 
-        print_stats:bool, 
-        suppress_warnings:bool, 
+        source:str,
+        output:Optional[str],
+        depends_path:Optional[str],
+        base_directory:Optional[str],
+        fragment:bool,
+        dont_read:bool,
+        dont_import:bool,
+        no_js:bool,
+        untrusted:bool,
+        args:Optional[List[str]],
+        jsargs:Optional[str],
+        json_file_args:Optional[str],
+        dont_write:bool,
+        dont_inline:bool,
+        print_stats:bool,
+        suppress_warnings:bool,
         strip_spaces:bool,
         allow_js_write:bool=False,
     ) -> None:
@@ -92,14 +92,22 @@ def run(
     if not base_directory:
         base_directory = os.path.dirname(source)
 
+    if depends_path:
+        deps = set()
+    else:
+        deps = None
+
     if format:
+        if deps is not None: raise Exception('--format does not support --depends-path.')
         outs = pydndc.reformat(source_text, logger=pydndc.stderr_logger)
     elif expand:
+        if deps is not None: raise Exception('--expand does not support --depends-path.')
         outs = pydndc.expand(source_text, base_dir=base_directory, logger=pydndc.stderr_logger, flags=flags, jsargs=jsstuff)
     elif md:
-        outs = pydndc.to_markdown(source_text, base_dir=base_directory, logger=pydndc.stderr_logger, flags=flags, jsargs=jsstuff)
+        if deps is not None: raise Exception('--markdown does not support --depends-path.')
+        outs = pydndc.to_markdown(source_text, base_dir=base_directory, logger=pydndc.stderr_logger, flags=flags, jsargs=jsstuff, deps=deps)
     else:
-        outs = pydndc.htmlgen(source_text, base_dir=base_directory, jsargs=jsstuff, logger=pydndc.stderr_logger, flags=flags)
+        outs = pydndc.htmlgen(source_text, base_dir=base_directory, jsargs=jsstuff, logger=pydndc.stderr_logger, flags=flags, deps=deps)
     if dont_write:
         return
     if output:
@@ -108,6 +116,14 @@ def run(
     else:
         sys.stdout.write(outs)
         sys.stdout.flush()
+    if depends_path:
+        with open(depends_path, 'w') as fp:
+            fp.write(output+':')
+            for d in deps:
+                fp.write(' '+d)
+            fp.write('\n')
+            for d in deps:
+                fp.write(d+':\n')
 
 
 if __name__ == '__main__':

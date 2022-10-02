@@ -19,7 +19,7 @@
 
 #define DNDC_MAJOR 0
 #define DNDC_MINOR 29
-#define DNDC_MICRO 1
+#define DNDC_MICRO 2
 #define DNDC_STRINGIFY_IMPL(x) #x
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
 
@@ -172,7 +172,7 @@ struct DndcStringViewUtf16 {
 enum DndcSyntax {
 // ----------
 // The kind of syntactic region, for `DndcSyntaxFunc`.
-  DNDC_SYNTAX_NONE = 0,
+  DNDC_SYNTAX_NONE = 0, // normal text
   DNDC_SYNTAX_DOUBLE_COLON = 1,
   DNDC_SYNTAX_HEADER = 2,
   DNDC_SYNTAX_NODE_TYPE = 3,
@@ -509,7 +509,6 @@ print_cache_paths(FILE* fp, DndcFileCache* cache){
         for(size_t i = 0; i < n; i++){
             DndcStringView path = buff[i];
             fprintf(fp, "%.*s\n", (int)path.length, path.text);
-
         }
     }
 }

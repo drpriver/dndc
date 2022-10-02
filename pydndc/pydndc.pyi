@@ -95,7 +95,6 @@ def to_markdown(
     file_cache:Optional[FileCache]=None,
     flags:Flags=Flags.NONE,
     jsargs:Optional[Union[dict, list, str]]=None,
-    deps:Optional[Set[str]]=None,
 ) -> str:
     ...
 

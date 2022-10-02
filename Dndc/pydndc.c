@@ -1168,6 +1168,7 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     PyObject* file_cache = NULL;
     PyObject* jsargs = NULL;
     PyObject* filename = NULL;
+    PyObject* deps = NULL;
     unsigned long long flags = 0;
     _Static_assert(sizeof(flags) == sizeof(uint64_t), "");
     enum {WHITELIST = 0
@@ -1184,10 +1185,10 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_NO_CSS
         | DNDC_ENABLE_JS_WRITE
     };
-    const char* const keywords[] = {"text", "base_dir", "filename", "logger", "file_cache", "flags", "jsargs", NULL};
+    const char* const keywords[] = {"text", "base_dir", "filename", "logger", "file_cache", "flags", "jsargs", "deps", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O!OOKO:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &logger, &file_cache, &flags, &jsargs)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O!OOKOO!:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &logger, &file_cache, &flags, &jsargs, &PySet_Type, &deps)){
         return NULL;
     }
     PopDiagnostic();
@@ -1236,7 +1237,52 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
         b64cache = cache->b64_cache;
     }
     DndcStringView source_path = filename?pystring_borrow_stringview(filename): SV("(string input)");
-    int e = dndc_compile_dnd_file(flags, base_str, source, source_path, &output, b64cache, textcache, func, error_list, NULL, jsargs_ls);
+    int e;
+    if(deps){
+        DndcContext* ctx = dndc_create_ctx(flags, b64cache, textcache);
+        unhandled_error_condition(!ctx);
+        if(func) dndc_ctx_set_logger(ctx, func, error_list);
+        dndc_ctx_set_base(ctx, base_str);
+        DndcNodeHandle root = dndc_ctx_make_root(ctx, source_path);
+        unhandled_error_condition(root == DNDC_NODE_HANDLE_INVALID);
+
+        e = dndc_ctx_parse_string(ctx, root, source_path, source);
+        if(e) goto ctxfail;
+
+        e = dndc_ctx_resolve_imports(ctx);
+        if(e) goto ctxfail;
+
+        e = dndc_ctx_execute_js(ctx, jsargs_ls);
+        if(e) goto ctxfail;
+
+        e = dndc_ctx_resolve_links(ctx);
+        if(e) goto ctxfail;
+
+        e = dndc_ctx_build_toc(ctx);
+        if(e) goto ctxfail;
+
+        e = dndc_ctx_render_to_html(ctx, &output);
+        if(e) goto ctxfail;
+
+        size_t cookie = 0;
+        DndcStringView buff[32];
+        size_t n;
+        while((n=dndc_ctx_get_dependencies(ctx, buff, 32, &cookie))){
+            for(size_t i = 0; i < n; i++){
+                DndcStringView sv = buff[i];
+                PyObject* s = PyUnicode_FromStringAndSize(sv.text, sv.length);
+                unhandled_error_condition(!s);
+                int err = PySet_Add(deps, s);
+                Py_XDECREF(s);
+                unhandled_error_condition(err < 0);
+            }
+        }
+        ctxfail:
+        dndc_ctx_destroy(ctx);
+    }
+    else {
+        e = dndc_compile_dnd_file(flags, base_str, source, source_path, &output, b64cache, textcache, func, error_list, NULL, jsargs_ls);
+    }
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;

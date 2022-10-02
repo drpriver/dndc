@@ -253,7 +253,10 @@ class TestExamples(TestCase):
                 text = fp.read()
             filename = os.path.basename(example)
             base = os.path.dirname(example)
-            _ = pydndc.htmlgen(text, base_dir=base, filename=filename)
+            deps = set()
+            _ = pydndc.htmlgen(text, base_dir=base, filename=filename, deps=deps)
+            if 'calendar.dnd' in example:
+                self.assertSetEqual(deps, {'Examples/Calendar/calendar.css'})
             if 'calendar.dnd' in example: continue
             if 'OVERVIEW' in example: continue
             _ = pydndc.expand(text, base_dir=base, logger=pydndc.stderr_logger)
