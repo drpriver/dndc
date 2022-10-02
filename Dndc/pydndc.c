@@ -1188,18 +1188,27 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
     const char* const keywords[] = {"text", "base_dir", "filename", "logger", "file_cache", "flags", "jsargs", "deps", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O!OOKOO!:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &logger, &file_cache, &flags, &jsargs, &PySet_Type, &deps)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O!OOKOO:htmlgen", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &logger, &file_cache, &flags, &jsargs, &deps)){
         return NULL;
     }
     PopDiagnostic();
     // Allow sloppy flags.
     flags &= WHITELIST;
+
+    if(deps && deps == Py_None)
+        deps = NULL;
+    if(deps && !PySet_Check(deps)){
+        PyErr_SetString(PyExc_TypeError, "deps must be a set or None");
+        return NULL;
+    }
+
     if(logger && logger == Py_None)
         logger = NULL;
     if(logger && !PyCallable_Check(logger)){
         PyErr_SetString(PyExc_TypeError, "logger must be a callable");
         return NULL;
     }
+
     if(file_cache && file_cache == Py_None)
         file_cache = NULL;
     if(file_cache && !Py_IS_TYPE(file_cache, &DndcPyFileCache_Type)){
