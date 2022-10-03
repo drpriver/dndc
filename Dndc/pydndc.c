@@ -2883,8 +2883,11 @@ DndcNodePy_insert_child(PyObject* s, PyObject* args, PyObject* kwargs){
     Py_ssize_t idx = 0;
     PyObject* child;
     const char* const keywords[] = { "idx", "child", NULL};
+    PushDiagnostic();
+    SuppressCastQual();
     if(!PyArg_ParseTupleAndKeywords(args, kwargs, "nO|:insert_child", (char**)keywords, &idx, &child))
         return NULL;
+    PopDiagnostic();
     if(PyUnicode_Check(child)){
         // special case for strings
         DndcNodePy* self = (DndcNodePy*)s;
@@ -3168,7 +3171,7 @@ static PyMethodDef DndcNodePy_methods[] = {
         .ml_flags=METH_VARARGS|METH_KEYWORDS,
         .ml_doc= PYSIG(
             "insert_child(self, idx:str, child:Union[Node, str]) -> None\n",
-            "append_child(self, idx,child)\n")
+            "insert_child(self, idx, child)\n")
             "--\n"
             "\n"
             "Inserts a node as a child of this node.\n"
