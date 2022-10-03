@@ -19,7 +19,7 @@
 
 #define DNDC_MAJOR 0
 #define DNDC_MINOR 29
-#define DNDC_MICRO 2
+#define DNDC_MICRO 3
 #define DNDC_STRINGIFY_IMPL(x) #x
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
 

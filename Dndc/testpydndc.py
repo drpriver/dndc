@@ -317,6 +317,15 @@ class TestAst(TestCase):
             "Aloha::div .hi @hawaiian\n"
             "woo::div\n"
         )
+        n.detach()
+        ctx.root.insert_child(len(ctx.root.children), n)
+        self.assertEqual(ctx.expand(),
+            "Hello::raw .hi @english\n"
+            "Bonjour::raw .hi @french\n"
+            "Hola::raw .hi @spanish\n"
+            "Aloha::div .hi @hawaiian\n"
+            "woo::div\n"
+        )
         self.assertEqual(ctx.to_md(),
             "<!-- This md file was generated from a dnd file. -->\n"
             "\n"

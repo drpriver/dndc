@@ -2877,6 +2877,35 @@ DndcNodePy_append_child(PyObject* s, PyObject* arg){
     }
     Py_RETURN_NONE;
 }
+static
+PyObject* _Nullable
+DndcNodePy_insert_child(PyObject* s, PyObject* args, PyObject* kwargs){
+    Py_ssize_t idx = 0;
+    PyObject* child;
+    const char* const keywords[] = { "idx", "child", NULL};
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "nO|:insert_child", (char**)keywords, &idx, &child))
+        return NULL;
+    if(PyUnicode_Check(child)){
+        // special case for strings
+        DndcNodePy* self = (DndcNodePy*)s;
+        DndcStringView content;
+        int err = dndc_ctx_dup_sv(self->pyctx->ctx, pystring_borrow_stringview(child), &content);
+        unhandled_error_condition(err);
+        err = dndc_node_insert_string(self->pyctx->ctx, self->handle, idx, content);
+        if(err)
+            return PyErr_Format(PyExc_ValueError, "Node could not be inserted");
+        Py_RETURN_NONE;
+    }
+    if(!Py_IS_TYPE(child, &DndcNodePyType)) return PyErr_Format(PyExc_TypeError, "Need a node argument for insert");
+    DndcNodePy* self = (DndcNodePy*)s;
+    DndcNodePy* child_ = (DndcNodePy*)child;
+    if(self->pyctx != child_->pyctx)
+        return PyErr_Format(PyExc_ValueError, "Nodes from different contexts cannot be mixed");
+    int err = dndc_node_insert_child(self->pyctx->ctx, self->handle, idx, child_->handle);
+    if(err)
+        return PyErr_Format(PyExc_ValueError, "Node could not be inserted");
+    Py_RETURN_NONE;
+}
 
 static
 PyObject* _Nullable
@@ -3132,6 +3161,17 @@ static PyMethodDef DndcNodePy_methods[] = {
             "--\n"
             "\n"
             "Append a node as a child of this node.\n"
+    },
+    {
+        .ml_name="insert_child",
+        .ml_meth=(PyCFunction)DndcNodePy_insert_child,
+        .ml_flags=METH_VARARGS|METH_KEYWORDS,
+        .ml_doc= PYSIG(
+            "insert_child(self, idx:str, child:Union[Node, str]) -> None\n",
+            "append_child(self, idx,child)\n")
+            "--\n"
+            "\n"
+            "Inserts a node as a child of this node.\n"
     },
     {
         .ml_name="detach",
