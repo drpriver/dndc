@@ -4,6 +4,7 @@
 #define WASM 1
 #define DNDC_API static inline
 #include "Dndc/dndc.h"
+#include "Dndc/dndc_funcs.h"
 #include "Allocators/nullacator.h"
 #include "Utils/msb_format.h"
 #include "jsinter.h"
@@ -19,11 +20,12 @@ struct {
 static
 void dndc_log_func(void* log_user_data, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
     if(message_len+filename_len < 4096-64){
-        MStringBuilder msb = {0};
         char buff[4096];
-        msb.data = buff;
-        msb.capacity = sizeof(buff);
-        msb.allocator = NULLACATOR;
+        MStringBuilder msb = {
+            .data = buff,
+            .capacity = sizeof buff,
+            .allocator = NULLACATOR,
+        };
         StringView m = {message_len, message};
         StringView f = {filename_len, filename};
         MSB_FORMAT(&msb, f, ":", line, ":", col, ":", m);
