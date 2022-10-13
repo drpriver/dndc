@@ -86,10 +86,14 @@ __attribute__((__format__(__printf__, 1, 2)))
 static
 void
 TestPrintf(const char* fmt, ...){
-    va_list arg;
+    va_list arg_;
     char buff[10000];
+    // Some C compiler don't support multiple va_starts, but do
+    // support va_copy, so just do that.
+    va_start(arg_, fmt);
     for(size_t i = 0; i < TestOutFileCount; i++){
-        va_start(arg, fmt);
+        va_list arg;
+        va_copy(arg, arg_);
         FILE* fp = TestOutFiles[i];
         if(fp == stderr || fp == stdout)
             vfprintf(fp, fmt, arg);
@@ -122,6 +126,7 @@ TestPrintf(const char* fmt, ...){
         }
         va_end(arg);
     }
+    va_end(arg_);
 }
 
 #ifndef TestPrintValue
@@ -383,7 +388,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
   // ----------------
   // Expects lhs == rhs, using the == operator
   //
-#if defined (__GNUC__) || defined(__clang__)
+#if !defined(__IMPORTC__) && (defined(__GNUC__) || defined(__clang__))
   #define TestExpectEquals(lhs, rhs) do {\
           __auto_type _lhs = lhs; \
           typeof(lhs) _rhs = rhs; \
@@ -413,7 +418,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
   // -----------------
   // Expects lhs == rhs, using the passed in binary function instead of == operator
   //
-#if defined (__GNUC__) || defined(__clang__)
+#if !defined(__IMPORTC__) && (defined(__GNUC__) || defined(__clang__))
   #define TestExpectEquals2(func, lhs, rhs) do {\
           __auto_type _lhs = lhs; \
           __auto_type _rhs = rhs; \
@@ -444,7 +449,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
   // -------------------
   // Expects lhs != rhs, using the != operator
   //
-#if defined (__GNUC__) || defined(__clang__)
+#if !defined(__IMPORTC__) && (defined(__GNUC__) || defined(__clang__))
   #define TestExpectNotEquals(lhs, rhs) do {\
           __auto_type _lhs = lhs; \
           typeof(lhs) _rhs = rhs; \
@@ -475,7 +480,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
   // -------------------
   // Checks for func(lhs, rhs) == 0
   //
-#if defined (__GNUC__) || defined(__clang__)
+#if !defined(__IMPORTC__) && (defined(__GNUC__) || defined(__clang__))
   #define TestExpectNotEqual2(func, lhs, rhs) do{\
           __auto_type _lhs = lhs; \
           __auto_type _rhs = rhs; \
@@ -615,7 +620,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 // ----------------
 // Asserts lhs is equal to rhs, using ==
 //
-#if defined (__GNUC__) || defined(__clang__)
+#if !defined(__IMPORTC__) && (defined(__GNUC__) || defined(__clang__))
   #define TestAssertEquals(lhs, rhs) do{\
         __auto_type _lhs = lhs; \
         typeof(lhs) _rhs = rhs; \
@@ -651,7 +656,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 // ----------------
 // Asserts lhs is equal to rhs, using ==
 //
-#if defined (__GNUC__) || defined(__clang__)
+#if !defined(__IMPORTC__) && (defined(__GNUC__) || defined(__clang__))
   #define TestAssertNotEqual(lhs, rhs) do{\
         __auto_type _lhs = lhs; \
         typeof(lhs) _rhs = rhs; \
@@ -687,7 +692,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 // ----------------
 // Asserts lhs is equal to rhs, using ==
 //
-#if defined (__GNUC__) || defined(__clang__)
+#if !defined(__IMPORTC__) && (defined(__GNUC__) || defined(__clang__))
   #define TestAssertEquals2(func, lhs, rhs) do{\
         __auto_type _lhs = lhs; \
         typeof(lhs) _rhs = rhs; \
@@ -706,7 +711,7 @@ register_test(StringView test_name, TestFunc* func, enum TestCaseFlags flags){
 #else
   #define TestAssertEquals2(func, lhs, rhs) do{\
         TEST_stats.executed++;\
-        if (!func(lhs, rhs){ \
+        if (!func(lhs, rhs)){ \
             TEST_stats.failures++; \
             TEST_stats.assert_failures++; \
             TestReport("Test condition failed");\
@@ -1023,12 +1028,16 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
     ArgParser argparser = {
         .name = argc?argv[0]:"(Unnamed program)",
         .description = "A test runner.",
-        .keyword.args = kw_args,
-        .keyword.count = arrlen(kw_args),
-        .keyword.next = extra_kwargs,
-        .early_out.args = early_args,
-        .early_out.count = arrlen(early_args),
-        .styling.plain = !isatty(fileno(stdout)),
+        .keyword={
+            .args = kw_args,
+            .count = arrlen(kw_args),
+            .next = extra_kwargs,
+        },
+        .early_out={
+            .args = early_args,
+            .count = arrlen(early_args),
+        },
+        .styling={.plain = !isatty(fileno(stdout)),},
     };
     Args args = argc?(Args){argc-1, (const char*const*)argv+1}: (Args){0, 0};
     switch(check_for_early_out_args(&argparser, &args)){

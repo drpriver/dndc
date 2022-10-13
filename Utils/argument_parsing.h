@@ -881,8 +881,10 @@ next_tokenize_help(const char* help){
             // Note that this list includes '\0' as a word boundary.
             case ' ': case '\n': case '\r': case '\t': case '\f': case '\0':{
                 return (struct HelpTokenized){
-                    .token.text = begin,
-                    .token.length = (size_t)(help - begin),
+                    .token={
+                        .text = begin,
+                        .length = (size_t)(help - begin),
+                    },
                     .rest = help,
                 };
             }break;
