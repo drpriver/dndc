@@ -212,6 +212,20 @@ type CtxType = {
     // -------
     select_nodes(args:{type:number?, classes:Array<string>?,
                        attributes:Array<string>?, id:string?}): Array<Node>;
+    //
+    // by_id
+    // -----
+    // Retrieves the node identified by the given id, or null.
+    //
+    // Arguments:
+    // ----------
+    //   id: A string identifying the node (after "kebabing").
+    //
+    // Returns:
+    // --------
+    // The node or null.
+    // --------
+    by_id(id:string): Node | null;
 
     //
     // add_link

@@ -155,6 +155,7 @@ QJSMETHOD(js_dndc_context_add_dependency);
 QJSMETHOD(js_dndc_context_kebab);
 QJSMETHOD(js_dndc_context_html_escape);
 QJSMETHOD(js_dndc_context_select_nodes);
+QJSMETHOD(js_dndc_context_by_id);
 QJSMETHOD(js_dndc_context_to_string);
 QJSMETHOD(js_dndc_context_add_link);
 
@@ -171,6 +172,7 @@ QJSCFunctionListEntry QJS_DNDC_CONTEXT_FUNCS[] = {
     QJS_CFUNC_DEF("kebab", 1, js_dndc_context_kebab),
     QJS_CFUNC_DEF("html_escape", 1, js_dndc_context_html_escape),
     QJS_CFUNC_DEF("select_nodes", 1, js_dndc_context_select_nodes),
+    QJS_CFUNC_DEF("by_id", 1, js_dndc_context_by_id),
     QJS_CFUNC_DEF("toString", 0, js_dndc_context_to_string),
     QJS_CFUNC_DEF("add_link", 2, js_dndc_context_add_link),
 };
@@ -1993,6 +1995,21 @@ QJSMETHOD(js_dndc_context_html_escape){
     msb_destroy(&msb);
     Allocator_free(temp_allocator(ctx), sv.text, sv.length+1);
     return result;
+}
+QJSMETHOD(js_dndc_context_by_id){
+    DndcContext* ctx = js_get_dndc_context(jsctx, thisValue);
+    if(!ctx) return QJS_EXCEPTION;
+    if(argc != 1) return QJS_ThrowTypeError(jsctx, "Need 1 obj argument to by_id");
+    QJSValueConst arg = argv[0];
+    if(!QJS_IsString(arg)) return QJS_ThrowTypeError(jsctx, "Need 1 string argument to by_id");
+    ArenaAllocator aa = {0};
+    Allocator tmp = allocator_from_arena(&aa);
+    StringView node_id = jsstring_to_stringview(jsctx, arg, tmp);
+    DndcNodeHandle hnd = dndc_ctx_node_by_id(ctx, node_id);
+    ArenaAllocator_free_all(&aa);
+    if(hnd != DNDC_NODE_HANDLE_INVALID)
+        return js_make_dndc_node(jsctx, (NodeHandle){._value=hnd});
+    return QJS_NULL;
 }
 
 QJSMETHOD(js_dndc_context_select_nodes){
