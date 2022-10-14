@@ -58,6 +58,8 @@ enum {
     // Allocator failed, operations up to that point succeeded.
     // No further information is available.
     FILE_RESULT_ALLOC_FAILURE = 3,
+    // File is not a normal file (could be something like /dev/stdin).
+    FILE_IS_NOT_A_FILE = 4,
 };
 
 // Re: the `native_error` member of the following:
@@ -228,6 +230,10 @@ file_size_from_fd(int fd, size_t* length){
     if(err == -1){
         result.errored = FILE_ERROR;
         result.native_error = errno;
+        return result;
+    }
+    if(!S_ISREG(s.st_mode)){
+        result.errored = FILE_IS_NOT_A_FILE;
         return result;
     }
     *length = s.st_size;

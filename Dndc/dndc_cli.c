@@ -519,6 +519,33 @@ main(int argc, char**argv){
         else {
             Allocator allocator = MALLOCATOR;
             FileError load_err = read_file(original_source_path.text, allocator, (LongString*)&source_text);
+            if(load_err.errored == FILE_IS_NOT_A_FILE){
+                MStringBuilder sb = {.allocator=MALLOCATOR};
+                // Use FILE until we add "read_entire_file_streamed" native api.
+                FILE* fp = fopen(original_source_path.text, "rb");
+                if(!fp){
+                    fprintf(stderr, "Unable to read: '%s'\n", original_source_path.text);
+                    return 1;
+                }
+                for(;;){
+                    enum {N=4096};
+                    int err = msb_ensure_additional(&sb, N);
+                    if(unlikely(err)){
+                        fprintf(stderr, "OOM when allocating input buffer\n");
+                        return 1;
+                    }
+                    char* buff = sb.data + sb.cursor;
+                    size_t numread = fread(buff, 1, N, stdin);
+                    sb.cursor += numread;
+                    if(numread != N)
+                        break;
+                }
+                if(!sb.cursor)
+                    msb_write_char(&sb, ' ');
+                source_text = msb_detach_sv(&sb);
+                fclose(fp);
+                load_err.errored = 0;
+            }
             if(load_err.errored){
                 fprintf(stderr, "Unable to read: '%s'\n", original_source_path.text);
                 return 1;
