@@ -5,7 +5,7 @@
 #include "testing.h"
 TestFunction(TestStrip){
     TESTBEGIN();
-    struct TestCase{
+    const struct TestValue {
         StringView prestrip;
         StringView poststrip;
     } testvalues[] = {
@@ -18,10 +18,10 @@ TestFunction(TestStrip){
         {SV("yo   \t\t"), SV("yo")},
     };
     for(size_t i = 0; i < arrlen(testvalues); i++){
-        struct TestCase* testval = &testvalues[i];
-        StringView pre = testval->prestrip;
+        const struct TestValue* tv = &testvalues[i];
+        StringView pre = tv->prestrip;
         StringView stripped = stripped_view(pre.text, pre.length);
-        TestExpectEquals2(SV_equals,stripped, testval->poststrip);
+        TestExpectEquals2(SV_equals,stripped, tv->poststrip);
     }
     TESTEND();
 }
