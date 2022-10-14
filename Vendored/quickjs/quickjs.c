@@ -63,7 +63,7 @@ typedef intptr_t ssize_t;
 
 #define OPTIMIZE         1
 #define SHORT_OPCODES    1
-#if defined(EMSCRIPTEN) || (defined(_MSC_VER) && !defined(__clang__))
+#if defined(__IMPORTC__) || defined(EMSCRIPTEN) || (defined(_MSC_VER) && !defined(__clang__))
 #define DIRECT_DISPATCH  0
 #else
 #define DIRECT_DISPATCH  1
