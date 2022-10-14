@@ -8,6 +8,11 @@ if host_machine.system() == 'windows'
 else
   ignore_bogus_deprecations = []
 endif
+if host_machine.system() == 'darwin'
+  arches = ['-arch', 'x86_64', '-arch', 'arm64']
+else
+  arches = []
+endif
 
 includes = include_directories('.')
 install_headers('Dndc/dndc.h', 'Dndc/dndc_ast.h', subdir:'Dndc')
@@ -31,7 +36,7 @@ quickjs_static = static_library(
   'quickjs',
   'Vendored/libquickjs.c',
   include_directories: 'Vendored/quickjs',
-  c_args: qjs_extra_args+ignore_bogus_deprecations,
+  c_args: qjs_extra_args+ignore_bogus_deprecations+arches,
   install: true,
   dependencies:[m_dep],
 )
@@ -39,12 +44,13 @@ quickjs_dylib = shared_library(
   'quickjs',
   'Vendored/libquickjs.c',
   include_directories: 'Vendored/quickjs',
-  c_args: qjs_extra_args+['-DBUILDING_SHARED_OBJECT']+ignore_bogus_deprecations,
+  c_args: qjs_extra_args+['-DBUILDING_SHARED_OBJECT']+ignore_bogus_deprecations+arches,
   install: true,
   version: meson.project_version(),
   soversion: meson.project_version(),
   darwin_versions: [COMPAT_VERSION, meson.project_version()],
   dependencies:[m_dep],
+  link_args:arches,
 )
 
 executable(
@@ -54,7 +60,8 @@ executable(
   dependencies:[thread_dep],
   install: true,
   link_with: quickjs_static,
-  c_args:ignore_bogus_deprecations,
+  c_args:ignore_bogus_deprecations+arches,
+  link_args:arches,
 )
 dndc_lib = both_libraries(
   'dndc',
@@ -66,8 +73,9 @@ dndc_lib = both_libraries(
   soversion: meson.project_version(),
   darwin_versions: [COMPAT_VERSION, meson.project_version()],
   link_with: quickjs_static,
-  c_args:ignore_bogus_deprecations,
-  )
+  c_args:ignore_bogus_deprecations+arches,
+  link_args:arches,
+)
 executable(
   'dndc-browse',
   'Dndc/dndc_browse.c',
@@ -75,7 +83,8 @@ executable(
   install: true,
   link_with: dndc_lib,
   dependencies:[thread_dep],
-  c_args:ignore_bogus_deprecations,
+  c_args:ignore_bogus_deprecations+arches,
+  link_args:arches,
 )
 executable(
   'dndc-tag',
@@ -84,7 +93,8 @@ executable(
   install: true,
   link_with: dndc_lib,
   dependencies:[thread_dep],
-  c_args:ignore_bogus_deprecations,
+  c_args:ignore_bogus_deprecations+arches,
+  link_args:arches,
 )
 
 
@@ -94,7 +104,8 @@ pydndc = pyinstall.extension_module(
   include_directories: includes,
   link_with: quickjs_static,
   dependencies:pyinstall.dependency(),
-  c_args:ignore_bogus_deprecations + py_extra_args,
+  c_args:ignore_bogus_deprecations + py_extra_args+arches,
+  link_args:arches,
 )
 
 if host_machine.system() == 'darwin'
@@ -104,8 +115,8 @@ if host_machine.system() == 'darwin'
     'Platform/MacOS/gdndc.m',
     dependencies:[dependency('appleframeworks', modules: ['Cocoa', 'WebKit'])],
     include_directories: includes,
-    objc_args: ['-fobjc-arc', '-DAPP_ICON_PATH="'+meson.source_root()+'/Platform/MacOS/app_icon.png'+'"'],
-    link_args: '-Wl,-sectcreate,__TEXT,__info_plist,'+meson.source_root() + '/Platform/MacOS/Info.plist',
+    objc_args: ['-fobjc-arc', '-DAPP_ICON_PATH="'+meson.source_root()+'/Platform/MacOS/app_icon.png'+'"']+arches,
+    link_args: ['-Wl,-sectcreate,__TEXT,__info_plist,'+meson.source_root() + '/Platform/MacOS/Info.plist']+arches,
     link_with: quickjs_static,
     install: true,
   )
@@ -115,8 +126,9 @@ if host_machine.system() == 'darwin'
     'Dndc/dndc_local_server.c',
     dependencies:[dependency('appleframeworks', modules:'Cocoa')],
     include_directories: includes,
-    objc_args: ['-fobjc-arc', '-DAPP_ICON_PATH="'+meson.source_root()+'/Platform/MacOS/dndbr_app_icon.png'+'"'],
-    link_args: '-Wl,-sectcreate,__TEXT,__info_plist,'+meson.source_root() + '/Platform/MacOS/DndBrInfo.plist',
+    objc_args: ['-fobjc-arc', '-DAPP_ICON_PATH="'+meson.source_root()+'/Platform/MacOS/dndbr_app_icon.png'+'"']+arches,
+    c_args:arches,
+    link_args: ['-Wl,-sectcreate,__TEXT,__info_plist,'+meson.source_root() + '/Platform/MacOS/DndBrInfo.plist']+arches,
     link_with: dndc_lib,
     install: true,
   )
