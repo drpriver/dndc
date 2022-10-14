@@ -926,8 +926,9 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
     _Bool should_wait = 0;
     int nreps = 1;
     _Bool shuffle = 0;
+    _Bool silent = 0;
     uint64_t seed = 0;
-    enum {TEE_INDEX=6, TARGET_INDEX=3};
+    enum {TEE_INDEX=7, TARGET_INDEX=3};
     ArgToParse kw_args[] = {
         {
             .name = SV("-C"),
@@ -959,6 +960,12 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
             .name = SV("--all"),
             .dest = ARGDEST(&run_all),
             .help = "Run all tests, including those which are disabled by default.",
+        },
+        {
+            .name = SV("-s"),
+            .altname1 = SV("--silent"),
+            .dest = ARGDEST(&silent),
+            .help = "Don't print to stderr.",
         },
         {
             .name = SV("-o"),
@@ -1079,7 +1086,7 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
         }
         TestRegisterOutFile(fp);
     }
-    else {
+    else if(!silent){
         TestRegisterOutFile(stderr);
     }
     // Register extras

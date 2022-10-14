@@ -596,6 +596,7 @@ def mymain() -> None:
     parser.add_argument('-e', '--extension-directory')
     parser.add_argument('-b', '--extension-binary')
     parser.add_argument('-t', '--tee')
+    parser.add_argument('-s', '--silent', action='store_true')
     argz = sys.argv[0]
     args, remainder = parser.parse_known_args()
     argv = [argz] + remainder
@@ -624,6 +625,7 @@ def run(
     extension_directory:Optional[str]=None,
     extension_binary:Optional[str]=None,
     tee:Optional[str]=None,
+    silent:bool=False,
 ) -> None:
     global pydndc
     if change_directory:
@@ -644,9 +646,14 @@ def run(
     if tee:
         with open(tee, 'w', encoding='utf-8', newline='') as fp:
             # ignore that we don't actually implement all of TextTIO
-            runner = TextTestRunner(Tee(fp, sys.stderr)) # type: ignore
+            if silent:
+                runner = TextTestRunner(fp)
+            else:
+                runner = TextTestRunner(Tee(fp, sys.stderr)) # type: ignore
             main(argv=argv, testRunner=runner)
     else:
+        if silent:
+            argv.append('--quiet')
         main(argv=argv)
 
 

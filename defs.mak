@@ -142,6 +142,12 @@ FLAGS=$(INCLUDE_FLAGS) $(WARNING_FLAGS) $(PLATFORM_FLAGS)
 # TestDsort hangs gcc for some reason.
 TESTS:=$(filter-out Dndc/TestDndc.c Dndc/TestDndcAst.c Dndc/TestDndcAlloc.c Dndc/TestQJS.c Utils/TestDsort.c,$(wildcard **/Test*.c))
 
+ifneq (,$(findstring s,$(MAKEFLAGS)))
+TESTQUIET=-s
+else
+TESTQUIET=
+endif
+
 # This template defines how to build and run a test. Tests are automatically
 # discovered by convention: a test program is a C file starting with 'Test'.
 #
@@ -161,10 +167,10 @@ $(BINDIR)/$(notdir $(basename $(1)))_debug$(EXE): $(DEPDIR)/$(notdir $(1))_debug
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(TDEPFLAGS) $(DEPDIR)/$(notdir $(1))_debug.dep $(1) -o $$@ -g  $(LINK_FLAGS)
 
 $(TESTDIR)/$(notdir $(basename $(1)))_debug: $(BINDIR)/$(notdir $(basename $(1)))_debug$(EXE)
-	$$< --tee $$@ --shuffle
+	$$< --tee $$@ --shuffle $(TESTQUIET)
 
 $(TESTDIR)/$(notdir $(basename $(1)))_fast: $(BINDIR)/$(notdir $(basename $(1)))_fast$(EXE)
-	$$< --tee $$@ --shuffle
+	$$< --tee $$@ --shuffle $(TESTQUIET)
 
 tests: $(TESTDIR)/$(notdir $(basename $(1)))_fast
 tests: $(TESTDIR)/$(notdir $(basename $(1)))_debug

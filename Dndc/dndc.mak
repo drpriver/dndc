@@ -39,10 +39,10 @@ $(BINDIR)/TestDndc_debug$(EXE): Dndc/TestDndc.c $(DEPDIR)/TestDndc_debug.dep $(B
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndc_debug.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
 
 $(TESTDIR)/TestDndc_debug: $(BINDIR)/TestDndc_debug$(EXE)
-	$< --tee $@ --shuffle
+	$< --tee $@ --shuffle $(TESTQUIET)
 tests: $(TESTDIR)/TestDndc_debug
 $(TESTDIR)/TestDndc_fast: $(BINDIR)/TestDndc_fast$(EXE)
-	$< --tee $@ --shuffle
+	$< --tee $@ --shuffle $(TESTQUIET)
 tests: $(TESTDIR)/TestDndc_fast
 
 TestDndc: $(TESTDIR)/TestDndc_debug $(TESTDIR)/TestDndc_fast
@@ -54,10 +54,10 @@ $(BINDIR)/TestQJS_debug$(EXE): Dndc/TestQJS.c $(DEPDIR)/TestQJS_debug.dep | $(DI
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestQJS_debug.dep $< -o $@ -g  $(LINK_FLAGS) $(QUICKJS_CEXTRA)
 
 $(TESTDIR)/TestQJS_debug: $(BINDIR)/TestQJS_debug$(EXE)
-	$< --tee $@ --shuffle
+	$< --tee $@ --shuffle $(TESTQUIET)
 tests: $(TESTDIR)/TestQJS_debug
 $(TESTDIR)/TestQJS_fast: $(BINDIR)/TestQJS_fast$(EXE)
-	$< --tee $@ --shuffle
+	$< --tee $@ --shuffle $(TESTQUIET)
 tests: $(TESTDIR)/TestQJS_fast
 
 TestQJS: $(TESTDIR)/TestQJS_debug $(TESTDIR)/TestQJS_fast
@@ -70,25 +70,25 @@ $(BINDIR)/TestDndcAlloc_debug$(EXE): Dndc/TestDndcAlloc.c $(DEPDIR)/TestDndcAllo
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndcAlloc_debug.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
 
 $(TESTDIR)/TestDndcAlloc_debug_html: $(BINDIR)/TestDndcAlloc_debug$(EXE)
-	$< --tee $@ --html
+	$< --tee $@ --html $(TESTQUIET)
 $(TESTDIR)/TestDndcAlloc_debug_md: $(BINDIR)/TestDndcAlloc_debug$(EXE)
-	$< --tee $@ --md
+	$< --tee $@ --md $(TESTQUIET)
 $(TESTDIR)/TestDndcAlloc_debug_reformat: $(BINDIR)/TestDndcAlloc_debug$(EXE)
-	$< --tee $@ --reformat
+	$< --tee $@ --reformat $(TESTQUIET)
 $(TESTDIR)/TestDndcAlloc_debug_expand: $(BINDIR)/TestDndcAlloc_debug$(EXE)
-	$< --tee $@ --expand
+	$< --tee $@ --expand $(TESTQUIET)
 tests: $(TESTDIR)/TestDndcAlloc_debug_html
 tests: $(TESTDIR)/TestDndcAlloc_debug_md
 tests: $(TESTDIR)/TestDndcAlloc_debug_reformat
 tests: $(TESTDIR)/TestDndcAlloc_debug_expand
 $(TESTDIR)/TestDndcAlloc_fast_html: $(BINDIR)/TestDndcAlloc_fast$(EXE)
-	$< --tee $@ --html
+	$< --tee $@ --html $(TESTQUIET)
 $(TESTDIR)/TestDndcAlloc_fast_md: $(BINDIR)/TestDndcAlloc_fast$(EXE)
-	$< --tee $@ --md
+	$< --tee $@ --md $(TESTQUIET)
 $(TESTDIR)/TestDndcAlloc_fast_reformat: $(BINDIR)/TestDndcAlloc_fast$(EXE)
-	$< --tee $@ --reformat
+	$< --tee $@ --reformat $(TESTQUIET)
 $(TESTDIR)/TestDndcAlloc_fast_expand: $(BINDIR)/TestDndcAlloc_fast$(EXE)
-	$< --tee $@ --expand
+	$< --tee $@ --expand $(TESTQUIET)
 tests: $(TESTDIR)/TestDndcAlloc_fast_html
 tests: $(TESTDIR)/TestDndcAlloc_fast_md
 tests: $(TESTDIR)/TestDndcAlloc_fast_reformat
@@ -112,10 +112,10 @@ $(BINDIR)/TestDndcAst_debug$(EXE): Dndc/TestDndcAst.c $(DEPDIR)/TestDndcAst_debu
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndcAst_debug.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
 
 $(TESTDIR)/TestDndcAst_debug: $(BINDIR)/TestDndcAst_debug$(EXE)
-	$< --tee $@
+	$< --tee $@ $(TESTQUIET)
 tests: $(TESTDIR)/TestDndcAst_debug
 $(TESTDIR)/TestDndcAst_fast: $(BINDIR)/TestDndcAst_fast$(EXE)
-	$< --tee $@
+	$< --tee $@ $(TESTQUIET)
 tests: $(TESTDIR)/TestDndcAst_fast
 
 TestDndcAst: $(TESTDIR)/TestDndcAst_debug $(TESTDIR)/TestDndcAst_fast
@@ -127,7 +127,7 @@ $(BINDIR)/pydndc$(PYEXTENSION): Dndc/pydndc.c $(VENDOBJDIR)/libquickjs.o
 pydndc: pydndc/pydndc$(PYEXTENSION) $(BINDIR)/pydndc$(PYEXTENSION) Dndc/jsdoc.dnd
 
 TestResults/testpydndc: $(BINDIR)/pydndc$(PYEXTENSION) Dndc/testpydndc.py Examples/HobswellManor/add.py Examples/HobswellManor/hobswell-manor-before.dnd Examples/HobswellManor/hobswell-manor.dnd
-	$(PYTHON) Dndc/testpydndc.py --extension-directory $(BINDIR) --tee $@
+	$(PYTHON) Dndc/testpydndc.py --extension-directory $(BINDIR) --tee $@ $(TESTQUIET)
 tests: TestResults/testpydndc
 
 pydndc/pydndc$(PYEXTENSION): $(BINDIR)/pydndc$(PYEXTENSION)
