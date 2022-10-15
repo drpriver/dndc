@@ -8,6 +8,7 @@
 #include "dndc_funcs.h"
 #include "dndc_types.h"
 #include "dndc_logging.h"
+#include "dndc_js.h"
 #include "Utils/MStringBuilder.h"
 #include "Utils/msb_extensions.h"
 #include "Utils/msb_format.h"
@@ -40,7 +41,25 @@ PopDiagnostic()
 #pragma clang assume_nonnull begin
 #endif
 
+static
+warn_unused
+int
+execute_qjs_string(QJSContext*jsctx, DndcContext* ctx, const char* str, size_t length, NodeHandle handle, NodeHandle firstline);
+
+static
+QJSRuntime*_Nullable
+new_qjs_rt(ArenaAllocator*);
+
+static
+QJSContext*_Nullable
+new_qjs_ctx(QJSRuntime*, DndcContext*, LongString);
+
+static
+void
+free_qjs_rt(QJSRuntime*, ArenaAllocator*);
+
 enum { ZERO_NODE_VALUE = INVALID_NODE_HANDLE_VALUE-1 };
+
 static inline
 void*_Nullable
 NodeHandle_to_opaque(NodeHandle handle){
@@ -2625,6 +2644,33 @@ QJSMETHOD(js_dndc_classlist_values){
 #undef QJSMETHOD
 #undef QJSSETTER
 #undef QJSGETTER
+
+static
+warn_unused
+int
+dndc_execute_js_string(DndcJsContext*jsctx, DndcContext* ctx, const char* str, size_t length, NodeHandle handle, NodeHandle firstline){
+    return execute_qjs_string((QJSContext*)jsctx, ctx, str, length, handle, firstline);
+}
+
+static
+DndcJsRuntime*_Nullable
+dndc_new_js_rt(ArenaAllocator* a){
+    return (DndcJsRuntime*)new_qjs_rt(a);
+}
+
+static
+DndcJsContext*_Nullable
+dndc_new_js_ctx(DndcJsRuntime* rt, DndcContext* ctx, LongString ls){
+    return (DndcJsContext*)new_qjs_ctx((QJSRuntime*)rt, ctx, ls);
+}
+
+static
+void
+dndc_free_js_rt(DndcJsRuntime* rt, ArenaAllocator* a){
+    free_qjs_rt((QJSRuntime*)rt, a);
+}
+
+
 
 #ifdef __clang__
 #pragma clang assume_nonnull end

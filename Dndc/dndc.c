@@ -10,7 +10,7 @@
 #include "dndc_format.c"
 #include "dndc_types.h"
 #include "dndc_funcs.h"
-#include "dndc_qjs.h"
+#include "dndc_js.h"
 #include "dndc_file_cache.h"
 #include "dndc_logging.h"
 #include "common_macros.h"
@@ -95,8 +95,8 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
     ArenaAllocator aa = {0};
     // The rt is lazily initialized as they are pretty expensive
     // if not actually used.
-    QJSRuntime* rt = NULL;
-    QJSContext* jsctx = NULL;
+    DndcJsRuntime* rt = NULL;
+    DndcJsContext* jsctx = NULL;
     uint64_t before = get_t();
     // Count must be re-read each time through the loop as more scripts
     // can be added by scripts.
@@ -141,23 +141,23 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
             assert(type == NODE_JS);
             if(!rt){
                 uint64_t before_init = get_t();
-                rt = new_qjs_rt(&aa);
+                rt = dndc_new_js_rt(&aa);
                 if(!rt) {
                     report_system_error(ctx, SV("Failed to create javascript rt"));
                     result = DNDC_ERROR_JS;
                     goto cleanup;
                 }
                 assert(!jsctx);
-                jsctx = new_qjs_ctx(rt, ctx, jsargs);
+                jsctx = dndc_new_js_ctx(rt, ctx, jsargs);
                 if(!jsctx){
                     report_system_error(ctx, SV("Failed to initialize javascript context"));
                     result = DNDC_ERROR_JS;
                     goto cleanup;
                 }
                 uint64_t after_init = get_t();
-                report_time(ctx, SV("qjs init took: "), after_init-before_init);
+                report_time(ctx, SV("js init took: "), after_init-before_init);
             }
-            int js_err = execute_qjs_string(jsctx, ctx, str.text, str.length, handle, firstchild);
+            int js_err = dndc_execute_js_string(jsctx, ctx, str.text, str.length, handle, firstchild);
             msb_destroy(&msb);
             if(js_err){
                 result = js_err;
@@ -183,7 +183,7 @@ execute_user_scripts(DndcContext* ctx, LongString jsargs){
     report_time(ctx, SV("user scripts took: "), after_scripts-before);
     cleanup:
     if(rt){
-        free_qjs_rt(rt, &aa);
+        dndc_free_js_rt(rt, &aa);
     }
     return result;
 }
@@ -754,28 +754,28 @@ run_the_dndc(
 // Stubs for wasm
 static
 int
-execute_qjs_string(QJSContext*jsctx, DndcContext*ctx, const char* str, size_t length, NodeHandle handle, NodeHandle firstline){
+dndc_execute_js_string(DndcJsContext*jsctx, DndcContext*ctx, const char* str, size_t length, NodeHandle handle, NodeHandle firstline){
     (void)jsctx, (void)ctx, (void)str, (void)length, (void)handle, (void)firstline;
     return DNDC_ERROR_OS;
 }
 
 static
-QJSRuntime*_Nullable
-new_qjs_rt(ArenaAllocator*aa){
+DndcJsRuntime*_Nullable
+dndc_new_js_rt(ArenaAllocator*aa){
     (void)aa;
     return NULL;
 }
 
 static
-QJSContext*_Nullable
-new_qjs_ctx(QJSRuntime*rt, DndcContext*ctx, LongString args){
+DndcJsContext*_Nullable
+dndc_new_js_ctx(DndcJsRuntime*rt, DndcContext*ctx, LongString args){
     (void)rt, (void)ctx, (void)args;
     return NULL;
 }
 
 static
 void
-free_qjs_rt(QJSRuntime*rt, ArenaAllocator*aa){
+dndc_free_js_rt(DndcJsRuntime*rt, ArenaAllocator*aa){
     (void)rt, (void)aa;
 }
 #else
@@ -3500,15 +3500,15 @@ dndc_node_execute_js(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString js){
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
     ArenaAllocator aa = {0};
-    QJSRuntime* rt = new_qjs_rt(&aa);
+    DndcJsRuntime* rt = dndc_new_js_rt(&aa);
     if(!rt) return DNDC_ERROR_JS;
-    QJSContext* jsctx = new_qjs_ctx(rt, ctx, LS("null"));
+    DndcJsContext* jsctx = dndc_new_js_ctx(rt, ctx, LS("null"));
     if(!jsctx){
-        free_qjs_rt(rt, &aa);
+        dndc_free_js_rt(rt, &aa);
         return DNDC_ERROR_JS;
     }
-    int err = execute_qjs_string(jsctx, ctx, js.text, js.length, handle, handle);
-    free_qjs_rt(rt, &aa);
+    int err = dndc_execute_js_string(jsctx, ctx, js.text, js.length, handle, handle);
+    dndc_free_js_rt(rt, &aa);
     ArenaAllocator_free_all(&aa);
     return err;
 }
