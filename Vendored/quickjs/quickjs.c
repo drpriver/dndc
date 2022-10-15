@@ -6810,12 +6810,16 @@ QJSValue printflike(2, 3) QJS_ThrowInternalError(QJSContext *ctx, const char *fm
 QJS_API
 QJSValue QJS_ThrowOutOfMemory(QJSContext *ctx)
 {
+#if 0
     QJSRuntime *rt = ctx->rt;
     if (!rt->in_out_of_memory) {
         rt->in_out_of_memory = TRUE;
         QJS_ThrowInternalError(ctx, "out of memory");
         rt->in_out_of_memory = FALSE;
     }
+#else
+    (void)ctx;
+#endif
     return QJS_EXCEPTION;
 }
 
