@@ -48,6 +48,7 @@
 
 #include "quickjs/libunicode.c"
 
+#if !defined(QJS_API)
 #if !defined(BUILDING_SHARED_OBJECT)
 
 #if defined(_MSC_VER) && !defined(__clang__)
@@ -60,6 +61,7 @@
 #define QJS_API __declspec(dllexport)
 #else
 #define QJS_API extern __attribute__((visibility("default")))
+#endif
 #endif
 
 #include "quickjs/quickjs.c"

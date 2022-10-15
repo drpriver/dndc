@@ -11,6 +11,7 @@
 #include "Utils/testing.h"
 #include "Utils/MStringBuilder.h"
 #include "Utils/file_util.h"
+#define QJS_API extern
 #include "Vendored/quickjs/quickjs.h"
 
 static TestFunc TestLanguage;
