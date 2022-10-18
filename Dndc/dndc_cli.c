@@ -495,7 +495,6 @@ main(int argc, char**argv){
                     msb_write_str(&sb, history.buff, len);
                     msb_write_char(&sb, '\n');
                 }
-                puts("^D");
             }
             else {
                 for(;;){
