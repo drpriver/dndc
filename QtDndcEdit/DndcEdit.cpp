@@ -208,6 +208,13 @@ QString SCROLL_RESTO_SCRIPT = QS(
     "    });\n"
     );
 
+QString EXTRA_CSS=QS("\n"
+    "::css\n"
+    "  body {\n"
+    "    /* the overscroll effect looks really bad in the webview */\n"
+    "    overscroll-behavior: none;\n"
+    "  }\n"
+    );
 QString GET_SCROLL_POSITION_SCRIPT = QS(
     "(function(){\n"
     "    const result = {};\n"
@@ -1228,6 +1235,7 @@ Page::get_text_for_preview(void){
         text += QS("\n::script\n  const SCROLLRESTO = ") + scroll_pos_string + QS("\n");
         text += SCROLL_RESTO_SCRIPT;
     }
+    text += EXTRA_CSS;
     return text + QS("\n");
 }
 
