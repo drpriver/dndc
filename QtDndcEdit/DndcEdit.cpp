@@ -1227,9 +1227,6 @@ Page::get_text_for_preview(void){
                     "        add_scroller(h);\n"
                     "  });\n"
         );
-#undef RAW
-        // fprintf(stderr, "%s\n", text.toUtf8().data());
-        // qDebug() << text << "\n";
     }
     if(scroll_pos_string.length()){
         text += QS("\n::script\n  const SCROLLRESTO = ") + scroll_pos_string + QS("\n");
