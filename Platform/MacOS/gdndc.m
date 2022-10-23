@@ -21,9 +21,6 @@
 // Note that you need to semi-colon terminate all of your lines.
 #define JSRAW(...) #__VA_ARGS__
 
-// We only compile this with apple clang anyway, so using extensions is fine.
-#define auto __auto_type
-
 #if !__has_feature(objc_arc)
 #error "ARC is off"
 #endif
@@ -54,7 +51,8 @@ ns_consume_ls(LongString ls){
 
 static
 StringView
-ns_borrow_sv(NSString* str){
+ns_borrow_sv(NSString*_Nullable str){
+    if(!str) return SV("");
     const char* text = [str UTF8String];
     size_t len = strlen(text);
     return (StringView){.text=text, .length=len};
@@ -95,7 +93,7 @@ cache_watch_file(void* cache_, StringView path){
     // TODO: use a hash table.
     size_t first_tomb = -1;
     for(size_t i = 0; i < cache->count; i++){
-        auto it = &cache->items[i];
+        FileWatchItem* it = &cache->items[i];
         if(it->tomb){
             if(first_tomb == (size_t)-1){
                 first_tomb = i;
@@ -123,8 +121,8 @@ cache_watch_file(void* cache_, StringView path){
         cache->items = items;
         cache->capacity = capacity;
     }
-    auto item_index = (first_tomb != (size_t)-1)?first_tomb:cache->count++;
-    auto item = &cache->items[item_index];
+    size_t item_index = (first_tomb != (size_t)-1)?first_tomb:cache->count++;
+    FileWatchItem* item = &cache->items[item_index];
     item->tomb = false;
     item->hash = hash;
     item->last_eight_chars = last_eight;
@@ -145,7 +143,7 @@ cache_watch_file(void* cache_, StringView path){
     // NSLog(@"watching '%s'", item->fullpath.text);
     dispatch_source_t source = dispatch_source_create(DISPATCH_SOURCE_TYPE_VNODE, item->fd, DISPATCH_VNODE_WRITE | DISPATCH_VNODE_DELETE | DISPATCH_VNODE_RENAME | DISPATCH_VNODE_EXTEND | DISPATCH_VNODE_ATTRIB, dispatch_get_main_queue());
     dispatch_source_set_event_handler(source, ^{
-        auto bitem = &cache->items[item_index];
+        FileWatchItem* bitem = &cache->items[item_index];
         dndc_filecache_remove(TEXTCACHE, LS_to_SV(bitem->fullpath));
         dndc_filecache_remove(BASE64CACHE, LS_to_SV(bitem->fullpath));
         // NSLog(@"'%s' changed", bitem->fullpath.text);
@@ -170,7 +168,7 @@ cache_watch_file(void* cache_, StringView path){
         dispatch_source_cancel(source);
     });
     dispatch_source_set_cancel_handler(source, ^{
-        auto bitem = &cache->items[item_index];
+        FileWatchItem* bitem = &cache->items[item_index];
         // NSLog(@"VNode for '%s' was canceled", bitem->fullpath.text);
         bitem->tomb = true;
         close(bitem->fd);
@@ -337,7 +335,7 @@ NSString* APPNAME = @"DndEdit";
 
 
 -(NSWindow*)make_window{
-    auto screen = [NSScreen mainScreen];
+    NSScreen* screen = [NSScreen mainScreen];
     NSRect rect = screen? screen.visibleFrame : NSMakeRect(0, 0, 1400, 800);
 
     NSWindow* window = [[NSWindow alloc]
@@ -356,13 +354,13 @@ NSString* APPNAME = @"DndEdit";
     NSWindow* docwindow = [self make_window];
     DndWindowController* winc = [[DndWindowController alloc] initWithWindow:docwindow];
     [self addWindowController:winc];
-    auto mainwindow = [NSApp mainWindow];
+    NSWindow* mainwindow = [NSApp mainWindow];
     if(mainwindow){
         [mainwindow addTabbedWindow:docwindow ordered:NSWindowAbove];
     }
     [docwindow makeKeyAndOrderFront: nil];
 }
--(NSString*)doc_title{
+-(NSString*_Nullable)doc_title{
     return self->view_controller->doc_title;
 }
 
@@ -451,7 +449,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
             MSB_FORMAT(&builder, mess, "\n");
             break;
     }
-    auto s = msb_detach_as_ns_string(&builder);
+    NSString* s = msb_detach_as_ns_string(&builder);
     [[tv textStorage].mutableString appendString:s];
 }
 
@@ -469,10 +467,10 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     }
     // NSRange currentLineRange = NSMakeRange(0, [string length]);
     NSRange currentLineRange = [string lineRangeForRange:editedRange];
-    // auto before= get_t();
+    // uint64_t before= get_t();
     [textStorage removeAttribute:NSForegroundColorAttributeName range:currentLineRange];
     [textStorage removeAttribute:NSBackgroundColorAttributeName range:currentLineRange];
-    auto len = [string length];
+    size_t len = [string length];
     // gross!
     static unichar* chars;
     static size_t chars_length;
@@ -491,10 +489,10 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         .text = chars,
         .length = len,
     };
-    // auto t0 = get_t();
+    // uint64_t t0 = get_t();
     // for(int i = 0; i < 1000; i++)
         dndc_analyze_syntax_utf16(text16, dndc_syntax_func, &sd);
-    // auto t1 = get_t();
+    // uint64_t t1 = get_t();
     return;
 }
 @end
@@ -502,13 +500,13 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 @implementation DndTextView
 -(void)keyDown:(NSEvent*) event{
     if(event.modifierFlags & NSEventModifierFlagCommand){
-        auto num = [event.characters integerValue];
+        NSInteger num = [event.characters integerValue];
         if(num){
             num -= 1;
-           auto tabs =  [NSApp mainWindow].tabbedWindows;
-           if(tabs.count > num){
-               [tabs[num] makeKeyAndOrderFront:nil];
-               return;
+            NSArray<NSWindow*>* tabs = [NSApp mainWindow].tabbedWindows;
+            if(tabs.count > num){
+                [tabs[num] makeKeyAndOrderFront:nil];
+                return;
            }
         }
     }
@@ -516,30 +514,30 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 }
 
 -(void)indent:(id _Nullable)sender{
-    auto r = self.selectedRange;
+    NSRange r = self.selectedRange;
     NSRange currentLineRange = [self.string lineRangeForRange:r];
     int adjustment = 0;
     [self insertText:@"  " replacementRange:NSMakeRange(currentLineRange.location, 0)];
     adjustment += 2;
     //               -1 to not do final newline
     for(int i = 0; i < currentLineRange.length-1; i++){
-        auto c = [self.string characterAtIndex:i+currentLineRange.location+adjustment];
+        unichar c = [self.string characterAtIndex:i+currentLineRange.location+adjustment];
         if(c == '\n'){
             [self insertText:@"  " replacementRange:NSMakeRange(currentLineRange.location + i + 1 + adjustment, 0)];
             adjustment += 2;
         }
     }
-    auto adjustedrange = NSMakeRange(currentLineRange.location, currentLineRange.length+adjustment);
+    NSRange adjustedrange = NSMakeRange(currentLineRange.location, currentLineRange.length+adjustment);
     if(r.length > 0)
         [self setSelectedRange:adjustedrange];
 }
 -(void)dedent:(id _Nullable)sender{
-    auto r = self.selectedRange;
+    NSRange r = self.selectedRange;
     NSRange currentLineRange = [self.string lineRangeForRange:r];
     int adjustment = 0;
     int n_leading_space = 0;  // negative means no longer counting leading spaces.
     for(int i = 0; i < currentLineRange.length-1; i++){
-        auto c = [self.string characterAtIndex:i+currentLineRange.location+adjustment];
+        unichar c = [self.string characterAtIndex:i+currentLineRange.location+adjustment];
         if(c == '\n'){
             n_leading_space = 0;
             continue;
@@ -550,7 +548,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         if(c == ' '){
             n_leading_space++;
             if(n_leading_space == 2){
-                auto range = NSMakeRange(currentLineRange.location+adjustment+i-1, 2);
+                NSRange range = NSMakeRange(currentLineRange.location+adjustment+i-1, 2);
                 [self insertText:@"" replacementRange:range];
                 n_leading_space = -1;
                 adjustment -= 2;
@@ -559,7 +557,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         }
         n_leading_space = -1;
     }
-    auto adjustedrange = NSMakeRange(currentLineRange.location, currentLineRange.length+adjustment);
+    NSRange adjustedrange = NSMakeRange(currentLineRange.location, currentLineRange.length+adjustment);
     if(r.length > 0)
         [self setSelectedRange:adjustedrange];
 }
@@ -571,9 +569,9 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         PopDiagnostic();
 }
 -(void)insert_file_block:(NSString*)path tag:(GdndInsertTag)tag size:(NSSize)size{
-    auto r = self.selectedRange;
+    NSRange r = self.selectedRange;
     NSRange currentLineRange = [self.string lineRangeForRange:r];
-    auto rel = r.location - currentLineRange.location;
+    NSUInteger rel = r.location - currentLineRange.location;
     switch(tag){
         case GDND_INSERT_IMG:
             [self insert_block:path at:r indent_amount:rel name:SV("::img\n")];
@@ -608,7 +606,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     const char* cpath = [path UTF8String];
     msb_write_str(&sb, cpath, strlen(cpath));
     msb_write_char(&sb, '\n');
-    auto to_insert = msb_detach_as_ns_string(&sb);
+    NSString* to_insert = msb_detach_as_ns_string(&sb);
     [self insertText:to_insert replacementRange:r];
 }
 -(void)insert_imglinks_block:(NSString*)path at:(NSRange)r indent_amount:(NSInteger)indent_amount size:(NSSize)size{
@@ -640,7 +638,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         msb_write_str(&sb, script[i].text, script[i].length);
     }
 #undef INDENT
-    auto to_insert = msb_detach_as_ns_string(&sb);
+    NSString* to_insert = msb_detach_as_ns_string(&sb);
     [self insertText:to_insert replacementRange:r];
 }
 +(NSMenu*_Nullable)defaultMenu{
@@ -711,16 +709,16 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 }
 
 -(void)deleteBackward:(id _Nullable)sender{
-    auto r = self.selectedRange;
+    NSRange r = self.selectedRange;
     if(r.length == 0){
         NSRange currentLineRange = [self.string lineRangeForRange:r];
         NSString* currentLine = [self.string substringWithRange:currentLineRange];
         [self ensure_pattern];
         NSTextCheckingResult* indent_matched = [indent_pattern firstMatchInString:currentLine options:0 range:NSMakeRange(0, currentLine.length)];
         if(indent_matched){
-            auto this_char = r.location?[self.string characterAtIndex:r.location-1]:'\0';
+            unichar this_char = r.location?[self.string characterAtIndex:r.location-1]:'\0';
             // how far into the line the current selection is
-            auto rel = r.location - currentLineRange.location;
+            NSUInteger rel = r.location - currentLineRange.location;
             if(rel && !(rel & 1) && this_char == ' ' && rel <= indent_matched.range.length){
                     [super deleteBackward:sender];
                     [super deleteBackward:sender];
@@ -733,7 +731,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     [self display];
 }
 -(void)insertNewline:(id _Nullable)sender {
-    auto sel_range = self.selectedRange;
+    NSRange sel_range = self.selectedRange;
     if(sel_range.length){
         [super insertNewline:sender];
         return;
@@ -769,14 +767,14 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 -(void)webView:(WKWebView *)webView
     decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction
     decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler{
-        auto url = navigationAction.request.URL;
+        NSURL* url = navigationAction.request.URL;
         // LOGIT(url);
         if([url isEqual:[self.controller this_dnd_url]]){
             decisionHandler(WKNavigationActionPolicyAllow);
             return;
         }
         if([[url host] isEqual:DND_HOST]){
-            auto real_url = [NSURL fileURLWithPath:[[[url URLByDeletingPathExtension] URLByAppendingPathExtension:@"dnd"] path]];
+            NSURL* real_url = [NSURL fileURLWithPath:[[[url URLByDeletingPathExtension] URLByAppendingPathExtension:@"dnd"] path]];
             [[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:real_url display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
                 (void)documentWasAlreadyOpen;
                 (void)document;
@@ -788,10 +786,10 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
                         [alert setInformativeText:[[real_url path] stringByAppendingString:@" does not exist. Create it?"]];
                         [alert addButtonWithTitle:@"Ok"];
                         [alert addButtonWithTitle:@"Cancel"];
-                        auto response = [alert runModal];
+                        NSModalResponse response = [alert runModal];
                         if(response != NSAlertFirstButtonReturn)
                             return;
-                        auto cstring = [[real_url path] UTF8String];
+                        const char* cstring = [[real_url path] UTF8String];
                         if(!cstring) return;
                         int fd = open(cstring, O_RDWR|O_CREAT|O_EXCL, 0644);
                         if(fd < 0) return;
@@ -830,13 +828,13 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 
 @implementation DndUrlHandler
 -(void)webView:(WKWebView*)webView startURLSchemeTask:(id<WKURLSchemeTask>)urlSchemeTask{
-    auto request = [urlSchemeTask request];
+    NSURLRequest* request = [urlSchemeTask request];
     NSURL* url = request.URL;
-    auto method = [request HTTPMethod];
+    NSString* method = [request HTTPMethod];
     // Handle the click helper for adding rooms by clicking
     // on map.
     if([method isEqualToString:@"POST"] && [url isEqual:[NSURL URLWithString:@"dnd:///roomclick"]]){
-        auto response = [[NSURLResponse alloc]
+        NSURLResponse* response = [[NSURLResponse alloc]
             initWithURL:request.mainDocumentURL
             MIMEType:@"text/plain"
             expectedContentLength:0
@@ -850,7 +848,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     }
     if([method isEqualToString:@"POST"] && [url isEqual:[NSURL URLWithString:@"dnd:///roommove"]]){
         // LOGIT(url);
-        auto response = [[NSURLResponse alloc]
+        NSURLResponse* response = [[NSURLResponse alloc]
             initWithURL:request.mainDocumentURL
             MIMEType:@"text/plain"
             expectedContentLength:0
@@ -864,7 +862,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     }
     if([method isEqualToString:@"POST"] && [url isEqual:[NSURL URLWithString:@"dnd:///scrolltoid"]]){
         // LOGIT(url);
-        auto response = [[NSURLResponse alloc]
+        NSURLResponse* response = [[NSURLResponse alloc]
             initWithURL:request.mainDocumentURL
             MIMEType:@"text/plain"
             expectedContentLength:0
@@ -878,7 +876,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     }
     if([method isEqualToString:@"GET"]){
         if([[url scheme] isEqualToString:DND_SCHEME] && [[url path] isEqualToString:@"/scrollresto"]){
-        auto response = [[NSHTTPURLResponse alloc]
+        NSURLResponse* response = [[NSHTTPURLResponse alloc]
             initWithURL:(NSURL*)[NSURL URLWithString:DND_SCHEME_HOST]
              statusCode:200
             HTTPVersion:@"HTTP/1.1"
@@ -900,19 +898,19 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 #if 0
     if([method isEqualToString:@"GET"] and [[url scheme] isEqualToString:DND_SCHEME]){
         LOGIT([@"file://" stringByAppendingString:[url path]]);
-        auto urlstr = [url path];
+        NSString* urlstr = [url path];
         urlstr = [urlstr stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLPathAllowedCharacterSet]];
         urlstr = [@"file://" stringByAppendingString:urlstr];
         url = [[NSURL alloc] initWithString: urlstr];
-        // auto path = [url path];
+        // NSString* path = [url path];
         // LOGIT(url);
-        auto data = [NSData dataWithContentsOfURL: url];
+        NSData* data = [NSData dataWithContentsOfURL: url];
         if(!data){
             LOGIT(@"no data?");
             // TODO: better error.
             [urlSchemeTask didFailWithError:[NSError errorWithDomain:@"denied" code:1 userInfo:nil]];
         }
-        auto response = [[NSURLResponse alloc]
+        NSURLReponse* response = [[NSURLResponse alloc]
             initWithURL: request.mainDocumentURL
             MIMEType:@"image/png" // This is wrong, but webkit doesn't mind.
             expectedContentLength: [data length]
@@ -960,8 +958,8 @@ BOOL show_stats;
 -(void)button_click:(id)a{
     // Being lazy and just doing string comparisons
     NSButton* button = a;
-    auto title = [button title];
-    auto state = [button state];
+    NSString* title = [button title];
+    NSControlStateValue state = [button state];
     if([title isEqualToString:DND_AUTO_APPLY_CHANGES_LABEL]){
         if(state == NSControlStateValueOn){
             auto_recalc = YES;
@@ -1018,7 +1016,7 @@ BOOL show_stats;
     auto_recalc = YES;
     show_errors = YES;
     show_stats = NO;
-    auto screen = [NSScreen mainScreen];
+    NSScreen* screen = [NSScreen mainScreen];
     NSRect screenrect;
     if(screen){
         screenrect = screen.visibleFrame;
@@ -1026,11 +1024,11 @@ BOOL show_stats;
     else{
         screenrect = NSMakeRect(0, 0, 1400, 800);
     }
-    auto split_view = [[NSSplitView alloc] initWithFrame:screenrect];
+    NSSplitView* split_view = [[NSSplitView alloc] initWithFrame:screenrect];
     split_view.vertical = YES;
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:(id)EDITOR_FONT, NSFontAttributeName, nil];
-    auto Msize = [[NSAttributedString alloc] initWithString:@"M" attributes:attributes].size.width;
-    auto textwidth  = 84*Msize;
+    CGFloat Msize = [[NSAttributedString alloc] initWithString:@"M" attributes:attributes].size.width;
+    CGFloat textwidth  = 84*Msize;
     NSRect textrect = {.origin={screenrect.size.width-textwidth,0}, .size={textwidth,screenrect.size.height}};
     text = [[DndTextView alloc] initWithFrame:textrect font:EDITOR_FONT];
     highlighter = [[DndHighlighter alloc] init];
@@ -1078,7 +1076,7 @@ BOOL show_stats;
     [split_view addSubview:webview];
     [editor_container addSubview:scrollview];
 
-    auto button_view = [[NSStackView alloc] init];
+    NSStackView* button_view = [[NSStackView alloc] init];
     {
         NSString* button_labels[] = {
             DND_AUTO_APPLY_CHANGES_LABEL,
@@ -1096,7 +1094,7 @@ BOOL show_stats;
         };
         _Static_assert(arrlen(button_states)==arrlen(button_labels), "");
         for(size_t i = 0; i < arrlen(button_labels); i++){
-            auto button = [NSButton checkboxWithTitle:button_labels[i] target:self action:@selector(button_click:)];
+            NSButton* button = [NSButton checkboxWithTitle:button_labels[i] target:self action:@selector(button_click:)];
             button.state = button_states[i]?NSControlStateValueOn:NSControlStateValueOff;
             [button_view addView:button inGravity:NSStackViewGravityLeading];
         }
@@ -1151,12 +1149,12 @@ BOOL show_stats;
             NSString* path;
             path = panel.URL.path;
             if(self->file_url){
-                auto chosen_components = panel.URL.pathComponents;
-                auto doc_components = self->file_url.pathComponents;
+                NSArray<NSString*>* chosen_components = panel.URL.pathComponents;
+                NSArray<NSString*>* doc_components = self->file_url.pathComponents;
                 if(doc_components.count > chosen_components.count){
                     goto have_path;
                 }
-                auto shorter = doc_components.count;
+                NSUInteger shorter = doc_components.count;
                 NSUInteger i;
                 for(i = 0; i < shorter; i++){
                     if([chosen_components[i] isEqual:doc_components[i]])
@@ -1250,15 +1248,15 @@ BOOL show_stats;
 
 -(void)format_dnd:(id)sender {
     // FIXME: restoring the scroll position doesn't work
-    auto before = [self->scrollview lineScroll];
+    CGFloat before = [self->scrollview lineScroll];
     NSString *string = self->text.string;
     const char* source_text = [string UTF8String];
-    // auto t1 = get_t();
+    // uint64_t t1 = get_t();
     LongString html = {};
-    auto len = strlen(source_text);
+    size_t len = strlen(source_text);
     error_text.editable = YES;
     [[error_text textStorage].mutableString setString:@""];
-    auto err = dndc_format((StringView){len, source_text}, &html, gdndc_error_func, (__bridge void*)error_text);
+    int err = dndc_format((StringView){len, source_text}, &html, gdndc_error_func, (__bridge void*)error_text);
     error_text.editable = NO;
     if(err){
         return;
@@ -1267,7 +1265,7 @@ BOOL show_stats;
     SuppressCastQual();
     NSData* htmldata = [NSData dataWithBytesNoCopy:(void*)html.text length:html.length freeWhenDone:YES];
     PopDiagnostic();
-    auto str = [[NSString alloc] initWithData:htmldata encoding:NSUTF8StringEncoding];
+    NSString* str = [[NSString alloc] initWithData:htmldata encoding:NSUTF8StringEncoding];
     if(!str)
         return;
     [self->text insertText:str replacementRange:NSMakeRange(0, [[self->text textStorage] length])];
@@ -1538,7 +1536,7 @@ BOOL show_stats;
         base_dir.length = strlen(dir_text);
     }
     NSString* filename = [[self->file_url path] lastPathComponent];
-    // auto t0 = get_t();
+    // uint64_t t0 = get_t();
     uint64_t flags = 0;
     // flags |= DNDC_SUPPRESS_WARNINGS;
     flags |= DNDC_ALLOW_BAD_LINKS;
@@ -1550,34 +1548,32 @@ BOOL show_stats;
     // flags |= DNDC_USE_DND_URL_SCHEME;
     error_text.editable = YES;
     [[error_text textStorage].mutableString setString:@""];
-    auto err = run_the_dndc(OUTPUT_HTML, flags, base_dir, LS_to_SV(source), ns_borrow_sv(filename), &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL, gdndc_ast_func, (__bridge void*)self, (WorkerThread*)B64WORKER, LS(""));
-    // auto err = dndc_compile_dnd_file(flags, base_dir, source, &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL);
+    int err = run_the_dndc(OUTPUT_HTML, flags, base_dir, LS_to_SV(source), ns_borrow_sv(filename), &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)error_text:NULL, cache_watch_files, NULL, gdndc_ast_func, (__bridge void*)self, (WorkerThread*)B64WORKER, LS(""));
     error_text.editable = NO;
-    // auto t1 = get_t();
-    if(err){
-        return;
-    }
+    // uint64_t t1 = get_t();
+    if(err) return;
+
     PushDiagnostic();
     SuppressCastQual();
     NSData* htmldata = [NSData dataWithBytesNoCopy:(void*)html.text length:html.length+1 freeWhenDone:YES];
     PopDiagnostic();
     NSURL* url = [self this_dnd_url];
     [webview loadData:htmldata MIMEType:@"text/html" characterEncodingName:@"UTF-8" baseURL:url];
-    // auto t2 = get_t();
+    // uint64_t t2 = get_t();
 }
 
 -(NSURL*) this_dnd_url {
     if(!self->file_url){
         return [NSURL URLWithString: DND_SCHEME_HOST "/nil.dnd"];
     }
-    auto stringurl = [DND_SCHEME_HOST stringByAppendingString:[[self->file_url path] stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLPathAllowedCharacterSet]]];
-    auto url = [NSURL URLWithString:stringurl];
+    NSString* stringurl = [DND_SCHEME_HOST stringByAppendingString:[[self->file_url path] stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLPathAllowedCharacterSet]]];
+    NSURL* url = [NSURL URLWithString:stringurl];
     return url;
     // return [NSURL URLWithString:DND_THIS_URL];
 }
 
 -(void)loadView {
-    auto screen = [NSScreen mainScreen];
+    NSScreen* screen = [NSScreen mainScreen];
     NSRect screenrect;
     if(screen){
         screenrect = screen.visibleFrame;
@@ -1621,17 +1617,17 @@ runJavaScriptTextInputPanelWithPrompt:(NSString *)prompt
     defaultText:(NSString *_Nullable)defaultText
 initiatedByFrame:(WKFrameInfo *)frame
 completionHandler:(void (^)(NSString *result))completionHandler{
-    auto alert = [[NSAlert alloc] init];
+    NSAlert* alert = [[NSAlert alloc] init];
     // [alert setTitle:@"Room"];
     alert.messageText = prompt;
     [alert addButtonWithTitle:@"Submit"];
     [alert addButtonWithTitle:@"Cancel"];
     alert.icon = nil;
-    auto input_frame = NSMakeRect(0, 0, 300, 24);
-    auto text_field = [[NSTextField alloc] initWithFrame:input_frame];
+    NSRect input_frame = NSMakeRect(0, 0, 300, 24);
+    NSTextField* text_field = [[NSTextField alloc] initWithFrame:input_frame];
     alert.accessoryView = text_field;
     [[alert window] setInitialFirstResponder:text_field];
-    auto response = [alert runModal];
+    NSModalResponse response = [alert runModal];
     if(response == NSAlertFirstButtonReturn){
         completionHandler([text_field stringValue]);
     }
@@ -1703,7 +1699,7 @@ completionHandler:(void (^)(NSString *result))completionHandler{
     if(target == DNDC_NODE_HANDLE_INVALID) goto fail;
     DndcNodeLocation loc; err = dndc_node_location(ctx, target, &loc);
     if(err) goto fail;
-    auto length = [doc_string length];
+    size_t length = [doc_string length];
     size_t lineno = 0;
     size_t i;
     for(i = 0; i < length; i++){
@@ -1719,7 +1715,7 @@ completionHandler:(void (^)(NSString *result))completionHandler{
     NSLayoutManager *l = [self->text layoutManager];
     NSRect rect = [l boundingRectForGlyphRange:range inTextContainer:[self->text textContainer]];
     rect = NSOffsetRect(rect, self->text.textContainerOrigin.x, self->text.textContainerOrigin.y);
-    auto point = rect.origin;
+    CGPoint point = rect.origin;
     [self->text scrollPoint:point];
     dndc_ctx_destroy(ctx);
     return;
@@ -1732,7 +1728,7 @@ fail:
 
 @implementation DndWindowController : NSWindowController
 -(NSString*)windowTitleForDocumentDisplayName:(NSString*)displayName{
-    auto result = [self.document doc_title];
+    NSString* result = [self.document doc_title];
     if(!result)
         return displayName;
     return result;
@@ -1743,7 +1739,7 @@ fail:
         NSInteger num = [event.characters integerValue];
         if(num){
             num -= 1;
-           auto tabs =  [NSApp mainWindow].tabbedWindows;
+           NSArray<NSWindow*>* tabs =  [NSApp mainWindow].tabbedWindows;
            if(tabs.count > num){
                [tabs[num] makeKeyAndOrderFront:nil];
                return;
@@ -1767,7 +1763,7 @@ fail:
     do_menus();
 }
 - (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)sender{
-    auto controller = [NSDocumentController sharedDocumentController];
+    NSDocumentController* controller = [NSDocumentController sharedDocumentController];
     // Dude, there's no way this is how you are supposed to do this.
     // What was I thinking?
     [controller openDocument:nil];
@@ -1776,7 +1772,7 @@ fail:
 
 
 -(void)flop_editors:(id)sender{
-    auto windows = [NSApp windows];
+    NSArray<NSWindow*>* windows = [NSApp windows];
     for(NSWindow* win in windows){
         NSViewController* vc = win.contentViewController;
         if([vc isKindOfClass:[DndViewController class]]){
@@ -1791,7 +1787,7 @@ fail:
 
 #if 0
 -(void)change_font{
-    auto mgr = [NSFontManager sharedFontManager];
+    NSFontManager* mgr = [NSFontManager sharedFontManager];
     LOGIT([mgr selectedFont]);
 }
 #endif
@@ -1799,12 +1795,12 @@ fail:
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     [NSApp activateIgnoringOtherApps:YES];
     NSApp.applicationIconImage = appimage;
-    auto panel = [NSFontPanel sharedFontPanel];
+    NSFontPanel* panel = [NSFontPanel sharedFontPanel];
     fontdel = [[DndFontDelegate alloc] init];
     panel.delegate = fontdel;
 
     [panel setPanelFont:EDITOR_FONT isMultiple:NO];
-    auto mgr = [NSFontManager sharedFontManager];
+    NSFontManager* mgr = [NSFontManager sharedFontManager];
     [mgr setTarget:fontdel];
     // [mgr setAction:@selector(change_font)];
 
@@ -1834,7 +1830,7 @@ fail:
     // I am leaving it here in case I need it for something else.
     static id o;
     o = [[NSDistributedNotificationCenter defaultCenter] addObserverForName:@"AppleInterfaceThemeChangedNotification" object:nil queue:nil usingBlock:^(NSNotification* note){
-        auto windows = [NSApp windows];
+        NSArray<NSWindow*> windows = [NSApp windows];
         for(NSWindow* win in windows){
             NSViewController* vc = win.contentViewController;
             if([vc isKindOfClass:[DndViewController class]]){
@@ -1859,12 +1855,12 @@ fail:
 // this shit is deprecated apparently.
 // but uh. Whatever.
 -(void)changeFont:(nullable id)sender{
-    auto font = [sender convertFont:EDITOR_FONT];
+    NSFont* font = [sender convertFont:EDITOR_FONT];
     if(!font)
         return;
     EDITOR_FONT = font;
-    auto controller = [NSDocumentController sharedDocumentController];
-    auto documents = [controller documents];
+    NSDocumentController* controller = [NSDocumentController sharedDocumentController];
+    NSArray<DndDocument*>* documents = [controller documents];
     for(DndDocument* doc in documents){
         [doc change_font:EDITOR_FONT];
     }
@@ -1887,7 +1883,7 @@ asm(".global __app_icon\n"
 
 int
 main(int argc, const char *_Null_unspecified *_Nonnull argv) {
-    auto font = [NSFont fontWithName:@"SF Mono" size:11];
+    NSFont* font = [NSFont fontWithName:@"SF Mono" size:11];
     if(!font) font = [NSFont fontWithName:@"Courier" size:11];
     if(!font) font = [NSFont fontWithName:@"Menlo" size:11];
     EDITOR_FONT = font;
@@ -1897,7 +1893,7 @@ main(int argc, const char *_Null_unspecified *_Nonnull argv) {
     NSApplication* app = [NSApplication sharedApplication];
     DndAppDelegate* appDelegate = [DndAppDelegate new];
     app.delegate = appDelegate;
-    auto icon_size = _app_icon_end - _app_icon;
+    ptrdiff_t icon_size = _app_icon_end - _app_icon;
     NSData* imagedata = [NSData dataWithBytesNoCopy:(void*)_app_icon length:icon_size freeWhenDone:NO];
     PushDiagnostic();
     #pragma clang diagnostic ignored "-Wnullable-to-nonnull-conversion"
@@ -1922,9 +1918,9 @@ do_syntax_colors(void){
     SYNTAX_COLORS[DNDC_SYNTAX_CLASS]              = [NSColor systemGrayColor];
     SYNTAX_COLORS[DNDC_SYNTAX_RAW_STRING]         = [NSColor systemPinkColor]; // currently unused
 
-    auto blendedteal = [[NSColor systemTealColor] blendedColorWithFraction:0.5 ofColor:[NSColor blackColor]];
-    auto blendedgreen = [[NSColor systemGreenColor] blendedColorWithFraction:0.5 ofColor:[NSColor blackColor]];
-    auto blendedorange = [[NSColor systemOrangeColor] blendedColorWithFraction:0.5 ofColor:[NSColor blackColor]];
+    NSColor* blendedteal = [[NSColor systemTealColor] blendedColorWithFraction:0.5 ofColor:[NSColor blackColor]];
+    NSColor* blendedgreen = [[NSColor systemGreenColor] blendedColorWithFraction:0.5 ofColor:[NSColor blackColor]];
+    NSColor* blendedorange = [[NSColor systemOrangeColor] blendedColorWithFraction:0.5 ofColor:[NSColor blackColor]];
     // javascript colors
     SYNTAX_COLORS[DNDC_SYNTAX_JS_COMMENT]       = [NSColor systemGrayColor];
     SYNTAX_COLORS[DNDC_SYNTAX_JS_STRING]        = blendedgreen;//[NSColor systemGreenColor];
