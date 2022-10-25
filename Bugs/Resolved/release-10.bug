@@ -1,0 +1,13 @@
+Changelog::kv
+  created:  2022-08-26T20:20:34Z
+  resolved: 2022-10-24T21:10:21Z
+Created Aug 26, 2022, 01:20PM::md .update
+Summary::md .summary
+  Release 1.0
+
+  We’re looking pretty stable. Chase down the last few
+  <tt>unhandled_error_condition</tt>s and improver <tt>assert</tt>s and I think
+  we’re good to go?
+
+Resolved Oct 24, 2022, 02:10PM::md .update
+  Yolo
