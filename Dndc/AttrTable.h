@@ -437,7 +437,7 @@ AttrTable_get(AttrTable*_Nullable table, StringView key, StringView* value){
     return 1;
 }
 
-// Only call in has mode.
+// Only call in hash mode.
 //
 // Returns 1 if key is present and 0 if missing.
 static inline

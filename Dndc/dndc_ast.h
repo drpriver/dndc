@@ -401,7 +401,7 @@ dndc_node_get_id(DndcContext*, DndcNodeHandle, DndcStringView* id);
 // ---------------
 // Retrieves the string id associated with the given node.
 //
-// FIXME: the returned string id is unnormalized (kebabed) and so
+// NOTE: the returned string id is unnormalized (kebabed) and so
 // may be confusing.
 //
 

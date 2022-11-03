@@ -90,7 +90,7 @@ cache_watch_file(void* cache_, StringView path){
     const char* end = path.text + path.length;
     size_t length = path.length >= 8? 8 : path.length;
     memcpy(&last_eight, end-length, length);
-    // TODO: use a hash table.
+
     size_t first_tomb = -1;
     for(size_t i = 0; i < cache->count; i++){
         FileWatchItem* it = &cache->items[i];
@@ -1247,7 +1247,6 @@ BOOL show_stats;
 }
 
 -(void)format_dnd:(id)sender {
-    // FIXME: restoring the scroll position doesn't work
     CGFloat before = [self->scrollview lineScroll];
     NSString *string = self->text.string;
     const char* source_text = [string UTF8String];
