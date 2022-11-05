@@ -5,7 +5,10 @@ ifeq ($(origin CXX), default)
 CXX=clang++ $(ARCHES)
 endif
 PYTHON:=python3
-PYCFLAGS:=-F/Library/Frameworks -isystem /Library/Frameworks/Python.framework/Headers
+ifndef PYPREFIX
+PYPREFIX:=$(shell python3-config --prefix)
+endif
+PYCFLAGS:=-F/Library/Frameworks -isystem $(PYPREFIX)/Headers/
 ifeq ($(shell arch),i386)
 ARCHES?=-arch x86_64 -msse4.2
 else
