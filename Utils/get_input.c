@@ -283,18 +283,25 @@ get_line_internal_loop(GetInputCtx* ctx){
         CTRL_D = 4,         // Ctrl-d
         CTRL_E = 5,         // Ctrl-e
         CTRL_F = 6,         // Ctrl-f
+        // CTRL_G = 7,      // unused
         CTRL_H = 8,         // Ctrl-h
-        TAB = 9,            // Tab
+        TAB    = 9,         // Tab / Ctrl-i
+        CTRL_J = 10,        // Accept
         CTRL_K = 11,        // Ctrl-k
         CTRL_L = 12,        // Ctrl-l
-        ENTER = 13,         // Enter
+        ENTER = 13,         // Enter / Ctrl-m
         CTRL_N = 14,        // Ctrl-n
         CTRL_O = 15,        // Ctrl-o
         CTRL_P = 16,        // Ctrl-p
+        // CTRL_Q = 17,
+        // CTRL_R = 18,
+        // CTRL_S = 19,
         CTRL_T = 20,        // Ctrl-t
         CTRL_U = 21,        // Ctrl-u
         CTRL_V = 22,        // Ctrl-v
         CTRL_W = 23,        // Ctrl-w
+        // CTRL_X = 24,
+        // CTRL_Y = 25,
         CTRL_Z = 26,        // Ctrl-z
         ESC = 27,           // Escape
         BACKSPACE =  127    // Backspace
@@ -334,6 +341,7 @@ get_line_internal_loop(GetInputCtx* ctx){
             continue;
         }
         switch(c){
+            case CTRL_J:
             case ENTER:
                 DBG("ENTER\n");
                 write_data("\n", 1);
@@ -543,9 +551,6 @@ get_line_internal_loop(GetInputCtx* ctx){
                 id s = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
                 const char* c = [s cString];
                 DBG("c = %s\n", c);
-                [s release];
-                [data release];
-                [pb release];
                 size_t len = strlen(c);
                 if(len)len--;
                 memmove(ls.buff+ls.curr_pos+len, ls.buff+ls.curr_pos, ls.length-ls.curr_pos);
@@ -558,6 +563,9 @@ get_line_internal_loop(GetInputCtx* ctx){
                     *newline = ' ';
                 }
                 redisplay(&ls);
+                [s release];
+                [data release];
+                [pb release];
             }break;
             #endif
         }
