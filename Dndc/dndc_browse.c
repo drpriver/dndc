@@ -33,6 +33,10 @@
 #include "Utils/recursive_glob.h"
 #include "Utils/gi_byte_distance_completer.h"
 
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 typedef Marray__StringView Entries;
 
 
@@ -318,16 +322,96 @@ print_entries(Entries entries){
     }
 }
 
-#if defined(__APPLE__) || defined(__linux__)
+#if defined(__APPLE__)
+#ifdef __clang__
+#pragma clang assume_nonnull end
+#endif
+
+// This is fun: call into appkit just using objc_msgSend
+// so that we can get a directory picker in C without
+// needing to compile as objective C.
+// Needs to link against Cocoa (or AppKit I guess, whatever).
+
+#include <objc/message.h>
+#include <CoreFoundation/CoreFoundation.h>
+extern id NSApp; // Linker needs to see us actually using something from AppKit
+#ifndef SELUID
+#define SELUID(str) sel_getUid(str)
+#endif
+
+#ifdef __clang__
+#pragma clang assume_nonnull begin
+#endif
+
 static int
 native_gui_pick_directory(LongString* directory){
-    // TODO: actual file picker
-    // The annoyance is you'd have to tell the linker to link against Cocoa or
-    // gtk or whatever, which complicates the build system. Windows let's you just
-    // slam some `pragam comments` in.
-    *directory = LS(".");
+    typedef void(BoolSetter)(id, SEL, BOOL);
+    BoolSetter *boolsetter = (BoolSetter*)objc_msgSend;
+
+
+    // The app's activationPolicy needs to be set to accessory
+    Class appc = objc_getClass("NSApplication");
+    id app = ((id(*)(Class, SEL))objc_msgSend)(appc, SELUID("sharedApplication"));
+
+    enum {/*NS*/ApplicationActivationPolicyAccessory=1};
+    ((void(*)(id, SEL, long))objc_msgSend)(app, SELUID("setActivationPolicy:"), ApplicationActivationPolicyAccessory);
+
+    // Activate the app so the picker will become key.
+    boolsetter(NSApp, SELUID("activateIgnoringOtherApps:"), YES);
+
+    Class nsop = objc_getClass("NSOpenPanel");
+    id panel = ((id(*)(Class, SEL))objc_msgSend)(nsop, SELUID("openPanel"));
+    boolsetter(panel, SELUID("setCanChooseFiles:"), NO);
+    boolsetter(panel, SELUID("setCanChooseDirectories:"), YES);
+    boolsetter(panel, SELUID("setFloatingPanel:"), YES);
+    boolsetter(panel, SELUID("setAllowsMultipleSelection:"), NO);
+
+    long response = ((long(*)(id, SEL))objc_msgSend)(panel, SELUID("runModal"));
+    // NSLog(CFSTR("response: %ld"), response);
+    enum {/*NS*/ModalResponseOK = 1};
+    if(response != ModalResponseOK) return 1;
+
+    CFArrayRef urls = ((CFArrayRef(*)(id, SEL))objc_msgSend)(panel, SELUID("URLs"));
+    // NSLog(CFSTR("URLS: %@"), urls);
+    CFURLRef directoryURL = (CFURLRef)CFArrayGetValueAtIndex(urls, 0);
+    CFStringRef path = CFURLCopyFileSystemPath(directoryURL, kCFURLPOSIXPathStyle); // new ref
+
+    const char* s = CFStringGetCStringPtr(path, kCFStringEncodingUTF8);
+    char buff[1024];
+    if(!s){
+        if(CFStringGetCString(path, buff, sizeof buff, kCFStringEncodingUTF8))
+            s = buff;
+        else {
+            CFRelease(path);
+            return 1;
+        }
+    }
+    assert(s);
+    size_t len = strlen(s);
+    char* copy = strdup(s);
+    directory->text = copy;
+    directory->length = len;
+    CFRelease(path);
+    // Probably leaking some objects in this function.
     return 0;
 }
+#elif defined(__linux__)
+static int
+native_gui_pick_directory(LongString* directory){
+    FILE* proc = popen("zenity --file-selection --directory --filename=.", "r");
+    if(!proc) return 1;
+    char buff[1024];
+    char* g = fgets(buff, sizeof buff, proc);
+    pclose(proc);
+    if(!g) return 1;
+    size_t len = strlen(buff);
+    if(len <= 1) return 1;
+    char* fn = Allocator_strndup(a, buff, len-1);
+    directory->text = fn;
+    directory->length = len-1;
+    return 0;
+}
+
 #elif defined(_WIN32)
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "user32.lib")
@@ -390,6 +474,10 @@ native_gui_pick_directory(LongString* directory){
     CoUninitialize();
     return 1;
 }
+#endif
+
+#ifdef __clang__
+#pragma clang assume_nonnull end
 #endif
 
 #include "dndc_local_server.c"

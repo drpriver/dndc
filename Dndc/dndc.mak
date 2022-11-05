@@ -163,9 +163,14 @@ $(OBJDIR)/dndc.wasm: Platform/Wasm/dndc_wasm.c Dndc/dndc.mak Platform/Wasm/wasm.
 $(BINDIR)/demo.html: Platform/Wasm/demo.dnd $(OBJDIR)/dndc.wasm | $(DIRECTORIES) $(BINDIR)/dndc$(EXE)
 	$(BINDIR)/dndc $< -o $@ -d $(DEPDIR)/demo.html.dep
 
+ifeq ($(UNAME),Darwin)
+BRLINK=-framework Cocoa
+else
+BRLINK=
+endif
 
 $(BINDIR)/dndc-browse$(EXE): Bin/libdndc.$(DNDCVERSION)$(SO) Dndc/dndc_browse.c
-	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc_browse.dep Dndc/dndc_browse.c -o $@ Bin/libdndc.$(DNDCVERSION)$(SOLIB) $(LINK_FLAGS) $(RPATH)
+	$(CC) $(FLAGS) $(OPT_FLAGS) $(PLATFORM_FLAGS) $(DEPFLAGS) $(DEPDIR)/dndc_browse.dep Dndc/dndc_browse.c -o $@ Bin/libdndc.$(DNDCVERSION)$(SOLIB) $(LINK_FLAGS) $(RPATH) $(BRLINK)
 .PHONY: dndc-browse
 dndc-browse: $(BINDIR)/dndc-browse$(EXE)
 all: dndc-browse
