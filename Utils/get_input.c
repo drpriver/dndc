@@ -45,6 +45,7 @@
 
 #if 0
 // Debug code that logs to a file so you can understand wtf is going on
+// Do a tail -f on it.
 
 FILE* loop_fp;
 void vdbg(const char* fmt, va_list args){
@@ -190,6 +191,20 @@ gi_get_input(GetInputCtx*ctx){
     ctx->buff_count = 0;
     ctx->buff_cursor = 0;
     ctx->tab_completion_cookie = 0;
+    memset(ctx->buff, 0, GI_BUFF_SIZE);
+    ssize_t length = get_line_internal(ctx);
+    return length;
+}
+
+GET_INPUT_API
+ssize_t
+gi_get_input2(GetInputCtx*ctx, size_t preserved){
+    ctx->_hst_cursor = ctx->_hst_count;
+    ctx->_cols = gi_get_cols();
+    ctx->buff_count = preserved;
+    ctx->buff_cursor = preserved;
+    ctx->tab_completion_cookie = 0;
+    memset(ctx->buff+preserved, 0, GI_BUFF_SIZE-preserved);
     ssize_t length = get_line_internal(ctx);
     return length;
 }
@@ -273,7 +288,6 @@ get_line_internal_loop(GetInputCtx* ctx){
     bool in_tab = false;
     int n_tabs = 0;
     write_data(ctx->prompt.text, ctx->prompt.length);
-    memset(ctx->buff, 0, GI_BUFF_SIZE);
     redisplay(ctx);
     size_t original_curr_pos=0, original_used_len=0;
     enum {
@@ -294,7 +308,7 @@ get_line_internal_loop(GetInputCtx* ctx){
         CTRL_O = 15,        // Ctrl-o
         CTRL_P = 16,        // Ctrl-p
         // CTRL_Q = 17,
-        // CTRL_R = 18,
+        CTRL_R = 18,
         // CTRL_S = 19,
         CTRL_T = 20,        // Ctrl-t
         CTRL_U = 21,        // Ctrl-u
@@ -349,11 +363,15 @@ get_line_internal_loop(GetInputCtx* ctx){
             case BACKSPACE: case CTRL_H:
                 DBG("BACKSPACE\n");
                 if(ctx->buff_cursor > 0 && ctx->buff_count > 0){
-                    memremove(ctx->buff_cursor, ctx->buff, ctx->buff_count+1, 1);
-                    // memmove(ctx->buff+ctx->buff_count-1, ctx->buff+ctx->buff_count, ctx->buff_count-ctx->buff_cursor);
-                    ctx->buff_cursor--;
-                    ctx->buff_count--;
-                    // ctx->buff[--ctx->buff_count] = '\0';
+                    size_t n = 1;
+                    if(ctx->buff_cursor >= 2 && !(ctx->buff_cursor & 1)){
+                        if(ctx->buff[ctx->buff_cursor-1] == ' ' && ctx->buff[ctx->buff_cursor-2] == ' '){
+                            n = 2;
+                        }
+                    }
+                    memremove(ctx->buff_cursor, ctx->buff, ctx->buff_count+n, n);
+                    ctx->buff_cursor-=n;
+                    ctx->buff_count-=n;
                     redisplay(ctx);
                 }
                 break;
@@ -534,6 +552,10 @@ get_line_internal_loop(GetInputCtx* ctx){
                 ctx->buff_count -= diff;
                 redisplay(ctx);
             }break;
+            case CTRL_R:{
+                change_history(ctx, -1);
+                redisplay(ctx);
+            }break;
             case CTRL_Z:{
                 DBG("CTRL_Z\n");
                 write_data("^Z\r\n", 4);
@@ -583,12 +605,11 @@ struct GiSimpleWriter {
 static inline
 void
 gis_write(GiSimpleWriter*buff, const char* data, size_t length){
-    size_t remainder = GI_BUFF_SIZE - buff->cursor;
-    if(length > remainder){
+    int err = memappend(buff->buff, GI_BUFF_SIZE, buff->cursor, data, length);
+    if(err){
         buff->overflowed = 1;
         return;
     }
-    memcpy(buff->buff+buff->cursor, data, length);
     buff->cursor += length;
 }
 
@@ -644,6 +665,7 @@ redisplay(GetInputCtx*ctx){
     char tmp[128];
     int printsize = snprintf(tmp, sizeof tmp, "\r\x1b[%zuC", pos+plen);
     gis_write(&writer, tmp, printsize);
+
     // Actually write to the terminal.
     if(writer.overflowed) return;
     write_data(writer.buff, writer.cursor);
@@ -652,12 +674,12 @@ redisplay(GetInputCtx*ctx){
 static
 void
 delete_right(GetInputCtx* ctx){
-    if(ctx->buff_count > 0 && ctx->buff_cursor < ctx->buff_count){
-        char* buff = ctx->buff;
-        size_t pos = ctx->buff_cursor;
-        memmove(buff+pos, buff+pos+1,ctx->buff_count-pos-1);
-        buff[--ctx->buff_cursor] = '\0';
-    }
+    if(!ctx->buff_count)
+        return;
+    if(ctx->buff_cursor >= ctx->buff_count)
+        return;
+    memremove(ctx->buff_cursor, ctx->buff, ctx->buff_count, 1);
+    ctx->buff_count--;
 }
 
 static

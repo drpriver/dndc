@@ -230,6 +230,35 @@ gi_get_input(GetInputCtx* ctx);
 // invalidated when you call this again.
 //
 
+GET_INPUT_API
+ssize_t
+gi_get_input2(GetInputCtx* ctx, size_t preserved);
+// --------------
+// Handles user input, filling the buffer with the text.
+// Like `gi_get_input`, but preserves part of the initial buffer.
+//
+// Arguments:
+// ----------
+// ctx:
+//   A fully initialized `GetInputCtx` structure.
+//
+// preserved:
+//   How many bytes to preserve in the `buff`
+//
+// Returns:
+// --------
+// Returns >= 0 on success.
+//
+// Returns -1 on ctrl-d.
+//
+// Returns an error code < 0 if an error is returned from the tab completion
+// function.
+//
+// For >= 0, the return value is the c-string length of the buffer. The buffer
+// will be nul-terminated, but as it is an internal structure, it will be
+// invalidated when you call this again.
+//
+
 //
 // gi_get_cols
 // --------

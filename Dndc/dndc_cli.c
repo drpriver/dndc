@@ -485,13 +485,19 @@ main(int argc, char**argv){
             // read from stdin
             MStringBuilder sb = {.allocator=MALLOCATOR};
             if(isatty(fileno(stdin))){
+                size_t indent = 0;
                 GetInputCtx history = {.prompt = SV("> ")};
                 history.tab_completion_func = indent_completer;
                 for(;;){
-                    ssize_t len = gi_get_input(&history);
+                    ssize_t len = gi_get_input2(&history, indent);
                     if(len < 0)
                         break;
                     gi_add_line_to_history_len(&history, history.buff, len);
+                    indent = 0;
+                    for(ssize_t i = 0; i < len; i++){
+                        if(history.buff[i] != ' ') break;
+                        indent++;
+                    }
                     msb_write_str(&sb, history.buff, len);
                     msb_write_char(&sb, '\n');
                 }
