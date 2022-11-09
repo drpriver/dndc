@@ -210,9 +210,6 @@ struct Node{
 
 #if UINTPTR_MAX != 0xFFFFFFFF
 _Static_assert(sizeof(Node) == 8*sizeof(size_t), "");
-// Damn these are fat.
-// As a huge number of nodes are string nodes, we need a different scheme
-// for storing children attributes and classes.
 _Static_assert(sizeof(Node) == 64, "");
 #endif
 
@@ -319,8 +316,7 @@ struct DndcContext {
     Marray(IdItem) explicit_node_ids;
     // If a toc block exists, this string holds the html fragment
     // that is the toc.
-    // TODO: make this a string view?
-    LongString renderedtoc;
+    StringView renderedtoc;
     // See DndcFlags.
     uint64_t flags;
     // See dndc.h

@@ -728,6 +728,7 @@ dndc_node_set_flag(DndcContext* ctx, DndcNodeHandle dnh, int flag, int on);
 //
 // flag:
 //     A `DNDC_NODEFLAG` to set (or clear) on the node.
+//     This can also be a bitwise-or combination of flags.
 //
 // on:
 //     If 0, the flag will be cleared. If 1, the flag will be set.

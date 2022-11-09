@@ -2093,6 +2093,7 @@ dndc_ctx_dup_sv(DndcContext* ctx, DndcStringView text, DndcStringView* result){
     return 0;
 }
 
+#if 0
 static inline
 warn_unused
 int
@@ -2106,6 +2107,7 @@ ctx_dup_ls(DndcContext* ctx, LongString text, LongString* result){
     *result = ls;
     return 0;
 }
+#endif
 
 DNDC_API
 DndcContext*_Nullable
@@ -2235,7 +2237,7 @@ dndc_ctx_clone(DndcContext* ctx){
         if(unlikely(err)) goto fail;
     }
     if(ctx->renderedtoc.text){
-        int err = ctx_dup_ls(result, ctx->renderedtoc, &result->renderedtoc);
+        int err = dndc_ctx_dup_sv(result, ctx->renderedtoc, &result->renderedtoc);
         if(unlikely(err)) goto fail;
     }
     MARRAY_FOR_EACH(Node, node, ctx->nodes){
@@ -2672,12 +2674,10 @@ dndc_node_set_flag(DndcContext* ctx, DndcNodeHandle dnh, int flag, int on){
         return DNDC_ERROR_VALUE;
     if((flag & PUBLIC_NODE_FLAGS) != flag) return DNDC_ERROR_VALUE;
     if(!flag) return DNDC_ERROR_VALUE;
-    if(on){
+    if(on)
         get_node(ctx, handle)->flags |= flag;
-    }
-    else {
+    else
         get_node(ctx, handle)->flags &= ~flag;
-    }
     return 0;
 }
 

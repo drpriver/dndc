@@ -265,7 +265,7 @@ build_toc_block(DndcContext* ctx){
     MStringBuilder sb = {.allocator=string_allocator(ctx)};
     build_toc_block_node(ctx, ctx->root_handle, &sb, 1);
     if(sb.cursor)
-        ctx->renderedtoc = msb_detach_ls(&sb);
+        ctx->renderedtoc = msb_detach_sv(&sb);
 }
 
 static
