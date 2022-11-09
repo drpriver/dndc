@@ -160,6 +160,10 @@ add_executable(dndc-browse
 target_link_libraries(dndc-browse
     dndc-dylib
 )
+if(APPLE)
+	target_link_libraries(dndc-browse "-framework Cocoa")
+endif()
+
 add_executable(dndc-tag
     Dndc/dndc_tag.c
 )

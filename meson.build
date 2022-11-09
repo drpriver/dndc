@@ -76,13 +76,18 @@ dndc_lib = both_libraries(
   c_args:ignore_bogus_deprecations+arches,
   link_args:arches,
 )
+if host_machine.system() == 'darwin'
+  browsedep = [dependency('appleframeworks', modules:['Cocoa'])]
+else
+  browsedep = []
+endif
 executable(
   'dndc-browse',
   'Dndc/dndc_browse.c',
   include_directories: includes,
   install: true,
   link_with: dndc_lib,
-  dependencies:[thread_dep],
+  dependencies:[thread_dep] + browsedep,
   c_args:ignore_bogus_deprecations+arches,
   link_args:arches,
 )
