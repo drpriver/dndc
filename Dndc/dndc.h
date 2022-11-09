@@ -276,7 +276,7 @@ dndc_analyze_syntax(DndcStringView source_text,
 // This syntax func will never be invoked with `DNDC_SYNTAX_NONE`. The function
 // is not invoked on every single piece of the string - "regular" string nodes
 // and such will not be called on (as implicitly everything is a string node
-// unless otherwise).
+// unless otherwise marked).
 //
 // This function does not execute any javascript blocks and does not read any
 // files.
@@ -316,6 +316,9 @@ dndc_analyze_syntax_utf16(DndcStringViewUtf16 source_text,
 // -------------------------
 //
 // Ditto, but for utf-16 code units of native endianness.
+// Many GUI frameworks (appkit, Qt, etc.) use utf-16 strings, so this allows
+// you to avoid having to convert a byte offset in utf-8 to a code unit offset
+// in utf-16..
 //
 
 
@@ -376,7 +379,7 @@ typedef void DndcLogFunc(DNDC_NULLABLE(void*) log_user_data, int type,
 //    Which file the error occurred in. This pointer is NOT nul-terminated.
 //
 // filename_len:
-//    The length of the character array pointed to by file.
+//    The length of the character array pointed to by filename.
 //
 // line:
 //    Which line of the file the error originated from. This is 0-based.
@@ -782,7 +785,7 @@ dndc_format(DndcStringView source_text,
 // Arguments:
 // ----------
 // source_text:
-//    The actual source .dnd string. This string does need to be
+//    The actual source .dnd string. This string does not need to be
 //    nul-terminated. No references to this are retained afterwards.
 //
 // output:
@@ -822,7 +825,7 @@ dndc_expand_to_dnd(
 );
 // ---------------------
 // Compiles and executes dnd, rendering to a single dnd document (if
-// possible).
+// possible). This imports files and executes javascript.
 //
 // Arguments:
 // ----------
