@@ -151,7 +151,9 @@ static
 FileError
 read_relative_file_with_suffix_conversion(LongString directory, StringView path, StringView suffix, LongString* outstr){
     char buff[1024];
-    snprintf(buff, sizeof buff, "%s/%.*s%.*s", directory.text, (int)path.length, path.text, (int)suffix.length, suffix.text);
+    int n = snprintf(buff, sizeof buff, "%s/%.*s%.*s", directory.text, (int)path.length, path.text, (int)suffix.length, suffix.text);
+    unhandled_error_condition(n > 1024);
+    unhandled_error_condition(n < 0);
     return read_file(buff, MALLOCATOR, outstr);
 }
 
@@ -174,6 +176,7 @@ compile_file(const DndLogger* logger, LongString directory, uint64_t flags, Stri
             *error = 1;
             return (LongString){0};
         }
+        unhandled_error_condition(n > (int)sizeof buff);
         base = (StringView){.length = n, .text = buff};
     }
     StringView filename = {.length=path.length-(p-path.text), .text=p};
@@ -522,7 +525,10 @@ handle_request(DndLogger* logger, uint64_t flags, LongString directory, SOCKET a
             goto LOk;
         }
         char buff[1024];
+        // Can't fail as the buff is absurdly oversized.
         int n = snprintf(buff, sizeof buff, "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\n\r\n", html.length);
+        assert(n > 0);
+        assert(n < (int)sizeof buff);
         send(accsd, buff, n, 0);
         send(accsd, html.text, html.length, 0);
         if(t.length) dndc_free_string(t);
@@ -539,7 +545,10 @@ handle_request(DndLogger* logger, uint64_t flags, LongString directory, SOCKET a
             goto LNotFound;
         }
         char buff[1024];
+        // Can't fail as the buff is absurdly oversized.
         int n = snprintf(buff, sizeof buff, "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\n\r\n", t.length);
+        assert(n > 0);
+        assert(n < (int)sizeof buff);
         send(accsd, buff, n, 0);
         send(accsd, t.text, t.length, 0);
         dndc_free_string(t);
@@ -568,6 +577,8 @@ void
 vlogit(const DndLogger* logger, int lvl, const char* msg, va_list args){
     char buff[4192];
     long len = vsnprintf(buff, sizeof buff, msg, args);
+    unhandled_error_condition(len < 0);
+    unhandled_error_condition(len > 4192);
     logger->func(logger->p, lvl, "", 0, -1, -1, buff, len);
 }
 
