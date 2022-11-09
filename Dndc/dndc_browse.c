@@ -278,6 +278,13 @@ main(int argc, char** argv){
         if(SV_equals(b, SV("q")) || SV_equals(b, SV("quit"))){
             break;
         }
+        if(SV_equals(b, SV("h")) || SV_equals(b, SV("help"))){
+            puts(
+                "\rl, list - list entries\n"
+                "q, quit - quit\n"
+                "h, help - print this help");
+            continue;
+        }
         Int64Result ir = parse_int64(b.text, b.length);
         int64_t idx = -1;
         if(ir.errored) {
