@@ -538,6 +538,43 @@ handle_request(DndLogger* logger, uint64_t flags, LongString directory, SOCKET a
     else {
         LongString t;
         FileError tfr = read_relative_file_with_suffix_conversion(directory, path, suffix, &t);
+        if(tfr.errored == FILE_IS_NOT_A_FILE){
+            if(!endswith(path, SV("/"))){
+                MStringBuilder redirect = {.allocator=MALLOCATOR};
+                msb_write_literal(&redirect,
+                        "HTTP/1.1 301 Moved Permanently\r\n"
+                        "Location: /");
+                msb_url_percent_encode_filepath(&redirect, path.text, path.length);
+                msb_write_literal(&redirect, "/\r\n");
+                unhandled_error_condition(redirect.errored);
+                StringView rd = msb_borrow_sv(&redirect);
+                send(accsd, rd.text, rd.length, 0);
+                msb_destroy(&redirect);
+                goto LOk;
+            }
+            // XXX: copy paste from above
+            int err = 0;
+            LongString html = compile_file(logger, directory, flags, path, INDEXTEXT, &err);
+            if(err){
+                #define MESS "HTTP/1.1 500 Compiler-Error\r\n\r\n" \
+                "<div align=center style=\"margin-top:10%; font-family: sans-serif;\">" \
+                "<h1><span style=\"color:red;\">Error</span>Error compiling file.</h1>" \
+                "</div>" \
+                "\r\n"
+                send(accsd, MESS, (sizeof MESS)-1, 0);
+                #undef MESS
+                goto LOk;
+            }
+            char buff[1024];
+            // Can't fail as the buff is absurdly oversized.
+            int n = snprintf(buff, sizeof buff, "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\n\r\n", html.length);
+            assert(n > 0);
+            assert(n < (int)sizeof buff);
+            send(accsd, buff, n, 0);
+            send(accsd, html.text, html.length, 0);
+            dndc_free_string(html);
+            goto LOk;
+        }
         if(tfr.errored){
             const char* errmess = os_error_mess(tfr.native_error);
             error(logger, "Error reading '%.*s': %s", (int)path.length, path.text, errmess);
@@ -554,6 +591,7 @@ handle_request(DndLogger* logger, uint64_t flags, LongString directory, SOCKET a
         dndc_free_string(t);
         goto LOk;
     }
+
     LNotFound:
     #define MESS "HTTP/1.1 404 Not-Found\r\n\r\n" \
         "<div align=center style=\"margin-top:10%; font-family: sans-serif;\">" \
@@ -564,9 +602,11 @@ handle_request(DndLogger* logger, uint64_t flags, LongString directory, SOCKET a
     #undef MESS
     msb_destroy(&urlsb);
     return 0;
+
     LOk:
     msb_destroy(&urlsb);
     return 0;
+
     LShutdown:
     msb_destroy(&urlsb);
     return 1;
