@@ -115,8 +115,16 @@ def clang_default_include() -> List[str]:
                            stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     _, out = sub.communicate(b'')
     reg = re.compile('.*/include$')
-    includes = [line.strip() for line in out.decode('utf-8').split('\n') if reg.search(line)]
-    return ['-isystem' + i for i in includes]
+    reg2 = re.compile(r'.*/Frameworks\s\(framework\sdirectory\)$')
+    includes = []
+    frameworks = []
+    for line in out.decode('utf-8').split('\n'):
+        line = line.strip()
+        if reg.search(line):
+            includes.append(line)
+        elif reg2.search(line):
+            frameworks.append(line)
+    return ['-isystem' + i for i in includes] + ['-F'+f.split('(')[0].strip() for f in frameworks]
     sysname = os.uname().sysname
     if sysname == 'Darwin':
         MACOSX_platform = [p for p in includes if 'MacOSX.platform' in p]
