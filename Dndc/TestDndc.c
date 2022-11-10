@@ -723,6 +723,13 @@ TestFunction(TestSpecialChars){
         {SV("1234567890123456 [hi!] 1234567890123456"), SV("1234567890123456 <a href=\"hi\">hi!</a> 1234567890123456")},
         {SV("1234567890123456 \r 1234567890123456"), SV("1234567890123456   1234567890123456")},
         {SV("hi \r\n"), SV("hi")},
+        {SV("<hr>hello!"), SV("<hr>hello!")},
+        {SV("<b>hello!</b>"), SV("<b>hello!</b>")},
+        {SV("<s>hello!</s>"), SV("<s>hello!</s>")},
+        {SV("<i>hello!</i>"), SV("<i>hello!</i>")},
+        {SV("<u>hello!</u>"), SV("<u>hello!</u>")},
+        {SV("<tt>hello!</tt>"), SV("<tt>hello!</tt>")},
+        {SV("<code>hello!</code>"), SV("<code>hello!</code>")},
     };
 
     for(size_t i = 0; i < arrlen(testcases); i++){

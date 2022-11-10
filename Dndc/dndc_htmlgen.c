@@ -506,7 +506,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                         if(length - i >= sizeof("<code>")-1){
                             if(memcmp(text+i, "<code>", sizeof("<code>")-1) == 0){
                                 msb_write_literal(sb, "<code>");
-                                i += 5;
+                                i += sizeof("<code>")-2;
                                 continue;
                             }
                         }
@@ -515,7 +515,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                         if(length - i >= sizeof("<hr>")-1){
                             if(memcmp(text+i, "<hr>", sizeof("<hr>")-1) == 0){
                                 msb_write_literal(sb, "<hr>");
-                                i += 4;
+                                i += sizeof("<hr>")-2;
                                 continue;
                             }
                         }
@@ -561,7 +561,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                         if(peek1 == 'b' && peek2 == 'r'){
                             if(length - i >= 4 && text[i+3] == '>'){
                                 msb_write_literal(sb, "<br>");
-                                i += 3;
+                                i += sizeof("<br>")-2;
                                 continue;
                             }
                         }
