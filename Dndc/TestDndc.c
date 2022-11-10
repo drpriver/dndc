@@ -704,7 +704,9 @@ TestFunction(TestSpecialChars){
     };
     uint64_t flags = 0
         | DNDC_ALLOW_BAD_LINKS
-        | DNDC_SUPPRESS_WARNINGS;
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_FRAGMENT_ONLY
+        ;
     struct test_case testcases[] = {
         {SV("---"), SV("&mdash;")},
         {SV("--"), SV("&ndash;")},
@@ -736,8 +738,8 @@ TestFunction(TestSpecialChars){
         LongString output = {0};
         int e = run_the_dndc(OUTPUT_HTML, flags, SV(""), testcases[i].source, SV(""), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
         TestAssertFalse(e);
-        TestExpectEquals2(SV_equals, sv_slice(LS_to_SV(output), 172, testcases[i].result.length), testcases[i].result);
-        if(!SV_equals(sv_slice(LS_to_SV(output), 172, testcases[i].result.length), testcases[i].result)){
+        TestExpectEquals2(SV_equals, sv_slice(LS_to_SV(output), sizeof("<p>\n")-1, testcases[i].result.length), testcases[i].result);
+        if(!SV_equals(sv_slice(LS_to_SV(output), sizeof("<p>\n")-1, testcases[i].result.length), testcases[i].result)){
             TestPrintValue("output", output);
         }
         dndc_free_string(output);
