@@ -76,6 +76,7 @@ enum DndcMainFlags {
     DNDC_MAIN_DUMP_JSON = 0x4,
 };
 
+static
 int
 append_arg(void* msb_, const void* arg_){
     MStringBuilder* msb = msb_;
