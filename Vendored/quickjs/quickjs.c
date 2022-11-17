@@ -11685,6 +11685,8 @@ static void js_dtoa1(char *buf, double d, int radix, int n_digits, int flags)
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
                 sprintf(q, "%d", p);
 #pragma clang diagnostic pop
+#else
+                sprintf(q, "%d", p);
 #endif
             }
         }
