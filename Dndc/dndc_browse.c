@@ -88,6 +88,7 @@ main(int argc, char** argv){
 #endif
     LongString directory = {0};
     int port = 0;
+    int loglevel = 3;
     {
         char* cwd;
         #ifdef _WIN32
@@ -143,6 +144,12 @@ main(int argc, char** argv){
 
         },
         {
+            .name = SV("--loglevel"),
+            .dest = ARGDEST(&loglevel),
+            .help = "log level. Only relevant if --log is passed.",
+            .show_default = 1,
+        },
+        {
             .name = SV("--bind-all"),
             .dest = ARGDEST(&bind_all),
             .help = "Bind to 0.0.0.0 instead of loopback. Don't do this if you don't trust the network and for god's sake don't put it on the internet.",
@@ -152,6 +159,7 @@ main(int argc, char** argv){
             .altname1 = SV("--max-depth"),
             .help = "How many directories deep to look for dnd files. 1 means only check the current directory",
             .dest = ARGDEST(&depth),
+            .show_default = 1,
         },
     };
     enum {HELP, VERSION, FISH};
@@ -219,8 +227,7 @@ main(int argc, char** argv){
         PopDiagnostic();
     }
 
-    // TODO: add log level to cli.
-    DndServer* server = dnd_server_create(should_log?wrap_report:null_report, NULL, 3, &port, bind_all);
+    DndServer* server = dnd_server_create(should_log?wrap_report:null_report, NULL, loglevel, &port, bind_all);
     if(!server) {
         fprintf(stderr, "No server\n");
         return 1;
