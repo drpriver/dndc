@@ -240,8 +240,8 @@ main(int argc, char** argv){
     };
 
     ThreadHandle thrd;
-    create_thread(&thrd, &serve, &data);
-    // int err = dnd_server_serve(server, flags, directory);
+    int th_err = create_thread(&thrd, &serve, &data);
+    if(th_err != 0) return 1;
     Entries entries = {0};
     recursive_glob_suffix(directory, SV(".dnd"), &entries, depth);
     if(!entries.count) return 1;

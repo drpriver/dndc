@@ -162,7 +162,8 @@ tag_dnd_files(StringView* filenames, size_t filename_count, LongString outfile, 
     for(size_t i = 0; i < n_threads; i++){
         ThreadHandle* th; int err = Marray_alloc__ThreadHandle(&threads, MALLOCATOR, &th);
         unhandled_error_condition(err);
-        create_thread(th, worker_func, NULL);
+        int th_err = create_thread(th, worker_func, NULL);
+        unhandled_error_condition(th_err);
     }
     worker_func(NULL); // use this thread as well
     for(size_t i = 0; i < threads.count; i++)

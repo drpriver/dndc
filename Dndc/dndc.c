@@ -301,7 +301,11 @@ execute_user_scripts_and_load_images(DndcContext* ctx, WorkerThread*_Nullable wo
                 worker_submit((WorkerThread*)worker, job);
             }
             else{
-                create_thread(&thread_worker, &preload_img_job_func, job);
+                int th_err = create_thread(&thread_worker, &preload_img_job_func, job);
+                if(unlikely(th_err)){
+                    // XXX: do we need cleanup?
+                    return DNDC_ERROR_OS;
+                }
             }
             thread_created = true;
         }

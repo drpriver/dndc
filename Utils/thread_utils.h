@@ -27,6 +27,18 @@
 #define unhandled_error_condition(x) assert(!(x))
 #endif
 
+#ifndef warn_unused
+
+#if defined(__GNUC__) || defined(__clang__)
+#define warn_unused __attribute__((warn_unused_result))
+#elif defined(_MSC_VER)
+#define warn_unused
+#else
+#define warn_unused
+#endif
+
+#endif
+
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #else
@@ -126,7 +138,7 @@ typedef THREADFUNC(thread_func);
 // Creates and launches that thread, with the given thread func and argument.
 // Initializes the given handle with the info that identifies that thread.
 // thread_arg should be what the thread_func expects.
-static void create_thread(ThreadHandle* handle, thread_func* func, void*_Nullable thread_arg);
+static warn_unused int create_thread(ThreadHandle* handle, thread_func* func, void*_Nullable thread_arg);
 //
 // Waits for the corresponding thread to finish.
 // This is a synchronization event between the joiner and the joinee.
@@ -245,7 +257,8 @@ worker_create(thread_func* job){
     #else
     sem_init(&w->sem, 0, 0);
     #endif
-    create_thread(&w->thrd, worker_thread_main, w);
+    int th_err = create_thread(&w->thrd, worker_thread_main, w);
+    unhandled_error_condition(th_err);
     return w;
 }
 
@@ -279,10 +292,11 @@ worker_wait(WorkerThread* w){
 }
 
 static
-void
+warn_unused
+int
 create_thread(ThreadHandle* handle, thread_func* func, void*_Nullable thread_arg){
     int err = pthread_create(&handle->thread, NULL, func, thread_arg);
-    unhandled_error_condition(err != 0);
+    return err;
 }
 
 static
@@ -372,7 +386,8 @@ worker_create(thread_func* job){
     w->job = job;
     InitializeCriticalSection(&w->mutex);
     InitializeConditionVariable(&w->worker_cond);
-    create_thread(&w->thrd, worker_thread_main, w);
+    int th_err = create_thread(&w->thrd, worker_thread_main, w);
+    unhandled_error_condition(th_err != 0);
     w->sem = CreateSemaphoreW(NULL, 0, LONG_MAX, NULL);
     return w;
 }
@@ -402,10 +417,11 @@ worker_wait(WorkerThread* w){
 }
 
 static
-void
+warn_unused
+int
 create_thread(ThreadHandle* handle, thread_func* func, void*_Nullable thread_arg){
     handle->thread = CreateThread(NULL, 0, func, thread_arg, 0, NULL);
-    unhandled_error_condition(handle->thread == NULL);
+    return handle->thread == NULL;
 }
 
 static
@@ -423,7 +439,8 @@ struct ThreadHandle {
 };
 
 static
-void
+warn_unused
+int
 create_thread(ThreadHandle* handle, thread_func* func, void*_Nullable thread_arg){
     (void)handle;
     (void)func;
