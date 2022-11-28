@@ -1,0 +1,9 @@
+Changelog::kv
+  created: 2022-11-28T16:56:48Z
+Created Nov 28, 2022, 08:56AM::md.update
+Summary::md.summary
+  A tree view on the left (hide-able) for showing all of your dnd files in a certain folder.
+
+  - “Open Folder” action
+  - All windows now have browser widget for that folder.
+  - Ignore out of band file creation, assume all new files are via the editor.
