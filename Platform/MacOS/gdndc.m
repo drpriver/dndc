@@ -127,7 +127,7 @@ typedef enum GdndInsertTag {
 //
 // ViewController for the windows of the app
 //
-@interface DndEditViewController: NSViewController <NSToolbarDelegate> {
+@interface DndEditViewController: NSViewController <NSToolbarDelegate, NSTextViewDelegate> {
 @public NSScrollView* scrollview; // contains the text
 @public NSSplitView* editor_container;
 @public NSTextView* error_text;
@@ -137,6 +137,7 @@ typedef enum GdndInsertTag {
 @property(weak, nonatomic) DndTextView* text;
 @property(weak, nonatomic) DndDocument* doc;
 -(instancetype)initWithDoc:(DndDocument*)doc withRect:(NSRect)textrect;
+-(void)scroll_to_line:(int)line column:(int)column;
 @end
 
 @interface DndWebViewController: NSViewController <WKUIDelegate>{
@@ -290,6 +291,11 @@ NSWindow* web_window;
     [self->editor_window makeKeyAndOrderFront:nil];
     DndWindowController* wc = [[DndWindowController alloc] initWithWindow:self->editor_window];
     [self addWindowController:wc];
+}
+-(void)scroll_to_line:(int)line column:(int)column{
+    if(!self->editor_window || !self->editor_window.isVisible)
+        [self pop_out_editor:nil];
+    [self->editor_controller scroll_to_line:line column:column];
 }
 -(void)change_font:(NSFont*)font{
     self->text.font = font;
@@ -653,6 +659,16 @@ fail:
 }
 @end
 
+
+@interface DndLink: NSObject {
+    @public NSString* filename;
+    @public int line;
+    @public int col;
+}
+@end
+@implementation DndLink
+@end
+
 static NSColor*_Nonnull SYNTAX_COLORS[DNDC_SYNTAX_MAX] = {};
 struct SyntaxData {
     NSTextStorage* storage;
@@ -751,10 +767,9 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     switch((enum DndcLogMessageType)type){
         case DNDC_ERROR_MESSAGE:
         case DNDC_WARNING_MESSAGE:
-            if(SV_equals(fn, SV("(string input)"))){
+            if(SV_equals(fn, SV("(string input)")))
                 MSB_FORMAT(&builder, line, ":", col, ": ", mess, "\n");
-            }
-            else{
+            else {
                 MSB_FORMAT(&builder, fn, ":", line, ":", col, ": ", mess, "\n");
             }
             break;
@@ -765,7 +780,16 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
             break;
     }
     NSString* s = msb_detach_as_ns_string(&builder);
-    [[tv textStorage].mutableString appendString:s];
+    NSMutableAttributedString* as = [[NSMutableAttributedString alloc] initWithString:s];
+    if(fn.length && !SV_equals(fn, SV("(string input)"))){
+        NSRange range = NSMakeRange(0, fn.length); // XXX this is in utf8, should be utf16 length
+        DndLink* link = [[DndLink alloc] init];
+        link->filename = [NSString stringWithFormat:@"/%.*s", (int)fn.length, fn.text];
+        link->line = line;
+        link->col = col;
+        [as addAttribute:NSLinkAttributeName value:link range:range];
+    }
+    [[tv textStorage] appendAttributedString:as];
 }
 
 @implementation DndHighlighter
@@ -1504,7 +1528,6 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     [super keyDown:event];
 }
 @end
-
 @implementation DndEditViewController{
 }
 
@@ -1520,6 +1543,21 @@ enum DndEditViewButtonTags {
     DND_SHOW_ERRORS_TAG = 3,
     DND_SHOW_STATS_TAG = 4,
 };
+-(void)scroll_to_line:(int)line column:(int)column{
+    // this is ridiculous
+    NSUInteger i = 0;
+    int lineno = 1;
+    {
+        NSString* s = self.text.string;
+        for(i = 0; lineno < line; i++){
+            unichar c = [s characterAtIndex:i];
+            if(c == u'\n')
+                lineno++;
+        }
+    }
+    [self.text scrollRangeToVisible:NSMakeRange(i, 1+column)];
+    [self.text setSelectedRange:NSMakeRange(i+column+1, 0)];
+}
 -(void)button_click:(id)a{
     // Actually button or menu item, but both respond to tag and state
     NSControlStateValue state = [a state];
@@ -1571,6 +1609,31 @@ enum DndEditViewButtonTags {
         }
     }
 }
+- (BOOL)textView:(NSTextView *)textView clickedOnLink:(id)link atIndex:(NSUInteger)charIndex{
+    if([link isKindOfClass:[DndLink class]]){
+        DndLink* l = link;
+        NSURL* real_url = [[self.doc.fileURL URLByDeletingLastPathComponent] URLByAppendingPathComponent:l->filename];
+        int line = l->line;
+        int col = l->col;
+        if([real_url isEqualTo:self.doc.fileURL]){
+            [self.doc scroll_to_line:line column:col];
+        }
+        else {
+            [[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:real_url display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
+                (void)documentWasAlreadyOpen;
+                if(!error){
+                    DndDocument* doc = (DndDocument*)document;
+                    [doc scroll_to_line:line column: col];
+                    [doc recalc_html];
+                }
+            }];
+        }
+        return YES;
+    }
+    (void)charIndex;
+    (void)textView;
+    return NO;
+}
 -(instancetype)initWithDoc:(DndDocument*)doc withRect:(NSRect)textrect{
     self = [super init];
     if(!self) return nil;
@@ -1588,6 +1651,7 @@ enum DndEditViewButtonTags {
     error_text.textStorage.font = EDITOR_FONT;
     error_text.editable = NO;
     error_text.usesAdaptiveColorMappingForDarkAppearance = YES;
+    error_text.delegate = self;
 
     scrollview = [[NSScrollView alloc] initWithFrame:textrect];
     // scrollview.borderType = NSNoBorder;
