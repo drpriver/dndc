@@ -25,6 +25,14 @@
 // Note that you need to semi-colon terminate all of your lines.
 #define JSRAW(...) #__VA_ARGS__
 
+#if 0
+#ifndef DNDC_DEVELOPER
+#define DNDC_DEVELOPER
+#endif
+#undef
+#endif
+
+
 #if !__has_feature(objc_arc)
 #error "ARC is off"
 #endif
@@ -140,12 +148,13 @@ typedef enum GdndInsertTag {
 -(void)scroll_to_line:(int)line column:(int)column;
 @end
 
-@interface DndWebViewController: NSViewController <WKUIDelegate>{
+@interface DndWebViewController: NSViewController <WKUIDelegate, NSToolbarDelegate>{
 @public WKWebView* webview;
 @public WebNavDel* webnavdel; // for the webview
 @public DndUrlHandler* handler;
 @public NSString* scroll_resto_string;
 @public BOOL dont_update;
+@public NSToolbar* toolbar;
 }
 @property(weak, nonatomic) DndDocument* doc;
 -(NSURL*) this_dnd_url;
@@ -234,8 +243,11 @@ NSWindow* web_window;
         backing: NSBackingStoreBuffered
         defer: NO];
     window.title = @"Dndc";
+    window.titlebarAppearsTransparent = YES;
     window.tabbingIdentifier = @"Dnd Window";
     window.contentViewController = self->web_controller;
+    window.toolbar = self->web_controller->toolbar;
+
     self->web_window = window;
     return window;
 }
@@ -1318,6 +1330,77 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 
 
 @implementation DndWebViewController
+- (nullable NSToolbarItem *)toolbar:(NSToolbar *)toolbar itemForItemIdentifier:(NSToolbarItemIdentifier)itemIdentifier willBeInsertedIntoToolbar:(BOOL)flag {
+    // LOGIT(itemIdentifier);
+    NSToolbarItem* tbi = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier ];
+    tbi.label = itemIdentifier;
+    if([itemIdentifier isEqualToString:@"Edit"]){
+        NSImage* img = [NSImage imageWithSystemSymbolName:@"square.and.pencil" accessibilityDescription:nil];
+        tbi.target = self.doc;
+        tbi.action = @selector(pop_out_editor:);
+        tbi.image = img;
+        tbi.navigational = YES;
+        tbi.bordered = YES;
+        tbi.label = @"Edit";
+        tbi.toolTip = @"Edit This Document";
+    }
+    if([itemIdentifier isEqualToString:@"File Tree"]){
+        NSImage* img = [NSImage imageWithSystemSymbolName:@"list.triangle" accessibilityDescription:nil];
+        tbi.target = NSApp.delegate;
+        tbi.action = @selector(show_file_tree:);
+        tbi.image = img;
+        tbi.navigational = YES;
+        tbi.bordered = YES;
+        tbi.label = @"File Tree";
+        tbi.toolTip = @"Browse File Tree";
+    }
+    if([itemIdentifier isEqualToString:@"New Doc"]){
+        NSImage* img = [NSImage imageWithSystemSymbolName:@"doc.badge.plus" accessibilityDescription:nil];
+        // tbi.target = NSApp.delegate;
+        tbi.action = @selector(newWindowForTab:);
+        tbi.image = img;
+        tbi.navigational = YES;
+        tbi.bordered = YES;
+        tbi.label = @"New Document";
+        tbi.toolTip = @"New Document";
+    }
+    if([itemIdentifier isEqualToString: NSToolbarFlexibleSpaceItemIdentifier]){
+    };
+    return tbi;
+}
+
+- (NSArray<NSToolbarItemIdentifier> *)toolbarSelectableItemIdentifiers:(NSToolbar *)toolbar {
+    return @[
+    ];
+}
+
+- (NSArray<NSToolbarItemIdentifier> *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar{
+    return @[
+        @"File Tree",
+        @"Edit",
+        @"New Doc",
+    ];
+}
+- (NSArray<NSToolbarItemIdentifier> *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar {
+    return @[
+        @"File Tree",
+        @"Edit",
+        @"New Doc",
+    ];
+}
+- (NSSet<NSToolbarItemIdentifier> *)toolbarImmovableItemIdentifiers:(NSToolbar *)toolbar {
+    return NSSet.set;
+}
+
+- (BOOL)toolbar:(NSToolbar *)toolbar itemIdentifier:(NSToolbarItemIdentifier)itemIdentifier canBeInsertedAtIndex:(NSInteger)index {
+    return YES;
+}
+
+- (void)toolbarWillAddItem:(NSNotification *)notification {
+}
+
+- (void)toolbarDidRemoveItem:(NSNotification *)notification {
+}
 -(instancetype)initWithDoc:(DndDocument*)doc{
     self = [super init];
     self.doc = doc;
@@ -1345,6 +1428,9 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     webview.autoresizingMask = NSViewHeightSizable | NSViewWidthSizable;
     webview.allowsBackForwardNavigationGestures = YES;
     webview.UIDelegate = self;
+    toolbar = [[NSToolbar alloc] init];
+    toolbar.delegate = self;
+    toolbar.displayMode = NSToolbarDisplayModeIconOnly;
 
     self.view = webview;
     return self;
@@ -1531,17 +1617,30 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 @implementation DndEditViewController{
 }
 
+#ifdef DNDC_DEVELOPER
 #define BUTTON_LABELS(x) \
     x("Auto-Apply") \
     x("Coord Helper") \
     x("Show Errors") \
     x("Show Stats") \
 
+#else
+
+#define BUTTON_LABELS(x) \
+    x("Auto-Apply") \
+    x("Coord Helper") \
+    x("Show Errors") \
+
+#endif
+
+
 enum DndEditViewButtonTags {
     DND_AUTO_APPLY_CHANGES_TAG = 1,
     DND_COORD_HELPER_TAG = 2,
     DND_SHOW_ERRORS_TAG = 3,
+#ifdef DNDC_DEVELOPER
     DND_SHOW_STATS_TAG = 4,
+#endif
 };
 -(void)scroll_to_line:(int)line column:(int)column{
     // this is ridiculous
@@ -1594,6 +1693,7 @@ enum DndEditViewButtonTags {
             }
             break;
         }
+#ifdef DNDC_DEVELOPER
         case DND_SHOW_STATS_TAG:{
             if(state == NSControlStateValueOn){
                 self.doc->show_stats = YES;
@@ -1603,6 +1703,7 @@ enum DndEditViewButtonTags {
             }
             break;
         }
+#endif
         default: {
             NSString* title = [a title];
             NSLog(@"Unknown button title:%@", title);
@@ -1678,7 +1779,9 @@ enum DndEditViewButtonTags {
         // DND_READ_ONLY_TAG,
         DND_COORD_HELPER_TAG,
         DND_SHOW_ERRORS_TAG,
+#ifdef DNDC_DEVELOPER
         DND_SHOW_STATS_TAG,
+#endif
     };
     NSString* button_labels[] = {
         #define X(a) @a,
@@ -1690,7 +1793,9 @@ enum DndEditViewButtonTags {
         // !self.doc->text.editable,
         self.doc->coord_helper,
         self.doc->show_errors,
+#ifdef DNDC_DEVELOPER
         self.doc->show_stats,
+#endif
     };
     _Static_assert(arrlen(button_states)==arrlen(button_labels), "");
     _Static_assert(arrlen(button_states)==arrlen(tags), "");
