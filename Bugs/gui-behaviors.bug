@@ -2,11 +2,12 @@ Changelog::kv
   created: 2022-12-12T18:34:20Z
   updated: 2022-12-12T18:47:59Z
   updated: 2022-12-15T07:32:53Z
+  updated: 2022-12-15T20:00:44Z
 Created Dec 12, 2022, 10:34AM::md .update
 Summary::md .summary
   * [ ] drag and drop from file tree
   * [ ] drag and drop from finder
-  * [ ] drag and drop onto dock icon
+  * [x] drag and drop onto dock icon
   * [ ] refreshing file tree when making new file
 
 Updated Dec 12, 2022, 10:47AM::md .update
@@ -14,3 +15,6 @@ Updated Dec 12, 2022, 10:47AM::md .update
 
 Updated Dec 14, 2022, 11:32PM::md .update
   log messages are clickable
+
+Updated Dec 15, 2022, 12:00PM::md .update
+  Dock Icon already handled by document controller

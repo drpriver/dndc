@@ -29,7 +29,6 @@
 #ifndef DNDC_DEVELOPER
 #define DNDC_DEVELOPER
 #endif
-#undef
 #endif
 
 
@@ -1994,7 +1993,7 @@ enum DndEditViewButtonTags {
 }
 - (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)sender{
     NSDocumentController* controller = [NSDocumentController sharedDocumentController];
-#if 0
+#if 1 && defined(DNDC_DEVELOPER)
     [[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:@"/Users/drpriver/Documents/Dungeons/BarrowMaze/the-forgotten-antechamber.dnd"] display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
         (void)document;
         (void)documentWasAlreadyOpen;
@@ -2082,6 +2081,7 @@ enum DndEditViewButtonTags {
 -(void)show_licenses:(nullable id) sender{
     [licenses_window makeKeyAndOrderFront:self];
 }
+
 
 @end
 
