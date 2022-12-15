@@ -1,0 +1,16 @@
+Changelog::kv
+  created: 2022-12-12T18:34:20Z
+  updated: 2022-12-12T18:47:59Z
+  updated: 2022-12-15T07:32:53Z
+Created Dec 12, 2022, 10:34AM::md .update
+Summary::md .summary
+  * [ ] drag and drop from file tree
+  * [ ] drag and drop from finder
+  * [ ] drag and drop onto dock icon
+  * [ ] refreshing file tree when making new file
+
+Updated Dec 12, 2022, 10:47AM::md .update
+  * [x] log messages being clickable links.
+
+Updated Dec 14, 2022, 11:32PM::md .update
+  log messages are clickable
