@@ -25,8 +25,8 @@
 // Note that you need to semi-colon terminate all of your lines.
 #define JSRAW(...) #__VA_ARGS__
 
-#if 0
 #ifndef DNDC_DEVELOPER
+#if 0
 #define DNDC_DEVELOPER
 #endif
 #endif
@@ -202,7 +202,7 @@ NSWindow* web_window;
     self->show_errors = YES;
     self->show_stats = NO;
     self->web_controller = [[DndWebViewController alloc] initWithDoc:self];
-    NSScreen* screen = [NSScreen mainScreen];
+    NSScreen* screen = NSScreen.mainScreen;
     NSRect screenrect;
     if(screen)
         screenrect = screen.visibleFrame;
@@ -231,7 +231,7 @@ NSWindow* web_window;
 }
 
 -(NSWindow*)make_window{
-    NSScreen* screen = [NSScreen mainScreen];
+    NSScreen* screen = NSScreen.mainScreen;
     NSRect rect = screen? screen.visibleFrame : NSMakeRect(0, 0, 1400, 800);
 
     NSWindow* window = [[NSWindow alloc]
@@ -526,8 +526,8 @@ NSWindow* web_window;
     // LOGIT(coord_text);
     // coord_text is of the format {internal_id}:{new x},{new y}
     NSArray<NSString*>* parts = [coord_text componentsSeparatedByString:@":"];
-    if([parts count] != 2) return;
-    int internal_id = [parts[0] intValue];
+    if(parts.count != 2) return;
+    int internal_id = parts[0].intValue;
     NSString* doc_string = self->text.string;
     DndcContext* ctx = dndc_create_ctx(0, NULL, NULL);
     dndc_ctx_set_logger(ctx, dndc_stderr_log_func, NULL);
@@ -583,7 +583,7 @@ NSWindow* web_window;
     if(target == DNDC_NODE_HANDLE_INVALID) goto fail;
     DndcNodeLocation loc; err = dndc_node_location(ctx, target, &loc);
     if(err) goto fail;
-    size_t length = [doc_string length];
+    size_t length = doc_string.length;
     size_t lineno = 0;
     size_t i;
     for(i = 0; i < length; i++){
@@ -596,8 +596,8 @@ NSWindow* web_window;
     {
     NSRange range = NSMakeRange(i, 0);
     // [self->text scrollRangeToVisible:range];
-    NSLayoutManager *l = [self->text layoutManager];
-    NSRect rect = [l boundingRectForGlyphRange:range inTextContainer:[self->text textContainer]];
+    NSLayoutManager *l = self->text.layoutManager;
+    NSRect rect = [l boundingRectForGlyphRange:range inTextContainer:self->text.textContainer];
     rect = NSOffsetRect(rect, self->text.textContainerOrigin.x, self->text.textContainerOrigin.y);
     CGPoint point = rect.origin;
     [self->text scrollPoint:point];
@@ -780,9 +780,8 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         case DNDC_WARNING_MESSAGE:
             if(SV_equals(fn, SV("(string input)")))
                 MSB_FORMAT(&builder, line, ":", col, ": ", mess, "\n");
-            else {
+            else
                 MSB_FORMAT(&builder, fn, ":", line, ":", col, ": ", mess, "\n");
-            }
             break;
         case DNDC_NODELESS_MESSAGE:
         case DNDC_STATISTIC_MESSAGE:
@@ -800,7 +799,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         link->col = col;
         [as addAttribute:NSLinkAttributeName value:link range:range];
     }
-    [[tv textStorage] appendAttributedString:as];
+    [tv.textStorage appendAttributedString:as];
 }
 
 @implementation DndHighlighter
@@ -816,7 +815,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 -(void)do_highlight:(NSTextStorage*)textStorage range:(NSRange)editedRange{
     NSString *string = textStorage.string;
     LongString text;
-    text.text = [string UTF8String];
+    text.text = string.UTF8String;
     text.length = strlen(text.text);
     // NSRange currentLineRange = NSMakeRange(0, [string length]);
     NSRange currentLineRange = [string lineRangeForRange:editedRange];
@@ -852,7 +851,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         [self.window close];
     }
     if(event.modifierFlags & NSEventModifierFlagCommand){
-        NSInteger num = [event.characters integerValue];
+        NSInteger num = event.characters.integerValue;
         if(num){
             num -= 1;
             NSArray<NSWindow*>* tabs = get_main_window().tabbedWindows;
@@ -914,7 +913,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     }
     NSRange adjustedrange = NSMakeRange(currentLineRange.location, currentLineRange.length+adjustment);
     if(r.length > 0)
-        [self setSelectedRange:adjustedrange];
+        self.selectedRange = adjustedrange;
 }
 -(void)ensure_pattern{
     if(!indent_pattern)
@@ -958,7 +957,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     unhandled_error_condition(err);
     msb_write_str(&sb, blockname.text, blockname.length);
     msb_write_nchar(&sb, ' ', indent_amount+2);
-    const char* cpath = [path UTF8String];
+    const char* cpath = path.UTF8String;
     msb_write_str(&sb, cpath, strlen(cpath));
     msb_write_char(&sb, '\n');
     NSString* to_insert = msb_detach_as_ns_string(&sb);
@@ -1010,7 +1009,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     item = [[NSMenuItem alloc] initWithTitle:@"Dedent" action:@selector(dedent:) keyEquivalent:@""];
     [result addItem:item];
 
-    [result addItem:[NSMenuItem separatorItem]];
+    [result addItem:NSMenuItem.separatorItem];
 
     item = [[NSMenuItem alloc] initWithTitle:@"Insert Image" action:@selector(insert_file:) keyEquivalent:@""];
     item.tag = GDND_INSERT_IMG;
@@ -1135,17 +1134,17 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler{
         NSURL* url = navigationAction.request.URL;
         // LOGIT(url);
-        if([url isEqual:[self.controller this_dnd_url]]){
+        if([url isEqual:self.controller.this_dnd_url]){
             decisionHandler(WKNavigationActionPolicyAllow);
             return;
         }
-        if([[url host] isEqual:DND_HOST]){
-            NSURL* real_url = [NSURL fileURLWithPath:[[[url URLByDeletingPathExtension] URLByAppendingPathExtension:@"dnd"] path]];
-            [[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:real_url display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
+        if([url.host isEqual:DND_HOST]){
+            NSURL* real_url = [NSURL fileURLWithPath:[url.URLByDeletingPathExtension URLByAppendingPathExtension:@"dnd"].path];
+            [NSDocumentController.sharedDocumentController openDocumentWithContentsOfURL:real_url display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
                 (void)documentWasAlreadyOpen;
                 (void)document;
                 if(error && error.code == NSFileReadNoSuchFileError){
-                    if([[real_url path] isEqualToString:@"/nil.dnd"]){
+                    if([real_url.path isEqualToString:@"/nil.dnd"]){
                         decisionHandler(WKNavigationActionPolicyAllow);
                         return;
                     }
@@ -1153,13 +1152,13 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
                         (void)timer;
                         NSAlert *alert = [[NSAlert alloc] init];
                         [alert setMessageText:@"File does not exist."];
-                        [alert setInformativeText:[[real_url path] stringByAppendingString:@" does not exist. Create it?"]];
+                        [alert setInformativeText:[real_url.path stringByAppendingString:@" does not exist. Create it?"]];
                         [alert addButtonWithTitle:@"Ok"];
                         [alert addButtonWithTitle:@"Cancel"];
                         NSModalResponse response = [alert runModal];
                         if(response != NSAlertFirstButtonReturn)
                             return;
-                        const char* cstring = [[real_url path] UTF8String];
+                        const char* cstring = real_url.path.UTF8String;
                         if(!cstring) return;
                         int fd = open(cstring, O_RDWR|O_CREAT|O_EXCL, 0644);
                         if(fd < 0) return;
@@ -1167,7 +1166,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
                             perror("close");
                             return;
                         }
-                        [[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:real_url display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
+                        [NSDocumentController.sharedDocumentController openDocumentWithContentsOfURL:real_url display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
                             (void)documentWasAlreadyOpen;
                             (void)document;
                             if(error){
@@ -1198,9 +1197,9 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 
 @implementation DndUrlHandler
 -(void)webView:(WKWebView*)webView startURLSchemeTask:(id<WKURLSchemeTask>)urlSchemeTask{
-    NSURLRequest* request = [urlSchemeTask request];
+    NSURLRequest* request = urlSchemeTask.request;
     NSURL* url = request.URL;
-    NSString* method = [request HTTPMethod];
+    NSString* method = request.HTTPMethod;
     // Handle the click helper for adding rooms by clicking
     // on map.
     if([method isEqualToString:@"POST"] && [url isEqual:[NSURL URLWithString:@"dnd:///roomclick"]]){
@@ -1213,7 +1212,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         NSString* body = [[NSString alloc] initWithData:(NSData*)[request HTTPBody] encoding:NSUTF8StringEncoding];
         [urlSchemeTask didFinish];
         // append the body of the request to the document (click)
-        [self.controller.doc->text insertText:body replacementRange:NSMakeRange([[self.controller.doc->text textStorage] length], 0)];
+        [self.controller.doc->text insertText:body replacementRange:NSMakeRange(self.controller.doc->text.textStorage.length, 0)];
         return;
     }
     if([method isEqualToString:@"POST"] && [url isEqual:[NSURL URLWithString:@"dnd:///roommove"]]){
@@ -1245,7 +1244,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         return;
     }
     if([method isEqualToString:@"GET"]){
-        if([[url scheme] isEqualToString:DND_SCHEME] && [[url path] isEqualToString:@"/scrollresto"]){
+        if([url.scheme isEqualToString:DND_SCHEME] && [url.path isEqualToString:@"/scrollresto"]){
         NSURLResponse* response = [[NSHTTPURLResponse alloc]
             initWithURL:(NSURL*)[NSURL URLWithString:DND_SCHEME_HOST]
              statusCode:200
@@ -1266,13 +1265,13 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     }
     // This is faster, but I can't figure out how to clear the image from the cache.
 #if 0
-    if([method isEqualToString:@"GET"] and [[url scheme] isEqualToString:DND_SCHEME]){
-        LOGIT([@"file://" stringByAppendingString:[url path]]);
+    if([method isEqualToString:@"GET"] and [url.scheme isEqualToString:DND_SCHEME]){
+        LOGIT([@"file://" stringByAppendingString:url.path]);
         NSString* urlstr = [url path];
-        urlstr = [urlstr stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLPathAllowedCharacterSet]];
+        urlstr = [urlstr stringByAddingPercentEncodingWithAllowedCharacters: NSCharacterSet.URLPathAllowedCharacterSet];
         urlstr = [@"file://" stringByAppendingString:urlstr];
         url = [[NSURL alloc] initWithString: urlstr];
-        // NSString* path = [url path];
+        // NSString* path = url.path;
         // LOGIT(url);
         NSData* data = [NSData dataWithContentsOfURL: url];
         if(!data){
@@ -1288,7 +1287,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         [urlSchemeTask didReceiveResponse:response];
         [urlSchemeTask didReceiveData:data];
         [urlSchemeTask didFinish];
-        // int fd = open([path UTF8String], O_EVTONLY);
+        // int fd = open(path.UTF8String, O_EVTONLY);
         // if(fd > 0){
             // dispatch_source_t source = dispatch_source_create(DISPATCH_SOURCE_TYPE_VNODE, fd, DISPATCH_VNODE_WRITE | DISPATCH_VNODE_DELETE | DISPATCH_VNODE_RENAME | DISPATCH_VNODE_EXTEND | DISPATCH_VNODE_ATTRIB, dispatch_get_main_queue());
             // dispatch_source_set_event_handler(source, ^{
@@ -1403,7 +1402,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 -(instancetype)initWithDoc:(DndDocument*)doc{
     self = [super init];
     self.doc = doc;
-    NSScreen* screen = [NSScreen mainScreen];
+    NSScreen* screen = NSScreen.mainScreen;
     NSRect screenrect;
     if(screen)
         screenrect = screen.visibleFrame;
@@ -1479,15 +1478,16 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
                 LOGIT(error);
                 return;
             }
-            if(object == [NSNull null])
+            if(object == NSNull.null)
                 return;
-            scroll_resto_string = object;
+            if([object isKindOfClass:NSString.class])
+                scroll_resto_string = object;
         }];
 }
 -(void)recalc_html:(NSString*)string{
     if(dont_update)
         return;
-    const char* source_text = [string UTF8String];
+    const char* source_text = string.UTF8String;
     LongString source = {
         .text = source_text,
         // this is so dumb. Is there an API to get the length of the utf-8 string?
@@ -1500,14 +1500,14 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     if(!self.doc->auto_recalc)
         return;
     LongString html = {};
-    NSString* dir = [[self.doc.fileURL URLByDeletingLastPathComponent] path];
+    NSString* dir = self.doc.fileURL.URLByDeletingLastPathComponent.path;
     StringView base_dir = SV("");
     if(dir){
-        const char* dir_text = [dir UTF8String];
+        const char* dir_text = dir.UTF8String;
         base_dir.text = dir_text;
         base_dir.length = strlen(dir_text);
     }
-    NSString* filename = [[self.doc.fileURL path] lastPathComponent];
+    NSString* filename = self.doc.fileURL.path.lastPathComponent;
     // uint64_t t0 = get_t();
     uint64_t flags = 0;
     // flags |= DNDC_SUPPRESS_WARNINGS;
@@ -1520,7 +1520,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     // flags |= DNDC_USE_DND_URL_SCHEME;
     if(self.doc->editor_controller){
         self.doc->editor_controller->error_text.editable = YES;
-        [[self.doc->editor_controller->error_text textStorage].mutableString setString:@""];
+        [self.doc->editor_controller->error_text.textStorage.mutableString setString:@""];
     }
     BOOL show_errors = !!self.doc->editor_controller && self.doc->show_errors;
     int err = run_the_dndc(OUTPUT_HTML, flags, base_dir, LS_to_SV(source), ns_borrow_sv(filename), &html, BASE64CACHE, TEXTCACHE, show_errors?gdndc_error_func:NULL, show_errors?(__bridge void*)self.doc->editor_controller->error_text:NULL, cache_watch_files, NULL, gdndc_ast_func, (__bridge void*)self.doc, (WorkerThread*)B64WORKER, LS(""));
@@ -1534,7 +1534,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     SuppressCastQual();
     NSData* htmldata = [NSData dataWithBytesNoCopy:(void*)html.text length:html.length+1 freeWhenDone:YES];
     PopDiagnostic();
-    NSURL* url = [self this_dnd_url];
+    NSURL* url = self.this_dnd_url;
     [webview loadData:htmldata MIMEType:@"text/html" characterEncodingName:@"UTF-8" baseURL:url];
     // uint64_t t2 = get_t();
 }
@@ -1543,14 +1543,13 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     if(!self.doc.fileURL){
         return [NSURL URLWithString: DND_SCHEME_HOST "/nil.dnd"];
     }
-    NSString* stringurl = [DND_SCHEME_HOST stringByAppendingString:[[self.doc.fileURL path] stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLPathAllowedCharacterSet]]];
+    NSString* stringurl = [DND_SCHEME_HOST stringByAppendingString:[self.doc.fileURL.path stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLPathAllowedCharacterSet]];
     NSURL* url = [NSURL URLWithString:stringurl];
     return url;
-    // return [NSURL URLWithString:DND_THIS_URL];
 }
 
 -(void)loadView {
-    NSScreen* screen = [NSScreen mainScreen];
+    NSScreen* screen = NSScreen.mainScreen;
     NSRect screenrect;
     if(screen){
         screenrect = screen.visibleFrame;
@@ -1576,10 +1575,10 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     NSRect input_frame = NSMakeRect(0, 0, 300, 24);
     NSTextField* text_field = [[NSTextField alloc] initWithFrame:input_frame];
     alert.accessoryView = text_field;
-    [[alert window] setInitialFirstResponder:text_field];
+    alert.window.initialFirstResponder = text_field;
     NSModalResponse response = [alert runModal];
     if(response == NSAlertFirstButtonReturn){
-        completionHandler([text_field stringValue]);
+        completionHandler(text_field.stringValue);
     }
     else {
         completionHandler(@"");
@@ -1597,7 +1596,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
 
 -(void)keyDown:(NSEvent*) event{
     if(event.modifierFlags & NSEventModifierFlagCommand){
-        NSInteger num = [event.characters integerValue];
+        NSInteger num = event.characters.integerValue;
         if(num){
             num -= 1;
            NSArray<NSWindow*>* tabs =  get_main_window().tabbedWindows;
@@ -1654,72 +1653,76 @@ enum DndEditViewButtonTags {
         }
     }
     [self.text scrollRangeToVisible:NSMakeRange(i, 1+column)];
-    [self.text setSelectedRange:NSMakeRange(i+column+1, 0)];
+    self.text.selectedRange = NSMakeRange(i+column+1, 0);
 }
 -(void)button_click:(id)a{
     // Actually button or menu item, but both respond to tag and state
-    NSControlStateValue state = [a state];
-    switch([a tag]){
-        case DND_AUTO_APPLY_CHANGES_TAG:{
-            if(state == NSControlStateValueOn){
-                self.doc->auto_recalc = YES;
-                [self.doc recalc_html];
+    if([a isKindOfClass:NSButton.class]){
+        NSButton* b = a;
+        NSControlStateValue state = b.state;
+        switch(b.tag){
+            case DND_AUTO_APPLY_CHANGES_TAG:{
+                if(state == NSControlStateValueOn){
+                    self.doc->auto_recalc = YES;
+                    [self.doc recalc_html];
+                }
+                else {
+                    self.doc->auto_recalc = NO;
+                }
+                break;
             }
-            else {
-                self.doc->auto_recalc = NO;
+            case DND_COORD_HELPER_TAG:{
+                if(state == NSControlStateValueOn){
+                    self.doc->coord_helper = YES;
+                    [self.doc recalc_html];
+                }
+                else {
+                    self.doc->coord_helper = NO;
+                    [self.doc recalc_html];
+                }
+                break;
             }
-            break;
-        }
-        case DND_COORD_HELPER_TAG:{
-            if(state == NSControlStateValueOn){
-                self.doc->coord_helper = YES;
-                [self.doc recalc_html];
+            case DND_SHOW_ERRORS_TAG:{
+                if(state == NSControlStateValueOn){
+                    self.doc->show_errors = YES;
+                    [self.doc recalc_html];
+                }
+                else {
+                    self.doc->show_errors = NO;
+                    [self.doc recalc_html];
+                }
+                break;
             }
-            else {
-                self.doc->coord_helper = NO;
-                [self.doc recalc_html];
+            #ifdef DNDC_DEVELOPER
+            case DND_SHOW_STATS_TAG:{
+                if(state == NSControlStateValueOn){
+                    self.doc->show_stats = YES;
+                    [self.doc recalc_html];
+                }
+                else {
+                    self.doc->show_stats = NO;
+                }
+                break;
             }
-            break;
-        }
-        case DND_SHOW_ERRORS_TAG:{
-            if(state == NSControlStateValueOn){
-                self.doc->show_errors = YES;
-                [self.doc recalc_html];
+            #endif
+            default: {
+                NSString* title = b.title;
+                NSLog(@"Unknown button title:%@", title);
             }
-            else {
-                self.doc->show_errors = NO;
-                [self.doc recalc_html];
-            }
-            break;
-        }
-#ifdef DNDC_DEVELOPER
-        case DND_SHOW_STATS_TAG:{
-            if(state == NSControlStateValueOn){
-                self.doc->show_stats = YES;
-            }
-            else {
-                self.doc->show_stats = NO;
-            }
-            break;
-        }
-#endif
-        default: {
-            NSString* title = [a title];
-            NSLog(@"Unknown button title:%@", title);
         }
     }
 }
 - (BOOL)textView:(NSTextView *)textView clickedOnLink:(id)link atIndex:(NSUInteger)charIndex{
-    if([link isKindOfClass:[DndLink class]]){
+    if([link isKindOfClass:DndLink.class]){
         DndLink* l = link;
-        NSURL* real_url = [[self.doc.fileURL URLByDeletingLastPathComponent] URLByAppendingPathComponent:l->filename];
+        NSURL* real_url = [self.doc.fileURL.URLByDeletingLastPathComponent URLByAppendingPathComponent:l->filename];
         int line = l->line;
         int col = l->col;
         if([real_url isEqualTo:self.doc.fileURL]){
             [self.doc scroll_to_line:line column:col];
         }
         else {
-            [[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:real_url display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
+            [NSDocumentController.sharedDocumentController openDocumentWithContentsOfURL:real_url display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
                 (void)documentWasAlreadyOpen;
                 if(!error){
                     DndDocument* doc = (DndDocument*)document;
@@ -1847,7 +1850,7 @@ enum DndEditViewButtonTags {
 
 -(void)insert_file:(id)sender{
     NSMenuItem* item = sender;
-    NSOpenPanel* panel = [NSOpenPanel openPanel];
+    NSOpenPanel* panel = NSOpenPanel.openPanel;
     panel.canChooseFiles = YES;
     panel.canChooseDirectories = NO;
     panel.allowsMultipleSelection = NO;
@@ -1878,7 +1881,7 @@ enum DndEditViewButtonTags {
             NSURL* url = panel.URL;
             NSSize size = {};
             if(item.tag == GDND_INSERT_IMGLINKS){
-                NSImage* img = [ [NSImage alloc] initByReferencingURL:url];
+                NSImage* img = [[NSImage alloc] initByReferencingURL:url];
                 size.height = [img representations][0].pixelsHigh;
                 size.width = [img representations][0].pixelsWide;
             }
@@ -1910,14 +1913,14 @@ enum DndEditViewButtonTags {
     }];
 }
 -(void)format_dnd:(id)sender {
-    CGFloat before = [self->scrollview lineScroll];
+    CGFloat before = self->scrollview.lineScroll;
     NSString *string = self.text.string;
-    const char* source_text = [string UTF8String];
+    const char* source_text = string.UTF8String;
     // uint64_t t1 = get_t();
     LongString html = {};
     size_t len = strlen(source_text);
     error_text.editable = YES;
-    [[error_text textStorage].mutableString setString:@""];
+    error_text.textStorage.mutableString.string = @"";
     int err = dndc_format((StringView){len, source_text}, &html, gdndc_error_func, (__bridge void*)error_text);
     error_text.editable = NO;
     if(err){
@@ -1930,8 +1933,8 @@ enum DndEditViewButtonTags {
     NSString* str = [[NSString alloc] initWithData:htmldata encoding:NSUTF8StringEncoding];
     if(!str)
         return;
-    [self.text insertText:str replacementRange:NSMakeRange(0, [[self.text textStorage] length])];
-    [self->scrollview setLineScroll:before];
+    [self.text insertText:str replacementRange:NSMakeRange(0, self.text.textStorage.length)];
+    self->scrollview.lineScroll = before;
 }
 
 @end
@@ -1945,7 +1948,7 @@ enum DndEditViewButtonTags {
 -(IBAction)newWindowForTab:(id)sender{
     NSLog(@"%@", NSThread.callStackSymbols);
     LOGIT(sender);
-    [(id)[NSDocumentController sharedDocumentController] newWindowForTab:sender];
+    [(id)NSDocumentController.sharedDocumentController newWindowForTab:sender];
     // return nil;
 }
 #endif
@@ -1954,9 +1957,9 @@ enum DndEditViewButtonTags {
         NSWindow* w = get_main_window();
         if(w){
             NSViewController* vc = w.contentViewController;
-            if([vc isKindOfClass:[DndWebViewController class]]){
+            if([vc isKindOfClass:DndWebViewController.class]){
                 DndWebViewController* wc = (DndWebViewController*)vc;
-                set_filetree_window_url([wc.doc.fileURL URLByDeletingLastPathComponent]);
+                set_filetree_window_url(wc.doc.fileURL.URLByDeletingLastPathComponent);
                 return;
             }
         }
@@ -1992,9 +1995,9 @@ enum DndEditViewButtonTags {
     do_menus();
 }
 - (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)sender{
-    NSDocumentController* controller = [NSDocumentController sharedDocumentController];
+    NSDocumentController* controller = NSDocumentController.sharedDocumentController;
 #if 1 && defined(DNDC_DEVELOPER)
-    [[NSDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:@"/Users/drpriver/Documents/Dungeons/BarrowMaze/the-forgotten-antechamber.dnd"] display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
+    [NSDocumentController.sharedDocumentController openDocumentWithContentsOfURL:[NSURL fileURLWithPath:@"/Users/drpriver/Documents/Dungeons/BarrowMaze/the-forgotten-antechamber.dnd"] display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
         (void)document;
         (void)documentWasAlreadyOpen;
         (void)error;
@@ -2020,7 +2023,7 @@ enum DndEditViewButtonTags {
 
 #if 0
 -(void)change_font{
-    NSFontManager* mgr = [NSFontManager sharedFontManager];
+    NSFontManager* mgr = NSFontManager.sharedFontManager;
     LOGIT([mgr selectedFont]);
 }
 #endif
@@ -2028,12 +2031,12 @@ enum DndEditViewButtonTags {
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     [NSApp activateIgnoringOtherApps:YES];
     NSApp.applicationIconImage = appimage;
-    NSFontPanel* panel = [NSFontPanel sharedFontPanel];
+    NSFontPanel* panel = NSFontPanel.sharedFontPanel;
     fontdel = [[DndFontDelegate alloc] init];
     panel.delegate = fontdel;
 
     [panel setPanelFont:EDITOR_FONT isMultiple:NO];
-    NSFontManager* mgr = [NSFontManager sharedFontManager];
+    NSFontManager* mgr = NSFontManager.sharedFontManager;
     [mgr setTarget:fontdel];
     // [mgr setAction:@selector(change_font)];
 
@@ -2062,11 +2065,11 @@ enum DndEditViewButtonTags {
     // this code is totally unnecessary as the webviews are aware of dark mode - duh!
     // I am leaving it here in case I need it for something else.
     static id o;
-    o = [[NSDistributedNotificationCenter defaultCenter] addObserverForName:@"AppleInterfaceThemeChangedNotification" object:nil queue:nil usingBlock:^(NSNotification* note){
+    o = [NSDistributedNotificationCenter.defaultCenter addObserverForName:@"AppleInterfaceThemeChangedNotification" object:nil queue:nil usingBlock:^(NSNotification* note){
         NSArray<NSWindow*> windows = [NSApp windows];
         for(NSWindow* win in windows){
             NSViewController* vc = win.contentViewController;
-            if([vc isKindOfClass:[DndViewController class]]){
+            if([vc isKindOfClass:DndViewController.class]){
              [(DndViewController*)vc refresh];
             }
         }
@@ -2093,8 +2096,8 @@ enum DndEditViewButtonTags {
     if(!font)
         return;
     EDITOR_FONT = font;
-    NSDocumentController* controller = [NSDocumentController sharedDocumentController];
-    NSArray<DndDocument*>* documents = [controller documents];
+    NSDocumentController* controller = NSDocumentController.sharedDocumentController;
+    NSArray<DndDocument*>* documents = controller.documents;
     for(DndDocument* doc in documents){
         [doc change_font:EDITOR_FONT];
     }
@@ -2124,8 +2127,8 @@ main(int argc, const char *_Null_unspecified *_Nonnull argv) {
     BASE64CACHE = dndc_create_filecache();
     TEXTCACHE = dndc_create_filecache();
     B64WORKER = dndc_worker_thread_create();
-    NSApplication* app = [NSApplication sharedApplication];
-    DndAppDelegate* appDelegate = [DndAppDelegate new];
+    NSApplication* app = NSApplication.sharedApplication;
+    DndAppDelegate* appDelegate = [DndAppDelegate.alloc init];
     app.delegate = appDelegate;
     ptrdiff_t icon_size = _app_icon_end - _app_icon;
     NSData* imagedata = [NSData dataWithBytesNoCopy:(void*)_app_icon length:icon_size freeWhenDone:NO];
@@ -2141,32 +2144,32 @@ static
 void
 do_syntax_colors(void){
     for(int i = 0; i < DNDC_SYNTAX_MAX; i++){
-        SYNTAX_COLORS[i] = [NSColor textColor]; // set up backup
+        SYNTAX_COLORS[i] = NSColor.textColor; // set up backup
     }
-    SYNTAX_COLORS[DNDC_SYNTAX_DOUBLE_COLON]       = [NSColor lightGrayColor];
-    SYNTAX_COLORS[DNDC_SYNTAX_HEADER]             = [NSColor systemBlueColor];
-    SYNTAX_COLORS[DNDC_SYNTAX_NODE_TYPE]          = [NSColor darkGrayColor];
-    SYNTAX_COLORS[DNDC_SYNTAX_ATTRIBUTE]          = [NSColor systemBrownColor];
-    SYNTAX_COLORS[DNDC_SYNTAX_DIRECTIVE]          = [NSColor systemPurpleColor];
-    SYNTAX_COLORS[DNDC_SYNTAX_ATTRIBUTE_ARGUMENT] = [NSColor systemBrownColor];
-    SYNTAX_COLORS[DNDC_SYNTAX_CLASS]              = [NSColor systemGrayColor];
-    SYNTAX_COLORS[DNDC_SYNTAX_RAW_STRING]         = [NSColor systemPinkColor]; // currently unused
+    SYNTAX_COLORS[DNDC_SYNTAX_DOUBLE_COLON]       = NSColor.lightGrayColor;
+    SYNTAX_COLORS[DNDC_SYNTAX_HEADER]             = NSColor.systemBlueColor;
+    SYNTAX_COLORS[DNDC_SYNTAX_NODE_TYPE]          = NSColor.darkGrayColor;
+    SYNTAX_COLORS[DNDC_SYNTAX_ATTRIBUTE]          = NSColor.systemBrownColor;
+    SYNTAX_COLORS[DNDC_SYNTAX_DIRECTIVE]          = NSColor.systemPurpleColor;
+    SYNTAX_COLORS[DNDC_SYNTAX_ATTRIBUTE_ARGUMENT] = NSColor.systemBrownColor;
+    SYNTAX_COLORS[DNDC_SYNTAX_CLASS]              = NSColor.systemGrayColor;
+    SYNTAX_COLORS[DNDC_SYNTAX_RAW_STRING]         = NSColor.systemPinkColor; // currently unused
 
-    NSColor* blendedteal = [[NSColor systemTealColor] blendedColorWithFraction:0.5 ofColor:[NSColor blackColor]];
-    NSColor* blendedgreen = [[NSColor systemGreenColor] blendedColorWithFraction:0.5 ofColor:[NSColor blackColor]];
-    NSColor* blendedorange = [[NSColor systemOrangeColor] blendedColorWithFraction:0.5 ofColor:[NSColor blackColor]];
+    NSColor* blendedteal = [NSColor.systemTealColor blendedColorWithFraction:0.5 ofColor:NSColor.blackColor];
+    NSColor* blendedgreen = [NSColor.systemGreenColor blendedColorWithFraction:0.5 ofColor:NSColor.blackColor];
+    NSColor* blendedorange = [NSColor.systemOrangeColor blendedColorWithFraction:0.5 ofColor:NSColor.blackColor];
     // javascript colors
-    SYNTAX_COLORS[DNDC_SYNTAX_JS_COMMENT]       = [NSColor systemGrayColor];
-    SYNTAX_COLORS[DNDC_SYNTAX_JS_STRING]        = blendedgreen;//[NSColor systemGreenColor];
-    SYNTAX_COLORS[DNDC_SYNTAX_JS_REGEX]         = [NSColor systemRedColor];
-    SYNTAX_COLORS[DNDC_SYNTAX_JS_NUMBER]        = blendedgreen;//[NSColor systemGreenColor];
-    SYNTAX_COLORS[DNDC_SYNTAX_JS_KEYWORD]       = blendedteal;//[NSColor systemTealColor];
-    SYNTAX_COLORS[DNDC_SYNTAX_JS_KEYWORD_VALUE] = blendedgreen;//[NSColor systemGreenColor];
-    SYNTAX_COLORS[DNDC_SYNTAX_JS_VAR]           = blendedteal;//[NSColor systemTealColor];
-    SYNTAX_COLORS[DNDC_SYNTAX_JS_IDENTIFIER]    = [NSColor textColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_COMMENT]       = NSColor.systemGrayColor;
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_STRING]        = blendedgreen;//NSColor.systemGreenColor;
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_REGEX]         = NSColor.systemRedColor;
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_NUMBER]        = blendedgreen;//NSColor.systemGreenColor;
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_KEYWORD]       = blendedteal;//NSColor.systemTealColor;
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_KEYWORD_VALUE] = blendedgreen;//NSColor.systemGreenColor;
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_VAR]           = blendedteal;//NSColor.systemTealColor;
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_IDENTIFIER]    = NSColor.textColor;
     SYNTAX_COLORS[DNDC_SYNTAX_JS_BUILTIN]       = blendedorange;
-    SYNTAX_COLORS[DNDC_SYNTAX_JS_NODETYPE]      = [NSColor systemOrangeColor];
-    SYNTAX_COLORS[DNDC_SYNTAX_JS_BRACE]         = [NSColor headerTextColor];
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_NODETYPE]      = NSColor.systemOrangeColor;
+    SYNTAX_COLORS[DNDC_SYNTAX_JS_BRACE]         = NSColor.headerTextColor;
 }
 
 static
@@ -2174,7 +2177,7 @@ void
 do_menus(void){
     NSMenu *mainMenu = [[NSMenu alloc] init];
     // Create the main menu bar
-    [NSApp setMainMenu:mainMenu];
+    NSApp.mainMenu = mainMenu;
 
     {
         // Create the application menu
@@ -2184,19 +2187,19 @@ do_menus(void){
         NSString *title = [[@"About " stringByAppendingString:APPNAME] stringByAppendingString:@"…"];
         [menu addItemWithTitle:title action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
 
-        [menu addItem:[NSMenuItem separatorItem]];
+        [menu addItem:NSMenuItem.separatorItem];
 
         [menu addItemWithTitle:@"Preferences…" action:nil keyEquivalent:@","];
 
-        [menu addItem:[NSMenuItem separatorItem]];
+        [menu addItem:NSMenuItem.separatorItem];
 
         NSMenu* serviceMenu = [[NSMenu alloc] initWithTitle:@""];
         NSMenuItem* menu_item = [menu addItemWithTitle:@"Services" action:nil keyEquivalent:@""];
-        [menu_item setSubmenu:serviceMenu];
+        menu_item.submenu = serviceMenu;
 
         [NSApp setServicesMenu:serviceMenu];
 
-        [menu addItem:[NSMenuItem separatorItem]];
+        [menu addItem:NSMenuItem.separatorItem];
 
         title = [@"Hide " stringByAppendingString:APPNAME];
         [menu addItemWithTitle:title action:@selector(hide:) keyEquivalent:@"h"];
@@ -2206,14 +2209,14 @@ do_menus(void){
 
         [menu addItemWithTitle:@"Show All" action:@selector(unhideAllApplications:) keyEquivalent:@""];
 
-        [menu addItem:[NSMenuItem separatorItem]];
+        [menu addItem:NSMenuItem.separatorItem];
 
         title = [@"Quit " stringByAppendingString:APPNAME];
         [menu addItemWithTitle:title action:@selector(terminate:) keyEquivalent:@"q"];
 
         menu_item = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
-        [menu_item setSubmenu:menu];
-        [[NSApp mainMenu] addItem:menu_item];
+        menu_item.submenu = menu;
+        [NSApp.mainMenu addItem:menu_item];
     }
 
     // Create the File menu
@@ -2223,15 +2226,15 @@ do_menus(void){
         [menu addItemWithTitle:@"New Tab" action:@selector(newWindowForTab:) keyEquivalent:@"t"];
         [menu addItemWithTitle:@"Open" action:@selector(openDocument:) keyEquivalent:@"o"];
         [menu addItemWithTitle:@"Open Folder" action:@selector(openFolder:) keyEquivalent:@"O"];
-        [menu addItem:[NSMenuItem separatorItem]];
+        [menu addItem:NSMenuItem.separatorItem];
         [menu addItemWithTitle:@"Close Window" action:@selector(performClose:) keyEquivalent:@"w"];
         [menu addItemWithTitle:@"Save" action:@selector(saveDocument:) keyEquivalent:@"s"];
         [menu addItemWithTitle:@"Revert to Saved" action:@selector(revertDocumentToSaved:) keyEquivalent:@""];
-        [menu addItem:[NSMenuItem separatorItem]];
+        [menu addItem:NSMenuItem.separatorItem];
         [menu addItemWithTitle:@"Empty File Caches" action:@selector(purge_file_caches:) keyEquivalent:@""];
         NSMenuItem* menu_item = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
-        [menu_item setSubmenu:menu];
-        [[NSApp mainMenu] addItem:menu_item];
+        menu_item.submenu = menu;
+        [NSApp.mainMenu addItem:menu_item];
     }
     // Create the edit menu
     {
@@ -2240,9 +2243,9 @@ do_menus(void){
         [menu addItemWithTitle:@"Undo" action:@selector(undo:) keyEquivalent:@"z"];
         [menu addItemWithTitle:@"Redo" action:@selector(redo:) keyEquivalent:@"Z"];
         NSMenuItem* fontmi = [[NSMenuItem alloc] initWithTitle:@"Font" action:nil keyEquivalent:@""];
-        NSFontManager *fontManager = [NSFontManager sharedFontManager];
+        NSFontManager *fontManager = NSFontManager.sharedFontManager;
         NSMenu *fontMenu = [fontManager fontMenu:YES];
-        [fontmi setSubmenu:fontMenu];
+        fontmi.submenu = fontMenu;
         [menu addItem:fontmi];
         [menu addItem:[NSMenuItem separatorItem]];
         [menu addItemWithTitle:@"Cut" action:@selector(cut:) keyEquivalent:@"x"];
@@ -2270,8 +2273,8 @@ do_menus(void){
         [menu addItem:mi];
 
         NSMenuItem* menu_item = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
-        [menu_item setSubmenu:menu];
-        [[NSApp mainMenu] addItem:menu_item];
+        menu_item.submenu = menu;
+        [NSApp.mainMenu addItem:menu_item];
     }
     // Create the insert menu
     {
@@ -2299,24 +2302,24 @@ do_menus(void){
         mi.tag = GDND_INSERT_DND;
         [menu addItem:mi];
 
-        [menu_item setSubmenu:menu];
-        [[NSApp mainMenu] addItem:menu_item];
+        menu_item.submenu = menu;
+        [NSApp.mainMenu addItem:menu_item];
     }
     // Create the view menu
     {
         NSMenu* menu = [[NSMenu alloc] initWithTitle:@"View"];
         [menu addItemWithTitle:@"File Tree" action:@selector(show_file_tree:) keyEquivalent:@"l"];
-        [menu addItem:[NSMenuItem separatorItem]];
+        [menu addItem:NSMenuItem.separatorItem];
         [menu addItemWithTitle:@"Refresh" action:@selector(refresh) keyEquivalent:@"r"];
         [menu addItemWithTitle:@"Scroll Into View" action:@selector(scroll_selection_into_view:) keyEquivalent:@"\r"];
-        [menu addItem:[NSMenuItem separatorItem]];
+        [menu addItem:NSMenuItem.separatorItem];
         [menu addItemWithTitle:@"Zoom Out" action:@selector(zoom_out:) keyEquivalent:@"-"];
         [menu addItemWithTitle:@"Zoom In" action:@selector(zoom_in:) keyEquivalent:@"+"];
         [menu addItemWithTitle:@"Actual Size" action:@selector(zoom_normal:) keyEquivalent:@"0"];
 
         NSMenuItem* menu_item = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
-        [menu_item setSubmenu:menu];
-        [[NSApp mainMenu] addItem:menu_item];
+        menu_item.submenu = menu;
+        [NSApp.mainMenu addItem:menu_item];
     }
 
 
@@ -2328,10 +2331,10 @@ do_menus(void){
         [menu addItemWithTitle:@"Zoom" action:@selector(performZoom:) keyEquivalent:@""];
 
         NSMenuItem* menu_item = [[NSMenuItem alloc] initWithTitle:@"Window" action:nil keyEquivalent:@""];
-        [menu_item setSubmenu:menu];
-        [[NSApp mainMenu] addItem:menu_item];
+        menu_item.submenu = menu;
+        [NSApp.mainMenu addItem:menu_item];
 
-        [NSApp setWindowsMenu:menu];
+        NSApp.windowsMenu = menu;
     }
     // Create the help menu
     {
@@ -2339,9 +2342,9 @@ do_menus(void){
 
         NSMenuItem* menu_item = [[NSMenuItem alloc] initWithTitle:@"Help" action:nil keyEquivalent:@""];
         [menu addItemWithTitle:@"Open Source Licenses…" action:@selector(show_licenses:) keyEquivalent:@""];
-        [menu_item setSubmenu:menu];
-        [[NSApp mainMenu] addItem:menu_item];
-        [NSApp setHelpMenu:menu];
+        menu_item.submenu = menu;
+        [NSApp.mainMenu addItem:menu_item];
+        NSApp.helpMenu = menu;
     }
 }
 
