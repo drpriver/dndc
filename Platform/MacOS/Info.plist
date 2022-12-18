@@ -38,10 +38,17 @@
             <key>CFBundleTypeRole</key>
             <string>Editor</string>
 
+            <key>CFBundleTypeName</key>
+            <string>Dnd Document</string>
+
             <key>LSItemContentTypes</key>
             <array>
+                <!--
+                    This doesn't work for some reason.
+                <string>com.davidpriver.dndc.dnd</string>
+                -->
                 <string>public.plain-text</string>
-		<string>public.data</string>
+                <string>public.data</string>
             </array>
 
             <key>NSDocumentClass</key>
@@ -49,18 +56,22 @@
 
         </dict>
     </array>
+    <!--
+        I can't get the system to recognize this.
+        I don't know what I am doing wrong.
     <key>UTImportedTypeDeclarations</key>
     <array>
         <dict>
             <key>UTTypeConformsTo</key>
             <array>
+                <string>public.data</string>
                 <string>public.plain-text</string>
             </array>
             <key>UTTypeDescription</key>
-            <string>Example Text</string>
+            <string>Dnd Document</string>
 
             <key>UTTypeIdentifier</key>
-            <string>public.plain-text</string>
+            <string>com.davidpriver.dndc.dnd</string>
 
             <key>UTTypeTagSpecification</key>
             <dict>
@@ -71,5 +82,6 @@
             </dict>
         </dict>
     </array>
+    -->
 </dict>
 </plist>
