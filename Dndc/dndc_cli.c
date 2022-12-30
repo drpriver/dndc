@@ -621,7 +621,7 @@ main(int argc, char**argv){
                     if(write_err.errored) return write_err.errored;
                 }
                 else {
-                    puts(output.text);
+                    fwrite(output.text, output.length, 1, stdout);
                 }
             }
             dndc_free_string(output);
@@ -656,7 +656,7 @@ main(int argc, char**argv){
             return write_err.errored;
         }
         else {
-            puts(output.text);
+            fwrite(output.text, output.length, 1, stdout);
         }
         return 0;
     }

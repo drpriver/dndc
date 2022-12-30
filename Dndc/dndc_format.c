@@ -39,19 +39,15 @@ struct FormatState {
     int col;
 };
 
-typedef struct FormatTokenized FormatTokenized;
-struct FormatTokenized {
-    StringView token;
-    StringView rest;
-};
-
 // Splits a string into (token, rest). Splits on ascii whitespace, treating all
 // other characters as opaque (which means it actually works with non-ascii
 // text).
+//
+// Rest is both an input parameter and an output parameter.
 static
-FormatTokenized
-format_next_token(StringView sv){
-    sv = lstripped_view(sv.text, sv.length);
+StringView
+format_next_token(StringView* rest){
+    StringView sv = lstripped_view(rest->text, rest->length);
     size_t i = 0;
     // Treat links as a single token.
     if(sv.length && sv.text[0] == '['){
@@ -72,39 +68,36 @@ format_next_token(StringView sv){
             case '\f':
             case '\v':
             case '\r':
-                return (FormatTokenized){
-                    .token = {
-                        .text = sv.text,
-                        .length = i,
-                    },
-                    .rest = {
-                        .text = sv.text+i,
-                        .length = sv.length - i,
-                    },
+                *rest = (StringView){
+                    .text = sv.text+i,
+                    .length = sv.length - i,
+                };
+                return (StringView){
+                    .text = sv.text,
+                    .length = i,
                 };
             default:
                 continue;
         }
     }
-    return (FormatTokenized){
-        .token = sv,
-        .rest = {0},
-    };
+    *rest = (StringView){0};
+    return sv;
 }
 
+// FIXME: If we have a really long token we break before inserting it even if that makes no sense.
 static inline
 void
 format_write_wrapped_string(MStringBuilder* sb, FormatState* state, StringView sv){
-    FormatTokenized tokenized= {.rest=sv};
+    StringView rest = sv;
     if(state->col < state->lead){
         msb_write_nchar(sb, ' ', state->lead);
         state->col = state->lead;
     }
-    while(tokenized.rest.length){
-        tokenized = format_next_token(tokenized.rest);
-        if(!tokenized.token.length)
+    while(rest.length){
+        StringView token = format_next_token(&rest);
+        if(!token.length)
             break;
-        if(state->col+tokenized.token.length > FORMAT_WIDTH){
+        if(state->col+token.length > FORMAT_WIDTH){
             msb_write_char(sb, '\n');
             msb_write_nchar(sb, ' ', state->lead);
             state->col = state->lead;
@@ -113,10 +106,95 @@ format_write_wrapped_string(MStringBuilder* sb, FormatState* state, StringView s
             msb_write_char(sb, ' ');
             state->col++;
         }
-        msb_write_str(sb, tokenized.token.text, tokenized.token.length);
-        state->col += tokenized.token.length;
+        msb_write_str(sb, token.text, token.length);
+        state->col += token.length;
     }
 }
+static inline
+_Bool
+format_is_list_start(StringView sv){
+    if(sv.length == 1){
+        switch(sv.text[0]){
+            case '-':
+            case '+':
+            case '*':
+                return 1;
+            default:
+                return 0;
+        }
+    }
+    if(sv.length < 2) return 0;
+    if(sv.text[sv.length-1] != '.') return 0;
+    for(size_t i = 0; i < sv.length-1; i++){
+        switch(sv.text[i]){
+            case CASE_0_9:
+                continue;
+            default:
+                return 0;
+        }
+    }
+    return 1;
+}
+
+// MD nodes need their own implementation so they don't accidentally create
+// lists. Other nodes don't need to worry about that.
+
+static inline
+void
+format_md_write_wrapped_string(MStringBuilder* sb, FormatState* state, StringView sv){
+    StringView rest = sv;
+    if(state->col < state->lead){
+        msb_write_nchar(sb, ' ', state->lead);
+        state->col = state->lead;
+    }
+    while(rest.length){
+        StringView token = format_next_token(&rest);
+        if(!token.length)
+            break;
+        size_t len = token.length;
+        if(rest.length){
+            // This approach is kind of janky, but we tokenize as long as the
+            // next token would be a list starter. Instead of pushing this into
+            // an array, we just tokenize again.
+            // This avoids dynamic allocation, but is almost surely slower.
+            StringView rtmp = rest;
+            while(rtmp.length){
+                StringView next = format_next_token(&rtmp);
+                if(format_is_list_start(next)){
+                    len += next.length + 1;
+                }
+                else
+                    break;
+            }
+        }
+        if(state->col == state->lead){
+        }
+        else if(state->col+len > FORMAT_WIDTH){
+            msb_write_char(sb, '\n');
+            msb_write_nchar(sb, ' ', state->lead);
+            state->col = state->lead;
+        }
+        else if(state->col != state->lead){
+            msb_write_char(sb, ' ');
+            state->col++;
+        }
+        msb_write_str(sb, token.text, token.length);
+        state->col += token.length;
+        len -= token.length;
+        // Tokenize again to recover the rest of the tokens.
+        while(len){
+            // assert((ssize_t)len >= 0);
+            // assert(rest.length);
+            // assert(rest.text);
+            StringView tok = format_next_token(&rest);
+            // assert(format_is_list_start(tok));
+            msb_write_char(sb, ' ');
+            msb_write_str(sb, tok.text, tok.length);
+            len -= 1 + tok.length;
+        }
+    }
+}
+
 
 static inline
 void
@@ -303,7 +381,7 @@ FORMATFUNC(para_node){
             NODE_LOG_ERROR(ctx, node, "Children of paragraphs must be STRINGs");
             return DNDC_ERROR_INVALID_TREE;
         }
-        format_write_wrapped_string(sb, &state, child->header);
+        format_md_write_wrapped_string(sb, &state, child->header);
     }
     if(state.col)
         msb_write_char(sb, '\n');
@@ -338,7 +416,7 @@ format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, 
         NODE_CHILDREN_FOR_EACH(subit, child){
             Node* subchild = get_node(ctx, *subit);
             if(subchild->type == NODE_STRING){
-                format_write_wrapped_string(sb, &state, subchild->header);
+                format_md_write_wrapped_string(sb, &state, subchild->header);
             }
             else if(subchild->type == NODE_BULLETS){
                 if(state.col != state.lead)
@@ -385,7 +463,7 @@ FORMATFUNC(md_list){
         for(size_t j = 0; j < node_children_count(child); j++){
             Node* subchild = get_node(ctx, node_children(child)[j]);
             if(subchild->type == NODE_STRING){
-                format_write_wrapped_string(sb, &state, subchild->header);
+                format_md_write_wrapped_string(sb, &state, subchild->header);
             }
             else {
                 if(state.col != state.lead)

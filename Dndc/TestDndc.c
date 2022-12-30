@@ -26,6 +26,7 @@ static TestFunc TestDndcTableMultiline;
 static TestFunc TestFormatTable;
 static TestFunc TestFormatList;
 static TestFunc TestFormatKV;
+static TestFunc TestFormatMD;
 static TestFunc TestCrashesFixed;
 static TestFunc TestEscapedFixed;
 static TestFunc TestExamplesWork;
@@ -49,6 +50,7 @@ int main(int argc, char** argv){
     RegisterTest(TestFormatTable);
     RegisterTest(TestFormatList);
     RegisterTest(TestFormatKV);
+    RegisterTest(TestFormatMD);
     RegisterTest(TestCrashesFixed);
     RegisterTest(TestEscapedFixed);
     RegisterTest(TestExamplesWork);
@@ -497,6 +499,113 @@ TestFunction(TestFormatKV){
         }
         dndc_free_string(outdata);
     }
+    TESTEND();
+}
+TestFunction(TestFormatMD){
+    // This tests that we don't break in such a that breaks the
+    // semantics of the document (mostly from lists).
+    TESTBEGIN();
+    struct {StringView src, expected;} test_cases[]= {
+#if defined(TEN) || defined(EIGHTY) || defined(SEVENTYNINE)
+#error "Why would you define TEN, EIGHTY or SEVENTYNINE?"
+#endif
+#define TEN "aaaaaaaaaa"
+#define EIGHTY TEN TEN TEN TEN TEN TEN TEN TEN
+#define SEVENTYNINE TEN TEN TEN TEN TEN TEN TEN "aaaaaaaaa"
+        {
+            .src = SV(EIGHTY),
+            .expected = SV(EIGHTY "\n"),
+        },
+        {
+            .src = SV(EIGHTY "\n"),
+            .expected = SV(EIGHTY "\n"),
+        },
+        {
+            .src = SV(EIGHTY " 1."),
+            .expected = SV(EIGHTY " 1.\n"),
+        },
+        {
+            .src      = SV(EIGHTY " 1. 1. 1. 1. 1. 1. 1."),
+            .expected = SV(EIGHTY " 1. 1. 1. 1. 1. 1. 1.\n"),
+        },
+        {
+            .src = SV(EIGHTY " b."),
+            .expected = SV(EIGHTY "\nb.\n"),
+        },
+        {
+            .src = SV(EIGHTY " - 1"),
+            .expected = SV(EIGHTY " -\n1\n"),
+        },
+        {
+            .src = SV(EIGHTY " - 1."),
+            .expected = SV(EIGHTY " - 1.\n"),
+        },
+        {
+            .src = SV(EIGHTY " + 1"),
+            .expected = SV(EIGHTY " +\n1\n"),
+        },
+        {
+            .src = SV(EIGHTY " * 1"),
+            .expected = SV(EIGHTY " *\n1\n"),
+        },
+        {
+            .src = SV(EIGHTY "   *        1"),
+            .expected = SV(EIGHTY " *\n1\n"),
+        },
+        {
+            .src = SV(SEVENTYNINE),
+            .expected = SV(SEVENTYNINE "\n"),
+        },
+        {
+            .src = SV(SEVENTYNINE "\n"),
+            .expected = SV(SEVENTYNINE "\n"),
+        },
+        {
+            .src = SV(SEVENTYNINE " 1."),
+            .expected = SV(SEVENTYNINE " 1.\n"),
+        },
+        {
+            .src = SV(SEVENTYNINE " - 1"),
+            .expected = SV(SEVENTYNINE " -\n1\n"),
+        },
+        {
+            .src = SV(SEVENTYNINE " - 1."),
+            .expected = SV(SEVENTYNINE " - 1.\n"),
+        },
+        {
+            .src = SV(SEVENTYNINE " + 1"),
+            .expected = SV(SEVENTYNINE " +\n1\n"),
+        },
+        {
+            .src = SV(SEVENTYNINE " * 1"),
+            .expected = SV(SEVENTYNINE " *\n1\n"),
+        },
+        {
+            .src = SV(SEVENTYNINE "   *        1"),
+            .expected = SV(SEVENTYNINE " *\n1\n"),
+        },
+#undef TEN
+#undef EIGHTY
+#undef SEVENTYNINE
+    };
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_DONT_PRINT_ERRORS
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+        ;
+    for(size_t i = 0; i < arrlen(test_cases); i++){
+        StringView src = test_cases[i].src;
+        StringView expected = test_cases[i].expected;
+        LongString outdata = {0};
+        int e = run_the_dndc(OUTPUT_REFORMAT, flags, SV(""), src, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,NULL, LS(""));
+        TestExpectFalse(e);
+        if(!e){
+            TestExpectEquals2(LS_SV_equals, outdata, expected);
+            dndc_free_string(outdata);
+        }
+
+    }
+    (void)test_cases;
     TESTEND();
 }
 

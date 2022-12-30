@@ -2,7 +2,7 @@
 # Copyright © 2021-2022, David Priver
 #
 import sys
-pydndcver = '1.0.0'
+pydndcver = '1.0.1'
 pydndeditver = '1.0.0'
 def win_install_deps() -> bool:
     import sys
