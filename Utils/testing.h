@@ -244,10 +244,10 @@ enum {MAX_TEST_NUM = 1000};
 // ----------
 // Internal use struct.
 struct TestResults {
-    unsigned long long funcs_executed;
-    unsigned long long failures;
-    unsigned long long executed;
-    unsigned long long assert_failures;
+    size_t funcs_executed;
+    size_t failures;
+    size_t executed;
+    size_t assert_failures;
     size_t failed_tests[MAX_TEST_NUM];
     size_t n_failed_tests;
 };
@@ -1140,7 +1140,6 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
         }
     }
 
-    assert(SV_equals(kw_args[TARGET_INDEX].name, SV("-t")));
 
     if(print_pid){
         #ifdef _WIN32
@@ -1165,31 +1164,31 @@ test_main(int argc, char*_Nonnull *_Nonnull argv, const ArgParseKwParams*_Nullab
     const char* text = result.funcs_executed == 1?
         "test function executed"
         : "test functions executed";
-    TestPrintf("%s%s: %s%llu%s %s\n",
+    TestPrintf("%s%s: %s%zu%s %s\n",
             gray, filename,
-            blue, (unsigned long long)result.funcs_executed,
+            blue, result.funcs_executed,
             reset, text);
 
     text = result.executed == 1? "test executed" : "tests executed";
-    TestPrintf("%s%s: %s%llu%s %s\n",
+    TestPrintf("%s%s: %s%zu%s %s\n",
             gray, filename,
-            blue, (unsigned long long)result.executed,
+            blue, result.executed,
             reset, text);
 
     text = result.assert_failures == 1?
         "test function aborted early"
         : "test functions aborted early";
     const char* color = result.assert_failures?red:green;
-    TestPrintf("%s%s: %s%llu%s %s\n",
+    TestPrintf("%s%s: %s%zu%s %s\n",
             gray, filename,
-            color, (unsigned long long)result.assert_failures,
+            color, result.assert_failures,
             reset, text);
 
     color = result.failures?red:green;
     text = result.failures == 1? "test failed" : "tests failed";
-    TestPrintf("%s%s: %s%llu%s %s\n",
+    TestPrintf("%s%s: %s%zu%s %s\n",
             gray, filename,
-            color, (unsigned long long)result.failures,
+            color, result.failures,
             reset, text);
     for(size_t i = 0 ; i < TestOutFileCount; i++){
         if(TestOutFiles[i] != stderr)

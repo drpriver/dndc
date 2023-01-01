@@ -16,52 +16,39 @@
 #include "Utils/testing.h"
 #include "Utils/argument_parsing.h"
 
-// These are forward function decls
-static TestFunc TestDndc1;
-static TestFunc TestDndc2;
-static TestFunc TestDndc3;
-static TestFunc TestDndcOutParam;
-static TestFunc TestDndcFragment;
-static TestFunc TestDndcTableMultiline;
-static TestFunc TestFormatTable;
-static TestFunc TestFormatList;
-static TestFunc TestFormatKV;
-static TestFunc TestFormatMD;
-static TestFunc TestCrashesFixed;
-static TestFunc TestEscapedFixed;
-static TestFunc TestExamplesWork;
-static TestFunc TestUntrusted;
-static TestFunc TestSpecialChars;
-static TestFunc TestImgAttributes;
-static TestFunc TestJs;
-static TestFunc TestFileCache;
-static TestFunc TestExpand;
-static TestFunc TestMd;
-static TestFunc TestUtf16Syntax;
+#define TESTS(X) \
+    X(TestDndc1) \
+    X(TestDndc2) \
+    X(TestDndc3) \
+    X(TestDndcOutParam) \
+    X(TestDndcFragment) \
+    X(TestDndcTableMultiline) \
+    X(TestFormatTable) \
+    X(TestFormatList) \
+    X(TestFormatKV) \
+    X(TestFormatMD) \
+    X(TestCrashesFixed) \
+    X(TestEscapedFixed) \
+    X(TestExamplesWork) \
+    X(TestUntrusted) \
+    X(TestSpecialChars) \
+    X(TestImgAttributes) \
+    X(TestJs) \
+    X(TestFileCache) \
+    X(TestExpand) \
+    X(TestMd) \
+    X(TestUtf16Syntax) \
+
+// These are forward function declarations.
+#define X(t) static TestFunc t;
+TESTS(X)
+#undef X
 
 int main(int argc, char** argv){
     testing_allocator_init();
-    RegisterTest(TestDndc1);
-    RegisterTest(TestDndc2);
-    RegisterTest(TestDndc3);
-    RegisterTest(TestDndcOutParam);
-    RegisterTest(TestDndcFragment);
-    RegisterTest(TestDndcTableMultiline);
-    RegisterTest(TestFormatTable);
-    RegisterTest(TestFormatList);
-    RegisterTest(TestFormatKV);
-    RegisterTest(TestFormatMD);
-    RegisterTest(TestCrashesFixed);
-    RegisterTest(TestEscapedFixed);
-    RegisterTest(TestExamplesWork);
-    RegisterTest(TestUntrusted);
-    RegisterTest(TestSpecialChars);
-    RegisterTest(TestImgAttributes);
-    RegisterTest(TestJs);
-    RegisterTest(TestFileCache);
-    RegisterTest(TestExpand);
-    RegisterTest(TestMd);
-    RegisterTest(TestUtf16Syntax);
+    #define X(t) RegisterTest(t);
+    TESTS(X)
+    #undef X
     ArgToParse kw_args[] = {
         {
             .name = SV("-F"),
