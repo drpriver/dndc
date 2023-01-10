@@ -285,7 +285,7 @@ ssize_t
 get_line_internal_loop(GetInputCtx* ctx){
     DBG("Enter Loop\n");
     DBG("----------\n");
-    bool in_tab = false;
+    _Bool in_tab = 0;
     int n_tabs = 0;
     write_data(ctx->prompt.text, ctx->prompt.length);
     redisplay(ctx);
@@ -327,7 +327,7 @@ get_line_internal_loop(GetInputCtx* ctx){
         if(nread <= 0)
             return ctx->buff_count;
         if(c != TAB){
-            in_tab = false;
+            in_tab = 0;
             ctx->tab_completion_cookie = 0;
             n_tabs = 0;
         }
@@ -342,7 +342,7 @@ get_line_internal_loop(GetInputCtx* ctx){
                 memcpy(ctx->altbuff, ctx->buff, GI_BUFF_SIZE);
                 ctx->altbuff[original_used_len] = 0;
             }
-            in_tab = true;
+            in_tab = 1;
             int err = ctx->tab_completion_func(ctx, original_curr_pos, original_used_len, n_tabs);
             if(err){
                 if(err > 0){
@@ -369,7 +369,7 @@ get_line_internal_loop(GetInputCtx* ctx){
                             n = 2;
                         }
                     }
-                    memremove(ctx->buff_cursor, ctx->buff, ctx->buff_count+n, n);
+                    memremove(ctx->buff_cursor-n, ctx->buff, ctx->buff_count+n, n);
                     ctx->buff_cursor-=n;
                     ctx->buff_count-=n;
                     redisplay(ctx);
@@ -771,7 +771,7 @@ change_history(GetInputCtx*ctx, int magnitude){
 }
 
 static void get_line_init(void){
-    get_line_is_init = true;
+    get_line_is_init = 1;
 #ifdef _WIN32
     // In theory we should open "CONOUT$" instead, but idk.
     // TODO: report errors.
