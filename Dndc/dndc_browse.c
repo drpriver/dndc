@@ -79,6 +79,13 @@ wrap_report(void* ud, int type, const char* filename, int filename_len, int line
     fprintf(stderr, "\r> ");
 }
 
+THREADFUNC(quit_after){
+    sleep((intptr_t)thread_arg);
+    puts("\r");
+    exit(0);
+    return 0;
+}
+
 
 int
 main(int argc, char** argv){
@@ -87,6 +94,7 @@ main(int argc, char** argv){
     if(get_main_args(&argc, &argv) != 0) return 1;
 #endif
     LongString directory = {0};
+    StringView file_to_open = {0};
     int port = 0;
     int loglevel = 3;
     {
@@ -117,6 +125,7 @@ main(int argc, char** argv){
     _Bool should_log = false;
     _Bool bind_all = false;
     int depth = 10;
+    int quit = 0;
     ArgToParse kw_args[] = {
         {
             .name = SV("-p"),
@@ -160,6 +169,17 @@ main(int argc, char** argv){
             .help = "How many directories deep to look for dnd files. 1 means only check the current directory",
             .dest = ARGDEST(&depth),
             .show_default = 1,
+        },
+        {
+            .name = SV("--open"),
+            .help = "Open this file after starting",
+            .dest = ARGDEST(&file_to_open),
+        },
+        {
+            .name = SV("-q"),
+            .altname1 = SV("--quit"),
+            .help = "Quit after this many seconds",
+            .dest = ARGDEST(&quit),
         },
     };
     enum {HELP, VERSION, FISH};
@@ -274,6 +294,17 @@ main(int argc, char** argv){
     MStringBuilder opensb = {.allocator = MALLOCATOR};
     MSB_FORMAT(&opensb, opencmd, " ", url, ":", port, "/");
     size_t before_entry = opensb.cursor;
+    if(file_to_open.length){
+        msb_url_percent_encode_filepath(&opensb, file_to_open.text, file_to_open.length);
+        LongString op = msb_borrow_ls(&opensb);
+        int s = system(op.text);
+        (void)s;
+    }
+    if(quit){
+        ThreadHandle thrd;
+        int err = create_thread(&thrd, quit_after, (void*)(intptr_t)quit);
+        (void)err;
+    }
     for(;;){
         ssize_t len = gi_get_input(&input);
         if(len < 0) break;
