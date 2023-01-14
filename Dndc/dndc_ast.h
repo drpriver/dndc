@@ -55,7 +55,10 @@ dndc_ctx_dup_sv(DndcContext* ctx, DndcStringView text, DndcStringView* result);
 
 DNDC_API
 DNDC_NULLABLE(DndcContext*)
-dndc_create_ctx(unsigned long long flags, DNDC_NULLABLE(DndcFileCache*) base64cache, DNDC_NULLABLE(DndcFileCache*) textcache);
+dndc_create_ctx(
+        unsigned long long flags,
+        DNDC_NULLABLE(DndcFileCache*) base64cache,
+        DNDC_NULLABLE(DndcFileCache*) textcache);
 // ------------
 // Creates an ast context.
 //
@@ -90,7 +93,8 @@ dndc_ctx_get_flags(DndcContext*);
 
 DNDC_API
 void
-dndc_ctx_set_logger(DndcContext*, DNDC_NULLABLE(DndcLogFunc*), DNDC_NULLABLE(void*));
+dndc_ctx_set_logger(DndcContext*,
+        DNDC_NULLABLE(DndcLogFunc*), DNDC_NULLABLE(void*));
 // ------------------
 // Sets the logger on the context. Pass NULL to disable logging.
 //
@@ -171,7 +175,8 @@ dndc_ctx_get_base(DndcContext*, DndcStringView*);
 
 DNDC_API
 int
-dndc_ctx_parse_file(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sourcepath);
+dndc_ctx_parse_file(DndcContext* ctx, DndcNodeHandle dnh,
+        DndcStringView sourcepath);
 // -------------------
 // Loads and then parses the file into the context.
 //
@@ -197,7 +202,8 @@ dndc_ctx_parse_file(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView sourcep
 
 DNDC_API
 int
-dndc_ctx_parse_string(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView filename, DndcStringView contents);
+dndc_ctx_parse_string(DndcContext* ctx, DndcNodeHandle dnh,
+        DndcStringView filename, DndcStringView contents);
 // ---------------------
 // Parses the given contents into the context.
 //
@@ -262,7 +268,8 @@ dndc_ctx_set_root(DndcContext*, DndcNodeHandle);
 DNDC_API
 DNDC_WARN_UNUSED
 int
-dndc_node_get_attribute(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView key, DndcStringView* value);
+dndc_node_get_attribute(DndcContext* ctx, DndcNodeHandle dnh,
+        DndcStringView key, DndcStringView* value);
 // -----------------------
 // Retrieves the value of an attribute for a given node.
 //
@@ -282,12 +289,14 @@ dndc_node_has_attribute(DndcContext*, DndcNodeHandle, DndcStringView key);
 //
 // Returns 1 if it does, 0 otherwise.
 //
-// This function does not distinguish between not having an attribute and an error.
+// This function does not distinguish between not having an attribute and an
+// error.
 //
 
 DNDC_API
 int
-dndc_node_set_attribute(DndcContext*, DndcNodeHandle, DndcStringView key, DndcStringView value);
+dndc_node_set_attribute(DndcContext*, DndcNodeHandle,
+        DndcStringView key, DndcStringView value);
 // -----------------------
 // Sets a specific attribute for a given node.
 //
@@ -307,7 +316,8 @@ dndc_node_del_attribute(DndcContext*, DndcNodeHandle, DndcStringView key);
 //
 // Returns 1 if it does, 0 otherwise.
 //
-// This function does not distinguish between not having an attribute and an error.
+// This function does not distinguish between not having an attribute and an
+// error.
 //
 
 DNDC_API
@@ -331,7 +341,8 @@ struct DndcStringPair {
 
 DNDC_API
 size_t
-dndc_node_attributes(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, DndcStringPair* buff, size_t bufflen);
+dndc_node_attributes(DndcContext* ctx, DndcNodeHandle dnh,
+        size_t* cookie, DndcStringPair* buff, size_t bufflen);
 // --------------------
 // Copies the set attributes and their values into the given buffer.
 //
@@ -416,7 +427,8 @@ dndc_node_set_id(DndcContext*, DndcNodeHandle, DndcStringView id);
 
 DNDC_API
 int
-dndc_node_append_child(DndcContext* ctx, DndcNodeHandle parent, DndcNodeHandle child);
+dndc_node_append_child(DndcContext* ctx,
+        DndcNodeHandle parent, DndcNodeHandle child);
 // ----------------------
 // Appends the child as a child to parent.
 //
@@ -442,7 +454,8 @@ dndc_node_append_child(DndcContext* ctx, DndcNodeHandle parent, DndcNodeHandle c
 
 DNDC_API
 int
-dndc_node_append_string(DndcContext* ctx, DndcNodeHandle parent, DndcStringView sv);
+dndc_node_append_string(DndcContext* ctx,
+        DndcNodeHandle parent, DndcStringView sv);
 // ----------------------
 // Creates a string node with the given string and immediately appends that new
 // node as a child to parent.
@@ -471,7 +484,8 @@ dndc_node_append_string(DndcContext* ctx, DndcNodeHandle parent, DndcStringView 
 
 DNDC_API
 int
-dndc_node_insert_child(DndcContext* ctx, DndcNodeHandle parent, size_t i, DndcNodeHandle child);
+dndc_node_insert_child(DndcContext* ctx, DndcNodeHandle parent,
+        size_t i, DndcNodeHandle child);
 // ---------------------
 // Inserts the child as the `i`th child of the parent.
 //
@@ -501,7 +515,8 @@ dndc_node_insert_child(DndcContext* ctx, DndcNodeHandle parent, size_t i, DndcNo
 
 DNDC_API
 int
-dndc_node_insert_string(DndcContext* ctx, DndcNodeHandle parent, size_t i, DndcStringView sv);
+dndc_node_insert_string(DndcContext* ctx, DndcNodeHandle parent,
+        size_t i, DndcStringView sv);
 // ---------------------
 // Creates a new STRING node, with the header set to `sv`. Inserts the new node
 // as the `i`th child of the parent.
@@ -646,7 +661,9 @@ enum DndcNodeType {
 };
 
 // Check that the above is correct.
-#define X(a, b) _Static_assert(DNDC_NODE_TYPE_##a == b, #a " has incorrect value, not equal to " #b);
+#define X(a, b) _Static_assert(DNDC_NODE_TYPE_##a == b, \
+    #a " has incorrect value, not equal to " #b);
+
     DNDCNODETYPES(X)
 #undef X
 
@@ -803,7 +820,8 @@ dndc_node_children_count(DndcContext*, DndcNodeHandle);
 
 DNDC_API
 size_t
-dndc_node_get_children(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie, DndcNodeHandle* buff, size_t buff_len);
+dndc_node_get_children(DndcContext* ctx, DndcNodeHandle dnh, size_t* cookie,
+        DndcNodeHandle* buff, size_t buff_len);
 // -----------------------
 // Copies the handles to the child nodes of a node into a buffer.
 //
@@ -852,7 +870,8 @@ dndc_node_get_child(DndcContext* ctx, DndcNodeHandle dnh, long i);
 //     Handle to the node that is the parent of the return value.
 //
 // i:
-//     Index of the child. This can be negative, which means to index from the back.
+//     Index of the child. This can be negative, which means to index from the
+//     back.
 //
 //
 // Returns:
@@ -890,7 +909,8 @@ dndc_node_classes_count(DndcContext*, DndcNodeHandle);
 
 DNDC_API
 size_t
-dndc_node_classes(DndcContext*, DndcNodeHandle, size_t* cookie, DndcStringView* buff, size_t buff_len);
+dndc_node_classes(DndcContext*, DndcNodeHandle, size_t* cookie,
+        DndcStringView* buff, size_t buff_len);
 // -----------------------
 // Copies the classes (string views) of a node into a buffer.
 //
@@ -904,8 +924,9 @@ dndc_node_classes(DndcContext*, DndcNodeHandle, size_t* cookie, DndcStringView* 
 //     Must be a valid handle.
 //
 // cookie:
-//     A pointer to an opaque value used for remembering where in the classes array
-//     this function is. Initialize the cookie to 0 before calling this function.
+//     A pointer to an opaque value used for remembering where in the classes
+//     array this function is. Initialize the cookie to 0 before calling this
+//     function.
 //
 // buff:
 //     The buffer to copy classes into.
@@ -1159,7 +1180,8 @@ dndc_node_location(DndcContext*, DndcNodeHandle, DndcNodeLocation*);
 
 DNDC_API
 DndcNodeHandle
-dndc_ctx_node_by_approximate_location(DndcContext*, DndcStringView filename, int row, int column);
+dndc_ctx_node_by_approximate_location(DndcContext*,
+        DndcStringView filename, int row, int column);
 // ---------------------
 // Retrieves the node closest to the given location.
 // Closest is only in regards to row and column - filename has to be exact.
@@ -1187,8 +1209,8 @@ dndc_ctx_node_by_approximate_location(DndcContext*, DndcStringView filename, int
 //
 // Returns:
 // --------
-// Returns the node's handle on successful lookup and `DNDC_NODE_HANDLE_INVALID`
-// if the node cannot be found.
+// Returns the node's handle on successful lookup and
+// `DNDC_NODE_HANDLE_INVALID` if the node cannot be found.
 //
 
 DNDC_API
@@ -1201,8 +1223,8 @@ dndc_ctx_node_by_id(DndcContext*, DndcStringView);
 // "Hello World" becomes "hello-world". You do not need to call `dndc_kebab`
 // beforehand.
 //
-// Returns the node's handle on successful lookup and `DNDC_NODE_HANDLE_INVALID`
-// if the node cannot be found.
+// Returns the node's handle on successful lookup and
+// `DNDC_NODE_HANDLE_INVALID` if the node cannot be found.
 //
 // Note: in some circumstances, two nodes can have the same string id. Which
 // handle is returned is not specified.
@@ -1222,7 +1244,8 @@ dndc_ctx_node_invalid(DndcContext* ctx, DndcNodeHandle);
 
 DNDC_API
 DndcNodeHandle
-dndc_ctx_make_node(DndcContext*, int type, DndcStringView header, DndcNodeHandle parent);
+dndc_ctx_make_node(DndcContext*, int type,
+        DndcStringView header, DndcNodeHandle parent);
 // -------------------
 // Creates a new node in the tree.
 //
@@ -1244,7 +1267,8 @@ dndc_ctx_make_node(DndcContext*, int type, DndcStringView header, DndcNodeHandle
 //
 // Returns:
 // --------
-// The handle to the new node on success and `DNDC_NODE_HANDLE_INVALID` on error.
+// The handle to the new node on success and `DNDC_NODE_HANDLE_INVALID` on
+// error.
 //
 
 DNDC_API
@@ -1278,7 +1302,7 @@ void
 dndc_preload_imgs(DNDC_NULLABLE(DndcPreloadImageJob*));
 // ---------------------------------
 // Iterates the IMG nodes and the IMGLINKS node and popluates the loaded image
-// chage. This can speed up html generation as this work would otherwise have
+// cache. This can speed up html generation as this work would otherwise have
 // to be done during html generation.
 //
 // The intended use is to call this in parallel with executing user scripts.
@@ -1289,8 +1313,8 @@ DNDC_API
 void
 dndc_ctx_preload_img_job_join(DndcContext*, DNDC_NULLABLE(DndcPreloadImageJob*));
 // ----------------------------
-// Merges the result of preloading into the ctx. Call this after user scripts have
-// finished.
+// Merges the result of preloading into the ctx. Call this after user scripts
+// have finished.
 
 DNDC_API
 int
@@ -1403,11 +1427,12 @@ dndc_ctx_add_link(DndcContext* ctx, DndcStringView k, DndcStringView v);
 
 DNDC_API
 size_t
-dndc_ctx_get_dependencies(DndcContext*, DndcStringView* buff, size_t bufflen, size_t* cookie);
+dndc_ctx_get_dependencies(DndcContext*,
+        DndcStringView* buff, size_t bufflen, size_t* cookie);
 // ---------------------
-// Copies the filepaths that are the files the context depends on into a buffer.
-// This always you to do things like watch these files and re-create and
-// recalculate the outputted html whenever those files change.
+// Copies the filepaths that are the files the context depends on into a
+// buffer.  This allows you to do things like watch these files and re-create
+// and recalculate the outputted html whenever those files change.
 //
 // Arguments:
 // ----------

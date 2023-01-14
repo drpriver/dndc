@@ -864,6 +864,8 @@ export const NodeType = {
     QUOTE:        number;
     JS:           number;
     DETAILS:      number;
-    INVALID:      number;
     META:         number;
+    DEFLIST:      number;
+    DEF:          number;
+    INVALID:      number;
 };

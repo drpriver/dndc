@@ -15,7 +15,9 @@
 //
 // DNDC_VERSION
 // ------------
-#define DNDC_VERSION DNDC_STRINGIFY(DNDC_MAJOR) "." DNDC_STRINGIFY(DNDC_MINOR) "." DNDC_STRINGIFY(DNDC_MICRO)
+#define DNDC_VERSION DNDC_STRINGIFY(DNDC_MAJOR) "." \
+    DNDC_STRINGIFY(DNDC_MINOR) "." \
+    DNDC_STRINGIFY(DNDC_MICRO)
 
 #define DNDC_MAJOR 1
 #define DNDC_MINOR 0
@@ -23,14 +25,15 @@
 #define DNDC_STRINGIFY_IMPL(x) #x
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
 
-#define DNDC_INT_VERSION(major, minor, micro) (10000000*(major) + 10000*(minor) + (micro))
+#define DNDC_INT_VERSION(major, minor, micro) \
+    (10000000*(major) + 10000*(minor) + (micro))
 // ----------------
 // The version as a single number. Comparable.
 // many digits for major
 // 3 digits for minor
 // 4 digits for micro
 
-enum {DNDC_NUMERIC_VERSION = DNDC_INT_VERSION(DNDC_MAJOR, DNDC_MINOR, DNDC_MICRO)};
+enum {DNDC_NUMERIC_VERSION=DNDC_INT_VERSION(DNDC_MAJOR, DNDC_MINOR, DNDC_MICRO)};
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin // Unless marked, pointers are nonnull.
@@ -467,7 +470,8 @@ dndc_filecache_n_paths(DndcFileCache*);
 
 DNDC_API
 size_t
-dndc_filecache_cached_paths(DndcFileCache*cache, DndcStringView* buff, size_t bufflen, size_t* cookie);
+dndc_filecache_cached_paths(DndcFileCache*cache,
+        DndcStringView* buff, size_t bufflen, size_t* cookie);
 // ---------------------------
 // Reads a number of cached paths into a buffer. These paths are unstable -
 // further interaction with the filecache may invalidate them. Call this
@@ -520,7 +524,8 @@ print_cache_paths(FILE* fp, DndcFileCache* cache){
 
 DNDC_API
 int
-dndc_filecache_store_text(DndcFileCache* cache, DndcStringView path, DndcStringView data, int overwrite);
+dndc_filecache_store_text(DndcFileCache* cache,
+        DndcStringView path, DndcStringView data, int overwrite);
 // ---------------------
 // Stores the given text in the file cache under the given path. The path and
 // data are copied out.
@@ -548,7 +553,8 @@ dndc_filecache_store_text(DndcFileCache* cache, DndcStringView path, DndcStringV
 
 typedef struct DndcWorkerThread DndcWorkerThread;
 // ------------
-// Opaque type representing a worker thread for doing some operations in parallel.
+// Opaque type representing a worker thread for doing some operations in
+// parallel.
 
 DNDC_API
 DndcWorkerThread*
