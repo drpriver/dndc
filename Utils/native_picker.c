@@ -20,7 +20,7 @@ extern id NSApp; // Linker needs to see us actually using something from AppKit
 #endif
 
 
-static 
+static
 warn_unused
 int
 native_gui_pick_directory(LongString* directory){
@@ -81,7 +81,7 @@ native_gui_pick_directory(LongString* directory){
 #pragma clang assume_nonnull begin
 #endif
 
-static 
+static
 warn_unused
 int
 native_gui_pick_directory(LongString* directory){
@@ -115,7 +115,7 @@ native_gui_pick_directory(LongString* directory){
 #pragma clang assume_nonnull begin
 #endif
 
-static 
+static
 warn_unused
 int
 native_gui_pick_directory(LongString* directory){
@@ -182,7 +182,7 @@ native_gui_pick_directory(LongString* directory){
 #pragma clang assume_nonnull begin
 #endif
 
-static 
+static
 warn_unused
 int
 native_gui_pick_directory(LongString* directory){

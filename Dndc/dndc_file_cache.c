@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2022, David Priver
+// Copyright © 2021-2023, David Priver
 //
 #ifndef DNDC_FILE_CACHE_C
 #define DNDC_FILE_CACHE_C
@@ -304,7 +304,7 @@ FileCache_store_text_file(FileCache* cache, StringView spath, StringView data, b
     char* d = Allocator_strndup(cache->allocator, data.text, data.length);
     if(!d)
         return DNDC_ERROR_OOM;
-    
+
     LongString ds = {.text=d, .length=data.length};
     MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
         if(FileCache_key_eq(key, src->sourcepath)){

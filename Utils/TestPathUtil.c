@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2022, David Priver
+// Copyright © 2021-2023, David Priver
 //
 #define BACKSLASH_IS_A_PATH_SEP 1
 #include "path_util.h"

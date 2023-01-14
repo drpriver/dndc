@@ -1,5 +1,5 @@
 //
-// Copyright © 2022, David Priver
+// Copyright © 2022-2023, David Priver
 //
 #define REPLACE_MALLOCATOR
 #define HEAVY_RECORDING
@@ -63,7 +63,7 @@ TestFunction(TestAttrTable){
             case 2:
                 TestExpectTrue(SV_equals(p->key, hello));
                 break;
-            default: 
+            default:
                 TestAssert(0);
                 break;
         }

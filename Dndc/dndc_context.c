@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2022, David Priver
+// Copyright © 2021-2023, David Priver
 //
 #ifndef DNDC_CONTEXT_C
 #define DNDC_CONTEXT_C

@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2022, David Priver
+// Copyright © 2021-2023, David Priver
 //
 #ifndef DNDC_LOCAL_SERVER_H
 #define DNDC_LOCAL_SERVER_H

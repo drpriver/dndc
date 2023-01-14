@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2022, David Priver
+// Copyright © 2021-2023, David Priver
 //
 #include <string.h> // memcpy
 #include <stdlib.h> // malloc, free, qsort

@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2022, David Priver
+// Copyright © 2021-2023, David Priver
 //
 #ifndef ARENA_ALLOCATOR_H
 #define ARENA_ALLOCATOR_H

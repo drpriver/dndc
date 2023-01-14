@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2022, David Priver
+// Copyright © 2021-2023, David Priver
 //
 #ifndef STRING_TABLE_H
 #define STRING_TABLE_H
@@ -43,7 +43,7 @@ struct StringTable {
     char*_Null_unspecified data;
 };
 
-static inline 
+static inline
 size_t
 string_table_alloc_size(size_t capacity){
     return capacity * sizeof(StringView2) + capacity * sizeof(uint32_t);

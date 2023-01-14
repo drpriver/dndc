@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2022, David Priver
+// Copyright © 2021-2023, David Priver
 //
 #ifndef MSTRING_BUILDER_H
 #define MSTRING_BUILDER_H

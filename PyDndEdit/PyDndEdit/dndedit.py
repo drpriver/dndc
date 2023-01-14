@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 #
-# Copyright © 2021-2022, David Priver
+# Copyright © 2021-2023, David Priver
 #
 PYGDNDC_VERSION = '1.0.0'
 __version__ = PYGDNDC_VERSION

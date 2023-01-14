@@ -1,5 +1,5 @@
 //
-// Copyright © 2022, David Priver
+// Copyright © 2022-2023, David Priver
 //
 #ifndef DNDC_JS_H
 #define DNDC_JS_H

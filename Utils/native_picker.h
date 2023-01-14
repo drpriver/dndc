@@ -18,7 +18,7 @@
 #endif
 
 
-static 
+static
 warn_unused
 int
 native_gui_pick_directory(LongString* directory);

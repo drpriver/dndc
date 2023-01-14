@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2022, David Priver
+// Copyright © 2021-2023, David Priver
 //
 #if !defined(_WIN32)
 #include <errno.h> // For reporting write file erors
@@ -609,7 +609,7 @@ main(int argc, char**argv){
                 b64cache, textcache,
                 dndc_stderr_log_func, NULL,
                 dependency_func, &dependency_user_data,
-                dndc_main_ast_func, &mad, 
+                dndc_main_ast_func, &mad,
                 worker,
                 jsargs);
             if(e) return 1;

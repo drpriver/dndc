@@ -1,5 +1,5 @@
 //
-// Copyright © 2022, David Priver
+// Copyright © 2022-2023, David Priver
 //
 
 // Run's qjs's tests to make sure my changes to quickjs haven't broken it.
