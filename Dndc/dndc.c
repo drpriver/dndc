@@ -25,7 +25,7 @@
 #include "Allocators/nullacator.h"
 #include "Utils/measure_time.h"
 #include "Utils/thread_utils.h"
-#ifndef WASM
+#ifndef __wasm__
 #include "Utils/term_util.h"
 #endif
 
@@ -41,7 +41,7 @@ dndc_version(void){
 
 #define ZERO_WORK_JOB ((DndcPreloadImageJob*)(uintptr_t)-1)
 
-#if defined(_WIN32) || defined(WASM)
+#if defined(_WIN32) || defined(__wasm__)
 // provide our own version
 static
 const void*_Nullable
@@ -369,7 +369,7 @@ run_the_dndc(
     }
     // Having const bools is easier to work with than ifdef-ing everywhere
     // and the optimizer will strip out dead code anyway.
-#ifdef WASM
+#ifdef __wasm__
     const bool wasm = true;
 #else
     const bool wasm = false;
@@ -749,7 +749,7 @@ run_the_dndc(
 #include "dndc_md.c"
 #include "Allocators/allocator.c"
 
-#if defined(WASM) || defined(NO_QJS)
+#if defined(__wasm__) || defined(NO_QJS)
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -791,7 +791,7 @@ dndc_free_js_rt(DndcJsRuntime*rt, ArenaAllocator*aa){
 #endif
 
 
-#ifndef WASM
+#ifndef __wasm__
 
 DNDC_API
 DNDC_WARN_UNUSED

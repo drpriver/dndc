@@ -431,7 +431,7 @@ join_thread(ThreadHandle handle){
     unhandled_error_condition(result != WAIT_OBJECT_0);
 }
 
-#elif defined(WASM)
+#elif defined(__wasm__)
 
 typedef struct ThreadHandle ThreadHandle;
 struct ThreadHandle {

@@ -52,7 +52,7 @@ get_terminal_size(void){
     }
     return (TermSize){80, 24};
 }
-#elif defined(WASM)
+#elif defined(__wasm__)
 static inline
 TermSize
 get_terminal_size(void){

@@ -53,7 +53,7 @@ get_t(void){
     assert(ok == TRUE);
     return  (1000000llu * time.QuadPart) / freq.QuadPart;
 }
-#elif defined(WASM)
+#elif defined(__wasm__)
 
 static inline
 uint64_t

@@ -15,7 +15,7 @@
 #include <stdint.h>
 #include <sys/stat.h>
 #if !defined(_WIN32) || defined(USE_C_STDIO)
-#if !defined(WASM)
+#if !defined(__wasm__)
 #include <errno.h>
 #endif
 #endif
@@ -619,7 +619,7 @@ finally:
 #pragma clang diagnostic pop
 #endif
 
-#elif defined(WASM)
+#elif defined(__wasm__)
 static inline
 warn_unused
 FileError

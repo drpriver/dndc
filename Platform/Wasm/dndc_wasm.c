@@ -1,7 +1,6 @@
 //
 // Copyright © 2021-2023, David Priver
 //
-#define WASM 1
 #define DNDC_API static inline
 #include "Dndc/dndc.h"
 #include "Dndc/dndc_funcs.h"

@@ -208,7 +208,7 @@
 // reimplement in a sane way. So in order to accomodate
 // platforms where we need to implement it ourselves
 // (aka WASM), we use this compatibility macro.
-#ifndef WASM
+#ifndef __wasm__
 #define sane_realloc(ptr, orig_size, size) realloc(ptr, size)
 #else
 static void* sane_realloc(void* ptr, size_t orig_size, size_t size);
