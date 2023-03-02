@@ -379,7 +379,7 @@ But Wait, There's More::md
   }
   a {
     text-decoration: none;
-    color: black;
+    color: currentcolor;
     border-bottom: 1px grey dotted;
   }
   div.root {
@@ -390,7 +390,6 @@ But Wait, There's More::md
   }
   nav a {
     border-bottom: 0;
-    color: initial;
     text-decoration: none;
   }
   nav li {

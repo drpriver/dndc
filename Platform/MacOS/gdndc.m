@@ -1428,7 +1428,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     webview.UIDelegate = self;
     toolbar = [[NSToolbar alloc] init];
     toolbar.delegate = self;
-    toolbar.displayMode = NSToolbarDisplayModeIconOnly;
+    // toolbar.displayMode = NSToolbarDisplayModeIconOnly;
 
     self.view = webview;
     return self;

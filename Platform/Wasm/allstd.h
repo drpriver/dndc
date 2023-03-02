@@ -88,6 +88,7 @@ strchr(const char*_Nonnull pointer, int c){
 // static inline
 void*_Null_unspecified
 memcpy(void*_Nonnull dst, const void*_Nonnull src, size_t nbytes){
+    return __builtin_memcpy(dst, src, nbytes);
     char* d = dst;
     const char* s = src;
     while(nbytes--)
@@ -98,6 +99,8 @@ memcpy(void*_Nonnull dst, const void*_Nonnull src, size_t nbytes){
 // static inline
 void
 bzero(void*_Nonnull s, size_t nbytes){
+    __builtin_memset(s, 0, nbytes);
+    return;
     uint64_t* dl = s;
     while((nbytes-=8) > 7)
         *dl++ = 0;
@@ -108,6 +111,7 @@ bzero(void*_Nonnull s, size_t nbytes){
 
 void*
 memset(void*_Nonnull s, int c, size_t n){
+    return __builtin_memset(s, c, n);
     unsigned char* str = s;
     unsigned char ch = c;
     while(n--)

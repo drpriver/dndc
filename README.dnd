@@ -45,7 +45,7 @@ Building::md
 
   setuptools::details
     If you just want the python extension, you can build using the
-    <code>setup.py</code> script. Builds with gcc or clang.
+    <code>setup.py</code> script. Builds with gcc, clang or clang-cl.
 
 Vendored Libraries::deflist
   quickjs::def
