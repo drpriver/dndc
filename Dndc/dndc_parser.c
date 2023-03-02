@@ -167,6 +167,7 @@ analyze_line(DndcContext* ctx){
         uint8x16_t whitespace = vorrq_u8(spacecr, test_tabs);
         uint64_t fatmask = vector128_to_fatmask(whitespace);
         int n = ctz_64(~fatmask)/4;
+
         nspace += n;
         if(n != 16){
             cursor += n;

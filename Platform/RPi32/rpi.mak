@@ -4,7 +4,7 @@ PYTHON:=python3
 PYCFLAGS?=$(shell pkg-config --cflags python3)
 PYLDFLAGS?=$(shell pkg-config --libs python3)
 
-PLATFORM_FLAGS=-march=native -fPIC
+PLATFORM_FLAGS=-march=native -fPIC -mfpu=neon -mtune=native -DRPI4=1
 DEBUG_FLAGS=-DDEBUG\
 	 -DLOG_LEVEL=4\
 	 -fsanitize=undefined\
