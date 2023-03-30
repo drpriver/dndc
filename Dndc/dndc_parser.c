@@ -17,6 +17,11 @@
 #ifdef __ARM_NEON
 #include <arm_neon.h>
 #endif
+
+#ifdef __wasm_simd128__
+#include <wasm_simd128.h>
+#endif
+
 #endif
 
 #ifdef __clang__
@@ -154,6 +159,30 @@ analyze_line(DndcContext* ctx){
         length -= 16;
     }
 #endif
+
+#if 1 && !defined(NO_SIMD) && defined(__wasm_simd128__)
+    v128_t spaces = wasm_i8x16_splat(' ');
+    v128_t cr     = wasm_i8x16_splat('\r');
+    v128_t tabs   = wasm_i8x16_splat('\t');
+    while(length >= 16){
+        v128_t data       = wasm_v128_load(cursor);
+        v128_t test_space = wasm_i8x16_eq(data, spaces);
+        v128_t test_cr    = wasm_i8x16_eq(data, cr);
+        v128_t test_tabs  = wasm_i8x16_eq(data, tabs);
+        v128_t whitespace = test_space | test_cr | test_tabs;
+        unsigned mask = wasm_i8x16_bitmask(whitespace);
+        int n = ctz_32(~mask);
+        nspace += n;
+        if(n != 16){
+            cursor += n;
+            length -= n;
+            goto Lafterwhitespace;
+        }
+        cursor += 16;
+        length -= 16;
+    }
+#endif
+
 #if 1 && !defined(NO_SIMD) && defined(__ARM_NEON)
     uint8x16_t spaces = vdupq_n_u8(' ');
     uint8x16_t cr     = vdupq_n_u8('\r');
@@ -246,6 +275,64 @@ analyze_line(DndcContext* ctx){
         length -= 16;
     }
 #endif
+
+#if 1 && !defined(NO_SIMD) && defined(__wasm_simd128__)
+    v128_t colons  = wasm_i8x16_splat(':');
+    v128_t newline = wasm_i8x16_splat('\n');
+    v128_t zed     = wasm_i8x16_splat(0);
+    while(length >= 17){
+        v128_t data0      = wasm_v128_load(cursor+0);
+        v128_t data1      = wasm_v128_load(cursor+1);
+        v128_t testcolon0 = wasm_i16x8_eq(data0, colons);
+        v128_t testcolon1 = wasm_i16x8_eq(data1, colons);
+        v128_t testnl     = wasm_i8x16_eq(data0, newline);
+        v128_t testzed    = wasm_i8x16_eq(data0, zed);
+        v128_t testend    = testnl | testzed;
+        unsigned colon0    = wasm_i8x16_bitmask(testcolon0);
+        unsigned colon1    = wasm_i8x16_bitmask(testcolon1);
+        unsigned end       = wasm_i8x16_bitmask(testend);
+        if(end){
+            unsigned endoff = ctz_32(end);
+            unsigned colonoff = -1;
+            if(colon0){
+                unsigned off = ctz_32(colon0);
+                if(off < endoff && off < colonoff)
+                    colonoff = off;
+            }
+            if(colon1){
+                unsigned off = ctz_32(colon1)+1;
+                if(off < endoff && off < colonoff)
+                    colonoff = off;
+            }
+            if(colonoff != (unsigned)-1){
+                doublecolon = cursor + colonoff;
+            }
+            endline = cursor + endoff;
+            goto Lfinish;
+        }
+        if(colon0 || colon1){
+            unsigned colonoff = -1;
+            if(colon0){
+                unsigned off = ctz_32(colon0);
+                colonoff = off;
+            }
+            if(colon1){
+                unsigned off = ctz_32(colon1)+1;
+                if(off < colonoff)
+                    colonoff = off;
+            }
+            if(colonoff != (unsigned)-1){
+                doublecolon = cursor + colonoff;
+                cursor += 16;
+                length -= 16;
+                goto Lendonly;
+            }
+        }
+        cursor += 16;
+        length -= 16;
+    }
+#endif
+
 #if 1 && !defined(NO_SIMD) && defined(__ARM_NEON)
     uint8x16_t colons  = vdupq_n_u8(':');
     uint8x16_t newline = vdupq_n_u8('\n');
@@ -327,6 +414,22 @@ analyze_line(DndcContext* ctx){
         __m128i testzed = _mm_cmpeq_epi8(data, zed);
         __m128i testend = _mm_or_si128(testnl, testzed);
         unsigned end = _mm_movemask_epi8(testend);
+        if(end){
+            unsigned endoff = ctz_32(end);
+            endline = cursor + endoff;
+            goto Lfinish;
+        }
+        cursor += 16;
+        length -= 16;
+    }
+#endif
+#if 1 && !defined(NO_SIMD) && defined(__wasm_simd128__)
+    while(length >= 16){
+        v128_t data    = wasm_v128_load(cursor);
+        v128_t testnl  = wasm_i8x16_eq(data, newline);
+        v128_t testzed = wasm_i8x16_eq(data, zed);
+        v128_t testend = testnl | testzed;
+        unsigned end = wasm_i8x16_bitmask(testend);
         if(end){
             unsigned endoff = ctz_32(end);
             endline = cursor + endoff;

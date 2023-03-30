@@ -22,6 +22,11 @@
 #ifdef __ARM_NEON
 #include <arm_neon.h>
 #endif
+
+#ifdef __wasm_simd128__
+#include <wasm_simd128.h>
+#endif
+
 #endif
 
 
@@ -682,6 +687,49 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
         // Safe to store as we did the ensure additional above and we only
         // write 1 byte of output per byte of input in this loop.
         _mm_storeu_si128((__m128i_u*)sbdata, data);
+        cursor += 16;
+        sbdata += 16;
+        length -= 16;
+        text += 16;
+    }
+    sb->cursor = cursor;
+#endif
+#if 1 && !defined(NO_SIMD) && defined(__wasm_simd128__)
+    size_t cursor = sb->cursor;
+    char* sbdata = sb->data + cursor;
+    v128_t lsquare = wasm_i8x16_splat('[');
+    v128_t hyphen  = wasm_i8x16_splat('-');
+    v128_t langle  = wasm_i8x16_splat('<');
+    v128_t rangle  = wasm_i8x16_splat('>');
+    v128_t amp     = wasm_i8x16_splat('&');
+    v128_t control = wasm_i8x16_splat(32);
+    while(length >= 16){
+        // This code is straightforward. Check each 16byte chunk for the
+        // presence of one of the special characters.  Also check for control
+        // characters (ascii < 32), as those are not valid in html, with the
+        // exception of newline.
+        //
+        // For the common case of no special character this is much faster
+        // than the byte at a time processing we'd otherwise have to do.
+        v128_t data         = wasm_v128_load(text);
+        v128_t test_lsquare = wasm_i8x16_eq(data, lsquare);
+        v128_t test_hyphen  = wasm_i8x16_eq(data, hyphen);
+        v128_t test_langle  = wasm_i8x16_eq(data, langle);
+        v128_t test_rangle  = wasm_i8x16_eq(data, rangle);
+        v128_t test_amp     = wasm_i8x16_eq(data, amp);
+        v128_t test_control = wasm_i8x16_eq(data, control);
+        // Combine the results together so we can do a single check
+        v128_t Ored  = test_lsquare | test_hyphen;
+        v128_t Ored2 = test_langle | test_rangle;
+        v128_t Ored3 = test_amp | test_control;
+        v128_t Ored4 = Ored | Ored2;
+        v128_t Ored5 = Ored3 | Ored4;
+        int had_it = wasm_i8x16_bitmask(Ored5);
+        if(had_it)
+            break;
+        // Safe to store as we did the ensure additional above and we only
+        // write 1 byte of output per byte of input in this loop.
+        wasm_v128_store(sbdata, data);
         cursor += 16;
         sbdata += 16;
         length -= 16;
