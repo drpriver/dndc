@@ -12,6 +12,9 @@
 #ifdef _WIN32
 #define VC_EXTRALEAN
 #define WIN32_LEAN_AND_MEAN
+#ifdef _MSC_VER
+#pragma warning( disable : 5105)
+#endif
 #include <Windows.h>
 #include <conio.h>
 #include <io.h>
@@ -102,6 +105,7 @@ read_one(char* buff){
         int c = _getch();
         DBG("c = %d\n", c);
         switch(c){
+            case 0:
             case 224:{
                 int next = _getch();
                 DBG("next = %d\n", next);
@@ -135,7 +139,9 @@ read_one(char* buff){
                         *buff = '\x05';
                         return 1;
                     case 'S': // del
-                        *buff = '\x7f';
+                        // *buff = '\x7f';
+                        *buff = '\033';
+                        remaining = "3~";
                         return 1;
 
                         // insert
@@ -318,21 +324,90 @@ get_line_internal_loop(GetInputCtx* ctx){
         // CTRL_Y = 25,
         CTRL_Z = 26,        // Ctrl-z
         ESC = 27,           // Escape
-        BACKSPACE =  127    // Backspace
+        BACKSPACE =  127,   // Backspace
+        // fake key codes
+        #undef DELETE
+        DELETE    = -1,
+        UP        = -2,
+        DOWN      = -3,
+        LEFT      = -4,
+        RIGHT     = -5,
+        HOME      = -6,
+        END       = -7,
+        SHIFT_TAB = -8,
     };
     for(;;){
-        char c;
+        char _c;
         char sequence[8];
-        ssize_t nread = read_one(&c);
+        ssize_t nread = read_one(&_c);
+        int c = (int)(unsigned char)_c;
         if(nread <= 0)
-            return ctx->buff_count;
-        if(c != TAB){
+            return ctx->buff_count?ctx->buff_count:-1;
+        if(c == ESC){
+            DBG("ESC\n");
+            if(read_one(sequence) == -1) return -1;
+            if(read_one(sequence+1) == -1) return -1;
+            DBG("sequence[0] = %d\n", sequence[0]);
+            DBG("sequence[1] = %d\n", sequence[1]);
+            if(sequence[0] == '['){
+                if (sequence[1] >= '0' && sequence[1] <= '9'){
+                    // Extended escape, read additional byte.
+                    if (read_one(sequence+2) == -1) return -1;
+                    if (sequence[2] == '~') {
+                        switch(sequence[1]) {
+                        case '3': /* Delete key. */
+                            c = DELETE;
+                            break;
+                        }
+                    }
+                }
+                else {
+                    switch(sequence[1]) {
+                    case 'A': // Up
+                        c = UP;
+                        break;
+                    case 'B': // Down
+                        c = DOWN;
+                        break;
+                    case 'C': // Right
+                        c = RIGHT;
+                        break;
+                    case 'D': // Left
+                        c = LEFT;
+                        break;
+                    case 'H': // Home
+                        c = HOME;
+                        break;
+                    case 'F': // End
+                        c = END;
+                        break;
+                    case 'Z': // Shift-tab
+                        c = SHIFT_TAB;
+                        break;
+                    }
+                }
+            }
+            else if(sequence[0] == 'O'){
+                switch(sequence[1]){
+                    case 'H': // Home
+                        c = HOME;
+                        break;
+                    case 'F': // End
+                        c = END;
+                        break;
+                }
+            }
+        }
+        if(c != TAB && c != SHIFT_TAB){
             in_tab = 0;
             ctx->tab_completion_cookie = 0;
             n_tabs = 0;
         }
-        if(c == TAB){
-            n_tabs++;
+        if(c == TAB || (c == SHIFT_TAB && n_tabs > 0)){
+            if(c == SHIFT_TAB)
+                n_tabs--;
+            else
+                n_tabs++;
             // ignore tabs if no completion function
             if(!ctx->tab_completion_func)
                 continue;
@@ -375,13 +450,14 @@ get_line_internal_loop(GetInputCtx* ctx){
                     redisplay(ctx);
                 }
                 break;
+            case DELETE:
             case CTRL_D:
                 DBG("CTRL_D\n");
                 if(ctx->buff_count > 0){
                     delete_right(ctx);
                     redisplay(ctx);
                 }
-                else {
+                else if(c != DELETE) {
                     write_data("^D\r\n", 4);
                     return -1;
                 }
@@ -398,6 +474,7 @@ get_line_internal_loop(GetInputCtx* ctx){
                     redisplay(ctx);
                 }
                 break;
+            case LEFT:
             case CTRL_B:
                 DBG("CTRL_B\n");
                 if(ctx->buff_cursor > 0){
@@ -405,6 +482,7 @@ get_line_internal_loop(GetInputCtx* ctx){
                     redisplay(ctx);
                 }
                 break;
+            case RIGHT:
             case CTRL_F:
                 DBG("CTRL_F\n");
                 if(ctx->buff_cursor != ctx->buff_count){
@@ -412,91 +490,29 @@ get_line_internal_loop(GetInputCtx* ctx){
                     redisplay(ctx);
                 }
                 break;
+            case UP:
             case CTRL_P:
                 DBG("CTRL_P\n");
                 change_history(ctx, -1);
                 redisplay(ctx);
                 break;
+            case DOWN:
             case CTRL_N:
                 DBG("CTRL_N\n");
                 change_history(ctx, +1);
                 redisplay(ctx);
                 break;
-            case ESC: // beginning of escape sequence
-                DBG("ESC\n");
-                if(read_one(sequence) == -1) return -1;
-                if(read_one(sequence+1) == -1) return -1;
-                DBG("sequence[0] = %d\n", sequence[0]);
-                DBG("sequence[1] = %d\n", sequence[1]);
-
-                // ESC [ sequences
-                if(sequence[0] == '['){
-                    if (sequence[1] >= '0' && sequence[1] <= '9'){
-                        // Extended escape, read additional byte.
-                        if (read_one(sequence+2) == -1) return -1;
-                        if (sequence[2] == '~') {
-                            switch(sequence[1]) {
-                            case '3': /* Delete key. */
-                                delete_right(ctx);
-                                redisplay(ctx);
-                                break;
-                            }
-                        }
-                    }
-                    else {
-                        switch(sequence[1]) {
-                        case 'A': // Up
-                            change_history(ctx, -1);
-                            redisplay(ctx);
-                            break;
-                        case 'B': // Down
-                            change_history(ctx, +1);
-                            redisplay(ctx);
-                            break;
-                        case 'C': // Right
-                            if(ctx->buff_cursor != ctx->buff_count){
-                                ctx->buff_cursor++;
-                                redisplay(ctx);
-                            }
-                            break;
-                        case 'D': // Left
-                            if(ctx->buff_cursor > 0){
-                                ctx->buff_cursor--;
-                                redisplay(ctx);
-                            }
-                            break;
-                        case 'H': // Home
-                            ctx->buff_cursor = 0;
-                            redisplay(ctx);
-                            break;
-                        case 'F': // End
-                            ctx->buff_cursor = ctx->buff_count;
-                            redisplay(ctx);
-                            break;
-                        case 'Z': // Shift-tab
-                            break;
-                        }
-                    }
-                }
-                else if(sequence[0] == 'O'){
-                    switch(sequence[1]){
-                        case 'H': // Home
-                            ctx->buff_cursor = 0;
-                            redisplay(ctx);
-                            break;
-                        case 'F': // End
-                            ctx->buff_cursor = ctx->buff_count;
-                            redisplay(ctx);
-                            break;
-                    }
-                }
+            case ESC:
                 break;
             default:
-                DBG("default ('%c')\n", c);
-                if(c < 27)
-                    continue;
-                insert_char_into_line(ctx, c);
-                redisplay(ctx);
+                if(c > 0){
+                    DBG("default ('%d')\n", c);
+                    DBG("default ('%c')\n", c);
+                    if((unsigned char)c < 27)
+                        continue;
+                    insert_char_into_line(ctx, c);
+                    redisplay(ctx);
+                }
                 break;
             case CTRL_C:
                 DBG("CTRL_C\n");
@@ -518,11 +534,13 @@ get_line_internal_loop(GetInputCtx* ctx){
                 ctx->buff_count = ctx->buff_cursor;
                 redisplay(ctx);
                 break;
+            case HOME:
             case CTRL_A: // Home
                 DBG("CTRL_A\n");
                 ctx->buff_cursor = 0;
                 redisplay(ctx);
                 break;
+            case END:
             case CTRL_E: // End
                 DBG("CTRL_E\n");
                 ctx->buff_cursor = ctx->buff_count;
