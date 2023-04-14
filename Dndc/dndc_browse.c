@@ -18,6 +18,7 @@
 
 #if defined(_WIN32)
 #include <direct.h>
+#include <synchapi.h>
 #include "Platform/Windows/wincli.h"
 #elif defined(__APPLE__) || defined(__linux__)
 #include <unistd.h>
@@ -80,7 +81,11 @@ wrap_report(void* ud, int type, const char* filename, int filename_len, int line
 }
 
 THREADFUNC(quit_after){
+#ifdef _WIN32
+    Sleep((intptr_t)thread_arg);
+#else
     sleep((intptr_t)thread_arg);
+#endif
     puts("\r");
     exit(0);
     return 0;
@@ -259,17 +264,21 @@ main(int argc, char** argv){
         .server = server,
     };
 
-    ThreadHandle thrd;
-    int th_err = create_thread(&thrd, &serve, &data);
-    if(th_err != 0) return 1;
+    {
+        ThreadHandle thrd;
+        int th_err = create_thread(&thrd, &serve, &data);
+        if(th_err != 0) return 1;
+    }
     Entries entries = {0};
     recursive_glob_suffix(directory, SV(".dnd"), &entries, depth);
     if(!entries.count) return 1;
     for(size_t i = 0; i < entries.count; i++){
         if(SV_equals(entries.data[i], SV("index.dnd"))) goto LHasIndex;
     }
-    int err = Marray_push__StringView(&entries, MALLOCATOR, SV("index.dnd"));
-    unhandled_error_condition(err);
+    {
+        int err = Marray_push__StringView(&entries, MALLOCATOR, SV("index.dnd"));
+        unhandled_error_condition(err);
+    }
     LHasIndex:
     print_entries(entries);
     struct ByteDistanceCompleterContext tabctx = {
