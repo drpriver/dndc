@@ -42,11 +42,14 @@
 // structure so count, capacity, etc.  don't have to be accessed through a
 // pointer.
 //
-// If expect a larger amount of data, you can skip the "start as an array"
+// If you expect a larger amount of data, you can skip the "start as an array"
 // stage.  Lots of things to tweak in hash table design.
 //
 // Note that this file doesn't #include any Dndc files, so it is easy
 // to use in another project using the Allocators and Utils.
+//
+// TODO:
+//   - test ATTRIBUTE_THRESH for optimal threshold
 
 
 

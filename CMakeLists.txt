@@ -191,6 +191,8 @@ add_test(strutil TestStrUtils)
 # Dndc tests
 add_executable(TestMsbExtension Utils/TestMsbExtension.c)
 add_test(msbext TestMsbExtension)
+add_executable(TestAttrTable Dndc/TestAttrTable.c)
+add_test(attr-table TestAttrTable)
 add_test(
     NAME testpydndc
     COMMAND ${Python3_EXECUTABLE} Dndc/testpydndc.py --extension-binary $<TARGET_FILE:pydndc>

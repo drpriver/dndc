@@ -150,6 +150,7 @@ test('pathutil', executable('TestPathUtil', 'Utils/TestPathUtil.c', kwargs:testk
 test('rarray', executable('TestRarray', 'Utils/TestRarray.c', kwargs:testkw, c_args:ignore_bogus_deprecations, dependencies:[thread_dep]))
 test('strutil', executable('TestStrUtils', 'Utils/TestStrUtils.c', kwargs:testkw, c_args:ignore_bogus_deprecations, dependencies:[thread_dep]))
 test('msbext', executable('TestMsbExtension', 'Utils/TestMsbExtension.c', kwargs:testkw, c_args:ignore_bogus_deprecations, dependencies:[thread_dep]))
+test('attr-table', executable('TestAttrTable', 'Dndc/TestAttrTable.c', kwargs:testkw, c_args:ignore_bogus_deprecations, dependencies:[thread_dep]))
 test('dndc',
   executable('TestDndc',
     'Dndc/TestDndc.c',

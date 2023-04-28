@@ -69,6 +69,113 @@ TestFunction(TestAttrTable){
         }
     }
 
+    StringView more_keys[] = {
+        SV("a"),
+        SV("b"),
+        SV("c"),
+        SV("d"),
+        SV("e"),
+        SV("f"),
+        SV("g"),
+        SV("h"),
+        SV("i"),
+        SV("j"),
+        SV("k"),
+        SV("l"),
+        SV("m"),
+        SV("n"),
+        SV("o"),
+        SV("p"),
+    };
+    for(size_t i = 0; i < (sizeof more_keys) / (sizeof more_keys[0]); i++){
+        StringView k = more_keys[i];
+        if(i & 1){
+            int err = AttrTable_set(&table, a, k, k);
+            TestAssertFalse(err);
+            TestAssert(AttrTable_has(table, k));
+            StringView* v = NULL;
+            err = AttrTable_alloc(&table, a, k, &v);
+            TestAssertFalse(err);
+            TestAssert(v);
+            TestExpectEquals2(SV_equals, *v, k);
+
+        }
+        else {
+            StringView* v = NULL;
+            int err = AttrTable_alloc(&table, a, k, &v);
+            TestAssert(v);
+            TestAssertFalse(err);
+            TestAssert(AttrTable_has(table, k));
+            *v = k;
+            StringView v2 = SV("-1");
+            err = AttrTable_get(table, k, &v2);
+            TestAssertFalse(err);
+            TestExpectEquals2(SV_equals, k, v2);
+        }
+    }
+
+    {
+        TestAssertFalse(AttrTable_has(table, SV("-1")));
+        StringView v = SV("-2");
+        int err = AttrTable_get(table, SV("-1"), &v);
+        TestAssert(err);
+        TestExpectEquals2(SV_equals, v, SV("-2"));
+    }
+    for(size_t i = 0; i < 4; i++){
+        StringView k = more_keys[i];
+        TestAssert(AttrTable_has(table, k));
+        int deleted = AttrTable_del(table, k);
+        TestAssert(deleted);
+        deleted = AttrTable_del(table, k);
+        TestAssertFalse(deleted);
+        TestAssertFalse(AttrTable_has(table, k));
+    }
+
+    StringView even_more_keys[] = {
+        SV("A"),
+        SV("B"),
+        SV("C"),
+        SV("D"),
+        SV("E"),
+        SV("F"),
+        SV("G"),
+        SV("H"),
+        SV("I"),
+        SV("J"),
+        SV("K"),
+        SV("L"),
+        SV("M"),
+        SV("N"),
+        SV("O"),
+        SV("P"),
+    };
+    for(size_t i = 0; i < (sizeof even_more_keys) / (sizeof even_more_keys[0]); i++){
+        StringView k = even_more_keys[i];
+        if(i & 1){
+            int err = AttrTable_set(&table, a, k, k);
+            TestAssertFalse(err);
+            TestAssert(AttrTable_has(table, k));
+            StringView* v = NULL;
+            err = AttrTable_alloc(&table, a, k, &v);
+            TestAssertFalse(err);
+            TestAssert(v);
+            TestExpectEquals2(SV_equals, *v, k);
+
+        }
+        else {
+            StringView* v = NULL;
+            int err = AttrTable_alloc(&table, a, k, &v);
+            TestAssert(v);
+            TestAssertFalse(err);
+            TestAssert(AttrTable_has(table, k));
+            *v = k;
+            StringView v2 = SV("-1");
+            err = AttrTable_get(table, k, &v2);
+            TestAssertFalse(err);
+            TestExpectEquals2(SV_equals, k, v2);
+        }
+    }
+
     AttrTable_cleanup(table, a);
     TESTEND();
 }
