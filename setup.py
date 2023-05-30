@@ -26,7 +26,7 @@ with open('Documentation/OVERVIEW.md', encoding='utf-8') as fp:
 
 setup(
     name='pydndc',
-    version='1.0.1',
+    version='1.0.2',
     license='Proprietary',
     description='dndc, but from python',
     long_description=LONG_DESCRIPTION,

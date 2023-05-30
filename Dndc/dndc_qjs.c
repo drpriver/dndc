@@ -369,7 +369,8 @@ js_arena_malloc(QJSMallocState*s, size_t size){
 static
 void
 js_arena_free(QJSMallocState*s, void* pointer){
-    return;
+    // return;
+    // Below no longer seems to be true?
     // We crash in TestDndcAlloc if we actually free pointers here.  Maybe
     // something in qjs is not checking the return value of malloc properly.
     if(!pointer) return;
