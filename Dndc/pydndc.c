@@ -100,7 +100,7 @@ enum {CONTEXTPY_WHITELIST = 0
 };
 
 //
-// Wrappers a python callable so that it can be called as a DndcLogger
+// Wraps a python callable so that it can be called as a DndcLogger
 // user_data is actually a pointer to the  PyObject*, so it needs to be a static PyObject*
 // or be in some object that is guaranteed to live long enough.
 static
