@@ -90,7 +90,7 @@ TestFunction(TestAttrTable){
     for(size_t i = 0; i < (sizeof more_keys) / (sizeof more_keys[0]); i++){
         StringView k = more_keys[i];
         if(i & 1){
-            int err = AttrTable_set(&table, a, k, k);
+            err = AttrTable_set(&table, a, k, k);
             TestAssertFalse(err);
             TestAssert(AttrTable_has(table, k));
             StringView* v = NULL;
@@ -102,7 +102,7 @@ TestFunction(TestAttrTable){
         }
         else {
             StringView* v = NULL;
-            int err = AttrTable_alloc(&table, a, k, &v);
+            err = AttrTable_alloc(&table, a, k, &v);
             TestAssert(v);
             TestAssertFalse(err);
             TestAssert(AttrTable_has(table, k));
@@ -117,7 +117,7 @@ TestFunction(TestAttrTable){
     {
         TestAssertFalse(AttrTable_has(table, SV("-1")));
         StringView v = SV("-2");
-        int err = AttrTable_get(table, SV("-1"), &v);
+        err = AttrTable_get(table, SV("-1"), &v);
         TestAssert(err);
         TestExpectEquals2(SV_equals, v, SV("-2"));
     }
@@ -152,7 +152,7 @@ TestFunction(TestAttrTable){
     for(size_t i = 0; i < (sizeof even_more_keys) / (sizeof even_more_keys[0]); i++){
         StringView k = even_more_keys[i];
         if(i & 1){
-            int err = AttrTable_set(&table, a, k, k);
+            err = AttrTable_set(&table, a, k, k);
             TestAssertFalse(err);
             TestAssert(AttrTable_has(table, k));
             StringView* v = NULL;
@@ -164,7 +164,7 @@ TestFunction(TestAttrTable){
         }
         else {
             StringView* v = NULL;
-            int err = AttrTable_alloc(&table, a, k, &v);
+            err = AttrTable_alloc(&table, a, k, &v);
             TestAssert(v);
             TestAssertFalse(err);
             TestAssert(AttrTable_has(table, k));
