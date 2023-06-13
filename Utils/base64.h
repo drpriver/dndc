@@ -6,7 +6,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <assert.h>
-#include "MStringBuilder.h"
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -302,20 +301,6 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
     assert(size_used == size_needed);
     return size_needed;
 #endif
-}
-
-// Writes the base64 representation of the data buffer into the builder.
-static inline
-void
-msb_write_b64(MStringBuilder* restrict sb, const void* data, size_t length){
-    size_t size_needed = base64_encode_size(length);
-    if(unlikely(!size_needed))
-        return;
-    int err = _check_msb_remaining_size(sb, size_needed);
-    if(unlikely(err)) return;
-    size_t size_used = base64_encode(sb->data + sb->cursor, size_needed, data, length);
-    assert(size_used == size_needed);
-    sb->cursor += size_used;
 }
 
 // Decodes a base64 string into a data buffer.

@@ -6,6 +6,7 @@
 #include "testing.h"
 #include "long_string.h"
 #include "base64.h"
+#include "msb_base64.h"
 #include "Allocators/testing_allocator.h"
 
 TestFunction(TestBase64){

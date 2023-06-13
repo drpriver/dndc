@@ -6,7 +6,7 @@
 #include <string.h>
 #include "dndc_file_cache.h"
 #include "Utils/file_util.h"
-#include "Utils/base64.h"
+#include "Utils/msb_base64.h"
 #include "Utils/hash_func.h"
 
 #ifdef __clang__
