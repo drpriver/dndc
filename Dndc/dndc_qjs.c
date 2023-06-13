@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2023, David Priver
+// Copyright © 2021-2023, David Priver <david@davidpriver.com>
 //
 #ifndef DNDC_QJS_C
 #define DNDC_QJS_C

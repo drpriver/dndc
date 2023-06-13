@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2023, David Priver
+// Copyright © 2021-2023, David Priver <david@davidpriver.com>
 //
 #ifndef RECURSIVE_GLOB_C
 #define RECURSIVE_GLOB_C

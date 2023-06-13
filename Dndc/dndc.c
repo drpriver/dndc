@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2023, David Priver
+// Copyright © 2021-2023, David Priver <david@davidpriver.com>
 //
 // define DNDC_API before including dndc.h
 #include "dndc_api_def.h"

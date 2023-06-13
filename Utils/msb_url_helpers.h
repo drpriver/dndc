@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2023, David Priver
+// Copyright © 2021-2023, David Priver <david@davidpriver.com>
 //
 #ifndef MSB_URL_HELPERS_H
 #define MSB_URL_HELPERS_H

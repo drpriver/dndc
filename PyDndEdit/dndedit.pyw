@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright © 2021-2022, David Priver
+# Copyright © 2021-2023, David Priver <david@davidpriver.com>
 #
 import sys
 pydndcver = '1.0.1'

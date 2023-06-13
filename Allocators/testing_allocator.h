@@ -1,5 +1,5 @@
 //
-// Copyright © 2022-2023, David Priver
+// Copyright © 2022-2023, David Priver <david@davidpriver.com>
 //
 #ifndef TESTING_ALLOCATOR_H
 #define TESTING_ALLOCATOR_H

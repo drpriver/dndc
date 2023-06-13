@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2022, David Priver
+// Copyright © 2021-2022, David Priver <david@davidpriver.com>
 //
 #import <Cocoa/Cocoa.h>
 #import <Webkit/WebKit.h>

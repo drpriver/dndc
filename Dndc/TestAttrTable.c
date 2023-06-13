@@ -1,5 +1,5 @@
 //
-// Copyright © 2022-2023, David Priver
+// Copyright © 2022-2023, David Priver <david@davidpriver.com>
 //
 #define REPLACE_MALLOCATOR
 #define HEAVY_RECORDING
