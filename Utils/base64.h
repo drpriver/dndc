@@ -67,6 +67,8 @@ base64_decode_size(size_t src_length){
 // Base64 encodes the data into the output string.
 // This uses '+' and '/' and does not pad the end with '='.
 // Some implementations don't like that, but they are wrong!
+//
+// Returns the amount of space actually used for encoding.
 static inline
 size_t
 base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, size_t src_length){
@@ -362,38 +364,38 @@ base64_decode(void* restrict dst, size_t dst_length, const uint8_t* restrict src
 #else
     // Totally unreadable, but standard-compliant
     const uint8_t base64_decode_table[] = {
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0x3e, 0xff, 0xff, 0xff, 0x3f,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  0x3e, BAD,  BAD,  BAD,  0x3f,
         0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b,
-        0x3c, 0x3d, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x3c, 0x3d, BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
         0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
         0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16,
-        0x17, 0x18, 0x19, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
+        0x17, 0x18, 0x19, BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
         0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
         0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30,
-        0x31, 0x32, 0x33, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0x31, 0x32, 0x33, BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
+        BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,  BAD,
     };
 #endif
     _Static_assert(sizeof(base64_decode_table) == 256, "");
@@ -407,20 +409,18 @@ base64_decode(void* restrict dst, size_t dst_length, const uint8_t* restrict src
     uint8_t* out = dst;
     size_t length = src_length;
     // Read 4 chars at a time into 3 bytes
-    {
-        for(;length > 3;length-=4){
-            unsigned v1 = base64_decode_table[*(src++)];
-            unsigned v2 = base64_decode_table[*(src++)];
-            unsigned v3 = base64_decode_table[*(src++)];
-            unsigned v4 = base64_decode_table[*(src++)];
-            bad |= v1;
-            bad |= v2;
-            bad |= v3;
-            bad |= v4;
-            *(out++) = (v1 << 2) | (v2 >> 4);
-            *(out++) = (v2 << 4) | (v3 >> 2);
-            *(out++) = (v3 << 6) | v4;
-        }
+    for(;length > 3;length-=4){
+        unsigned v1 = base64_decode_table[*(src++)];
+        unsigned v2 = base64_decode_table[*(src++)];
+        unsigned v3 = base64_decode_table[*(src++)];
+        unsigned v4 = base64_decode_table[*(src++)];
+        bad |= v1;
+        bad |= v2;
+        bad |= v3;
+        bad |= v4;
+        *(out++) = (v1 << 2) | (v2 >> 4);
+        *(out++) = (v2 << 4) | (v3 >> 2);
+        *(out++) = (v3 << 6) | v4;
     }
     {
         // Since I did the optimization above, this becomes the cleanup loop instead
@@ -457,19 +457,11 @@ base64_decode(void* restrict dst, size_t dst_length, const uint8_t* restrict src
         // It's possible the leftover bits are the result of padding with zeros.
         if(size_needed == dst_length){
             switch(bits_remaining){
-                case 0:
-                    break;
-                case 2:
-                    *(out++) = remainder << 6;
-                    break;
-                case 4:
-                    *(out++) = remainder << 4;
-                    break;
-                case 6:
-                    *(out++) = remainder << 2;
-                    break;
-                default:
-                    unreachable();
+                case 0: break;
+                case 2: *(out++) = remainder << 6; break;
+                case 4: *(out++) = remainder << 4; break;
+                case 6: *(out++) = remainder << 2; break;
+                default: unreachable();
             }
         }
         else {
