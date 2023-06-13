@@ -159,6 +159,8 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
     size_t len = src_length;
 
     // unsigned here is important!
+    // But, note that we still need to cast before a shift as unsigned char
+    // gets promoted to int.
     uint8_t t1, t2, t3, t4, t5, t6;
 
     if(len > 5) {
@@ -170,16 +172,16 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
             t5 = str[i+4];
             t6 = str[i+5];
             *d++ = base64_encode_table0[t1];
-            unsigned index1 = ((t1 & 0x3) << 4) | ((t2 >> 4) & 0xf);
+            unsigned index1 = ((t1 & 0x3u) << 4) | (((unsigned)t2 >> 4) & 0xfu);
             *d++ = base64_encode_table1[index1];
-            unsigned index2 = ((t2 & 0xf) << 2) | ((t3 >> 6) & 0x3);
+            unsigned index2 = ((t2 & 0xfu) << 2) | (((unsigned)t3 >> 6) & 0x3u);
             *d++ = base64_encode_table1[index2];
             *d++ = base64_encode_table2[t3];
 
             *d++ = base64_encode_table0[t4];
-            unsigned index3 = ((t4 & 0x3) << 4) | ((t5 >> 4) & 0xf);
+            unsigned index3 = ((t4 & 0x3u) << 4) | (((unsigned)t5 >> 4) & 0xfu);
             *d++ = base64_encode_table1[index3];
-            unsigned index4 = ((t5 & 0xf) << 2) | ((t6 >> 6) & 0x3);
+            unsigned index4 = ((t5 & 0xfu) << 2) | (((unsigned)t6 >> 6) & 0x3u);
             *d++ = base64_encode_table1[index4];
             *d++ = base64_encode_table2[t6];
         }
@@ -189,9 +191,9 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
         t2 = str[i+1];
         t3 = str[i+2];
         *d++ = base64_encode_table0[t1];
-        unsigned index1 = ((t1 & 0x3) << 4) | ((t2 >> 4) & 0xf);
+        unsigned index1 = ((t1 & 0x3u) << 4) | (((unsigned)t2 >> 4) & 0xfu);
         *d++ = base64_encode_table1[index1];
-        unsigned index2 = ((t2 & 0xf) << 2) | ((t3 >> 6) & 0x3);
+        unsigned index2 = ((t2 & 0xfu) << 2) | (((unsigned)t3 >> 6) & 0x3u);
         *d++ = base64_encode_table1[index2];
         *d++ = base64_encode_table2[t3];
         i += 3;
@@ -203,13 +205,13 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
         case 1:
             t1 = str[i];
             *d++ = base64_encode_table0[t1];
-            *d++ = base64_encode_table1[(t1 & 0x3) << 4];
+            *d++ = base64_encode_table1[(t1 & 0x3u) << 4];
             break;
         default: // case 2
             t1 = str[i]; t2 = str[i+1];
             *d++ = base64_encode_table0[t1];
-            *d++ = base64_encode_table1[((t1 & 0x3) << 4) | ((t2 >> 4) & 0xf)];
-            *d++ = base64_encode_table2[(t2 & 0xf) << 2];
+            *d++ = base64_encode_table1[((t1 & 0x3u) << 4) | (((unsigned)t2 >> 4) & 0xfu)];
+            *d++ = base64_encode_table2[(t2 & 0xfu) << 2];
     }
     ptrdiff_t used_length = d - (uint8_t*)dst;
     assert(used_length == (ptrdiff_t)dst_length);
