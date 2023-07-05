@@ -605,14 +605,14 @@ TestFunction(TestCrashesFixed){
         ;
     struct {
         LongString name;
-        bool error; // if we expect an error
+        _Bool error; // if we expect an error
         uint64_t flags;
         enum OutputTarget target;
     } cases[] = {
-        {.name=LS("TestCases/case1.dnd"),  .error=false, .flags=FLAGS, .target=OUTPUT_HTML},
-        {.name=LS("TestCases/case2.dnd"),  .error=true,  .flags=FLAGS, .target=OUTPUT_HTML},
-        {.name=LS("TestCases/case3.dnd"),  .error=true,  .flags=FLAGS, .target=OUTPUT_HTML},
-        {.name=LS("TestCases/oob_md.dnd"), .error=false, .flags=FLAGS, .target=OUTPUT_MD},
+        {.name=LS("TestCases/case1.dnd"),  .error=0, .flags=FLAGS, .target=OUTPUT_HTML},
+        {.name=LS("TestCases/case2.dnd"),  .error=1,  .flags=FLAGS, .target=OUTPUT_HTML},
+        {.name=LS("TestCases/case3.dnd"),  .error=1,  .flags=FLAGS, .target=OUTPUT_HTML},
+        {.name=LS("TestCases/oob_md.dnd"), .error=0, .flags=FLAGS, .target=OUTPUT_MD},
     };
     for(size_t i = 0; i < arrlen(cases); i++){
         LongString output = {0};
@@ -646,11 +646,11 @@ TestFunction(TestEscapedFixed){
         ;
     struct {
         LongString name;
-        bool error; // if we expect an error
+        _Bool error; // if we expect an error
         uint64_t flags;
     } cases[] = {
-        {.name=LS("TestCases/class_escape.dnd"), .error=true, .flags=FLAGS},
-        {.name=LS("TestCases/toc_escape.dnd"), .error=false, .flags=FLAGS},
+        {.name=LS("TestCases/class_escape.dnd"), .error=1, .flags=FLAGS},
+        {.name=LS("TestCases/toc_escape.dnd"), .error=0, .flags=FLAGS},
     };
     for(size_t i = 0; i < arrlen(cases); i++){
         LongString output = {0};
@@ -1129,11 +1129,11 @@ TestFunction(TestFileCache){
     uint64_t flags = 0;
     DndcLongString output;
     int e = run_the_dndc(OUTPUT_HTML, flags, SV(""), input, SV(""), &output, &cache, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
-    TestExpectEquals(FileCache_has_file(&cache, SV("Makefile")), true);
+    TestExpectEquals(FileCache_has_file(&cache, SV("Makefile")), 1);
     TestExpectEquals(FileCache_n_paths(&cache), 1);
     int removed = FileCache_maybe_remove(&cache, SV("Makefile"));
     TestExpectEquals(removed, 1);
-    TestExpectEquals(FileCache_has_file(&cache, SV("Makefile")), false);
+    TestExpectEquals(FileCache_has_file(&cache, SV("Makefile")), 0);
     TestExpectEquals(FileCache_n_paths(&cache), 0);
     FileCache_clear(&cache);
     for(size_t i = 0; i < ra.count; i++){

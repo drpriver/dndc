@@ -29,7 +29,7 @@ TestFunction(TestBaseName){
     for(size_t i = 0; i < arrlen(cases); i++){
         StringView expected = cases[i].expected;
         StringView result = path_basename(cases[i].input);
-        bool equality = SV_equals(expected, result);
+        _Bool equality = SV_equals(expected, result);
         TestExpectTrue(equality);
         if(!equality){
             TestPrintValue("result", result);
@@ -59,7 +59,7 @@ TestFunction(TestDirName){
     for(size_t i = 0; i < arrlen(cases); i++){
         StringView expected = cases[i].expected;
         StringView result = path_dirname(cases[i].input);
-        bool equality = SV_equals(expected, result);
+        _Bool equality = SV_equals(expected, result);
         TestExpectTrue(equality);
         if(!equality){
             TestPrintValue("result", result);
@@ -99,7 +99,7 @@ TestFunction(TestStripExtension){
     for(size_t i = 0; i < arrlen(cases); i++){
         StringView expected = cases[i].expected;
         StringView result = path_strip_extension(cases[i].input);
-        bool equality = SV_equals(expected, result);
+        _Bool equality = SV_equals(expected, result);
         TestExpectTrue(equality);
         if(!equality){
             TestPrintValue("result", result);

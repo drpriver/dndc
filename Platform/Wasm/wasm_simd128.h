@@ -11,7 +11,6 @@
 #ifndef __WASM_SIMD128_H
 #define __WASM_SIMD128_H
 
-#include <stdbool.h>
 #include <stdint.h>
 
 // User-facing type
@@ -1138,7 +1137,7 @@ wasm_v128_andnot(v128_t __a, v128_t __b) {
 
 static inline
 __DEFAULT_FN_ATTRS
-bool
+_Bool
 wasm_v128_any_true(v128_t __a) {
     return __builtin_wasm_any_true_v128((__i8x16)__a);
 }
@@ -1166,7 +1165,7 @@ wasm_i8x16_neg(v128_t __a) {
 
 static inline
 __DEFAULT_FN_ATTRS
-bool
+_Bool
 wasm_i8x16_all_true(v128_t __a) {
     return __builtin_wasm_all_true_i8x16((__i8x16)__a);
 }
@@ -1297,7 +1296,7 @@ wasm_i16x8_neg(v128_t __a) {
     return (v128_t)(-(__u16x8)__a);
 }
 
-static inline bool __DEFAULT_FN_ATTRS wasm_i16x8_all_true(v128_t __a) {
+static inline _Bool __DEFAULT_FN_ATTRS wasm_i16x8_all_true(v128_t __a) {
     return __builtin_wasm_all_true_i16x8((__i16x8)__a);
 }
 
@@ -1424,7 +1423,7 @@ wasm_i32x4_neg(v128_t __a) {
     return (v128_t)(-(__u32x4)__a);
 }
 
-static inline bool __DEFAULT_FN_ATTRS wasm_i32x4_all_true(v128_t __a) {
+static inline _Bool __DEFAULT_FN_ATTRS wasm_i32x4_all_true(v128_t __a) {
     return __builtin_wasm_all_true_i32x4((__i32x4)__a);
 }
 
@@ -1523,7 +1522,7 @@ wasm_i64x2_neg(v128_t __a) {
     return (v128_t)(-(__u64x2)__a);
 }
 
-static inline bool __DEFAULT_FN_ATTRS wasm_i64x2_all_true(v128_t __a) {
+static inline _Bool __DEFAULT_FN_ATTRS wasm_i64x2_all_true(v128_t __a) {
     return __builtin_wasm_all_true_i64x2((__i64x2)__a);
 }
 

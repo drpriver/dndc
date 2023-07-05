@@ -105,16 +105,16 @@ main(int argc, char**argv){
     StringView base_dir = {0};
     uint64_t ast_func_flags = DNDC_MAIN_NONE;
     uint64_t flags = DNDC_FLAGS_NONE ;
-    bool print_syntax = false;
-    bool print_depends = false;
-    bool cleanup = false;
+    _Bool print_syntax = 0;
+    _Bool print_depends = 0;
+    _Bool cleanup = 0;
     int bench_iters = 0;
-    bool bench_cache_files = false;
-    bool no_null_terminator = false;
-    bool dont_write = false;
-    bool format_only = false;
-    bool markdown = false;
-    bool expand = false;
+    _Bool bench_cache_files = 0;
+    _Bool no_null_terminator = 0;
+    _Bool dont_write = 0;
+    _Bool format_only = 0;
+    _Bool markdown = 0;
+    _Bool expand = 0;
     enum OutputTarget output_target = OUTPUT_HTML;
     LongString jsargs = LS("");
     MStringBuilder argbuilder = {.allocator = MALLOCATOR};
@@ -163,62 +163,62 @@ main(int argc, char**argv){
                 .name = SV("--no-js"),
                 .dest = ArgBitFlagDest(&flags, DNDC_NO_COMPILETIME_JS),
                 .help = "Don't execute js nodes.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--print-tree"),
                 .dest = ArgBitFlagDest(&ast_func_flags, DNDC_MAIN_PRINT_TREE),
                 .help = "Print out the entire document tree.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--json"),
                 .dest = ArgBitFlagDest(&ast_func_flags, DNDC_MAIN_DUMP_JSON),
                 .help = "Dump out the state of the context as json to stdout.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--print-links"),
                 .dest = ArgBitFlagDest(&ast_func_flags, DNDC_MAIN_PRINT_LINKS),
                 .help = "Print out all links (and what they target) known by "
                         "the system.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--print-syntax"),
                 .dest = ARGDEST(&print_syntax),
                 .help = "Print out the input document with syntax highlighting.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--print-stats"),
                 .dest = ArgBitFlagDest(&flags, DNDC_PRINT_STATS),
                 .help = "Log some informative statistics.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--print-depends"),
                 .dest = ARGDEST(&print_depends),
                 .help = "Print out what paths the document depends on.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--allow-bad-links"),
                 .dest = ArgBitFlagDest(&flags, DNDC_ALLOW_BAD_LINKS),
                 .help = "Warn instead of erroring if a link can't be resolved.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--suppress-warnings"),
                 .dest = ArgBitFlagDest(&flags, DNDC_SUPPRESS_WARNINGS),
                 .help = "Don't report non-fatal errors.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--dont-write"),
                 .dest = ARGDEST(&dont_write),
                 .help = "Don't write out the document.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--dont-import"),
@@ -228,14 +228,14 @@ main(int argc, char**argv){
                         "Useful for breaking circular dependencies during "
                         "bootstrapping. Can also speed up introspection-only "
                         "runs.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--single-threaded"),
                 .dest = ArgBitFlagDest(&flags, DNDC_NO_THREADS),
                 .help = "Do not create worker threads, do everything in the "
                         "same thread.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--cleanup"),
@@ -243,7 +243,7 @@ main(int argc, char**argv){
                 .help = "Cleanup all resources (memory allocations, etc.).\n"
                         "Development debugging tool, useless in regular cli "
                         "use.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--format"),
@@ -259,7 +259,7 @@ main(int argc, char**argv){
                 .help = "Output as a single .dnd file instead of html.\n"
                         "Expansion is after resolving imports and executing "
                         "user scripts.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--md"),
@@ -270,13 +270,13 @@ main(int argc, char**argv){
                         "user scripts. This is a best effort attempt to "
                         "translate to markdown, some things will be dropped."
                         ,
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--dont-inline-images"),
                 .dest = ArgBitFlagDest(&flags, DNDC_DONT_INLINE_IMAGES),
                 .help = "Instead of base64ing the images, use a link.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--untrusted-input"),
@@ -286,33 +286,33 @@ main(int argc, char**argv){
                         "Input thus should not be allowed to "
                         "import files, execute scripts or embed javascript in "
                         "the output.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--strip-spaces"),
                 .dest = ArgBitFlagDest(&flags, DNDC_STRIP_WHITESPACE),
                 .help = "Strip trailing and leading whitespace from all output "
                         "lines.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--dont-read"),
                 .dest = ArgBitFlagDest(&flags, DNDC_DONT_READ),
                 .help = "Don't read any files other than the "
                         "initial input file.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--bench-iters"),
                 .dest = ARGDEST(&bench_iters),
                 .help = "Execute in a repeated loop this many times.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--bench-cache-files"),
                 .dest = ARGDEST(&bench_cache_files),
                 .help = "Cache files while benchmarking",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--fragment"),
@@ -320,7 +320,7 @@ main(int argc, char**argv){
                 .dest = ArgBitFlagDest(&flags, DNDC_FRAGMENT_ONLY),
                 .help = "Produce an html fragment instead of a full html "
                         "document.",
-                .hidden = false,
+                .hidden = 0,
             },
             {
                 .name = SV("--disallow-attribute-directive-overlap"),
@@ -328,13 +328,13 @@ main(int argc, char**argv){
                 .dest = ArgBitFlagDest(&flags, DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP),
                 .help = "Error if an attribute name overlaps with a directive "
                         "name.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--allow-js-write"),
                 .dest = ArgBitFlagDest(&flags, DNDC_ENABLE_JS_WRITE),
                 .help = "Allow compiletime javascript to write files.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--jsargs"),
@@ -342,7 +342,7 @@ main(int argc, char**argv){
                 .dest = ARGDEST(&jsargs),
                 .help = "A json literal that will be exposed to javascript as "
                         "Args.",
-                .hidden = true,
+                .hidden = 1,
             },
             {
                 .name = SV("--args"),
@@ -357,20 +357,20 @@ main(int argc, char**argv){
                 .help = "The following arguments will be appened to a js array "
                         "that will be available as Args. This overwrites any "
                         "argument given by --jsargs. Use one or the other.",
-                .hidden = true,
+                .hidden = 1,
                 .max_num = 0xffff,
                 .append_proc = &append_arg,
             },
             {
                 .name = SV("--no-nul-terminator"),
-                .hidden = true,
+                .hidden = 1,
                 .dest = ARGDEST(&no_null_terminator),
                 .help = "Don't have a trailing nul after the input text. "
                         " For reproducing fuzzing bugs.",
             },
             {
                 .name = SV("--no-css"),
-                .hidden = true,
+                .hidden = 1,
                 .dest = ArgBitFlagDest(&flags, DNDC_NO_CSS),
                 .help = "Don't output css",
             },
@@ -400,7 +400,7 @@ main(int argc, char**argv){
             [FISH] = {
                 .name = SV("--fish-completions"),
                 .help = "Print out commands for fish shell completions.",
-                .hidden = true,
+                .hidden = 1,
             },
         };
         const char* version = "dndc version " DNDC_VERSION ". Compiled "

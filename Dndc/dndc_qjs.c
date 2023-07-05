@@ -103,15 +103,15 @@ log_js_traceback(DndcContext* ctx, QJSContext* jsctx, NodeHandle handle);
 
 static
 warn_unused
-bool
+_Bool
 js_dndc_get_node_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out);
 static
 warn_unused
-bool
+_Bool
 js_dndc_get_attributes_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out);
 static
 warn_unused
-bool
+_Bool
 js_dndc_get_classlist_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out);
 
 static inline
@@ -370,7 +370,7 @@ static
 void
 js_arena_free(QJSMallocState*s, void* pointer){
     // return;
-    // Below no longer seems to be true?
+    // Below no longer seems to be 1?
     // We crash in TestDndcAlloc if we actually free pointers here.  Maybe
     // something in qjs is not checking the return value of malloc properly.
     if(!pointer) return;
@@ -647,50 +647,50 @@ jsstring_make_stringview_js_allocated(QJSContext* jsctx, QJSValueConst v){
 // returns false on error.
 static
 warn_unused
-bool
+_Bool
 js_dndc_get_node_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out){
     void* pointer = QJS_GetOpaque2(jsctx, obj, QJS_DNDC_NODE_CLASS_ID);
     uintptr_t p = (uintptr_t)pointer;
     if(!p){
-        return false;
+        return 0;
     }
     if(p == (uintptr_t)ZERO_NODE_VALUE)
         out->_value = 0;
     else
         out->_value = p;
-    return true;
+    return 1;
 }
 
 static
 warn_unused
-bool
+_Bool
 js_dndc_get_attributes_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out){
     void* pointer = QJS_GetOpaque2(jsctx, obj, QJS_DNDC_ATTRIBUTES_CLASS_ID);
     uintptr_t p = (uintptr_t)pointer;
     if(!p){
-        return false;
+        return 0;
     }
     if(p == (uintptr_t)ZERO_NODE_VALUE)
         out->_value = 0;
     else
         out->_value = p;
-    return true;
+    return 1;
 }
 
 static
 warn_unused
-bool
+_Bool
 js_dndc_get_classlist_handle(QJSContext* jsctx, QJSValueConst obj, NodeHandle* out){
     void* pointer = QJS_GetOpaque2(jsctx, obj, QJS_DNDC_CLASSLIST_CLASS_ID);
     uintptr_t p = (uintptr_t)pointer;
     if(!p){
-        return false;
+        return 0;
     }
     if(p == (uintptr_t)ZERO_NODE_VALUE)
         out->_value = 0;
     else
         out->_value = p;
-    return true;
+    return 1;
 }
 
 static
@@ -840,7 +840,7 @@ js_load_file_as_base64(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJS
         ctx->jsb64cache = dndc_create_filecache();
 
     LongString base64ed;
-    int e = FileCache_read_and_b64_file(ctx->jsb64cache, sv, false, &base64ed);
+    int e = FileCache_read_and_b64_file(ctx->jsb64cache, sv, 0, &base64ed);
     QJS_FreeCString(jsctx, sv.text);
     if(e){
         return QJS_ThrowTypeError(jsctx, "Error when loading file: '%s'", sv.text);
@@ -1120,7 +1120,7 @@ js_path_exists(QJSContext *jsctx, QJSValueConst thisValue, int argc, QJSValueCon
     msb_nul_terminate(&sb);
     LongString path = msb_borrow_ls(&sb);
     struct stat s;
-    bool exists = stat(path.text, &s) == 0;
+    _Bool exists = stat(path.text, &s) == 0;
     msb_destroy(&sb);
     if(exists)
         return QJS_TRUE;
@@ -1692,7 +1692,7 @@ QJSMETHOD(js_dndc_node_has_class){
     StringView msg = jsstring_to_stringview(jsctx, argv[0], temp_allocator(ctx));
     if(!msg.text)
         return QJS_EXCEPTION;
-    bool has_it = node_has_class(node, msg);
+    _Bool has_it = node_has_class(node, msg);
     Allocator_free(temp_allocator(ctx), msg.text, msg.length+1);
     return has_it? QJS_TRUE : QJS_FALSE;
 }

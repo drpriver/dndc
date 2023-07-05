@@ -5,7 +5,6 @@
 #define MSB_FORMAT_H
 
 #include <stdint.h>
-#include <stdbool.h>
 #include <string.h>
 #include <stddef.h>
 #include "MStringBuilder.h"
@@ -348,7 +347,7 @@ msb_write_int_space_padded(MStringBuilder* sb, int32_t value, int width){
     char buff[10];
     const char* p;
     size_t size;
-    bool is_negative = false;
+    _Bool is_negative = 0;
     if(value == INT32_MIN){
         p = "-2147483648";
         size = sizeof("-2147483648")-1;
@@ -356,7 +355,7 @@ msb_write_int_space_padded(MStringBuilder* sb, int32_t value, int width){
     else {
         if(value < 0){
             value = -value;
-            is_negative = true;
+            is_negative = 1;
         }
         p = uint32_to_str_buffer(buff, value);
         size = (buff+10) - p;

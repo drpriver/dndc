@@ -124,11 +124,11 @@ main(int argc, char** argv){
             .help = "What directory to serve dnd from.",
             .min_num = 0,
             .max_num = 1,
-            .show_default = true,
+            .show_default = 1,
         },
     };
-    _Bool should_log = false;
-    _Bool bind_all = false;
+    _Bool should_log = 0;
+    _Bool bind_all = 0;
     int depth = 10;
     int quit = 0;
     ArgToParse kw_args[] = {
@@ -202,7 +202,7 @@ main(int argc, char** argv){
         [FISH] = {
             .name = SV("--fish-completions"),
             .help = "Print out commands for fish shell completions.",
-            .hidden = true,
+            .hidden = 1,
         },
     };
     const char* version = "dndc-browse 0.0.1. Compiled " __DATE__ " " __TIME__ ".";

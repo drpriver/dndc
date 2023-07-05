@@ -25,8 +25,6 @@
 //   assert(long__is_sorted(longs, 10));
 //
 
-// for bool
-#include <stdbool.h>
 // for size_t
 #include <stddef.h>
 #endif
@@ -64,7 +62,7 @@ static inline void DSORT_IMPL(array_sort_d)(DSORT_T*, size_t, size_t);
 static inline void DSORT_IMPL(heap_sort)(DSORT_SLICE(DSORT_T)*);
 static inline size_t DSORT_IMPL(get_pivot)(DSORT_SLICE(DSORT_T)*);
 static inline void DSORT_IMPL(short_sort)(DSORT_T*, size_t);
-static inline bool DSORT_IMPL(is_sorted)(DSORT_T*, size_t);
+static inline _Bool DSORT_IMPL(is_sorted)(DSORT_T*, size_t);
 
 static inline
 void
@@ -325,15 +323,15 @@ DSORT_IMPL(sift_down)(DSORT_SLICE(DSORT_T)* r, size_t parent, size_t end){
 }
 
 static inline
-bool
+_Bool
 DSORT_IMPL(is_heap)(DSORT_SLICE(DSORT_T)* r){
     size_t parent = 0;
     for(size_t child = 1; child < r->count; child++){
         if(DSORT_CMP(r->data+parent, r->data+child) < 0)
-            return false;
+            return 0;
         parent += !(child & 1llu);
     }
-    return true;
+    return 1;
 }
 
 static inline
@@ -392,16 +390,16 @@ DSORT_IMPL(heap_sort)(DSORT_SLICE(DSORT_T)* r){
 }
 
 static inline
-bool
+_Bool
 DSORT_IMPL(is_sorted)(DSORT_T* data, size_t n_items){
     DSORT_T* before = data;
     for(size_t i = 0; i < n_items; i++){
         if(DSORT_CMP(data+i, before) < 0){
-            return false;
+            return 0;
         }
         before = data+i;
     }
-    return true;
+    return 1;
 }
 
 #ifdef __clang__

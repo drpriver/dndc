@@ -4,7 +4,6 @@
 #ifndef THREAD_UTILS_H
 #define THREAD_UTILS_H
 #include <stdlib.h>
-#include <stdbool.h>
 #if defined(__linux__) || defined(__APPLE__)
 #include <unistd.h> // sysconf
 #include <pthread.h>
@@ -196,7 +195,7 @@ struct WorkerThread {
 #endif
     thread_func* job;
     void*_Nullable job_data;
-    bool shutdown;
+    _Bool shutdown;
 };
 
 static
@@ -266,7 +265,7 @@ static
 void
 worker_destroy(WorkerThread* w){
     pthread_mutex_lock(&w->mutex);
-    w->shutdown = true;
+    w->shutdown = 1;
     pthread_cond_signal(&w->worker_cond);
     pthread_mutex_unlock(&w->mutex);
 }
@@ -340,7 +339,7 @@ struct WorkerThread {
     HANDLE sem;
     thread_func* job;
     void*_Nullable job_data;
-    bool shutdown;
+    _Bool shutdown;
 };
 
 static
@@ -396,7 +395,7 @@ static
 void
 worker_destroy(WorkerThread* w){
     EnterCriticalSection(&w->mutex);
-    w->shutdown = true;
+    w->shutdown = 1;
     LeaveCriticalSection(&w->mutex);
     WakeConditionVariable(&w->worker_cond);
 }

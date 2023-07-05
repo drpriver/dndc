@@ -7,8 +7,6 @@
 #include <stddef.h>
 // strlen, memcmp
 #include <string.h>
-// true, false
-#include <stdbool.h>
 // uint16_t
 #include <stdint.h>
 
@@ -89,12 +87,12 @@ cstr_to_SV(const char* cstr){
 }
 
 static inline
-bool
+_Bool
 LS_equals(const LongString a, const LongString b){
     if (a.length != b.length)
-        return false;
+        return 0;
     if(a.text == b.text)
-        return true;
+        return 1;
     // assert(a.text);
     // assert(b.text);
     return a.text && b.text && !memcmp(a.text, b.text, a.length);
@@ -114,38 +112,38 @@ LS_equals(const LongString a, const LongString b){
 #define SV16INIT(literal) {.length=sizeof(u"" literal)/2-1, .text=u"" literal}
 static inline
 force_inline
-bool
+_Bool
 SV_equals(const StringView a, const StringView b){
     if(a.length != b.length)
-        return false;
+        return 0;
     if(!a.length)
-        return true;
+        return 1;
     if(a.text == b.text)
-        return true;
+        return 1;
     // assert(a.text);
     // assert(b.text);
     return a.text && b.text && memcmp(a.text, b.text, a.length) == 0;
 }
 
 static inline
-bool
+_Bool
 SV_utf16_equals(const StringViewUtf16 a, const StringViewUtf16 b){
     if(a.length != b.length)
-        return false;
+        return 0;
     if(a.text == b.text)
-        return true;
+        return 1;
     // assert(a.text);
     // assert(b.text);
     return a.text && b.text && memcmp(a.text, b.text, a.length*sizeof(uint16_t)) == 0;
 }
 
 static inline
-bool
+_Bool
 LS_SV_equals(const LongString ls, const StringView sv){
     if(ls.length != sv.length)
-        return false;
+        return 0;
     if(ls.text == sv.text)
-        return true;
+        return 1;
     // assert(ls.text);
     // assert(sv.text);
     return ls.text && sv.text && memcmp(ls.text, sv.text, sv.length)==0;

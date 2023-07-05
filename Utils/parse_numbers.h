@@ -5,8 +5,6 @@
 #define PARSE_NUMBERS_H
 // size_t
 #include <stddef.h>
-// bool
-#include <stdbool.h>
 // integer types
 #include <stdint.h>
 // INT64_MAX, etc.
@@ -300,13 +298,13 @@ parse_uint64(const char* str, size_t length){
         result.errored = PARSENUMBER_OVERFLOWED_VALUE;
         return result;
     }
-    int bad = false;
+    int bad = 0;
     uint64_t value = 0;
     for(size_t i=0;i < length-1; i++){
         unsigned cval = (unsigned char)str[i];
         cval -= '0';
         if(cval > 9u)
-            bad = true;
+            bad = 1;
         value *= 10;
         value += cval;
     }
@@ -346,7 +344,7 @@ parse_int64(const char* str, size_t length){
         result.errored = PARSENUMBER_UNEXPECTED_END;
         return result;
     }
-    bool negative = (*str == '-');
+    _Bool negative = (*str == '-');
     if(negative){
         str++;
         length--;
@@ -364,13 +362,13 @@ parse_int64(const char* str, size_t length){
         result.errored = PARSENUMBER_OVERFLOWED_VALUE;
         return result;
     }
-    int bad = false;
+    int bad = 0;
     uint64_t value = 0;
     for(size_t i=0;i < length-1; i++){
         unsigned cval = (unsigned char)str[i];
         cval -= '0';
         if(cval > 9u)
-            bad = true;
+            bad = 1;
         value *= 10;
         value += cval;
     }
@@ -435,13 +433,13 @@ parse_uint32(const char*str, size_t length){
         result.errored = PARSENUMBER_OVERFLOWED_VALUE;
         return result;
     }
-    int bad = false;
+    int bad = 0;
     uint32_t value = 0;
     for(size_t i=0;i < length-1; i++){
         unsigned cval = (unsigned char)str[i];
         cval -= '0';
         if(cval > 9u)
-            bad = true;
+            bad = 1;
         value *= 10;
         value += cval;
     }
@@ -480,7 +478,7 @@ parse_int32(const char*str, size_t length){
         result.errored = PARSENUMBER_UNEXPECTED_END;
         return result;
     }
-    bool negative = (*str == '-');
+    _Bool negative = (*str == '-');
     if(negative){
         str++;
         length--;
@@ -498,13 +496,13 @@ parse_int32(const char*str, size_t length){
         result.errored = PARSENUMBER_OVERFLOWED_VALUE;
         return result;
     }
-    int bad = false;
+    int bad = 0;
     uint32_t value = 0;
     for(size_t i=0;i < length-1; i++){
         unsigned cval = (unsigned char)str[i];
         cval -= '0';
         if(cval > 9u)
-            bad = true;
+            bad = 1;
         value *= 10;
         value += cval;
     }

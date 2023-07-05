@@ -1059,13 +1059,13 @@ PARSEFUNC(parse_raw_node){
     // break out of this node). So for those, we'll pretend like they are indented at
     // the same level as our leading indent, which means their indentation will be
     // off in the output. This is really unusual though.
-    bool have_leading_indent = false;
+    _Bool have_leading_indent = 0;
     int leading_indent = 0;
     for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         if(!have_leading_indent && ctx->linestart+ctx->nspaces != ctx->line_end){
             leading_indent = ctx->nspaces;
-            have_leading_indent = true;
+            have_leading_indent = 1;
         }
         size_t length;
         const char* text;
@@ -1101,7 +1101,7 @@ PARSEFUNC(parse_table_node){
         assert(parent->type == NODE_TABLE);
     }
     NodeHandle last_cell_handle = INVALID_NODE_HANDLE;
-    bool converted = false;
+    _Bool converted = 0;
     int previous_row_indentation = indentation;
     for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
@@ -1130,7 +1130,7 @@ PARSEFUNC(parse_table_node){
                     if(content.length){
                         if(!converted){
                             int e = convert_node_to_container_containing_clone_of_former_self(ctx, last_cell_handle);
-                            converted = true;
+                            converted = 1;
                             if(unlikely(e)) return e;
                         }
                         NodeHandle str_handle = alloc_handle(ctx);
@@ -1149,7 +1149,7 @@ PARSEFUNC(parse_table_node){
         if(unlikely(e)) return e;
         previous_row_indentation = ctx->nspaces;
         // last_cell_handle = INVALID_NODE_HANDLE;
-        converted = false;
+        converted = 0;
         while(pipe){
             NodeHandle cell_index = alloc_handle(ctx);
             size_t length = pipe - cursor;
@@ -1177,7 +1177,7 @@ PARSEFUNC(parse_keyvalue_node){
     }
     NodeHandle previous_value = INVALID_NODE_HANDLE;
     int previous_kv_indentation = indentation;
-    bool previous_value_was_converted = false;
+    _Bool previous_value_was_converted = 0;
     for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
         // skip blanks
@@ -1197,7 +1197,7 @@ PARSEFUNC(parse_keyvalue_node){
                 if(!previous_value_was_converted){
                     int e = convert_node_to_container_containing_clone_of_former_self(ctx, previous_value);
                     if(unlikely(e)) return e;
-                    previous_value_was_converted = true;
+                    previous_value_was_converted = 1;
                 }
                 StringView content = stripped_view(ctx->linestart+ctx->nspaces, ctx->line_end-(ctx->linestart+ctx->nspaces));
                 NodeHandle str_handle = alloc_handle(ctx);
@@ -1233,7 +1233,7 @@ PARSEFUNC(parse_keyvalue_node){
         advance_row(ctx);
         previous_value = val_idx;
         previous_kv_indentation = ctx->nspaces;
-        previous_value_was_converted = false;
+        previous_value_was_converted = 0;
     }
     return 0;
 }

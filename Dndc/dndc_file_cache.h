@@ -4,7 +4,6 @@
 #ifndef DNDC_FILE_CACHE_H
 #define DNDC_FILE_CACHE_H
 #include <stdint.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include "dndc_long_string.h"
 #include "Allocators/allocator.h"
@@ -24,18 +23,18 @@ int
 FileCache_maybe_remove(FileCache* cache, StringView path);
 
 static inline
-bool
+_Bool
 FileCache_has_file(const FileCache* cache, StringView path);
 
 static inline
 warn_unused
 int
-FileCache_read_file(FileCache* cache, StringView spath, bool cached_only, LongString* outstr);
+FileCache_read_file(FileCache* cache, StringView spath, _Bool cached_only, LongString* outstr);
 
 static inline
 warn_unused
 int
-FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only, LongString* outstr);
+FileCache_read_and_b64_file(FileCache* cache, StringView spath, _Bool cached_only, LongString* outstr);
 
 static
 void // preload only so no error code
@@ -50,7 +49,7 @@ FileCache_preload_b64_files(FileCache* cache, StringView* spath, size_t count);
 //   overwrite: whether to overwrite previous cached file.
 static inline
 int
-FileCache_store_text_file(FileCache* cache, StringView path, StringView data, bool overwrite);
+FileCache_store_text_file(FileCache* cache, StringView path, StringView data, _Bool overwrite);
 
 //
 // Outputs what paths are cached in this filecache.

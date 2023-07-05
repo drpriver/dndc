@@ -435,7 +435,7 @@ expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
                 msb_write_str(msb, row_item->header.text, row_item->header.length);
             }
             else if(row_item->type == NODE_CONTAINER){
-                bool first = true;
+                _Bool first = 1;
                 NODE_CHILDREN_FOR_EACH(s, row_item){
                     if(!first){
                         if(row_item->col > indent){
@@ -446,7 +446,7 @@ expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
                             msb_write_nchar(msb, ' ', indent + node_children_count(row)*4);
                         }
                     }
-                    first = false;
+                    first = 0;
                     Node* container_item = get_node(ctx, *s);
                     if(container_item->type != NODE_STRING){
                         NODE_LOG_ERROR(ctx, row, "Expected string, got ", quotedls(NODENAMES[row->type]));
@@ -499,7 +499,7 @@ expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, i
             msb_write_char(msb, '\n');
         }
         else if(value->type == NODE_CONTAINER){
-            bool first = true;
+            _Bool first = 1;
             NODE_CHILDREN_FOR_EACH(v, value){
                 Node* vchild = get_node(ctx, *v);
                 if(vchild->type != NODE_STRING){
@@ -513,7 +513,7 @@ expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, i
                         msb_write_nchar(msb, ' ',  indent + key->header.length+2);
                     }
                 }
-                first = false;
+                first = 0;
                 msb_write_str(msb, vchild->header.text, vchild->header.length);
                 msb_write_char(msb, '\n');
             }

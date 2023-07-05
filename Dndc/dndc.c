@@ -289,8 +289,8 @@ execute_user_scripts_and_load_images(DndcContext* ctx, WorkerThread*_Nullable wo
     uint64_t flags = ctx->flags;
     DndcPreloadImageJob* job = dndc_ctx_create_preload_img_job(ctx);
     ThreadHandle thread_worker = {0};
-    bool binary_work_to_be_done = job != ZERO_WORK_JOB && !!job;
-    bool thread_created = false;
+    _Bool binary_work_to_be_done = job != ZERO_WORK_JOB && !!job;
+    _Bool thread_created = 0;
     if(binary_work_to_be_done){
         if(flags & DNDC_NO_THREADS){
             // Do it ourselves in this thread.
@@ -307,7 +307,7 @@ execute_user_scripts_and_load_images(DndcContext* ctx, WorkerThread*_Nullable wo
                     return DNDC_ERROR_OS;
                 }
             }
-            thread_created = true;
+            thread_created = 1;
         }
     }
 
@@ -370,9 +370,9 @@ run_the_dndc(
     // Having const bools is easier to work with than ifdef-ing everywhere
     // and the optimizer will strip out dead code anyway.
 #ifdef __wasm__
-    const bool wasm = true;
+    const _Bool wasm = 1;
 #else
-    const bool wasm = false;
+    const _Bool wasm = 0;
 #endif
     uint64_t t0 = get_t();
     // The error code returned from this function. This function has a lot of
@@ -966,7 +966,7 @@ find_double_colon_utf16(const uint16_t* haystack, size_t ncode_units){
 
 struct JsStyleState {
     int js_parse_which;
-    bool can_regex;
+    _Bool can_regex;
 };
 static
 void
@@ -1155,9 +1155,9 @@ js_syntax_is_word(char c){
         case CASE_0_9:
         case '_':
         case '$':
-            return true;
+            return 1;
         default:
-            return false;
+            return 0;
     }
 }
 
@@ -1435,9 +1435,9 @@ js_syntax_is_word_utf16(uint16_t c){
         case CASE_u16_0_9:
         case u'_':
         case u'$':
-            return true;
+            return 1;
         default:
-            return false;
+            return 0;
     }
 }
 
@@ -3149,7 +3149,7 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
         NodeHandle newhandle = alloc_handle(ctx);
         Node* node = get_node(ctx, handle);
         node->flags &= ~NODEFLAG_IMPORT;
-        bool was_import = false;
+        _Bool was_import = 0;
         {
             Node* newnode = get_node(ctx, newhandle);
             *newnode = *node;
@@ -3157,7 +3157,7 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
             newnode->classes = NULL; // why didn't I do this before?
             if(newnode->type == NODE_IMPORT){
                 newnode->type = NODE_MD;
-                was_import = true;
+                was_import = 1;
             }
             int err = AttrTable_dup(node->attributes, main_allocator(ctx), &newnode->attributes);
             if(unlikely(err)) return DNDC_ERROR_OOM;

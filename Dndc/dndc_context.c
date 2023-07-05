@@ -23,13 +23,13 @@
 #endif
 
 static inline
-bool
+_Bool
 node_has_attribute(const Node* node, StringView attr){
     return AttrTable_has(node->attributes, attr);
 }
 
 static inline
-bool
+_Bool
 node_del_attribute(const Node* node, StringView attr){
     return AttrTable_del(node->attributes, attr);
 }
@@ -51,15 +51,15 @@ node_set_attribute(Node* node, Allocator allocator, StringView attr, StringView 
 }
 
 static inline
-bool
+_Bool
 node_has_class(const Node* node, StringView c){
     if(!node->classes)
-        return false;
+        return 0;
     RARRAY_FOR_EACH(StringView, cls, node->classes){
         if(SV_equals(*cls, c))
-            return true;
+            return 1;
     }
-    return false;
+    return 0;
 }
 
 static inline
@@ -93,15 +93,15 @@ node_remove_class(Node* node, StringView cls){
 // Don't call this function unless you really need what was explicitly set
 // by a #id() directive.
 static inline
-bool
+_Bool
 node_get_explicit_id(DndcContext* ctx, NodeHandle handle, StringView* out){
     MARRAY_FOR_EACH(IdItem, item, ctx->explicit_node_ids){
         if(NodeHandle_eq(item->node, handle)){
             *out = item->text;
-            return true;
+            return 1;
         }
     }
-    return false;
+    return 0;
 }
 
 

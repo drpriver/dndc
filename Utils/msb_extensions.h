@@ -135,21 +135,21 @@ msb_write_title(MStringBuilder* restrict msb, const char* restrict str, size_t l
         return;
     int err = _check_msb_remaining_size(msb, len);
     if(unlikely(err)) return;
-    bool wants_cap = true;
+    _Bool wants_cap = 1;
     for(size_t i = 0; i < len; i++){
         char c = str[i];
         switch(c){
             case CASE_a_z:
                 if(wants_cap){
                     c &= ~0x20; // toupper
-                    wants_cap = false;
+                    wants_cap = 0;
                 }
                 break;
             case CASE_A_Z:
-                wants_cap = false;
+                wants_cap = 0;
                 break;
             default:
-                wants_cap = true;
+                wants_cap = 1;
                 break;
         }
         msb->data[msb->cursor++] = c;

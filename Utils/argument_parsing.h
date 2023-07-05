@@ -5,8 +5,6 @@
 #define ARGUMENT_PARSING_H
 // size_t
 #include <stddef.h>
-// bool
-#include <stdbool.h>
 // integer types
 #include <stdint.h>
 // strtod, strtof
@@ -161,7 +159,7 @@ static inline void print_argparse_fish_completions(const ArgParser*);
 #define ARGS(apply) \
     apply(ARG_INTEGER64, int64_t, "int64") \
     apply(ARG_INT, int, "int") \
-    apply(ARG_FLAG, bool, "flag") \
+    apply(ARG_FLAG, _Bool, "flag") \
     apply(ARG_STRING, LongString, "string") \
     apply(ARG_CSTRING, const char*, "string") \
     apply(ARG_UINTEGER64, uint64_t, "uint64") \
@@ -194,7 +192,7 @@ static const LongString ArgTypeNames[] = {
         float: ARG_FLOAT32, \
         double: ARG_FLOAT64, \
         int: ARG_INT, \
-        bool: ARG_FLAG, \
+        _Bool: ARG_FLAG, \
         const char*: ARG_CSTRING, \
         char*: ARG_CSTRING, \
         StringView: ARG_STRING, \
@@ -375,16 +373,16 @@ struct ArgToParse {
 
     // Also, used internally to avoid allowing duplicate keywords at the
     // commandline.
-    bool visited;
+    _Bool visited;
 
     //
     // Whether to show the default value in the help printout.
-    bool show_default; // maybe we'll want a bitflags field with options instead.
+    _Bool show_default; // maybe we'll want a bitflags field with options instead.
 
     //
     // Whether to hide this flag from the help output.
     // Keyword argument only.
-    bool hidden;
+    _Bool hidden;
 
     //
     // The description of the argument. When printed, the helpstring will be
@@ -421,9 +419,9 @@ struct ArgToParse {
 typedef struct ArgParseStyling ArgParseStyling;
 struct ArgParseStyling {
     // Set to true to not style the output at all.
-    bool plain;
+    _Bool plain;
     // Don't print a "------" style heading underneath a section heading.
-    bool no_dashed_header_underline;
+    _Bool no_dashed_header_underline;
     // Will be used before the name of a section heading.
     const char*_Nullable pre_header;
     // Used after a section heading, before the ':'.
@@ -679,14 +677,14 @@ print_argparse_help(const ArgParser* p, int columns){
     }
     // It's possible for all keyword arguments to be hidden,
     // so only print the header until we hit a non-hidden argument.
-    bool printed_keyword_header = false;
+    _Bool printed_keyword_header = 0;
     for(const ArgParseKwParams* keywords = &p->keyword; keywords; keywords = keywords->next){
         for(size_t i = 0; i < keywords->count; i++){
             ArgToParse* arg = &keywords->args[i];
             if(arg->hidden)
                 continue;
             if(!printed_keyword_header){
-                printed_keyword_header = true;
+                printed_keyword_header = 1;
                 printf("\n%sKeyword Arguments%s:\n", style.pre_header, style.post_header);
                 if(!p->styling.no_dashed_header_underline)
                     printf("------------------\n");
@@ -703,13 +701,13 @@ print_argparse_hidden_help(const ArgParser* p, int columns){
     ArgStyle style = determine_styling(p);
     // There might be no hidden args. Only print the header if we are actually
     // going to print an arg.
-    bool printed_an_arg = false;
+    _Bool printed_an_arg = 0;
     for(const ArgParseKwParams* keywords = &p->keyword; keywords; keywords=keywords->next){
         for(size_t i = 0; i < keywords->count; i++){
             ArgToParse* arg = &keywords->args[i];
             if(!arg->hidden) continue;
             if(!printed_an_arg){
-                printed_an_arg = true;
+                printed_an_arg = 1;
                 printf("%sHidden Arguments%s:\n", style.pre_header, style.post_header);
                 if(!p->styling.no_dashed_header_underline)
                     printf("-----------------\n");
@@ -851,7 +849,7 @@ print_arg_help(const ArgToParse* arg, int columns, const ArgStyle* style){
 
 struct HelpTokenized {
     StringView token;
-    bool is_newline;
+    _Bool is_newline;
     const char* rest;
 };
 
@@ -871,7 +869,7 @@ next_tokenize_help(const char* help){
     }
     if(*help == '\n'){
         return (struct HelpTokenized){
-            .is_newline = true,
+            .is_newline = 1,
             .rest = help+1,
         };
     }
@@ -901,7 +899,7 @@ print_wrapped(const char*text, int columns){
     HelpState hs = {.output_width = columns, .lead=0, .remaining=0};
     hs.remaining = hs.output_width;
     // Track if we had a hardbreak so we can preserve paragraph breaks.
-    bool newline = false;
+    _Bool newline = 0;
     for(;*text;){
         struct HelpTokenized tok = next_tokenize_help((const char*)text); // cast away nullability
         text = tok.rest;
@@ -910,11 +908,11 @@ print_wrapped(const char*text, int columns){
                 putchar('\n');
                 hs.remaining = hs.output_width;
             }
-            newline = true;
+            newline = 1;
             continue;
         }
         else {
-            newline = false;
+            newline = 0;
         }
         help_state_update(&hs, tok.token.length);
         printf("%.*s", (int)tok.token.length, tok.token.text);
@@ -1134,8 +1132,8 @@ set_flag(ArgToParse* arg){
     assert(arg->dest.type == ARG_FLAG);
     if(arg->num_parsed >= agp_maxnum(arg->max_num))
         return ARGPARSE_DUPLICATE_KWARG;
-    bool* dest = arg->dest.pointer;
-    *dest = true;
+    _Bool* dest = arg->dest.pointer;
+    *dest = 1;
     arg->num_parsed += 1;
     return 0;
 }
@@ -1213,7 +1211,7 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
             continue;
         if(s.length > 1){
             if(s.text[0] == '-'){
-                bool number = s.text[1] == '.' || (s.text[1] >= '0' && s.text[1] <= '9');
+                _Bool number = s.text[1] == '.' || (s.text[1] >= '0' && s.text[1] <= '9');
                 if(!number){
                     // Not a number, find matching kwarg
                     ArgToParse* new_kwarg = find_matching_kwarg(parser, s);
@@ -1231,7 +1229,7 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
                     if(pos_arg && pos_arg != past_the_end && pos_arg->visited)
                         pos_arg++;
                     kwarg = new_kwarg;
-                    kwarg->visited = true;
+                    kwarg->visited = 1;
                     if(kwarg->dest.type == ARG_FLAG || kwarg->dest.type == ARG_BITFLAG){
                         enum ArgParseError error = set_flag(kwarg);
                         if(error) {
@@ -1256,7 +1254,7 @@ parse_args(ArgParser* parser, const Args* args, enum ArgParseFlags flags){
                 kwarg = NULL;
         }
         else if(pos_arg && pos_arg != past_the_end){
-            pos_arg->visited = true;
+            pos_arg->visited = 1;
             enum ArgParseError err = parse_arg(pos_arg, s);
             if(err){
                 parser->failed.arg = *arg;
@@ -1320,7 +1318,7 @@ parse_args_longstrings(ArgParser* parser, const LongString*args, size_t args_cou
             continue;
         if(s.length > 1){
             if(s.text[0] == '-'){
-                bool number = s.text[1] == '.' || (s.text[1] >= '0' && s.text[1] <= '9');
+                _Bool number = s.text[1] == '.' || (s.text[1] >= '0' && s.text[1] <= '9');
                 if(!number){
                     // Not a number, find matching kwarg
                     ArgToParse* new_kwarg = find_matching_kwarg(parser, s);
@@ -1340,7 +1338,7 @@ parse_args_longstrings(ArgParser* parser, const LongString*args, size_t args_cou
                     if(pos_arg && pos_arg != past_the_end && pos_arg->visited)
                         pos_arg++;
                     kwarg = new_kwarg;
-                    kwarg->visited = true;
+                    kwarg->visited = 1;
                     if(kwarg->dest.type == ARG_FLAG || kwarg->dest.type == ARG_BITFLAG){
                         enum ArgParseError error = set_flag(kwarg);
                         if(error) {
@@ -1365,7 +1363,7 @@ parse_args_longstrings(ArgParser* parser, const LongString*args, size_t args_cou
                 kwarg = NULL;
         }
         else if(pos_arg && pos_arg != past_the_end){
-            pos_arg->visited = true;
+            pos_arg->visited = 1;
             enum ArgParseError err = parse_arg(pos_arg, s);
             if(err){
                 parser->failed.arg = arg->text;
@@ -1691,7 +1689,7 @@ main(int argc, const char*_Null_unspecified*_Null_unspecified argv){
         },
     };
     int n_times = 5;
-    bool dry_run = false;
+    _Bool dry_run = 0;
     ArgToParse kw_args[] = {
         {
             .name = SV("-o"),
@@ -1703,7 +1701,7 @@ main(int argc, const char*_Null_unspecified*_Null_unspecified argv){
             .name = SV("-n"),
             .altname1 = SV("--n-times"),
             .dest = ARGDEST(&n_times),
-            .show_default = true,
+            .show_default = 1,
             .help = "Do it n times.",
         },
         {
@@ -1727,7 +1725,7 @@ main(int argc, const char*_Null_unspecified*_Null_unspecified argv){
         [FISH] = {
             .name = SV("--fish-completions"),
             .help = "Print out commands for fish shell completions.",
-            .hidden = true,
+            .hidden = 1,
         },
     };
     ArgParser parser = {

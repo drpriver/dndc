@@ -4,7 +4,6 @@
 #ifndef DNDC_TYPES_H
 #define DNDC_TYPES_H
 #include <stdint.h>
-#include <stdbool.h>
 #include "dndc_long_string.h"
 #include "dndc.h"
 #include "common_macros.h"
@@ -123,7 +122,7 @@ enum {INVALID_NODE_HANDLE_VALUE = -1};
 
 static inline
 force_inline
-bool
+_Bool
 NodeHandle_eq(NodeHandle a, NodeHandle b){
     return a._value == b._value;
 }

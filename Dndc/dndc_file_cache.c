@@ -71,14 +71,14 @@ FileCache_free_path(FileCache* cache, FileCachePath path){
 
 
 static inline
-bool
+_Bool
 FileCache_key_eq(FileCacheLookupKey key, FileCachePath p){
     if(key.last_eight_chars != p.last_eight_chars)
-        return false;
+        return 0;
     if(key.length != p.length)
-        return false;
+        return 0;
     if(key.hash != p.hash)
-        return false;
+        return 0;
     return memcmp(key.text, p.text, key.length) == 0;
 }
 
@@ -123,14 +123,14 @@ FileCache_maybe_remove(FileCache* cache, StringView path){
 }
 
 static inline
-bool
+_Bool
 FileCache_has_file(const FileCache* cache, StringView path){
     FileCacheLookupKey key = FileCache_make_key(path);
     MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
         if(FileCache_key_eq(key, src->sourcepath))
-            return true;
+            return 1;
     }
-    return false;
+    return 0;
 }
 
 static inline
@@ -173,7 +173,7 @@ FileCache_read_file_(FileCache* cache, FileCachePath path, LongString* outstr){
 static inline
 warn_unused
 int
-FileCache_read_file(FileCache* cache, StringView spath, bool cached_only, LongString* outstr){
+FileCache_read_file(FileCache* cache, StringView spath, _Bool cached_only, LongString* outstr){
     FileCacheLookupKey key = FileCache_make_key(spath);
     MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
         if(FileCache_key_eq(key, src->sourcepath)){
@@ -198,7 +198,7 @@ FileCache_read_file(FileCache* cache, StringView spath, bool cached_only, LongSt
 static inline
 warn_unused
 int
-FileCache_read_and_b64_file(FileCache* cache, StringView spath, bool cached_only, LongString* outstr){
+FileCache_read_and_b64_file(FileCache* cache, StringView spath, _Bool cached_only, LongString* outstr){
     FileCacheLookupKey key = FileCache_make_key(spath);
     MARRAY_FOR_EACH(LoadedSource, src, cache->_files){
         if(FileCache_key_eq(key, src->sourcepath)){
@@ -236,7 +236,7 @@ FileCache_preload_b64_files(FileCache* cache, StringView* spaths, size_t count){
     for(size_t i = 0; i < count; i++){
         StringView spath = spaths[i];
         LongString unused;
-        int e = FileCache_read_and_b64_file(cache, spath, false, &unused);
+        int e = FileCache_read_and_b64_file(cache, spath, 0, &unused);
         (void)unused;
         (void)e;
     }
@@ -299,7 +299,7 @@ read_and_base64_bin_file(Allocator scratch, Allocator outallocator, const char* 
 
 static inline
 int
-FileCache_store_text_file(FileCache* cache, StringView spath, StringView data, bool overwrite){
+FileCache_store_text_file(FileCache* cache, StringView spath, StringView data, _Bool overwrite){
     FileCacheLookupKey key = FileCache_make_key(spath);
     char* d = Allocator_strndup(cache->allocator, data.text, data.length);
     if(!d)

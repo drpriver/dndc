@@ -5,8 +5,6 @@
 #define PATH_UTIL_H
 // size_t
 #include <stddef.h>
-// bool
-#include <stdbool.h>
 // memchr
 #include <string.h>
 // StringView and currently force_inline, which is kind of janky.
@@ -33,7 +31,7 @@ enum {
 // Helper to distinguish what is a path separator.
 static inline
 force_inline
-bool
+_Bool
 is_sep(char c){
     if(BACKSLASH_IS_A_PATH_SEP)
         return c == '/' || c == '\\';
@@ -57,20 +55,20 @@ memsep(const char* str, size_t length){
 // Returns if the path is an absolute path (aka starts from /).
 //
 static inline
-bool
+_Bool
 path_is_abspath(StringView path){
     if(!path.length)
-        return false;
+        return 0;
 #ifndef _WIN32
     return is_sep(path.text[0]);
 #else
     if(is_sep(path.text[0]))
-        return true;
+        return 1;
     if(path.length > 2){
         if(path.text[1] == ':')
-            return true;
+            return 1;
     }
-    return false;
+    return 0;
 #endif
 }
 

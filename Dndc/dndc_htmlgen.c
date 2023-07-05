@@ -72,7 +72,7 @@ int
 render_node(DndcContext* ctx, MStringBuilder* restrict sb, NodeHandle handle, int header_depth, int node_depth){
     if(node_depth > DNDC_MAX_NODE_DEPTH) return 1;
     Node* node = get_node(ctx, handle);
-    bool hide = !!(node->flags & NODEFLAG_HIDE);
+    _Bool hide = !!(node->flags & NODEFLAG_HIDE);
     if(hide) return 0;
 #if 0
     switch(node->type){
@@ -95,7 +95,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
     int err = msb_ensure_additional(msb, reserve_amount);
     if(err) return DNDC_ERROR_OOM;
     uint64_t flags = ctx->flags;
-    bool complete_document = !(flags & DNDC_FRAGMENT_ONLY);
+    _Bool complete_document = !(flags & DNDC_FRAGMENT_ONLY);
     if(complete_document){
         msb_write_literal(msb,
             "<!DOCTYPE html>\n"
@@ -139,7 +139,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
     }
     if(ctx->stylesheets_nodes.count && !(flags & DNDC_NO_CSS)){
         msb_write_literal(msb, "<style>\n");
-        bool written = false;
+        _Bool written = 0;
         MARRAY_FOR_EACH(NodeHandle, ss, ctx->stylesheets_nodes){
             Node* node = get_node(ctx, *ss);
             // css nodes can change node types after they are registered
@@ -154,7 +154,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
                 else {
                     msb_write_literal(msb, "</style>\n");
                 }
-                written = false;
+                written = 0;
                 NODE_CHILDREN_FOR_EACH(it, node){
                     Node* child = get_node(ctx, *it);
                     if(unlikely(child->type != NODE_STRING)){
@@ -165,7 +165,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
                 }
                 continue;
             }
-            written = true;
+            written = 1;
             NODE_CHILDREN_FOR_EACH(it, node){
                 Node* child = get_node(ctx, *it);
                 if(unlikely(child->type != NODE_STRING)){
@@ -186,7 +186,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
             msb_write_literal(msb, "</style>\n");
     }
     if(ctx->script_nodes.count){
-        bool strip_ws = !!(flags & DNDC_STRIP_WHITESPACE);
+        _Bool strip_ws = !!(flags & DNDC_STRIP_WHITESPACE);
         MARRAY_FOR_EACH(NodeHandle, s, ctx->script_nodes){
             Node* node = get_node(ctx, *s);
             // script nodes can change node types after they are registered
@@ -323,6 +323,7 @@ build_toc_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
         case NODE_KEYVALUEPAIR:{
             build_toc_block_children(ctx, handle, sb, depth);
         }break;
+        case NODE_HEAD:
         case NODE_META:
         case NODE_TITLE: // skip title as everything would be a child of it
         case NODE_TABLE_ROW:

@@ -238,14 +238,14 @@ main(int argc, char** argv){
             .name = SV("-j"),
             .altname1 = SV("--n-threads"),
             .dest = ARGDEST(&n_threads),
-            .show_default = true,
+            .show_default = 1,
             .help = "How many additional threads to spawn to process the work",
         },
         {
             .name = SV("--ignore-errors"),
             .altname1 = SV("--keep-going"),
             .dest = ARGDEST(&ignore_errors),
-            .show_default = true,
+            .show_default = 1,
             .help = "Skip files with errors instead of exiting with an error.",
         },
     };
@@ -265,7 +265,7 @@ main(int argc, char** argv){
         [FISH] = {
             .name = SV("--fish-completions"),
             .help = "Print out commands for fish shell completions.",
-            .hidden = true,
+            .hidden = 1,
         },
     };
 

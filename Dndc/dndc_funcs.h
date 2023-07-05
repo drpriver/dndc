@@ -230,7 +230,7 @@ get_node_e(DndcContext*, NodeHandle);
 // only, but you can use this in the implementation of the bindings.
 //
 static inline
-bool
+_Bool
 node_has_attribute(const Node* node, StringView attr);
 
 //
@@ -239,7 +239,7 @@ node_has_attribute(const Node* node, StringView attr);
 // TODO: document me.
 
 static inline
-bool
+_Bool
 node_del_attribute(const Node* node, StringView attr);
 
 //
@@ -270,7 +270,7 @@ node_set_attribute(Node* node, Allocator allocator, StringView attr, StringView 
 // Checks if the node has a class or not.
 //
 static inline
-bool
+_Bool
 node_has_class(const Node* node, StringView class);
 
 //
@@ -303,7 +303,7 @@ node_get_id(DndcContext*, NodeHandle);
 // Don't call this function unless you really need what was explicitly set
 // by a #id() directive.
 static inline
-bool
+_Bool
 node_get_explicit_id(DndcContext* ctx, NodeHandle handle, StringView* out);
 
 //

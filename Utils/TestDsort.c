@@ -101,7 +101,7 @@ TestFunction(TestSortRandoms){
             array[j] = rng_random32(&rng);
         }
         int__array_sort(array, n);
-        bool is_sorted = int__is_sorted(array, n);
+        _Bool is_sorted = int__is_sorted(array, n);
         if(!is_sorted){
             TestPrintValue("n", n);
             TestPrintValue("before.inc", before.inc);

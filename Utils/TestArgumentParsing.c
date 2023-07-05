@@ -29,12 +29,12 @@ clear_parser(ArgParser* parser){
     for(size_t i = 0; i < parser->positional.count; i++){
         ArgToParse* arg = &parser->positional.args[i];
         arg->num_parsed = 0;
-        arg->visited = false;
+        arg->visited = 0;
     }
     for(size_t i = 0; i < parser->keyword.count; i++){
         ArgToParse* arg = &parser->keyword.args[i];
         arg->num_parsed = 0;
-        arg->visited = false;
+        arg->visited = 0;
     }
     memset(&parser->failed, 0, sizeof(parser->failed));
 }
@@ -46,7 +46,7 @@ TestFunction(TestArgumentParsing1){
         uint64_t y;
         int64_t z[3];
         LongString a;
-        bool flag;
+        _Bool flag;
         int an_int;
     } h = {0};
     ArgToParse kw_args[] = {
@@ -107,7 +107,7 @@ TestFunction(TestArgumentParsing1){
         TestExpectEquals(h.z[0], 3);
         TestExpectEquals(h.z[1], 4);
         TestExpectEquals(h.z[2], 5);
-        TestExpectEquals(h.flag, false);
+        TestExpectEquals(h.flag, 0);
         TestExpectEquals(h.an_int, 0);
         TestAssertEquals(kw_args[3].num_parsed, 1);
         TestExpectEquals(h.a.length, sizeof("hello")-1);
