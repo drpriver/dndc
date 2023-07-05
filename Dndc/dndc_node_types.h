@@ -37,7 +37,8 @@
     apply(META,           27)\
     apply(DEFLIST,        28)\
     apply(DEF,            29)\
-    apply(INVALID,        30)\
+    apply(HEAD,           30)\
+    apply(INVALID,        31)\
 
 enum NodeType{
     NODE_MD           =  0,
@@ -70,7 +71,8 @@ enum NodeType{
     NODE_META         = 27,
     NODE_DEFLIST      = 28,
     NODE_DEF          = 29,
-    NODE_INVALID      = 30, // maybe this should be 0.
+    NODE_HEAD         = 30,
+    NODE_INVALID      = 31, // maybe this should be 0.
 };
 
 typedef enum NodeType NodeType;
@@ -127,6 +129,7 @@ NODEALIASES[] = {
     {SVINIT("dl"),           NODE_DEFLIST},
     {SVINIT("deflist"),      NODE_DEFLIST},
     {SVINIT("def"),          NODE_DEF},
+    {SVINIT("head"),         NODE_HEAD},
 };
 
 enum {RAW_NODE_JS_INDEX = 5 };
@@ -140,6 +143,7 @@ StringView RAW_NODES[] = {
     [RAW_NODE_SCRIPT_INDEX] = SVINIT("script"),
     [RAW_NODE_JS_INDEX] = SVINIT("js"),
     SVINIT("meta"),
+    SVINIT("head"),
 };
 static const
 StringViewUtf16 RAW_NODES_UTF16[] = {
@@ -150,6 +154,7 @@ StringViewUtf16 RAW_NODES_UTF16[] = {
     [RAW_NODE_SCRIPT_INDEX] = SV16INIT("script"),
     [RAW_NODE_JS_INDEX] = SV16INIT("js"),
     SV16INIT("meta"),
+    SV16INIT("head"),
 };
 
 static const
@@ -178,6 +183,7 @@ NODETYPE_TO_NODE_ALIASES[NODE_INVALID+1] = {
      [NODE_META]        = SVINIT("meta"),
      [NODE_DEFLIST]     = SVINIT("deflist"),
      [NODE_DEF]         = SVINIT("def"),
+     [NODE_HEAD]        = SVINIT("head"),
 };
 
 enum {DNDC_MAX_NODE_DEPTH=100};

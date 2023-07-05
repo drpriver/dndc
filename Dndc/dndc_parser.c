@@ -639,6 +639,9 @@ parse_post_colon(DndcContext* ctx, StringView postcolon, NodeHandle node_handle)
                     case NODE_SCRIPTS:
                         err = Marray_push(NodeHandle)(&ctx->script_nodes, main_allocator(ctx), node_handle);
                         break;
+                    case NODE_HEAD:
+                        err = Marray_push(NodeHandle)(&ctx->head_nodes, main_allocator(ctx), node_handle);
+                        break;
                     case NODE_META:
                         err = Marray_push(NodeHandle)(&ctx->meta_nodes, main_allocator(ctx), node_handle);
                         break;
@@ -887,6 +890,7 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
     if(flags & NODEFLAG_IMPORT)
         goto regular_string_parsing;
     switch(parent_type){
+        case NODE_HEAD:
         case NODE_META:
         case NODE_PRE:
         case NODE_RAW:

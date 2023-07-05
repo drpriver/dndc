@@ -763,6 +763,7 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth, FILE* ou
         case NODE_KEYVALUEPAIR:
             break;
         case NODE_META:
+        case NODE_HEAD:
         case NODE_RAW:
         case NODE_PRE:
         case NODE_JS:

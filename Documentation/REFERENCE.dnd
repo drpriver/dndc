@@ -593,6 +593,14 @@
 
     This node can't be used in untrusted input.
 
+  :​:head::md .node #id(head)
+    The <tt>:​:head</tt> node is parsed as a raw node. Each line is
+    placed verbatim into the <head> of the document.
+    This allows you to do whatever you need to do.
+    This functionality is rarely needed.
+
+    This node can't be used in untrusted input.
+
 ::css
   * {
     box-sizing: border-box;

@@ -209,6 +209,7 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
             msb_write_literal(sb, "</details>\n");
             return 0;
         case NODE_META:
+        case NODE_HEAD:
             return 0;
         case NODE_INVALID:
             break;

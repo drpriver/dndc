@@ -1384,6 +1384,9 @@ js_dndc_node_set_type(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst 
         case NODE_META:
             err = Marray_push(NodeHandle)(&ctx->meta_nodes, main_allocator(ctx), handle);
             break;
+        case NODE_HEAD:
+            err = Marray_push(NodeHandle)(&ctx->head_nodes, main_allocator(ctx), handle);
+            break;
         case NODE_JS:
             return QJS_ThrowTypeError(jsctx, "Setting a node to QJS is not supported");
         case NODE_IMPORT:
@@ -1926,6 +1929,9 @@ QJSMETHOD(js_dndc_context_make_node){
             break;
         case NODE_META:
             node_store = &ctx->meta_nodes;
+            break;
+        case NODE_HEAD:
+            node_store = &ctx->head_nodes;
             break;
         case NODE_TITLE:
             ctx->titlenode = handle;

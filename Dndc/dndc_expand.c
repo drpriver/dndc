@@ -138,6 +138,7 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
             NODE_LOG_ERROR(ctx,n, "Node escaped to top level: ", quoted(LS_to_SV(NODENAMES[n->type])));
             return DNDC_ERROR_INVALID_TREE;
         case NODE_META:
+        case NODE_HEAD:
         case NODE_DEFLIST:
         case NODE_DEF:
         case NODE_DETAILS:
@@ -198,6 +199,7 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int n
         case NODE_LINKS:
         case NODE_DIV:
         case NODE_META:
+        case NODE_HEAD:
             NODE_CHILDREN_FOR_EACH(ch, n){
                 Node* child = get_node(ctx, *ch);
                 result = expand_node(ctx, child, indent, msb, node_depth+1);

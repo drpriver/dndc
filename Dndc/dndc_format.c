@@ -234,6 +234,7 @@ format_node(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
         case NODE_MD:
             return format_md_node(ctx, sb, node, indent);
         case NODE_META:
+        case NODE_HEAD:
         case NODE_RAW:
         case NODE_PRE:
         case NODE_JS:

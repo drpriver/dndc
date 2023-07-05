@@ -463,6 +463,7 @@ gather_anchor(DndcContext* ctx, NodeHandle handle, int node_depth){
             }
         }break;
         case NODE_META:
+        case NODE_HEAD:
         case NODE_TABLE_ROW:
         case NODE_STYLESHEETS:
         case NODE_LINKS:

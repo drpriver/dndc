@@ -3100,6 +3100,9 @@ dndc_ctx_make_node(DndcContext* ctx, int type, DndcStringView header, DndcNodeHa
         case NODE_META:
             node_store = &ctx->meta_nodes;
             break;
+        case NODE_HEAD:
+            node_store = &ctx->head_nodes;
+            break;
         case NODE_TITLE:
             ctx->titlenode = handle;
             break;
@@ -3421,6 +3424,7 @@ dndc_node_tree_repr_inner(DndcContext* ctx, NodeHandle handle, int depth, MStrin
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:
             break;
+        case NODE_HEAD:
         case NODE_META:
         case NODE_RAW:
         case NODE_PRE:

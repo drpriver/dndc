@@ -122,10 +122,25 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
                     MSB_FORMAT(msb, SV("<meta "), ch->header, SV(">\n"));
                 }
             }
+            MARRAY_FOR_EACH(NodeHandle, h, ctx->head_nodes){
+                Node* n = get_node(ctx, *h);
+                if(n->type != NODE_HEAD) continue;
+                NODE_CHILDREN_FOR_EACH(s, n){
+                    Node* ch = get_node(ctx, *s);
+                    if(ch->type != NODE_STRING)
+                        continue;
+                    StringView content = stripped_view(ch->header.text, ch->header.length);
+                    if(!content.length) continue;
+                    msb_write_str(msb, ch->header.text, ch->header.length);
+                }
+            }
         }
         else {
             if(ctx->meta_nodes.count){
                 HANDLE_LOG_WARNING(ctx, ctx->meta_nodes.data[0], "Meta nodes are not allowed for untrusted input. Ignoring meta nodes");
+            }
+            if(ctx->head_nodes.count){
+                HANDLE_LOG_WARNING(ctx, ctx->head_nodes.data[0], "Head nodes are not allowed for untrusted input. Ignoring head nodes");
             }
         }
     }
@@ -1611,6 +1626,13 @@ RENDERFUNC(DEF){
 
 // GCOV_EXCL_START
 RENDERFUNC(META){
+    (void)ctx;
+    (void)sb;
+    (void)handle;
+    (void)header_depth;
+    return 0;
+}
+RENDERFUNC(HEAD){
     (void)ctx;
     (void)sb;
     (void)handle;
