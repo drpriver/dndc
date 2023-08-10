@@ -99,15 +99,15 @@ def run(
 
     if format:
         if deps is not None: raise Exception('--format does not support --depends-path.')
-        outs = pydndc.reformat(source_text, logger=pydndc.stderr_logger)
+        outs = pydndc.reformat(source_text, logger=pydndc.stderr_logger, filename=source)
     elif expand:
         if deps is not None: raise Exception('--expand does not support --depends-path.')
-        outs = pydndc.expand(source_text, base_dir=base_directory, logger=pydndc.stderr_logger, flags=flags, jsargs=jsstuff)
+        outs = pydndc.expand(source_text, base_dir=base_directory, logger=pydndc.stderr_logger, flags=flags, jsargs=jsstuff, filename=source)
     elif md:
         if deps is not None: raise Exception('--markdown does not support --depends-path.')
-        outs = pydndc.to_markdown(source_text, base_dir=base_directory, logger=pydndc.stderr_logger, flags=flags, jsargs=jsstuff, deps=deps)
+        outs = pydndc.to_markdown(source_text, base_dir=base_directory, logger=pydndc.stderr_logger, flags=flags, jsargs=jsstuff, deps=deps, filename=source)
     else:
-        outs = pydndc.htmlgen(source_text, base_dir=base_directory, jsargs=jsstuff, logger=pydndc.stderr_logger, flags=flags, deps=deps)
+        outs = pydndc.htmlgen(source_text, base_dir=base_directory, jsargs=jsstuff, logger=pydndc.stderr_logger, flags=flags, deps=deps, filename=source)
     if dont_write:
         return
     if output:

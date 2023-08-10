@@ -806,6 +806,18 @@ dndc_format(StringView source_text, LongString* output, DndcLogFunc*_Nullable lo
 }
 
 DNDC_API
+DNDC_WARN_UNUSED
+int
+dndc_format2(StringView source_text, StringView source_path, LongString* output, DndcLogFunc*_Nullable log_func, void*_Nullable log_user_data){
+    uint64_t flags = 0
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_ALLOW_BAD_LINKS
+        ;
+    int e = run_the_dndc(OUTPUT_REFORMAT, flags, SV(""), source_text, source_path, output, NULL, NULL, log_func, log_user_data, NULL, NULL, NULL, NULL, NULL, LS(""));
+    return e;
+}
+
+DNDC_API
 void
 dndc_free_string(LongString str){
     Allocator_free(MALLOCATOR, str.text, str.length+1);

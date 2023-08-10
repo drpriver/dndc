@@ -20,7 +20,7 @@
     DNDC_STRINGIFY(DNDC_MICRO)
 
 #define DNDC_MAJOR 1
-#define DNDC_MINOR 1
+#define DNDC_MINOR 2
 #define DNDC_MICRO 0
 #define DNDC_STRINGIFY_IMPL(x) #x
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
@@ -793,6 +793,59 @@ dndc_format(DndcStringView source_text,
 // source_text:
 //    The actual source .dnd string. This string does not need to be
 //    nul-terminated. No references to this are retained afterwards.
+//
+// output:
+//    A pointer to a string to store the formatted string into. The output is
+//    allocated by malloc. You take ownership of the result. Must be non-null.
+//    If there is an error, the output is not written to.
+//
+// log_func:
+//    A function for reporting errors. See `DndcLogFunc` above. If NULL,
+//    errors will not be printed. Use `dndc_stderr_log_func` for a function
+//    that just prints to stderr.
+//
+// log_user_data:
+//    A pointer that will be passed to the log_func. For
+//    `dndc_stderr_log_func`, this should be NULL. For a function you've
+//    defined, pass an appropriate pointer!
+//
+// Returns:
+// --------
+// Returns 0 on success, a non-zero error code otherwise.
+// If non-zero, output will not be written to.
+
+DNDC_API
+DNDC_WARN_UNUSED
+int
+dndc_format2(DndcStringView source_text,
+      DndcStringView source_path,
+      DndcLongString* output,
+      DNDC_NULLABLE(DndcLogFunc*) log_func,
+      DNDC_NULLABLE(void*) log_user_data);
+// -----------
+// This function is exactly like `dndc_format`, but allows specifying the 
+// source_path for better log messages. In Dndc2.0 this will replace `dndc_format`.
+//
+// Turns the given .dnd string into another .dnd string, but formatted such
+// that lines do not exceed 79 characters if it is possible to semantically do
+// so, lines are right-stripped, redundant blank lines are merged, etc.  The
+// resulting string is stored in output.
+//
+// This function does not execute any javascript blocks and does not read any
+// files.
+//
+// The output is allocated by malloc. You take ownership of the result.  If on
+// Windows and if loaded from a dll, you should use `dndc_free_string`.
+//
+// Arguments:
+// ----------
+// source_text:
+//    The actual source .dnd string. This string does not need to be
+//    nul-terminated. No references to this are retained afterwards.
+//
+// source_path:
+//    The filepath that the source path was loaded from. This is mostly used
+//    for reporting errors.
 //
 // output:
 //    A pointer to a string to store the formatted string into. The output is

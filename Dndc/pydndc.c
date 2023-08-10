@@ -293,6 +293,7 @@ pydndc_reformat(PyObject* , PyObject* , PyObject*);
 static
 PyObject*_Nullable
 pydndc_expand(PyObject* , PyObject* , PyObject*);
+
 static
 PyObject*_Nullable
 pydndc_md(PyObject* , PyObject* , PyObject*);
@@ -321,8 +322,8 @@ PyMethodDef pydndc_methods[] = {
         .ml_meth = (PyCFunction)pydndc_reformat,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =PYSIG(
-        "reformat(text:str, logger:Callable|None=None) -> str\n",
-        "reformat(text, logger=None)\n")
+        "reformat(text:str, filename:str='(string input)', logger:Callable|None=None) -> str\n",
+        "reformat(text, filename='(string input)', logger=None)\n")
         "--\n"
         "\n"
         "Reformat the given .dnd string into a nicely formatted representation.\n"
@@ -334,6 +335,9 @@ PyMethodDef pydndc_methods[] = {
         "\n"
         "Optional Args:\n"
         "--------------\n"
+        "filename: str\n"
+        "    The filename that the text came from.\n"
+        "\n"
         "logger: Callable(int, str, int, int, str)\n"
         "    A callable for reporting errors. See the discussion in htmlgen.\n"
         "\n"
@@ -497,8 +501,8 @@ PyMethodDef pydndc_methods[] = {
         .ml_meth = (PyCFunction)pydndc_expand,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =PYSIG(
-        "expand(text:str, base_dir:str='.', logger:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs=None) -> str\n",
-        "expand(text, base_dir='.', logger=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n")
+        "expand(text:str, base_dir:str='.', filename:str='(string input)', logger:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs=None) -> str\n",
+        "expand(text, base_dir='.', filename='(string input)', logger=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n")
         "--\n"
         "\n"
         "Parses and converts the .dnd string into an equivelant .dnd string after\n"
@@ -514,6 +518,9 @@ PyMethodDef pydndc_methods[] = {
         "base_dir: str\n"
         "    For relative filepaths referenced in the document, what those paths\n"
         "    are relative to. Defaults to the current directory.\n"
+        "\n"
+        "filename: str\n"
+        "    The filename that the text came from.\n"
         "\n"
         "logger: Callable(int, str, int, int, str)\n"
         "    A callable for reporting errors. See the discussion in htlmgen.\n"
@@ -571,8 +578,8 @@ PyMethodDef pydndc_methods[] = {
         .ml_meth = (PyCFunction)pydndc_md,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc =PYSIG(
-        "to_markdown(text:str, base_dir:str='.', logger:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs=None) -> str\n",
-        "to_markdown(text, base_dir='.', logger=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n")
+        "to_markdown(text:str, base_dir:str='.', filename:str='(string input)', logger:Callable=None, file_cache:FileCache=None, flags:Flags=0, jsargs=None) -> str\n",
+        "to_markdown(text, base_dir='.', filename='(string input)', logger=None, file_cache=None, flags=Flags.NONE, jsargs=None)\n")
         "--\n"
         "\n"
         "Parses and converts the .dnd string into a best effort markdown string after\n"
@@ -588,6 +595,9 @@ PyMethodDef pydndc_methods[] = {
         "base_dir: str\n"
         "    For relative filepaths referenced in the document, what those paths\n"
         "    are relative to. Defaults to the current directory.\n"
+        "\n"
+        "filename: str\n"
+        "    The filename that the text came from.\n"
         "\n"
         "logger: Callable(int, str, int, int, str)\n"
         "    A callable for reporting errors. See the discussion in htlmgen.\n"
@@ -1115,10 +1125,11 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
     (void)mod;
     PyObject* text;
     PyObject* logger = NULL;
-    const char* const keywords[] = { "text", "logger", NULL};
+    PyObject* filename = NULL;
+    const char* const keywords[] = { "text", "filename", "logger", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O:reformat", (char**)keywords, &PyUnicode_Type, &text, &logger)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O:reformat", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &filename, &logger)){
         return NULL;
     }
     PopDiagnostic();
@@ -1129,11 +1140,12 @@ pydndc_reformat(PyObject* mod, PyObject* args, PyObject* kwargs){
         return NULL;
     }
     DndcStringView source = pystring_borrow_stringview(text);
+    DndcStringView source_path = filename?pystring_borrow_stringview(filename):SV("(string input)");
     DndcLongString output = {0};
     DndcLogFunc* func = logger?pydndc_collect_errors:NULL;
     PyObject* error_list = func? PyList_New(0) : NULL;
     PyObject* result = NULL;
-    int e = dndc_format(source, &output, func, error_list);
+    int e = dndc_format2(source, source_path, &output, func, error_list);
     if(PyErr_Occurred()){
         goto finally;
     }
@@ -1328,6 +1340,7 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
     PyObject* logger = NULL;
     PyObject* file_cache = NULL;
     PyObject* jsargs = NULL;
+    PyObject* filename = NULL;
     unsigned long long flags = 0;
     _Static_assert(sizeof(flags) == sizeof(uint64_t), "");
     enum {WHITELIST = 0
@@ -1340,10 +1353,10 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_NO_CSS
     };
-    const char* const keywords[] = {"text", "base_dir", "logger", "file_cache", "flags", "jsargs", NULL};
+    const char* const keywords[] = {"text", "base_dir", "filename", "logger", "file_cache", "flags", "jsargs", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOKO:expand", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &logger, &file_cache, &flags, &jsargs)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O!OOKO:expand", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &logger, &file_cache, &flags, &jsargs)){
         return NULL;
     }
     PopDiagnostic();
@@ -1390,7 +1403,8 @@ pydndc_expand(PyObject* mod, PyObject* args, PyObject* kwargs){
         DndcPyFileCache* cache = (DndcPyFileCache*)file_cache;
         textcache = cache->text_cache;
     }
-    int e = dndc_expand_to_dnd(flags, base_str, source, SV(""), &output, textcache, func, error_list, jsargs_ls);
+    DndcStringView source_path = filename?pystring_borrow_stringview(filename):SV("(string input)");
+    int e = dndc_expand_to_dnd(flags, base_str, source, source_path, &output, textcache, func, error_list, jsargs_ls);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
@@ -1429,6 +1443,7 @@ pydndc_md(PyObject* mod, PyObject* args, PyObject* kwargs){
     PyObject* logger = NULL;
     PyObject* file_cache = NULL;
     PyObject* jsargs = NULL;
+    PyObject* filename = NULL;
     unsigned long long flags = 0;
     _Static_assert(sizeof(flags) == sizeof(uint64_t), "");
     enum {WHITELIST = 0
@@ -1441,10 +1456,10 @@ pydndc_md(PyObject* mod, PyObject* args, PyObject* kwargs){
         | DNDC_SUPPRESS_WARNINGS
         | DNDC_NO_CSS
     };
-    const char* const keywords[] = {"text", "base_dir", "logger", "file_cache", "flags", "jsargs", NULL};
+    const char* const keywords[] = {"text", "base_dir", "filename", "logger", "file_cache", "flags", "jsargs", NULL};
     PushDiagnostic();
     SuppressCastQual();
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!OOKO:to_markdown", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &logger, &file_cache, &flags, &jsargs)){
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|O!O!OOKO:to_markdown", (char**)keywords, &PyUnicode_Type, &text, &PyUnicode_Type, &base_dir, &PyUnicode_Type, &filename, &logger, &file_cache, &flags, &jsargs)){
         return NULL;
     }
     PopDiagnostic();
@@ -1491,7 +1506,8 @@ pydndc_md(PyObject* mod, PyObject* args, PyObject* kwargs){
         DndcPyFileCache* cache = (DndcPyFileCache*)file_cache;
         textcache = cache->text_cache;
     }
-    int e = dndc_expand_to_md(flags, base_str, source, SV(""), &output, textcache, func, error_list, jsargs_ls);
+    DndcStringView source_path = filename?pystring_borrow_stringview(filename):SV("(string input)");
+    int e = dndc_expand_to_md(flags, base_str, source, source_path, &output, textcache, func, error_list, jsargs_ls);
     if(PyErr_Occurred()){
         result = NULL;
         goto finally;
