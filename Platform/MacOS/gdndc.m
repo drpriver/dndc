@@ -771,6 +771,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         .text = filename,
         .length = filename_len,
     };
+    _Bool fn_is_valid = fn.length && !SV_equals(fn, SV("(string input)"));
     StringView mess = {
         .text = message,
         .length = message_len,
@@ -778,20 +779,23 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     switch((enum DndcLogMessageType)type){
         case DNDC_ERROR_MESSAGE:
         case DNDC_WARNING_MESSAGE:
-            if(SV_equals(fn, SV("(string input)")))
-                MSB_FORMAT(&builder, line, ":", col, ": ", mess, "\n");
-            else
+            if(fn_is_valid)
                 MSB_FORMAT(&builder, fn, ":", line, ":", col, ": ", mess, "\n");
+            else
+                MSB_FORMAT(&builder, line, ":", col, ": ", mess, "\n");
             break;
         case DNDC_NODELESS_MESSAGE:
         case DNDC_STATISTIC_MESSAGE:
         case DNDC_DEBUG_MESSAGE:
-            MSB_FORMAT(&builder, mess, "\n");
+            if(fn_is_valid)
+                MSB_FORMAT(&builder, fn, ":", line, ": ", mess, "\n");
+            else
+                MSB_FORMAT(&builder, mess, "\n");
             break;
     }
     NSString* s = msb_detach_as_ns_string(&builder);
     NSMutableAttributedString* as = [[NSMutableAttributedString alloc] initWithString:s];
-    if(fn.length && !SV_equals(fn, SV("(string input)"))){
+    if(fn_is_valid){
         NSRange range = NSMakeRange(0, fn.length); // XXX this is in utf8, should be utf16 length
         DndLink* link = [[DndLink alloc] init];
         link->filename = [NSString stringWithFormat:@"/%.*s", (int)fn.length, fn.text];
