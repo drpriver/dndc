@@ -1,4 +1,4 @@
-DNDCVERSION:=1.2.0
+DNDCVERSION:=1.2.1
 DNDC_COMPAT_VERSION:=1.0.0
 include defs.mak
 include Vendored/quickjs.mak
