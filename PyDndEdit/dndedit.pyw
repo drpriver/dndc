@@ -2,8 +2,8 @@
 # Copyright © 2021-2023, David Priver <david@davidpriver.com>
 #
 import sys
-pydndcver = '1.0.1'
-pydndeditver = '1.0.0'
+pydndcver = '1.2.1'
+pydndeditver = '1.0.1'
 def win_install_deps() -> bool:
     import sys
     assert sys.platform == 'win32'

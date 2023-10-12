@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QP
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineUrlScheme, QWebEngineUrlSchemeHandler, QWebEngineUrlRequestJob, QWebEnginePage, QWebEngineProfile
 from PySide6.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices, QCloseEvent, QAction, QTextCursor
-from PySide6.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher, QFile, QThread, QTimer
+from PySide6.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher, QFile, QThread, QTimer, QIODevice
 import pydndc
 from typing import Optional, List, Dict, Optional, Callable, Tuple, Set
 import time
@@ -1089,7 +1089,7 @@ class Page(QSplitter):
         LOGGER.debug("Saving '%s'", self.filename)
         savefile = QSaveFile(self)
         savefile.setFileName(self.filename)
-        savefile.open(savefile.WriteOnly)
+        savefile.open(QIODevice.WriteOnly)
         text = self.textedit.toPlainText().encode('utf-8')
         if not text.endswith(b'\n'):
             text += b'\n'
@@ -1167,7 +1167,7 @@ class Page(QSplitter):
             fname += '.html'
         savefile = QSaveFile(self)
         savefile.setFileName(fname)
-        savefile.open(savefile.WriteOnly)
+        savefile.open(QIODevice.WriteOnly)
         text = html.encode('utf-8')
         if not text.endswith(b'\n'):
             text += b'\n'
