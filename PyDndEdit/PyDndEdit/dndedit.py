@@ -267,8 +267,16 @@ class DndMainWindow(QMainWindow):
             page.save()
         e.accept()
 
+class DndTabBar(QTabBar):
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.MiddleButton:
+            self.tabCloseRequested.emit(self.tabAt(event.pos()))
+        else:
+            super().mouseReleaseEvent(event)
+
 WINDOW = DndMainWindow()
 TABWIDGET = QTabWidget()
+TABWIDGET.setTabBar(DndTabBar())
 TABWIDGET.setDocumentMode(True)
 TABWIDGET.setTabsClosable(True)
 def close_tab(index:int) -> None:
