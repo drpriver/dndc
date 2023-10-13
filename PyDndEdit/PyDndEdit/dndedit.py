@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 
 #
 # Copyright © 2021-2023, David Priver <david@davidpriver.com>
@@ -9,10 +10,10 @@ import os
 # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
 os.environ['QT_ENABLE_HIGHDPI_SCALING'] = '1'
 import sys
-from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox, QToolButton
+from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox, QToolButton, QTabBar
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineUrlScheme, QWebEngineUrlSchemeHandler, QWebEngineUrlRequestJob, QWebEnginePage, QWebEngineProfile
-from PySide6.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices, QCloseEvent, QAction, QTextCursor
+from PySide6.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices, QCloseEvent, QAction, QTextCursor, QMouseEvent
 from PySide6.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher, QFile, QThread, QTimer, QIODevice
 import pydndc
 from typing import Optional, List, Dict, Optional, Callable, Tuple, Set
@@ -738,7 +739,9 @@ class DndWebPage(QWebEnginePage):
         super().__init__(*args, **kwargs)
         self.basedir = ''
 
-    def acceptNavigationRequest(self, url:QUrl, navtype:QWebEnginePage.NavigationType, isMainFrame:bool) -> bool:
+    def acceptNavigationRequest(self, url:QUrl|str, navtype:QWebEnginePage.NavigationType, isMainFrame:bool) -> bool:
+        if isinstance(url, str):
+            return False
         if url.scheme() == 'data':
             return True
         if navtype == QWebEnginePage.NavigationType.NavigationTypeLinkClicked:
@@ -757,7 +760,7 @@ class DndWebPage(QWebEnginePage):
                     add_tab(filepath)
                 else:
                     LOGGER.debug('Checking to create: %s, url: %s', filepath, url)
-                    answer = QMessageBox.question(None, "Create file?", f'{filepath} does not exist. Create and open the file?', defaultButton=QMessageBox.StandardButton.Yes)
+                    answer = QMessageBox.question(None, "Create file?", f'{filepath} does not exist. Create and open the file?', defaultButton=QMessageBox.StandardButton.Yes) # type: ignore # ???
                     if answer == QMessageBox.StandardButton.Yes:
                         LOGGER.debug('creating: %s', filepath)
                         open(filepath, 'w').close()
@@ -782,7 +785,7 @@ class SplitterHandler(QObject):
 class Page(QSplitter):
     def keyPressEvent(self, event: QKeyEvent) -> None:
         # idk if this is the right spot for this.
-        if not (event.modifiers() & Qt.ControlModifier):
+        if not (event.modifiers() & Qt.ControlModifier): # type: ignore # type defs should subclass int
             return super().keyPressEvent(event)
         try:
             v = int(chr(event.key()))
@@ -814,7 +817,7 @@ class Page(QSplitter):
         self.error_display.setFont(FONT)
         self.error_display.setReadOnly(True)
         self.editor_holder = QSplitter()
-        self.editor_holder.setOrientation(Qt.Orientation().Vertical)
+        self.editor_holder.setOrientation(Qt.Orientation.Vertical)
         self.editor_holder.addWidget(self.textedit)
         self.editor_holder.addWidget(self.error_display)
         self.checks = [
@@ -866,7 +869,7 @@ class Page(QSplitter):
         try:
             ctx = pydndc.Context(filename='')
             ctx.root.parse(text, filename='a')
-            node: pydndc.Node = ctx.node_by_approximate_location('a', line)
+            node: pydndc.Node| None = ctx.node_by_approximate_location('a', line)
             if not node:
                 return
             while node and node.handle != ctx.root.handle and not node.id:
@@ -1089,7 +1092,7 @@ class Page(QSplitter):
         LOGGER.debug("Saving '%s'", self.filename)
         savefile = QSaveFile(self)
         savefile.setFileName(self.filename)
-        savefile.open(QIODevice.WriteOnly)
+        savefile.open(QIODevice.WriteOnly) # type: ignore # idk what's up with these annotations
         text = self.textedit.toPlainText().encode('utf-8')
         if not text.endswith(b'\n'):
             text += b'\n'
@@ -1098,7 +1101,7 @@ class Page(QSplitter):
         LOGGER.debug("Saved '%s'", self.filename)
         savefile = QSaveFile(self)
     def get_fname(self, title:str, filter:str)->Optional[str]:
-        fname, _ = QFileDialog.getOpenFileName(None, title, '', filter)
+        fname, _ = QFileDialog.getOpenFileName(None, title, '', filter) # type: ignore # ???
         if not fname:
             return None
         if self.dirname:
@@ -1118,7 +1121,7 @@ class Page(QSplitter):
             return
         self.textedit.insert_image(fname)
     def insert_image_links(self)-> None:
-        fullname, _ = QFileDialog.getOpenFileName(None, 'Choose an image file', '', 'PNG images (*.png)')
+        fullname, _ = QFileDialog.getOpenFileName(None, 'Choose an image file', '', 'PNG images (*.png)') # type: ignore # ???
         if not fullname:
             return
         if self.dirname:
@@ -1167,7 +1170,7 @@ class Page(QSplitter):
             fname += '.html'
         savefile = QSaveFile(self)
         savefile.setFileName(fname)
-        savefile.open(QIODevice.WriteOnly)
+        savefile.open(QIODevice.WriteOnly) # type: ignore # idk what's up with these annotations
         text = html.encode('utf-8')
         if not text.endswith(b'\n'):
             text += b'\n'
@@ -1277,7 +1280,7 @@ def add_tab(filename:str, focus=True, allow_fail:bool=False) -> None:
         TABWIDGET.setCurrentWidget(page)
 
 def open_file(*args) -> None:
-    fname, _ = QFileDialog.getOpenFileName(None, 'Choose a dnd file', '', 'Dnd Files (*.dnd)')
+    fname, _ = QFileDialog.getOpenFileName(None, 'Choose a dnd file', '', 'Dnd Files (*.dnd)') # type: ignore # ???
     if not fname:
         return
     add_tab(fname)
@@ -1356,7 +1359,7 @@ def add_menus() -> None:
         global FONT
         ok, font = QFontDialog.getFont(FONT)
         if ok:
-            FONT = font
+            FONT = font # type: ignore # ???
             for page in all_windows.values():
                 page.textedit.setFont(FONT)
     action = QAction('F&ont', WINDOW)
