@@ -574,7 +574,7 @@ class DndEditor(QPlainTextEdit):
     def updateLineNumberAreaWidth(self, _) -> None:
         self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
 
-    def updateLineNumberArea(self, rect, dy) -> None:
+    def updateLineNumberArea(self, rect:QRect, dy:int) -> None:
         if dy:
             self.lineNumberArea.scroll(0, dy)
         else:
@@ -1043,7 +1043,7 @@ class Page(QSplitter):
             ctx.resolve_links()
             ctx.build_toc()
             html = ctx.render()
-        except ValueError:
+        except (ValueError, RuntimeError):
             # I am not sure if this comment is still valid.
 
             # On error, the file cache can have loaded things, but we don't get those
@@ -1052,7 +1052,7 @@ class Page(QSplitter):
             paths = FILE_CACHE.paths()
             for path in paths:
                 if path not in before_paths:
-                    WINDOW.watched.addPath(path)
+                    WINDOW.watcher.addPath(path)
             after = time.time()
             # print(f'addPaths: {(after-before)*1000:.3f}ms')
             return
