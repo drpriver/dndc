@@ -210,7 +210,14 @@ else:
     pointsize = 11
 FONT.setPointSize(pointsize)
 FONT.setFixedPitch(True)
-FONT.setFamilies(['Menlo','Cascadia Mono', 'Consolas','Ubuntu Mono', 'Mono'])
+fonts = []
+if sys.platform == 'darwin':
+    fonts.append('Menlo')
+elif sys.platform == 'win32':
+    fonts.extend(['Cascadia Mono', 'Consolas'])
+else:
+    fonts.append('Ubuntu Mono')
+FONT.setFamilies(fonts)
 FONTMETRICS = QFontMetrics(FONT)
 EIGHTYCHARS = FONTMETRICS.horizontalAdvance('M')*80
 EDITOR_ON_LEFT = False
@@ -728,6 +735,7 @@ class DndEditor(QPlainTextEdit):
         cursor.setPosition(first_block.position())
         cursor.setPosition(end_block.position() + len(end_block.text()), cursor.KeepAnchor)
         cursor.insertText(s.getvalue().rstrip())
+
     def contextMenuEvent(self, event:QContextMenuEvent) -> None:
         menu = self.createStandardContextMenu()
         action = QAction('Indent', menu)
@@ -739,7 +747,7 @@ class DndEditor(QPlainTextEdit):
         action.triggered.connect(lambda: self.alter_indent(False))
         action.setShortcut(QKeySequence('Ctrl+<'))
         menu.insertAction(menu.actions()[8], action)
-        menu.exec_(event.globalPos())
+        menu.exec(event.globalPos())
 
 
 class DndWebPage(QWebEnginePage):
@@ -818,7 +826,7 @@ class Page(QSplitter):
         self.web.resize(400, 400)
         self.textedit = DndEditor('')
         self.textedit.setFont(FONT)
-        self.textedit.setMinimumSize(EIGHTYCHARS*1.05, 200)  # type: ignore
+        self.textedit.setMinimumSize(EIGHTYCHARS*1.1, 200)  # type: ignore
         self.dirname = '.'
         self.textedit.document().contentsChanged.connect(self.contents_changed)
         self.error_display = QPlainTextEdit()
@@ -832,7 +840,7 @@ class Page(QSplitter):
             QCheckBox('Auto-apply changes', self),
             QCheckBox('Read-only', self),
             QCheckBox('Coord helper', self),
-            ]
+        ]
         self.checks[0].setCheckState(Qt.CheckState.Checked)
         self.auto_apply = True
         self.checks[0].stateChanged.connect(self.auto_apply_changed)
@@ -1575,6 +1583,6 @@ if not TABWIDGET.currentWidget():
     LOGGER.close()
     sys.exit(0)
 WINDOW.show()
-APP.exec_()
+APP.exec()
 LOGGER.info('Exiting normally')
 LOGGER.close()
