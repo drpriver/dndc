@@ -1177,8 +1177,8 @@ class Page(QSplitter):
             return
         options = QFileDialog.Options()
         options |= QFileDialog.DontConfirmOverwrite
-        if sys.platform == 'darwin':
-            options |= QFileDialog.DontUseNativeDialog
+        # if sys.platform == 'darwin':
+            # options |= QFileDialog.DontUseNativeDialog
         fname, _ = QFileDialog.getSaveFileName(None, 'Choose where to save html', '', 'HTML files (*.html)', selectedFilter="*.html", options=options)  # type: ignore
         if not fname:
             return
@@ -1314,8 +1314,8 @@ def add_menus() -> None:
     def new_file(*args) -> None:
         options = QFileDialog.Options()
         options |= QFileDialog.DontConfirmOverwrite
-        if sys.platform == 'darwin':
-            options |= QFileDialog.DontUseNativeDialog
+        # if sys.platform == 'darwin':
+            # options |= QFileDialog.DontUseNativeDialog
         fname, _ = QFileDialog.getSaveFileName(None, 'Choose or Create a dnd file', '', 'Dnd Files (*.dnd)', selectedFilter="*.dnd", options=options)  # type: ignore
         if not fname:
             return
