@@ -1179,7 +1179,7 @@ class Page(QSplitter):
         options |= QFileDialog.DontConfirmOverwrite
         if sys.platform == 'darwin':
             options |= QFileDialog.DontUseNativeDialog
-        fname, _ = QFileDialog.getSaveFileName(None, 'Choose where to save html', '', 'HTML files (*.html)', initialFilter="*.html", options=options)  # type: ignore
+        fname, _ = QFileDialog.getSaveFileName(None, 'Choose where to save html', '', 'HTML files (*.html)', selectedFilter="*.html", options=options)  # type: ignore
         if not fname:
             return
         if not fname.endswith('.html'):
@@ -1316,7 +1316,7 @@ def add_menus() -> None:
         options |= QFileDialog.DontConfirmOverwrite
         if sys.platform == 'darwin':
             options |= QFileDialog.DontUseNativeDialog
-        fname, _ = QFileDialog.getSaveFileName(None, 'Choose or Create a dnd file', '', 'Dnd Files (*.dnd)', initialFilter="*.dnd", options=options)  # type: ignore
+        fname, _ = QFileDialog.getSaveFileName(None, 'Choose or Create a dnd file', '', 'Dnd Files (*.dnd)', selectedFilter="*.dnd", options=options)  # type: ignore
         if not fname:
             return
         add_tab(fname, allow_fail=True)
