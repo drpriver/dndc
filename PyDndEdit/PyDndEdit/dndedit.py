@@ -13,8 +13,8 @@ import sys
 from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox, QToolButton, QTabBar
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineUrlScheme, QWebEngineUrlSchemeHandler, QWebEngineUrlRequestJob, QWebEnginePage, QWebEngineProfile
-from PySide6.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices, QCloseEvent, QAction, QTextCursor, QMouseEvent
-from PySide6.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher, QFile, QThread, QTimer, QIODevice
+from PySide6.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices, QCloseEvent, QAction, QTextCursor, QMouseEvent, QPaintEvent
+from PySide6.QtCore import Slot, Signal, QRect, QSize, Qt, QUrl, QStandardPaths, QSaveFile, QSettings, QObject, QEvent, QFileSystemWatcher, QFile, QThread, QTimer, QIODevice, QIODeviceBase
 import pydndc
 from typing import Optional, List, Dict, Optional, Callable, Tuple, Set
 import time
@@ -25,7 +25,7 @@ import logging
 import datetime
 import zipfile
 import io
-QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+QApplication.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling)
 APPNAME = 'DndEdit'
 APP = QApplication(sys.argv)
 APP.setApplicationName(APPNAME)
@@ -39,17 +39,17 @@ APPFOLDER = os.path.join(APPLOCAL, APPNAME)
 LOGS_FOLDER = os.path.join(APPFOLDER, 'Logs')
 os.makedirs(LOGS_FOLDER, exist_ok=True)
 LOGFILE_LOCATION = os.path.join(LOGS_FOLDER, datetime.datetime.now().strftime('%Y-%m-%d.txt'))
-SCHEME = QWebEngineUrlScheme(b'dnd')  # type: ignore
+SCHEME = QWebEngineUrlScheme(b'dnd')
 SCHEME.setFlags(
         QWebEngineUrlScheme.Flag.SecureScheme
-        | QWebEngineUrlScheme.Flag.LocalAccessAllowed # type: ignore
-        | QWebEngineUrlScheme.Flag.CorsEnabled # type: ignore
+        | QWebEngineUrlScheme.Flag.LocalAccessAllowed
+        | QWebEngineUrlScheme.Flag.CorsEnabled
       )
 SCHEME.setSyntax(QWebEngineUrlScheme.Syntax.Path)
 QWebEngineUrlScheme.registerScheme(SCHEME)
 
 def append_room_with_name_at(name:str, x:int, y:int) -> None:
-    page: Optional[Page] = TABWIDGET.currentWidget()
+    page: Optional[Page] = get_current_tab()
     if not page:
         return
     if page.textedit.isReadOnly():
@@ -60,7 +60,7 @@ def append_room_with_name_at(name:str, x:int, y:int) -> None:
     page.textedit.setFocus(Qt.FocusReason.NoFocusReason)
 
 def change_coord(id:int, x:int, y:int) -> None:
-    page: Optional[Page] = TABWIDGET.currentWidget()
+    page: Optional[Page] = get_current_tab()
     if not page: return
     if page.textedit.isReadOnly(): return
     text = page.textedit.toPlainText()
@@ -74,7 +74,7 @@ def change_coord(id:int, x:int, y:int) -> None:
         LOGGER.exception('Problem while doing change coord')
 
 def scroll_to_id(nid:str) -> None:
-    page: Optional[Page] = TABWIDGET.currentWidget()
+    page: Optional[Page] = get_current_tab()
     if not page: return
     if page.textedit.isReadOnly(): return
     text = page.textedit.toPlainText()
@@ -84,7 +84,7 @@ def scroll_to_id(nid:str) -> None:
         n = ctx.node_by_id(nid)
         if n is None: return
         loc:pydndc.Location = n.location
-        page.textedit.moveCursor(QTextCursor.End)
+        page.textedit.moveCursor(QTextCursor.MoveOperation.End)
         cursor = QTextCursor(page.textedit.document().findBlockByLineNumber(loc.row-1))
         page.textedit.setTextCursor(cursor)
 
@@ -145,7 +145,7 @@ class SCHEME_Handler(QWebEngineUrlSchemeHandler):
                     }
             if imgtype in types:
                 file = QFile(imgpath, request)
-                request.reply(types[imgtype], file)  # type: ignore
+                request.reply(types[imgtype], file)
                 return
         request.fail(QWebEngineUrlRequestJob.Error.RequestDenied)
 
@@ -198,7 +198,7 @@ APPHOST = 'invalid.'
 
 
 handler = SCHEME_Handler()
-QWebEngineProfile.defaultProfile().installUrlSchemeHandler(b'dnd', handler)  # type: ignore
+QWebEngineProfile.defaultProfile().installUrlSchemeHandler(b'dnd', handler)
 all_windows: Dict[str, 'Page'] = {}
 
 FONT = QFont()
@@ -283,16 +283,22 @@ class DndTabBar(QTabBar):
 
 WINDOW = DndMainWindow()
 TABWIDGET = QTabWidget()
+def get_current_tab() -> Optional[Page]:
+    current_tab = TABWIDGET.currentWidget()
+    if not current_tab: return None
+    assert isinstance(current_tab, Page)
+    return current_tab
+
 TABWIDGET.setTabBar(DndTabBar())
 TABWIDGET.setDocumentMode(True)
 TABWIDGET.setTabsClosable(True)
 def close_tab(index:int) -> None:
-    page = TABWIDGET.widget(index)
+    page: Page = TABWIDGET.widget(index) # type: ignore
     page.save()
     page.close()
     TABWIDGET.removeTab(index)
     del all_windows[page.filename]
-    page.setParent(None)  # type: ignore
+    page.setParent(None)
 
 TABWIDGET.tabCloseRequested.connect(close_tab)
 WINDOW.setCentralWidget(TABWIDGET)
@@ -363,14 +369,14 @@ class DndSyntaxHighlighter(QSyntaxHighlighter):
                 self.setFormat(bytecol, bytelength, fmt)
 
 class LineNumberArea(QWidget):
-    def __init__(self, editor) -> None:
+    def __init__(self, editor: DndEditor) -> None:
         super().__init__(editor)
         self.codeEditor = editor
 
     def sizeHint(self) -> QSize:
-        return QSize(self.editor.lineNumberAreaWidth(), 0)
+        return QSize(self.codeEditor.lineNumberAreaWidth(), 0)
 
-    def paintEvent(self, event) -> None:
+    def paintEvent(self, event: QPaintEvent) -> None:
         self.codeEditor.lineNumberAreaPaintEvent(event)
 
 COORD_HELPER_SCRIPT= (
@@ -588,7 +594,8 @@ class DndEditor(QPlainTextEdit):
         self.lineNumberArea.setGeometry(QRect(cr.left(), cr.top(), self.lineNumberAreaWidth(), cr.height()))
 
     def keyPressEvent(self, event:QKeyEvent) -> None:
-        if event.key() == Qt.Key.Key_Tab:
+        key = event.key()
+        if key == Qt.Key.Key_Tab:
             if self.isReadOnly():
                 return
             if self.textCursor().hasSelection():
@@ -596,7 +603,7 @@ class DndEditor(QPlainTextEdit):
                 return
             self.insertPlainText('  ')
             return
-        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
+        if key == Qt.Key.Key_Return or key == Qt.Key.Key_Enter:
             if self.isReadOnly():
                 return
             block = self.textCursor().block()
@@ -607,7 +614,7 @@ class DndEditor(QPlainTextEdit):
             else:
                 self.insertPlainText('\n')
             return
-        if event.key() == Qt.Key.Key_Backspace:
+        if key == Qt.Key.Key_Backspace:
             if self.isReadOnly():
                 return
             cursor = self.textCursor()
@@ -618,6 +625,32 @@ class DndEditor(QPlainTextEdit):
                 if text[position-1] == ' ' and text[position-2] == ' ':
                     cursor.deletePreviousChar()
                     cursor.deletePreviousChar()
+                    return
+        if sys.platform != 'darwin':
+            if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+                if key == Qt.Key.Key_H:
+                    cursor.deletePreviousChar()
+                    return
+                if key == Qt.Key.Key_D:
+                    cursor.deleteChar()
+                    return
+                if event.key() == Qt.Key.Key_B:
+                    self.moveCursor(QTextCursor.MoveOperation.Left)
+                    return
+                if event.key() == Qt.Key.Key_F:
+                    self.moveCursor(QTextCursor.MoveOperation.Right)
+                    return
+                if event.key() == Qt.Key.Key_N:
+                    self.moveCursor(QTextCursor.MoveOperation.Down)
+                    return
+                if event.key() == Qt.Key.Key_P:
+                    self.moveCursor(QTextCursor.MoveOperation.Up)
+                    return
+                if event.key() == Qt.Key.Key_A:
+                    self.moveCursor(QTextCursor.MoveOperation.StartOfLine)
+                    return
+                if event.key() == Qt.Key.Key_E:
+                    self.moveCursor(QTextCursor.MoveOperation.EndOfLine)
                     return
         super().keyPressEvent(event)
 
@@ -637,7 +670,7 @@ class DndEditor(QPlainTextEdit):
     def lineNumberAreaPaintEvent(self, event) -> None:
         painter = QPainter(self.lineNumberArea)
 
-        painter.fillRect(event.rect(), Qt.lightGray)
+        painter.fillRect(event.rect(), Qt.GlobalColor.lightGray)
 
         block = self.firstVisibleBlock()
         blockNumber = block.blockNumber()
@@ -650,13 +683,13 @@ class DndEditor(QPlainTextEdit):
         while block.isValid() and (top <= event.rect().bottom()):
             if block.isVisible() and (bottom >= event.rect().top()):
                 if blockNumber == cursor_number:
-                    painter.fillRect(QRect(0, top, self.lineNumberArea.width(), height), Qt.yellow)  # type: ignore
+                    painter.fillRect(QRect(0, int(top), self.lineNumberArea.width(), height), Qt.GlobalColor.yellow)
                 if blockNumber == self.error_line:
-                    painter.fillRect(QRect(0, top, self.lineNumberArea.width(), height), Qt.red)  # type: ignore
+                    painter.fillRect(QRect(0, int(top), self.lineNumberArea.width(), height), Qt.GlobalColor.red)
 
                 number = str(blockNumber + 1)
-                painter.setPen(Qt.black)
-                painter.drawText(0, top, self.lineNumberArea.width(), height, Qt.AlignRight, number)  # type: ignore
+                painter.setPen(Qt.GlobalColor.black)
+                painter.drawText(0, int(top), self.lineNumberArea.width(), height, Qt.AlignmentFlag.AlignRight, number)
 
             block = block.next()
             top = bottom
@@ -733,7 +766,7 @@ class DndEditor(QPlainTextEdit):
                 break
             block = block.next()
         cursor.setPosition(first_block.position())
-        cursor.setPosition(end_block.position() + len(end_block.text()), cursor.KeepAnchor)
+        cursor.setPosition(end_block.position() + len(end_block.text()), QTextCursor.MoveMode.KeepAnchor)
         cursor.insertText(s.getvalue().rstrip())
 
     def contextMenuEvent(self, event:QContextMenuEvent) -> None:
@@ -789,8 +822,8 @@ class DndWebPage(QWebEnginePage):
 
 class SplitterHandler(QObject):
     def eventFilter(self, watched:QObject, event:QEvent) -> bool:
-        if event.type() == QEvent.MouseButtonDblClick:
-            handle: QSplitterHandle = watched
+        if event.type() == QEvent.Type.MouseButtonDblClick:
+            handle: QSplitterHandle = watched # type: ignore
             if handle.splitter().widget(0).width():
                 handle.splitter().setSizes([0, 1])
             else:
@@ -826,7 +859,7 @@ class Page(QSplitter):
         self.web.resize(400, 400)
         self.textedit = DndEditor('')
         self.textedit.setFont(FONT)
-        self.textedit.setMinimumSize(EIGHTYCHARS*1.1, 200)  # type: ignore
+        self.textedit.setMinimumSize(int(EIGHTYCHARS*1.1), 200)
         self.dirname = '.'
         self.textedit.document().contentsChanged.connect(self.contents_changed)
         self.error_display = QPlainTextEdit()
@@ -1091,14 +1124,14 @@ class Page(QSplitter):
         self.error_display.hide()
         self.show_errors = False
     def put_editor_right(self) -> None:
-        self.editor_holder.setParent(None)  # type: ignore
-        self.web.setParent(None)  # type: ignore
+        self.editor_holder.setParent(None)
+        self.web.setParent(None)
         self.addWidget(self.web)
         self.addWidget(self.editor_holder)
         self.editor_is_on_left = False
     def put_editor_left(self) -> None:
-        self.editor_holder.setParent(None)  # type: ignore
-        self.web.setParent(None)  # type: ignore
+        self.editor_holder.setParent(None)
+        self.web.setParent(None)
         self.addWidget(self.editor_holder)
         self.addWidget(self.web)
         self.editor_is_on_left = True
@@ -1108,11 +1141,11 @@ class Page(QSplitter):
         LOGGER.debug("Saving '%s'", self.filename)
         savefile = QSaveFile(self)
         savefile.setFileName(self.filename)
-        savefile.open(QIODevice.WriteOnly) # type: ignore # idk what's up with these annotations
+        savefile.open(QIODeviceBase.OpenModeFlag.WriteOnly)
         text = self.textedit.toPlainText().encode('utf-8')
         if not text.endswith(b'\n'):
             text += b'\n'
-        savefile.write(text)  # type: ignore
+        savefile.write(text)
         savefile.commit()
         LOGGER.debug("Saved '%s'", self.filename)
         savefile = QSaveFile(self)
@@ -1130,13 +1163,15 @@ class Page(QSplitter):
                     fname = relative
         return fname
     def insert_image(self) -> None:
-        if self.isReadOnly():
+        if self.textedit.isReadOnly():
             return
         fname = self.get_fname('Choose an image file', 'PNG images (*.png)')
         if not fname:
             return
         self.textedit.insert_image(fname)
     def insert_image_links(self)-> None:
+        if self.textedit.isReadOnly():
+            return
         fullname, _ = QFileDialog.getOpenFileName(None, 'Choose an image file', '', 'PNG images (*.png)') # type: ignore # ???
         if not fullname:
             return
@@ -1175,10 +1210,9 @@ class Page(QSplitter):
             mbox = QMessageBox()
             mbox.critical(None, 'Unable to convert current document', 'Unable to convert current document to html.\n\nSyntax Error in document (see error output).')  # type: ignore
             return
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontConfirmOverwrite
+        options = QFileDialog.Option.DontConfirmOverwrite
         # if sys.platform == 'darwin':
-            # options |= QFileDialog.DontUseNativeDialog
+            # options |= QFileDialog.Option.DontUseNativeDialog
         fname, _ = QFileDialog.getSaveFileName(None, 'Choose where to save html', '', 'HTML files (*.html)', selectedFilter="*.html", options=options)  # type: ignore
         if not fname:
             return
@@ -1186,11 +1220,11 @@ class Page(QSplitter):
             fname += '.html'
         savefile = QSaveFile(self)
         savefile.setFileName(fname)
-        savefile.open(QIODevice.WriteOnly) # type: ignore # idk what's up with these annotations
+        savefile.open(QIODeviceBase.OpenModeFlag.WriteOnly)
         text = html.encode('utf-8')
         if not text.endswith(b'\n'):
             text += b'\n'
-        savefile.write(text)  # type: ignore
+        savefile.write(text)
         savefile.commit()
 
 
@@ -1312,8 +1346,7 @@ def add_menus() -> None:
     filemenu.addAction(action)
 
     def new_file(*args) -> None:
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontConfirmOverwrite
+        options = QFileDialog.Option.DontConfirmOverwrite
         # if sys.platform == 'darwin':
             # options |= QFileDialog.DontUseNativeDialog
         fname, _ = QFileDialog.getSaveFileName(None, 'Choose or Create a dnd file', '', 'Dnd Files (*.dnd)', selectedFilter="*.dnd", options=options)  # type: ignore
@@ -1326,7 +1359,7 @@ def add_menus() -> None:
     filemenu.addAction(action)
 
     def save_file(*args) -> None:
-        page: Optional[Page]= TABWIDGET.currentWidget()
+        page: Optional[Page]= get_current_tab()
         if page:
             page.save()
     action = QAction('&Save', WINDOW)
@@ -1335,7 +1368,7 @@ def add_menus() -> None:
     filemenu.addAction(action)
 
     def export_file(*args) -> None:
-        page: Optional[Page] = TABWIDGET.currentWidget()
+        page: Optional[Page] = get_current_tab()
         if page: page.export_as_html()
     action = QAction('&Export As HTML', WINDOW)
     action.triggered.connect(export_file)
@@ -1343,13 +1376,13 @@ def add_menus() -> None:
     filemenu.addAction(action)
 
     def close_current_tab(*args) -> None:
-        current_tab: Optional[Page] = TABWIDGET.currentWidget()
+        current_tab: Optional[Page] = get_current_tab()
         if not current_tab:
             WINDOW.close()
             return
         current_tab.save()
         del all_windows[current_tab.filename]
-        current_tab.setParent(None)  # type: ignore
+        current_tab.setParent(None)
     action = QAction('&Close', WINDOW)
     action.triggered.connect(close_current_tab)
     action.setShortcut(QKeySequence('Ctrl+w'))
@@ -1363,7 +1396,7 @@ def add_menus() -> None:
     editmenu = menubar.addMenu('Edit')
 
     def format_dnd(*args) -> None:
-        current_tab: Optional[Page] = TABWIDGET.currentWidget()
+        current_tab: Optional[Page] = get_current_tab()
         if not current_tab:
             return
         current_tab.format()
@@ -1375,7 +1408,7 @@ def add_menus() -> None:
         global FONT
         ok, font = QFontDialog.getFont(FONT)
         if ok:
-            FONT = font # type: ignore # ???
+            FONT = font
             for page in all_windows.values():
                 page.textedit.setFont(FONT)
     action = QAction('F&ont', WINDOW)
@@ -1383,7 +1416,7 @@ def add_menus() -> None:
     editmenu.addAction(action)
 
     def indent(*args) -> None:
-        current_tab: Optional[Page] = TABWIDGET.currentWidget()
+        current_tab: Optional[Page] = get_current_tab()
         if not current_tab:
             return
         current_tab.textedit.alter_indent(indent=True)
@@ -1393,7 +1426,7 @@ def add_menus() -> None:
     editmenu.addAction(action)
 
     def dedent(*args) -> None:
-        current_tab: Optional[Page] = TABWIDGET.currentWidget()
+        current_tab: Optional[Page] = get_current_tab()
         if not current_tab:
             return
         current_tab.textedit.alter_indent(indent=False)
@@ -1405,7 +1438,7 @@ def add_menus() -> None:
     insert = menubar.addMenu('Insert')
     def insert_func(method):
         def insert_foo(*args) -> None:
-            current_tab: Optional[Page] = TABWIDGET.currentWidget()
+            current_tab: Optional[Page] = get_current_tab()
             if not current_tab:
                 return
             method(current_tab)
@@ -1476,7 +1509,7 @@ def add_menus() -> None:
     viewmenu.addAction(action)
 
     def scroll_into_view(*args) -> None:
-        current_tab: Optional[Page] = TABWIDGET.currentWidget()
+        current_tab: Optional[Page] = get_current_tab()
         LOGGER.debug('scrolling into view')
         if not current_tab:
             return
@@ -1488,7 +1521,7 @@ def add_menus() -> None:
     viewmenu.addAction(action)
 
     def refresh_highlight(*args) -> None:
-        current_tab: Optional[Page] = TABWIDGET.currentWidget()
+        current_tab: Optional[Page] = get_current_tab()
         if not current_tab:
             return
         current_tab.textedit.highlight.rehighlight()
@@ -1576,9 +1609,9 @@ def add_menus() -> None:
 
 add_menus()
 WINDOW.restore_everything()
-if not TABWIDGET.currentWidget():
+if not get_current_tab():
     open_file()
-if not TABWIDGET.currentWidget():
+if not get_current_tab():
     LOGGER.info('Exiting due to user canceling open file')
     LOGGER.close()
     sys.exit(0)
