@@ -5,6 +5,7 @@
 #include <stdlib.h> // malloc, free, qsort
 #include "gi_byte_distance_completer.h"
 #include "str_util.h"
+#include "path_util.h"
 #include "string_distances.h"
 #include "Allocators/mallocator.h"
 
@@ -15,6 +16,9 @@
 struct BdcPair {
     size_t idx;
     ssize_t distance;
+    ssize_t idistance;
+    ssize_t filename_distance;
+    ssize_t filename_idistance;
 };
 
 static
@@ -22,8 +26,14 @@ int
 bdc_pair_cmp(const void* a, const void* b){
     const struct BdcPair* pa = a;
     const struct BdcPair* pb = b;
+    if(pa->filename_distance < pb->filename_distance) return -1;
+    if(pa->filename_distance > pb->filename_distance) return 1;
+    if(pa->filename_idistance < pb->filename_idistance) return -1;
+    if(pa->filename_idistance > pb->filename_idistance) return 1;
     if(pa->distance < pb->distance) return -1;
     if(pa->distance > pb->distance) return 1;
+    if(pa->idistance < pb->idistance) return -1;
+    if(pa->idistance > pb->idistance) return 1;
     return 0;
 }
 
@@ -33,16 +43,28 @@ byte_distance_completer(GetInputCtx* ctx, size_t original_cursor, size_t origina
     struct ByteDistanceCompleterContext* bdcctx = ctx->tab_completion_user_data;
     if(n_tabs == 1){
         StringView original = {.length=original_count, .text=ctx->altbuff};
-        int strip_suff = !endswith(original, bdcctx->strip_suff);
+        _Bool strip_suff = !endswith(original, bdcctx->strip_suff);
         bdcctx->ordered.count = 0;
         struct BdcPair* distances = malloc(bdcctx->original->count * sizeof*distances);
         size_t n = 0;
         for(size_t i = 0; i < bdcctx->original->count; i++){
             StringView hay = bdcctx->original->data[i];
-            ssize_t distance = byte_expansion_distance(hay.text, hay.length-bdcctx->strip_suff.length*strip_suff, ctx->altbuff, original_count);
-            if(distance < 0) continue;
+            if(strip_suff && endswith(hay, bdcctx->strip_suff))
+                hay.length -= bdcctx->strip_suff.length;
+            StringView hay_filename = path_basename(hay);
+            ssize_t distance = byte_expansion_distance(hay.text, hay.length, ctx->altbuff, original_count);
+            ssize_t idistance = byte_expansion_distance_icase(hay.text, hay.length, ctx->altbuff, original_count);
+            ssize_t filename_distance = byte_expansion_distance(hay_filename.text, hay_filename.length, ctx->altbuff, original_count);
+            ssize_t filename_idistance = byte_expansion_distance_icase(hay_filename.text, hay_filename.length, ctx->altbuff, original_count);
+            if(idistance < 0) continue;
+            if(distance < 0) distance = hay.length;
+            if(filename_distance < 0) filename_distance = hay.length;
+            if(filename_idistance < 0) filename_idistance = hay.length;
             distances[n].idx = i;
             distances[n].distance = distance;
+            distances[n].idistance = idistance;
+            distances[n].filename_distance = filename_distance;
+            distances[n].filename_idistance = filename_idistance;
             n++;
         }
         qsort(distances, n, sizeof *distances, bdc_pair_cmp);
