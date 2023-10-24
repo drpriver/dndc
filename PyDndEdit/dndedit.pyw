@@ -3,7 +3,7 @@
 #
 import sys
 pydndcver = '1.2.1'
-pydndeditver = '1.0.3'
+pydndeditver = '1.0.4'
 def win_install_deps() -> bool:
     import sys
     assert sys.platform == 'win32'

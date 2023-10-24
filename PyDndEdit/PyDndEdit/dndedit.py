@@ -4,7 +4,7 @@ from __future__ import annotations
 #
 # Copyright © 2021-2023, David Priver <david@davidpriver.com>
 #
-PYGDNDC_VERSION = '1.0.0'
+PYGDNDC_VERSION = '1.0.4'
 __version__ = PYGDNDC_VERSION
 import os
 # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
@@ -1372,7 +1372,6 @@ def add_menus() -> None:
         if page: page.export_as_html()
     action = QAction('&Export As HTML', WINDOW)
     action.triggered.connect(export_file)
-    action.setShortcut(QKeySequence('Ctrl+e'))
     filemenu.addAction(action)
 
     def close_current_tab(*args) -> None:
