@@ -319,7 +319,7 @@ main(int argc, char** argv){
         if(len < 0) break;
         if(len == 0) continue;
         StringView b = stripped_view(input.buff, len);
-        if(SV_equals(b, SV("l")) || SV_equals(b, SV("list"))){
+        if(SV_equals(b, SV("l")) || SV_equals(b, SV("list")) || SV_equals(b, SV("ls"))){
             print_entries(entries);
             gi_add_line_to_history_len(&input, b.text, b.length);
             continue;
