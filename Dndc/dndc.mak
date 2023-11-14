@@ -1,4 +1,3 @@
-
 ifeq ($(UNAME),Darwin)
 RPATH:=-rpath @executable_path
 else
@@ -35,8 +34,9 @@ $(FUZZDIR): ; @$(MKDIR) -p $@
 
 $(BINDIR)/TestDndc_fast$(EXE): Dndc/TestDndc.c $(DEPDIR)/TestDndc_fast.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndc_fast.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
+# No RPATH as sanitize adds it already and new ld64 on macos gives annoying warning
 $(BINDIR)/TestDndc_debug$(EXE): Dndc/TestDndc.c $(DEPDIR)/TestDndc_debug.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
-	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndc_debug.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
+	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndc_debug.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB)
 
 $(TESTDIR)/TestDndc_debug: $(BINDIR)/TestDndc_debug$(EXE)
 	$< --tee $@ --shuffle $(TESTQUIET)
@@ -66,8 +66,9 @@ TestQJS: $(TESTDIR)/TestQJS_debug $(TESTDIR)/TestQJS_fast
 
 $(BINDIR)/TestDndcAlloc_fast$(EXE): Dndc/TestDndcAlloc.c $(DEPDIR)/TestDndcAlloc_fast.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndcAlloc_fast.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
+# No RPATH as sanitize adds it already and new ld64 on macos gives annoying warning
 $(BINDIR)/TestDndcAlloc_debug$(EXE): Dndc/TestDndcAlloc.c $(DEPDIR)/TestDndcAlloc_debug.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
-	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndcAlloc_debug.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
+	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndcAlloc_debug.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB)
 
 $(TESTDIR)/TestDndcAlloc_debug_html: $(BINDIR)/TestDndcAlloc_debug$(EXE)
 	$< --tee $@ --html $(TESTQUIET)
@@ -108,8 +109,9 @@ TestDndcAlloc: \
 
 $(BINDIR)/TestDndcAst_fast$(EXE): Dndc/TestDndcAst.c $(DEPDIR)/TestDndcAst_fast.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
 	$(CC) $(TEST_FLAGS) $(FLAGS) $(FAST_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndcAst_fast.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
+# No RPATH as sanitize adds it already and new ld64 on macos gives annoying warning
 $(BINDIR)/TestDndcAst_debug$(EXE): Dndc/TestDndcAst.c $(DEPDIR)/TestDndcAst_debug.dep $(BINDIR)/libquickjs$(SO) | $(DIRECTORIES)
-	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndcAst_debug.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB) $(RPATH)
+	$(CC) $(TEST_FLAGS) $(FLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) $(DEPDIR)/TestDndcAst_debug.dep $< -o $@ -g  $(LINK_FLAGS) -DQJS_SHARED_LIBRARY $(BINDIR)/libquickjs$(SOLIB)
 
 $(TESTDIR)/TestDndcAst_debug: $(BINDIR)/TestDndcAst_debug$(EXE)
 	$< --tee $@ $(TESTQUIET)
