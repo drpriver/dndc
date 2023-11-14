@@ -57,7 +57,7 @@ dndbr: $(BINDIR)/dndbr
 $(OBJDIR)/libdndc.$(DNDCVERSION).a: $(OBJDIR)/dndc.o
 	ar crs $@ $^
 $(BINDIR)/libdndc.$(DNDCVERSION).dylib: $(OBJDIR)/dndc.o $(VENDOBJDIR)/libquickjs.o
-	$(CC) $^ -o $@ $(OPT_FLAGS) -Wl,-dead_strip_dylibs -Wl,-headerpad_max_install_names -Wl,-undefined,error -shared -install_name @rpath/libdndc.$(DNDCVERSION).dylib -compatibility_version $(DNDC_COMPAT_VERSION) -current_version $(DNDCVERSION) -g
+	$(CC) $^ -o $@ $(OPT_FLAGS) -Wl,-dead_strip_dylibs -Wl,-headerpad_max_install_names -shared -install_name @rpath/libdndc.$(DNDCVERSION).dylib -compatibility_version $(DNDC_COMPAT_VERSION) -current_version $(DNDCVERSION) -g
 
 all: gdndc $(OBJDIR)/libdndc.$(DNDCVERSION).a $(BINDIR)/libdndc.$(DNDCVERSION).dylib
 all: dndbr
