@@ -189,12 +189,12 @@ static
 int
 handle_request(DndLogger*, uint64_t flags, LongString directory, SOCKET accsd, LongString request);
 
+typedef struct DndServer DndServer;
 struct DndServer{
     SOCKET sd;
     DndLogger logger;
 };
 
-typedef struct DndServer DndServer;
 
 #ifdef _WIN32
 //
@@ -498,12 +498,15 @@ handle_request(DndLogger* logger, uint64_t flags, LongString directory, SOCKET a
     }
     debug(logger, "path: '%.*s' suffix: '%.*s'", (int)path.length, path.text, (int)suffix.length, suffix.text);
     if(endswith(path, SV(".dnd")) || SV_equals(suffix, SV(".dnd"))){
+        // nasty hack
+        if(endswith(path, SV("/")))
+            suffix = SV("index.dnd");
         LongString text = LS("");
         LongString t = {0};
         FileError tfr = read_relative_file_with_suffix_conversion(directory, path, suffix, &t);
         if(tfr.errored){
             StringView bn = path_basename(path);
-            if(SV_equals(bn, SV("index")) || SV_equals(bn, SV("index.dnd"))){
+            if(SV_equals(bn, SV("index")) || SV_equals(bn, SV("index.dnd")) || endswith(path, SV("/"))){
                 text = INDEXTEXT;
             }
             else {

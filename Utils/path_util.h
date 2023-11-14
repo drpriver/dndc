@@ -122,16 +122,25 @@ path_dirname(StringView path){
     return result;
 }
 
+//
+// Returns the extension part of a string.
+//
+// Turns "/foo/bar/baz.html" into ".html"
+// Turns "/foo/bar" into ""
+//
 static inline
 StringView
 path_extension(StringView path){
     if(!path.length) return path;
-    size_t off = path.length;
-    while(off--){
-        if(path.text[off] == '.'){
-            return (StringView){.text=path.text+off, .length=path.length-off};
+    size_t offset = path.length;
+    while(--offset){
+        if(path.text[offset] == '.'){
+            if(offset == path.length-1) return SV("");
+            if(is_sep(path.text[offset-1])) return SV("");
+
+            return (StringView){.text=path.text+offset, .length=path.length-offset};
         }
-        if(is_sep(path.text[off]))
+        if(is_sep(path.text[offset]))
             return SV("");
     }
     return SV("");
@@ -149,9 +158,12 @@ path_strip_extension(StringView path){
     if(!path.length)
         return path;
     size_t offset = path.length;
-    while(offset--){
-        if(path.text[offset] == '.')
+    while(--offset){
+        if(path.text[offset] == '.'){
+            if(offset == path.length-1) return path;
+            if(is_sep(path.text[offset-1])) return path;
             return (StringView){.text=path.text, .length = offset};
+        }
         if(is_sep(path.text[offset]))
             return path;
     }
