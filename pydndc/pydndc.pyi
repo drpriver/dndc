@@ -140,11 +140,11 @@ class NodeType(IntEnum):
     INVALID      = 30
 
 class Context:
-    def __new__(cls, flags:Flags=Flags.NONE, filename:str=None, filecache:FileCache=None) -> Context:
+    def __new__(cls, flags:Flags=Flags.NONE, filename:Optional[str]=None, filecache:Optional[FileCache]=None) -> Context:
         ...
     # This is wrong, it defines __new__ instead, but whatever
     # Autocomplete doesn't work without this.
-    def __init__(cls, flags:Flags=Flags.NONE, filename:str=None, filecache:FileCache=None) -> None:
+    def __init__(cls, flags:Flags=Flags.NONE, filename:Optional[str]=None, filecache:Optional[FileCache]=None) -> None:
         ...
     errors: List[str]
     filename: Optional[str]
@@ -180,7 +180,7 @@ class Context:
         ...
     def resolve_data_blocks(self) -> None:
         ...
-    def select_nodes(self, type:NodeType=None, attributes:Iterable[str]=None, classes:Iterable[str]=None) -> List[Node]:
+    def select_nodes(self, type:Optional[NodeType]=None, attributes:Optional[Iterable[str]]=None, classes:Optional[Iterable[str]]=None) -> List[Node]:
         ...
     def clone(self) -> Context:
         ...

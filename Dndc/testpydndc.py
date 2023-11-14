@@ -1,9 +1,10 @@
+from __future__ import annotations
 from unittest import TestCase, main, TextTestRunner
 import argparse
 import sys
 import os
 import textwrap
-from typing import Optional, List, TYPE_CHECKING, TextIO, Any
+from typing import Optional, List, TYPE_CHECKING, TextIO, Any, Set
 import subprocess
 if TYPE_CHECKING:
     import pydndc
@@ -19,7 +20,7 @@ HEADER ="""
 """.lstrip()
 FOOTER = "</body>\n</html>\n"
 
-def dedent(text):
+def dedent(text:str) -> str:
     return textwrap.dedent(text[1:])
 
 
@@ -253,7 +254,7 @@ class TestExamples(TestCase):
                 text = fp.read()
             filename = os.path.basename(example)
             base = os.path.dirname(example)
-            deps = set()
+            deps: Set[str] = set()
             _ = pydndc.htmlgen(text, base_dir=base, filename=filename, deps=deps)
             if 'calendar.dnd' in example:
                 self.assertSetEqual(deps, {'Examples/Calendar/calendar.css'})
