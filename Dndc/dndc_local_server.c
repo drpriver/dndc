@@ -482,6 +482,9 @@ handle_request(DndLogger* logger, uint64_t flags, LongString directory, SOCKET a
         path.length -= 5;
         suffix = SV(".dnd");
     }
+    if(!path_extension(path).length){
+        suffix = SV(".dnd");
+    }
     if(SV_equals(path, SV("shutdown"))){
         #define MESS "HTTP/1.1 200 OK\r\n"
         send(accsd, MESS, (sizeof MESS)-1, 0);

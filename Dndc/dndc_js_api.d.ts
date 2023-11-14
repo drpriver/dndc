@@ -470,17 +470,21 @@ type Node = {
     // noinline
     // --------
     // The noinline flag, presented as a boolean
+    // If true, the node will be an appropriate link instead of inlined into
+    // the document.
     noinline: boolean;
 
     //
     // noid
     // ----
+    // The noid flag, presented as a boolean
     // If true, the node will not be assigned an id when rendered.
     noid: boolean;
 
     //
     // hide
     // ----
+    // The hide flag, presented as a boolean
     // If true, the node will not be rendered in the output.
     hide: boolean;
 
@@ -596,7 +600,7 @@ type Node = {
     //
     // Example:
     // --------
-    //   let tables = ctx.select_nodes(NodeType.TABLE);
+    //   let tables = ctx.select_nodes({type:NodeType.TABLE});
     //   for(let table of tables){
     //     let container = ctx.make_node(NodeType.DIV, {header:table.header});
     //     table.header = '';

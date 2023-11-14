@@ -122,6 +122,21 @@ path_dirname(StringView path){
     return result;
 }
 
+static inline
+StringView
+path_extension(StringView path){
+    if(!path.length) return path;
+    size_t off = path.length;
+    while(off--){
+        if(path.text[off] == '.'){
+            return (StringView){.text=path.text+off, .length=path.length-off};
+        }
+        if(is_sep(path.text[off]))
+            return SV("");
+    }
+    return SV("");
+}
+
 //
 // Removes the extension part of a string.
 //
