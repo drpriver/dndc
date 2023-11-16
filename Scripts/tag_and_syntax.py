@@ -261,6 +261,10 @@ def good_tag(cursor) -> bool:
         return False
     if '__' in spelling:
         return False
+    if ' (unnamed' in spelling:
+        return False
+    if ' (anonymous' in spelling:
+        return False
     return True
 
 
