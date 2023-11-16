@@ -1,0 +1,5 @@
+command script import lldb_stuff.py
+target stop-hook add -P lldb_stuff.StopHook
+settings set stop-line-count-before 0
+settings set stop-line-count-after 0
+settings set frame-format "frame #${frame.index}: {${function.name}}{ at ${line.file.basename}:${line.number}}\n"
