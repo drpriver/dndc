@@ -1,0 +1,5 @@
+Changelog::kv
+  created: 2023-11-20T17:23:02Z
+Created Nov 20, 2023, 09:23AM::md.update
+Summary::md.summary
+  With appkit I’ve got a nice setup where by default the preview is the main window and if you want to edit it you can open a child window that floats above it with the dnd document. I should port this to the qt apps as well.
