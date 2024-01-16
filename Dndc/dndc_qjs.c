@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2023, David Priver <david@davidpriver.com>
+// Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
 #ifndef DNDC_QJS_C
 #define DNDC_QJS_C
@@ -410,7 +410,10 @@ new_qjs_rt(ArenaAllocator* aa){
     };
     QJSRuntime* rt = NULL;
     rt = QJS_NewRuntime2(&mf, aa);
-    if(unlikely(!rt)) return NULL;
+    if(unlikely(!rt)) {
+        goto fail;
+        return NULL;
+    }
     QJS_NewClassID(&QJS_DNDC_CONTEXT_CLASS_ID);
     if(QJS_NewClass(rt, QJS_DNDC_CONTEXT_CLASS_ID, &QJS_DNDC_CONTEXT_CLASS) < 0){
         goto fail;
@@ -1221,6 +1224,8 @@ QJSMETHOD(js_dndc_node_add_child){
     if(QJS_IsString(arg)){
         StringView sv = jsstring_to_stringview(jsctx, arg, string_allocator(ctx));
         child = alloc_handle(ctx);
+        if(unlikely(NodeHandle_eq(child, INVALID_NODE_HANDLE)))
+            return QJS_ThrowTypeError(jsctx, "oom");
         Node* node = get_node(ctx, child);
         node->header = sv;
         node->type = NODE_STRING;
@@ -1259,6 +1264,8 @@ QJSMETHOD(js_dndc_node_replace_child){
     if(QJS_IsString(newchild_arg)){
         StringView sv = jsstring_to_stringview(jsctx, newchild_arg, string_allocator(ctx));
         new_child = alloc_handle(ctx);
+        if(unlikely(NodeHandle_eq(new_child, INVALID_NODE_HANDLE)))
+            return QJS_ThrowTypeError(jsctx, "oom");
         Node* node = get_node(ctx, new_child);
         node->header = sv;
         node->type = NODE_STRING;
@@ -1314,6 +1321,8 @@ QJSMETHOD(js_dndc_node_insert_child){
     if(QJS_IsString(newchild_arg)){
         StringView sv = jsstring_to_stringview(jsctx, newchild_arg, string_allocator(ctx));
         new_child = alloc_handle(ctx);
+        if(unlikely(NodeHandle_eq(new_child, INVALID_NODE_HANDLE)))
+            return QJS_ThrowTypeError(jsctx, "oom");
         Node* node = get_node(ctx, new_child);
         node->header = sv;
         node->type = NODE_STRING;
@@ -1773,6 +1782,8 @@ QJSMETHOD(js_dndc_node_set){
         return QJS_UNDEFINED;
     }
     NodeHandle kvh = alloc_handle(ctx);
+    if(unlikely(NodeHandle_eq(kvh, INVALID_NODE_HANDLE)))
+        return QJS_ThrowTypeError(jsctx, "oom");
     {
         int e = append_child(ctx, handle, kvh);
         if(unlikely(e)) return QJS_ThrowTypeError(jsctx, "oom");
@@ -1781,6 +1792,8 @@ QJSMETHOD(js_dndc_node_set){
     }
     {
         NodeHandle kh = alloc_handle(ctx);
+        if(unlikely(NodeHandle_eq(kh, INVALID_NODE_HANDLE)))
+            return QJS_ThrowTypeError(jsctx, "oom");
         int e = append_child(ctx, kvh, kh);
         if(unlikely(e)) return QJS_ThrowTypeError(jsctx, "oom");
         Node* n = get_node(ctx, kh);
@@ -1790,6 +1803,8 @@ QJSMETHOD(js_dndc_node_set){
     }
     {
         NodeHandle vh = alloc_handle(ctx);
+        if(unlikely(NodeHandle_eq(vh, INVALID_NODE_HANDLE)))
+            return QJS_ThrowTypeError(jsctx, "oom");
         int e = append_child(ctx, kvh, vh);
         if(unlikely(e)) return QJS_ThrowTypeError(jsctx, "oom");
         Node* n = get_node(ctx, vh);
@@ -1813,6 +1828,8 @@ QJSMETHOD(js_dndc_context_make_string){
         return QJS_ThrowTypeError(jsctx, "Need 1 string arg to make_string");
     StringView sv = jsstring_to_stringview(jsctx, arg, string_allocator(ctx));
     NodeHandle new_handle = alloc_handle(ctx);
+    if(unlikely(NodeHandle_eq(new_handle, INVALID_NODE_HANDLE)))
+        return QJS_ThrowTypeError(jsctx, "oom");
     {
         Node* node = get_node(ctx, new_handle);
         node->header = sv;
@@ -1846,6 +1863,8 @@ QJSMETHOD(js_dndc_context_make_node){
         attributes = QJS_GetPropertyStr(jsctx, obj, "attributes");
     }
     NodeHandle handle = alloc_handle(ctx);
+    if(unlikely(NodeHandle_eq(handle, INVALID_NODE_HANDLE)))
+        return QJS_ThrowTypeError(jsctx, "oom");
     Node* node = get_node(ctx, handle);
     node->type = type;
     if(!QJS_IsUndefined(header)){

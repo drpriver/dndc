@@ -1,6 +1,10 @@
 //
-// Copyright © 2021-2023, David Priver <david@davidpriver.com>
+// Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
+
+// Turning this on will reveal a lot of bugs in quickjs around handling OOM.
+// Idk what to do about that without rewriting the lib.
+// #define ARENA_SIZE (ARENA_PAGE_SIZE*1)
 #define HEAVY_RECORDING
 #define USE_TESTING_ALLOCATOR
 #define REPLACE_MALLOCATOR

@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2023, David Priver <david@davidpriver.com>
+// Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
 #ifndef DNDC_CONTEXT_C
 #define DNDC_CONTEXT_C
@@ -145,6 +145,8 @@ static inline
 NodeHandle
 node_clone(DndcContext* ctx, NodeHandle handle){
     NodeHandle result = alloc_handle(ctx);
+    if(unlikely(NodeHandle_eq(result, INVALID_NODE_HANDLE)))
+        return result;
     Node* dstnode = get_node(ctx, result);
     Node* srcnode = get_node(ctx, handle);
     dstnode->type = srcnode->type;

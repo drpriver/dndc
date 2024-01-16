@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2023, David Priver <david@davidpriver.com>
+// Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
 // define DNDC_API before including dndc.h
 #include "dndc_api_def.h"
@@ -421,6 +421,8 @@ run_the_dndc(
     // Setup the root node.
     {
         NodeHandle root_handle = alloc_handle(&ctx);
+        // Can't fail due to reserve.
+        assert(!NodeHandle_eq(root_handle, INVALID_NODE_HANDLE));
         ctx.root_handle = root_handle;
         Node* root = get_node(&ctx, root_handle);
         root->col = 0;
@@ -3008,6 +3010,8 @@ dndc_node_append_string(DndcContext* ctx, DndcNodeHandle parent_, DndcStringView
     if(NodeHandle_eq(parent, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
     NodeHandle child = alloc_handle(ctx);
+    if(NodeHandle_eq(child, INVALID_NODE_HANDLE))
+        return DNDC_ERROR_OOM;
     Node* node = get_node(ctx, child);
     node->type = NODE_STRING;
     node->header = sv;
@@ -3038,6 +3042,8 @@ dndc_node_insert_string(DndcContext* ctx, DndcNodeHandle parent_, size_t i, Dndc
     if(NodeHandle_eq(parent, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
     NodeHandle child = alloc_handle(ctx);
+    if(NodeHandle_eq(child, INVALID_NODE_HANDLE))
+        return DNDC_ERROR_OOM;
     Node* node = get_node(ctx, child);
     node->type = NODE_STRING;
     node->header = sv;
@@ -3162,6 +3168,8 @@ dndc_ctx_resolve_imports(DndcContext* ctx){
         }
         // We parse into a different node and then swap the two.
         NodeHandle newhandle = alloc_handle(ctx);
+        if(unlikely(NodeHandle_eq(newhandle, INVALID_NODE_HANDLE)))
+            return DNDC_ERROR_OOM;
         Node* node = get_node(ctx, handle);
         node->flags &= ~NODEFLAG_IMPORT;
         _Bool was_import = 0;

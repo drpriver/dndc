@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2023, David Priver <david@davidpriver.com>
+// Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
 #ifndef DNDC_PARSER_C
 #define DNDC_PARSER_C
@@ -539,6 +539,7 @@ parse_double_colon(DndcContext* ctx, NodeHandle parent_handle){
     size_t length = ctx->line_end - starttext;
     StringView postcolon = stripped_view(starttext, length);
     NodeHandle new_node_handle = alloc_handle(ctx);
+    if(unlikely(NodeHandle_eq(new_node_handle, INVALID_NODE_HANDLE))) return DNDC_ERROR_OOM;
     init_node(ctx, new_node_handle, ctx->linestart+ctx->nspaces, NODE_INVALID);
     NodeFlags flags;
     {
@@ -951,6 +952,8 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
         StringView content = stripped_view(ctx->linestart + ctx->nspaces,
             (ctx->line_end - ctx->linestart)-ctx->nspaces);
         NodeHandle new_node_handle = alloc_handle(ctx);
+        if(unlikely(NodeHandle_eq(new_node_handle, INVALID_NODE_HANDLE)))
+            return DNDC_ERROR_OOM;
         init_string_node(ctx, new_node_handle, content);
         int e = append_child(ctx, parent_handle, new_node_handle);
         if(unlikely(e)) return e;
@@ -1091,6 +1094,7 @@ PARSEFUNC(parse_raw_node){
         if(ctx->flags & DNDC_STRIP_WHITESPACE)
             content = lstripped_view(content.text, content.length);
         NodeHandle new_node_handle = alloc_handle(ctx);
+        if(unlikely(NodeHandle_eq(new_node_handle, INVALID_NODE_HANDLE))) return DNDC_ERROR_OOM;
         init_string_node(ctx, new_node_handle, content);
         int e = append_child(ctx, parent_handle, new_node_handle);
         if(unlikely(e)) return e;
@@ -1138,6 +1142,8 @@ PARSEFUNC(parse_table_node){
                             if(unlikely(e)) return e;
                         }
                         NodeHandle str_handle = alloc_handle(ctx);
+                        if(unlikely(NodeHandle_eq(str_handle, INVALID_NODE_HANDLE)))
+                            return DNDC_ERROR_OOM;
                         init_string_node(ctx, str_handle, content);
                         int e = append_child(ctx, last_cell_handle, str_handle);
                         if(unlikely(e)) return e;
@@ -1148,6 +1154,8 @@ PARSEFUNC(parse_table_node){
             }
         }
         NodeHandle new_node_handle = alloc_handle(ctx);
+        if(unlikely(NodeHandle_eq(new_node_handle, INVALID_NODE_HANDLE)))
+            return DNDC_ERROR_OOM;
         init_node(ctx, new_node_handle, ctx->linestart+ctx->nspaces, NODE_TABLE_ROW);
         int e = append_child(ctx, parent_handle, new_node_handle);
         if(unlikely(e)) return e;
@@ -1156,6 +1164,8 @@ PARSEFUNC(parse_table_node){
         converted = 0;
         while(pipe){
             NodeHandle cell_index = alloc_handle(ctx);
+            if(unlikely(NodeHandle_eq(cell_index, INVALID_NODE_HANDLE)))
+                return DNDC_ERROR_OOM;
             size_t length = pipe - cursor;
             StringView content = stripped_view(cursor,length);
             init_string_node(ctx, cell_index, content);
@@ -1165,6 +1175,8 @@ PARSEFUNC(parse_table_node){
             pipe = memchr(cursor, '|', ctx->line_end - cursor);
         }
         NodeHandle cell_index = alloc_handle(ctx);
+        if(unlikely(NodeHandle_eq(cell_index, INVALID_NODE_HANDLE)))
+            return DNDC_ERROR_OOM;
         last_cell_handle = cell_index;
         StringView content = stripped_view(cursor, ctx->line_end-cursor);
         init_string_node(ctx, cell_index, content);
@@ -1205,6 +1217,8 @@ PARSEFUNC(parse_keyvalue_node){
                 }
                 StringView content = stripped_view(ctx->linestart+ctx->nspaces, ctx->line_end-(ctx->linestart+ctx->nspaces));
                 NodeHandle str_handle = alloc_handle(ctx);
+                if(unlikely(NodeHandle_eq(str_handle, INVALID_NODE_HANDLE)))
+                    return DNDC_ERROR_OOM;
                 init_string_node(ctx, str_handle, content);
                 int e = append_child(ctx, previous_value, str_handle);
                 if(unlikely(e)) return e;
@@ -1213,6 +1227,8 @@ PARSEFUNC(parse_keyvalue_node){
             }
         }
         NodeHandle new_node_handle = alloc_handle(ctx);
+        if(unlikely(NodeHandle_eq(new_node_handle, INVALID_NODE_HANDLE)))
+            return DNDC_ERROR_OOM;
         init_node(ctx, new_node_handle, ctx->linestart + ctx->nspaces, NODE_KEYVALUEPAIR);
         int e = append_child(ctx, parent_handle, new_node_handle);
         if(unlikely(e)) return e;
@@ -1227,8 +1243,12 @@ PARSEFUNC(parse_keyvalue_node){
         StringView pre = stripped_view(pre_text,colon - pre_text);
         StringView post = stripped_view(colon+1, (ctx->line_end-colon)-1);
         NodeHandle key_idx = alloc_handle(ctx);
+        if(unlikely(NodeHandle_eq(key_idx, INVALID_NODE_HANDLE)))
+            return DNDC_ERROR_OOM;
         init_string_node(ctx, key_idx, pre);
         NodeHandle val_idx = alloc_handle(ctx);
+        if(unlikely(NodeHandle_eq(val_idx, INVALID_NODE_HANDLE)))
+            return DNDC_ERROR_OOM;
         init_string_node(ctx, val_idx, post);
         e = append_child(ctx, new_node_handle, key_idx);
         if(unlikely(e)) return e;
@@ -1412,6 +1432,8 @@ PARSEFUNC(parse_md_node){
                 si = 0;
                 struct StackItem* s = &stack[si];
                 s->list = alloc_handle(ctx);
+                if(unlikely(NodeHandle_eq(s->list, INVALID_NODE_HANDLE)))
+                    return DNDC_ERROR_OOM;
                 s->item = INVALID_NODE_HANDLE;
                 s->indentation = ctx->nspaces;
                 s->state = newstate;
@@ -1429,6 +1451,8 @@ PARSEFUNC(parse_md_node){
                     }
                     struct StackItem* s = &stack[si];
                     s->list = alloc_handle(ctx);
+                    if(unlikely(NodeHandle_eq(s->list, INVALID_NODE_HANDLE)))
+                        return DNDC_ERROR_OOM;
                     s->item = INVALID_NODE_HANDLE;
                     s->indentation = ctx->nspaces;
                     s->state = newstate;
@@ -1444,6 +1468,8 @@ PARSEFUNC(parse_md_node){
                         // neighbor of different type
                         NodeHandle prev = si>0? stack[si-1].item : parent_handle;
                         s->list = alloc_handle(ctx);
+                        if(unlikely(NodeHandle_eq(s->list, INVALID_NODE_HANDLE)))
+                            return DNDC_ERROR_OOM;
                         s->item = INVALID_NODE_HANDLE;
                         s->indentation = ctx->nspaces;
                         s->state = newstate;
@@ -1477,6 +1503,8 @@ PARSEFUNC(parse_md_node){
                     struct StackItem* s = &stack[si];
                     if(s->state != newstate){
                         s->list = alloc_handle(ctx);
+                        if(unlikely(NodeHandle_eq(s->list, INVALID_NODE_HANDLE)))
+                            return DNDC_ERROR_OOM;
                         s->item = INVALID_NODE_HANDLE;
                         s->indentation = ctx->nspaces;
                         s->state = newstate;
@@ -1492,11 +1520,15 @@ PARSEFUNC(parse_md_node){
             }
             struct StackItem* s = &stack[si];
             s->item = alloc_handle(ctx);
+            if(unlikely(NodeHandle_eq(s->item, INVALID_NODE_HANDLE)))
+                return DNDC_ERROR_OOM;
             init_node(ctx, s->item, ctx->linestart+ctx->nspaces, NODE_LIST_ITEM);
             int e = append_child(ctx, s->list, s->item);
             if(unlikely(e)) return e;
             StringView content = stripped_view(ctx->linestart + ctx->nspaces+prefix_length, (ctx->line_end - ctx->linestart)-ctx->nspaces-prefix_length);
             NodeHandle new_node_handle = alloc_handle(ctx);
+            if(unlikely(NodeHandle_eq(new_node_handle, INVALID_NODE_HANDLE)))
+                return DNDC_ERROR_OOM;
             init_string_node(ctx, new_node_handle, content);
             e = append_child(ctx, s->item, new_node_handle);
             if(unlikely(e)) return e;
@@ -1508,6 +1540,8 @@ PARSEFUNC(parse_md_node){
         if(state == PARA || state == NONE || ctx->nspaces == normal_indent){
             if(state != PARA){
                 para_handle = alloc_handle(ctx);
+                if(unlikely(NodeHandle_eq(para_handle, INVALID_NODE_HANDLE)))
+                    return DNDC_ERROR_OOM;
                 init_node(ctx, para_handle, ctx->linestart+ctx->nspaces, NODE_PARA);
                 int e = append_child(ctx, parent_handle, para_handle);
                 if(unlikely(e)) return e;
@@ -1515,6 +1549,8 @@ PARSEFUNC(parse_md_node){
             }
             StringView content = stripped_view( ctx->linestart + ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);
             NodeHandle new_node_handle = alloc_handle(ctx);
+            if(unlikely(NodeHandle_eq(new_node_handle, INVALID_NODE_HANDLE)))
+                return DNDC_ERROR_OOM;
             init_string_node(ctx, new_node_handle, content);
             int e = append_child(ctx, para_handle, new_node_handle);
             if(unlikely(e)) return e;
@@ -1530,6 +1566,8 @@ PARSEFUNC(parse_md_node){
         // don't change state for these
         StringView content = stripped_view(ctx->linestart + ctx->nspaces, (ctx->line_end - ctx->linestart)-ctx->nspaces);
         NodeHandle new_node_handle = alloc_handle(ctx);
+        if(unlikely(NodeHandle_eq(new_node_handle, INVALID_NODE_HANDLE)))
+            return DNDC_ERROR_OOM;
         init_string_node(ctx, new_node_handle, content);
         int e = append_child(ctx, stack[si].item, new_node_handle);
         if(unlikely(e)) return e;
