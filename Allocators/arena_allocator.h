@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2023, David Priver <david@davidpriver.com>
+// Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
 #ifndef ARENA_ALLOCATOR_H
 #define ARENA_ALLOCATOR_H
@@ -82,7 +82,8 @@ struct BigAllocation {
 static inline
 void
 Big_init(BigListNode* prev, BigAllocation* ba){
-    ba->next = NULL;
+    ba->next = prev->next;
+    if(prev->next) prev->next->prev = &ba->node;
     ba->prev = prev;
     prev->next = &ba->node;
 }
@@ -91,6 +92,7 @@ static inline
 void*_Nullable
 Big_alloc(BigListNode* prev, size_t size){
     BigAllocation* ba = Allocator_alloc(MALLOCATOR, size + sizeof(*ba));
+    if(!ba) return NULL;
     Big_init(prev, ba);
     ba->size = size;
     return ba+1;
@@ -100,6 +102,7 @@ static inline
 void*_Nullable
 Big_zalloc(BigListNode* prev, size_t size){
     BigAllocation* ba = Allocator_zalloc(MALLOCATOR, size + sizeof(*ba));
+    if(!ba) return NULL;
     Big_init(prev, ba);
     ba->size = size;
     return ba+1;
@@ -115,6 +118,7 @@ Big_realloc(void* a, size_t old, size_t size){
     if(!ba) return NULL;
     if(prev) prev->next = &ba->node;
     if(next) next->prev = &ba->node;
+    ba->size = size;
     return ba+1;
 }
 
@@ -139,10 +143,14 @@ struct ArenaAllocator {
 
 
 
+#ifndef ARENA_PAGE_SIZE
 enum {ARENA_PAGE_SIZE=4096};
+#endif
 
 // Arenas are in 64 page chunks. This might be excessive, idk.
+#ifndef ARENA_SIZE
 enum {ARENA_SIZE=ARENA_PAGE_SIZE*128};
+#endif
 
 // Allocations bigger than this will be put in the big allocation list instead.
 enum {BIG_ALLOC_THRESH=ARENA_SIZE/2};
