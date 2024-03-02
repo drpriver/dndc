@@ -25,6 +25,7 @@
     X(TestDndcTableMultiline) \
     X(TestFormatTable) \
     X(TestFormatList) \
+    X(TestFormatBullets) \
     X(TestFormatKV) \
     X(TestFormatMD) \
     X(TestCrashesFixed) \
@@ -211,7 +212,9 @@ TestFunction(TestDndcFragment){
         "Hello::title\n"
         "::md\n"
         "   * Hello World\n"
-        "   * This is amazing!\n"
+        "   - This is amazing!\n"
+        "   o round bullets\n"
+        "   • unicode bullets\n"
         "::js\n"
         "  ctx.root.add_child('hello')\n"
         "::css\n"
@@ -240,6 +243,12 @@ TestFunction(TestDndcFragment){
             "</li>\n"
             "<li>\n"
             "This is amazing!\n"
+            "</li>\n"
+            "<li>\n"
+            "round bullets\n"
+            "</li>\n"
+            "<li>\n"
+            "unicode bullets\n"
             "</li>\n"
             "</ul>\n"
             "</div>\n"
@@ -442,6 +451,51 @@ TestFunction(TestFormatList){
     }
     TESTEND();
 }
+TestFunction(TestFormatBullets){
+    TESTBEGIN();
+    StringView source = SV(
+        "Hello\n"
+        "* 1\n"
+        "- 2\n"
+        "+ 3\n"
+        "• 4\n"
+        "• 5\n"
+        "  6\n"
+        "o 7\n"
+    );
+    uint64_t flags = DNDC_FLAGS_NONE
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_DONT_PRINT_ERRORS
+        | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+        ;
+    LongString outdata = {0};
+    int e = run_the_dndc(OUTPUT_REFORMAT, flags, SV(""), source, SV(""), &outdata, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    TestExpectFalse(e);
+    if(!e){
+        // A bit brittle of a test, but it shows that the outparam works.
+        LongString expected = LS(
+            "Hello\n"
+            "\n"
+            "• 1\n"
+            "• 2\n"
+            "• 3\n"
+            "• 4\n"
+            "• 5 6\n"
+            "• 7\n"
+        );
+        TestExpectEquals(expected.length, outdata.length);
+        TestExpectEquals2(LS_equals, expected, outdata);
+        {
+            // check it parses after format
+            LongString output = {0};
+            int e2 = run_the_dndc(OUTPUT_REFORMAT, flags, SV(""), LS_to_SV(outdata),  SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+            TestExpectFalse(e2);
+            if(!e2) dndc_free_string(output);
+        }
+        dndc_free_string(outdata);
+    }
+    TESTEND();
+}
 TestFunction(TestFormatKV){
     TESTBEGIN();
     StringView source = SV(
@@ -524,6 +578,10 @@ TestFunction(TestFormatMD){
             .expected = SV(EIGHTY " -\n1\n"),
         },
         {
+            .src = SV(EIGHTY " • 1"),
+            .expected = SV(EIGHTY " •\n1\n"),
+        },
+        {
             .src = SV(EIGHTY " - 1."),
             .expected = SV(EIGHTY " - 1.\n"),
         },
@@ -550,6 +608,14 @@ TestFunction(TestFormatMD){
         {
             .src = SV(SEVENTYNINE " 1."),
             .expected = SV(SEVENTYNINE " 1.\n"),
+        },
+        {
+            .src = SV(SEVENTYNINE " o"),
+            .expected = SV(SEVENTYNINE " o\n"),
+        },
+        {
+            .src = SV(SEVENTYNINE " •"),
+            .expected = SV(SEVENTYNINE " •\n"),
         },
         {
             .src = SV(SEVENTYNINE " - 1"),

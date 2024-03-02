@@ -1394,9 +1394,19 @@ PARSEFUNC(parse_md_node){
         const char* firstchar = ctx->linestart + ctx->nspaces;
         int prefix_length = 0;
         switch(*firstchar){
+            // "•"
+            case '\xe2':
+                if(firstchar+3 < ctx->end && firstchar[1] == '\x80' && firstchar[2] == '\xa2' && firstchar[3] == ' '){
+                    prefix_length = 4;
+                    newstate = BULLET;
+                }
+                else
+                    newstate = PARA;
+                goto after;
             case '+':
             case '-':
             case '*':
+            case 'o':
                 if(firstchar+1 != ctx->end && firstchar[1] == ' '){
                     prefix_length = 1;
                     newstate = BULLET;

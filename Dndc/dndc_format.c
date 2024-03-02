@@ -118,10 +118,14 @@ format_is_list_start(StringView sv){
             case '-':
             case '+':
             case '*':
+            case 'o':
                 return 1;
             default:
                 return 0;
         }
+    }
+    if(sv.length == 3 && SV_equals(sv, SV("•"))){
+        return 1;
     }
     if(sv.length < 2) return 0;
     if(sv.text[sv.length-1] != '.') return 0;
@@ -404,7 +408,7 @@ format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, 
         msb_write_nchar(sb, ' ', indent);
         switch(bullet_depth){
             case 0:
-                msb_write_literal(sb, "* ");
+                msb_write_literal(sb, "• ");
                 break;
             case 1:
                 msb_write_literal(sb, "- ");
