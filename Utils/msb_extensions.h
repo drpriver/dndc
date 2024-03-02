@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2023, David Priver <david@davidpriver.com>
+// Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
 #ifndef MSB_EXTENSIONS_H
 #define MSB_EXTENSIONS_H

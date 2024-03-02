@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# Copyright © 2021-2023, David Priver <david@davidpriver.com>
+# Copyright © 2021-2024, David Priver <david@davidpriver.com>
 #
 import sys
-pydndcver = '1.2.1'
-pydndeditver = '1.0.4'
+pydndcver = '1.3.0'
+pydndeditver = '1.1.0'
 def win_install_deps() -> bool:
     import sys
     assert sys.platform == 'win32'

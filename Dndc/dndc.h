@@ -1,5 +1,5 @@
 //
-// Copyright © 2021-2023, David Priver <david@davidpriver.com>
+// Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
 #ifndef DNDC_H
 #define DNDC_H
@@ -20,8 +20,8 @@
     DNDC_STRINGIFY(DNDC_MICRO)
 
 #define DNDC_MAJOR 1
-#define DNDC_MINOR 2
-#define DNDC_MICRO 1
+#define DNDC_MINOR 3
+#define DNDC_MICRO 0
 #define DNDC_STRINGIFY_IMPL(x) #x
 #define DNDC_STRINGIFY(x) DNDC_STRINGIFY_IMPL(x)
 

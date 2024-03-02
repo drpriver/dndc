@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 #
-# Copyright © 2021-2023, David Priver <david@davidpriver.com>
+# Copyright © 2021-2024, David Priver <david@davidpriver.com>
 #
-PYGDNDC_VERSION = '1.0.4'
+PYGDNDC_VERSION = '1.1.0'
 __version__ = PYGDNDC_VERSION
 import os
 # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
