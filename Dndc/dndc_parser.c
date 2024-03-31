@@ -1394,9 +1394,19 @@ PARSEFUNC(parse_md_node){
         const char* firstchar = ctx->linestart + ctx->nspaces;
         int prefix_length = 0;
         switch(*firstchar){
-            // "•"
             case '\xe2':
+                // "•"
                 if(firstchar+3 < ctx->end && firstchar[1] == '\x80' && firstchar[2] == '\xa2' && firstchar[3] == ' '){
+                    prefix_length = 4;
+                    newstate = BULLET;
+                }
+                // "◦"
+                else if(firstchar+3 < ctx->end && firstchar[1] == '\x97' && firstchar[2] == '\xa6' && firstchar[3] == ' '){
+                    prefix_length = 4;
+                    newstate = BULLET;
+                }
+                // "⁃"
+                else if(firstchar+3 < ctx->end && firstchar[1] == '\x81' && firstchar[2] == '\x83' && firstchar[3] == ' '){
                     prefix_length = 4;
                     newstate = BULLET;
                 }

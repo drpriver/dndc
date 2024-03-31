@@ -124,8 +124,13 @@ format_is_list_start(StringView sv){
                 return 0;
         }
     }
-    if(sv.length == 3 && SV_equals(sv, SV("•"))){
-        return 1;
+    if(sv.length == 3){
+        if(SV_equals(sv, SV("•")))
+            return 1;
+        if(SV_equals(sv, SV("◦")))
+            return 1;
+        if(SV_equals(sv, SV("⁃")))
+            return 1;
     }
     if(sv.length < 2) return 0;
     if(sv.text[sv.length-1] != '.') return 0;
@@ -411,10 +416,10 @@ format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, 
                 msb_write_literal(sb, "• ");
                 break;
             case 1:
-                msb_write_literal(sb, "- ");
+                msb_write_literal(sb, "◦ ");
                 break;
             default:
-                msb_write_literal(sb, "+ ");
+                msb_write_literal(sb, "⁃ ");
                 break;
         }
         FormatState state = {.lead = indent+2, .col=indent+2};
