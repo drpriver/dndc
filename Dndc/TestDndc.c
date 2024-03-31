@@ -33,6 +33,7 @@
     X(TestExamplesWork) \
     X(TestUntrusted) \
     X(TestSpecialChars) \
+    X(TestMaliciousLinks) \
     X(TestImgAttributes) \
     X(TestJs) \
     X(TestFileCache) \
@@ -905,6 +906,29 @@ TestFunction(TestSpecialChars){
             TestPrintValue("output", output);
         }
         dndc_free_string(output);
+    }
+    TESTEND();
+}
+TestFunction(TestMaliciousLinks){
+    TESTBEGIN();
+    struct test_case {
+        StringView source;
+    };
+    uint64_t flags = 0
+        | DNDC_ALLOW_BAD_LINKS
+        | DNDC_SUPPRESS_WARNINGS
+        | DNDC_FRAGMENT_ONLY
+        ;
+    struct test_case testcases[] = {
+        {SV("[hello]\n"
+            "::links\n"
+            "  hello = \"><script>alert(\"pwned\")</script><a href=\""),},
+    };
+
+    for(size_t i = 0; i < arrlen(testcases); i++){
+        LongString output = {0};
+        int e = run_the_dndc(OUTPUT_HTML, flags, SV(""), testcases[i].source, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        TestAssertEquals(e, DNDC_ERROR_LINK);
     }
     TESTEND();
 }

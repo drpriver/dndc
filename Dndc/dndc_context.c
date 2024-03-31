@@ -274,6 +274,22 @@ find_link_target(DndcContext* ctx, StringView kebabed, StringView* value){
 }
 
 static inline
+_Bool
+href_is_safe(StringView sv){
+    const char* cursor = sv.text;
+    const char* end = cursor + sv.length;
+    for(;cursor != end; cursor++){
+        unsigned c = (unsigned char)*cursor;
+        if(c <= 32 || c >= 127)
+            return 0;
+        if(c=='"') return 0;
+        if(c=='<') return 0;
+        if(c=='>') return 0;
+    }
+    return 1;
+}
+
+static inline
 int
 add_link_from_sv(DndcContext* ctx, Node* node){
     StringView str = node->header;
@@ -309,6 +325,10 @@ add_link_from_sv(DndcContext* ctx, Node* node){
         NODE_LOG_ERROR(ctx, node, LS("Anchor does not correspond to any link"));
         return DNDC_ERROR_LINK;
         foundit:;
+    }
+    else if(!href_is_safe(value)){
+        NODE_LOG_ERROR(ctx, node, LS("Unsafe link target"));
+        return DNDC_ERROR_LINK;
     }
     int err = string_table_set(&ctx->links, main_allocator(ctx), key, value);
     if(unlikely(err)) return DNDC_ERROR_OOM;
