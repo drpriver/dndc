@@ -270,7 +270,7 @@ main(int argc, char** argv){
         if(th_err != 0) return 1;
     }
     Entries entries = {0};
-    recursive_glob_suffix(directory, SV(".dnd"), &entries, depth);
+    recursive_glob_suffix(directory, SV(".dnd"), &entries, depth, MALLOCATOR);
     if(!entries.count) return 1;
     for(size_t i = 0; i < entries.count; i++){
         if(SV_equals(entries.data[i], SV("index.dnd"))) goto LHasIndex;

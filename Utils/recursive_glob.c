@@ -13,8 +13,9 @@
 #include "recursive_glob.h"
 #include "str_util.h"
 
-#include "Allocators/mallocator.h"
+#if defined(_WIN32)
 #include "MStringBuilder.h"
+#endif
 
 
 #ifdef __clang__
@@ -23,9 +24,9 @@
 #if defined(_WIN32)
 static
 void
-recursive_glob_suffix_inner(StringView original, StringView directory, StringView suffix, Marray(StringView)* entries, int max_depth){
+recursive_glob_suffix_inner(StringView original, StringView directory, StringView suffix, Marray(StringView)* entries, int max_depth, Allocator allocator){
     if(max_depth <= 0) return;
-    MStringBuilder sb = {.allocator = MALLOCATOR};
+    MStringBuilder sb = {.allocator = allocator};
     msb_write_str(&sb, directory.text, directory.length);
     msb_write_char(&sb, '/');
     msb_write_char(&sb, '*');
@@ -43,8 +44,8 @@ recursive_glob_suffix_inner(StringView original, StringView directory, StringVie
             msb_write_char(&sb, '/');
             msb_write_str(&sb, findd.cFileName, strlen(findd.cFileName));
             StringView text = msb_borrow_sv(&sb);
-            char* s = Allocator_strndup(MALLOCATOR, text.text+original.length+1, text.length-original.length-1);
-            StringView* it; int err = Marray_alloc__StringView(entries, MALLOCATOR, &it);
+            char* s = Allocator_strndup(allocator, text.text+original.length+1, text.length-original.length-1);
+            StringView* it; int err = Marray_alloc__StringView(entries, allocator, &it);
             assert(!err);
             *it = (StringView){.text=s, .length=text.length-original.length-1};
             sb.cursor = cursor;
@@ -100,7 +101,7 @@ recursive_glob_suffix_inner(StringView original, StringView directory, StringVie
 
 RECURSIVE_GLOB_API
 void
-recursive_glob_suffix(LongString directory, StringView suffix, Marray(StringView)* entries, int max_depth){
+recursive_glob_suffix(LongString directory, StringView suffix, Marray(StringView)* entries, int max_depth, Allocator allocator){
 #if defined(__APPLE__) || defined(__linux__)
     const char* dirs[] = {directory.text, NULL};
     PushDiagnostic();
@@ -125,15 +126,15 @@ recursive_glob_suffix(LongString directory, StringView suffix, Marray(StringView
                 continue;
             char* p = ent->fts_path + directory.length+1;
             size_t len = strlen(p);
-            char* t = Allocator_strndup(MALLOCATOR, p, len);
-            StringView* it; int err = Marray_alloc__StringView(entries, MALLOCATOR, &it);
+            char* t = Allocator_strndup(allocator, p, len);
+            StringView* it; int err = Marray_alloc__StringView(entries, allocator, &it);
             assert(!err);
             *it = (StringView){.length = len, .text = t};
         }
     }
     fts_close(handle);
 #elif defined(_WIN32)
-    recursive_glob_suffix_inner(LS_to_SV(directory), LS_to_SV(directory), suffix, entries, max_depth);
+    recursive_glob_suffix_inner(LS_to_SV(directory), LS_to_SV(directory), suffix, entries, max_depth, allocator);
 #endif
 }
 

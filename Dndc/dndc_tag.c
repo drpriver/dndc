@@ -310,7 +310,7 @@ main(int argc, char** argv){
             unhandled_error_condition(err);
         }
     if(!dnd_files.count)
-        recursive_glob_suffix(directory, SV(".dnd"), &dnd_files, 100);
+        recursive_glob_suffix(directory, SV(".dnd"), &dnd_files, 100, MALLOCATOR);
     tag_dnd_files(dnd_files.data, dnd_files.count, output, n_threads);
     return 0;
 }
