@@ -253,12 +253,12 @@ write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
                 MStringBuilder temp = {.allocator=temp_allocator(ctx)};
                 msb_write_kebab(&temp, alias, alias_length);
                 if(!temp.cursor){
-                    msb_write_literal(sb, "[ ]");
+                    msb_write_literal(sb, "<input type=checkbox>");
                 }
                 else {
                     StringView temp_str = msb_borrow_sv(&temp);
                     if(SV_equals(temp_str, SV("x"))){
-                        msb_write_literal(sb, "[x]");
+                        msb_write_literal(sb, "<input type=checkbox checked>");
                     }
                     else {
                         msb_write_literal(sb, "[");
@@ -306,6 +306,7 @@ warn_unused
 int
 write_md_bullets(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth){
     int result;
+    if(depth == 0) msb_write_char(sb, '\n');
     Node* node = get_node(ctx, handle);
     NODE_CHILDREN_FOR_EACH(it, node){
         Node* li = get_node(ctx, *it);
@@ -364,6 +365,7 @@ warn_unused
 int
 write_md_list(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth){
     int result;
+    if(depth == 0) msb_write_char(sb, '\n');
     Node* node = get_node(ctx, handle);
     NODE_CHILDREN_FOR_EACH(it, node){
         Node* li = get_node(ctx, *it);
