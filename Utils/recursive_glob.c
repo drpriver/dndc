@@ -75,7 +75,7 @@ recursive_glob_suffix_inner(StringView original, StringView directory, StringVie
         msb_write_str(&sb, fn.text, fn.length);
         msb_nul_terminate(&sb);
         StringView nextdir = msb_borrow_sv(&sb);
-        recursive_glob_suffix_inner(original, nextdir, suffix, entries, max_depth-1);
+        recursive_glob_suffix_inner(original, nextdir, suffix, entries, max_depth-1, allocator);
         msb_erase(&sb, 1+fn.length);
     }while(FindNextFileA(handle, &findd));
     end:
