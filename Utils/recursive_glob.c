@@ -78,6 +78,7 @@ recursive_glob_suffix_inner(StringView original, StringView directory, StringVie
         recursive_glob_suffix_inner(original, nextdir, suffix, entries, max_depth-1, allocator);
         msb_erase(&sb, 1+fn.length);
     }while(FindNextFileA(handle, &findd));
+    FindClose(handle);
     end:
     msb_destroy(&sb);
 }
