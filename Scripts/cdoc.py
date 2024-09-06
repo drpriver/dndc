@@ -315,7 +315,7 @@ class DocWriter:
         self.include_buff = []
         self.sourcelines = sourcetext.split('\n')
 
-    def do_token(self, token:cindex.Token) -> None:
+    def do_token(self, token:cindex.Token, prev_token:cindex.Token|None) -> None:
         if token.location.line != self.prev[0]:
             sourceline = self.sourcelines[self.prev[0]-1]
             if sourceline.rstrip().endswith('\\'):
@@ -326,7 +326,7 @@ class DocWriter:
                 self.prev = (token.location.line, 1)
         if token.location.column != self.prev[1]:
             self.lines[-1] += ' '*(token.location.column - self.prev[1])
-        self.lines[-1] += self.tagit(token)
+        self.lines[-1] += self.tagit(token, prev_token)
         self.prev = self.prev[0], token.location.column + len(token.spelling)
     def href(self, ident:Ident) -> str:
         if same_path(self.sourcefile, ident.filename):
@@ -346,15 +346,20 @@ class DocWriter:
             href = self.href(ident)
             return f'<a class="{ident.kind}" href="{href}">{text}</a>'
         return f'<span class="{ident.kind}">{text}</span>'
-    def tagit(self, token:cindex.Token) -> str:
+    def tagit(self, token:cindex.Token, prev_token:cindex.Token|None) -> str:
         spell = token.spelling
         kind = token.kind
         text = escape(spell)
-        if spell in {'#', 'ifdef', 'undef', 'define', 'include', 'import', 'ifndef', 'elif', 'endif', 'pragma'}:
+        if prev_token and prev_token.spelling == '#':
             if spell == 'include':
                 self.include = True
             return f'<span class="preproc">{text}</span>'
-        if token.location.column == 2 and spell in {'else', 'if'}:
+        if spell in {'#', 'ifdef', 'undef', 'define', 'include', 'import', 'ifndef', 'elif', 'endif', 'pragma', 'defined'}:
+            if spell == 'include':
+                self.include = True
+            return f'<span class="preproc">{text}</span>'
+        if spell in {'else', 'if'} and prev_token and prev_token.spelling == '#':
+        # if token.location.column == 2 and spell in {'else', 'if'}:
             return f'<span class="preproc">{text}</span>'
         if kind == cindex.TokenKind.COMMENT:
             if spell[2:].strip().startswith('-'):
@@ -467,8 +472,10 @@ def do_tags(arguments:List[str], source_file:str, compiler:str) -> DocWriter:
         text = fp.read()
     writer = DocWriter(identifiers, source_file, text)
     prev = (1, 1)
+    prev_token = None
     for token in tu.get_tokens(locations=(cindex.SourceLocation.from_offset(tu, tu.get_file(source_file),0), cindex.SourceLocation.from_offset(tu, tu.get_file(source_file), len(text)))):
-        writer.do_token(token)
+        writer.do_token(token, prev_token)
+        prev_token = token
     return writer
 
 def do_cursor(cursor, source_files:List[str], identifiers:dict) -> None:
@@ -491,7 +498,9 @@ def do_cursor(cursor, source_files:List[str], identifiers:dict) -> None:
             if not cursor.semantic_parent.spelling:
                 kind = Kinds.anonenum
 
-        identifiers[cursor.spelling] = Ident(kind, cursor.spelling, normpath(cursor.location.file.name), cursor.location.line)
+        spelling = f'enum@{cursor.location.line}' if 'unnamed' in cursor.spelling else cursor.spelling
+
+        identifiers[spelling] = Ident(kind, spelling, normpath(cursor.location.file.name), cursor.location.line)
 
     if should_tag_children(cursor):
         for c in cursor.get_children():
@@ -515,8 +524,8 @@ def good_tag(cursor) -> bool:
         return False
     if spelling[0] == '_':
         return False
-    if spelling[-1] == '_':
-        return False
+    # if spelling[-1] == '_':
+        # return False
     if spelling.endswith('_H'):
         return False
     if '__' in spelling:
