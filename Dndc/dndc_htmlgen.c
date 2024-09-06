@@ -29,7 +29,13 @@
 
 #endif
 
-
+#ifndef FALLTHROUGH
+#ifdef __GNUC__
+#define FALLTHROUGH __attribute__((fallthrough))
+#else
+#define FALLTHROUGH
+#endif
+#endif
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -332,6 +338,7 @@ build_toc_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
                 }
             }
         }
+        FALLTHROUGH;
         // fall-through
         case NODE_IMPORT:
         case NODE_LIST_ITEM:

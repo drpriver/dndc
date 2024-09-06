@@ -18,6 +18,14 @@
 #include "Utils/str_util.h"
 #include "Utils/path_util.h"
 
+#ifndef FALLTHROUGH
+#ifdef __GNUC__
+#define FALLTHROUGH __attribute__((fallthrough))
+#else
+#define FALLTHROUGH
+#endif
+#endif
+
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
@@ -230,10 +238,11 @@ ctx_load_source_file(DndcContext* ctx, StringView sourcepath, StringView* outsv)
     uint64_t before = get_t();
     LongString cached;
     int cache_result = FileCache_read_file(ctx->textcache, sourcepath, !!(ctx->flags & DNDC_DONT_READ), &cached);
-    msb_destroy(&temp_builder);
     if(cache_result){
+        msb_destroy(&temp_builder);
         return cache_result;
     }
+    msb_destroy(&temp_builder);
     uint64_t after = get_t();
     report_time(ctx, SV("Loading a file took "), after-before);
     *outsv = LS_to_SV(cached);
@@ -474,7 +483,9 @@ gather_anchor(DndcContext* ctx, NodeHandle handle, int node_depth){
                     return DNDC_ERROR_OOM;
             }
         }
-        // fall-through
+        // I don't know why gcc doesn't like the comment
+        FALLTHROUGH;
+        // fall through
         case NODE_IMPORT:
         case NODE_LIST_ITEM:
         case NODE_KEYVALUEPAIR:{

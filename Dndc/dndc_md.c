@@ -8,6 +8,14 @@
 #include "Utils/MStringBuilder.h"
 #include "Utils/msb_format.h"
 
+#ifndef FALLTHROUGH
+#ifdef __GNUC__
+#define FALLTHROUGH __attribute__((fallthrough))
+#else
+#define FALLTHROUGH
+#endif
+#endif
+
 #ifdef __clang__
 #pragma clang assume_nonnull begin
 #endif
@@ -295,6 +303,7 @@ write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
                     }
                 }
             }
+            FALLTHROUGH;
             // fall-through
             default:
                 msb_write_char(sb, c);

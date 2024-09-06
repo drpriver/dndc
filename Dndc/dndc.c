@@ -3330,7 +3330,7 @@ dndc_node_get_child(DndcContext* ctx, DndcNodeHandle dnh, long i){
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return 0;
     Node* node = get_node(ctx, handle);
-    size_t idx = i < 0? i + node_children_count(node) : i;
+    size_t idx = i < 0? i + node_children_count(node) : (size_t)i;
     if(idx >= node_children_count(node)) return DNDC_NODE_HANDLE_INVALID;
     return node_children(node)[idx]._value;
 }
