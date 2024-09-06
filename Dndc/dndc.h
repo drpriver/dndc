@@ -600,8 +600,7 @@ enum DndcFlags {
 
     // DNDC_UNUSED_FLAG = 0x10,
     // ------------------
-    // This flag slot is unused and will either be used when 1.0 is reached
-    // or the value of the other flags will all shift.
+    // This flag slot is unused and is reserved for future use.
 
     DNDC_SUPPRESS_WARNINGS = 0x20,
     // ----------------------
@@ -748,13 +747,6 @@ dndc_compile_dnd_file(
 //    A pointer that will be passed to the log_func. For
 //    `dndc_stderr_log_func`, this should be NULL. For a function you've
 //    defined, pass an appropriate pointer!
-//
-// dependency_func:
-//    A function for reporting the dependencies of the generated file. See
-//    `DndcDependencyFunc` above.
-//
-// dependency_user_data:
-//   A pointer that will be passed to the dependency_func.
 //
 // worker_thread:
 //   A thread created with `dndc_worker_thread_create`.
@@ -1000,13 +992,6 @@ dndc_expand_to_md(
 //    A pointer that will be passed to the log_func. For
 //    `dndc_stderr_log_func`, this should be NULL. For a function you've
 //    defined, pass an appropriate pointer!
-//
-// dependency_func:
-//    A function for reporting the dependencies of the generated file. See
-//    `DndcDependencyFunc` above.
-//
-// dependency_user_data:
-//   A pointer that will be passed to the dependency_func.
 //
 // jsargs:
 //   A json string literal that will be available to JS blocks as Args. May be

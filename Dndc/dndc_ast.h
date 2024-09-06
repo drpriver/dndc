@@ -51,7 +51,9 @@ dndc_ctx_dup_sv(DndcContext* ctx, DndcStringView text, DndcStringView* result);
 // ctx. If you can't guarantee they last that long, then call this function to
 // get a copy that will last as long as the ctx.
 //
-// Returns DNDC_ERROR_OOM on oom, else 0.
+// Returns:
+// --------
+// Returns `DNDC_ERROR_OOM` on oom, else 0.
 
 DNDC_API
 DNDC_NULLABLE(DndcContext*)
@@ -132,14 +134,18 @@ dndc_ctx_clone(DndcContext*);
 //
 // When done, pass it to `dndc_ctx_destroy`.
 //
-// Returns NULL on oom.
+// Returns:
+// --------
+// Returns NULL on oom. Otherwise, the deep-cloned ctx.
+//
+
 DNDC_API
 DNDC_NULLABLE(DndcContext*)
 dndc_ctx_shallow_clone(DndcContext*);
 // --------------
 // This is similar to `dndc_ctx_clone`, but it does not copy things that
 // are safe to share, like strings. This means that the context returned
-// from this function should notoutlive the context it was cloned from.
+// from this function should not outlive the context it was cloned from.
 // This still has independent nodes, etc. so you can use it to fork a context,
 // make some modifications and render the results, etc. which can have
 // significant performance benefits if you need to dynamically render off
@@ -147,7 +153,9 @@ dndc_ctx_shallow_clone(DndcContext*);
 //
 // When done, pass it to `dndc_ctx_destroy`.
 //
-// Returns NULL on oom.
+// Returns:
+// --------
+// Returns NULL on oom. Otherwise, the shallow-cloned ctx.
 //
 
 DNDC_API
@@ -238,17 +246,21 @@ dndc_ctx_make_root(DndcContext* ctx, DndcStringView filename);
 // Creates the root node of the context, with the given filename.  The root
 // node will be a MD node.
 //
-// If the root already exists, returns DNDC_NODE_HANDLE_INVALID.  Otherwise,
+// Returns:
+// --------
+// If the root already exists, returns `DNDC_NODE_HANDLE_INVALID`.  Otherwise,
 // returns a handle to the new node.
 //
-// This can also return DNDC_NODE_HANDLE_INVALID in an oom situtation.
+// This can also return `DNDC_NODE_HANDLE_INVALID` in an oom situtation.
 //
 
 DNDC_API
 DndcNodeHandle
 dndc_ctx_get_root(DndcContext*);
 // -----------------
-// Returns the handle to the root node. Returns DNDC_NODE_HANDLE_INVALID if
+// Returns:
+// --------
+// Returns the handle to the root node. Returns `DNDC_NODE_HANDLE_INVALID` if
 // there is no root node (as can happen if the root gets detached).
 //
 
@@ -261,6 +273,8 @@ dndc_ctx_set_root(DndcContext*, DndcNodeHandle);
 //
 // The given node must be an orphan.
 //
+// Returns:
+// --------
 // Returns 0 on success, non-zero on error.
 //
 
@@ -277,6 +291,8 @@ dndc_node_get_attribute(DndcContext* ctx, DndcNodeHandle dnh,
 // is returned.  Otherwise, 0 is returned and value is filled with the value of
 // the given attribute.  NOTE: this may be an empty string view.
 //
+// Returns:
+// --------
 // Returns 0 on success, non-zero on error.
 //
 
@@ -287,6 +303,8 @@ dndc_node_has_attribute(DndcContext*, DndcNodeHandle, DndcStringView key);
 // -----------------------
 // Checks if a specific attribute is set on a node.
 //
+// Returns:
+// --------
 // Returns 1 if it does, 0 otherwise.
 //
 // This function does not distinguish between not having an attribute and an
@@ -303,6 +321,8 @@ dndc_node_set_attribute(DndcContext*, DndcNodeHandle,
 // Note that in this API, each attribute has a value, even if it is the empty
 // string.  The empty string represents the lack of a value for that attribute.
 //
+// Returns:
+// --------
 // Returns 0 on success, non-zero on error.
 //
 // This does not copy key nor value.
@@ -314,6 +334,8 @@ dndc_node_del_attribute(DndcContext*, DndcNodeHandle, DndcStringView key);
 // -----------------------
 // Deletes a specific attribute set on a node.
 //
+// Returns:
+// --------
 // Returns 1 if it does, 0 otherwise.
 //
 // This function does not distinguish between not having an attribute and an
@@ -324,6 +346,8 @@ DNDC_API
 size_t
 dndc_node_attributes_count(DndcContext*, DndcNodeHandle);
 // --------------------------
+// Returns:
+// --------
 // Returns the number of attributes set on a given node.
 //
 // This function does not distinguish between a node with no attributes and an
@@ -403,6 +427,8 @@ DNDC_API
 int
 dndc_node_has_id(DndcContext*, DndcNodeHandle);
 // --------------
+// Returns:
+// --------
 // Returns 1 if the node has an id (explicit or implicit), otherwise 0.
 
 DNDC_API
@@ -422,6 +448,8 @@ dndc_node_set_id(DndcContext*, DndcNodeHandle, DndcStringView id);
 // ----------------
 // Sets the string id associated with the given node.
 //
+// Returns:
+// --------
 // Returns 0 on success, a non-zero error code otherwise.
 //
 
@@ -567,6 +595,8 @@ dndc_node_remove_child(DndcContext* ctx, DndcNodeHandle parent, size_t i);
 //
 // If `i` is out of bounds, a non-zero error code is returned.
 //
+// Returns:
+// --------
 // Returns 0 on success, a non-zero error code otherwise.
 //
 
@@ -580,7 +610,7 @@ dndc_node_get_parent(DndcContext*, DndcNodeHandle);
 // a parent.
 //
 // If the node does not have a parent or if an error occurs, returns
-// DNDC_NODE_HANDLE_INVALID.
+// `DNDC_NODE_HANDLE_INVALID`.
 //
 
 // DNDCNODETYPES
@@ -673,10 +703,12 @@ DNDC_API
 int
 dndc_node_get_type(DndcContext*, DndcNodeHandle);
 // ------------------
+// Returns:
+// --------
 // Returns the type of the node (as an integer).
 //
 // Note: this function does not distinguish between an error and a node with
-// the type DNDC_NODE_TYPE_INVALID.
+// the type `DNDC_NODE_TYPE_INVALID`.
 //
 
 DNDC_API
@@ -687,6 +719,8 @@ dndc_node_set_type(DndcContext* ctx, DndcNodeHandle dnh, int node_type);
 //
 // `node_type` must be a valid value of `DndcNodeType`.
 //
+// Returns:
+// --------
 // Returns 0 on success and non-zero on error.
 //
 
@@ -779,6 +813,8 @@ dndc_node_set_flags(DndcContext*, DndcNodeHandle, int);
 // bit-twiddle them or use `dndc_node_set_flag` if you don't want to leave the
 // values of those flags undisturbed.
 //
+// Returns:
+// --------
 // Returns 0 on success and non-zero on error.
 //
 
@@ -791,6 +827,8 @@ dndc_node_get_header(DndcContext*, DndcNodeHandle, DndcStringView*);
 // headings.  As a special case, the header is actually the value of a STRING
 // node.
 //
+// Returns:
+// --------
 // Returns 0 on success and non-zero on error.
 //
 
@@ -806,6 +844,8 @@ dndc_node_set_header(DndcContext*, DndcNodeHandle, DndcStringView);
 // NOTE: the string view needs to live as long as the node or ctx. Call
 // `dndc_ctx_dup_sv` if that cannot be guaranteed.
 //
+// Returns:
+// --------
 // Returns 0 on success and non-zero on error.
 //
 
@@ -814,6 +854,8 @@ DNDC_API
 size_t
 dndc_node_children_count(DndcContext*, DndcNodeHandle);
 // ----------------------
+// Returns:
+// --------
 // Returns how many nodes are children of this node.
 //
 // Note: this function does not distinguish between an error and a node with no
@@ -861,7 +903,7 @@ dndc_node_get_child(DndcContext* ctx, DndcNodeHandle dnh, long i);
 // ---------------------
 // Retrieves the handle of the `i`th child of the given node.
 //
-// If this is out of bounds, DNDC_NODE_HANDLE_INVALID is returned.
+// If this is out of bounds, `DNDC_NODE_HANDLE_INVALID` is returned.
 //
 // Arguments:
 // ----------
@@ -878,9 +920,9 @@ dndc_node_get_child(DndcContext* ctx, DndcNodeHandle dnh, long i);
 //
 // Returns:
 // --------
-// The handle of the `i`th child or DNDC_NODE_HANDLE_INVALID if out of bounds.
+// The handle of the `i`th child or `DNDC_NODE_HANDLE_INVALID` if out of bounds.
 //
-// DNDC_NODE_HANDLE_INVALID can also be return if `dnh` is an invalid handle.
+// `DNDC_NODE_HANDLE_INVALID` can also be return if `dnh` is an invalid handle.
 
 DNDC_API
 int
@@ -892,10 +934,12 @@ dndc_node_cat_string_children(DndcContext*, DndcNodeHandle, DndcLongString* out)
 //
 // When you are done with the the string, pass it to `dndc_free_string`.
 //
-// Returns 0 on success and non-zero on error.
-//
 // On error, nothing is written to the string argument and you do not need to
 // call `dndc_free_string`.
+//
+// Returns:
+// --------
+// Returns 0 on success and non-zero on error.
 //
 
 
@@ -903,6 +947,9 @@ DNDC_API
 size_t
 dndc_node_classes_count(DndcContext*, DndcNodeHandle);
 // -----------------------
+//
+// Returns:
+// --------
 // Returns how many classes this node has.
 //
 // Note: this function does not distinguish between an error and a node with no
@@ -951,9 +998,12 @@ dndc_node_add_class(DndcContext*, DndcNodeHandle, DndcStringView);
 // ------------------
 // Adds a class to the class array of a node.
 //
+// Returns:
+// --------
 // Returns 0 on success and non-zero on error.
 //
-// Note: this does not copy the class.
+// Note: this does not copy the class. Call `dndc_ctx_dup_sv` if
+// it is not guaranteed to outlive the ctx.
 //
 
 DNDC_API
@@ -965,6 +1015,8 @@ dndc_node_has_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView cls);
 // Note: this function does not distinguish between an error and a node not
 // having a class.
 //
+// Returns:
+// --------
 // Returns 0 if it does not or if an error occurs. 1 if it does have that
 // class.
 //
@@ -974,8 +1026,10 @@ dndc_node_has_class(DndcContext* ctx, DndcNodeHandle dnh, DndcStringView cls);
 DNDC_API
 int
 dndc_node_remove_class(DndcContext*, DndcNodeHandle, DndcStringView);
-// Removes a class to the class array of a node.
+// Removes a class from the class array of a node.
 //
+// Returns:
+// --------
 // Returns 0 on success and non-zero on error.
 //
 // Note: this returns 0 even if the node does not have this class.
@@ -994,12 +1048,14 @@ dndc_ctx_expand_to_dnd(DndcContext*, DndcLongString*);
 //
 // When you are done with the the string, pass it to `dndc_free_string`.
 //
+// This function can call the logger.
+//
+// Returns:
+// --------
 // Returns 0 on success and non-zero on error.
 //
 // On error, nothing is written to the string argument and you do not need to
 // call `dndc_free_string`.
-//
-// This function can call the logger.
 //
 
 DNDC_API
@@ -1012,12 +1068,14 @@ dndc_ctx_render_to_md(DndcContext*, DndcLongString*);
 //
 // When you are done with the the string, pass it to `dndc_free_string`.
 //
+// This function can call the logger.
+//
+// Returns:
+// --------
 // Returns 0 on success and non-zero on error.
 //
 // On error, nothing is written to the string argument and you do not need to
 // call `dndc_free_string`.
-//
-// This function can call the logger.
 //
 
 DNDC_API
@@ -1028,16 +1086,18 @@ dndc_ctx_render_to_html(DndcContext*, DndcLongString*);
 // Generates an html document from the context, starting at the root.
 //
 // This will be either a complete document or a fragment if the
-// DNDC_FRAGMENT_ONLY flag was passed to `dndc_create_ctx`.
+// `DNDC_FRAGMENT_ONLY` flag was passed to `dndc_create_ctx`.
 //
 // When you are done with the the string, pass it to `dndc_free_string`.
 //
+// This function can call the logger.
+//
+// Returns:
+// --------
 // Returns 0 on success and non-zero on error.
 //
 // On error, nothing is written to the string argument and you do not need to
 // call `dndc_free_string`.
-//
-// This function can call the logger.
 //
 
 DNDC_API
@@ -1051,12 +1111,14 @@ dndc_node_render_to_html(DndcContext*, DndcNodeHandle, DndcLongString*);
 //
 // When you are done with the string, pass it to `dndc_free_string`.
 //
+// This function can call the logger.
+//
+// Returns:
+// --------
 // Returns 0 on success and non-zero on error.
 //
 // On error, nothing is written to the string argument and you do not need to
 // call `dndc_free_string`.
-//
-// This function can call the logger.
 //
 
 DNDC_API
@@ -1073,12 +1135,14 @@ dndc_ctx_format_tree(DndcContext*, DndcLongString*);
 //
 // When you are done with the the string, pass it to `dndc_free_string`.
 //
+// This function can call the logger.
+//
+// Returns:
+// --------
 // Returns 0 on success and non-zero on error.
 //
 // On error, nothing is written to the string argument and you do not need to
 // call `dndc_free_string`.
-//
-// This function can call the logger.
 //
 
 DNDC_API
@@ -1094,12 +1158,14 @@ dndc_node_format(DndcContext*, DndcNodeHandle, int indent, DndcLongString*);
 //
 // When you are done with the the string, pass it to `dndc_free_string`.
 //
+// This function can call the logger.
+//
+// Returns:
+// --------
 // Returns 0 on success and non-zero on error.
 //
 // On error, nothing is written to the string argument and you do not need to
 // call `dndc_free_string`.
-//
-// This function can call the logger.
 //
 
 DNDC_API
@@ -1110,13 +1176,15 @@ dndc_node_execute_js(DndcContext*, DndcNodeHandle, DndcLongString script);
 // node and ctx will be placed into the scope of the script as per usual, etc.
 // `Args` will be null.
 //
-// Returns 0 on success and non-zero on error.
-//
 // Note that the tree may be in an unexpected state after an error in
 // javascript. Likely the only safe thing to do is to call `dndc_ctx_destroy`
 // on the context to cleanup resources.
 //
 // This function can call the logger.
+//
+// Returns:
+// --------
+// Returns 0 on success and non-zero on error.
 //
 
 DNDC_API
@@ -1127,12 +1195,14 @@ dndc_ctx_execute_js(DndcContext* ctx, DndcLongString jsargs);
 // be placed into the scope of the script as per usual, etc.
 //
 // After execution, the javascript nodes will have their types changed to
-// DNDC_NODE_TYPE_INVALID and are removed from the tree. This means this
+// `DNDC_NODE_TYPE_INVALID` and are removed from the tree. This means this
 // function can be safely called multiple times.
 //
 // Note that the tree may be in an unexpected state after an error in
 // javascript. Likely the only safe thing to do is to call `dndc_ctx_destroy`
 // on the context to cleanup resources.
+//
+// This function can call the logger.
 //
 // Arguments:
 // ----------
@@ -1147,8 +1217,6 @@ dndc_ctx_execute_js(DndcContext* ctx, DndcLongString jsargs);
 // Returns:
 // --------
 // Returns 0 on success and non-zero on error.
-//
-// This function can call the logger.
 //
 
 typedef struct DndcNodeLocation DndcNodeLocation;
@@ -1177,6 +1245,8 @@ dndc_node_location(DndcContext*, DndcNodeHandle, DndcNodeLocation*);
 // Returns the location of a node in its source file. See the discussion of the
 // caveats of this information above in `DndcNodeLocation`.
 //
+// Returns:
+// --------
 // Returns 0 on success and non-zero on error.
 //
 
@@ -1207,7 +1277,7 @@ dndc_ctx_node_by_approximate_location(DndcContext*,
 //      Which line in the file the node is from. 1-based.
 //
 // column:
-//      While column in the row the node is from. 1-based, but 0 is allowed.
+//      Which column in the row the node is from. 1-based, but 0 is allowed.
 //
 // Returns:
 // --------
@@ -1225,6 +1295,8 @@ dndc_ctx_node_by_id(DndcContext*, DndcStringView);
 // "Hello World" becomes "hello-world". You do not need to call `dndc_kebab`
 // beforehand.
 //
+// Returns:
+// --------
 // Returns the node's handle on successful lookup and
 // `DNDC_NODE_HANDLE_INVALID` if the node cannot be found.
 //
@@ -1242,6 +1314,8 @@ dndc_ctx_node_invalid(DndcContext* ctx, DndcNodeHandle);
 // the check the validity of a handle that you deserialized from disk, stuffed
 // into an integer somewhere, taken from user input, etc.
 //
+// Returns:
+// --------
 // Returns 1 if the handle is invalid and 0 otherwise.
 
 DNDC_API
@@ -1283,9 +1357,11 @@ dndc_ctx_resolve_imports(DndcContext*);
 // function is safe to call multiple times as a given node will only be
 // imported once.
 //
-// Returns 0 on success, non-zero on error.
-//
 // This function can call the logger.
+//
+// Returns:
+// --------
+// Returns 0 on success, non-zero on error.
 //
 
 typedef struct DndcPreloadImageJob DndcPreloadImageJob;
@@ -1296,7 +1372,9 @@ dndc_ctx_create_preload_img_job(DndcContext*);
 // Preps the preload job so it can be safely performed in parallel with things
 // like user scripts that can add more img nodes.
 //
-// Returns NULL if there is no work to do.
+// Returns:
+// --------
+// Returns NULL if there is no work to do. Otherwise, returns the job.
 //
 
 DNDC_API
@@ -1326,9 +1404,11 @@ dndc_ctx_resolve_links(DndcContext*);
 // Also, adds links from LINKS nodes and prepares the internal link database.
 // Call this before rendering to html.
 //
-// Returns 0 on success, non-zero on error.
-//
 // This function can call the logger.
+//
+// Returns:
+// --------
+// Returns 0 on success, non-zero on error.
 //
 
 DNDC_API
@@ -1337,6 +1417,8 @@ dndc_ctx_build_toc(DndcContext*);
 // ------------------
 // Populates the TOC node, if there is one in the context.
 //
+// Returns:
+// --------
 // Returns 0 on success, non-zero on error.
 //
 
@@ -1351,7 +1433,7 @@ dndc_ctx_select_nodes(DndcContext* ctx, size_t* cookie,
 // ---------------------
 // Copies the handles of nodes in the context that meet certain criteria.
 //
-// Note: if type is DNDC_NODE_TYPE_INVALID, attributes is null and classes is
+// Note: if type is `DNDC_NODE_TYPE_INVALID`, attributes is null and classes is
 // null, then every node in the context will be copied into the buffer.
 //
 // Arguments:
@@ -1365,10 +1447,10 @@ dndc_ctx_select_nodes(DndcContext* ctx, size_t* cookie,
 //     function.
 //
 // type:
-//     The type of the selected nodes. If this is DNDC_NODE_TYPE_INVALID, then
+//     The type of the selected nodes. If this is `DNDC_NODE_TYPE_INVALID`, then
 //     this argument is ignored.  Otherwise, all nodes will be of this type.
 //     Note that there is no way to select nodes with type
-//     DNDC_NODE_TYPE_INVALID as they are supposed to be ignored.
+//     `DNDC_NODE_TYPE_INVALID` as they are supposed to be ignored.
 //
 // attributes:
 //     Pointer to an array of attributes that the selected nodes must have. If
@@ -1415,6 +1497,8 @@ dndc_node_tree_repr(DndcContext* ctx, DndcNodeHandle dnh, DndcLongString*);
 //
 // When you are done with the the string, pass it to `dndc_free_string`.
 //
+// Returns:
+// --------
 // Returns 0 on success and non-zero on error.
 //
 // On error, nothing is written to the string argument and you do not need to
@@ -1532,6 +1616,7 @@ dndc_kebab(DndcStringView sv, char* buff, size_t bufflen, size_t* used);
 // --------
 // 0 on success, non-zero if there is an error.
 // Errors occur due to zero length sv or insufficiently sized buff.
+//
 
 #ifdef __cplusplus
 }
