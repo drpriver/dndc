@@ -141,7 +141,7 @@
         Another paragraph
 
     Lists, both ordered and unordered are supported. Unordered lists begin with
-    a <tt>*</tt>, <tt>-</tt>, or <tt>+</tt> and one or more spaces.
+    a <tt>*</tt>, <tt>-</tt>, <tt>+</tt>, <tt>•</tt>, <tt>◦</tt> or <tt>⁃</tt> and one or more spaces.
     Ordered lists begin with a number, a <tt>.</tt> and a space. For
     example:
 
@@ -153,6 +153,7 @@
             This is still considered one item, just with
             linebreaks.
             + Lists can be nested.
+            • Fancy bullets can be used.
             1. Nested lists can be of different types
           1. This is a seperate list as it is a different type.
           3. The actual number is ignored.
@@ -164,6 +165,7 @@
         * This is a continuation of the same list This is still considered one
           item, just with linebreaks.
           - Lists can be nested.
+          - Fancy bullets can be used.
           1. Nested lists can be of different types
 
         1. This is a seperate list as it is a different type.
