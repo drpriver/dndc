@@ -131,7 +131,7 @@ endif
 
 # We finally have everything defined
 # We leave out OPT_FLAGS, LINK_FLAGS
-FLAGS=$(INCLUDE_FLAGS) $(WARNING_FLAGS) $(PLATFORM_FLAGS)
+FLAGS=$(INCLUDE_FLAGS) $(PLATFORM_FLAGS)
 
 
 

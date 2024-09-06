@@ -1,6 +1,7 @@
 //
 // Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
+#include "compiler_warnings.h"
 #include "str_util.h"
 #include "testing.h"
 TestFunction(TestStrip){

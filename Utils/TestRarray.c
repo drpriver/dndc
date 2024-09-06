@@ -1,6 +1,7 @@
 //
 // Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
+#include "compiler_warnings.h"
 #define REPLACE_MALLOCATOR
 #define USE_TESTING_ALLOCATOR
 #include "testing.h"

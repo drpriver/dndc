@@ -2,6 +2,7 @@
 // Copyright © 2022-2024, David Priver <david@davidpriver.com>
 //
 
+#include "compiler_warnings.h"
 // Run's qjs's tests to make sure my changes to quickjs haven't broken it.
 // #define HEAVY_RECORDING
 #define USE_TESTING_ALLOCATOR

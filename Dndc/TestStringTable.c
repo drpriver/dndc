@@ -1,6 +1,7 @@
 //
 // Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
+#include "compiler_warnings.h"
 #include "Utils/testing.h"
 #include "string_table.h"
 #include "Allocators/mallocator.h"

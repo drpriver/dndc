@@ -2,6 +2,10 @@
 // Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
 
+#include "compiler_warnings.h"
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
 // Unity build simplifies build system and also allows better
 // control of visibility of symbols for library.
 #define CONFIG_VERSION "2021-03-27"

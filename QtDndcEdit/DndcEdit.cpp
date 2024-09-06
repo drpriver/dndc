@@ -18,6 +18,12 @@
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QStyle>
+#include "compiler_warnings.h"
+// #pragma GCC diagnostic ignored "-Wunused-lambda-capture"
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 #define QS(x) QStringLiteral(x)
 const QString APPHOST = QS("invalid.");
 const QString APPURL = QS("https://invalid./this.html");
@@ -337,7 +343,7 @@ MainWindow::add_menus(void){
     filemenu->addAction(action);
 
     action = new QAction(QS("&Save"), this);
-    connect(action, &QAction::triggered, [this](){
+    connect(action, &QAction::triggered, [](){
             auto page = get_current_page();
             if(!page) return;
             page->save();
@@ -346,7 +352,7 @@ MainWindow::add_menus(void){
     filemenu->addAction(action);
 
     action = new QAction(QS("&Export As HTML"), this);
-    connect(action, &QAction::triggered, [this](){
+    connect(action, &QAction::triggered, [](){
             auto page = get_current_page();
             if(!page) return;
             page->export_as_html();
@@ -374,7 +380,7 @@ MainWindow::add_menus(void){
     #endif
     auto editmenu = menubar->addMenu(QS("Edit"));
     action = new QAction(QS("&Format"), this);
-    connect(action, &QAction::triggered, [this](){
+    connect(action, &QAction::triggered, [](){
             auto page = get_current_page();
             if(!page) return;
             page->format();
@@ -393,7 +399,7 @@ MainWindow::add_menus(void){
     editmenu->addAction(action);
 
     action = new QAction(QS("&Indent"), this);
-    connect(action, &QAction::triggered, [this](){
+    connect(action, &QAction::triggered, [](){
             auto page = get_current_page();
             if(!page) return;
             page->textedit->alter_indent(true);
@@ -403,7 +409,7 @@ MainWindow::add_menus(void){
 
     action = new QAction(QS("&Dedent"), this);
     action->setShortcut(QKeySequence(QS("Ctrl+<")));
-    connect(action, &QAction::triggered, [this](){
+    connect(action, &QAction::triggered, [](){
             auto page = get_current_page();
             if(!page) return;
             page->textedit->alter_indent(false);
@@ -413,7 +419,7 @@ MainWindow::add_menus(void){
     auto insert = menubar->addMenu(QS("Insert"));
     #define INSERT(name, method) do { \
         action = new QAction(QS(name), this); \
-        connect(action, &QAction::triggered, [this](){ \
+        connect(action, &QAction::triggered, [](){ \
                 auto page = get_current_page(); \
                 if(!page) return; \
                 page->method(); \
@@ -428,7 +434,7 @@ MainWindow::add_menus(void){
 
     auto viewmenu = menubar->addMenu(QS("View"));
     action = new QAction("&Toggle Editors", this);
-    connect(action, &QAction::triggered, [this](){
+    connect(action, &QAction::triggered, [](){
         bool first_is_hidden = false;
         bool checked = false;
         for(auto page: qAsConst(ALL_WINDOWS)){
@@ -445,7 +451,7 @@ MainWindow::add_menus(void){
     viewmenu->addAction(action);
 
     action = new QAction("&Flip Editors", this);
-    connect(action, &QAction::triggered, [this](){
+    connect(action, &QAction::triggered, [](){
         for(auto page: qAsConst(ALL_WINDOWS)){
             if(EDITOR_ON_LEFT) page->put_editor_right();
             else page->put_editor_left();
@@ -455,7 +461,7 @@ MainWindow::add_menus(void){
     viewmenu->addAction(action);
 
     action = new QAction("&Refresh Highlighting", this);
-    connect(action, &QAction::triggered, [this](){
+    connect(action, &QAction::triggered, [](){
         auto page = get_current_page();
         if(!page) return;
         page->textedit->highlight->rehighlight();
@@ -463,7 +469,7 @@ MainWindow::add_menus(void){
     viewmenu->addAction(action);
 
     action = new QAction("Scroll Into View", this);
-    connect(action, &QAction::triggered, [this](){
+    connect(action, &QAction::triggered, [](){
         auto page = get_current_page();
         if(!page) return;
         page->scroll_selection_into_view();
@@ -500,7 +506,7 @@ MainWindow::add_menus(void){
 
     auto developmenu = menubar->addMenu("Developer");
     action = new QAction("&Clear Caches", this);
-    connect(action, &QAction::triggered, [this](){
+    connect(action, &QAction::triggered, [](){
             dndc_filecache_clear(b64cache);
             dndc_filecache_clear(textcache);
             QWebEngineProfile::defaultProfile()->clearHttpCache();
@@ -510,7 +516,7 @@ MainWindow::add_menus(void){
     developmenu->addAction(action);
 
     action = new QAction("&Recalculate HTML", this);
-    connect(action, &QAction::triggered, [this](){
+    connect(action, &QAction::triggered, [](){
             auto page = get_current_page();
             if(!page) return;
             page->update_html();
@@ -518,7 +524,7 @@ MainWindow::add_menus(void){
     developmenu->addAction(action);
 
     action = new QAction("&Toggle Timings", this);
-    connect(action, &QAction::triggered, [this](){
+    connect(action, &QAction::triggered, [](){
         PRINT_STATS = !PRINT_STATS;
         });
     developmenu->addAction(action);
@@ -1244,7 +1250,7 @@ Page::update_html(void){
     }
     inflight = true;
     webpage->runJavaScript(GET_SCROLL_POSITION_SCRIPT, 0, [this](const QVariant& x){
-        set_scroll_pos(std::move(x.toString()));
+        set_scroll_pos(x.toString());
     });
 }
 

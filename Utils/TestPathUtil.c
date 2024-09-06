@@ -1,6 +1,7 @@
 //
 // Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
+#include "compiler_warnings.h"
 #define BACKSLASH_IS_A_PATH_SEP 1
 #include "path_util.h"
 #include "testing.h"

@@ -1,6 +1,11 @@
 //
 // Copyright © 2021-2022, David Priver <david@davidpriver.com>
 //
+#import "compiler_warnings.h"
+#pragma clang diagnostic ignored "-Wnullable-to-nonnull-conversion"
+#pragma clang diagnostic ignored "-Wshadow"
+#pragma clang diagnostic ignored "-Wgnu-conditional-omitted-operand"
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
 #import <Cocoa/Cocoa.h>
 #import <Webkit/WebKit.h>
 #ifndef DNDC_API
@@ -501,13 +506,13 @@ NSWindow* web_window;
             JSRAW(
                 let coords = ctx.select_nodes({attributes:["coord"]});
                 let s = ctx.root.make_child(NodeType.SCRIPTS);
-                let o = {};
+                let o = {0};
                 for(let co of coords){
                     o[co.id] = co.internal_id;
                 }
                 s.make_child(NodeType.STRING, {header:`let _coords = ${JSON.stringify(o)};`});
                 let imglinks = ctx.select_nodes({type:NodeType.IMGLINKS});
-                let o2 = {};
+                let o2 = {0};
                 for(let il of imglinks){
                     for(let ch of il.children){
                         if(ch.type != NodeType.STRING) continue;
@@ -584,7 +589,7 @@ NSWindow* web_window;
     DndcNodeLocation loc; err = dndc_node_location(ctx, target, &loc);
     if(err) goto fail;
     size_t length = doc_string.length;
-    size_t lineno = 0;
+    int lineno = 0;
     size_t i;
     for(i = 0; i < length; i++){
         if([doc_string characterAtIndex:i] == u'\n'){
@@ -680,7 +685,7 @@ fail:
 @implementation DndLink
 @end
 
-static NSColor*_Nonnull SYNTAX_COLORS[DNDC_SYNTAX_MAX] = {};
+static NSColor*_Nonnull SYNTAX_COLORS[DNDC_SYNTAX_MAX] = {0};
 struct SyntaxData {
     NSTextStorage* storage;
     const uint16_t* begin;
@@ -859,7 +864,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         if(num){
             num -= 1;
             NSArray<NSWindow*>* tabs = get_main_window().tabbedWindows;
-            if(tabs.count > num){
+            if((NSInteger)tabs.count > num){
                 NSWindow* tab = tabs[num];
                 [tab makeKeyAndOrderFront:nil];
                 if(tab.childWindows && tab.childWindows.count)
@@ -878,7 +883,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     [self insertText:@"  " replacementRange:NSMakeRange(currentLineRange.location, 0)];
     adjustment += 2;
     //               -1 to not do final newline
-    for(int i = 0; i < currentLineRange.length-1; i++){
+    for(NSUInteger i = 0; i < currentLineRange.length-1; i++){
         unichar c = [self.string characterAtIndex:i+currentLineRange.location+adjustment];
         if(c == '\n'){
             [self insertText:@"  " replacementRange:NSMakeRange(currentLineRange.location + i + 1 + adjustment, 0)];
@@ -894,7 +899,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     NSRange currentLineRange = [self.string lineRangeForRange:r];
     int adjustment = 0;
     int n_leading_space = 0;  // negative means no longer counting leading spaces.
-    for(int i = 0; i < currentLineRange.length-1; i++){
+    for(NSUInteger i = 0; i < currentLineRange.length-1; i++){
         unichar c = [self.string characterAtIndex:i+currentLineRange.location+adjustment];
         if(c == '\n'){
             n_leading_space = 0;
@@ -991,7 +996,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         SV("    imglinks.add_child(`${lead} = #${c.id} @${position}`);\n"),
         SV("  }\n"),
     };
-    for(int i = 0; i < arrlen(script); i++){
+    for(size_t i = 0; i < arrlen(script); i++){
         INDENT();
         msb_write_str(&sb, script[i].text, script[i].length);
     }
@@ -1454,7 +1459,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     [webview
         evaluateJavaScript:@ JSRAW(
             (function(){
-                const result = {};
+                const result = {0};
                 const html = document.getElementsByTagName("html")[0];
                 if(html.scrollLeft || html.scrollTop)
                     result.html = [html.scrollLeft, html.scrollTop];
@@ -1503,7 +1508,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     // FIXME: where the fuck are you supposed to put this stuff.
     if(!self.doc->auto_recalc)
         return;
-    LongString html = {};
+    LongString html = {0};
     NSString* dir = self.doc.fileURL.URLByDeletingLastPathComponent.path;
     StringView base_dir = SV("");
     if(dir){
@@ -1604,7 +1609,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         if(num){
             num -= 1;
            NSArray<NSWindow*>* tabs =  get_main_window().tabbedWindows;
-           if(tabs.count > num){
+           if((NSInteger)tabs.count > num){
                 NSWindow* tab = tabs[num];
                 [tab makeKeyAndOrderFront:nil];
                 if(tab.childWindows && tab.childWindows.count)
@@ -1883,7 +1888,7 @@ enum DndEditViewButtonTags {
         if(result == NSModalResponseOK){
             assert(panel.URL);
             NSURL* url = panel.URL;
-            NSSize size = {};
+            NSSize size = {0};
             if(item.tag == GDND_INSERT_IMGLINKS){
                 NSImage* img = [[NSImage alloc] initByReferencingURL:url];
                 size.height = [img representations][0].pixelsHigh;
@@ -1921,7 +1926,7 @@ enum DndEditViewButtonTags {
     NSString *string = self.text.string;
     const char* source_text = string.UTF8String;
     // uint64_t t1 = get_t();
-    LongString html = {};
+    LongString html = {0};
     size_t len = strlen(source_text);
     error_text.editable = YES;
     error_text.textStorage.mutableString.string = @"";

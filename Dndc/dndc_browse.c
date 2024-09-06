@@ -1,3 +1,4 @@
+#include "compiler_warnings.h"
 #include "common_macros.h"
 #include "dndc_local_server.h"
 #include "Utils/argument_parsing.h"

@@ -1,6 +1,7 @@
 //
 // Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
+#include "compiler_warnings.h"
 #include <stdlib.h>
 #ifdef _WIN32
 #include <direct.h>

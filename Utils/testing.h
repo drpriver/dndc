@@ -3,6 +3,7 @@
 //
 #ifndef TESTING_H
 #define TESTING_H
+#include "compiler_warnings.h"
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>

@@ -5,6 +5,7 @@
 //
 // Exposes dndc as a c-extension for python.
 //
+#include "compiler_warnings.h"
 #include "pyhead.h"
 // why this isn't in python.h or include python.h I don't know.
 #include <structmember.h>

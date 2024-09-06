@@ -5,16 +5,12 @@ PYCFLAGS?=$(shell pkg-config --cflags python3)
 PYLDFLAGS?=$(shell pkg-config --libs python3)
 
 PLATFORM_FLAGS=-march=native -fPIC -mfpu=neon -mtune=native -DRPI4=1
-DEBUG_FLAGS=-DDEBUG\
-	 -DLOG_LEVEL=4\
-	 -fsanitize=undefined\
+DEBUG_FLAGS=-fsanitize=undefined\
 	 -fsanitize=address\
 	 -static-libasan\
 	 -O0\
 	 -g
-DEV_FLAGS=-DLOG_LEVEL=4\
-	 -DDEBUG\
-	 -O0\
+DEV_FLAGS=-O0\
 	 -g
 ifeq ($(CC),clang)
 DEBUG_FLAGS+=-fsanitize=nullability

@@ -23,9 +23,7 @@ PYLDFLAGS:=-undefined dynamic_lookup
 PYEXTENSION=$(shell python3-config --extension-suffix)
 PYEXTFLAGS=-bundle $(ARCHES)
 PLATFORM_FLAGS=
-DEBUG_FLAGS=-DLOG_LEVEL=4\
-	 -DDEBUG\
-	 -fsanitize=nullability\
+DEBUG_FLAGS=-fsanitize=nullability\
 	 -fsanitize=undefined\
 	 -fsanitize=address\
 	 -O0\

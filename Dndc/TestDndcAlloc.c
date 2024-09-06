@@ -1,6 +1,7 @@
 //
 // Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
+#include "compiler_warnings.h"
 
 // Turning this on will reveal a lot of bugs in quickjs around handling OOM.
 // Idk what to do about that without rewriting the lib.

@@ -1,6 +1,7 @@
 //
 // Copyright © 2021-2024, David Priver <david@davidpriver.com>
 //
+#include "compiler_warnings.h"
 #define USE_TESTING_ALLOCATOR
 #define REPLACE_MALLOCATOR
 #include <string.h>
@@ -590,7 +591,7 @@ TestFunction(TestHumanIntegers){
         Uint64Result e = parse_unsigned_human(digits, 6);
         TestAssertSuccess(e);
         uint64_t val = e.result;
-        TestExpectEquals(val, 0b1101);
+        TestExpectEquals(val, 0xd);
     }
     TESTEND();
 }
