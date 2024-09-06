@@ -496,7 +496,7 @@ format_tree(DndcContext*, MStringBuilder*);
 static inline
 warn_unused
 int
-format_node(DndcContext* ctx, MStringBuilder*, Node*, int indent);
+format_node(DndcContext* ctx, MStringBuilder*, NodeHandle, int indent);
 
 // Link Functions
 // --------------

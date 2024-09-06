@@ -213,7 +213,7 @@ remove_trailing_blank_lines(MStringBuilder* sb){
 }
 
 #define FORMATFUNCNAME(nt) format_##nt
-#define FORMATFUNC(nt) static warn_unused int FORMATFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent)
+#define FORMATFUNC(nt) static warn_unused int FORMATFUNCNAME(nt)(DndcContext* ctx, MStringBuilder* sb, NodeHandle nh, int indent)
 
 FORMATFUNC(regular_node);
 FORMATFUNC(md_node);
@@ -223,25 +223,26 @@ FORMATFUNC(raw_node);
 FORMATFUNC(md_list);
 FORMATFUNC(para_node);
 
-static warn_unused int format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, int bullet_depth);
+static warn_unused int format_md_bullets(DndcContext* ctx, MStringBuilder* sb, NodeHandle nh, int indent, int bullet_depth);
 
 static inline
 int
-format_node(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
+format_node(DndcContext* ctx, MStringBuilder* sb, NodeHandle nh, int indent){
+    Node* node = get_node(ctx, nh);
     switch(node->type){
         case NODE_DIV:
         case NODE_TITLE:
         case NODE_HEADING:
         case NODE_TOC:
         case NODE_QUOTE:
-            return format_regular_node(ctx, sb, node, indent);
+            return format_regular_node(ctx, sb, nh, indent);
         case NODE_KEYVALUE:
-            return format_kv_node(ctx, sb, node, indent);
+            return format_kv_node(ctx, sb, nh, indent);
         case NODE_DEFLIST:
         case NODE_DEF:
         case NODE_DETAILS:
         case NODE_MD:
-            return format_md_node(ctx, sb, node, indent);
+            return format_md_node(ctx, sb, nh, indent);
         case NODE_META:
         case NODE_HEAD:
         case NODE_RAW:
@@ -254,13 +255,13 @@ format_node(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
         case NODE_IMGLINKS:
         case NODE_IMAGE:
         case NODE_COMMENT:
-            return format_raw_node(ctx, sb, node, indent);
+            return format_raw_node(ctx, sb, nh, indent);
         case NODE_TABLE:
-            return format_table_node(ctx, sb, node, indent);
+            return format_table_node(ctx, sb, nh, indent);
         case NODE_LIST:
-            return format_md_list(ctx, sb, node, indent);
+            return format_md_list(ctx, sb, nh, indent);
         case NODE_BULLETS:
-            return format_md_bullets(ctx, sb, node, indent, 0);
+            return format_md_bullets(ctx, sb, nh, indent, 0);
         case NODE_CONTAINER:
         case NODE_TABLE_ROW:
         case NODE_PARA:
@@ -290,16 +291,16 @@ format_tree(DndcContext* ctx, MStringBuilder* sb){
         // implicit, header-less md node.
         switch(child->type){
             case NODE_PARA:
-                result = format_para_node(ctx, sb, child, 0);
+                result = format_para_node(ctx, sb, *it, 0);
                 break;
             case NODE_BULLETS:
-                result = format_md_bullets(ctx, sb, child, 0, 0);
+                result = format_md_bullets(ctx, sb, *it, 0, 0);
                 break;
             case NODE_LIST:
-                result = format_md_list(ctx, sb, child, 0);
+                result = format_md_list(ctx, sb, *it, 0);
                 break;
             default:
-                result = format_node(ctx, sb, child, 0);
+                result = format_node(ctx, sb, *it, 0);
                 break;
         }
         if(result)
@@ -312,7 +313,8 @@ format_tree(DndcContext* ctx, MStringBuilder* sb){
 }
 static inline
 void
-format_header(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
+format_header(DndcContext* ctx, MStringBuilder* sb, NodeHandle nh, int indent){
+    Node* node = get_node(ctx, nh);
     msb_write_nchar(sb, ' ', indent);
     if(node->header.length)
         msb_write_str(sb, node->header.text,node->header.length);
@@ -342,12 +344,8 @@ format_header(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
     if(node->type != NODE_IMPORT && (flags & NODEFLAG_IMPORT))
         msb_write_literal(sb, " #import");
     if(flags & NODEFLAG_ID){
-        // #uggh
-        // This is super gross, I hate this.
-        // FIXME: use handles in the formatter instead of pointers.
-        NodeHandle handle = {._value = (uint32_t)(node - ctx->nodes.data)};
         StringView idcontent = SV("");
-        node_get_explicit_id(ctx, handle, &idcontent);
+        node_get_explicit_id(ctx, nh, &idcontent);
         MSB_FORMAT(sb, SV(" #id("), idcontent, SV(")"));
     }
     if(flags & NODEFLAG_NOID) msb_write_literal(sb, " #noid");
@@ -358,10 +356,11 @@ format_header(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent){
 
 
 FORMATFUNC(regular_node){
-    format_header(ctx, sb, node, indent);
+    format_header(ctx, sb, nh, indent);
     indent += FORMAT_INDENT;
     int result = 0;
     FormatState state = {.lead = indent};
+    Node* node = get_node(ctx, nh);
     NODE_CHILDREN_FOR_EACH(it, node){
         Node* child = get_node(ctx, *it);
         if(child->type == NODE_STRING){
@@ -371,7 +370,7 @@ FORMATFUNC(regular_node){
             if(state.col)
                 msb_write_char(sb, '\n');
             state.col = 0;
-            result = format_node(ctx, sb, child, indent);
+            result = format_node(ctx, sb, *it, indent);
             if(result)
                 return result;
         }
@@ -384,6 +383,7 @@ FORMATFUNC(regular_node){
 
 FORMATFUNC(para_node){
     FormatState state = {.lead = indent};
+    Node* node = get_node(ctx, nh);
     NODE_CHILDREN_FOR_EACH(it, node){
         Node* child = get_node(ctx, *it);
         // assert(child->type == NODE_STRING);
@@ -401,7 +401,8 @@ FORMATFUNC(para_node){
 
 static
 int
-format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, int bullet_depth){
+format_md_bullets(DndcContext* ctx, MStringBuilder* sb, NodeHandle nh, int indent, int bullet_depth){
+    Node* node = get_node(ctx, nh);
     int result = 0;
     NODE_CHILDREN_FOR_EACH(it, node){
         Node* child = get_node(ctx, *it);
@@ -431,7 +432,7 @@ format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, 
             else if(subchild->type == NODE_BULLETS){
                 if(state.col != state.lead)
                     msb_write_char(sb, '\n');
-                result = format_md_bullets(ctx, sb, subchild, indent+2, bullet_depth+1);
+                result = format_md_bullets(ctx, sb, *subit, indent+2, bullet_depth+1);
                 if(result) return result;
                 // FIXME: this is sketch - we shouldn't have strings after a nested list.
                 state = (FormatState){.lead=indent+2, .col=indent+2};
@@ -439,7 +440,7 @@ format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, 
             else {
                 if(state.col != state.lead)
                     msb_write_char(sb, '\n');
-                result = format_node(ctx, sb, subchild, indent+2);
+                result = format_node(ctx, sb, *subit, indent+2);
                 if(result) return result;
                 // FIXME: this is sketch - we shouldn't have strings after a nested list.
                 state = (FormatState){.lead=indent+2, .col=indent+2};
@@ -454,6 +455,7 @@ format_md_bullets(DndcContext* ctx, MStringBuilder* sb, Node* node, int indent, 
 }
 FORMATFUNC(md_list){
     int result = 0;
+    Node* node = get_node(ctx, nh);
     size_t count = node_children_count(node);
     int64_t numwidth = 1;
     numwidth += count > 9;
@@ -471,14 +473,15 @@ FORMATFUNC(md_list){
         MSB_FORMAT(sb, int_fmt(i+1), ". ");
         FormatState state = {.lead = indent+numwidth+2, .col=indent+numwidth+2};
         for(size_t j = 0; j < node_children_count(child); j++){
-            Node* subchild = get_node(ctx, node_children(child)[j]);
+            NodeHandle subh = node_children(child)[j];
+            Node* subchild = get_node(ctx, subh);
             if(subchild->type == NODE_STRING){
                 format_md_write_wrapped_string(sb, &state, subchild->header);
             }
             else {
                 if(state.col != state.lead)
                     msb_write_char(sb, '\n');
-                result = format_node(ctx, sb, subchild, indent+numwidth+2);
+                result = format_node(ctx, sb, subh, indent+numwidth+2);
                 if(result) return result;
                 // FIXME: this is sketch - we shouldn't have strings after a nested list.
                 state = (FormatState){.lead=indent+numwidth+2, .col=indent+numwidth+2};
@@ -491,22 +494,23 @@ FORMATFUNC(md_list){
 }
 FORMATFUNC(md_node){
     int result = 0;
-    format_header(ctx, sb, node, indent);
+    format_header(ctx, sb, nh, indent);
     indent += FORMAT_INDENT;
+    Node* node = get_node(ctx, nh);
     NODE_CHILDREN_FOR_EACH(it, node){
         Node* child = get_node(ctx, *it);
         switch(child->type){
             case NODE_PARA:
-                result = format_para_node(ctx, sb, child, indent);
+                result = format_para_node(ctx, sb, *it, indent);
                 break;
             case NODE_BULLETS:
-                result = format_md_bullets(ctx, sb, child, indent, 0);
+                result = format_md_bullets(ctx, sb, *it, indent, 0);
                 break;
             case NODE_LIST:
-                result = format_md_list(ctx, sb, child, indent);
+                result = format_md_list(ctx, sb, *it, indent);
                 break;
             default:
-                result = format_node(ctx, sb, child, indent);
+                result = format_node(ctx, sb, *it, indent);
                 break;
         }
         if(result) return result;
@@ -538,11 +542,12 @@ write_str_or_container(DndcContext* ctx, MStringBuilder* sb, Node* node){
 
 FORMATFUNC(table_node){
     int result = 0;
-    format_header(ctx, sb, node, indent);
+    format_header(ctx, sb, nh, indent);
     indent += FORMAT_INDENT;
     ssize_t n_cells = 0;
     ssize_t widths[100] = {0};
     // pre-pass to figure out widths
+    Node* node = get_node(ctx, nh);
     NODE_CHILDREN_FOR_EACH(row_iter, node){
         Node* row = get_node(ctx, *row_iter);
         if(row->type != NODE_TABLE_ROW)
@@ -593,7 +598,7 @@ FORMATFUNC(table_node){
         NODE_CHILDREN_FOR_EACH(row_iter, node){
             Node* row = get_node(ctx, *row_iter);
             if(row->type != NODE_TABLE_ROW){
-                result = format_node(ctx, sb, row, indent);
+                result = format_node(ctx, sb, *row_iter, indent);
                 if(result) return result;
                 continue;
             }
@@ -617,7 +622,7 @@ FORMATFUNC(table_node){
         NODE_CHILDREN_FOR_EACH(row_iter, node){
             Node* row = get_node(ctx, *row_iter);
             if(row->type != NODE_TABLE_ROW){
-                result = format_node(ctx, sb, row, indent);
+                result = format_node(ctx, sb, *row_iter, indent);
                 if(result) return result;
                 continue;
             }
@@ -655,9 +660,10 @@ FORMATFUNC(table_node){
 FORMATFUNC(kv_node){
     int result = 0;
     remove_trailing_blank_lines(sb);
-    format_header(ctx, sb, node, indent);
+    format_header(ctx, sb, nh, indent);
     indent += FORMAT_INDENT;
     size_t key_width = 0;
+    Node* node = get_node(ctx, nh);
     NODE_CHILDREN_FOR_EACH(it, node){
         Node* child = get_node(ctx, *it);
         if(child->type != NODE_KEYVALUEPAIR)
@@ -670,7 +676,7 @@ FORMATFUNC(kv_node){
     NODE_CHILDREN_FOR_EACH(it, node){
         Node* child = get_node(ctx, *it);
         if(child->type != NODE_KEYVALUEPAIR){
-            result = format_node(ctx, sb, child, indent);
+            result = format_node(ctx, sb, *it, indent);
             if(result) return result;
             continue;
         }
@@ -714,13 +720,14 @@ FORMATFUNC(kv_node){
 }
 FORMATFUNC(raw_node){
     int result = 0;
-    format_header(ctx, sb, node, indent);
+    format_header(ctx, sb, nh, indent);
     indent += FORMAT_INDENT;
     size_t nspace = indent < 80? indent: 80;
+    Node* node = get_node(ctx, nh);
     NODE_CHILDREN_FOR_EACH(it, node){
         Node* child = get_node(ctx, *it);
         if(child->type != NODE_STRING){
-            result = format_node(ctx, sb, child, indent);
+            result = format_node(ctx, sb, *it, indent);
             if(result) return result;
             continue;
         }

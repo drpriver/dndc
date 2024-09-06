@@ -2837,9 +2837,8 @@ dndc_node_format(DndcContext* ctx, DndcNodeHandle dnh, int indent, DndcLongStrin
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
-    Node* node = get_node(ctx, handle);
     MStringBuilder output_sb = {.allocator = MALLOCATOR};
-    int e = format_node(ctx, &output_sb, node, indent);
+    int e = format_node(ctx, &output_sb, handle, indent);
     if(e){
         msb_destroy(&output_sb);
         return e;

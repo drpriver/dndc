@@ -16,32 +16,32 @@
 static
 warn_unused
 int
-expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
+expand_node_body(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int node_depth);
 
 static
 warn_unused
 int
-expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
+expand_node(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int node_depth);
 
 static
 warn_unused
 int
-expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
+expand_md_list(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int node_depth);
 
 static
 warn_unused
 int
-expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
+expand_md_body(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int node_depth);
 
 static
 warn_unused
 int
-expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
+expand_table_body(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int node_depth);
 
 static
 warn_unused
 int
-expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
+expand_keyvalue_body(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int node_depth);
 
 static
 warn_unused
@@ -50,28 +50,25 @@ expand_to_dnd(DndcContext*ctx, MStringBuilder* msb){
     int result = 0;
     Node* node = get_node(ctx, ctx->root_handle);
     if(node->type != NODE_MD){
-        result = expand_node(ctx, node, 0, msb, 0);
+        result = expand_node(ctx, ctx->root_handle, 0, msb, 0);
         // return DNDC_ERROR_INVALID_TREE;
     }
     else
-        result = expand_node_body(ctx, node, 0, msb, 0);
+        result = expand_node_body(ctx, ctx->root_handle, 0, msb, 0);
     return result;
 }
 
 static
 void
-write_generic_header(DndcContext* ctx, Node* n, int indent, MStringBuilder*msb){
+write_generic_header(DndcContext* ctx, NodeHandle nh, int indent, MStringBuilder*msb){
+    Node* n = get_node(ctx, nh);
     msb_write_nchar(msb, ' ', indent);
     if(n->header.length)
         msb_write_str(msb, n->header.text, n->header.length);
     const StringView* hd = &NODETYPE_TO_NODE_ALIASES[n->type];
     MSB_FORMAT(msb, "::", *hd);
     if(n->flags & NODEFLAG_ID){
-        // #uggh
-        // This is super gross, I hate this.
-        // FIXME: use handles in the expand instead of raw nodes.
-        NodeHandle handle = {._value = (uint32_t)(n - ctx->nodes.data)};
-        StringView id = node_get_id(ctx, handle);
+        StringView id = node_get_id(ctx, nh);
         MSB_FORMAT(msb, " #id(", id, ")");
     }
     if(n->flags & NODEFLAG_HIDE){
@@ -103,7 +100,8 @@ write_generic_header(DndcContext* ctx, Node* n, int indent, MStringBuilder*msb){
 
 static
 int
-expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
+expand_node(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int node_depth){
+    Node* n = get_node(ctx, nh);
     if(node_depth > DNDC_MAX_NODE_DEPTH){
         NODE_LOG_ERROR(ctx, n, "Max node depth exceeded:", node_depth);
         return DNDC_ERROR_INVALID_TREE;
@@ -118,11 +116,11 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
             return result;
         case NODE_STYLESHEETS:
         case NODE_SCRIPTS:
-            write_generic_header(ctx, n, indent, msb);
-            return expand_node_body(ctx, n, indent+2, msb, node_depth+1);
+            write_generic_header(ctx, nh, indent, msb);
+            return expand_node_body(ctx, nh, indent+2, msb, node_depth+1);
         case NODE_TITLE:
         case NODE_HEADING:
-            write_generic_header(ctx, n, indent, msb);
+            write_generic_header(ctx, nh, indent, msb);
             if(node_children_count(n)){
                 NODE_LOG_ERROR(ctx, n, "TITLE or HEADING has children");
                 return DNDC_ERROR_INVALID_TREE;
@@ -153,10 +151,10 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
         case NODE_IMGLINKS:
         case NODE_COMMENT:
         case NODE_QUOTE:
-            write_generic_header(ctx, n, indent, msb);
-            return expand_node_body(ctx, n, indent+2, msb, node_depth+1);
+            write_generic_header(ctx, nh, indent, msb);
+            return expand_node_body(ctx, nh, indent+2, msb, node_depth+1);
         case NODE_TOC:
-            write_generic_header(ctx, n, indent, msb);
+            write_generic_header(ctx, nh, indent, msb);
             if(node_children_count(n)){
                 NODE_LOG_ERROR(ctx,n, "TOC has children");
                 return DNDC_ERROR_INVALID_TREE;
@@ -165,7 +163,7 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
         case NODE_IMPORT:
         case NODE_CONTAINER:{
             NODE_CHILDREN_FOR_EACH(child, n){
-                result = expand_node(ctx, get_node(ctx, *child), indent, msb, node_depth+1);
+                result = expand_node(ctx, *child, indent, msb, node_depth+1);
                 if(result) return result;
             }
             return result;
@@ -179,14 +177,15 @@ expand_node(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_d
 
 static
 int
-expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
+expand_node_body(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int node_depth){
     int result = 0;
+    Node* n = get_node(ctx, nh);
     switch(n->type){
         case NODE_DEFLIST:
         case NODE_DEF:
         case NODE_DETAILS:
         case NODE_MD:
-            result = expand_md_body(ctx, n, indent, msb, node_depth);
+            result = expand_md_body(ctx, nh, indent, msb, node_depth);
             return result;
         case NODE_STYLESHEETS:
         case NODE_SCRIPTS:
@@ -201,15 +200,14 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int n
         case NODE_META:
         case NODE_HEAD:
             NODE_CHILDREN_FOR_EACH(ch, n){
-                Node* child = get_node(ctx, *ch);
-                result = expand_node(ctx, child, indent, msb, node_depth+1);
+                result = expand_node(ctx, *ch, indent, msb, node_depth+1);
                 if(result) return result;
             }
             return result;
         case NODE_TABLE:
-            return expand_table_body(ctx, n, indent, msb, node_depth);
+            return expand_table_body(ctx, nh, indent, msb, node_depth);
         case NODE_KEYVALUE:
-            return expand_keyvalue_body(ctx, n, indent, msb, node_depth);
+            return expand_keyvalue_body(ctx, nh, indent, msb, node_depth);
         case NODE_INVALID:
         case NODE_CONTAINER:
         case NODE_TOC:
@@ -231,13 +229,14 @@ expand_node_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int n
 }
 static
 int
-expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
+expand_md_list(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int node_depth);
 static
 int
-expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth);
+expand_md_body(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int node_depth);
 static
 int
-expand_md_bullets(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int depth, int node_depth){
+expand_md_bullets(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int depth, int node_depth){
+    Node* n = get_node(ctx, nh);
     if(node_depth > DNDC_MAX_NODE_DEPTH){
         NODE_LOG_ERROR(ctx, n, "Max node depth exceeded: ", node_depth);
         return DNDC_ERROR_INVALID_TREE;
@@ -279,11 +278,11 @@ expand_md_bullets(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
                 msb_write_char(msb, '\n');
             }
             else if(sub->type == NODE_BULLETS){
-                result = expand_md_bullets(ctx, sub, indent+2, msb, depth+1, node_depth+1);
+                result = expand_md_bullets(ctx, *subitem, indent+2, msb, depth+1, node_depth+1);
                 if(result) return result;
             }
             else if(sub->type == NODE_LIST){
-                result = expand_md_list(ctx, sub, indent+2, msb, node_depth+1);
+                result = expand_md_list(ctx, *subitem, indent+2, msb, node_depth+1);
                 if(result) return result;
             }
             else {
@@ -297,7 +296,8 @@ expand_md_bullets(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
 }
 static
 int
-expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
+expand_md_list(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int node_depth){
+    Node* n = get_node(ctx, nh);
     if(node_depth > DNDC_MAX_NODE_DEPTH){
         NODE_LOG_ERROR(ctx, n, "Max node depth exceeded: ", node_depth);
         return DNDC_ERROR_INVALID_TREE;
@@ -337,11 +337,11 @@ expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int nod
                 msb_write_char(msb, '\n');
             }
             else if(sub->type == NODE_BULLETS){
-                result = expand_md_bullets(ctx, sub, indent+2, msb, 0, node_depth+1);
+                result = expand_md_bullets(ctx, *subitem, indent+2, msb, 0, node_depth+1);
                 if(result) return result;
             }
             else if(sub->type == NODE_LIST){
-                result = expand_md_list(ctx, sub, indent+2, msb, node_depth+1);
+                result = expand_md_list(ctx, *subitem, indent+2, msb, node_depth+1);
                 if(result) return result;
             }
             else {
@@ -356,7 +356,8 @@ expand_md_list(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int nod
 }
 static
 int
-expand_md_para(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
+expand_md_para(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int node_depth){
+    Node* n = get_node(ctx, nh);
     if(node_depth > DNDC_MAX_NODE_DEPTH){
         NODE_LOG_ERROR(ctx, n, "Max node depth exceeded: ", node_depth);
         return DNDC_ERROR_INVALID_TREE;
@@ -377,7 +378,8 @@ expand_md_para(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int nod
 
 static
 int
-expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
+expand_md_body(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int node_depth){
+    Node* n = get_node(ctx, nh);
     if(node_depth > DNDC_MAX_NODE_DEPTH){
         NODE_LOG_ERROR(ctx, n, "Max node depth exceeded: ", node_depth);
         return DNDC_ERROR_INVALID_TREE;
@@ -387,23 +389,23 @@ expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int nod
         Node* child = get_node(ctx, *c);
         switch(child->type){
             case NODE_BULLETS:
-                result = expand_md_bullets(ctx, child, indent, msb, 0, node_depth+1);
+                result = expand_md_bullets(ctx, *c, indent, msb, 0, node_depth+1);
                 if(result) return result;
                 break;
             case NODE_PARA:
-                result = expand_md_para(ctx, child, indent, msb, node_depth+1);
+                result = expand_md_para(ctx, *c, indent, msb, node_depth+1);
                 if(result) return result;
                 break;
             case NODE_LIST:
-                result = expand_md_list(ctx, child, indent, msb, node_depth+1);
+                result = expand_md_list(ctx, *c, indent, msb, node_depth+1);
                 if(result) return result;
                 break;
             case NODE_CONTAINER:
-                result = expand_md_body(ctx, child, indent, msb, node_depth+1);
+                result = expand_md_body(ctx, *c, indent, msb, node_depth+1);
                 if(result) return result;
                 break;
             default:
-                result = expand_node(ctx, child, indent, msb, node_depth+1);
+                result = expand_node(ctx, *c, indent, msb, node_depth+1);
                 if(result) return result;
                 break;
         }
@@ -413,7 +415,8 @@ expand_md_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int nod
 
 static
 int
-expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
+expand_table_body(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int node_depth){
+    Node* n = get_node(ctx, nh);
     if(node_depth > DNDC_MAX_NODE_DEPTH){
         NODE_LOG_ERROR(ctx, n, "Max node depth exceeded: ", node_depth);
         return DNDC_ERROR_INVALID_TREE;
@@ -470,7 +473,8 @@ expand_table_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int 
 
 static
 int
-expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, int node_depth){
+expand_keyvalue_body(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int node_depth){
+    Node* n = get_node(ctx, nh);
     if(node_depth > DNDC_MAX_NODE_DEPTH){
         NODE_LOG_ERROR(ctx, n, "Max node depth exceeded: ", node_depth);
         return DNDC_ERROR_INVALID_TREE;
@@ -479,7 +483,7 @@ expand_keyvalue_body(DndcContext*ctx, Node* n, int indent, MStringBuilder*msb, i
     NODE_CHILDREN_FOR_EACH(c, n){
         Node* child = get_node(ctx, *c);
         if(child->type != NODE_KEYVALUEPAIR){
-            result = expand_node(ctx, child, indent, msb, node_depth+1);
+            result = expand_node(ctx, *c, indent, msb, node_depth+1);
             if(result) return result;
             continue;
         }

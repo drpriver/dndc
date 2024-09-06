@@ -1,5 +1,6 @@
 # I release this file into the public domain.
 # - D.
+from __future__ import annotations
 import argparse
 import os
 from collections import defaultdict
