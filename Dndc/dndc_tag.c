@@ -118,6 +118,7 @@ iterate_children(DndcContext* ctx, DndcNodeHandle node, Marray__Tag* tags, Strin
         case DNDC_NODE_TYPE_INVALID:
         case DNDC_NODE_TYPE_STRING:
         case DNDC_NODE_TYPE_TOC:
+        case DNDC_NODE_TYPE_SHEBANG:
             return 0;
         default: break;
     }

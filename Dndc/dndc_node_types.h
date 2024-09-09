@@ -7,73 +7,76 @@
 #include "common_macros.h"
 
 #define NODETYPES(apply) \
-    apply(MD,              0)\
-    apply(DIV,             1)\
-    apply(STRING,          2)\
-    apply(PARA,            3)\
-    apply(TITLE,           4)\
-    apply(HEADING,         5)\
-    apply(TABLE,           6)\
-    apply(TABLE_ROW,       7)\
-    apply(STYLESHEETS,     8)\
-    apply(LINKS,           9)\
-    apply(SCRIPTS,        10)\
-    apply(IMPORT,         11)\
-    apply(IMAGE,          12)\
-    apply(BULLETS,        13)\
-    apply(RAW,            14)\
-    apply(PRE,            15)\
-    apply(LIST,           16)\
-    apply(LIST_ITEM,      17)\
-    apply(KEYVALUE,       18)\
-    apply(KEYVALUEPAIR,   19)\
-    apply(IMGLINKS,       20)\
-    apply(TOC,            21)\
-    apply(COMMENT,        22)\
-    apply(CONTAINER,      23)\
-    apply(QUOTE,          24)\
-    apply(JS,             25)\
-    apply(DETAILS,        26)\
-    apply(META,           27)\
-    apply(DEFLIST,        28)\
-    apply(DEF,            29)\
-    apply(HEAD,           30)\
-    apply(INVALID,        31)\
+    apply(INVALID,         0)\
+    apply(MD,              1)\
+    apply(DIV,             2)\
+    apply(STRING,          3)\
+    apply(PARA,            4)\
+    apply(TITLE,           5)\
+    apply(HEADING,         6)\
+    apply(TABLE,           7)\
+    apply(TABLE_ROW,       8)\
+    apply(STYLESHEETS,     9)\
+    apply(LINKS,          10)\
+    apply(SCRIPTS,        11)\
+    apply(IMPORT,         12)\
+    apply(IMAGE,          13)\
+    apply(BULLETS,        14)\
+    apply(RAW,            15)\
+    apply(PRE,            16)\
+    apply(LIST,           17)\
+    apply(LIST_ITEM,      18)\
+    apply(KEYVALUE,       19)\
+    apply(KEYVALUEPAIR,   20)\
+    apply(IMGLINKS,       21)\
+    apply(TOC,            22)\
+    apply(COMMENT,        23)\
+    apply(CONTAINER,      24)\
+    apply(QUOTE,          25)\
+    apply(JS,             26)\
+    apply(DETAILS,        27)\
+    apply(META,           28)\
+    apply(DEFLIST,        29)\
+    apply(DEF,            30)\
+    apply(HEAD,           31)\
+    apply(SHEBANG,        32)\
 
 enum NodeType{
-    NODE_MD           =  0,
-    NODE_DIV          =  1,
-    NODE_STRING       =  2,
-    NODE_PARA         =  3,
-    NODE_TITLE        =  4,
-    NODE_HEADING      =  5,
-    NODE_TABLE        =  6,
-    NODE_TABLE_ROW    =  7,
-    NODE_STYLESHEETS  =  8,
-    NODE_LINKS        =  9,
-    NODE_SCRIPTS      = 10,
-    NODE_IMPORT       = 11,
-    NODE_IMAGE        = 12,
-    NODE_BULLETS      = 13,
-    NODE_RAW          = 14,
-    NODE_PRE          = 15,
-    NODE_LIST         = 16,
-    NODE_LIST_ITEM    = 17,
-    NODE_KEYVALUE     = 18,
-    NODE_KEYVALUEPAIR = 19,
-    NODE_IMGLINKS     = 20,
-    NODE_TOC          = 21,
-    NODE_COMMENT      = 22,
-    NODE_CONTAINER    = 23,
-    NODE_QUOTE        = 24,
-    NODE_JS           = 25,
-    NODE_DETAILS      = 26,
-    NODE_META         = 27,
-    NODE_DEFLIST      = 28,
-    NODE_DEF          = 29,
-    NODE_HEAD         = 30,
-    NODE_INVALID      = 31, // maybe this should be 0.
+    NODE_INVALID      =  0,
+    NODE_MD           =  1,
+    NODE_DIV          =  2,
+    NODE_STRING       =  3,
+    NODE_PARA         =  4,
+    NODE_TITLE        =  5,
+    NODE_HEADING      =  6,
+    NODE_TABLE        =  7,
+    NODE_TABLE_ROW    =  8,
+    NODE_STYLESHEETS  =  9,
+    NODE_LINKS        = 10,
+    NODE_SCRIPTS      = 11,
+    NODE_IMPORT       = 12,
+    NODE_IMAGE        = 13,
+    NODE_BULLETS      = 14,
+    NODE_RAW          = 15,
+    NODE_PRE          = 16,
+    NODE_LIST         = 17,
+    NODE_LIST_ITEM    = 18,
+    NODE_KEYVALUE     = 19,
+    NODE_KEYVALUEPAIR = 20,
+    NODE_IMGLINKS     = 21,
+    NODE_TOC          = 22,
+    NODE_COMMENT      = 23,
+    NODE_CONTAINER    = 24,
+    NODE_QUOTE        = 25,
+    NODE_JS           = 26,
+    NODE_DETAILS      = 27,
+    NODE_META         = 28,
+    NODE_DEFLIST      = 29,
+    NODE_DEF          = 30,
+    NODE_HEAD         = 31,
+    NODE_SHEBANG      = 32,
 };
+enum {NODE_MAX = NODE_SHEBANG+1};
 
 typedef enum NodeType NodeType;
 
@@ -159,7 +162,7 @@ StringViewUtf16 RAW_NODES_UTF16[] = {
 
 static const
 StringView
-NODETYPE_TO_NODE_ALIASES[NODE_INVALID+1] = {
+NODETYPE_TO_NODE_ALIASES[NODE_MAX] = {
      [NODE_MD]          = SVINIT("md"),
      [NODE_DIV]         = SVINIT("div"),
      [NODE_IMPORT]      = SVINIT("import"),

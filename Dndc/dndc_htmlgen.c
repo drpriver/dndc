@@ -357,6 +357,7 @@ build_toc_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
         case NODE_TOC:
         case NODE_COMMENT:
         case NODE_INVALID:
+        case NODE_SHEBANG:
             break;
         case NODE_PRE:
         case NODE_RAW:{
@@ -1674,6 +1675,14 @@ RENDERFUNC(IMPORT){
     return 0;
 }
 RENDERFUNC(JS){
+    // intentionally not outputting this
+    (void)ctx;
+    (void)sb;
+    (void)handle;
+    (void)header_depth;
+    return 0;
+}
+RENDERFUNC(SHEBANG){
     // intentionally not outputting this
     (void)ctx;
     (void)sb;

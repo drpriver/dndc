@@ -1371,7 +1371,7 @@ js_dndc_node_set_type(QJSContext* jsctx, QJSValueConst thisValue, QJSValueConst 
     int32_t type;
     if(QJS_ToInt32(jsctx, &type, arg))
         return QJS_ThrowTypeError(jsctx, "Expected an integer when trying to set node type");
-    if(type < 0 || type >= NODE_INVALID)
+    if(type <= NODE_INVALID || type >= NODE_MAX)
         return QJS_ThrowTypeError(jsctx, "Integer out of range for valid node types.");
     int err = 0;
     switch(type){
@@ -1851,7 +1851,7 @@ QJSMETHOD(js_dndc_context_make_node){
     int32_t type;
     if(QJS_ToInt32(jsctx, &type, argv[0]))
         return QJS_EXCEPTION;
-    if(type < 0 || type >= NODE_INVALID)
+    if(type < 0 || type >= NODE_MAX)
         return QJS_ThrowTypeError(jsctx, "type argument invalid");
     QJSValue header = QJS_UNDEFINED;
     QJSValue classes = QJS_UNDEFINED;
@@ -2080,7 +2080,7 @@ QJSMETHOD(js_dndc_context_select_nodes){
             int32_t type_;
             if(QJS_ToInt32(jsctx, &type_, jstype_))
                 return QJS_EXCEPTION;
-            if(type_ < 0 || type_ >= NODE_INVALID)
+            if(type_ <= NODE_INVALID || type_ >= NODE_MAX)
                 return QJS_ThrowTypeError(jsctx, "type argument invalid");
             type = type_;
         }

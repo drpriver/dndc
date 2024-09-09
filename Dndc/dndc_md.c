@@ -23,7 +23,7 @@
 static
 warn_unused
 int
-render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth);
+render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth, _Bool append_newline);
 static void write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
 static warn_unused int write_md_bullets(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth);
 static warn_unused int write_md_list(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth);
@@ -41,7 +41,7 @@ render_md(DndcContext* ctx, MStringBuilder* sb){
         return DNDC_ERROR_INVALID_TREE;
     }
     msb_write_literal(sb, "<!-- This md file was generated from a dnd file. -->\n");
-    return render_node_as_md(ctx, root, sb, 2);
+    return render_node_as_md(ctx, root, sb, 2, 0);
 }
 
 // returns how much the header depth has increased.
@@ -62,72 +62,67 @@ write_md_header(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int hea
 static
 warn_unused
 int
-render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth){
+render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth, _Bool append_newline){
     Node* node = get_node(ctx, handle);
     switch(node->type){
         case NODE_MD:{
             header_depth += write_md_header(ctx, handle, sb, header_depth);
             NODE_CHILDREN_FOR_EACH(ch, node){
-                int err = render_node_as_md(ctx, *ch, sb, header_depth);
+                int err = render_node_as_md(ctx, *ch, sb, header_depth, 1);
                 if(err) return err;
-                msb_write_char(sb, '\n');
             }
-        }return 0;
+        }goto Lok;
         case NODE_DEFLIST:{
             header_depth += write_md_header(ctx, handle, sb, header_depth);
             msb_write_literal(sb, "<dl>\n");
             NODE_CHILDREN_FOR_EACH(ch, node){
-                int err = render_node_as_md(ctx, *ch, sb, header_depth);
+                int err = render_node_as_md(ctx, *ch, sb, header_depth, 1);
                 if(err) return err;
-                msb_write_char(sb, '\n');
             }
             msb_write_literal(sb, "</dl>\n");
-        }return 0;
+        }goto Lok;
         case NODE_DEF:{
             msb_write_literal(sb, "<dt>");
             write_md_string(ctx, handle, sb);
             msb_write_literal(sb, "</dt>\n");
             msb_write_literal(sb, "<dd>\n");
             NODE_CHILDREN_FOR_EACH(ch, node){
-                int err = render_node_as_md(ctx, *ch, sb, header_depth);
+                int err = render_node_as_md(ctx, *ch, sb, header_depth, 1);
                 if(err) return err;
-                msb_write_char(sb, '\n');
             }
             msb_write_literal(sb, "</dd>\n");
-        }return 0;
+        }goto Lok;
         case NODE_DIV:{
             header_depth += write_md_header(ctx, handle, sb, header_depth);
             msb_write_literal(sb, "<div>\n");
             NODE_CHILDREN_FOR_EACH(ch, node){
-                int err = render_node_as_md(ctx, *ch, sb, header_depth);
+                int err = render_node_as_md(ctx, *ch, sb, header_depth, 1);
                 if(err) return err;
-                msb_write_char(sb, '\n');
             }
             msb_write_literal(sb, "</div>\n");
-        }return 0;
+        }goto Lok;
         case NODE_STRING:{
             write_md_string(ctx, handle, sb);
-            return 0;
+            goto Lok;
         }
         case NODE_PARA:{
             msb_write_char(sb, '\n');
             NODE_CHILDREN_FOR_EACH(ch, node){
-                int err = render_node_as_md(ctx, *ch, sb, header_depth);
+                int err = render_node_as_md(ctx, *ch, sb, header_depth, 1);
                 if(err) return err;
-                msb_write_char(sb, '\n');
             }
-        }return 0;
+        } goto Lok;
         case NODE_TITLE:
             write_md_header(ctx, handle, sb, 1);
-            return 0;
+            goto Lok;
         case NODE_HEADING:
             write_md_header(ctx, handle, sb, header_depth);
-            return 0;
+            goto Lok;
         case NODE_TABLE:{
             header_depth += write_md_header(ctx, handle, sb, header_depth);
             int err = write_md_table(ctx, handle, sb, header_depth);
             if(err) return err;
-        }return 0;
+        } goto Lok;
         case NODE_TABLE_ROW:
             NODE_LOG_ERROR(ctx, node, "Unexpected table row");
             return DNDC_ERROR_INVALID_TREE;
@@ -138,7 +133,7 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
             msb_write_literal(sb, "<style>\n");
             write_md_raw(ctx, handle, sb);
             msb_write_literal(sb, "</style>\n");
-            return 0; // ignore
+            goto Lok;
         case NODE_LINKS:
             return 0; // ignore
         case NODE_SCRIPTS:
@@ -151,24 +146,24 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
             header_depth += write_md_header(ctx, handle, sb, header_depth);
             int err = write_md_bullets(ctx, handle, sb, 0);
             if(err) return err;
-        }return 0;
+        } goto Lok;
         case NODE_RAW:{
             write_md_raw(ctx, handle, sb);
-        }return 0;
+        } goto Lok;
         case NODE_PRE:{
             msb_write_literal(sb, "<pre>\n");
             NODE_CHILDREN_FOR_EACH(ch, node){
-                int err = render_node_as_md(ctx, *ch, sb, header_depth);
+                int err = render_node_as_md(ctx, *ch, sb, header_depth, 0);
                 if(err) return err;
                 msb_write_char(sb, '\n');
             }
             msb_write_literal(sb, "</pre>\n");
-        }return 0;
+        } goto Lok;
         case NODE_LIST:{
             header_depth += write_md_header(ctx, handle, sb, header_depth);
             int err = write_md_list(ctx, handle, sb, 0);
             if(err) return err;
-        }return 0;
+        } goto Lok;
         case NODE_LIST_ITEM:
             NODE_LOG_ERROR(ctx, node, "Unexpected list item");
             return DNDC_ERROR_INVALID_TREE;
@@ -176,7 +171,7 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
             header_depth += write_md_header(ctx, handle, sb, header_depth);
             int err = write_md_keyvalue(ctx, handle, sb);
             if(err) return err;
-        }return 0;
+        } goto Lok;
         case NODE_KEYVALUEPAIR:
             NODE_LOG_ERROR(ctx, node, "Unexpected kv pair");
             return DNDC_ERROR_INVALID_TREE;
@@ -188,20 +183,18 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
             return 0;
         case NODE_CONTAINER:
             NODE_CHILDREN_FOR_EACH(ch, node){
-                int err = render_node_as_md(ctx, *ch, sb, header_depth);
+                int err = render_node_as_md(ctx, *ch, sb, header_depth, 1);
                 if(err) return err;
-                msb_write_char(sb, '\n');
             }
             return 0;
         case NODE_QUOTE:{
             msb_write_literal(sb, "<blockquote>\n");
             NODE_CHILDREN_FOR_EACH(ch, node){
-                int err = render_node_as_md(ctx, *ch, sb, header_depth);
+                int err = render_node_as_md(ctx, *ch, sb, header_depth, 1);
                 if(err) return err;
-                msb_write_char(sb, '\n');
             }
             msb_write_literal(sb, "</blockquote>\n");
-        }return 0;
+        } goto Lok;
         case NODE_JS:
             return 0;
         case NODE_DETAILS:
@@ -210,19 +203,23 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
             // header_depth += write_md_header(ctx, handle, sb, header_depth);
             msb_write_literal(sb, "</summary>\n");
             NODE_CHILDREN_FOR_EACH(ch, node){
-                int err = render_node_as_md(ctx, *ch, sb, header_depth);
+                int err = render_node_as_md(ctx, *ch, sb, header_depth, 1);
                 if(err) return err;
-                msb_write_char(sb, '\n');
             }
             msb_write_literal(sb, "</details>\n");
-            return 0;
+            goto Lok;
         case NODE_META:
         case NODE_HEAD:
             return 0;
         case NODE_INVALID:
             break;
+        case NODE_SHEBANG:
+            return 0;
     }
     return DNDC_ERROR_INVALID_TREE;
+    Lok:
+    if(append_newline) msb_write_char(sb, '\n');
+    return 0;
 }
 
 static
@@ -492,7 +489,7 @@ write_md_table(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int head
         msb_write_literal(sb, "<tr>\n");
         NODE_CHILDREN_FOR_EACH(it, child){
             msb_write_literal(sb, "<th>");
-            int e = render_node_as_md(ctx, *it, sb, header_depth+1);
+            int e = render_node_as_md(ctx, *it, sb, header_depth+1, 0);
             if(e) return e;
             msb_write_literal(sb, "</th>\n");
         }
@@ -509,7 +506,7 @@ write_md_table(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int head
         msb_write_literal(sb, "<tr>\n");
         NODE_CHILDREN_FOR_EACH(it, child){
             msb_write_literal(sb, "<td>");
-            int e = render_node_as_md(ctx, *it, sb, header_depth+1);
+            int e = render_node_as_md(ctx, *it, sb, header_depth+1, 0);
             if(e) return e;
             msb_write_literal(sb, "</td>\n");
         }

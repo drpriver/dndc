@@ -626,6 +626,7 @@ FileError
 read_file(const char* filepath, Allocator a, LongString* outstr){
     (void)a;
     (void)filepath;
+    (void)outstr;
     FileError result = {.errored=FILE_ERROR};
     return result;
 }
@@ -636,6 +637,7 @@ FileError
 read_bin_file(const char* filepath, Allocator a, ByteBuffer* outbuff){
     (void)a;
     (void)filepath;
+    (void)outbuff;
     FileError result = {.errored=FILE_ERROR};
     return result;
 }

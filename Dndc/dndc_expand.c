@@ -108,6 +108,12 @@ expand_node(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb, int 
     }
     int result = 0;
     switch(n->type){
+        case NODE_SHEBANG:
+            msb_write_nchar(msb, ' ', indent);
+            if(n->header.length)
+                msb_write_str(msb, n->header.text, n->header.length);
+            msb_write_char(msb, '\n');
+            return result;
         case NODE_STRING:
             msb_write_nchar(msb, ' ', indent);
             if(n->header.length)
@@ -222,6 +228,7 @@ expand_node_body(DndcContext*ctx, NodeHandle nh, int indent, MStringBuilder*msb,
         case NODE_TITLE:
         case NODE_PARA:
         case NODE_STRING:
+        case NODE_SHEBANG:
             NODE_LOG_ERROR(ctx, n, "Node can't be expanded into text format: ", quoted(LS_to_SV(NODENAMES[n->type])));
             return DNDC_ERROR_INVALID_TREE;
     }

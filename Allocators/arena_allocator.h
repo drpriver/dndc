@@ -282,7 +282,7 @@ ArenaAllocator_realloc(ArenaAllocator* aa, void*_Nullable ptr, size_t old_size, 
         void* result = ArenaAllocator_alloc(aa, new_size);
         if(!result) return NULL;
         assert(old_size > new_size);
-        memcpy(result, ptr, new_size);
+        memcpy(result, (const void*)ptr, new_size);
         Big_free(ptr, old_size);
         return result;
     }
@@ -292,7 +292,7 @@ ArenaAllocator_realloc(ArenaAllocator* aa, void*_Nullable ptr, size_t old_size, 
         void* result = Big_alloc(&aa->big_allocations, new_size);
         if(!result) return NULL;
         if(old_size){
-            memcpy(result, ptr, old_size);
+            memcpy(result, (const void*)ptr, old_size);
             ArenaAllocator_free(aa, ptr, old_size);
         }
         return result;
@@ -317,9 +317,9 @@ ArenaAllocator_realloc(ArenaAllocator* aa, void*_Nullable ptr, size_t old_size, 
     void* result = aa->arena->buff + aa->arena->used;
     aa->arena->used += new_size;
     if(old_size < new_size)
-        memcpy(result, ptr, old_size);
+        memcpy(result, (const void*)ptr, old_size);
     else
-        memcpy(result, ptr, new_size);
+        memcpy(result, (const void*)ptr, new_size);
     // no point in freeing ptr as it was an arena allocation we couldn't realloc into.
     // We could do it with the old arena, but we never go back once we've alloced a new
     // arena. Maybe we should? idk.

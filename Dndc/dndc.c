@@ -2635,7 +2635,7 @@ dndc_node_set_type(DndcContext* ctx, DndcNodeHandle dnh, int type){
     NodeHandle handle = check_api_handle(ctx, dnh);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_ERROR_VALUE;
-    if(type < 0 || type > NODE_INVALID)
+    if(type < 0 || type >= NODE_MAX)
         return DNDC_ERROR_VALUE;
     Marray(NodeHandle)* node_store = NULL;
     switch(type){
@@ -3092,7 +3092,7 @@ dndc_node_detach(DndcContext* ctx, DndcNodeHandle dnh){
 DNDC_API
 DndcNodeHandle
 dndc_ctx_make_node(DndcContext* ctx, int type, DndcStringView header, DndcNodeHandle parent_){
-    if(type < 0 || type > DNDC_NODE_TYPE_INVALID) return DNDC_NODE_HANDLE_INVALID;
+    if(type <= DNDC_NODE_TYPE_INVALID || type >= DNDC_NODE_TYPE_MAX) return DNDC_NODE_HANDLE_INVALID;
     NodeHandle handle = alloc_handle(ctx);
     if(NodeHandle_eq(handle, INVALID_NODE_HANDLE))
         return DNDC_NODE_HANDLE_INVALID;
@@ -3399,7 +3399,7 @@ dndc_ctx_select_nodes(
         DndcStringView*_Nullable classes, size_t class_count,
         DndcNodeHandle* outbuf, size_t buflen
         ){
-    if(type_ < 0 || type_ > NODE_INVALID) return 0;
+    if(type_ < 0 || type_ >= NODE_MAX) return 0;
     NodeType type = type_;
     size_t n_writ = 0;
     size_t start = *cookie;
@@ -3501,6 +3501,9 @@ dndc_node_tree_repr_inner(DndcContext* ctx, NodeHandle handle, int depth, MStrin
         }break;
         case NODE_STRING:{
             MSB_FORMAT(sb, " '", node->header, "'");
+        }break;
+        case NODE_SHEBANG:{
+            MSB_FORMAT(sb, node->header);
         }break;
     }
     msb_write_char(sb, '\n');

@@ -620,77 +620,82 @@ dndc_node_get_parent(DndcContext*, DndcNodeHandle);
 //
 // Usable in an X macro for convenient wrapping.
 #define DNDCNODETYPES(apply) \
-    apply(MD,              0)\
-    apply(DIV,             1)\
-    apply(STRING,          2)\
-    apply(PARA,            3)\
-    apply(TITLE,           4)\
-    apply(HEADING,         5)\
-    apply(TABLE,           6)\
-    apply(TABLE_ROW,       7)\
-    apply(STYLESHEETS,     8)\
-    apply(LINKS,           9)\
-    apply(SCRIPTS,        10)\
-    apply(IMPORT,         11)\
-    apply(IMAGE,          12)\
-    apply(BULLETS,        13)\
-    apply(RAW,            14)\
-    apply(PRE,            15)\
-    apply(LIST,           16)\
-    apply(LIST_ITEM,      17)\
-    apply(KEYVALUE,       18)\
-    apply(KEYVALUEPAIR,   19)\
-    apply(IMGLINKS,       20)\
-    apply(TOC,            21)\
-    apply(COMMENT,        22)\
-    apply(CONTAINER,      23)\
-    apply(QUOTE,          24)\
-    apply(JS,             25)\
-    apply(DETAILS,        26)\
-    apply(META,           27)\
-    apply(DEFLIST,        28)\
-    apply(DEF,            29)\
-    apply(HEAD,           30)\
-    apply(INVALID,        31)\
+    apply(INVALID,         0)\
+    apply(MD,              1)\
+    apply(DIV,             2)\
+    apply(STRING,          3)\
+    apply(PARA,            4)\
+    apply(TITLE,           5)\
+    apply(HEADING,         6)\
+    apply(TABLE,           7)\
+    apply(TABLE_ROW,       8)\
+    apply(STYLESHEETS,     9)\
+    apply(LINKS,          10)\
+    apply(SCRIPTS,        11)\
+    apply(IMPORT,         12)\
+    apply(IMAGE,          13)\
+    apply(BULLETS,        14)\
+    apply(RAW,            15)\
+    apply(PRE,            16)\
+    apply(LIST,           17)\
+    apply(LIST_ITEM,      18)\
+    apply(KEYVALUE,       19)\
+    apply(KEYVALUEPAIR,   20)\
+    apply(IMGLINKS,       21)\
+    apply(TOC,            22)\
+    apply(COMMENT,        23)\
+    apply(CONTAINER,      24)\
+    apply(QUOTE,          25)\
+    apply(JS,             26)\
+    apply(DETAILS,        27)\
+    apply(META,           28)\
+    apply(DEFLIST,        29)\
+    apply(DEF,            30)\
+    apply(HEAD,           31)\
+    apply(SHEBANG,        32)\
 
 // Manually expand for better documentation
 enum DndcNodeType {
 //----------------------
 // The type of the node.
 //
-    DNDC_NODE_TYPE_MD           =  0,
-    DNDC_NODE_TYPE_DIV          =  1,
-    DNDC_NODE_TYPE_STRING       =  2,
-    DNDC_NODE_TYPE_PARA         =  3,
-    DNDC_NODE_TYPE_TITLE        =  4,
-    DNDC_NODE_TYPE_HEADING      =  5,
-    DNDC_NODE_TYPE_TABLE        =  6,
-    DNDC_NODE_TYPE_TABLE_ROW    =  7,
-    DNDC_NODE_TYPE_STYLESHEETS  =  8,
-    DNDC_NODE_TYPE_LINKS        =  9,
-    DNDC_NODE_TYPE_SCRIPTS      = 10, // NOTE: This is for <script> tags in the rendered doc
-    DNDC_NODE_TYPE_IMPORT       = 11,
-    DNDC_NODE_TYPE_IMAGE        = 12,
-    DNDC_NODE_TYPE_BULLETS      = 13,
-    DNDC_NODE_TYPE_RAW          = 14,
-    DNDC_NODE_TYPE_PRE          = 15,
-    DNDC_NODE_TYPE_LIST         = 16,
-    DNDC_NODE_TYPE_LIST_ITEM    = 17,
-    DNDC_NODE_TYPE_KEYVALUE     = 18,
-    DNDC_NODE_TYPE_KEYVALUEPAIR = 19,
-    DNDC_NODE_TYPE_IMGLINKS     = 20,
-    DNDC_NODE_TYPE_TOC          = 21,
-    DNDC_NODE_TYPE_COMMENT      = 22,
-    DNDC_NODE_TYPE_CONTAINER    = 23,
-    DNDC_NODE_TYPE_QUOTE        = 24,
-    DNDC_NODE_TYPE_JS           = 25, // NOTE: This is for compiletime scripting.
-    DNDC_NODE_TYPE_DETAILS      = 26,
-    DNDC_NODE_TYPE_META         = 27,
-    DNDC_NODE_TYPE_DEFLIST      = 28,
-    DNDC_NODE_TYPE_DEF          = 29,
-    DNDC_NODE_TYPE_HEAD         = 30,
-    DNDC_NODE_TYPE_INVALID      = 31,
+    DNDC_NODE_TYPE_INVALID      =  0,
+    DNDC_NODE_TYPE_MD           =  1,
+    DNDC_NODE_TYPE_DIV          =  2,
+    DNDC_NODE_TYPE_STRING       =  3,
+    DNDC_NODE_TYPE_PARA         =  4,
+    DNDC_NODE_TYPE_TITLE        =  5,
+    DNDC_NODE_TYPE_HEADING      =  6,
+    DNDC_NODE_TYPE_TABLE        =  7,
+    DNDC_NODE_TYPE_TABLE_ROW    =  8,
+    DNDC_NODE_TYPE_STYLESHEETS  =  9,
+    DNDC_NODE_TYPE_LINKS        = 10,
+    DNDC_NODE_TYPE_SCRIPTS      = 11, // NOTE: This is for <script> tags in the rendered doc
+    DNDC_NODE_TYPE_IMPORT       = 12,
+    DNDC_NODE_TYPE_IMAGE        = 13,
+    DNDC_NODE_TYPE_BULLETS      = 14,
+    DNDC_NODE_TYPE_RAW          = 15,
+    DNDC_NODE_TYPE_PRE          = 16,
+    DNDC_NODE_TYPE_LIST         = 17,
+    DNDC_NODE_TYPE_LIST_ITEM    = 18,
+    DNDC_NODE_TYPE_KEYVALUE     = 19,
+    DNDC_NODE_TYPE_KEYVALUEPAIR = 20,
+    DNDC_NODE_TYPE_IMGLINKS     = 21,
+    DNDC_NODE_TYPE_TOC          = 22,
+    DNDC_NODE_TYPE_COMMENT      = 23,
+    DNDC_NODE_TYPE_CONTAINER    = 24,
+    DNDC_NODE_TYPE_QUOTE        = 25,
+    DNDC_NODE_TYPE_JS           = 26, // NOTE: This is for compiletime scripting.
+    DNDC_NODE_TYPE_DETAILS      = 27,
+    DNDC_NODE_TYPE_META         = 28,
+    DNDC_NODE_TYPE_DEFLIST      = 29,
+    DNDC_NODE_TYPE_DEF          = 30,
+    DNDC_NODE_TYPE_HEAD         = 31,
+    DNDC_NODE_TYPE_SHEBANG      = 32,
 };
+
+// for range checking
+enum {DNDC_NODE_TYPE_MAX = DNDC_NODE_TYPE_SHEBANG+1};
 
 // Check that the above is correct.
 #define X(a, b) _Static_assert(DNDC_NODE_TYPE_##a == b, \

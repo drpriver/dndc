@@ -931,6 +931,7 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
         case NODE_INVALID:
         case NODE_BULLETS:
         case NODE_LIST:
+        case NODE_SHEBANG:
             parser_log_err(ctx, ctx->linestart, LS("Invalid node to parse from"));
             return DNDC_ERROR_PARSE;
     }
@@ -943,6 +944,20 @@ parse_node(DndcContext* ctx, NodeHandle parent_handle, NodeType parent_type, int
         }
         if(ctx->nspaces <= indentation)
             break;
+        if(unlikely(ctx->linestart[ctx->nspaces] == '#')){
+            const char* firstchar = ctx->linestart + ctx->nspaces;
+            if(firstchar + 1 < ctx->line_end && firstchar[1] == '!'){
+                NodeHandle nh = alloc_handle(ctx);
+                if(unlikely(NodeHandle_eq(nh, INVALID_NODE_HANDLE)))
+                    return DNDC_ERROR_OOM;
+                init_node(ctx, nh, firstchar, NODE_SHEBANG);
+                get_node(ctx, nh)->header = (StringView){ctx->line_end-firstchar, firstchar};
+                int e = append_child(ctx, parent_handle, nh);
+                if(unlikely(e)) return e;
+                advance_row(ctx);
+                continue;
+            }
+        }
         if(ctx->doublecolon){
             int e = parse_double_colon(ctx, parent_handle);
             if(e) return e;
@@ -1441,6 +1456,22 @@ PARSEFUNC(parse_md_node){
                     }
                 }
             }break;
+            case '#':{
+                if(firstchar+1 < ctx->end){
+                    if(firstchar[1] == '!'){
+                        NodeHandle nh = alloc_handle(ctx);
+                        if(unlikely(NodeHandle_eq(nh, INVALID_NODE_HANDLE)))
+                            return DNDC_ERROR_OOM;
+                        init_node(ctx, nh, firstchar, NODE_SHEBANG);
+                        get_node(ctx, nh)->header = (StringView){ctx->line_end-firstchar, firstchar};
+                        int e = append_child(ctx, parent_handle, nh);
+                        if(unlikely(e)) return e;
+                        advance_row(ctx);
+                        continue;
+                    }
+                }
+                FALLTHROUGH;
+            }
             default:
                 newstate = PARA;
                 goto after;

@@ -41,6 +41,7 @@
     X(TestExpand) \
     X(TestMd) \
     X(TestUtf16Syntax) \
+    X(TestShebang) \
 
 // These are forward function declarations.
 #define X(t) static TestFunc t;
@@ -1312,6 +1313,166 @@ TestFunction(TestMd){
     TestAssertFalse(e);
     TestExpectEquals2(LS_equals, expected, output);
     dndc_free_string(output);
+    TESTEND();
+}
+TestFunction(TestShebang){
+    TESTBEGIN();
+    StringView source = SV(
+        "#!/usr/bin/env dndc\n"
+        "hello\n"
+        "#! this is also ignored\n"
+        "  #! this ignored as well\n"
+        "::div\n"
+        "  in div\n"
+        "  #! ignored\n"
+        "#! ignored, but ends div\n"
+        "  #! ignored\n"
+        "  not ignored\n"
+        "#! ignored\n"
+    );
+    if(1){
+        LongString expected = LS(
+            "<p>\n"
+            "hello\n"
+            "</p>\n"
+            "<div>\n"
+            "in div\n"
+            "</div>\n"
+            "<p>\n"
+            "not ignored\n"
+            "</p>\n"
+        );
+        uint64_t flags = DNDC_FLAGS_NONE
+            | DNDC_SUPPRESS_WARNINGS
+            | DNDC_DONT_PRINT_ERRORS
+            | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+            | DNDC_FRAGMENT_ONLY
+            ;
+        LongString output = {0};
+        int e = run_the_dndc(OUTPUT_HTML, flags, SV(""), source, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        TestExpectFalse(e);
+        TestExpectEquals2(LS_equals, output, expected);
+        dndc_free_string(output);
+    }
+    if(1){
+        StringView ssource = SV(
+            "hello\n"
+        );
+        LongString expected = LS(
+            "hello\n\n" // extra newline
+        );
+        uint64_t flags = DNDC_FLAGS_NONE
+            | DNDC_SUPPRESS_WARNINGS
+            | DNDC_DONT_PRINT_ERRORS
+            | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+            ;
+        LongString output = {0};
+        int e = run_the_dndc(OUTPUT_EXPAND, flags, SV(""), ssource, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        TestExpectFalse(e);
+        TestExpectEquals2(LS_equals, output, expected);
+        dndc_free_string(output);
+    }
+    if(1){
+        StringView ssource = SV(
+            "::div\n"
+            "  in div\n"
+            "  #! ignored\n"
+        );
+        LongString expected = LS(
+            "::div\n"
+            "  in div\n"
+            "  #! ignored\n"
+        );
+        uint64_t flags = DNDC_FLAGS_NONE
+            | DNDC_SUPPRESS_WARNINGS
+            | DNDC_DONT_PRINT_ERRORS
+            | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+            ;
+        LongString output = {0};
+        int e = run_the_dndc(OUTPUT_EXPAND, flags, SV(""), ssource, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        TestExpectFalse(e);
+        TestExpectEquals2(LS_equals, output, expected);
+        dndc_free_string(output);
+    }
+    if(1){
+        LongString expected = LS(
+            "#!/usr/bin/env dndc\n"
+            "hello\n"
+            "\n"
+            "#! this is also ignored\n"
+            "#! this ignored as well\n"
+            "::div\n"
+            "  in div\n"
+            "  #! ignored\n"
+            "#! ignored, but ends div\n"
+            "#! ignored\n"
+            "not ignored\n"
+            "\n"
+            "#! ignored\n"
+        );
+        uint64_t flags = DNDC_FLAGS_NONE
+            | DNDC_SUPPRESS_WARNINGS
+            | DNDC_DONT_PRINT_ERRORS
+            | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+            ;
+        LongString output = {0};
+        int e = run_the_dndc(OUTPUT_EXPAND, flags, SV(""), source, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        TestExpectFalse(e);
+        TestExpectEquals2(LS_equals, output, expected);
+        dndc_free_string(output);
+    }
+    if(1){
+        LongString expected = LS(
+            "#!/usr/bin/env dndc\n"
+            "hello\n"
+            "\n"
+            "#! this is also ignored\n"
+            "#! this ignored as well\n"
+            "::div\n"
+            "  in div\n"
+            "  #! ignored\n"
+            "#! ignored, but ends div\n"
+            "#! ignored\n"
+            "not ignored\n"
+            "\n"
+            "#! ignored\n"
+        );
+        uint64_t flags = DNDC_FLAGS_NONE
+            | DNDC_SUPPRESS_WARNINGS
+            | DNDC_DONT_PRINT_ERRORS
+            | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+            ;
+        LongString output = {0};
+        int e = run_the_dndc(OUTPUT_REFORMAT, flags, SV(""), source, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        TestExpectFalse(e);
+        TestExpectEquals2(LS_equals, output, expected);
+        dndc_free_string(output);
+    }
+    if(1){
+        LongString expected = LS(
+            "<!-- This md file was generated from a dnd file. -->\n"
+            "\n"
+            "hello\n"
+            "\n"
+            "<div>\n"
+            "in div\n"
+            "</div>\n"
+            "\n"
+            "\n"
+            "not ignored\n"
+            "\n"
+        );
+        uint64_t flags = DNDC_FLAGS_NONE
+            | DNDC_SUPPRESS_WARNINGS
+            | DNDC_DONT_PRINT_ERRORS
+            | DNDC_DISALLOW_ATTRIBUTE_DIRECTIVE_OVERLAP
+            ;
+        LongString output = {0};
+        int e = run_the_dndc(OUTPUT_MD, flags, SV(""), source, SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        TestExpectFalse(e);
+        TestExpectEquals2(LS_equals, output, expected);
+        dndc_free_string(output);
+    }
     TESTEND();
 }
 

@@ -19,6 +19,8 @@ struct {
 
 static
 void dndc_log_func(void* log_user_data, int type, const char* filename, int filename_len, int line, int col, const char* message, int message_len){
+    (void)log_user_data;
+    (void)type;
     if(message_len+filename_len < 4096-64){
         char buff[4096];
         MStringBuilder msb = {

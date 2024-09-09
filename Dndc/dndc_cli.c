@@ -811,6 +811,9 @@ print_node_and_children(DndcContext* ctx, NodeHandle handle, int depth, FILE* ou
         case NODE_STRING:{
             fprintf(out, " '%.*s'", (int)node->header.length, node->header.text);
         }break;
+        case NODE_SHEBANG:{
+            fprintf(out, "%.*s", (int)node->header.length, node->header.text);
+        }break;
     }
     fputc('\n', out);
     NODE_CHILDREN_FOR_EACH(it, node){

@@ -262,6 +262,14 @@ format_node(DndcContext* ctx, MStringBuilder* sb, NodeHandle nh, int indent){
             return format_md_list(ctx, sb, nh, indent);
         case NODE_BULLETS:
             return format_md_bullets(ctx, sb, nh, indent, 0);
+        case NODE_SHEBANG:{
+            msb_write_nchar(sb, ' ', indent);
+            if(node->header.length){
+                msb_write_str(sb, node->header.text, node->header.length);
+            }
+            msb_write_char(sb, '\n');
+            return 0;
+        }
         case NODE_CONTAINER:
         case NODE_TABLE_ROW:
         case NODE_PARA:

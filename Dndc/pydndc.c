@@ -2014,7 +2014,7 @@ DndcContextPy_select_nodes(PyObject* s, PyObject* args, PyObject* kwargs){
     long type = DNDC_NODE_TYPE_INVALID;
     if(nt)
         type = PyLong_AsLong(nt);
-    if(type < 0 || type > DNDC_NODE_TYPE_INVALID){
+    if(type < 0 || type >= DNDC_NODE_TYPE_MAX){
         result = PyErr_Format(PyExc_ValueError, "value of type must fit within the range of NodeType, got %R", nt);
         goto fail;
     }

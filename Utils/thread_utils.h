@@ -431,6 +431,7 @@ join_thread(ThreadHandle handle){
 }
 
 #elif defined(__wasm__)
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
 
 typedef struct ThreadHandle ThreadHandle;
 struct ThreadHandle {
@@ -443,6 +444,7 @@ int
 create_thread(ThreadHandle* handle, thread_func* func, void*_Nullable thread_arg){
     (void)handle;
     (void)func;
+    (void)thread_arg;
     unimplemented();
 }
 
