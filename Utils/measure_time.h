@@ -44,6 +44,7 @@ get_t(void){
         // succeed and will thus never return zero."
         BOOL ok = QueryPerformanceFrequency(&freq);
         assert(ok == TRUE);
+        (void)ok;
     }
 
     // This should never fail.
@@ -51,6 +52,7 @@ get_t(void){
     // succeed and will thus never return zero."
     BOOL ok = QueryPerformanceCounter(&time);
     assert(ok == TRUE);
+    (void)ok;
     return  (1000000llu * time.QuadPart) / freq.QuadPart;
 }
 #elif defined(__wasm__)
