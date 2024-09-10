@@ -101,7 +101,6 @@ def to_markdown(
 ) -> str:
     ...
 
-
 def reformat(text:str,
     filename:str='',
     logger:Logger | None=None,
@@ -238,7 +237,6 @@ class Classes:
     ctx: Context
     node: Node
 
-
 class Node:
     header: str
     type: NodeType
@@ -282,6 +280,9 @@ class Node:
         ...
     def __len__(self) -> int:
         ...
+    ...
+
+def kebab(txt:str, /) -> str:
     ...
 
 __version__: str

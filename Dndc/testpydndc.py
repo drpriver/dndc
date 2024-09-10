@@ -23,7 +23,6 @@ FOOTER = "</body>\n</html>\n"
 def dedent(text:str) -> str:
     return textwrap.dedent(text[1:])
 
-
 # unittest is kinda crappy due to it imitating JUnit,
 # but I don't want a third-party dependency for testing.
 
@@ -226,6 +225,7 @@ class TestReformat(TestCase):
         )
         output = pydndc.reformat(input)
         self.assertEqual(output, expected)
+
 EXAMPLE_FILES = [
     "Examples/Calendar/calendar.dnd",
     "Examples/KrugsBasement/krugs-basement.dnd",
@@ -458,7 +458,6 @@ class TestAst(TestCase):
         ''')
         self.assertEqual(json.loads(arg), 'foo')
 
-
 class TestFileCache(TestCase):
     def test_contents(self) -> None:
         input = (
@@ -529,8 +528,6 @@ class TestExpand(TestCase):
         output = pydndc.expand(input, logger=testout, file_cache=cache)
         self.assertEqual(output, expected)
 
-
-
 class TestJsVars(TestCase):
     def test_jsargs(self) -> None:
         # Have C call our test assertion ;)
@@ -577,6 +574,7 @@ class TestJsVars(TestCase):
         _ = pydndc.htmlgen(input,
                 jsargs=d2,
                 logger=testout)
+
 class TestScriptExample(TestCase):
     def test_add(self) -> None:
         cmd = [sys.executable, 'Examples/HobswellManor/add.py']
@@ -590,6 +588,21 @@ class TestScriptExample(TestCase):
                 fp.write(before)
         self.assertEqual(before, after)
 
+class TestKebab(TestCase):
+    def test_kebab(self) -> None:
+        for before, expected in [
+            ("hello there", "hello-there"),
+            ("H3l--lo", "h3l-lo"),
+            ("  hi    ", "hi"),
+            ("1   2   3", "1-2-3"),
+            ("My wonderful cat, Lucy", "my-wonderful-cat-lucy"),
+            ("123, North Elm St.", "123-north-elm-st"),
+            ("", ""),
+            (" ", ""),
+            ("x", "x"),
+        ]:
+            k = pydndc.kebab(before)
+            self.assertEqual(k, expected)
 
 def mymain() -> None:
     parser = argparse.ArgumentParser()

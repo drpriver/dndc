@@ -311,6 +311,10 @@ static
 PyObject*_Nullable
 pydndc_anaylze_syntax_for_highlight(PyObject*, PyObject*, PyObject*);
 
+static
+PyObject*_Nullable
+pydndc_kebab(PyObject*, PyObject*);
+
 // returns 0 on success
 static
 int
@@ -682,11 +686,22 @@ PyMethodDef pydndc_methods[] = {
         .ml_meth = (PyCFunction)pydndc_stderr_logger,
         .ml_flags = METH_VARARGS|METH_KEYWORDS,
         .ml_doc = PYSIG(
-            "stderr_logger(type::int, filename:str, line:int, col:int, message:str) -> None\n",
+            "stderr_logger(type:int, filename:str, line:int, col:int, message:str) -> None\n",
             "stderr_logger(type, filename, line, col, message)\n")
             "--\n"
             "\n"
             "An implementation of the dndc logger protocol that just logs to stderr.\n"
+    },
+    {
+        .ml_name = "kebab",
+        .ml_meth = (PyCFunction)pydndc_kebab,
+        .ml_flags = METH_O,
+        .ml_doc = PYSIG(
+            "kebab(txt:str, /) -> str\n",
+            "kebab(txt, /)\n")
+            "--\n"
+            "\n"
+            "kebabs a string\n"
     },
     {NULL, NULL, 0, NULL}
 };
@@ -1119,6 +1134,29 @@ pydndc_stderr_logger(PyObject* mod, PyObject* args, PyObject* kwargs){
     Py_RETURN_NONE;
 }
 // GCOV_EXCL_STOP
+
+static
+PyObject*_Nullable
+pydndc_kebab(PyObject* mod, PyObject* arg){
+    (void)mod;
+    if(!PyUnicode_Check(arg)){
+        PyErr_SetString(PyExc_TypeError, "arg must be a string");
+        return NULL;
+    }
+    DndcStringView txt = pystring_borrow_stringview(arg);
+    MStringBuilder sb = {.allocator=MALLOCATOR};
+    msb_write_kebab(&sb, txt.text, txt.length);
+    if(sb.errored){
+        PyErr_SetString(PyExc_MemoryError, "oom when kebabing");
+        msb_destroy(&sb);
+        return NULL;
+    }
+    DndcStringView output = msb_borrow_sv(&sb);
+    PyObject* result = PyUnicode_FromStringAndSize(output.text, output.length);
+    msb_destroy(&sb);
+    return result;
+
+}
 
 static
 PyObject*_Nullable
