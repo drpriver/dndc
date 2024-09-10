@@ -17,6 +17,22 @@
 #include "MStringBuilder.h"
 #endif
 
+#ifndef abort_program
+#if defined(__GNUC__) || defined(__clang__)
+#define abort_program() __builtin_trap()
+#else
+#define abort_program() abort()
+#endif
+#endif
+
+#ifndef unhandled_error_condition
+#ifdef DEBUGGING_H // debugging.h was included
+#define unhandled_error_condition(cond) do {if(cond)bt(); assert(!(cond));}while(0)
+#else
+#define unhandled_error_condition(cond) do {assert(!(cond));if(unlikely(cond))abort_program();}while(0)
+#endif
+#endif
+
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
@@ -46,7 +62,7 @@ recursive_glob_suffix_inner(StringView original, StringView directory, StringVie
             StringView text = msb_borrow_sv(&sb);
             char* s = Allocator_strndup(allocator, text.text+original.length+1, text.length-original.length-1);
             StringView* it; int err = Marray_alloc__StringView(entries, allocator, &it);
-            assert(!err);
+            unhandled_error_condition(err);
             *it = (StringView){.text=s, .length=text.length-original.length-1};
             sb.cursor = cursor;
         }while(FindNextFileA(handle, &findd));
@@ -129,6 +145,7 @@ recursive_glob_suffix(LongString directory, StringView suffix, Marray(StringView
             size_t len = strlen(p);
             char* t = Allocator_strndup(allocator, p, len);
             StringView* it; int err = Marray_alloc__StringView(entries, allocator, &it);
+            unhandled_error_condition(err);
             assert(!err);
             *it = (StringView){.length = len, .text = t};
         }
