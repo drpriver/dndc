@@ -186,6 +186,7 @@ static inline
 void*_Nullable
 recording_realloc(RecordingAllocator* r, void*_Nullable data, size_t orig_size, size_t new_size){
     RA_LOGIT("realloc request: old ptr: %p, orig_size: %zu, new_size: %zu", data, orig_size, new_size);
+    (void)orig_size;
     if(!data)
         goto Lrealloc;
     size_t count = r->count;
@@ -268,6 +269,7 @@ recording_assert_all_freed(RecordingAllocator* r){
     #endif
     }
     assert(leaked == 0);
+    if(leaked != 0) abort();
 }
 
 #ifdef __clang__
