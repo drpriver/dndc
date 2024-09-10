@@ -224,7 +224,7 @@ dndc_ctx_create_preload_img_job(DndcContext* ctx){
                     StringView* sv;
                     int err = Marray_alloc(StringView)(&sourcepaths, main_allocator(ctx), &sv);
                     assert(!err); // this shouldn't fail as we did the ensure.
-                    (void)err;
+                    if(err) unreachable();
                     *sv = child->header;
                 }
             }
@@ -242,7 +242,7 @@ dndc_ctx_create_preload_img_job(DndcContext* ctx){
                     StringView* sv;
                     int err = Marray_alloc(StringView)(&sourcepaths, main_allocator(ctx), &sv);
                     assert(!err); // this shouldn't fail as we did the ensure
-                    (void)err;
+                    if(err) unreachable();
                     if(unlikely(path_builder.errored)){
                         // Just leak it. It'll all get cleaned up at the end.
                         return NULL;

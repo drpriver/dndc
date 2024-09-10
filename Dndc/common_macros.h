@@ -49,6 +49,14 @@
 #endif
 #endif
 
+#ifndef abort_program
+#if defined(__GNUC__) || defined(__clang__)
+#define abort_program() __builtin_trap()
+#else
+#define abort_program() abort()
+#endif
+#endif
+
 // This is for TODO error handling. Don't use bare assert for that as asserts
 // are for invariants and are left in after development is done, whereas
 // these represent defects in the code that needs to be re-written.
@@ -57,7 +65,7 @@
 #ifdef DEBUGGING_H // debugging.h was included
 #define unhandled_error_condition(cond) do {if(cond)bt(); assert(!(cond));}while(0)
 #else
-#define unhandled_error_condition(cond) do {assert(!(cond));}while(0)
+#define unhandled_error_condition(cond) do {assert(!(cond));if(unlikely(cond))abort_program();}while(0)
 #endif
 #endif
 

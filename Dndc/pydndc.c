@@ -1297,7 +1297,6 @@ pydndc_htmlgen(PyObject* mod, PyObject* args, PyObject* kwargs){
                 int err = PySet_Add(deps, s);
                 Py_XDECREF(s);
                 unhandled_error_condition(err < 0);
-                (void)err;
             }
         }
         ctxfail:
@@ -1900,7 +1899,6 @@ DndcContextPy_make_node(PyObject* s, PyObject* args, PyObject* kwargs){
     if(header){
         int err = dndc_ctx_dup_sv(self->ctx, pystring_borrow_stringview(header), &h);
         unhandled_error_condition(err);
-        (void)err;
     }
     DndcNodeHandle n = dndc_ctx_make_node(self->ctx, PyLong_AsLong(type), h, DNDC_NODE_HANDLE_INVALID);
     if(n == DNDC_NODE_HANDLE_INVALID)
@@ -2593,12 +2591,10 @@ DndcNodePy_parse(PyObject* s, PyObject* args, PyObject* kwargs){
     if(filename){
         int err = dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(filename), &fn);
         unhandled_error_condition(err);
-        (void)err;
     }
     DndcStringView txt;
     int err = dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(text), &txt);
     unhandled_error_condition(err);
-    (void)err;
     err = dndc_ctx_parse_string(ctx, self->handle, fn, txt);
     if(err) return PyErr_Format(PyExc_ValueError, "Error while parsing");
     Py_RETURN_NONE;
@@ -2643,7 +2639,6 @@ DndcNodePy_make_child(PyObject* s, PyObject* args, PyObject* kwargs){
     if(header){
         int err = dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(header), &h);
         unhandled_error_condition(err);
-        (void)err;
     }
     DndcNodeHandle n = dndc_ctx_make_node(ctx, PyLong_AsLong(type), h, self->handle);
     if(n == DNDC_NODE_HANDLE_INVALID)
@@ -2662,7 +2657,7 @@ DndcNodePy_get_header(PyObject *s, void *_Nullable p){
     DndcStringView sv;
     int err = dndc_node_get_header(ctx, self->handle, &sv);
     assert(!err);
-    (void)err;
+    if(err) unreachable();
     return PyUnicode_FromStringAndSize(sv.text, sv.length);
 }
 static
@@ -2678,7 +2673,6 @@ DndcNodePy_set_header(PyObject * s, PyObject * o, void * p){
     if(!PyUnicode_Check(o)) return 0;
     DndcStringView sv;
     int err =  dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(o), &sv);
-    (void)err;
     unhandled_error_condition(err);
     dndc_node_set_header(ctx, self->handle, sv);
     return 0;
@@ -2750,7 +2744,6 @@ DndcNodePy_set_id(PyObject * s, PyObject * o, void * p){
     DndcStringView sv;
     int err = dndc_ctx_dup_sv(ctx, pystring_borrow_stringview(o), &sv);
     unhandled_error_condition(err);
-    (void)err;
     dndc_node_set_id(ctx, self->handle, sv);
     return 0;
 }
@@ -2887,7 +2880,6 @@ DndcNodePy_append_child(PyObject* s, PyObject* arg){
         DndcNodePy* self = (DndcNodePy*)s;
         DndcStringView content;
         int err = dndc_ctx_dup_sv(self->pyctx->ctx, pystring_borrow_stringview(arg), &content);
-        (void)err;
         unhandled_error_condition(err);
         DndcNodeHandle child = dndc_ctx_make_node(self->pyctx->ctx, DNDC_NODE_TYPE_STRING, content, self->handle);
         (void)child;
@@ -2921,7 +2913,6 @@ DndcNodePy_insert_child(PyObject* s, PyObject* args, PyObject* kwargs){
         DndcStringView content;
         int err = dndc_ctx_dup_sv(self->pyctx->ctx, pystring_borrow_stringview(child), &content);
         unhandled_error_condition(err);
-        (void)err;
         err = dndc_node_insert_string(self->pyctx->ctx, self->handle, idx, content);
         if(err)
             return PyErr_Format(PyExc_ValueError, "Node could not be inserted");
