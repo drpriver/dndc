@@ -28744,7 +28744,7 @@ static int add_import(QJSParseState *s, QJSModuleDef *m,
     is_local = (import_name == QJS_ATOM__star_);
     var_idx = add_closure_var(ctx, s->cur_func, is_local, FALSE,
                               m->import_entries_count,
-                              local_name, TRUE, TRUE, FALSE);
+                              local_name, TRUE, TRUE, /*FALSE wtf why FALSE*/0);
     if (var_idx < 0)
         return -1;
     if (js_resize_array(ctx, (void **)&m->import_entries,
@@ -32619,7 +32619,7 @@ static int add_module_variables(QJSContext *ctx, QJSFunctionDef *fd)
     for(i = 0; i < fd->global_var_count; i++) {
         hf = &fd->global_vars[i];
         if (add_closure_var(ctx, fd, TRUE, FALSE, i, hf->var_name, hf->is_const,
-                            hf->is_lexical, FALSE) < 0)
+                            hf->is_lexical, /*FALSE wtf why is this FALSE*/ 0) < 0)
             return -1;
     }
 
