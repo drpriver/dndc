@@ -1,4 +1,5 @@
-from typing import Callable, Optional, Dict, Tuple, List, NamedTuple, Union, Any, Sequence, Set, Iterable, Iterator
+from __future__ import annotations
+from typing import Callable, NamedTuple, Any, Sequence, Iterable, Iterator
 from enum import IntEnum, IntFlag
 
 class FileCache:
@@ -6,7 +7,7 @@ class FileCache:
         ...
     def clear(self) -> None:
         ...
-    def paths(self) -> List[str]:
+    def paths(self) -> list[str]:
         ...
     def store(self, path:str, data:str, overwrite:bool=True) -> bool:
         ...
@@ -70,40 +71,45 @@ def htmlgen(
     text:str,
     base_dir:str='.',
     filename:str='',
-    logger:Optional[Logger]=None,
-    file_cache:Optional[FileCache]=None,
+    logger:Logger | None=None,
+    file_cache:FileCache | None=None,
     flags:Flags=Flags.NONE,
-    jsargs:Optional[Union[dict, list, str]] = None,
-    deps:Optional[Set[str]] = None,
+    jsargs:dict| list| str | None = None,
+    deps:set[str] | None = None,
 ) -> str:
     ...
 
 def expand(
     text:str,
     base_dir:str='.',
-    logger:Optional[Logger]=None,
-    file_cache:Optional[FileCache]=None,
+    filename:str='',
+    logger:Logger | None=None,
+    file_cache:FileCache | None=None,
     flags:Flags=Flags.NONE,
-    jsargs:Optional[Union[dict, list, str]] = None
+    jsargs:dict | list| str | None = None
 ) -> str:
     ...
 
 def to_markdown(
     text:str,
     base_dir:str='.',
-    logger:Optional[Logger]=None,
-    file_cache:Optional[FileCache]=None,
+    filename:str='',
+    logger:Logger | None=None,
+    file_cache:FileCache | None=None,
     flags:Flags=Flags.NONE,
-    jsargs:Optional[Union[dict, list, str]]=None,
+    jsargs:dict | list | str | None=None,
 ) -> str:
     ...
 
 
-def reformat(text:str, logger:Optional[Logger]=None) -> str:
+def reformat(text:str,
+    filename:str='',
+    logger:Logger | None=None,
+) -> str:
     ...
 
 # result is {line: [SyntaxRegion]}
-def analyze_syntax_for_highlight(text:str) -> Dict[int, List[SyntaxRegion]]:
+def analyze_syntax_for_highlight(text:str) -> dict[int, list[SyntaxRegion]]:
     ...
 
 class NodeType(IntEnum):
@@ -140,25 +146,25 @@ class NodeType(IntEnum):
     INVALID      = 30
 
 class Context:
-    def __new__(cls, flags:Flags=Flags.NONE, filename:Optional[str]=None, filecache:Optional[FileCache]=None) -> Context:
+    def __new__(cls, flags:Flags=Flags.NONE, filename:str|None=None, filecache:FileCache | None=None) -> Context:
         ...
     # This is wrong, it defines __new__ instead, but whatever
     # Autocomplete doesn't work without this.
-    def __init__(cls, flags:Flags=Flags.NONE, filename:Optional[str]=None, filecache:Optional[FileCache]=None) -> None:
+    def __init__(cls, flags:Flags=Flags.NONE, filename:str|None=None, filecache:FileCache | None=None) -> None:
         ...
-    errors: List[str]
-    filename: Optional[str]
+    errors: list[str]
+    filename: str | None
     root: Node
     base_dir: str
-    logger: Optional[Logger]
-    dependencies: Set[str]
+    logger: Logger | None
+    dependencies: set[str]
     flags: Flags
 
     def node_from_int(self, handle:int) -> Node:
         ...
-    def node_by_id(self, id:str) -> Optional[Node]:
+    def node_by_id(self, id:str) -> Node | None:
         ...
-    def node_by_approximate_location(self, filename:str, row:int, column:int=0) -> Optional[Node]:
+    def node_by_approximate_location(self, filename:str, row:int, column:int=0) -> Node | None:
         ...
     def format_tree(self) -> str:
         ...
@@ -168,7 +174,7 @@ class Context:
         ...
     def render(self) -> str:
         ...
-    def make_node(self, type:NodeType, header:Optional[str]=None) -> Node:
+    def make_node(self, type:NodeType, header:str | None=None) -> Node:
         ...
     def resolve_imports(self) -> None:
         ...
@@ -180,7 +186,11 @@ class Context:
         ...
     def resolve_data_blocks(self) -> None:
         ...
-    def select_nodes(self, type:Optional[NodeType]=None, attributes:Optional[Iterable[str]]=None, classes:Optional[Iterable[str]]=None) -> List[Node]:
+    def select_nodes(self,
+        type:NodeType|None=None,
+        attributes:Iterable[str]|None=None,
+        classes:Iterable[str]|None=None,
+    ) -> list[Node] | None:
         ...
     def clone(self) -> Context:
         ...
@@ -204,7 +214,7 @@ class Attributes:
         ...
     def __delitem__(self, key:str) -> None:
         ...
-    def __iter__(self) -> Iterator[Tuple[str, str]]:
+    def __iter__(self) -> Iterator[tuple[str, str]]:
         ...
     def __len__(self) -> int:
         ...
@@ -246,7 +256,7 @@ class Node:
     handle: int
     def execute_js(self, script:str) -> None:
         ...
-    def parse(self, text:str, filename:Optional[str]=None) -> None:
+    def parse(self, text:str, filename:str | None=None) -> None:
         ...
     def parse_file(self, path:str) -> None:
         ...
@@ -254,19 +264,19 @@ class Node:
         ...
     def render(self) -> str:
         ...
-    def append_child(self, child:Union[Node, str]) -> None:
+    def append_child(self, child:Node|str) -> None:
         ...
-    def insert_child(self, idx:int, child:Union[Node, str]) -> None:
+    def insert_child(self, idx:int, child:Node|str) -> None:
         ...
     def detach(self) -> None:
         ...
-    def make_child(self, type:NodeType, header:Optional[str]=None) -> Node:
+    def make_child(self, type:NodeType, header:str | None=None) -> Node:
         ...
     def tree_repr(self) -> str:
         ...
     def _to_json(self) -> str:
         ...
-    def __contains__(self, o:Union[int, Node]) -> bool:
+    def __contains__(self, o:int|Node) -> bool:
         ...
     def __getitem__(self, idx:int) -> Node:
         ...
@@ -275,5 +285,5 @@ class Node:
     ...
 
 __version__: str
-version: Tuple[int, int, int]
+version: tuple[int, int, int]
 INT_VERSION: int

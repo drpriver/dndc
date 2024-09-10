@@ -1,14 +1,15 @@
+from __future__ import annotations
 import argparse
 import os
 import sys
-from typing import Optional, Any, List
+from typing import Any
 
 from . import pydndc
 
 def main() -> None:
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, prog='pydndc')
     parser.add_argument('-v', '--version', action='version', version='%(prog)s {version}'.format(version=pydndc.__version__))
-    parser.add_argument('source', help='source file (.dnd file) to read from. This is not adjusted by --base-directory')
+    parser.add_argument('source', help='source file (.dnd file) to read from. This is not adjusted by --base-directory', required=False)
     parser.add_argument('-o', '--output', help='output_path (.html file) to write to. If not given, writes to stdout')
     parser.add_argument('-d', '--depends-path', help='Where to write a make-style dependency file')
     parser.add_argument('-C', '--base-directory', help='Paths in source files will be relative to the given directory. Note: this does not affect the source argument. Defaults to the base directory of source.')
@@ -37,18 +38,18 @@ def run(
         format:bool,
         expand:bool,
         md:bool,
-        source:str,
-        output:Optional[str],
-        depends_path:Optional[str],
-        base_directory:Optional[str],
+        source:str | None,
+        output:str | None,
+        depends_path:str | None,
+        base_directory:str | None,
         fragment:bool,
         dont_read:bool,
         dont_import:bool,
         no_js:bool,
         untrusted:bool,
-        args:Optional[List[str]],
-        jsargs:Optional[str],
-        json_file_args:Optional[str],
+        args:list[str] | None,
+        jsargs:str | None,
+        json_file_args:str | None,
         dont_write:bool,
         dont_inline:bool,
         print_stats:bool,
@@ -86,14 +87,20 @@ def run(
     if allow_js_write:
         flags |= pydndc.Flags.ENABLE_JS_WRITE
 
-    with open(source, 'r') as fp:
-        source_text = fp.read()
+    if not source:
+        source = '<stdin>'
+        source_text = sys.stdin.read()
+        if not base_directory:
+            base_directory = '.'
+    else:
+        with open(source, 'r') as fp:
+            source_text = fp.read()
 
-    if not base_directory:
-        base_directory = os.path.dirname(source)
+        if not base_directory:
+            base_directory = os.path.dirname(source)
 
     if depends_path:
-        deps = set()
+        deps: set[str] | None = set()
     else:
         deps = None
 
@@ -116,9 +123,10 @@ def run(
     else:
         sys.stdout.write(outs)
         sys.stdout.flush()
-    if depends_path:
+    if depends_path and output:
         with open(depends_path, 'w') as fp:
             fp.write(output+':')
+            assert deps is not None
             for d in deps:
                 fp.write(' '+d)
             fp.write('\n')
