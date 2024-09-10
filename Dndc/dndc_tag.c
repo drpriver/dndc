@@ -16,6 +16,8 @@
 #include "Utils/thread_utils.h"
 #include "Utils/argument_parsing.h"
 #include "Utils/term_util.h"
+#include "Utils/MStringBuilder.h"
+#include "Utils/msb_extensions.h"
 #include "Allocators/mallocator.h"
 
 #define MARRAY_T StringView
@@ -139,6 +141,37 @@ iterate_children(DndcContext* ctx, DndcNodeHandle node, Marray__Tag* tags, Strin
                 .row = loc.row,
             });
             if(e) return 1;
+            // Also add the lower-cased version and kebabed versions.
+            MStringBuilder sb = {.allocator=MALLOCATOR};
+            msb_write_lower(&sb, header.text, header.length);
+            if(sb.errored) return 1;
+            StringView lower = msb_borrow_sv(&sb);
+            _Bool appended_lower = 0;
+            if(!SV_equals(head, lower)){
+                appended_lower = 1;
+                lower = msb_detach_sv(&sb);
+                e = Marray_push__Tag(tags, MALLOCATOR,  (Tag){
+                    .filename = filename,
+                    .tagname = lower,
+                    .row = loc.row,
+                });
+                if(e) return 1;
+            }
+            msb_reset(&sb);
+            msb_write_kebab(&sb, header.text, header.length);
+            if(sb.errored) return 1;
+            StringView kebab = msb_borrow_sv(&sb);
+            if((appended_lower && !SV_equals(kebab, lower))
+               || (!appended_lower && !SV_equals(kebab, head))){
+                kebab = msb_detach_sv(&sb);
+                e = Marray_push__Tag(tags, MALLOCATOR,  (Tag){
+                    .filename = filename,
+                    .tagname = kebab,
+                    .row = loc.row,
+                });
+                if(e) return 1;
+            }
+            msb_destroy(&sb);
         }
     }
     DndcNodeHandle handles[32] = {0};

@@ -156,6 +156,26 @@ msb_write_title(MStringBuilder* restrict msb, const char* restrict str, size_t l
     }
 }
 
+static inline
+void
+msb_write_lower(MStringBuilder* restrict msb, const char* restrict str, size_t len){
+    if(!len)
+        return;
+    int err = _check_msb_remaining_size(msb, len);
+    if(unlikely(err)) return;
+    for(size_t i = 0; i < len; i++){
+        char c = str[i];
+        switch(c){
+            case CASE_A_Z:
+                c |= 0x20; // tolower
+                break;
+            default:
+                break;
+        }
+        msb->data[msb->cursor++] = c;
+    }
+}
+
 //
 // Writes the given string into the builder, escaping those characters required
 // by json.
