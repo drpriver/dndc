@@ -9,7 +9,7 @@ from . import pydndc
 def main() -> None:
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, prog='pydndc')
     parser.add_argument('-v', '--version', action='version', version='%(prog)s {version}'.format(version=pydndc.__version__))
-    parser.add_argument('source', help='source file (.dnd file) to read from. This is not adjusted by --base-directory', required=False)
+    parser.add_argument('source', help='source file (.dnd file) to read from. This is not adjusted by --base-directory', nargs='?')
     parser.add_argument('-o', '--output', help='output_path (.html file) to write to. If not given, writes to stdout')
     parser.add_argument('-d', '--depends-path', help='Where to write a make-style dependency file')
     parser.add_argument('-C', '--base-directory', help='Paths in source files will be relative to the given directory. Note: this does not affect the source argument. Defaults to the base directory of source.')
