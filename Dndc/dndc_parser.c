@@ -1122,6 +1122,7 @@ PARSEFUNC(parse_table_node){
     {
         Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_TABLE);
+        (void)parent;
     }
     NodeHandle last_cell_handle = INVALID_NODE_HANDLE;
     _Bool converted = 0;
@@ -1205,6 +1206,7 @@ PARSEFUNC(parse_keyvalue_node){
     {
         Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_KEYVALUE);
+        (void)parent;
     }
     NodeHandle previous_value = INVALID_NODE_HANDLE;
     int previous_kv_indentation = indentation;
@@ -1282,6 +1284,7 @@ PARSEFUNC(parse_bullets_node){
     {
         Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_BULLETS);
+        (void)parent;
     }
     for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
@@ -1323,6 +1326,7 @@ PARSEFUNC(parse_bullet_node){
     {
         Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_LIST_ITEM);
+        (void)parent;
     }
     for(;ctx->cursor != ctx->end;){
         analyze_line(ctx);
@@ -1368,6 +1372,7 @@ PARSEFUNC(parse_md_node){
     if(0){
         Node* parent = get_node(ctx, parent_handle);
         assert(parent->type == NODE_MD || parent->type == NODE_DETAILS || parent->type == NODE_DEF || parent->type == NODE_DEFLIST);
+        (void)parent;
     }
     enum MDSTATE {
         NONE = 0,

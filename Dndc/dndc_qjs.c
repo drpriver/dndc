@@ -2562,6 +2562,7 @@ QJSMETHOD(js_dndc_attributes_entries){
             };
             QJSValue call = QJS_ArrayPush(jsctx, pair, 2, js_kv);
             assert(!QJS_IsException(call));
+            (void)call;
             QJS_FreeValue(jsctx, js_kv[0]);
             QJS_FreeValue(jsctx, js_kv[1]);
             QJSValue v = QJS_ArrayPush(jsctx, result, 1, &pair);

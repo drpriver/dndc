@@ -216,6 +216,7 @@ base64_encode(char* restrict dst, size_t dst_length, const void* restrict src, s
     }
     ptrdiff_t used_length = d - (uint8_t*)dst;
     assert(used_length == (ptrdiff_t)dst_length);
+    (void)dst_length;
     return used_length;
 #if 0
     // A simpler, but slower version.

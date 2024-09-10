@@ -2257,6 +2257,7 @@ void QJS_SetClassProto(QJSContext *ctx, QJSClassID class_id, QJSValue obj)
 {
     QJSRuntime *rt = ctx->rt;
     assert(class_id < rt->class_count);
+    (void)rt;
     set_value(ctx, &ctx->class_proto[class_id], obj);
 }
 
@@ -2265,6 +2266,7 @@ QJSValue QJS_GetClassProto(QJSContext *ctx, QJSClassID class_id)
 {
     QJSRuntime *rt = ctx->rt;
     assert(class_id < rt->class_count);
+    (void)rt;
     return QJS_DupValue(ctx, ctx->class_proto[class_id]);
 }
 
@@ -7531,6 +7533,8 @@ static int num_keys_cmp(const void *p1, const void *p2, void *opaque)
     QJSAtom atom2 = ((const QJSPropertyEnum *)p2)->atom;
     uint32_t v1, v2;
     BOOL atom1_is_integer, atom2_is_integer;
+    (void)atom2_is_integer;
+    (void)atom1_is_integer;
 
     atom1_is_integer = QJS_AtomIsArrayIndex(ctx, &v1, atom1);
     atom2_is_integer = QJS_AtomIsArrayIndex(ctx, &v2, atom2);
@@ -33907,6 +33911,7 @@ QJSValue QJS_EvalThis(QJSContext *ctx, QJSValueConst this_obj,
                     const char *filename, int eval_flags)
 {
     int eval_type = eval_flags & QJS_EVAL_TYPE_MASK;
+    (void)eval_type;
     QJSValue ret;
 
     assert(eval_type == QJS_EVAL_TYPE_GLOBAL ||
@@ -46018,6 +46023,7 @@ static void reset_weak_ref(QJSRuntime *rt, QJSObject *p)
 {
     QJSMapRecord *mr, *mr_next;
     QJSMapState *s;
+    (void)s;
 
     /* first pass to remove the records from the WeakMap/WeakSet
        lists */

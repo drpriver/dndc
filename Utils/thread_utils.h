@@ -258,6 +258,7 @@ worker_create(thread_func* job){
     #endif
     int th_err = create_thread(&w->thrd, worker_thread_main, w);
     unhandled_error_condition(th_err);
+    (void)th_err;
     return w;
 }
 
@@ -277,7 +278,8 @@ worker_submit(WorkerThread* w, void* job_data){
     w->job_data = job_data;
     pthread_mutex_unlock(&w->mutex);
     int err = pthread_cond_signal(&w->worker_cond);
-    assert(!err);
+    unhandled_error_condition(err);
+    (void)err;
 }
 
 static
@@ -303,6 +305,7 @@ void
 join_thread(ThreadHandle handle){
     int err = pthread_join(handle.thread, NULL);
     unhandled_error_condition(err != 0);
+    (void)err;
 }
 
 #elif defined(_WIN32)
@@ -387,6 +390,7 @@ worker_create(thread_func* job){
     InitializeConditionVariable(&w->worker_cond);
     int th_err = create_thread(&w->thrd, worker_thread_main, w);
     unhandled_error_condition(th_err != 0);
+    (void)th_err;
     w->sem = CreateSemaphoreW(NULL, 0, LONG_MAX, NULL);
     return w;
 }
@@ -428,6 +432,7 @@ void
 join_thread(ThreadHandle handle){
     DWORD result = WaitForSingleObject(handle.thread, INFINITE);
     unhandled_error_condition(result != WAIT_OBJECT_0);
+    (void)result;
 }
 
 #elif defined(__wasm__)

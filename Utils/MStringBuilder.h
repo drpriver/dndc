@@ -112,7 +112,9 @@ msb_detach_ls(MStringBuilder* msb){
     assert(!msb->errored);
     msb_nul_terminate(msb);
     int err = _msb_resize(msb, msb->cursor+1);
+    // this needs proper error handling
     assert(!err);
+    (void)err;
     LongString result = {0};
     result.text = msb->data;
     result.length = msb->cursor;
@@ -131,7 +133,9 @@ msb_detach_sv(MStringBuilder* msb){
     assert(!msb->errored);
     StringView result = {0};
     int err = _msb_resize(msb, msb->cursor);
+    // this needs proper error handling
     assert(!err);
+    (void)err;
     result.text = msb->data;
     result.length = msb->cursor;
     msb->data = NULL;
