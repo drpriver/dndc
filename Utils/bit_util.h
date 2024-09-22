@@ -71,11 +71,8 @@ ctz_64(uint64_t a) {
     #elif defined(__IMPORTC__)
         return bsf(a);
     #else
-        #if defined(RPI4) && defined(__GNUC__) && !defined(__clang__)
-        // Other platforms behave sanely, with gcc on rpi4, check for 0.
-        if(!a) return 64;
-        #endif
-        return __builtin_ctzll(a);
+        // pray gets optimized to single instruction
+        return a?__builtin_ctzll(a):64;
     #endif
 }
 #if defined(__IMPORTC__)
