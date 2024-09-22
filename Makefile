@@ -102,6 +102,8 @@ fuzzmd: $(BINDIR)/dndcfuzzmd$(EXE) | $(FUZZDIR)
 	$< $(FUZZDIR) -fork=4 -only_ascii=1
 
 ifneq ($(UNAME),Windows) # shells out to unix commands
+.PHONY: ls
+ls: list
 .PHONY: list
 list:
 	@LC_ALL=C $(MAKE) -npRrq : 2>/dev/null \
