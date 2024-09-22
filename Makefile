@@ -113,7 +113,7 @@ list:
 		| egrep -v \
 			-e '^[^[:alnum:]]' \
 			-e '^$@$$' \
-			-e '.(dnd|dep|[ch])$$' \
+			-e '.(dnd|dep|[chm])$$' \
 			-e '^(Bin|Depends|Objs|VendObjs|Generated|FuzzCorpus)' \
 			-e '^(RenderedExamples|RenderedDocs|TestResults)' \
 			-e '^(Dndc/)'
