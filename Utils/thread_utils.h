@@ -63,38 +63,39 @@
 // posix.
 //
 // Example Usage:
-//
-//      THREADFUNC(worker);
-//
-//      typedef struct JobData {
-//          const char* msg;
-//          int whatever;
-//      } JobData;
-//
-//      int main(void){
-//          JobData data = {.msg="some very import information"};
-//          ThreadHandle handle;
-//          create_thread(&handle, worker, &data);
-//          // No touchy the data until we join, the other thread
-//          // is reading and possibly mutating it and we didn't set up
-//          // any synchronization mechanism.
-//
-//          // ... do some main thread work ...
-//
-//          join_thread(handle);
-//          if(data.whatever){
-//             //  ... do whatever based on results of the worker thread ...
-//          }
-//          return 0;
-//      }
-//
-//      THREADFUNC(worker){
-//          JobData* data = thread_arg;
-//          data->whatever = puts(data->msg);
-//          // always return 0.
-//          return 0;
-//      }
-//
+#ifdef THREAD_UTIL_EXAMPLE
+THREADFUNC(worker);
+
+typedef struct JobData {
+    const char* msg;
+    int whatever;
+} JobData;
+
+int main(void){
+    JobData data = {.msg="some very import information"};
+    ThreadHandle handle;
+    create_thread(&handle, worker, &data);
+    // No touchy the data until we join, the other thread
+    // is reading and possibly mutating it and we didn't set up
+    // any synchronization mechanism.
+
+    // ... do some main thread work ...
+
+    join_thread(handle);
+    if(data.whatever){
+       //  ... do whatever based on results of the worker thread ...
+    }
+    return 0;
+}
+
+THREADFUNC(worker){
+    JobData* data = thread_arg;
+    data->whatever = puts(data->msg);
+    // always return 0.
+    return 0;
+}
+
+#endif
 
 //
 // #define THREADFUNC(name) ret_type_differs (name)(void*_Nullable thread_arg)
