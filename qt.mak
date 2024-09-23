@@ -54,7 +54,12 @@ $(GENDIR)/moc_%.cpp: QtDndcEdit/%.h | $(GENDIR)
 	$(QTMOC) $< -o $@
 DNDCOBJS=$(OBJDIR)/dndc.o $(VENDOBJDIR)/libquickjs.o
 
-
+ifneq ($(findstring clang,$(CXX)),)
+QTFLAGS+=-fvisibility=hidden
+endif
+ifneq ($(findstring g++,$(CXX)),)
+QTFLAGS+=-fvisibility=hidden
+endif
 $(BINDIR)/DndcEdit$(EXE): QtDndcEdit/DndcEdit.cpp $(GENDIR)/moc_DndcEdit.cpp $(DNDCOBJS) $(DEPDIR)/DndcEdit.dep | $(GENDIR) $(BINDIR) $(DEPDIR) $(OBJDIR)
 	$(CXX) \
 		-O3 \

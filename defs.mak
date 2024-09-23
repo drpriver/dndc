@@ -86,7 +86,7 @@ endif
 endif
 endif
 
-ifneq ($(findstring $(CC),clang),)
+ifneq ($(findstring clang,$(CC)),)
 WARNING_FLAGS+=-Wassign-enum\
 	-Wshadow \
 	-Warray-bounds-pointer-arithmetic\
@@ -111,7 +111,7 @@ WARNING_FLAGS+=-Wassign-enum\
 	-Werror=undefined-internal\
 	-Wcomma
 endif
-ifneq ($(findstring $(CC),gcc),)
+ifneq ($(findstring gcc,$(CC)),)
 WARNING_FLAGS+=-Wno-missing-braces\
 	-Wno-missing-field-initializers
 endif
