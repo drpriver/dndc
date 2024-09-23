@@ -12,9 +12,9 @@ hi DnDTitle ctermfg=12 guifg=Blue
 hi DnDBullet ctermfg=7 guifg=#444444
 hi DnDNumberedList ctermfg=7 guifg=#444444
 hi DnDType ctermfg=15 guifg=#aaaaaa
-" Highlight js and css using hte other vim syntaxes.  I didn't write an
+" Highlight js and css using the other vim syntaxes.  I didn't write an
 " indentation based ending rule as that seemed hard and requires a lot of
-" lookahead The current workaround is to end js sections with //endjs and
+" lookahead. The current workaround is to end js sections with //endjs and
 " css sections with /*endcss*/. This is a total hack though and if I was
 " more willing to learn vim commands it wouldn't be necessary.
 if exists("b:current_syntax")
