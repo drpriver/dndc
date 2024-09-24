@@ -1272,47 +1272,75 @@ TestFunction(TestExpand){
 
 TestFunction(TestMd){
     TESTBEGIN();
-    StringView input = SV(
-            "Go to campaign:\n"
-            "* Hello\n"
-            "* World\n"
-            );
-    LongString expected = LS(
-            "<p>\n"
-            "Go to campaign:\n"
-            "</p>\n"
-            "<ul>\n"
-            "<li>\n"
-            "Hello\n"
-            "</li>\n"
-            "<li>\n"
-            "World\n"
-            "</li>\n"
-            "</ul>\n"
-            );
-    LongString output;
-    uint64_t flags = DNDC_FRAGMENT_ONLY;
-    int e = run_the_dndc(OUTPUT_HTML, flags, SV(""), input, SV(""), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
-    TestAssertFalse(e);
-    TestExpectEquals2(LS_equals, expected, output);
-    dndc_free_string(output);
+    if(1){
+        StringView input = SV(
+                "Go to campaign:\n"
+                "* Hello\n"
+                "* World\n"
+                "\n"
+                "<table>Hello</table>\n"
+                "  <b>whoa it's a bee</b>\n"
+                "\n"
+                );
+        LongString expected = LS(
+                "<!-- This md file was generated from a dnd file. -->\n"
+                "\n"
+                "Go to campaign:\n"
+                "\n"
+                "\n"
+                "* Hello\n"
+                "* World\n"
+                "\n"
+                "\n"
+                "&lt;table&gt;Hello&lt;/table&gt;\n"
+                "**whoa it's a bee**\n"
+                );
+        LongString output;
+        uint64_t flags = DNDC_FRAGMENT_ONLY;
+        int e = run_the_dndc(OUTPUT_MD, flags, SV(""), input, SV(""), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        TestAssertFalse(e);
+        TestExpectEquals2(LS_equals, expected, output);
+        dndc_free_string(output);
+        if(1){
 
-    input = SV(
-            "::js\n"
-            "  let s = 'Go to campaign:\\n* Hello\\n* World\\n';\n"
-            "  node.parent.parse(s)\n"
-            // This was for debugging the order of the nodes
-            // "  function ltree(n, pref){\n"
-            // "       console.log(pref, n); \n"
-            // "       for(let child of n.children) \n"
-            // "           ltree(child, pref+ '  '); \n"
-            // "  }\n"
-            // " ltree(node.parent);\n"
-            );
-    e = run_the_dndc(OUTPUT_HTML, flags, SV(""), input, SV(""), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
-    TestAssertFalse(e);
-    TestExpectEquals2(LS_equals, expected, output);
-    dndc_free_string(output);
+            input = SV(
+                    "::js\n"
+                    "  let s = 'Go to campaign:\\n* Hello\\n* World\\n<table>Hello</table>\\n  <b>whoa it\\'s a bee</b>\\n';\n"
+                    "  node.parent.parse(s)\n"
+                    // This was for debugging the order of the nodes
+                    // "  function ltree(n, pref){\n"
+                    // "       console.log(pref, n); \n"
+                    // "       for(let child of n.children) \n"
+                    // "           ltree(child, pref+ '  '); \n"
+                    // "  }\n"
+                    // " ltree(node.parent);\n"
+                    );
+            e = run_the_dndc(OUTPUT_MD, flags, SV(""), input, SV(""), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+            TestAssertFalse(e);
+            TestExpectEquals2(LS_equals, expected, output);
+            dndc_free_string(output);
+        }
+    }
+    if(1){
+        StringView input = SV(
+                "::pre\n"
+                "  <table>Table!</table>\n"
+                "  <b>whoa it's a bee</b>\n"
+                );
+        LongString expected = LS(
+                "<!-- This md file was generated from a dnd file. -->\n"
+                "<pre>\n"
+                "&lt;table&gt;Table!&lt;/table&gt;\n"
+                "&lt;b&gt;whoa it's a bee&lt;/b&gt;\n"
+                "</pre>\n"
+                );
+        LongString output;
+        uint64_t flags = DNDC_FRAGMENT_ONLY;
+        int e = run_the_dndc(OUTPUT_MD, flags, SV(""), input, SV(""), &output, NULL, NULL, dndc_stderr_log_func, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        TestAssertFalse(e);
+        TestExpectEquals2(LS_equals, expected, output);
+        dndc_free_string(output);
+    }
     TESTEND();
 }
 TestFunction(TestShebang){
@@ -1460,7 +1488,6 @@ TestFunction(TestShebang){
             "\n"
             "\n"
             "not ignored\n"
-            "\n"
         );
         uint64_t flags = DNDC_FLAGS_NONE
             | DNDC_SUPPRESS_WARNINGS

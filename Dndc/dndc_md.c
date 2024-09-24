@@ -25,6 +25,7 @@ warn_unused
 int
 render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth, _Bool append_newline);
 static void write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
+static void write_md_pre_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
 static warn_unused int write_md_bullets(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth);
 static warn_unused int write_md_list(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int depth);
 static warn_unused int write_md_keyvalue(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
@@ -41,7 +42,13 @@ render_md(DndcContext* ctx, MStringBuilder* sb){
         return DNDC_ERROR_INVALID_TREE;
     }
     msb_write_literal(sb, "<!-- This md file was generated from a dnd file. -->\n");
-    return render_node_as_md(ctx, root, sb, 2, 0);
+    int e = render_node_as_md(ctx, root, sb, 2, 0);
+    if(e) return e;
+    // Crude hack to remove excess trailing newlines.
+    while(sb->cursor>2 && sb->data[sb->cursor-1] == '\n' && sb->data[sb->cursor-2] == '\n'){
+        sb->cursor--;
+    }
+    return 0;
 }
 
 // returns how much the header depth has increased.
@@ -153,8 +160,12 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
         case NODE_PRE:{
             msb_write_literal(sb, "<pre>\n");
             NODE_CHILDREN_FOR_EACH(ch, node){
-                int err = render_node_as_md(ctx, *ch, sb, header_depth, 0);
-                if(err) return err;
+                Node* child = get_node(ctx, *ch);
+                if(child->type != NODE_STRING){
+                    NODE_LOG_ERROR(ctx, node, "Expected string as child of pre");
+                    return DNDC_ERROR_INVALID_TREE;
+                }
+                write_md_pre_string(ctx, *ch, sb);
                 msb_write_char(sb, '\n');
             }
             msb_write_literal(sb, "</pre>\n");
@@ -234,6 +245,8 @@ write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
     if(!header.length) return;
     const char* text = header.text;
     size_t length = header.length;
+    _Bool in_code_tag = 0; // we don't allow multiline code segments.
+
     for(size_t i = 0; i < length; i++){
         char c = text[i];
         switch(c){
@@ -283,25 +296,91 @@ write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
                 }
                 i += link_length;
             }break;
-            // replace <code> and </code> with `
             case '<':{
-                if(length - i >= sizeof("<code>")-1){
-                    if(memcmp(text+i, "<code>", sizeof("<code>")-1) == 0){
-                        msb_write_char(sb, '`');
-                        i += sizeof("<code>")-1-1;
-                        break;
+                struct Replacement {
+                    StringView sub, repl;
+                    unsigned is_code;
+                };
+                static const struct Replacement replacements[] = {
+                    {SV("<code>"),    SV("`"),  1},
+                    {SV("</code>"),   SV("`"),  2},
+                    {SV("<tt>"),      SV("`"),  1},
+                    {SV("</tt>"),     SV("`"),  2},
+                    {SV("<em>"),      SV("*"),  0},
+                    {SV("</em>"),     SV("*"),  0},
+                    {SV("<i>"),       SV("*"),  0},
+                    {SV("</i>"),      SV("*"),  0},
+                    {SV("<b>"),       SV("**"), 0},
+                    {SV("</b>"),      SV("**"), 0},
+                    {SV("<strong>"),  SV("**"), 0},
+                    {SV("</strong>"), SV("**"), 0},
+                };
+                for(size_t r = 0; r < arrlen(replacements); r++){
+                    const struct Replacement* p = &replacements[r];
+                    size_t l = p->sub.length;
+                    const char* t = p->sub.text;
+                    if(length - i >= l){
+                        if(memcmp(text+i, t, l) == 0){
+                            i += l-1;
+                            if((p->is_code & 2)){
+                                if(!in_code_tag) goto BreakSwitch;
+                                in_code_tag = 0;
+                            }
+                            else if(p->is_code & 1){
+                                if(in_code_tag) goto BreakSwitch;
+                                in_code_tag = 1;
+                            }
+                            else if(in_code_tag){
+                                msb_write_str(sb, t, l);
+                                goto BreakSwitch;
+                            }
+                            StringView repl = p->repl;
+                            msb_write_str(sb, repl.text, repl.length);
+                            goto BreakSwitch;
+                        }
                     }
                 }
-                if(length - i >= sizeof("</code>")-1){
-                    if(memcmp(text+i, "</code>", sizeof("</code>")-1) == 0){
-                        msb_write_char(sb, '`');
-                        i += sizeof("</code>")-1-1;
-                        break;
-                    }
-                }
+                if(in_code_tag) goto lDEFAULT;
+                msb_write_literal(sb, "&lt;");
+                break;
+            }
+            case '>':{
+                if(in_code_tag) goto lDEFAULT;
+                msb_write_literal(sb, "&gt;");
+                break;
             }
             FALLTHROUGH;
             // fall-through
+            default:
+                lDEFAULT:
+                msb_write_char(sb, c);
+        }
+        BreakSwitch:;
+    }
+    if(in_code_tag)
+        msb_write_char(sb, '`');
+}
+static
+void
+write_md_pre_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
+    // This is a slow character by character implementation, but
+    // this is a rarely used piece. We can SIMD it later.
+    Node* node = get_node(ctx, handle);
+    StringView header = node->header;
+    if(!header.length) return;
+    const char* text = header.text;
+    size_t length = header.length;
+    for(size_t i = 0; i < length; i++){
+        char c = text[i];
+        switch(c){
+            case '<':{
+                msb_write_literal(sb, "&lt;");
+                break;
+            }
+            case '>':{
+                msb_write_literal(sb, "&gt;");
+                break;
+            }
             default:
                 msb_write_char(sb, c);
         }

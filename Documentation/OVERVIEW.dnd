@@ -437,11 +437,11 @@ But Wait, There's More::md
 
 ::js
   // this shows more raw manipulation of the tree.
-  // we actually temporarily detach the root node from the context
   let root = ctx.root;
   root.type = NodeType.DIV;
   root.classes.add('container');
   let new_root = ctx.make_node(NodeType.DIV, {classes:['root']});
+  // we actually temporarily detach the root node from the context
   root.detach();
   new_root.add_child(root);
   // TOC blocks are kind of special. As one of the last things, the system

@@ -296,13 +296,14 @@ class TestAst(TestCase):
         Bonjour::raw .hi @french
         Hola::raw .hi @spanish
         Aloha::div .hi @hawaiian
+            <tt>Hello!</tt> <i>world</i> <b>How</b> <em>are</em> <strong>you</strong>.
         ''')
         self.assertIn(ctx.root[0], ctx.root) # type: ignore
         self.assertEqual(len(ctx.select_nodes(type=pydndc.NodeType.RAW)), 3)
         self.assertEqual(len(ctx.select_nodes(classes=['hi'])), 4)
         self.assertEqual(len(ctx.select_nodes(attributes=('english',))), 1)
         # no args selects all
-        self.assertEqual(len(ctx.select_nodes()), 5) # 4 + 1 for root
+        self.assertEqual(len(ctx.select_nodes()), 6) # 4 + 1 + 1 for root
         self.assertEqual(len(ctx.select_nodes(classes={'hi', 'hello'})), 0) # is an AND
         self.assertEqual(ctx.root.handle, ctx.node_from_int(ctx.root.handle).handle)
         aprox = ctx.node_by_approximate_location(ctx.root.location.filename, 1)
@@ -316,6 +317,7 @@ class TestAst(TestCase):
             "Bonjour::raw .hi @french\n"
             "Hola::raw .hi @spanish\n"
             "Aloha::div .hi @hawaiian\n"
+            "  <tt>Hello!</tt> <i>world</i> <b>How</b> <em>are</em> <strong>you</strong>.\n"
             "woo::div\n"
         )
         n.detach()
@@ -325,6 +327,7 @@ class TestAst(TestCase):
             "Bonjour::raw .hi @french\n"
             "Hola::raw .hi @spanish\n"
             "Aloha::div .hi @hawaiian\n"
+            "  <tt>Hello!</tt> <i>world</i> <b>How</b> <em>are</em> <strong>you</strong>.\n"
             "woo::div\n"
         )
         self.assertEqual(ctx.to_md(),
@@ -333,11 +336,11 @@ class TestAst(TestCase):
             "\n"
             "\n"
             "<h2>Aloha</h2><div>\n"
+            "`Hello!` *world* **How** *are* **you**.\n"
             "</div>\n"
             "\n"
             "<h2>woo</h2><div>\n"
-            "</div>\n"
-            "\n")
+            "</div>\n")
         ctx.add_link(key='hi', value='goodbye')
         import json
         s = ctx._to_json()

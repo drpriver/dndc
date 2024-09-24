@@ -1,21 +1,46 @@
 <!-- This md file was generated from a dnd file. -->
 <h2>Table of Contents</h2>
-
 <h1>Dndc</h1>
 
 See [the overview](Documentation/OVERVIEW.dnd), written in `.dnd` for a description of the file
 format. Or checkout [the reference](Documentation/REFERENCE.dnd).
 
 
-
 This is a compiler and associated tooling for the dnd document format. DND
 stands for David's New Document.
 
+
+&lt;table&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;Wtf&lt;td&gt;Is&lt;td&gt;This&lt;td&gt;bullshit&lt;/table&gt;
+
+<pre>
+&lt;table&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;Wtf&lt;td&gt;Is&lt;td&gt;This&lt;td&gt;bullshit&lt;/table&gt;
+::hello
+
+</pre>
+
 <h2>Building</h2>
-This project builds with clang (including apple clang) or gcc. It does not
-compile with MSVC. MSVC has some weird bug with static constant initializers
-that only manifests in release builds (strangely, debug builds do compile).
-You can just use clang on windows anyway. Mingw is not supported.
+This project builds with clang (including apple clang) or gcc. It should
+compile with MSVC.
+
+
+Mingw is not supported. Or maybe it is, I haven't tried.
+
+<details><summary>Requirements</summary>
+
+You need a C compiler. It is known to work with gcc and clang.
+It should work with MSVC.
+
+
+You need [make](#make), [meson](#meson) or [cmake](#cmake) to build the code.
+Or if you really want you can read the makefiles and type the build command by hand.
+
+
+The python extension requires python and supports python3.6+.
+
+
+Qt-based editor requires Qt 5 or 6 and a C++ compiler.
+
+</details>
 
 <details><summary>Make</summary>
 
@@ -61,7 +86,7 @@ dndc.wasm.
 <details><summary>setuptools</summary>
 
 If you just want the python extension, you can build using the
-`setup.py` script. Builds with gcc or clang.
+`setup.py` script. Builds with gcc, clang or clang-cl.
 
 </details>
 
@@ -78,7 +103,6 @@ of [quickjs](https://bellard.org/quickjs/), with some small modifications.
 It is a future project to see if we can use system javascript engines
 instead to reduce the filesize footprint of dndc. For example, javascript
 core on macos.
-
 
 </dd>
 
@@ -208,7 +232,6 @@ There is also a python test for the python extension, at
 python extension is and has an argument for that.
 
 
-
 <h2>Type Checking</h2>
 The python code should all type check with mypy. If it doesn't then that is a
 bug.
@@ -218,7 +241,6 @@ bug.
 
 There are some useful scripts in the `Scripts` folder for
 development.
-
 
 <dt>[tag_and_syntax.py](Scripts/tag_and_syntax.py)</dt>
 <dd>
@@ -239,8 +261,8 @@ This script also requires libclang. It converts C headers into a
 syntax/semantic highlighted hyperlinked html page.
 
 
-This and `make_cdoc_index.py` are invoked by `make
-cdocs`.
+This and `make_cdoc_index.py` are invoked by `make`
+cdocs.
 
 </dd>
 
@@ -280,8 +302,8 @@ This can be invoked by `make strip` or `make convert`.
 </dl>
 
 <h2>Docs</h2>
-Using the makefile, you can generate a dash/zeal docset. Simply do `make
-docset`.
+Using the makefile, you can generate a dash/zeal docset. Simply do `make`
+docset.
 
 
 Additionally, `make docs` will generate some html files in the
