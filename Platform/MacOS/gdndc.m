@@ -506,13 +506,13 @@ NSWindow* web_window;
             JSRAW(
                 let coords = ctx.select_nodes({attributes:["coord"]});
                 let s = ctx.root.make_child(NodeType.SCRIPTS);
-                let o = {0};
+                let o = {};
                 for(let co of coords){
                     o[co.id] = co.internal_id;
                 }
                 s.make_child(NodeType.STRING, {header:`let _coords = ${JSON.stringify(o)};`});
                 let imglinks = ctx.select_nodes({type:NodeType.IMGLINKS});
-                let o2 = {0};
+                let o2 = {};
                 for(let il of imglinks){
                     for(let ch of il.children){
                         if(ch.type != NodeType.STRING) continue;
@@ -1459,7 +1459,7 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
     [webview
         evaluateJavaScript:@ JSRAW(
             (function(){
-                const result = {0};
+                const result = {};
                 const html = document.getElementsByTagName("html")[0];
                 if(html.scrollLeft || html.scrollTop)
                     result.html = [html.scrollLeft, html.scrollTop];
