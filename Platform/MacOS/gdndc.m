@@ -324,13 +324,13 @@ NSWindow* web_window;
 }
 -(NSString*)get_text{
     [self->web_controller save_scroll_position];
-    NSString *string = self->text.string;
+    NSMutableString *string = [self->text.string mutableCopy];
     // Inject javascript that will restore the scroll position in the window.
-    string = [string stringByAppendingString:
+    [string appendString:
         @"\n"
         "::script\n"];
     if(!self->coord_helper)
-        string = [string stringByAppendingString:
+        [string appendString:
             @"\n"
             "::script\n  "
             // Internal anchors are broken in some versions of webkit. Inject
@@ -376,7 +376,7 @@ NSWindow* web_window;
             });)
             "\n"
         ];
-    string = [string stringByAppendingString:
+    [string appendString:
         @"  "
         JSRAW(document.addEventListener("DOMContentLoaded", function(){
                   let request = new XMLHttpRequest();
@@ -408,7 +408,7 @@ NSWindow* web_window;
                   request.send();
                 });) "\n"];
     if(self->coord_helper){
-        string = [string stringByAppendingString:
+        [string appendString:
             @"\n"
             "::script\n  "
             JSRAW(
@@ -588,14 +588,15 @@ NSWindow* web_window;
     if(target == DNDC_NODE_HANDLE_INVALID) goto fail;
     DndcNodeLocation loc; err = dndc_node_location(ctx, target, &loc);
     if(err) goto fail;
-    size_t length = doc_string.length;
+    NSUInteger length = doc_string.length;
     int lineno = 0;
-    size_t i;
-    for(i = 0; i < length; i++){
-        if([doc_string characterAtIndex:i] == u'\n'){
-            lineno++;
-            if(lineno == loc.row) break;
-        }
+    NSUInteger i = 0;
+    while(i < length && lineno < loc.row){
+        NSRange search = NSMakeRange(i, length - i);
+        NSRange found = [doc_string rangeOfString:@"\n" options:0 range:search];
+        if(found.location == NSNotFound) break;
+        lineno++;
+        i = found.location + 1;
     }
     if(lineno != loc.row) goto fail;
     {
@@ -925,11 +926,12 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
         self.selectedRange = adjustedrange;
 }
 -(void)ensure_pattern{
-    if(!indent_pattern)
+    if(!indent_pattern){
         PushDiagnostic();
         #pragma clang diagnostic ignored "-Wnullable-to-nonnull-conversion"
         indent_pattern = [[NSRegularExpression alloc] initWithPattern:kIndentPatternString options:0 error:nil];
         PopDiagnostic();
+    }
 }
 -(void)insert_file_block:(NSString*)path tag:(GdndInsertTag)tag size:(NSSize)size{
     NSRange r = self.selectedRange;
@@ -1650,19 +1652,21 @@ enum DndEditViewButtonTags {
 #endif
 };
 -(void)scroll_to_line:(int)line column:(int)column{
-    // this is ridiculous
+    NSString* s = self.text.string;
+    NSUInteger len = s.length;
     NSUInteger i = 0;
     int lineno = 1;
-    {
-        NSString* s = self.text.string;
-        for(i = 0; lineno < line; i++){
-            unichar c = [s characterAtIndex:i];
-            if(c == u'\n')
-                lineno++;
-        }
+    while(i < len && lineno < line){
+        NSRange search = NSMakeRange(i, len - i);
+        NSRange found = [s rangeOfString:@"\n" options:0 range:search];
+        if(found.location == NSNotFound) break;
+        lineno++;
+        i = found.location + 1;
     }
-    [self.text scrollRangeToVisible:NSMakeRange(i, 1+column)];
-    self.text.selectedRange = NSMakeRange(i+column+1, 0);
+    NSUInteger pos = i + column;
+    if(pos > len) pos = len;
+    [self.text scrollRangeToVisible:NSMakeRange(pos, 0)];
+    self.text.selectedRange = NSMakeRange(pos, 0);
 }
 -(void)button_click:(id)a{
     // Actually button or menu item, but both respond to tag and state
@@ -1922,7 +1926,7 @@ enum DndEditViewButtonTags {
     }];
 }
 -(void)format_dnd:(id)sender {
-    CGFloat before = self->scrollview.lineScroll;
+    NSPoint before = self->scrollview.contentView.bounds.origin;
     NSString *string = self.text.string;
     const char* source_text = string.UTF8String;
     // uint64_t t1 = get_t();
@@ -1943,7 +1947,8 @@ enum DndEditViewButtonTags {
     if(!str)
         return;
     [self.text insertText:str replacementRange:NSMakeRange(0, self.text.textStorage.length)];
-    self->scrollview.lineScroll = before;
+    [self->scrollview.contentView scrollToPoint:before];
+    [self->scrollview reflectScrolledClipView:self->scrollview.contentView];
 }
 
 @end
