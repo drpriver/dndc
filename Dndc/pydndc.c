@@ -22,9 +22,14 @@
 
 #ifdef __clang__
 #pragma clang assume_nonnull begin
-#elif defined(__GNUC__)
+#endif
+#if defined(__GNUC__)
 PushDiagnostic();
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+#else
 #pragma GCC diagnostic ignored "-Wcast-function-type"
+#endif
 #endif
 
 PushDiagnostic();
@@ -2184,6 +2189,34 @@ DndcContextPy_to_json(PyObject* s, PyObject* arg){
     return result;
 }
 
+static
+PyObject*_Nullable
+DndcContextPy_parse_file(PyObject* s, PyObject* args, PyObject* kwargs){
+    PyObject* filename;
+    DndcContextPy* self = (DndcContextPy*)s;
+    const char* const keywords[] = {"filename", NULL};
+    PushDiagnostic();
+    SuppressCastQual();
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|:node_by_approximate_location", (char**)keywords, &PyUnicode_Type, &filename)){
+        return NULL;
+    }
+    PopDiagnostic();
+    DndcStringView sv = pystring_borrow_stringview(filename);
+    DndcNodeHandle h = dndc_ctx_get_root(self->ctx);
+    if(h == DNDC_NODE_HANDLE_INVALID){
+        h = dndc_ctx_make_root(self->ctx, sv);
+        if(h == DNDC_NODE_HANDLE_INVALID){
+            PyErr_SetString(PyExc_RuntimeError, "Unknown error making implicit root node.");
+            return NULL;
+        }
+    }
+    int err = dndc_ctx_parse_file(self->ctx, h, sv);
+    if(err){
+        PyErr_SetString(PyExc_RuntimeError, "Error parsing file.");
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
 
 static PyMethodDef DndcContextPy_methods[] = {
     {
@@ -2388,6 +2421,17 @@ static PyMethodDef DndcContextPy_methods[] = {
             "--\n"
             "\n"
             "Gets a node by its by approximate location.\n",
+    },
+    {
+        .ml_name="parse_file",
+        .ml_meth=(PyCFunction)DndcContextPy_parse_file,
+        .ml_flags=METH_VARARGS|METH_KEYWORDS,
+        .ml_doc=PYSIG(
+            "parse_file(self, filename:str) -> None\n",
+            "parse_file(self, filename)\n")
+            "--\n"
+            "\n"
+            "Parses a file into the root node.\n",
     },
     {0} // Sentinel
 };
@@ -3776,7 +3820,8 @@ static PyTypeObject DndcClassesPyType = {
 
 #ifdef __clang__
 #pragma clang assume_nonnull end
-#elif defined(__GNUC__)
+#endif
+#if defined(__GNUC__)
 PopDiagnostic();
 #endif
 
