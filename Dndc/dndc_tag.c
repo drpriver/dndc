@@ -210,6 +210,7 @@ tag_dnd_files(StringView* filenames, size_t filename_count, LongString outfile, 
     }
     qsort(tags.data, tags.count, sizeof(Tag), StringView_cmp);
     FILE* fp = outfile.length? fopen(outfile.text, "w") : stdout;
+    if(!fp) unhandled_error_condition(!fp);
     fprintf(fp, "!_TAG_FILE_FORMAT\t1\t/basic format; no extension fields/\n");
     fprintf(fp, "!_TAG_FILE_SORTED\t1\t/0=unsorted, 1=sorted, 2=foldcase/\n");
     for(size_t i = 0; i< tags.count; i++){
