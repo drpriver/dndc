@@ -27,6 +27,7 @@
 #pragma clang diagnostic ignored "-Wconditional-uninitialized"
 // Can be a real bug, but too annoying
 #pragma clang diagnostic ignored "-Wsign-compare"
+#pragma clang diagnostic ignored "-Wcast-function-type"
 #elif defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
