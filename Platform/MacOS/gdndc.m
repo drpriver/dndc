@@ -2005,15 +2005,6 @@ enum DndEditViewButtonTags {
 }
 - (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)sender{
     NSDocumentController* controller = NSDocumentController.sharedDocumentController;
-#if 1 && defined(DNDC_DEVELOPER)
-    [NSDocumentController.sharedDocumentController openDocumentWithContentsOfURL:[NSURL fileURLWithPath:@"/Users/drpriver/Documents/Dungeons/BarrowMaze/the-forgotten-antechamber.dnd"] display:YES completionHandler:^(NSDocument *document, BOOL documentWasAlreadyOpen, NSError *error){
-        (void)document;
-        (void)documentWasAlreadyOpen;
-        (void)error;
-
-    }];
-    (void)controller;
-#else
     // Dude, there's no way this is how you are supposed to do this.
     static BOOL opened = NO;
     if(!opened){
@@ -2021,7 +2012,6 @@ enum DndEditViewButtonTags {
         [controller openDocument:nil];
     }
     return NO;
-#endif
     return NO;
 }
 
