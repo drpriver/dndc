@@ -542,7 +542,7 @@ main(int argc, char**argv){
                         return 1;
                     }
                     char* buff = sb.data + sb.cursor;
-                    size_t numread = fread(buff, 1, N, stdin);
+                    size_t numread = fread(buff, 1, N, fp);
                     sb.cursor += numread;
                     if(numread != N)
                         break;
@@ -561,6 +561,7 @@ main(int argc, char**argv){
                 // make a copy so we can remove the nul-terminator (for repro-ing
                 // fuzz crashes)
                 char* t = malloc(source_text.length);
+                if(!t) return 1;
                 memcpy(t, source_text.text, source_text.length);
                 source_text.text = t;
             }
