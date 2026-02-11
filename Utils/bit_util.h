@@ -98,7 +98,7 @@ popcount_32(uint32_t a){
 static inline
 force_inline
 int
-popcount_64(uint32_t a){
+popcount_64(uint64_t a){
     #if defined(_MSC_VER) && !defined(__clang__)
         return __popcnt64(a);
     #elif defined(__IMPORTC__)
