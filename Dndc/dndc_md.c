@@ -172,7 +172,9 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
                 msb_write_str(sb, child->header.text, child->header.length);
                 msb_write_char(sb, '\n');
             }
-            msb_write_literal(sb, "```\n");
+            while(msb_peek(sb) == '\n')
+                msb_erase(sb, 1);
+            msb_write_literal(sb, "\n```\n");
         } goto Lok;
         case NODE_LIST:{
             header_depth += write_md_header(ctx, handle, sb, header_depth);
@@ -577,9 +579,9 @@ write_md_table(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int head
             msb_write_literal(sb, "<th>");
             int e = render_node_as_md(ctx, *it, sb, header_depth+1, 0);
             if(e) return e;
-            msb_write_literal(sb, "</th>\n");
+            msb_write_literal(sb, "</th>");
         }
-        msb_write_literal(sb, "</tr>\n");
+        msb_write_literal(sb, "\n</tr>\n");
     }
     msb_write_literal(sb, "</thead>\n<tbody>\n");
     for(size_t i = 1; i < count; i++){
@@ -594,9 +596,9 @@ write_md_table(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int head
             msb_write_literal(sb, "<td>");
             int e = render_node_as_md(ctx, *it, sb, header_depth+1, 0);
             if(e) return e;
-            msb_write_literal(sb, "</td>\n");
+            msb_write_literal(sb, "</td>");
         }
-        msb_write_literal(sb, "</tr>\n");
+        msb_write_literal(sb, "\n</tr>\n");
     }
     msb_write_literal(sb, "</tbody>\n</table>\n");
     return 0;
