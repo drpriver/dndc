@@ -646,7 +646,7 @@ write_md_toc_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int d
                 if(id.length){
                     msb_write_nchar(sb, ' ', depth * 2);
                     msb_write_literal(sb, "* [");
-                    msb_write_str(sb, header.text, header.length);
+                    write_md_string(ctx, handle, sb);
                     msb_write_literal(sb, "](#");
                     msb_write_kebab(sb, id.text, id.length);
                     msb_write_literal(sb, ")\n");
