@@ -259,8 +259,7 @@ This script also requires libclang. It converts C headers into a
 syntax/semantic highlighted hyperlinked html page.
 
 
-This and <code>make_cdoc_index.py</code> are invoked by <code>make`
-cdocs.
+This and <code>make_cdoc_index.py</code> are invoked by <code>make cdocs</code>.
 
 
 #### [make_cdoc_index.py](Scripts/make_cdoc_index.py)
