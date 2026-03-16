@@ -10,11 +10,6 @@ format. Or checkout [the reference].
 This is a compiler and associated tooling for the dnd document format. DND
 stands for David's New Document.
 
-<table><tbody><tr><td>Wtf<td>Is<td>This<td>bullshit</table>
-::pre
-  <table><tbody><tr><td>Wtf<td>Is<td>This<td>bullshit</table>
-  ::hello
-
 Building::md
   This project builds with clang (including apple clang) or gcc. It should
   compile with MSVC.

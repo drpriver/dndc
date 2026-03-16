@@ -1329,10 +1329,10 @@ TestFunction(TestMd){
                 );
         LongString expected = LS(
                 "<!-- This md file was generated from a dnd file. -->\n"
-                "<pre>\n"
-                "&lt;table&gt;Table!&lt;/table&gt;\n"
-                "&lt;b&gt;whoa it's a bee&lt;/b&gt;\n"
-                "</pre>\n"
+                "```\n"
+                "<table>Table!</table>\n"
+                "<b>whoa it's a bee</b>\n"
+                "```\n"
                 );
         LongString output;
         uint64_t flags = DNDC_FRAGMENT_ONLY;

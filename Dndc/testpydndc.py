@@ -176,7 +176,8 @@ class TestMdGen(TestCase):
         )
         expected = (
             "<!-- This md file was generated from a dnd file. -->\n"
-            "<h2>Markdown!</h2>\n"
+            "## Markdown!\n"
+            "\n"
             "This is some markdown\n"
             "\n"
             "\n"
@@ -335,11 +336,13 @@ class TestAst(TestCase):
             "\n"
             "\n"
             "\n"
-            "<h2>Aloha</h2><div>\n"
+            "## Aloha\n"
+            "<div>\n"
             "`Hello!` *world* **How** *are* **you**.\n"
             "</div>\n"
             "\n"
-            "<h2>woo</h2><div>\n"
+            "## woo\n"
+            "<div>\n"
             "</div>\n")
         ctx.add_link(key='hi', value='goodbye')
         import json
