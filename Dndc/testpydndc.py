@@ -176,6 +176,7 @@ class TestMdGen(TestCase):
         )
         expected = (
             "<!-- This md file was generated from a dnd file. -->\n"
+            "\n"
             "## Markdown!\n"
             "\n"
             "This is some markdown\n"
@@ -184,14 +185,12 @@ class TestMdGen(TestCase):
             "<table>\n"
             "<thead>\n"
             "<tr>\n"
-            "<th>a</th>\n"
-            "<th>b</th>\n"
+            "<th>a</th><th>b</th>\n"
             "</tr>\n"
             "</thead>\n"
             "<tbody>\n"
             "<tr>\n"
-            "<td>1</td>\n"
-            "<td>2</td>\n"
+            "<td>1</td><td>2</td>\n"
             "</tr>\n"
             "</tbody>\n"
             "</table>\n"
@@ -333,8 +332,6 @@ class TestAst(TestCase):
         )
         self.assertEqual(ctx.to_md(),
             "<!-- This md file was generated from a dnd file. -->\n"
-            "\n"
-            "\n"
             "\n"
             "## Aloha\n"
             "<div>\n"

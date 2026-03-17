@@ -63,6 +63,8 @@ write_md_header(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int hea
     Node* node = get_node(ctx, handle);
     StringView header = node->header;
     if(!header.length) return 0;
+    while(msb_peek(sb) == '\n') msb_erase(sb, 1);
+    if(sb->cursor) msb_write_literal(sb, "\n\n");
     msb_write_nchar(sb, '#', header_depth);
     msb_write_char(sb, ' ');
     write_md_string(ctx, handle, sb);
