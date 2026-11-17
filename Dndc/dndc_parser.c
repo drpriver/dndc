@@ -467,6 +467,19 @@ analyze_line(DndcContext* ctx){
     endline = cursor;
 
     Lfinish:;
+    if(doublecolon && dndc_inline_is_escaped(ctx->cursor, doublecolon)){
+        const char* p = doublecolon+1;
+        doublecolon = NULL;
+        while(p < endline){
+            p = dndc_inline_find(p, endline, ':');
+            if(!p) break;
+            if(p+1 < endline && p[1] == ':'){
+                doublecolon = p;
+                break;
+            }
+            p++;
+        }
+    }
     ctx->doublecolon = doublecolon;
     ctx->line_end = endline;
     ctx->linestart = ctx->cursor;
@@ -1146,7 +1159,7 @@ PARSEFUNC(parse_table_node){
             continue;
         }
         const char* cursor = ctx->linestart+ctx->nspaces;
-        const char* pipe = memchr(cursor, '|', ctx->line_end - cursor);
+        const char* pipe = dndc_table_pipe(cursor, ctx->line_end);
         if(!pipe){
             if(!NodeHandle_eq(last_cell_handle, INVALID_NODE_HANDLE)){
                 if(ctx->nspaces > previous_row_indentation){
@@ -1188,7 +1201,7 @@ PARSEFUNC(parse_table_node){
             e = append_child(ctx, new_node_handle, cell_index);
             if(unlikely(e)) return e;
             cursor = pipe+1;
-            pipe = memchr(cursor, '|', ctx->line_end - cursor);
+            pipe = dndc_table_pipe(cursor, ctx->line_end);
         }
         NodeHandle cell_index = alloc_handle(ctx);
         if(unlikely(NodeHandle_eq(cell_index, INVALID_NODE_HANDLE)))

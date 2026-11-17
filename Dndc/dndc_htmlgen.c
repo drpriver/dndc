@@ -62,6 +62,8 @@
 NODETYPES(X)
 #undef X
 
+static void write_inline_label(MStringBuilder* sb, const char* text, size_t length);
+
 typedef int(renderfunc)(DndcContext*, MStringBuilder*, NodeHandle, int, int);
 
 static
@@ -154,7 +156,7 @@ render_tree(DndcContext* ctx, MStringBuilder* msb){
         if(!NodeHandle_eq(ctx->titlenode, INVALID_NODE_HANDLE)){
             Node* n = get_node(ctx, ctx->titlenode);
             msb_write_literal(msb, "<title>");
-            msb_write_tag_escaped_str(msb, n->header.text, n->header.length);
+            write_inline_label(msb, n->header.text, n->header.length);
             msb_write_literal(msb, "</title>\n");
         }
     }
@@ -315,14 +317,19 @@ build_toc_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
         case NODE_QUOTE:
         case NODE_CONTAINER:{
             StringView header = node->header;
-            header = stripped_view_chars(header.text, header.length, "[]");
+            while(header.length && (header.text[header.length-1] == '[' || header.text[header.length-1] == ']') && !dndc_inline_is_escaped(header.text, header.text+header.length-1))
+                header.length--;
+            while(header.length && (header.text[0] == '[' || header.text[0] == ']')){
+                header.text++;
+                header.length--;
+            }
             if(header.length){
                 StringView id = node_get_id(ctx, handle);
                 if(id.length){
                     msb_write_literal(sb, "<li><a href=\"#");
                     msb_write_kebab(sb, id.text, id.length);
                     msb_write_literal(sb, "\">");
-                    msb_write_tag_escaped_str(sb, header.text, header.length);
+                    write_inline_label(sb, header.text, header.length);
                     msb_write_literal(sb,  "</a>\n<ul>\n");
                     // kind of a hack
                     size_t cursor = sb->cursor;
@@ -362,14 +369,19 @@ build_toc_block_node(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, in
         case NODE_PRE:
         case NODE_RAW:{
             StringView header = node->header;
-            header = stripped_view_chars(header.text, header.length, "[]");
+            while(header.length && (header.text[header.length-1] == '[' || header.text[header.length-1] == ']') && !dndc_inline_is_escaped(header.text, header.text+header.length-1))
+                header.length--;
+            while(header.length && (header.text[0] == '[' || header.text[0] == ']')){
+                header.text++;
+                header.length--;
+            }
             if(header.length){
                 StringView id = node_get_id(ctx, handle);
                 if(id.length){
                     msb_write_literal(sb, "<li><a href=\"#");
                     msb_write_kebab(sb, id.text, id.length);
                     msb_write_literal(sb, "\">");
-                    msb_write_tag_escaped_str(sb, header.text, header.length);
+                    write_inline_label(sb, header.text, header.length);
                     msb_write_literal(sb,  "</a>");
                     msb_write_literal(sb, "</li>\n");
                 }
@@ -389,14 +401,38 @@ build_toc_block_children(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb
     }
 }
 
+static
+void
+write_inline_label(MStringBuilder* sb, const char* text, size_t length){
+    const char* end = text+length;
+    for(const char* p = text; p < end;){
+        const char* slash = (const char*)memchr(p, '\\', (size_t)(end-p));
+        if(!slash)
+            break;
+        if(slash+1 < end && dndc_inline_escapable(slash[1])){
+            msb_write_tag_escaped_str(sb, text, (size_t)(slash-text));
+            msb_write_char(sb, slash[1]);
+            p = text = slash+2;
+        }
+        else
+            p = slash+1;
+    }
+    msb_write_tag_escaped_str(sb, text, (size_t)(end-text));
+}
+
 static inline
 int
 write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* text, size_t length, const NodeHandle handle){
     for(size_t i = 0; i < length; i++){
         char c = text[i];
         switch(c){
+            case '\\':
+                if(i+1 < length && dndc_inline_escapable(text[i+1]))
+                    c = text[++i];
+                msb_write_char(sb, c);
+                break;
             case '[':{
-                const char* closing_brace = memchr(text+i, ']', length-i);
+                const char* closing_brace = dndc_inline_find(text+i+1, text+length, ']');
                 if(unlikely(!closing_brace)){
                     handle_log_err_offset(ctx, handle, i, LS("Unterminated '['"));
                     return DNDC_ERROR_PARSE;
@@ -404,7 +440,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                 const size_t link_length = closing_brace - (text+i);
                 size_t text_length = link_length-1;
                 // Check for '|'-delimited alias.
-                const char* alias = memchr(text+i+1, '|', link_length);
+                const char* alias = dndc_inline_find(text+i+1, closing_brace, '|');
                 if(likely(!alias)){
                     alias = text+i+1;
                 }
@@ -646,9 +682,17 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
             case 21: case 22: case 23: case 24: case 25: case 26: case 27:
             case 28: case 29: case 30: case 31:
                 break;
-            default:
-                msb_write_char(sb, c);
+            default:{
+                size_t start = i;
+                while(i+1 < length){
+                    unsigned char next = (unsigned char)text[i+1];
+                    if(next < 32 || next == '[' || next == '\\' || next == '-' || next == '<' || next == '>' || next == '&')
+                        break;
+                    i++;
+                }
+                msb_write_str(sb, text+start, i-start+1);
                 break;
+            }
         }
     }
     return 0;
@@ -678,6 +722,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
 #if 1 && !defined(NO_SIMD) && defined(__x86_64__)
     size_t cursor = sb->cursor;
     char* sbdata = sb->data + cursor;
+    __m128i backslash = _mm_set1_epi8('\\');
     __m128i lsquare = _mm_set1_epi8('[');
     __m128i hyphen  = _mm_set1_epi8('-');
     __m128i langle  = _mm_set1_epi8('<');
@@ -693,6 +738,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
         // For the common case of no special character this is much faster
         // than the byte at a time processing we'd otherwise have to do.
         __m128i data         = _mm_loadu_si128((const __m128i*)text);
+        __m128i test_backslash = _mm_cmpeq_epi8(data, backslash);
         __m128i test_lsquare = _mm_cmpeq_epi8(data, lsquare);
         __m128i test_hyphen  = _mm_cmpeq_epi8(data, hyphen);
         __m128i test_langle  = _mm_cmpeq_epi8(data, langle);
@@ -705,7 +751,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
         __m128i Ored3 = _mm_or_si128(test_amp, test_control);
         __m128i Ored4 = _mm_or_si128(Ored, Ored2);
         __m128i Ored5 = _mm_or_si128(Ored3, Ored4);
-        int had_it = _mm_movemask_epi8(Ored5);
+        int had_it = _mm_movemask_epi8(_mm_or_si128(Ored5, test_backslash));
         if(had_it)
             break;
         // Safe to store as we did the ensure additional above and we only
@@ -721,6 +767,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
 #if 1 && !defined(NO_SIMD) && defined(__wasm_simd128__)
     size_t cursor = sb->cursor;
     char* sbdata = sb->data + cursor;
+    v128_t backslash = wasm_i8x16_splat('\\');
     v128_t lsquare = wasm_i8x16_splat('[');
     v128_t hyphen  = wasm_i8x16_splat('-');
     v128_t langle  = wasm_i8x16_splat('<');
@@ -736,6 +783,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
         // For the common case of no special character this is much faster
         // than the byte at a time processing we'd otherwise have to do.
         v128_t data         = wasm_v128_load(text);
+        v128_t test_backslash = wasm_i8x16_eq(data, backslash);
         v128_t test_lsquare = wasm_i8x16_eq(data, lsquare);
         v128_t test_hyphen  = wasm_i8x16_eq(data, hyphen);
         v128_t test_langle  = wasm_i8x16_eq(data, langle);
@@ -748,7 +796,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
         v128_t Ored3 = test_amp | test_control;
         v128_t Ored4 = Ored | Ored2;
         v128_t Ored5 = Ored3 | Ored4;
-        int had_it = wasm_i8x16_bitmask(Ored5);
+        int had_it = wasm_i8x16_bitmask(Ored5 | test_backslash);
         if(had_it)
             break;
         // Safe to store as we did the ensure additional above and we only
@@ -764,6 +812,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
 #if 1 && !defined(NO_SIMD) && defined(__ARM_NEON)
     size_t cursor = sb->cursor;
     unsigned char* sbdata = (unsigned char*)sb->data + cursor;
+    uint8x16_t backslash = vdupq_n_u8('\\');
     uint8x16_t lsquare = vdupq_n_u8('[');
     uint8x16_t hyphen  = vdupq_n_u8('-');
     uint8x16_t langle  = vdupq_n_u8('<');
@@ -772,6 +821,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
     uint8x16_t control = vdupq_n_u8(32);
     while(length >= 16){
         uint8x16_t data         = vld1q_u8((const unsigned char*)text);
+        uint8x16_t test_backslash = vceqq_u8(data, backslash);
         uint8x16_t test_lsquare = vceqq_u8(data, lsquare);
         uint8x16_t test_hyphen  = vceqq_u8(data, hyphen);
         uint8x16_t test_langle  = vceqq_u8(data, langle);
@@ -785,7 +835,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
         uint8x16_t Ored3 = vorrq_u8(test_amp, test_control);
         uint8x16_t Ored4 = vorrq_u8(Ored, Ored2);
         uint8x16_t Ored5 = vorrq_u8(Ored3, Ored4);
-        uint8x8_t shifted = vshrn_n_u16(vreinterpretq_u16_u8(Ored5), 4);
+        uint8x8_t shifted = vshrn_n_u16(vreinterpretq_u16_u8(vorrq_u8(Ored5, test_backslash)), 4);
         uint64x1_t had_it = vreinterpret_u64_u8(shifted);
 
         if(vget_lane_u64(had_it, 0)){

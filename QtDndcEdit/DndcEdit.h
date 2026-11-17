@@ -12,6 +12,23 @@
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QPlainTextEdit>
 #include <QtWidgets/QSplitter>
+#include <QtWidgets/QTextBrowser>
+class Page;
+class EditorWindow : public QMainWindow {
+public:
+    Page* page;
+    QWidget* owner;
+    bool attached = false;
+    QPoint owner_position;
+    EditorWindow(Page* page, QWidget* owner);
+    ~EditorWindow();
+    void attach();
+    void detach();
+    void sync_visibility(bool focus = false);
+    void closeEvent(QCloseEvent* event) override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
+};
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -89,7 +106,7 @@ public:
             auto color = QColor();
             auto* color_names = 1?&dark_color_names:&light_color_names;
             for(const auto& region: highlight_regions[line]){
-                color.setNamedColor((*color_names)[region.type]);
+                auto color = QColor((*color_names)[region.type]);
                 fmt.setForeground(color);
                 setFormat(region.col, region.length, fmt);
                 }
@@ -120,6 +137,7 @@ public:
     DndEditor(QWidget* parent=nullptr);
     ~DndEditor();
     void update_syntax(void);
+    void replace_source(QString text);
     int lineNumberAreaWidth(void);
     void updateLineNumberAreaWidth(int);
     void updateLineNumberArea(QRect rect, int dy);
@@ -159,8 +177,10 @@ class Page: public QSplitter
 {
     Q_OBJECT
     QWebEngineView* web;
-    QPlainTextEdit* error_display;
+    friend class EditorWindow;
+    QTextBrowser* error_display;
     bool inflight = false;
+    bool closing = false;
     bool auto_apply = true;
     QList<QCheckBox*> checks;
     QWidget* checkholder;
@@ -168,20 +188,21 @@ class Page: public QSplitter
     QSet<QString> dependencies;
     QString scroll_pos_string;
     bool show_errors = true;
-    bool editor_is_on_left = true;
     bool coord_helper = false;
 
 public:
     QSplitter* editor_holder;
+    EditorWindow* editor_window = nullptr;
+    bool editor_open = false;
     DndWebPage* webpage;
     DndEditor* textedit;
     QString filename;
     QString dirname;
     Page(QWidget*parent=nullptr);
     ~Page();
-    void save(void);
-    void put_editor_left(void);
-    void put_editor_right(void);
+    bool save(void);
+    void dispose_editor(void);
+    void scroll_to_line(int line, int column = 0);
     void contents_changed(void);
     void auto_apply_changed(int state);
     void read_only_changed(int state);

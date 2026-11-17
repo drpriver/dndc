@@ -13,7 +13,7 @@ QTINCLUDE=-F$(QTFRAMEWORKDIR) -isystem $(QTINCLUDEDIR)
 QTFRAMEWORKS=-framework QtCore \
 	     -framework QtGui  \
 	     -framework QtWidgets \
-	     -framework QtWebEnginecore \
+	     -framework QtWebEngineCore \
 	     -framework QtWebEngineWidgets
 QTLINK=$(QTFRAMEWORKS) -rpath $(QTFRAMEWORKDIR)
 DNDCLINK=

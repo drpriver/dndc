@@ -386,7 +386,10 @@ NSWindow* web_window;
                         return;
                     const SCROLLRESTO = JSON.parse(request.response);
                     for(let [key, value] of Object.entries(SCROLLRESTO)){
-                        if(key == "html"){
+                        if(key == "__document"){
+                            document.dispatchEvent(new CustomEvent('dnd:restore-state', {detail:value}));
+                        }
+                        else if(key == "html"){
                             const html = document.getElementsByTagName("html")[0];
                             html.scrollLeft = value[0];
                             html.scrollTop = value[1];
@@ -415,67 +418,98 @@ NSWindow* web_window;
             document.addEventListener("DOMContentLoaded", function(){
               const svgs = document.getElementsByTagName("svg");
               let moving = false;
+              function mapPoint(svg, event){
+                const matrix = svg.getScreenCTM();
+                if(!matrix) return null;
+                const point = svg.createSVGPoint();
+                point.x = event.clientX;
+                point.y = event.clientY;
+                return point.matrixTransform(matrix.inverse());
+              }
               for(let i = 0; i < svgs.length; i++){
                 const svg = svgs[i];
                 const texts = svg.getElementsByTagName("text");
-                const aa = document.querySelectorAll("svg a");
-                for(let text of texts){
-                    text.parentNode.addEventListener("click", function(e){
+                let suppressClick = false;
+                svg.addEventListener('pointerdown', function(){ suppressClick = false; }, true);
+                svg.addEventListener('click', function(e){
+                    if(!suppressClick) return;
+                    suppressClick = false;
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                }, true);
+                for(const anchor of texts){
+                    const link = anchor.parentNode;
+                    link.addEventListener("click", function(e){
                         e.preventDefault();
                         e.stopPropagation();
                     });
-                }
-                for(let i = 0; i < texts.length; i++){
-                    let anchor = texts[i];
-                    anchor.addEventListener("pointerdown", function(e){
+                    link.addEventListener("pointerdown", function(e){
+                        if(e.button !== 0 || moving) return;
+                        const start = mapPoint(svg, e);
+                        if(!start) return;
                         e.stopPropagation();
                         e.preventDefault();
-                        if(moving) return;
                         moving = true;
-                        let svg = anchor.parentElement.parentElement;
-                        let sx = svg.width.baseVal.value / svg.viewBox.baseVal.width;
-                        let sy = svg.height.baseVal.value / svg.viewBox.baseVal.height;
-                        let org_x = anchor.transform.baseVal[0].matrix.e | 0;
-                        let org_y = anchor.transform.baseVal[0].matrix.f | 0;
-                        let start_x = e.screenX;
-                        let start_y = e.screenY;
+                        const pointerId = e.pointerId;
+                        // Move decorations with the text, including marker backgrounds.
+                        const transforms = Array.from(link.children)
+                            .filter(child => child.transform && child.transform.baseVal.numberOfItems)
+                            .map(child => {
+                                const matrix = child.transform.baseVal.consolidate().matrix;
+                                return {matrix, x: matrix.e, y: matrix.f};
+                            });
+                        let changed = false;
                         function move(e){
-                            let diffx = 1/sx*(e.screenX - start_x);
-                            let diffy = 1/sy*(e.screenY - start_y);
-                            start_x = e.screenX;
-                            start_y = e.screenY;
-                            anchor.transform.baseVal[0].matrix.e += diffx;
-                            anchor.transform.baseVal[0].matrix.f += diffy;
+                            if(e.pointerId !== pointerId) return;
+                            const point = mapPoint(svg, e);
+                            if(!point) return;
+                            const dx = point.x - start.x;
+                            const dy = point.y - start.y;
+                            changed = dx !== 0 || dy !== 0;
+                            for(const t of transforms){
+                                t.matrix.e = t.x + dx;
+                                t.matrix.f = t.y + dy;
+                            }
                         }
-                        svg.addEventListener("pointermove", move);
-                        function remove(e){
+                        function finish(e){
+                            if(e.pointerId !== pointerId) return;
+                            if(e.type === 'pointerup') move(e);
+                            suppressClick = true;
                             moving = false;
                             e.stopPropagation();
                             e.preventDefault();
-                            svg.removeEventListener('pointermove', move);
-                            let a = anchor.parentElement;
-                            let href = a.href.baseVal;
-                            let internal_id = 0;
-                            let sp = href.split('#');
-                            if(sp.length > 1)
-                                internal_id = _coords[sp[1]];
-                            if(!internal_id)
-                                internal_id = _coords2[href];
-                            if(!internal_id){
-                                let t = anchor.childNodes[0].textContent.trim();
-                                console.log('t', t);
-                                internal_id = _coords2[t];
+                            window.removeEventListener('pointermove', move);
+                            window.removeEventListener('pointerup', finish);
+                            window.removeEventListener('pointercancel', finish);
+                            if(link.hasPointerCapture(pointerId)) link.releasePointerCapture(pointerId);
+                            if(e.type === 'pointercancel'){
+                                for(const t of transforms){
+                                    t.matrix.e = t.x;
+                                    t.matrix.f = t.y;
+                                }
+                                return;
                             }
+                            if(!changed) return;
+                            const href = link.href.baseVal;
+                            let internal_id = 0;
+                            const sp = href.split('#');
+                            if(sp.length > 1) internal_id = _coords[sp[1]];
+                            if(!internal_id) internal_id = _coords2[svg.dataset.coordMap]?.[href];
+                            if(!internal_id) internal_id = _coords2[svg.dataset.coordMap]?.[anchor.textContent.trim()];
                             if(!internal_id) return;
-                            let request = new XMLHttpRequest();
-                            let new_x = anchor.transform.baseVal[0].matrix.e | 0;
-                            let new_y = anchor.transform.baseVal[0].matrix.f | 0;
+                            const matrix = anchor.transform.baseVal.consolidate().matrix;
+                            const new_x = Math.round(matrix.e);
+                            const new_y = Math.round(matrix.f);
                             const combo = `${internal_id}:${new_x},${new_y}`;
                             fetch("dnd:///roommove", {method:"POST", body:combo});
                         }
-                        window.addEventListener("pointerup", remove, {once:true});
+                        link.setPointerCapture(pointerId);
+                        window.addEventListener('pointermove', move);
+                        window.addEventListener('pointerup', finish);
+                        window.addEventListener('pointercancel', finish);
                     });
                 }
+                svg.dataset.coordMap = i;
                 let text_height = 0;
                 if(texts.length){
                   const first_text = texts[0];
@@ -484,11 +518,12 @@ NSWindow* web_window;
                 svg.addEventListener("click", function(e){
                   let name = prompt('Enter Room Name');
                   if(name){
-                    const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;
-                    const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height;
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const true_x = ((e.clientX - rect.x)/ x_scale) | 0;
-                    const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;
+                    const point = mapPoint(svg, e);
+                    if(!point) return;
+                    const baseline = texts.length ? getComputedStyle(texts[0]).dominantBaseline : "";
+                    const offset = baseline === 'middle' || baseline === 'central' ? 0 : text_height/2;
+                    const true_x = Math.round(point.x);
+                    const true_y = Math.round(point.y + offset);
                     let request = new XMLHttpRequest();
                     if(!name.includes(".")){
                       name += ".";
@@ -513,11 +548,13 @@ NSWindow* web_window;
                 s.make_child(NodeType.STRING, {header:`let _coords = ${JSON.stringify(o)};`});
                 let imglinks = ctx.select_nodes({type:NodeType.IMGLINKS});
                 let o2 = {};
-                for(let il of imglinks){
+                for(let i = 0; i < imglinks.length; i++){
+                    const il = imglinks[i];
+                    o2[i] = {};
                     for(let ch of il.children){
                         if(ch.type != NodeType.STRING) continue;
                         let lead = ch.header.split('=')[0].trim();
-                        o2[lead] = ch.internal_id;
+                        o2[i][lead] = ch.internal_id;
                     }
                 }
                 s.make_child(NodeType.STRING, {header:`let _coords2 = ${JSON.stringify(o2)};`});
@@ -1479,6 +1516,10 @@ gdndc_error_func(void* _Nullable data, int type, const char*_Nonnull filename, i
                 get_scroll("left");
                 get_scroll("center");
                 get_scroll("right");
+                const documentState = {};
+                document.dispatchEvent(new CustomEvent('dnd:save-state', {detail:documentState}));
+                if(Object.keys(documentState).length)
+                    result.__document = documentState;
                 if(Object.keys(result).length){
                     return JSON.stringify(result);
                 }

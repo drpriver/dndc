@@ -9,6 +9,8 @@
 #include "dndc_types.h"
 #include "Utils/MStringBuilder.h"
 #include "Utils/msb_format.h"
+#include <stddef.h>
+#include <string.h>
 
 #ifndef warn_unused
 #if defined(__GNUC__) || defined(__clang__)
@@ -27,8 +29,8 @@
 //
 // dndc_funcs.h
 // ------------
-// Forward declarations of functions that are shared between components,
-// including the main run function.
+// Shared internal declarations and inline helpers, including the main run
+// function.
 //
 // This documents the internal API. For the external API, see dndc.h
 //
@@ -554,6 +556,57 @@ static inline
 warn_unused
 int
 add_link_from_pair(DndcContext* ctx, StringView kebabed, StringView value);
+
+// Inline Text Helpers
+// -------------------
+
+static inline
+_Bool
+dndc_inline_escapable(char c){
+    switch(c){
+        case '\\': case ':': case '|': case '[': case ']': return 1;
+        default: return 0;
+    }
+}
+
+static inline
+_Bool
+dndc_inline_is_escaped(const char* start, const char* p){
+    _Bool escaped = 0;
+    for(;p > start && p[-1] == '\\'; p--)
+        escaped = !escaped;
+    return escaped;
+}
+
+static inline
+const char*_Nullable
+dndc_inline_find(const char* start, const char* end, char delimiter){
+    for(const char *p = start; p < end; p++){
+        p = memchr(p, delimiter, (size_t)(end-p));
+        if(!p || !dndc_inline_is_escaped(start, p))
+            return p;
+    }
+    return NULL;
+}
+
+static inline
+const char*_Nullable
+dndc_table_pipe(const char* start, const char* end){
+    const char* pipe = dndc_inline_find(start, end, '|');
+    const char* p = start;
+    while(pipe){
+        const char* bracket = dndc_inline_find(p, pipe, '[');
+        if(!bracket)
+            return pipe;
+        const char* close = dndc_inline_find(bracket+1, end, ']');
+        if(!close)
+            return pipe;
+        p = close+1;
+        if(close > pipe)
+            pipe = dndc_inline_find(p, end, '|');
+    }
+    return NULL;
+}
 
 
 #ifdef __clang__

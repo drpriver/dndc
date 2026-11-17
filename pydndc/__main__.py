@@ -30,6 +30,7 @@ def main() -> None:
     parser.add_argument('--expand', action='store_true', help='Render to .dnd, after scripts and imports are resolved. Some documents may not be representable in this way. This does not format the output.')
     parser.add_argument('--md', '--markdown', action='store_true', help='Render to markdown instead of html.')
     parser.add_argument('--allow-js-write', action='store_true')
+    parser.add_argument('--no-css', action='store_true')
 
     args = parser.parse_args()
     run(**vars(args))
@@ -56,6 +57,7 @@ def run(
         suppress_warnings:bool,
         strip_spaces:bool,
         allow_js_write:bool=False,
+        no_css:bool=False,
     ) -> None:
     jsstuff: Any
     if jsargs is not None:
@@ -86,6 +88,8 @@ def run(
         flags |= pydndc.Flags.STRIP_WHITESPACE
     if allow_js_write:
         flags |= pydndc.Flags.ENABLE_JS_WRITE
+    if no_css:
+        flags |= pydndc.Flags.NO_CSS
 
     if not source:
         source = '<stdin>'

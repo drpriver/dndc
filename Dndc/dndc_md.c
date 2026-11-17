@@ -255,12 +255,25 @@ write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
     const char* text = header.text;
     size_t length = header.length;
     _Bool in_code_tag = 0; // we don't allow multiline code segments.
+    _Bool in_backtick = 0;
 
     for(size_t i = 0; i < length; i++){
         char c = text[i];
         switch(c){
+            case '\\':
+                if(!in_backtick && i+1 < length && dndc_inline_escapable(text[i+1])){
+                    if(!in_code_tag)
+                        msb_write_char(sb, '\\');
+                    msb_write_char(sb, text[++i]);
+                    break;
+                }
+                goto lDEFAULT;
+            case '`':
+                in_backtick = !in_backtick;
+                goto lDEFAULT;
             case '[':{
-                const char* closing_brace = memchr(text+i, ']', length-i);
+                if(in_backtick) goto lDEFAULT;
+                const char* closing_brace = dndc_inline_find(text+i+1, text+length, ']');
                 if(unlikely(!closing_brace)){
                     msb_write_char(sb, c);
                     break;
@@ -268,7 +281,7 @@ write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
                 const size_t link_length = closing_brace - (text+i);
                 size_t text_length = link_length-1;
                 // Check for '|'-delimited alias.
-                const char* alias = memchr(text+i+1, '|', link_length);
+                const char* alias = dndc_inline_find(text+i+1, closing_brace, '|');
                 if(likely(!alias)){
                     alias = text+i+1;
                 }

@@ -910,6 +910,7 @@ const char*_Nullable
 find_double_colon(const char* haystack, size_t length){
     if(length < 2)
         return NULL;
+    const char* start = haystack;
     const char* end = haystack + length;
     for(;;){
         const char* first = memchr(haystack, ':', end - haystack);
@@ -917,9 +918,9 @@ find_double_colon(const char* haystack, size_t length){
             return NULL;
         if(end - first < 2)
             return NULL;
-        if(first[1] == ':')
+        if(first[1] == ':' && !dndc_inline_is_escaped(start, first))
             return first;
-        haystack = first+2;
+        haystack = first+1;
     }
 }
 
@@ -967,6 +968,7 @@ const uint16_t*_Nullable
 find_double_colon_utf16(const uint16_t* haystack, size_t ncode_units){
     if(ncode_units < 2)
         return NULL;
+    const uint16_t* start = haystack;
     const uint16_t* end = haystack + ncode_units;
     for(;;){
         const uint16_t* first = mem_utf16(haystack, u':', end - haystack);
@@ -974,9 +976,16 @@ find_double_colon_utf16(const uint16_t* haystack, size_t ncode_units){
             return NULL;
         if(end - first < 2)
             return NULL;
-        if(first[1] == u':')
-            return first;
-        haystack = first+2;
+        if(first[1] == u':'){
+            _Bool escaped = 0;
+            const uint16_t* p = first;
+            while(p > start && p[-1] == u'\\'){
+                escaped = !escaped;
+                p--;
+            }
+            if(!escaped) return first;
+        }
+        haystack = first+1;
     }
 }
 

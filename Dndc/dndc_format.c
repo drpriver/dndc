@@ -51,15 +51,8 @@ format_next_token(StringView* rest){
     size_t i = 0;
     // Treat links as a single token.
     if(sv.length && sv.text[0] == '['){
-        for(; i < sv.length; i++){
-            switch(sv.text[i]){
-                case ']':
-                    goto breakloop;
-                default:
-                    continue;
-            }
-        }
-        breakloop:;
+        const char* close = dndc_inline_find(sv.text+1, sv.text+sv.length, ']');
+        i = close ? (size_t)(close-sv.text) : sv.length;
     }
     for(; i < sv.length; i++){
         switch(sv.text[i]){
@@ -324,8 +317,11 @@ void
 format_header(DndcContext* ctx, MStringBuilder* sb, NodeHandle nh, int indent){
     Node* node = get_node(ctx, nh);
     msb_write_nchar(sb, ' ', indent);
-    if(node->header.length)
+    if(node->header.length){
         msb_write_str(sb, node->header.text,node->header.length);
+        if(node->header.text[node->header.length-1] == ':' || dndc_inline_is_escaped(node->header.text, node->header.text+node->header.length))
+            msb_write_char(sb, ' ');
+    }
     msb_write_char(sb, ':');
     msb_write_char(sb, ':');
     const StringView* alias = &NODETYPE_TO_NODE_ALIASES[node->type];

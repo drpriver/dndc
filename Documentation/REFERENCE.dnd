@@ -1,10 +1,6 @@
 ::comment
   Some of this text looks pretty ugly due to all the <tt>tags. This document
   format is not optimized for rendering code, so that is an acceptable tradeoff.
-  Some spots have this weird <tt>:</tt><tt>:nodename</tt> pattern going
-  on. That is so that the parser doesn't see a double colon and issue an error
-  due to an illegal node. Again, it is extremely rare to actually talk about the
-  nodes themselves in your code, so it is not really a problem.
 ::toc .left
 ::md .right
   Reference::title
@@ -31,6 +27,16 @@
       - The first attribute is "greeting", with no associated value
       - The second attribute is "bonjour" with an associated value of "monde"
       - These attributes can be retrieved from javascript.
+
+  Inline Escapes::md .node #id(inline-escapes)
+    A backslash quotes a colon, pipe, opening or closing square bracket, or
+    another backslash in prose and headings. For example:
+
+    ::pre #noid
+      std\::vector
+      \[literal brackets\]
+      a\|b
+      \\
 
   Links::md .node #id(links-concept)
     In almost any place that text can go, text including a link can go. Links

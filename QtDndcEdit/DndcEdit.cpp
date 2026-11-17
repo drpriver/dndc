@@ -1,11 +1,20 @@
 #include "DndcEdit.h"
+#include <utility>
+#include <memory>
 #include <Dndc/dndc.h>
 #include <Dndc/dndc_ast.h>
 #include <QtCore/QFileSystemWatcher>
 #include <QtCore/QRegularExpressionMatch>
 #include <QtCore/QSettings>
+#include <QtCore/QPointer>
 #include <QtGui/QDesktopServices>
 #include <QtGui/QPalette>
+#include <QtGui/QScreen>
+#include <QtGui/QWindow>
+#include <QtGui/QMoveEvent>
+#ifdef __APPLE__
+#include <dlfcn.h>
+#endif
 #if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
 #include <QtWebEngineCore/QWebEngineProfile>
 #else
@@ -18,6 +27,7 @@
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QStyle>
+#include <QtWidgets/QScrollBar>
 #include "compiler_warnings.h"
 // #pragma GCC diagnostic ignored "-Wunused-lambda-capture"
 #ifdef __GNUC__
@@ -32,7 +42,6 @@ QString LOGS_FOLDER;
 QFont* FONT;
 QFontMetrics* FONTMETRICS;
 int EIGHTYCHARS;
-bool EDITOR_ON_LEFT = true;
 bool PRINT_STATS = false;
 QSettings* SETTINGS;
 QFileSystemWatcher* watcher;
@@ -80,95 +89,130 @@ DNDC_LOGIT(QtMsgType type, const QMessageLogContext& context, const QString& msg
 
 QString COORD_HELPER_SCRIPT = QS(
     "::script\n"
-    "  document.addEventListener('DOMContentLoaded', function(){\n"
-    "    const svgs = document.getElementsByTagName('svg');\n"
+    "  document.addEventListener(\"DOMContentLoaded\", function(){\n"
+    "    const svgs = document.getElementsByTagName(\"svg\");\n"
     "    let moving = false;\n"
+    "    function mapPoint(svg, event){\n"
+    "      const matrix = svg.getScreenCTM();\n"
+    "      if(!matrix) return null;\n"
+    "      const point = svg.createSVGPoint();\n"
+    "      point.x = event.clientX;\n"
+    "      point.y = event.clientY;\n"
+    "      return point.matrixTransform(matrix.inverse());\n"
+    "    }\n"
     "    for(let i = 0; i < svgs.length; i++){\n"
     "      const svg = svgs[i];\n"
-    "      const texts = svg.getElementsByTagName('text');\n"
-    "      const aa = document.querySelectorAll('svg a');\n"
-    "      for(let text of texts){\n"
-    "          text.parentNode.addEventListener('click', function(e){\n"
+    "      const texts = svg.getElementsByTagName(\"text\");\n"
+    "      let suppressClick = false;\n"
+    "      svg.addEventListener('pointerdown', function(){ suppressClick = false; }, true);\n"
+    "      svg.addEventListener('click', function(e){\n"
+    "          if(!suppressClick) return;\n"
+    "          suppressClick = false;\n"
+    "          e.preventDefault();\n"
+    "          e.stopImmediatePropagation();\n"
+    "      }, true);\n"
+    "      for(const anchor of texts){\n"
+    "          const link = anchor.parentNode;\n"
+    "          link.addEventListener(\"click\", function(e){\n"
     "              e.preventDefault();\n"
     "              e.stopPropagation();\n"
     "          });\n"
-    "      }\n"
-    "      for(let i = 0; i < texts.length; i++){\n"
-    "          let anchor = texts[i];\n"
-    "          anchor.addEventListener('pointerdown', function(e){\n"
+    "          link.addEventListener(\"pointerdown\", function(e){\n"
+    "              if(e.button !== 0 || moving) return;\n"
+    "              const start = mapPoint(svg, e);\n"
+    "              if(!start) return;\n"
     "              e.stopPropagation();\n"
     "              e.preventDefault();\n"
-    "              if(moving) return;\n"
     "              moving = true;\n"
-    "              let svg = anchor.parentElement.parentElement;\n"
-    "              let sx = svg.width.baseVal.value / svg.viewBox.baseVal.width;\n"
-    "              let sy = svg.height.baseVal.value / svg.viewBox.baseVal.height;\n"
-    "              let org_x = anchor.transform.baseVal[0].matrix.e | 0;\n"
-    "              let org_y = anchor.transform.baseVal[0].matrix.f | 0;\n"
-    "              let start_x = e.screenX;\n"
-    "              let start_y = e.screenY;\n"
+    "              const pointerId = e.pointerId;\n"
+    "              // Move decorations with the text, including marker backgrounds.\n"
+    "              const transforms = Array.from(link.children)\n"
+    "                  .filter(child => child.transform && child.transform.baseVal.numberOfItems)\n"
+    "                  .map(child => {\n"
+    "                      const matrix = child.transform.baseVal.consolidate().matrix;\n"
+    "                      return {matrix, x: matrix.e, y: matrix.f};\n"
+    "                  });\n"
+    "              let changed = false;\n"
     "              function move(e){\n"
-    "                  let diffx = 1/sx*(e.screenX - start_x);\n"
-    "                  let diffy = 1/sy*(e.screenY - start_y);\n"
-    "                  start_x = e.screenX;\n"
-    "                  start_y = e.screenY;\n"
-    "                  anchor.transform.baseVal[0].matrix.e += diffx;\n"
-    "                  anchor.transform.baseVal[0].matrix.f += diffy;\n"
+    "                  if(e.pointerId !== pointerId) return;\n"
+    "                  const point = mapPoint(svg, e);\n"
+    "                  if(!point) return;\n"
+    "                  const dx = point.x - start.x;\n"
+    "                  const dy = point.y - start.y;\n"
+    "                  changed = dx !== 0 || dy !== 0;\n"
+    "                  for(const t of transforms){\n"
+    "                      t.matrix.e = t.x + dx;\n"
+    "                      t.matrix.f = t.y + dy;\n"
+    "                  }\n"
     "              }\n"
-    "              svg.addEventListener('pointermove', move);\n"
-    "              function remove(e){\n"
+    "              function finish(e){\n"
+    "                  if(e.pointerId !== pointerId) return;\n"
+    "                  if(e.type === 'pointerup') move(e);\n"
+    "                  suppressClick = true;\n"
     "                  moving = false;\n"
     "                  e.stopPropagation();\n"
     "                  e.preventDefault();\n"
-    "                  svg.removeEventListener('pointermove', move);\n"
-    "                  let a = anchor.parentElement;\n"
-    "                  let href = a.href.baseVal;\n"
-    "                  let internal_id = 0;\n"
-    "                  let sp = href.split('#');\n"
-    "                  if(sp.length > 1)\n"
-    "                      internal_id = _coords[sp[1]];\n"
-    "                  if(!internal_id)\n"
-    "                      internal_id = _coords2[href];\n"
-    "                  if(!internal_id){\n"
-    "                      let t = anchor.childNodes[0].textContent.trim();\n"
-    "                      internal_id = _coords2[t];\n"
+    "                  window.removeEventListener('pointermove', move);\n"
+    "                  window.removeEventListener('pointerup', finish);\n"
+    "                  window.removeEventListener('pointercancel', finish);\n"
+    "                  if(link.hasPointerCapture(pointerId)) link.releasePointerCapture(pointerId);\n"
+    "                  if(e.type === 'pointercancel'){\n"
+    "                      for(const t of transforms){\n"
+    "                          t.matrix.e = t.x;\n"
+    "                          t.matrix.f = t.y;\n"
+    "                      }\n"
+    "                      return;\n"
     "                  }\n"
+    "                  if(!changed) return;\n"
+    "                  const href = link.href.baseVal;\n"
+    "                  let internal_id = 0;\n"
+    "                  const sp = href.split('#');\n"
+    "                  if(sp.length > 1) internal_id = _coords[sp[1]];\n"
+    "                  const mapCoords = _coords2[svg.dataset.coordMap] || {};\n"
+    "                  if(!internal_id) internal_id = mapCoords[href];\n"
+    "                  if(!internal_id) internal_id = mapCoords[anchor.textContent.trim()];\n"
     "                  if(!internal_id) return;\n"
-    "                  let new_x = anchor.transform.baseVal[0].matrix.e | 0;\n"
-    "                  let new_y = anchor.transform.baseVal[0].matrix.f | 0;\n"
+    "                  const matrix = anchor.transform.baseVal.consolidate().matrix;\n"
+    "                  const new_x = Math.round(matrix.e);\n"
+    "                  const new_y = Math.round(matrix.f);\n"
     "                  const combo = `${internal_id}.${new_x}.${new_y}`;\n"
-    "                  let request = new XMLHttpRequest();\n"
-    "                  request.open('PUT', 'dnd:///roommove/'+combo, true);\n"
+    "                  const request = new XMLHttpRequest();\n"
+    "                  request.open(\"PUT\", \"dnd:///roommove/\"+combo, true);\n"
     "                  request.send();\n"
     "              }\n"
-    "              window.addEventListener('pointerup', remove, {once:true});\n"
+    "              link.setPointerCapture(pointerId);\n"
+    "              window.addEventListener('pointermove', move);\n"
+    "              window.addEventListener('pointerup', finish);\n"
+    "              window.addEventListener('pointercancel', finish);\n"
     "          });\n"
     "      }\n"
+    "      svg.dataset.coordMap = i;\n"
     "      let text_height = 0;\n"
     "      if(texts.length){\n"
     "        const first_text = texts[0];\n"
     "        text_height = first_text.getBBox().height || 0;\n"
     "      }\n"
-    "      svg.addEventListener('click', function(e){\n"
+    "      svg.addEventListener(\"click\", function(e){\n"
     "        let name = prompt('Enter Room Name');\n"
     "        if(name){\n"
-    "          const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;\n"
-    "          const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height;\n"
-    "          const rect = e.currentTarget.getBoundingClientRect();\n"
-    "          const true_x = ((e.clientX - rect.x)/ x_scale) | 0;\n"
-    "          const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;\n"
+    "          const point = mapPoint(svg, e);\n"
+    "          if(!point) return;\n"
+    "          const baseline = texts.length ? getComputedStyle(texts[0]).dominantBaseline : \"\";\n"
+    "          const offset = baseline === 'middle' || baseline === 'central' ? 0 : text_height/2;\n"
+    "          const true_x = Math.round(point.x);\n"
+    "          const true_y = Math.round(point.y + offset);\n"
     "          let request = new XMLHttpRequest();\n"
-    "          if(!name.includes('.')){\n"
-    "            name += '.';\n"
+    "          if(!name.includes(\".\")){\n"
+    "            name += \".\";\n"
     "          }\n"
-    "          request.open('PUT', 'dnd:///roomclick/'+name+'/'+true_x+'.'+true_y, true);\n"
+    "          request.open(\"PUT\", \"dnd:///roomclick/\"+name+\"/\"+true_x+\".\"+true_y, true);\n"
     "          request.send();\n"
     "        }\n"
     "      });\n"
     "    }\n"
     "  });\n"
     "::js\n"
-    "  let coords = ctx.select_nodes({attributes:['coord']});\n"
+    "  let coords = ctx.select_nodes({attributes:[\"coord\"]});\n"
     "  let s = ctx.root.make_child(NodeType.SCRIPTS);\n"
     "  let o = {};\n"
     "  for(let co of coords){\n"
@@ -177,11 +221,13 @@ QString COORD_HELPER_SCRIPT = QS(
     "  s.make_child(NodeType.STRING, {header:`let _coords = ${JSON.stringify(o)};`});\n"
     "  let imglinks = ctx.select_nodes({type:NodeType.IMGLINKS});\n"
     "  let o2 = {};\n"
-    "  for(let il of imglinks){\n"
+    "  for(let i = 0; i < imglinks.length; i++){\n"
+    "      const il = imglinks[i];\n"
+    "      o2[i] = {};\n"
     "      for(let ch of il.children){\n"
     "          if(ch.type != NodeType.STRING) continue;\n"
     "          let lead = ch.header.split('=')[0].trim();\n"
-    "          o2[lead] = ch.internal_id;\n"
+    "          o2[i][lead] = ch.internal_id;\n"
     "      }\n"
     "  }\n"
     "  s.make_child(NodeType.STRING, {header:`let _coords2 = ${JSON.stringify(o2)};`});\n"
@@ -191,7 +237,10 @@ QString SCROLL_RESTO_SCRIPT = QS(
     "::script\n"
     "    document.addEventListener('DOMContentLoaded', function(){\n"
     "        for(let [key, value] of Object.entries(SCROLLRESTO)){\n"
-    "            if(key == 'html'){\n"
+    "            if(key == '__document'){\n"
+    "                document.dispatchEvent(new CustomEvent('dnd:restore-state', {detail:value}));\n"
+    "            }\n"
+    "            else if(key == 'html'){\n"
     "                const html = document.getElementsByTagName('html')[0];\n"
     "                if(html){\n"
     "                    html.scrollLeft = value[0];\n"
@@ -243,6 +292,10 @@ QString GET_SCROLL_POSITION_SCRIPT = QS(
     "    get_scroll('left');\n"
     "    get_scroll('center');\n"
     "    get_scroll('right');\n"
+    "    const documentState = {};\n"
+    "    document.dispatchEvent(new CustomEvent('dnd:save-state', {detail:documentState}));\n"
+    "    if(Object.keys(documentState).length)\n"
+    "        result.__document = documentState;\n"
     "    if(Object.keys(result).length){\n"
     "        return JSON.stringify(result);\n"
     "    }\n"
@@ -259,10 +312,129 @@ void LineNumberArea::paintEvent(QPaintEvent* event){
 
 Page*
 get_current_page(void){
+    if(auto editor = dynamic_cast<EditorWindow*>(QApplication::activeWindow()))
+        return editor->page;
     auto page_ = TABS->currentWidget();
     if(!page_) return nullptr;
     auto page = qobject_cast<Page*>(page_);
     return page;
+}
+
+#ifdef __APPLE__
+static void* cocoa_selector(const char* name){
+    static auto sel = reinterpret_cast<void*(*)(const char*)>(dlsym(RTLD_DEFAULT, "sel_registerName"));
+    return sel(name);
+}
+static void* cocoa_window(QWidget* widget){
+    static auto send = reinterpret_cast<void*(*)(void*, void*)>(dlsym(RTLD_DEFAULT, "objc_msgSend"));
+    return send(reinterpret_cast<void*>(widget->winId()), cocoa_selector("window"));
+}
+#endif
+
+EditorWindow::EditorWindow(Page* p, QWidget* parent):
+    QMainWindow(parent, Qt::Window | Qt::CustomizeWindowHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint),
+    page(p), owner(parent), owner_position(parent->pos())
+{
+    setAttribute(Qt::WA_QuitOnClose, false);
+    setCentralWidget(page->editor_holder);
+    setWindowTitle(page->filename + QS(" — Editor[*]"));
+    setWindowModified(page->textedit->document()->isModified());
+    connect(page->textedit->document(), &QTextDocument::modificationChanged, this, &QWidget::setWindowModified);
+    auto screen = owner->windowHandle() ? owner->windowHandle()->screen() : QGuiApplication::primaryScreen();
+    auto area = screen->availableGeometry();
+    resize(qMin(800, area.width()), qMin(1000, area.height()));
+    move(area.center() - rect().center());
+    owner->installEventFilter(this);
+    auto escape = new QAction(this);
+    escape->setShortcut(QKeySequence(Qt::Key_Escape));
+    escape->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    connect(escape, &QAction::triggered, page, &Page::hide_editor);
+    addAction(escape);
+}
+EditorWindow::~EditorWindow(){
+    detach();
+    owner->removeEventFilter(this);
+}
+void EditorWindow::attach(){
+#ifdef __APPLE__
+    if(!attached){
+        static auto send = reinterpret_cast<void(*)(void*, void*, void*, long)>(dlsym(RTLD_DEFAULT, "objc_msgSend"));
+        send(cocoa_window(owner), cocoa_selector("addChildWindow:ordered:"), cocoa_window(this), 1);
+        attached = true;
+    }
+#endif
+}
+void EditorWindow::detach(){
+#ifdef __APPLE__
+    if(attached){
+        static auto send = reinterpret_cast<void(*)(void*, void*, void*)>(dlsym(RTLD_DEFAULT, "objc_msgSend"));
+        send(cocoa_window(owner), cocoa_selector("removeChildWindow:"), cocoa_window(this));
+        attached = false;
+    }
+#endif
+}
+void EditorWindow::sync_visibility(bool focus){
+    bool visible = page->editor_open && page->isVisible() && owner->isVisible() && !owner->isMinimized();
+    if(visible){
+        if(!isVisible()){
+            setAttribute(Qt::WA_ShowWithoutActivating, !focus);
+            bool on_screen = false;
+            for(auto screen: QGuiApplication::screens())
+                on_screen |= screen->availableGeometry().intersects(frameGeometry());
+            if(!on_screen){
+                auto screen = owner->windowHandle()->screen();
+                move(screen->availableGeometry().center() - rect().center());
+            }
+            show();
+            attach();
+        }
+        if(focus){
+            raise();
+            activateWindow();
+            page->textedit->setFocus();
+        }
+    }
+    else {
+        detach();
+        hide();
+    }
+}
+void EditorWindow::closeEvent(QCloseEvent* event){
+    page->hide_editor();
+    event->ignore();
+}
+bool EditorWindow::eventFilter(QObject* watched, QEvent* event){
+    if(watched == owner){
+#ifndef __APPLE__
+        if(event->type() == QEvent::Move){
+            if(!owner->isMinimized()){
+                move(pos() + owner->pos() - owner_position);
+                owner_position = owner->pos();
+            }
+        }
+#endif
+        if(event->type() == QEvent::Hide || event->type() == QEvent::Show || event->type() == QEvent::WindowStateChange)
+            QTimer::singleShot(0, this, [this](){ sync_visibility(); });
+        else if(event->type() == QEvent::WindowActivate && isVisible())
+            raise();
+    }
+    return QMainWindow::eventFilter(watched, event);
+}
+static void sync_editors(){
+    auto current = qobject_cast<Page*>(TABS->currentWidget());
+    for(auto page: std::as_const(ALL_WINDOWS))
+        if(page != current && page->editor_window)
+            page->editor_window->sync_visibility();
+    if(current && current->editor_window)
+        current->editor_window->sync_visibility(QGuiApplication::applicationState() == Qt::ApplicationActive);
+}
+static void close_tab(int index){
+    auto page = qobject_cast<Page*>(TABS->widget(index));
+    if(!page || !page->save()) return;
+    page->dispose_editor();
+    ALL_WINDOWS.remove(page->filename);
+    TABS->removeTab(index);
+    page->deleteLater();
 }
 
 MainWindow::MainWindow(QWidget *parent)
@@ -277,10 +449,15 @@ MainWindow::~MainWindow()
 void MainWindow::closeEvent(QCloseEvent* e){
     QStringList filenames = QStringList(ALL_WINDOWS.keys());
     SETTINGS->setValue(QS("filenames"), filenames);
-    SETTINGS->setValue(QS("editor_on_left"), EDITOR_ON_LEFT);
     SETTINGS->setValue(QS("window_geometry"), saveGeometry());
-    for(auto page: qAsConst(ALL_WINDOWS))
-        page->save();
+    for(auto page: std::as_const(ALL_WINDOWS)){
+        if(!page->save()){
+            e->ignore();
+            return;
+        }
+    }
+    for(auto page: std::as_const(ALL_WINDOWS))
+        page->dispose_editor();
     e->accept();
 }
 
@@ -291,9 +468,6 @@ MainWindow::restore_everything(){
      restoreGeometry(SETTINGS->value(QS("window_geometry")).toByteArray());
     else
         showMaximized();
-    auto von_left = SETTINGS->value(QS("editor_on_left"));
-    if(von_left.canConvert<bool>())
-        EDITOR_ON_LEFT = von_left.toBool();
     auto vfiles = SETTINGS->value(QS("filenames"));
     if(vfiles.canConvert<QStringList>()){
         QStringList l = vfiles.toStringList();
@@ -357,7 +531,6 @@ MainWindow::add_menus(void){
             if(!page) return;
             page->export_as_html();
             });
-    action->setShortcut(QKeySequence(QS("Ctrl+e")));
     filemenu->addAction(action);
 
     action = new QAction(QS("&Close"), this);
@@ -367,9 +540,10 @@ MainWindow::add_menus(void){
                 close();
                 return;
                 }
-            page->save();
-            ALL_WINDOWS.remove(page->filename);
-            page->setParent(nullptr);
+            if(auto editor = dynamic_cast<EditorWindow*>(QApplication::activeWindow()))
+                editor->page->hide_editor();
+            else
+                close_tab(TABS->currentIndex());
             });
     action->setShortcut(QKeySequence(QS("Ctrl+w")));
     filemenu->addAction(action);
@@ -393,7 +567,7 @@ MainWindow::add_menus(void){
             QFont font = QFontDialog::getFont(&ok, *FONT, this);
             if(!ok) return;
             *FONT = font;
-            for(auto page: qAsConst(ALL_WINDOWS))
+            for(auto page: std::as_const(ALL_WINDOWS))
                 page->textedit->setFont(*FONT);
             });
     editmenu->addAction(action);
@@ -433,31 +607,14 @@ MainWindow::add_menus(void){
     #undef INSERT
 
     auto viewmenu = menubar->addMenu(QS("View"));
-    action = new QAction("&Toggle Editors", this);
+    action = new QAction("&Edit it", this);
+    action->setShortcut(QKeySequence(QS("Ctrl+e")));
     connect(action, &QAction::triggered, [](){
-        bool first_is_hidden = false;
-        bool checked = false;
-        for(auto page: qAsConst(ALL_WINDOWS)){
-            if(!checked){
-                checked = true;
-                first_is_hidden = page->editor_holder->isHidden();
-            }
-            if(first_is_hidden)
-                page->show_editor();
-            else
-                page->hide_editor();
-            }
-        });
-    viewmenu->addAction(action);
-
-    action = new QAction("&Flip Editors", this);
-    connect(action, &QAction::triggered, [](){
-        for(auto page: qAsConst(ALL_WINDOWS)){
-            if(EDITOR_ON_LEFT) page->put_editor_right();
-            else page->put_editor_left();
-            }
-        EDITOR_ON_LEFT = !EDITOR_ON_LEFT;
-        });
+        auto page = get_current_page();
+        if(!page) return;
+        if(page->editor_open) page->hide_editor();
+        else page->show_editor();
+    });
     viewmenu->addAction(action);
 
     action = new QAction("&Refresh Highlighting", this);
@@ -510,7 +667,7 @@ MainWindow::add_menus(void){
             dndc_filecache_clear(b64cache);
             dndc_filecache_clear(textcache);
             QWebEngineProfile::defaultProfile()->clearHttpCache();
-            for(auto page: qAsConst(ALL_WINDOWS))
+            for(auto page: std::as_const(ALL_WINDOWS))
                 page->update_html();
         });
     developmenu->addAction(action);
@@ -551,6 +708,42 @@ DndEditor::DndEditor(QWidget* parent): QPlainTextEdit(parent){
 }
 DndEditor::~DndEditor(){
 }
+
+void
+DndEditor::replace_source(QString text){
+    if(isReadOnly()) return;
+    if(text.endsWith('\n')) text.chop(1);
+    const auto old = toPlainText();
+    if(old == text) return;
+    int start = 0;
+    while(start < old.size() && start < text.size() && old[start] == text[start]) start++;
+    if(start && old[start-1].isHighSurrogate()) start--;
+    int suffix = 0;
+    while(suffix < old.size()-start && suffix < text.size()-start &&
+          old[old.size()-suffix-1] == text[text.size()-suffix-1]) suffix++;
+    if(suffix && old[old.size()-suffix].isLowSurrogate()) suffix--;
+    const int old_end = old.size()-suffix;
+    const int new_end = text.size()-suffix;
+    auto cursor = textCursor();
+    const int position = cursor.position(), anchor = cursor.anchor();
+    const int vertical = verticalScrollBar()->value(), horizontal = horizontalScrollBar()->value();
+    cursor.beginEditBlock();
+    cursor.setPosition(start);
+    cursor.setPosition(old_end, QTextCursor::KeepAnchor);
+    cursor.insertText(text.mid(start, new_end-start));
+    cursor.endEditBlock();
+    auto map_position = [=](int pos){
+        if(pos <= start) return pos;
+        if(pos >= old_end) return pos + new_end-old_end;
+        return start + qMin(pos-start, new_end-start);
+    };
+    cursor.setPosition(map_position(anchor));
+    cursor.setPosition(map_position(position), QTextCursor::KeepAnchor);
+    setTextCursor(cursor);
+    verticalScrollBar()->setValue(vertical);
+    horizontalScrollBar()->setValue(horizontal);
+}
+
 void
 DndEditor::update_syntax(void){
     auto text = toPlainText();
@@ -796,16 +989,16 @@ DndEditor::alter_indent(bool indent){
 
 void
 DndEditor::contextMenuEvent(QContextMenuEvent* event){
-    auto menu = createStandardContextMenu();
+    std::unique_ptr<QMenu> menu(createStandardContextMenu());
     QAction* action;
-    action = new QAction(QS("Indent"), menu);
+    action = new QAction(QS("Indent"), menu.get());
     connect(action, &QAction::triggered, [this](){
         alter_indent(true);
         });
     action->setShortcut(QKeySequence(QS("Ctrl+>")));
     menu->insertAction(menu->actions()[7], action);
 
-    action = new QAction(QS("Dedent"), menu);
+    action = new QAction(QS("Dedent"), menu.get());
     connect(action, &QAction::triggered, [this](){
         alter_indent(false);
         });
@@ -908,11 +1101,14 @@ DndWebPage::acceptNavigationRequest(const QUrl& url, QWebEnginePage::NavigationT
             QDesktopServices::openUrl(url);
             return false;
         }
-        if(path.endsWith(QS(".html"))){
+        if(path.endsWith(QS(".dnd")) || path.endsWith(QS(".html"))){
             #if defined(_WIN32)
-            path = path.right(path.length()-1);
+            if(path.startsWith('/') && path.size() > 2 && path[2] == ':')
+                path.remove(0, 1);
             #endif
-            auto filepath = QDir::cleanPath(path.left(path.length()-5)+QS(".dnd"));
+            if(path.endsWith(QS(".html")))
+                path = path.left(path.length()-5) + QS(".dnd");
+            auto filepath = QDir::cleanPath(path);
             auto info = QFileInfo(filepath);
             if(info.exists())
                 add_tab(filepath);
@@ -967,6 +1163,10 @@ create_caches(void){
         DndcStringView sv = {(size_t)bytes.length(), bytes.data()};
         dndc_filecache_remove(b64cache, sv);
         dndc_filecache_remove(textcache, sv);
+        if(QFileInfo::exists(path) && !watcher->files().contains(path))
+            watcher->addPath(path);
+        for(auto page: std::as_const(ALL_WINDOWS))
+            page->file_changed(path);
     });
 }
 
@@ -992,7 +1192,7 @@ change_coord(int id, int x, int y){
     DndcLongString outstring;
     err = dndc_ctx_format_tree(ctx.ctx, &outstring);
     if(err) return;
-    page->textedit->setPlainText(QString::fromUtf8(outstring.text, outstring.length));
+    page->textedit->replace_source(QString::fromUtf8(outstring.text, outstring.length));
     dndc_free_string(outstring);
 }
 
@@ -1002,7 +1202,7 @@ append_room_with_name_at(const QString& name, int x, int y){
     if(!page) return;
     if(page->textedit->isReadOnly())
         return;
-    page->textedit->appendPlainText(QS("\n%1 ::md .room @coord(%2,%2)\n").arg(!name.contains('.')?name+'.':name).arg(x).arg(y));
+    page->textedit->appendPlainText(QS("\n%1 ::md .room @coord(%2,%3)\n").arg(!name.contains('.')?name+'.':name).arg(x).arg(y));
     page->textedit->setFocus(Qt::FocusReason::NoFocusReason);
 }
 
@@ -1011,7 +1211,6 @@ scroll_to_id(QString nid){
     // qDebug() << "nid: " << nid << "\n";
     auto page = get_current_page();
     if(!page) return;
-    if(page->textedit->isReadOnly()) return;
     auto text = page->textedit->toPlainText() + QS("\n");
     auto textbytes = text.toUtf8();
     DndcStringView textsv = {(size_t)textbytes.size(), textbytes.data()};
@@ -1028,12 +1227,7 @@ scroll_to_id(QString nid){
     err = dndc_node_location(ctx.ctx, target, &loc);
     if(err) return;
     // qDebug() << "loc.row: " << loc.row;
-    page->textedit->moveCursor(QTextCursor::End);
-    auto cursor = QTextCursor(page->textedit->document()->findBlockByLineNumber(loc.row-1));
-    page->textedit->setTextCursor(cursor);
-}
-
-void add_tab(const QString& filename){
+    page->scroll_to_line(loc.row);
 }
 
 Page::Page(QWidget*parent): QSplitter(parent) {
@@ -1048,7 +1242,18 @@ Page::Page(QWidget*parent): QSplitter(parent) {
     textedit->setMinimumSize(EIGHTYCHARS*1.01, 200);
     dirname = QS(".");
     connect(textedit->document(), &QTextDocument::contentsChanged, this, &Page::contents_changed);
-    error_display = new QPlainTextEdit(this);
+    error_display = new QTextBrowser(this);
+    error_display->setOpenLinks(false);
+    connect(error_display, &QTextBrowser::anchorClicked, this, [](const QUrl& url){
+        auto filename = url.toLocalFile();
+        add_tab(filename);
+        auto page = ALL_WINDOWS.value(filename, nullptr);
+        auto location = url.fragment().split(':');
+        if(page && location.size() == 2){
+            page->show_editor();
+            page->scroll_to_line(location[0].toInt(), location[1].toInt());
+        }
+    });
     error_display->setFont(*FONT);
     error_display->setReadOnly(true);
     editor_holder = new QSplitter(this);
@@ -1059,9 +1264,15 @@ Page::Page(QWidget*parent): QSplitter(parent) {
     checks.append(new QCheckBox(QS("Read-only"), this));
     checks.append(new QCheckBox(QS("Coord helper"), this));
     checks[0]->setCheckState(Qt::CheckState::Checked);
-    connect(checks[0], &QCheckBox::stateChanged, this, &Page::auto_apply_changed);
-    connect(checks[1], &QCheckBox::stateChanged, this, &Page::read_only_changed);
-    connect(checks[2], &QCheckBox::stateChanged, this, &Page::coord_helper_changed);
+    connect(checks[0], &QCheckBox::toggled, this, [this](bool checked){
+        auto_apply_changed(checked ? Qt::Checked : Qt::Unchecked);
+    });
+    connect(checks[1], &QCheckBox::toggled, this, [this](bool checked){
+        read_only_changed(checked ? Qt::Checked : Qt::Unchecked);
+    });
+    connect(checks[2], &QCheckBox::toggled, this, [this](bool checked){
+        coord_helper_changed(checked ? Qt::Checked : Qt::Unchecked);
+    });
     checkholder = new QWidget(this);
     checkholder_layout = new QHBoxLayout(checkholder);
     for(auto check : checks)
@@ -1072,27 +1283,13 @@ Page::Page(QWidget*parent): QSplitter(parent) {
     editor_holder->setStretchFactor(0, 16);
     editor_holder->setStretchFactor(1, 1);
     editor_holder->setStretchFactor(2, 1);
-    bool left = EDITOR_ON_LEFT;
-    bool show_errors = true;
-    // Aren't these globals? Why am I doing this
-    if(ALL_WINDOWS.size()){
-        auto first_window = ALL_WINDOWS.constKeyValueBegin();
-        left = (*first_window).second->editor_is_on_left;
-        show_errors = (*first_window).second->show_errors;
-    }
-    if(left)
-        put_editor_left();
-    else
-        put_editor_right();
-    if(show_errors)
-        show_error();
-    else
-        hide_error();
-    handle(1)->installEventFilter(new SplitterHandler(this));
+    editor_holder->setParent(nullptr);
+    editor_holder->hide();
+    addWidget(web);
 }
 
 Page::~Page(){
-    // qDebug("Page dtor");
+    dispose_editor();
 }
 
 void
@@ -1137,15 +1334,15 @@ Page::read_only_changed(int state){
         textedit->setReadOnly(false);
     if(state == Qt::CheckState::Checked)
         textedit->setReadOnly(true);
+    if(coord_helper) update_html();
 }
 void
 Page::coord_helper_changed(int state){
     if(state == Qt::CheckState::Unchecked)
         coord_helper = false;
-    if(state == Qt::CheckState::Checked){
+    if(state == Qt::CheckState::Checked)
         coord_helper = true;
-        update_html();
-    }
+    update_html();
 }
 void
 Page::file_changed(const QString& path){
@@ -1174,10 +1371,15 @@ Page::display_dndc_error(int error_type, const QString& filename, int row, int c
         textedit->error_line = row;
     const auto& et = error_types[error_type];
     if(error_type == DNDC_STATISTIC_MESSAGE){
-        error_display->appendPlainText(et + QS(": ") + message);
+        error_display->append((et + QS(": ") + message).toHtmlEscaped());
     }
     else {
-        error_display->appendPlainText(QS("%1:%2:%3: %4").arg(et).arg(row+1).arg(col+1).arg(message));
+        auto path = filename.isEmpty() ? this->filename : filename;
+        if(QDir::isRelativePath(path)) path = QDir(dirname).absoluteFilePath(path);
+        auto url = QUrl::fromLocalFile(QDir::cleanPath(path));
+        url.setFragment(QS("%1:%2").arg(row+1).arg(col));
+        error_display->append(QS("<a href=\"%1\">%2:%3:%4</a>: %5")
+            .arg(url.toString().toHtmlEscaped()).arg(et).arg(row+1).arg(col+1).arg(message.toHtmlEscaped()));
     }
 }
 
@@ -1194,22 +1396,23 @@ Page::get_text_for_preview(void){
                     "    function add_interceptor(a){\n"
                     "      let href = a.href;\n"
                     "      if(href.baseVal) href = href.baseVal;\n"
-                    "      let split = href.split('#');\n"
-                    "      if(split.length > 1){\n"
+                    "      const targetURL = new URL(href, document.baseURI);\n"
+                    "      const currentURL = new URL(document.baseURI);\n"
+                    "      const target = decodeURIComponent(targetURL.hash.slice(1));\n"
+                    "      targetURL.hash = currentURL.hash = '';\n"
+                    "      if(target && targetURL.href === currentURL.href){\n"
                     "        a.onclick = function(e){\n"
-                    "          let target = split[1];\n"
                     "          let t = document.getElementById(target);\n"
                     "          if(t){\n"
                     "            t.scrollIntoView();\n"
                     "            e.preventDefault();\n"
                     "            e.stopPropagation();\n"
                     "            let request = new XMLHttpRequest();\n"
-                    "            request.open('PUT', 'dnd:///scrolltoid/'+target, true)\n"
+                    "            request.open('PUT', 'dnd:///scrolltoid/'+encodeURIComponent(target), true)\n"
                     "            request.send();\n"
                     "            return false;\n"
                     "          }\n"
                     "        };\n"
-                    "        a.setAttribute('target', '_blank');\n"
                     "      }\n"
                     "    }\n"
                     "    for(let a of anchors){\n"
@@ -1222,7 +1425,7 @@ Page::get_text_for_preview(void){
                     "            e.preventDefault();\n"
                     "            e.stopPropagation();\n"
                     "            let request = new XMLHttpRequest();\n"
-                    "            request.open('PUT', 'dnd:///scrolltoid/'+h.id, true);\n"
+                    "            request.open('PUT', 'dnd:///scrolltoid/'+encodeURIComponent(h.id), true);\n"
                     "            request.send();\n"
                     "            return false;\n"
                     "        };\n"
@@ -1245,12 +1448,13 @@ Page::get_text_for_preview(void){
 void
 Page::update_html(void){
     // qDebug() << "In flight: " << inflight << "\n";
-    if(inflight){
+    if(inflight || closing){
         return;
     }
     inflight = true;
-    webpage->runJavaScript(GET_SCROLL_POSITION_SCRIPT, 0, [this](const QVariant& x){
-        set_scroll_pos(x.toString());
+    QPointer<Page> page(this);
+    webpage->runJavaScript(GET_SCROLL_POSITION_SCRIPT, 0, [page](const QVariant& x){
+        if(page && !page->closing) page->set_scroll_pos(x.toString());
     });
 }
 
@@ -1364,15 +1568,20 @@ Page::set_scroll_pos(QString&& x){
     }
 
     // qDebug() << "err:" << err;
-    auto url = QUrl(QS("https://") + APPHOST + QS("/") + filename);
-    // qDebug() << "url: " << url;
+    QUrl url;
+    url.setScheme(QS("https"));
+    url.setHost(APPHOST);
+    auto path = QDir::fromNativeSeparators(filename);
+    if(!path.startsWith('/')) path.prepend('/');
+    url.setPath(path);
     webpage->setHtml(QString::fromUtf8(outstring.text, outstring.length), url);
     dndc_free_string(outstring);
 }
 
 void
 Page::format(void){
-    auto text = get_text_for_preview();
+    if(textedit->isReadOnly()) return;
+    auto text = textedit->toPlainText() + QS("\n");
     auto textbytes = text.toUtf8();
     DndcStringView textsv = {(size_t)textbytes.size(), textbytes.data()};
     DndcLogFunc* errfunc = [](
@@ -1386,29 +1595,61 @@ Page::format(void){
             page->display_dndc_error(type, QString::fromUtf8(filename, filename_len), line, col, QString::fromUtf8(message, message_len));
         };
     DndcLongString outstring;
-    uint64_t flags = 0;
-    if(PRINT_STATS)
-        flags |= DNDC_PRINT_STATS;
-    int err = dndc_expand_to_dnd(
-            flags,
-            DndcStringView{},
-            textsv,
-            DndcStringView{},
-            &outstring,
-            nullptr,
-            errfunc, this,
-            {0, ""});
+    auto pathbytes = filename.toUtf8();
+    DndcStringView source_path = {(size_t)pathbytes.size(), pathbytes.data()};
+    int err = dndc_format2(textsv, source_path, &outstring, errfunc, this);
     if(err) return;
-    textedit->setPlainText(QString::fromUtf8(outstring.text, outstring.length));
+    textedit->replace_source(QString::fromUtf8(outstring.text, outstring.length));
     dndc_free_string(outstring);
 }
 void
 Page::hide_editor(void){
-    editor_holder->hide();
+    editor_open = false;
+    if(editor_window){
+        bool focused = editor_window->isActiveWindow();
+        editor_window->sync_visibility();
+        if(focused){
+            TABS->window()->activateWindow();
+            web->setFocus();
+        }
+    }
 }
 void
 Page::show_editor(void){
-    editor_holder->show();
+    TABS->setCurrentWidget(this);
+    editor_open = true;
+    if(!editor_window){
+        editor_window = new EditorWindow(this, TABS->window());
+        editor_holder->show();
+    }
+    editor_window->sync_visibility(true);
+}
+void
+Page::dispose_editor(void){
+    if(closing) return;
+    closing = true;
+    editor_open = false;
+    if(editor_window){
+        editor_window->detach();
+        delete editor_window;
+        editor_window = nullptr;
+        editor_holder = nullptr;
+    }
+    else if(editor_holder){
+        delete editor_holder;
+        editor_holder = nullptr;
+    }
+}
+void
+Page::scroll_to_line(int line, int column){
+    // Preview navigation updates the selection without changing window visibility.
+    auto block = textedit->document()->findBlockByLineNumber(qMax(0, line-1));
+    if(block.isValid()){
+        QTextCursor cursor(block);
+        cursor.setPosition(block.position() + qBound(0, column, block.length()-1));
+        textedit->setTextCursor(cursor);
+        textedit->ensureCursorVisible();
+    }
 }
 void
 Page::show_error(void){
@@ -1421,34 +1662,24 @@ Page::hide_error(void){
     error_display->hide();
     show_errors = false;
 }
-void
-Page::put_editor_right(void){
-    editor_holder->setParent(nullptr);
-    web->setParent(nullptr);
-    addWidget(web);
-    addWidget(editor_holder);
-    editor_is_on_left = false;
-}
-void
-Page::put_editor_left(void){
-    editor_holder->setParent(nullptr);
-    web->setParent(nullptr);
-    addWidget(editor_holder);
-    addWidget(web);
-    editor_is_on_left = true;
-}
-void
+bool
 Page::save(void){
-    if(!filename.length())
-        return;
+    if(filename.isEmpty() || !textedit->document()->isModified()) return true;
     QSaveFile savefile(this);
     savefile.setFileName(filename);
-    savefile.open(QSaveFile::WriteOnly);
+    if(!savefile.open(QSaveFile::WriteOnly)){
+        QMessageBox::critical(editor_window ? static_cast<QWidget*>(editor_window) : TABS->window(), QS("Unable to save"), savefile.errorString());
+        return false;
+    }
     auto text = textedit->toPlainText();
-    if(!text.endsWith(QS("\n")))
-        text += '\n';
-    savefile.write(text.toUtf8());
-    savefile.commit();
+    if(!text.endsWith('\n')) text += '\n';
+    auto bytes = text.toUtf8();
+    if(savefile.write(bytes) != bytes.size() || !savefile.commit()){
+        QMessageBox::critical(editor_window ? static_cast<QWidget*>(editor_window) : TABS->window(), QS("Unable to save"), savefile.errorString());
+        return false;
+    }
+    textedit->document()->setModified(false);
+    return true;
 }
 bool
 Page::get_fname(const QString& title, const QString& filter, QString* out){
@@ -1549,9 +1780,14 @@ Page::export_as_html(void){
         fname += QS(".html");
     QSaveFile savefile(this);
     savefile.setFileName(fname);
-    savefile.open(savefile.WriteOnly);
-    savefile.write(QByteArray(outstring.text, (qsizetype)outstring.length));
-    savefile.commit();
+    if(!savefile.open(QSaveFile::WriteOnly)){
+        QMessageBox::critical(this, QS("Unable to export"), savefile.errorString());
+        dndc_free_string(outstring);
+        return;
+    }
+    auto bytes = QByteArray(outstring.text, (qsizetype)outstring.length);
+    if(savefile.write(bytes) != bytes.size() || !savefile.commit())
+        QMessageBox::critical(this, QS("Unable to export"), savefile.errorString());
     dndc_free_string(outstring);
     }
 
@@ -1561,14 +1797,25 @@ make_page_widget(QWidget* parent, const QString& filename, bool allow_fail){
     if(ALL_WINDOWS.contains(filename))
         return nullptr;
     QFile file(filename);
-    if(!file.open(QFile::ReadOnly))
+    QString text;
+    bool new_file = false;
+    if(file.open(QFile::ReadOnly)){
+        QTextStream stream(&file);
+        text = stream.readAll();
+        if(stream.status() != QTextStream::Ok) return nullptr;
+    }
+    else if(allow_fail && !QFileInfo::exists(filename)){
+        new_file = true;
+    }
+    else {
+        QMessageBox::critical(parent, QS("Unable to open"), file.errorString());
         return nullptr;
+    }
     Page* result = new Page(parent);
-    QTextStream stream(&file);
-    auto text = stream.readAll();
     if(text.endsWith(QS("\n")))
         text.chop(1);
     result->textedit->setPlainText(text);
+    result->textedit->document()->setModified(new_file);
     auto info = QFileInfo(file);
     result->dirname = info.absoluteDir().absolutePath();
     result->filename = filename;
@@ -1584,7 +1831,8 @@ condense(const QString& filename){
     }
 
 void
-add_tab(const QString& filename, bool focus, bool allow_fail){
+add_tab(const QString& path, bool focus, bool allow_fail){
+    const auto filename = QFileInfo(path).absoluteFilePath();
     if(ALL_WINDOWS.contains(filename)){
         if(focus)
             TABS->setCurrentWidget(ALL_WINDOWS[filename]);
@@ -1628,7 +1876,10 @@ main(int argc, char** argv)
 
 
     LOGFILE = new QFile(logfile);
-    LOGFILE->open(QFile::Append|QFile::WriteOnly|QFile::Text|QFile::Unbuffered);
+    if(!LOGFILE->open(QFile::Append|QFile::WriteOnly|QFile::Text|QFile::Unbuffered)){
+        fprintf(stderr, "Unable to open log: %s\n", qPrintable(LOGFILE->errorString()));
+        return 1;
+    }
     LOGSTREAM = new QTextStream(LOGFILE);
     qInstallMessageHandler(DNDC_LOGIT);
     qInfo("--------------------");
@@ -1661,21 +1912,27 @@ main(int argc, char** argv)
     TABS = new QTabWidget(&w);
     TABS->setTabsClosable(true);
     TABS->setDocumentMode(true);
-    QObject::connect(TABS, &QTabWidget::tabCloseRequested, [](int index){
-        // close_tab
-        auto page = qobject_cast<Page*>(TABS->widget(index));
-        page->save();
-        page->close();
-        TABS->removeTab(index);
-        ALL_WINDOWS.remove(page->filename);
-        page->setParent(nullptr);
-        page->deleteLater();
-    });
+    QObject::connect(TABS, &QTabWidget::tabCloseRequested, close_tab);
+    QObject::connect(TABS, &QTabWidget::currentChanged, [](){ sync_editors(); });
     w.setCentralWidget(TABS);
     w.restore_everything();
     if(!TABS->currentWidget())
         w.open_file();
     w.add_menus();
+    for(auto action: w.findChildren<QAction*>())
+        if(!action->shortcut().isEmpty()) action->setShortcutContext(Qt::ApplicationShortcut);
+    for(int index = 0; index < 10; index++){
+        auto action = new QAction(&w);
+        action->setShortcut(QKeySequence(QS("Ctrl+%1").arg((index+1)%10)));
+        action->setShortcutContext(Qt::ApplicationShortcut);
+        QObject::connect(action, &QAction::triggered, [index](){
+            if(index < TABS->count()){
+                TABS->setCurrentIndex(index);
+                sync_editors();
+            }
+        });
+        w.addAction(action);
+    }
     w.show();
     auto ret = a.exec();
     qDebug("Shutdown normal.");

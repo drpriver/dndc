@@ -29,11 +29,13 @@
     X(TestFormatBullets) \
     X(TestFormatKV) \
     X(TestFormatMD) \
+    X(TestFormatTrailingColon) \
     X(TestCrashesFixed) \
     X(TestEscapedFixed) \
     X(TestExamplesWork) \
     X(TestUntrusted) \
     X(TestSpecialChars) \
+    X(TestInlineEscapes) \
     X(TestMaliciousLinks) \
     X(TestImgAttributes) \
     X(TestJs) \
@@ -395,6 +397,42 @@ TestFunction(TestFormatTable){
         TestExpectEquals(expected.length, outdata.length);
         TestExpectEquals2(LS_equals, expected, outdata);
         dndc_free_string(outdata);
+    }
+    TESTEND();
+}
+TestFunction(TestFormatTrailingColon){
+    TESTBEGIN();
+    StringView source = SV(
+        "24) STORERM#6: ::md .room @coord(813,873) #id(area-24)\n"
+        "  Read aloud: ::quote\n"
+        "    ::md\n"
+        "      A room.\n"
+        "  Contents: ::table\n"
+        "    Item | Count\n"
+        "    Key | 1\n"
+        "Plain heading::md\n"
+        "  Unchanged.\n"
+    );
+    LongString formatted = {0};
+    int e = dndc_format(source, &formatted, NULL, NULL);
+    TestExpectFalse(e);
+    if(!e){
+        LongString reformatted = {0};
+        int e2 = dndc_format(LS_to_SV(formatted), &reformatted, NULL, NULL);
+        TestExpectFalse(e2);
+        if(!e2){
+            TestExpectEquals2(LS_equals, formatted, reformatted);
+            dndc_free_string(reformatted);
+        }
+        LongString before = {0}, after = {0};
+        int e3 = run_the_dndc(OUTPUT_HTML, 0, SV(""), source, SV(""), &before, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        int e4 = run_the_dndc(OUTPUT_HTML, 0, SV(""), LS_to_SV(formatted), SV(""), &after, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        TestExpectFalse(e3);
+        TestExpectFalse(e4);
+        if(!e3 && !e4) TestExpectEquals2(LS_equals, before, after);
+        dndc_free_string(before);
+        dndc_free_string(after);
+        dndc_free_string(formatted);
     }
     TESTEND();
 }
@@ -873,6 +911,10 @@ TestFunction(TestSpecialChars){
         | DNDC_FRAGMENT_ONLY
         ;
     struct test_case testcases[] = {
+        {SV("prefix \\[literal\\] ordinary text -- more text <b>bold</b> & tail"),
+         SV("prefix [literal] ordinary text &ndash; more text <b>bold</b> &amp; tail")},
+        {SV("prefix café 日本語 \t middle\fword\x01 tail"),
+         SV("prefix café 日本語 \t middle word tail")},
         {SV("---"), SV("&mdash;")},
         {SV("--"), SV("&ndash;")},
         {SV("--- ---"), SV("&mdash; &mdash;")},
@@ -911,6 +953,79 @@ TestFunction(TestSpecialChars){
     }
     TESTEND();
 }
+TestFunction(TestInlineEscapes){
+    TESTBEGIN();
+    struct {StringView source, expected;} cases[] = {
+        {SV("std\\::vector \\[literal\\] a\\|b \\\\ C:\\notes \\\n"),
+         SV("std::vector [literal] a|b \\ C:\\notes \\\n")},
+        {SV("[a\\]b\\|c | target]\nTarget::h\n"), SV("<a href=\"#target\">a]b|c</a>")},
+        {SV("::table\n  Name | Value\n  [Go | target] | a\\|b\n  [target] [target] | [x\\]y | target]\nTarget::h\n"),
+         SV("<td>a|b\n</td>")},
+        {SV("Escaped\\::heading::md\n  body\n"), SV("Escaped::heading</h2>")},
+        {SV("Even\\\\::md\n  body\n"), SV("Even\\</h2>")},
+        {SV("Slash\\ ::md\n  body\n"), SV("Slash\\</h2>")},
+        {SV("Odd\\\\\\::literal\n"), SV("Odd\\::literal")},
+        {SV("First\\::literal then second\\::literal::md\n  body\n"), SV("First::literal then second::literal</h2>")},
+        {SV("::pre\n  \\[x\\] std\\::vector \\\\\n"), SV("\\[x\\] std\\::vector \\\\")},
+        {SV("::raw\n  \\[x\\] \\\\\n"), SV("\\[x\\] \\\\")},
+        {SV("::js\n  node.parent.parse('std\\\\::vector');\n"), SV("std::vector")},
+        {SV("A\\[B\\]::title\n::toc\nX\\[Y\\]::h\n"), SV("<title>A[B]</title>")},
+        {SV("::toc\nX\\[Y\\]::h\n"), SV("X[Y]</a>")},
+        {SV("::css\n  .x { content: '\\[x\\]'; }\n::script\n  const x = /\\[x\\]/;\n"), SV("const x = /\\[x\\]/;")},
+        {SV("::table\n  A | B\n  \\[literal\\] | one\\\\|two\n"), SV("<td>one\\\n</td>")},
+    };
+    for(size_t i=0; i<arrlen(cases); i++){
+        LongString html={0}, formatted={0}, again={0}, html2={0};
+        int e = run_the_dndc(OUTPUT_HTML, 0, SV(""), cases[i].source, SV(""), &html, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+        TestExpectFalse(e);
+        if(!e) TestExpectTrue(strstr(html.text, cases[i].expected.text) != NULL);
+        e = dndc_format(cases[i].source, &formatted, NULL, NULL);
+        TestExpectFalse(e);
+        if(!e){
+            e = dndc_format(LS_to_SV(formatted), &again, NULL, NULL);
+            TestExpectFalse(e);
+            if(!e) TestExpectEquals2(LS_equals, formatted, again);
+            e = run_the_dndc(OUTPUT_HTML, 0, SV(""), LS_to_SV(formatted), SV(""), &html2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+            TestExpectFalse(e);
+            if(!e) TestExpectEquals2(LS_equals, html, html2);
+        }
+        dndc_free_string(html); dndc_free_string(formatted);
+        dndc_free_string(again); dndc_free_string(html2);
+    }
+    // Exercise both sides of every SIMD boundary and backslash parity.
+    for(size_t pad=0; pad<34; pad++){
+        for(size_t slashes=1; slashes<=4; slashes++){
+            MStringBuilder source={.allocator=MALLOCATOR}, expected={.allocator=MALLOCATOR};
+            msb_write_nchar(&source, 'a', pad);
+            msb_write_nchar(&expected, 'a', pad);
+            msb_write_nchar(&source, '\\', slashes);
+            msb_write_nchar(&expected, '\\', slashes/2);
+            msb_write_literal(&source, "::md\n");
+            if(slashes%2) msb_write_literal(&expected, "::md");
+            else msb_write_literal(&expected, "</h2>");
+            msb_write_char(&expected, 0);
+            LongString html={0};
+            int e = run_the_dndc(OUTPUT_HTML, DNDC_FRAGMENT_ONLY, SV(""), msb_borrow_sv(&source), SV(""), &html, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+            TestExpectFalse(e);
+            if(!e) TestExpectTrue(strstr(html.text, expected.data) != NULL);
+            dndc_free_string(html); msb_destroy(&source); msb_destroy(&expected);
+        }
+    }
+    LongString md={0};
+    int e = run_the_dndc(OUTPUT_MD, 0, SV(""), SV("\\[literal\\] a\\|b \\\\\n"), SV(""), &md, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+    TestExpectFalse(e);
+    if(!e) TestExpectTrue(strstr(md.text, "\\[literal\\] a\\|b \\\\") != NULL);
+    dndc_free_string(md);
+    // Both editor encodings must agree with the parser on escaped delimiters.
+    StringView syntax = SV("std\\::vector Heading::md");
+    const char* colon = find_double_colon(syntax.text, syntax.length);
+    TestExpectTrue(colon == syntax.text+20);
+    StringViewUtf16 syntax16 = SV16("std\\::vector Heading::md");
+    const uint16_t* colon16 = find_double_colon_utf16(syntax16.text, syntax16.length);
+    TestExpectTrue(colon16 == syntax16.text+20);
+    TESTEND();
+}
+
 TestFunction(TestMaliciousLinks){
     TESTBEGIN();
     struct test_case {
@@ -1502,4 +1617,3 @@ TestFunction(TestShebang){
     }
     TESTEND();
 }
-

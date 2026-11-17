@@ -7,10 +7,11 @@ from __future__ import annotations
 PYGDNDC_VERSION = '1.1.0'
 __version__ = PYGDNDC_VERSION
 import os
+import html as html_escape
 # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
 os.environ['QT_ENABLE_HIGHDPI_SCALING'] = '1'
 import sys
-from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QFileDialog, QTextEdit, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox, QToolButton, QTabBar
+from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QHBoxLayout, QPlainTextEdit, QWidget, QSplitter, QTabWidget, QFileDialog, QTextEdit, QTextBrowser, QFontDialog, QMessageBox, QSplitterHandle, QCheckBox, QToolButton, QTabBar
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineUrlScheme, QWebEngineUrlSchemeHandler, QWebEngineUrlRequestJob, QWebEnginePage, QWebEngineProfile
 from PySide6.QtGui import QFont, QKeySequence, QFontMetrics, QPainter, QColor, QTextFormat, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QImage, QDesktopServices, QContextMenuEvent, QDesktopServices, QCloseEvent, QAction, QTextCursor, QMouseEvent, QPaintEvent
@@ -69,14 +70,13 @@ def change_coord(id:int, x:int, y:int) -> None:
         ctx.root.parse(text)
         ctx.node_from_int(id).attributes['coord'] =  f'{x},{y}'
         text = ctx.format_tree()
-        page.textedit.setPlainText(text)
+        page.textedit.replace_source(text)
     except:
         LOGGER.exception('Problem while doing change coord')
 
 def scroll_to_id(nid:str) -> None:
     page: Optional[Page] = get_current_tab()
     if not page: return
-    if page.textedit.isReadOnly(): return
     text = page.textedit.toPlainText()
     try:
         ctx = pydndc.Context()
@@ -84,9 +84,7 @@ def scroll_to_id(nid:str) -> None:
         n = ctx.node_by_id(nid)
         if n is None: return
         loc:pydndc.Location = n.location
-        page.textedit.moveCursor(QTextCursor.MoveOperation.End)
-        cursor = QTextCursor(page.textedit.document().findBlockByLineNumber(loc.row-1))
-        page.textedit.setTextCursor(cursor)
+        page.scroll_to_line(loc.row)
 
     except:
         LOGGER.exception('Problem while doing scroll_to_id')
@@ -220,9 +218,116 @@ else:
 FONT.setFamilies(fonts)
 FONTMETRICS = QFontMetrics(FONT)
 EIGHTYCHARS = FONTMETRICS.horizontalAdvance('M')*80
-EDITOR_ON_LEFT = False
 PRINT_STATS = False
 FILE_CACHE = pydndc.FileCache()
+
+# A document-owned editor window, attached to its preview window.
+if sys.platform == 'darwin':
+    import ctypes
+    _objc = ctypes.CDLL('/usr/lib/libobjc.A.dylib')
+    _objc.sel_registerName.argtypes = [ctypes.c_char_p]
+    _objc.sel_registerName.restype = ctypes.c_void_p
+    _address = ctypes.cast(_objc.objc_msgSend, ctypes.c_void_p).value
+
+    def _send(receiver, selector, restype, argtypes=(), args=()):
+        call = ctypes.CFUNCTYPE(restype, ctypes.c_void_p, ctypes.c_void_p, *argtypes)(_address)
+        return call(receiver, _objc.sel_registerName(selector), *args)
+
+    def _native_window(widget):
+        # Qt's Cocoa winId is the NSView, whose window owns it.
+        return _send(int(widget.winId()), b'window', ctypes.c_void_p)
+
+
+class EditorWindow(QMainWindow):
+    def __init__(self, page, owner):
+        super().__init__(owner, Qt.WindowType.Window | Qt.WindowType.CustomizeWindowHint
+                         | Qt.WindowType.WindowTitleHint | Qt.WindowType.WindowCloseButtonHint)
+        self.page = page
+        self.owner = owner
+        self.attached = False
+        self.disposed = False
+        self.owner_position = owner.pos()
+        self.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, False)
+        self.setCentralWidget(page.editor_holder)
+        self.setWindowTitle(page.filename + ' — Editor[*]')
+        self.setWindowModified(page.textedit.document().isModified())
+        page.textedit.document().modificationChanged.connect(self.setWindowModified)
+        self.resize(800, 1000)
+        screen = owner.screen().availableGeometry()
+        self.resize(min(self.width(), screen.width()), min(self.height(), screen.height()))
+        self.move(screen.center() - self.rect().center())
+        self.visibility_timer = QTimer(self)
+        self.visibility_timer.setSingleShot(True)
+        self.visibility_timer.timeout.connect(self.sync_visibility)
+        # Never filter every application event in Python: WebEngine's internal
+        # Qt Quick objects may be in destruction when Shiboken wraps the receiver.
+        owner.installEventFilter(self)
+        escape = QAction(self)
+        escape.setShortcut(QKeySequence(Qt.Key.Key_Escape))
+        escape.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        escape.triggered.connect(page.hide_editor)
+        self.addAction(escape)
+
+    def attach(self):
+        if sys.platform == 'darwin' and not self.attached:
+            _send(_native_window(self.owner), b'addChildWindow:ordered:', None,
+                  (ctypes.c_void_p, ctypes.c_long), (_native_window(self), 1))
+            self.attached = True
+
+    def detach(self):
+        if sys.platform == 'darwin' and self.attached:
+            _send(_native_window(self.owner), b'removeChildWindow:', None,
+                  (ctypes.c_void_p,), (_native_window(self),))
+            self.attached = False
+
+    def sync_visibility(self, focus=False):
+        if self.disposed:
+            return
+        visible = (self.page.editor_open and self.page.isVisible()
+                   and self.owner.isVisible() and not self.owner.isMinimized())
+        if visible:
+            if not self.isVisible():
+                self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, not focus)
+                # A monitor may have disappeared while the editor was hidden.
+                if not any(screen.availableGeometry().intersects(self.frameGeometry())
+                           for screen in QApplication.screens()):
+                    area = self.owner.screen().availableGeometry()
+                    self.move(area.center() - self.rect().center())
+                self.show()
+                self.attach()
+            if focus:
+                self.raise_()
+                self.activateWindow()
+                self.page.textedit.setFocus()
+        else:
+            self.detach()
+            self.hide()
+
+    def closeEvent(self, event):
+        self.page.hide_editor()
+        event.ignore()  # Closing the editor does not close or destroy the document.
+
+    def eventFilter(self, watched, event):
+        if watched is self.owner:
+            if event.type() == QEvent.Type.Move and sys.platform != 'darwin':
+                # Move hidden editors too, so their remembered offsets stay correct.
+                if not self.owner.isMinimized():
+                    self.move(self.pos() + self.owner.pos() - self.owner_position)
+                    self.owner_position = self.owner.pos()
+            elif event.type() in (QEvent.Type.Hide, QEvent.Type.Show, QEvent.Type.WindowStateChange):
+                self.visibility_timer.start(0)
+            elif event.type() == QEvent.Type.WindowActivate and self.isVisible():
+                self.raise_()  # Preserve focus in the preview.
+        return super().eventFilter(watched, event)
+
+    def dispose(self):
+        self.disposed = True
+        self.visibility_timer.stop()
+        self.detach()
+        self.hide()
+        self.owner.removeEventFilter(self)
+        self.deleteLater()
+
 
 class DndMainWindow(QMainWindow):
     def __init__(self)->None:
@@ -235,19 +340,18 @@ class DndMainWindow(QMainWindow):
         if path.endswith('png'):
             QWebEngineProfile.defaultProfile().clearHttpCache()
         FILE_CACHE.remove(path)
+        # Atomic replacement can remove the watch on the previous file.
+        if os.path.isfile(path) and path not in self.watcher.files():
+            self.watcher.addPath(path)
         for page in all_windows.values():
             page.file_changed(path)
 
     def restore_everything(self)->None:
-        global EDITOR_ON_LEFT
         geometry = self.settings.value('window_geometry')
         if geometry is not None:
             self.restoreGeometry(geometry) # type: ignore
         else:
             self.showMaximized()
-        on_left = self.settings.value('editor_on_left')
-        if on_left is not None:
-            EDITOR_ON_LEFT = on_left # type: ignore
         filenames = self.settings.value('filenames')
         if filenames:
             if isinstance(filenames, str):
@@ -265,13 +369,16 @@ class DndMainWindow(QMainWindow):
         LOGGER.debug('Saving Window Positions and Settings.')
         filenames = list(all_windows.keys())
         self.settings.setValue('filenames', filenames)
-        self.settings.setValue('editor_on_left', EDITOR_ON_LEFT)
         self.settings.setValue('window_geometry', self.saveGeometry())
 
     def closeEvent(self, e:QCloseEvent) -> None:
         self.save_windows()
         for page in all_windows.values():
-            page.save()
+            if not page.save():
+                e.ignore()
+                return
+        for page in all_windows.values():
+            page.dispose_editor()
         e.accept()
 
 class DndTabBar(QTabBar):
@@ -284,6 +391,9 @@ class DndTabBar(QTabBar):
 WINDOW = DndMainWindow()
 TABWIDGET = QTabWidget()
 def get_current_tab() -> Optional[Page]:
+    active = APP.activeWindow()
+    if isinstance(active, EditorWindow) and active.page in all_windows.values():
+        return active.page
     current_tab = TABWIDGET.currentWidget()
     if not current_tab: return None
     assert isinstance(current_tab, Page)
@@ -294,12 +404,22 @@ TABWIDGET.setDocumentMode(True)
 TABWIDGET.setTabsClosable(True)
 def close_tab(index:int) -> None:
     page: Page = TABWIDGET.widget(index) # type: ignore
-    page.save()
-    page.close()
-    TABWIDGET.removeTab(index)
+    if not page or not page.save():
+        return
+    page.dispose_editor()
     del all_windows[page.filename]
-    page.setParent(None)
+    TABWIDGET.removeTab(index)
+    page.deleteLater()
 
+def sync_editors(index=None):
+    current = TABWIDGET.currentWidget()
+    for page in all_windows.values():
+        if page is not current and page.editor_window:
+            page.editor_window.sync_visibility()
+    if current and current.editor_window:
+        current.editor_window.sync_visibility(APP.applicationState() == Qt.ApplicationState.ApplicationActive)
+
+TABWIDGET.currentChanged.connect(sync_editors)
 TABWIDGET.tabCloseRequested.connect(close_tab)
 WINDOW.setCentralWidget(TABWIDGET)
 
@@ -382,95 +502,130 @@ class LineNumberArea(QWidget):
 COORD_HELPER_SCRIPT= (
     "\n"
     "::script\n"
-    "  document.addEventListener('DOMContentLoaded', function(){\n"
-    "    const svgs = document.getElementsByTagName('svg');\n"
+    "  document.addEventListener(\"DOMContentLoaded\", function(){\n"
+    "    const svgs = document.getElementsByTagName(\"svg\");\n"
     "    let moving = false;\n"
+    "    function mapPoint(svg, event){\n"
+    "      const matrix = svg.getScreenCTM();\n"
+    "      if(!matrix) return null;\n"
+    "      const point = svg.createSVGPoint();\n"
+    "      point.x = event.clientX;\n"
+    "      point.y = event.clientY;\n"
+    "      return point.matrixTransform(matrix.inverse());\n"
+    "    }\n"
     "    for(let i = 0; i < svgs.length; i++){\n"
     "      const svg = svgs[i];\n"
-    "      const texts = svg.getElementsByTagName('text');\n"
-    "      const aa = document.querySelectorAll('svg a');\n"
-    "      for(let text of texts){\n"
-    "          text.parentNode.addEventListener('click', function(e){\n"
+    "      const texts = svg.getElementsByTagName(\"text\");\n"
+    "      let suppressClick = false;\n"
+    "      svg.addEventListener('pointerdown', function(){ suppressClick = false; }, true);\n"
+    "      svg.addEventListener('click', function(e){\n"
+    "          if(!suppressClick) return;\n"
+    "          suppressClick = false;\n"
+    "          e.preventDefault();\n"
+    "          e.stopImmediatePropagation();\n"
+    "      }, true);\n"
+    "      for(const anchor of texts){\n"
+    "          const link = anchor.parentNode;\n"
+    "          link.addEventListener(\"click\", function(e){\n"
     "              e.preventDefault();\n"
     "              e.stopPropagation();\n"
     "          });\n"
-    "      }\n"
-    "      for(let i = 0; i < texts.length; i++){\n"
-    "          let anchor = texts[i];\n"
-    "          anchor.addEventListener('pointerdown', function(e){\n"
+    "          link.addEventListener(\"pointerdown\", function(e){\n"
+    "              if(e.button !== 0 || moving) return;\n"
+    "              const start = mapPoint(svg, e);\n"
+    "              if(!start) return;\n"
     "              e.stopPropagation();\n"
     "              e.preventDefault();\n"
-    "              if(moving) return;\n"
     "              moving = true;\n"
-    "              let svg = anchor.parentElement.parentElement;\n"
-    "              let sx = svg.width.baseVal.value / svg.viewBox.baseVal.width;\n"
-    "              let sy = svg.height.baseVal.value / svg.viewBox.baseVal.height;\n"
-    "              let org_x = anchor.transform.baseVal[0].matrix.e | 0;\n"
-    "              let org_y = anchor.transform.baseVal[0].matrix.f | 0;\n"
-    "              let start_x = e.screenX;\n"
-    "              let start_y = e.screenY;\n"
+    "              const pointerId = e.pointerId;\n"
+    "              // Move decorations with the text, including marker backgrounds.\n"
+    "              const transforms = Array.from(link.children)\n"
+    "                  .filter(child => child.transform && child.transform.baseVal.numberOfItems)\n"
+    "                  .map(child => {\n"
+    "                      const matrix = child.transform.baseVal.consolidate().matrix;\n"
+    "                      return {matrix, x: matrix.e, y: matrix.f};\n"
+    "                  });\n"
+    "              let changed = false;\n"
     "              function move(e){\n"
-    "                  let diffx = 1/sx*(e.screenX - start_x);\n"
-    "                  let diffy = 1/sy*(e.screenY - start_y);\n"
-    "                  start_x = e.screenX;\n"
-    "                  start_y = e.screenY;\n"
-    "                  anchor.transform.baseVal[0].matrix.e += diffx;\n"
-    "                  anchor.transform.baseVal[0].matrix.f += diffy;\n"
+    "                  if(e.pointerId !== pointerId) return;\n"
+    "                  const point = mapPoint(svg, e);\n"
+    "                  if(!point) return;\n"
+    "                  const dx = point.x - start.x;\n"
+    "                  const dy = point.y - start.y;\n"
+    "                  changed = dx !== 0 || dy !== 0;\n"
+    "                  for(const t of transforms){\n"
+    "                      t.matrix.e = t.x + dx;\n"
+    "                      t.matrix.f = t.y + dy;\n"
+    "                  }\n"
     "              }\n"
-    "              svg.addEventListener('pointermove', move);\n"
-    "              function remove(e){\n"
+    "              function finish(e){\n"
+    "                  if(e.pointerId !== pointerId) return;\n"
+    "                  if(e.type === 'pointerup') move(e);\n"
+    "                  suppressClick = true;\n"
     "                  moving = false;\n"
     "                  e.stopPropagation();\n"
     "                  e.preventDefault();\n"
-    "                  svg.removeEventListener('pointermove', move);\n"
-    "                  let a = anchor.parentElement;\n"
-    "                  let href = a.href.baseVal;\n"
-    "                  let internal_id = 0;\n"
-    "                  let sp = href.split('#');\n"
-    "                  if(sp.length > 1)\n"
-    "                      internal_id = _coords[sp[1]];\n"
-    "                  if(!internal_id)\n"
-    "                      internal_id = _coords2[href];\n"
-    "                  if(!internal_id){\n"
-    "                      let t = anchor.childNodes[0].textContent.trim();\n"
-    "                      internal_id = _coords2[t];\n"
+    "                  window.removeEventListener('pointermove', move);\n"
+    "                  window.removeEventListener('pointerup', finish);\n"
+    "                  window.removeEventListener('pointercancel', finish);\n"
+    "                  if(link.hasPointerCapture(pointerId)) link.releasePointerCapture(pointerId);\n"
+    "                  if(e.type === 'pointercancel'){\n"
+    "                      for(const t of transforms){\n"
+    "                          t.matrix.e = t.x;\n"
+    "                          t.matrix.f = t.y;\n"
+    "                      }\n"
+    "                      return;\n"
     "                  }\n"
+    "                  if(!changed) return;\n"
+    "                  const href = link.href.baseVal;\n"
+    "                  let internal_id = 0;\n"
+    "                  const sp = href.split('#');\n"
+    "                  if(sp.length > 1) internal_id = _coords[sp[1]];\n"
+    "                  const mapCoords = _coords2[svg.dataset.coordMap] || {};\n"
+    "                  if(!internal_id) internal_id = mapCoords[href];\n"
+    "                  if(!internal_id) internal_id = mapCoords[anchor.textContent.trim()];\n"
     "                  if(!internal_id) return;\n"
-    "                  let new_x = anchor.transform.baseVal[0].matrix.e | 0;\n"
-    "                  let new_y = anchor.transform.baseVal[0].matrix.f | 0;\n"
+    "                  const matrix = anchor.transform.baseVal.consolidate().matrix;\n"
+    "                  const new_x = Math.round(matrix.e);\n"
+    "                  const new_y = Math.round(matrix.f);\n"
     "                  const combo = `${internal_id}.${new_x}.${new_y}`;\n"
-    "                  let request = new XMLHttpRequest();\n"
-    "                  request.open('PUT', 'dnd:///roommove/'+combo, true);\n"
+    "                  const request = new XMLHttpRequest();\n"
+    "                  request.open(\"PUT\", \"dnd:///roommove/\"+combo, true);\n"
     "                  request.send();\n"
     "              }\n"
-    "              window.addEventListener('pointerup', remove, {once:true});\n"
+    "              link.setPointerCapture(pointerId);\n"
+    "              window.addEventListener('pointermove', move);\n"
+    "              window.addEventListener('pointerup', finish);\n"
+    "              window.addEventListener('pointercancel', finish);\n"
     "          });\n"
     "      }\n"
+    "      svg.dataset.coordMap = i;\n"
     "      let text_height = 0;\n"
     "      if(texts.length){\n"
     "        const first_text = texts[0];\n"
     "        text_height = first_text.getBBox().height || 0;\n"
     "      }\n"
-    "      svg.addEventListener('click', function(e){\n"
+    "      svg.addEventListener(\"click\", function(e){\n"
     "        let name = prompt('Enter Room Name');\n"
     "        if(name){\n"
-    "          const x_scale = svg.width.baseVal.value / svg.viewBox.baseVal.width;\n"
-    "          const y_scale = svg.height.baseVal.value / svg.viewBox.baseVal.height;\n"
-    "          const rect = e.currentTarget.getBoundingClientRect();\n"
-    "          const true_x = ((e.clientX - rect.x)/ x_scale) | 0;\n"
-    "          const true_y = (((e.clientY - rect.y)/ y_scale) + text_height/2) | 0;\n"
+    "          const point = mapPoint(svg, e);\n"
+    "          if(!point) return;\n"
+    "          const baseline = texts.length ? getComputedStyle(texts[0]).dominantBaseline : \"\";\n"
+    "          const offset = baseline === 'middle' || baseline === 'central' ? 0 : text_height/2;\n"
+    "          const true_x = Math.round(point.x);\n"
+    "          const true_y = Math.round(point.y + offset);\n"
     "          let request = new XMLHttpRequest();\n"
-    "          if(!name.includes('.')){\n"
-    "            name += '.';\n"
+    "          if(!name.includes(\".\")){\n"
+    "            name += \".\";\n"
     "          }\n"
-    "          request.open('PUT', 'dnd:///roomclick/'+name+'/'+true_x+'.'+true_y, true);\n"
+    "          request.open(\"PUT\", \"dnd:///roomclick/\"+name+\"/\"+true_x+\".\"+true_y, true);\n"
     "          request.send();\n"
     "        }\n"
     "      });\n"
     "    }\n"
     "  });\n"
     "::js\n"
-    "  let coords = ctx.select_nodes({attributes:['coord']});\n"
+    "  let coords = ctx.select_nodes({attributes:[\"coord\"]});\n"
     "  let s = ctx.root.make_child(NodeType.SCRIPTS);\n"
     "  let o = {};\n"
     "  for(let co of coords){\n"
@@ -479,11 +634,13 @@ COORD_HELPER_SCRIPT= (
     "  s.make_child(NodeType.STRING, {header:`let _coords = ${JSON.stringify(o)};`});\n"
     "  let imglinks = ctx.select_nodes({type:NodeType.IMGLINKS});\n"
     "  let o2 = {};\n"
-    "  for(let il of imglinks){\n"
+    "  for(let i = 0; i < imglinks.length; i++){\n"
+    "      const il = imglinks[i];\n"
+    "      o2[i] = {};\n"
     "      for(let ch of il.children){\n"
     "          if(ch.type != NodeType.STRING) continue;\n"
     "          let lead = ch.header.split('=')[0].trim();\n"
-    "          o2[lead] = ch.internal_id;\n"
+    "          o2[i][lead] = ch.internal_id;\n"
     "      }\n"
     "  }\n"
     "  s.make_child(NodeType.STRING, {header:`let _coords2 = ${JSON.stringify(o2)};`});\n"
@@ -492,7 +649,10 @@ SCROLL_RESTO_SCRIPT='''
 ::script
     document.addEventListener('DOMContentLoaded', function(){
         for(let [key, value] of Object.entries(SCROLLRESTO)){
-            if(key == "html"){
+            if(key == '__document'){
+                document.dispatchEvent(new CustomEvent('dnd:restore-state', {detail:value}));
+            }
+            else if(key == "html"){
                 const html = document.getElementsByTagName("html")[0];
                 if(html){
                     html.scrollLeft = value[0];
@@ -543,6 +703,10 @@ GET_SCROLL_POSITION_SCRIPT='''
     get_scroll("left");
     get_scroll("center");
     get_scroll("right");
+    const documentState = {};
+    document.dispatchEvent(new CustomEvent('dnd:save-state', {detail:documentState}));
+    if(Object.keys(documentState).length)
+        result.__document = documentState;
     if(Object.keys(result).length){
         return JSON.stringify(result);
     }
@@ -563,6 +727,50 @@ class DndEditor(QPlainTextEdit):
         # is called on a line.
         self.document().contentsChange.connect(self.update_syntax)
         self.highlight = DndSyntaxHighlighter(self.document())
+
+    def replace_source(self, text: str) -> None:
+        """Apply compiler output as one undoable edit without losing prior edits."""
+        if self.isReadOnly():
+            return
+        # Compiler output has a final line terminator; editor buffers do not.
+        if text.endswith('\n'):
+            text = text[:-1]
+        old = self.toPlainText()
+        if old == text:
+            return
+        start = 0
+        while start < min(len(old), len(text)) and old[start] == text[start]:
+            start += 1
+        suffix = 0
+        while (suffix < min(len(old), len(text)) - start
+               and old[len(old)-suffix-1] == text[len(text)-suffix-1]):
+            suffix += 1
+        old_end, new_end = len(old)-suffix, len(text)-suffix
+        # QTextCursor positions count UTF-16 units, unlike Python string indices.
+        start_units = len(old[:start].encode('utf-16-le')) // 2
+        old_end_units = len(old[:old_end].encode('utf-16-le')) // 2
+        new_end_units = len(text[:new_end].encode('utf-16-le')) // 2
+        cursor = self.textCursor()
+        position, anchor = cursor.position(), cursor.anchor()
+        vertical, horizontal = self.verticalScrollBar().value(), self.horizontalScrollBar().value()
+        cursor.beginEditBlock()
+        cursor.setPosition(start_units)
+        cursor.setPosition(old_end_units, QTextCursor.MoveMode.KeepAnchor)
+        cursor.insertText(text[start:new_end])
+        cursor.endEditBlock()
+
+        def map_position(pos):
+            if pos <= start_units:
+                return pos
+            if pos >= old_end_units:
+                return pos + new_end_units - old_end_units
+            return start_units + min(pos-start_units, new_end_units-start_units)
+
+        cursor.setPosition(map_position(anchor))
+        cursor.setPosition(map_position(position), QTextCursor.MoveMode.KeepAnchor)
+        self.setTextCursor(cursor)
+        self.verticalScrollBar().setValue(vertical)
+        self.horizontalScrollBar().setValue(horizontal)
 
     def update_syntax(self, *args) -> None:
         # t0 = time.time()
@@ -799,11 +1007,13 @@ class DndWebPage(QWebEnginePage):
             if host != APPHOST:
                 QDesktopServices.openUrl(url)
                 return False
-            if path.endswith('.html'):
-                filepath = os.path.normpath(path[:-len('.html')] + '.dnd')
+            if path.endswith(('.dnd', '.html')):
+                if path.endswith('.html'):
+                    path = path[:-len('.html')] + '.dnd'
+                filepath = os.path.normpath(path)
                 # this is kind of a hack, but I don't want to learn how to encode windows style
                 # drive letters into a URL properly and this basically works.
-                if IS_WINDOWS and filepath[2] == ':':
+                if IS_WINDOWS and filepath.startswith('/') and len(filepath) > 2 and filepath[2] == ':':
                     filepath = filepath[1:]
                 if os.path.isfile(filepath):
                     add_tab(filepath)
@@ -850,8 +1060,11 @@ class Page(QSplitter):
         return super().keyPressEvent(event)
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self.closing = False
+        self.editor_window = None
+        self.editor_open = False
         self.inflight = False
-        self.webpage = DndWebPage()
+        self.webpage = DndWebPage(self)
         self.web = QWebEngineView()
         self.web.setPage(self.webpage)
         self.webpage.setHtml(' ', baseUrl=QUrl(f'https://{APPHOST}/this.html'))
@@ -862,10 +1075,12 @@ class Page(QSplitter):
         self.textedit.setMinimumSize(int(EIGHTYCHARS*1.1), 200)
         self.dirname = '.'
         self.textedit.document().contentsChanged.connect(self.contents_changed)
-        self.error_display = QPlainTextEdit()
+        self.error_display = QTextBrowser()
+        self.error_display.setOpenLinks(False)
+        self.error_display.anchorClicked.connect(self.open_error)
         self.error_display.setFont(FONT)
         self.error_display.setReadOnly(True)
-        self.editor_holder = QSplitter()
+        self.editor_holder = QSplitter(WINDOW)
         self.editor_holder.setOrientation(Qt.Orientation.Vertical)
         self.editor_holder.addWidget(self.textedit)
         self.editor_holder.addWidget(self.error_display)
@@ -891,25 +1106,29 @@ class Page(QSplitter):
         self.editor_holder.setStretchFactor(2, 1)
         self.filename = ''
         self.dependencies = set()  # type: Set[str]
-        left = EDITOR_ON_LEFT
         self.scroll_pos_string = ''
-        show_errors = True
         self.show_errors = True
-        self.editor_is_on_left = True
         self.coord_helper = False
-        if all_windows:
-            first_window = next(iter(all_windows.values()))
-            left = first_window.editor_is_on_left
-            show_errors = first_window.show_errors
-        if left:
-            self.put_editor_left()
-        else:
-            self.put_editor_right()
-        if show_errors:
-            self.show_error()
-        else:
-            self.hide_error()
-        self.handle(1).installEventFilter(SplitterHandler(self))
+        self.editor_holder.hide()
+        self.addWidget(self.web)
+
+    def open_error(self, url):
+        filename = url.toLocalFile()
+        add_tab(filename)
+        page = all_windows.get(filename)
+        if page:
+            line, column = map(int, url.fragment().split(':'))
+            page.show_editor()
+            page.scroll_to_line(line, column)
+
+    def scroll_to_line(self, line, column=0):
+        # Preview navigation updates the selection without changing window visibility.
+        block = self.textedit.document().findBlockByLineNumber(max(0, line-1))
+        if block.isValid():
+            cursor = QTextCursor(block)
+            cursor.setPosition(block.position() + min(max(0, column), max(0, block.length()-1)))
+            self.textedit.setTextCursor(cursor)
+            self.textedit.ensureCursorVisible()
 
     def scroll_into_view(self) -> None:
         line = self.textedit.textCursor().blockNumber()
@@ -941,6 +1160,7 @@ class Page(QSplitter):
             self.update_html()
 
     def auto_apply_changed(self, state:int) -> None:
+        state = Qt.CheckState(state)
         if state == Qt.CheckState.Unchecked:
             self.auto_apply = False
         if state == Qt.CheckState.Checked:
@@ -948,17 +1168,21 @@ class Page(QSplitter):
             self.update_html()
 
     def read_only_changed(self, state:int) -> None:
+        state = Qt.CheckState(state)
         if state == Qt.CheckState.Unchecked:
             self.textedit.setReadOnly(False)
         if state == Qt.CheckState.Checked:
             self.textedit.setReadOnly(True)
+        if self.coord_helper:
+            self.update_html()
 
     def coord_helper_changed(self, state:int) -> None:
+        state = Qt.CheckState(state)
         if state == Qt.CheckState.Unchecked:
             self.coord_helper = False
         if state == Qt.CheckState.Checked:
             self.coord_helper = True
-            self.update_html()
+        self.update_html()
 
     def file_changed(self, path:str) -> None:
         if path not in self.dependencies:
@@ -967,7 +1191,7 @@ class Page(QSplitter):
         self.update_html()
 
     def clear_errors(self) -> None:
-        self.error_display.setPlainText('')
+        self.error_display.clear()
         self.textedit.error_line = None
 
     def display_dndc_error(self, error_type:int, filename:str, row:int, col:int, message:str) -> None:
@@ -985,9 +1209,15 @@ class Page(QSplitter):
             self.textedit.error_line = row
         et = error_types[error_type]
         if et == 'Info':
-            self.error_display.appendPlainText(f'{et}: {message}')
+            self.error_display.append(html_escape.escape(f'{et}: {message}'))
         else:
-            self.error_display.appendPlainText(f'{et}:{row+1}:{col+1}: {message}')
+            path = filename or self.filename
+            if not os.path.isabs(path):
+                path = os.path.join(self.dirname, path)
+            url = QUrl.fromLocalFile(os.path.normpath(path))
+            url.setFragment(f'{row+1}:{col}')
+            label = html_escape.escape(f'{et}:{row+1}:{col+1}')
+            self.error_display.append(f'<a href="{html_escape.escape(url.toString(), quote=True)}">{label}</a>: {html_escape.escape(message)}')
 
     def get_text_for_preview(self) -> str:
         text = self.textedit.toPlainText()
@@ -1001,22 +1231,23 @@ class Page(QSplitter):
                     "    function add_interceptor(a){\n"
                     "      let href = a.href;\n"
                     "      if(href.baseVal) href = href.baseVal;\n"
-                    "      let split = href.split('#');\n"
-                    "      if(split.length > 1){\n"
+                    "      const targetURL = new URL(href, document.baseURI);\n"
+                    "      const currentURL = new URL(document.baseURI);\n"
+                    "      const target = decodeURIComponent(targetURL.hash.slice(1));\n"
+                    "      targetURL.hash = currentURL.hash = '';\n"
+                    "      if(target && targetURL.href === currentURL.href){\n"
                     "        a.onclick = function(e){\n"
-                    "          let target = split[1];\n"
                     "          let t = document.getElementById(target);\n"
                     "          if(t){\n"
                     "            t.scrollIntoView();\n"
                     "            e.preventDefault();\n"
                     "            e.stopPropagation();\n"
                     "            let request = new XMLHttpRequest();\n"
-                    "            request.open('PUT', 'dnd:///scrolltoid/'+target, true);\n"
+                    "            request.open('PUT', 'dnd:///scrolltoid/'+encodeURIComponent(target), true);\n"
                     "            request.send();\n"
                     "            return false;\n"
                     "          }\n"
                     "        };\n"
-                    "        a.setAttribute('target', '_blank');\n"
                     "      }\n"
                     "    }\n"
                     "    for(let a of anchors){\n"
@@ -1029,7 +1260,7 @@ class Page(QSplitter):
                     "            e.preventDefault();\n"
                     "            e.stopPropagation();\n"
                     "            let request = new XMLHttpRequest();\n"
-                    "            request.open('PUT', 'dnd:///scrolltoid/'+h.id, true);\n"
+                    "            request.open('PUT', 'dnd:///scrolltoid/'+encodeURIComponent(h.id), true);\n"
                     "            request.send();\n"
                     "            return false;\n"
                     "        };\n"
@@ -1048,6 +1279,8 @@ class Page(QSplitter):
         return text
 
     def update_html(self) -> None:
+        if self.closing:
+            return
         # t0 = time.time()
         # print(f'{t0=}')
         if self.inflight:
@@ -1055,6 +1288,8 @@ class Page(QSplitter):
         self.inflight = True
         self.webpage.runJavaScript(GET_SCROLL_POSITION_SCRIPT, 0, self.set_scroll_pos)
     def set_scroll_pos(self, x:str) -> None:
+        if self.closing:
+            return
         self.scroll_pos_string = x
         self.inflight = False
         # t1 = time.time()
@@ -1093,9 +1328,13 @@ class Page(QSplitter):
         del ctx
 
         # t1 = time.time()
-        BACKSLASH = '\\'
-        u = QUrl(f'https://{APPHOST}/{self.filename.replace(BACKSLASH, "/")}')
-        # LOGGER.debug("u: %s", u)
+        u = QUrl()
+        u.setScheme('https')
+        u.setHost(APPHOST)
+        path = self.filename.replace('\\', '/') if IS_WINDOWS else self.filename
+        if not path.startswith('/'):
+            path = '/' + path
+        u.setPath(path)
         self.webpage.setHtml(html, baseUrl=u)
         # t2 = time.time()
         self.dependencies = depends
@@ -1107,15 +1346,41 @@ class Page(QSplitter):
         # print(f'total   = {(t3-t0)*1000:.3f}ms')
 
     def format(self) -> None:
+        if self.textedit.isReadOnly():
+            return
         try:
             text = pydndc.reformat(self.textedit.toPlainText(), logger=self.display_dndc_error)
         except ValueError:
             return
-        self.textedit.setPlainText(text)
+        self.textedit.replace_source(text)
     def hide_editor(self) -> None:
-        self.editor_holder.hide()
+        self.editor_open = False
+        if self.editor_window:
+            focused = self.editor_window.isActiveWindow()
+            self.editor_window.sync_visibility()
+            if focused:
+                WINDOW.activateWindow()
+                self.web.setFocus()
+
     def show_editor(self) -> None:
-        self.editor_holder.show()
+        TABWIDGET.setCurrentWidget(self)
+        self.editor_open = True
+        if self.editor_window is None:
+            self.editor_window = EditorWindow(self, WINDOW)
+            self.editor_holder.show()
+        self.editor_window.sync_visibility(True)
+
+    def dispose_editor(self) -> None:
+        if self.closing:
+            return
+        self.closing = True
+        self.editor_open = False
+        if self.editor_window:
+            self.editor_window.dispose()
+            self.editor_window = None
+        else:
+            self.editor_holder.deleteLater()
+
     def show_error(self) -> None:
         self.error_display.show()
         self.show_errors = True
@@ -1123,32 +1388,24 @@ class Page(QSplitter):
         self.clear_errors()
         self.error_display.hide()
         self.show_errors = False
-    def put_editor_right(self) -> None:
-        self.editor_holder.setParent(None)
-        self.web.setParent(None)
-        self.addWidget(self.web)
-        self.addWidget(self.editor_holder)
-        self.editor_is_on_left = False
-    def put_editor_left(self) -> None:
-        self.editor_holder.setParent(None)
-        self.web.setParent(None)
-        self.addWidget(self.editor_holder)
-        self.addWidget(self.web)
-        self.editor_is_on_left = True
-    def save(self) -> None:
-        if not self.filename:
-            return
+    def save(self) -> bool:
+        if not self.filename or not self.textedit.document().isModified():
+            return True
         LOGGER.debug("Saving '%s'", self.filename)
         savefile = QSaveFile(self)
         savefile.setFileName(self.filename)
-        savefile.open(QIODeviceBase.OpenModeFlag.WriteOnly)
+        if not savefile.open(QIODeviceBase.OpenModeFlag.WriteOnly):
+            QMessageBox.critical(self.editor_window or WINDOW, 'Unable to save', savefile.errorString())
+            return False
         text = self.textedit.toPlainText().encode('utf-8')
         if not text.endswith(b'\n'):
             text += b'\n'
-        savefile.write(text)
-        savefile.commit()
+        if savefile.write(text) != len(text) or not savefile.commit():
+            QMessageBox.critical(self.editor_window or WINDOW, 'Unable to save', savefile.errorString())
+            return False
+        self.textedit.document().setModified(False)
         LOGGER.debug("Saved '%s'", self.filename)
-        savefile = QSaveFile(self)
+        return True
     def get_fname(self, title:str, filter:str)->Optional[str]:
         fname, _ = QFileDialog.getOpenFileName(None, title, '', filter) # type: ignore # ???
         if not fname:
@@ -1231,13 +1488,14 @@ class Page(QSplitter):
 def make_page_widget(filename:str, allow_fail:bool) -> Optional[QWidget]:
     if filename in all_windows:
         return None
-    result = Page()
+    new_file = False
     try:
         fp = open(filename, 'r', encoding='utf-8')
-    except:
-        if not allow_fail:
+    except OSError:
+        if not allow_fail or os.path.exists(filename):
             LOGGER.debug("Failed to open: '%s'", filename)
             return None
+        new_file = True
         text = ''
     else:
         try:
@@ -1252,11 +1510,13 @@ def make_page_widget(filename:str, allow_fail:bool) -> Optional[QWidget]:
             return None
         else:
             fp.close()
+    result = Page()
     # Qt uses newlines as separators, not terminators.
     # We'll add a newline back when we save.
     if text.endswith('\n'):
         text = text[:-1]
     result.textedit.setPlainText(text)
+    result.textedit.document().setModified(new_file)
     dirname = os.path.dirname(filename)
     result.dirname = dirname
     result.filename = filename
@@ -1316,7 +1576,7 @@ def add_tab(filename:str, focus=True, allow_fail:bool=False) -> None:
         filename = filename.replace('/', '\\')
     while filename.startswith('//'):
         filename = filename[1:]
-    filename = os.path.normpath(filename)
+    filename = os.path.abspath(filename)
     LOGGER.debug("adding_tab: '%s'", filename)
     if filename in all_windows:
         if focus:
@@ -1375,13 +1635,13 @@ def add_menus() -> None:
     filemenu.addAction(action)
 
     def close_current_tab(*args) -> None:
-        current_tab: Optional[Page] = get_current_tab()
-        if not current_tab:
+        active = APP.activeWindow()
+        if isinstance(active, EditorWindow):
+            active.page.hide_editor()
+        elif TABWIDGET.currentIndex() >= 0:
+            close_tab(TABWIDGET.currentIndex())
+        else:
             WINDOW.close()
-            return
-        current_tab.save()
-        del all_windows[current_tab.filename]
-        current_tab.setParent(None)
     action = QAction('&Close', WINDOW)
     action.triggered.connect(close_current_tab)
     action.setShortcut(QKeySequence('Ctrl+w'))
@@ -1466,15 +1726,14 @@ def add_menus() -> None:
     viewmenu = menubar.addMenu('View')
 
     def toggle_editors(*args) -> None:
-        if not all_windows:
-            return
-        if next(iter(all_windows.values())).editor_holder.isHidden():
-            for w in all_windows.values():
-                w.show_editor()
-        else:
-            for w in all_windows.values():
-                w.hide_editor()
-    action = QAction('&Toggle Editors', WINDOW)
+        page = get_current_tab()
+        if page:
+            if page.editor_open:
+                page.hide_editor()
+            else:
+                page.show_editor()
+    action = QAction('&Edit it', WINDOW)
+    action.setShortcut(QKeySequence('Ctrl+e'))
     action.triggered.connect(toggle_editors)
     viewmenu.addAction(action)
 
@@ -1489,22 +1748,6 @@ def add_menus() -> None:
                 w.show_error()
     action = QAction('Toggle &Error', WINDOW)
     action.triggered.connect(toggle_errors)
-    viewmenu.addAction(action)
-
-    def flop_editors(*args) -> None:
-        global EDITOR_ON_LEFT
-        if not all_windows:
-            return
-        if next(iter(all_windows.values())).editor_is_on_left:
-            EDITOR_ON_LEFT = False
-            for w in all_windows.values():
-                w.put_editor_right()
-        else:
-            EDITOR_ON_LEFT = True
-            for w in all_windows.values():
-                w.put_editor_left()
-    action = QAction('&Flop Editors', WINDOW)
-    action.triggered.connect(flop_editors)
     viewmenu.addAction(action)
 
     def scroll_into_view(*args) -> None:
@@ -1604,6 +1847,20 @@ def add_menus() -> None:
     action = QAction('&Toggle Timings', WINDOW)
     action.triggered.connect(toggle_timings)
     developmenu.addAction(action)
+    # These commands must remain available while a separate editor has focus.
+    for action in WINDOW.findChildren(QAction):
+        if not action.shortcut().isEmpty():
+            action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
+    for index in range(10):
+        action = QAction(WINDOW)
+        action.setShortcut(QKeySequence(f'Ctrl+{(index+1)%10}'))
+        action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
+        def select_tab(checked=False, index=index):
+            if index < TABWIDGET.count():
+                TABWIDGET.setCurrentIndex(index)
+                sync_editors()
+        action.triggered.connect(select_tab)
+        WINDOW.addAction(action)
     return
 
 add_menus()
