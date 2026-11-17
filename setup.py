@@ -26,7 +26,7 @@ with open('Documentation/OVERVIEW.md', encoding='utf-8') as fp:
 
 setup(
     name='pydndc',
-    version='1.5.0',
+    version='1.6.0',
     license='Proprietary',
     description='dndc, but from python',
     long_description=LONG_DESCRIPTION,
@@ -48,6 +48,9 @@ setup(
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
+        'Programming Language :: Python :: 3.15',
         'Programming Language :: Python :: 3 :: Only',
     ],
     packages=['pydndc'],  # Required
