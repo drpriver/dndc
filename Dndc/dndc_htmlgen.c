@@ -431,6 +431,19 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                     c = text[++i];
                 msb_write_char(sb, c);
                 break;
+            case '`':{
+                const char* close = dndc_inline_find(text+i+1, text+length, '`');
+                if(!close){
+                    msb_write_char(sb, c);
+                    break;
+                }
+                msb_write_literal(sb, "<tt>");
+                int err = write_link_escaped_str_slow(ctx, sb, text+i+1, (size_t)(close-text-i-1), handle);
+                if(err) return err;
+                msb_write_literal(sb, "</tt>");
+                i = (size_t)(close-text);
+                break;
+            }
             case '[':{
                 const char* closing_brace = dndc_inline_find(text+i+1, text+length, ']');
                 if(unlikely(!closing_brace)){
@@ -686,7 +699,7 @@ write_link_escaped_str_slow(DndcContext* ctx, MStringBuilder* sb, const char* te
                 size_t start = i;
                 while(i+1 < length){
                     unsigned char next = (unsigned char)text[i+1];
-                    if(next < 32 || next == '[' || next == '\\' || next == '-' || next == '<' || next == '>' || next == '&')
+                    if(next < 32 || next == '[' || next == '`' || next == '\\' || next == '-' || next == '<' || next == '>' || next == '&')
                         break;
                     i++;
                 }
@@ -723,6 +736,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
     size_t cursor = sb->cursor;
     char* sbdata = sb->data + cursor;
     __m128i backslash = _mm_set1_epi8('\\');
+    __m128i backtick = _mm_set1_epi8('`');
     __m128i lsquare = _mm_set1_epi8('[');
     __m128i hyphen  = _mm_set1_epi8('-');
     __m128i langle  = _mm_set1_epi8('<');
@@ -739,6 +753,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
         // than the byte at a time processing we'd otherwise have to do.
         __m128i data         = _mm_loadu_si128((const __m128i*)text);
         __m128i test_backslash = _mm_cmpeq_epi8(data, backslash);
+        test_backslash = _mm_or_si128(test_backslash, _mm_cmpeq_epi8(data, backtick));
         __m128i test_lsquare = _mm_cmpeq_epi8(data, lsquare);
         __m128i test_hyphen  = _mm_cmpeq_epi8(data, hyphen);
         __m128i test_langle  = _mm_cmpeq_epi8(data, langle);
@@ -768,6 +783,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
     size_t cursor = sb->cursor;
     char* sbdata = sb->data + cursor;
     v128_t backslash = wasm_i8x16_splat('\\');
+    v128_t backtick = wasm_i8x16_splat('`');
     v128_t lsquare = wasm_i8x16_splat('[');
     v128_t hyphen  = wasm_i8x16_splat('-');
     v128_t langle  = wasm_i8x16_splat('<');
@@ -784,6 +800,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
         // than the byte at a time processing we'd otherwise have to do.
         v128_t data         = wasm_v128_load(text);
         v128_t test_backslash = wasm_i8x16_eq(data, backslash);
+        test_backslash |= wasm_i8x16_eq(data, backtick);
         v128_t test_lsquare = wasm_i8x16_eq(data, lsquare);
         v128_t test_hyphen  = wasm_i8x16_eq(data, hyphen);
         v128_t test_langle  = wasm_i8x16_eq(data, langle);
@@ -813,6 +830,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
     size_t cursor = sb->cursor;
     unsigned char* sbdata = (unsigned char*)sb->data + cursor;
     uint8x16_t backslash = vdupq_n_u8('\\');
+    uint8x16_t backtick = vdupq_n_u8('`');
     uint8x16_t lsquare = vdupq_n_u8('[');
     uint8x16_t hyphen  = vdupq_n_u8('-');
     uint8x16_t langle  = vdupq_n_u8('<');
@@ -822,6 +840,7 @@ write_link_escaped_str(DndcContext* ctx, MStringBuilder* sb, const char* text, s
     while(length >= 16){
         uint8x16_t data         = vld1q_u8((const unsigned char*)text);
         uint8x16_t test_backslash = vceqq_u8(data, backslash);
+        test_backslash = vorrq_u8(test_backslash, vceqq_u8(data, backtick));
         uint8x16_t test_lsquare = vceqq_u8(data, lsquare);
         uint8x16_t test_hyphen  = vceqq_u8(data, hyphen);
         uint8x16_t test_langle  = vceqq_u8(data, langle);

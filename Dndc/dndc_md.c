@@ -26,6 +26,7 @@ warn_unused
 int
 render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int header_depth, _Bool append_newline);
 static void write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
+static void write_md_inline(DndcContext* ctx, StringView header, MStringBuilder* sb);
 #if 0
 static void write_md_pre_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb);
 #endif
@@ -245,34 +246,70 @@ render_node_as_md(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb, int h
 static
 void
 write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
+    write_md_inline(ctx, get_node(ctx, handle)->header, sb);
+}
+
+static void
+write_md_code(StringView content, MStringBuilder* sb){
+    size_t longest = 0, run = 0;
+    char first = 0, last = 0;
+    _Bool nonspace = 0;
+    for(size_t i = 0; i < content.length; i++){
+        char c = content.text[i];
+        if(c == '\\' && i+1 < content.length && dndc_inline_escapable(content.text[i+1]))
+            c = content.text[++i];
+        if(!first) first = c;
+        last = c;
+        nonspace |= c != ' ';
+        run = c == '`' ? run+1 : 0;
+        if(run > longest) longest = run;
+    }
+    if(!content.length) return;
+    _Bool pad = first == '`' || last == '`' || (first == ' ' && last == ' ' && nonspace);
+    msb_write_nchar(sb, '`', longest+1);
+    if(pad) msb_write_char(sb, ' ');
+    for(size_t i = 0; i < content.length; i++){
+        char c = content.text[i];
+        if(c == '\\' && i+1 < content.length && dndc_inline_escapable(content.text[i+1]))
+            c = content.text[++i];
+        msb_write_char(sb, c);
+    }
+    if(pad) msb_write_char(sb, ' ');
+    msb_write_nchar(sb, '`', longest+1);
+}
+
+static void
+write_md_inline(DndcContext* ctx, StringView header, MStringBuilder* sb){
     // This is a slow character by character implementation, but
     // this is a rarely used piece. We can SIMD it later.
     //
     // We need to scan for links and convert them to markdown links.
-    Node* node = get_node(ctx, handle);
-    StringView header = node->header;
     if(!header.length) return;
     const char* text = header.text;
     size_t length = header.length;
-    _Bool in_code_tag = 0; // we don't allow multiline code segments.
-    _Bool in_backtick = 0;
 
     for(size_t i = 0; i < length; i++){
         char c = text[i];
         switch(c){
             case '\\':
-                if(!in_backtick && i+1 < length && dndc_inline_escapable(text[i+1])){
-                    if(!in_code_tag)
-                        msb_write_char(sb, '\\');
+                if(i+1 < length && dndc_inline_escapable(text[i+1])){
+                    msb_write_char(sb, '\\');
                     msb_write_char(sb, text[++i]);
+                }
+                else
+                    msb_write_literal(sb, "\\\\");
+                break;
+            case '`':{
+                const char* close = dndc_inline_find(text+i+1, text+length, '`');
+                if(!close){
+                    msb_write_literal(sb, "\\`");
                     break;
                 }
-                goto lDEFAULT;
-            case '`':
-                in_backtick = !in_backtick;
-                goto lDEFAULT;
+                write_md_code((StringView){.text=text+i+1, .length=(size_t)(close-text-i-1)}, sb);
+                i = (size_t)(close-text);
+                break;
+            }
             case '[':{
-                if(in_backtick) goto lDEFAULT;
                 const char* closing_brace = dndc_inline_find(text+i+1, text+length, ']');
                 if(unlikely(!closing_brace)){
                     msb_write_char(sb, c);
@@ -303,7 +340,7 @@ write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
                     else {
                         msb_write_literal(sb, "[");
                         StringView sv = stripped_view(text+i+1, text_length);
-                        msb_write_str(sb, sv.text, sv.length);
+                        write_md_inline(ctx, sv, sb);
                         msb_write_literal(sb, "](");
                         StringView value;
                         int missing = find_link_target(ctx, temp_str, &value);
@@ -319,23 +356,29 @@ write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
                 i += link_length;
             }break;
             case '<':{
+                if(length-i >= 4 && memcmp(text+i, "<tt>", 4) == 0){
+                    size_t end = i+4;
+                    while(end < length && !(length-end >= 5 && memcmp(text+end, "</tt>", 5) == 0))
+                        end++;
+                    write_md_code((StringView){.text=text+i+4, .length=end-i-4}, sb);
+                    i = end < length ? end+4 : length-1;
+                    break;
+                }
                 struct Replacement {
                     StringView sub, repl;
-                    unsigned is_code;
                 };
                 static const struct Replacement replacements[] = {
-                    {SV("<code>"),    SV("<code>"),  1},
-                    {SV("</code>"),   SV("</code>"),  2},
-                    {SV("<tt>"),      SV("`"),  1},
-                    {SV("</tt>"),     SV("`"),  2},
-                    {SV("<em>"),      SV("*"),  0},
-                    {SV("</em>"),     SV("*"),  0},
-                    {SV("<i>"),       SV("*"),  0},
-                    {SV("</i>"),      SV("*"),  0},
-                    {SV("<b>"),       SV("**"), 0},
-                    {SV("</b>"),      SV("**"), 0},
-                    {SV("<strong>"),  SV("**"), 0},
-                    {SV("</strong>"), SV("**"), 0},
+                    {SV("<code>"),    SV("<code>")},
+                    {SV("</code>"),   SV("</code>")},
+                    {SV("</tt>"),     SV("")},
+                    {SV("<em>"),      SV("*")},
+                    {SV("</em>"),     SV("*")},
+                    {SV("<i>"),       SV("*")},
+                    {SV("</i>"),      SV("*")},
+                    {SV("<b>"),       SV("**")},
+                    {SV("</b>"),      SV("**")},
+                    {SV("<strong>"),  SV("**")},
+                    {SV("</strong>"), SV("**")},
                 };
                 for(size_t r = 0; r < arrlen(replacements); r++){
                     const struct Replacement* p = &replacements[r];
@@ -344,43 +387,26 @@ write_md_string(DndcContext* ctx, NodeHandle handle, MStringBuilder* sb){
                     if(length - i >= l){
                         if(memcmp(text+i, t, l) == 0){
                             i += l-1;
-                            if((p->is_code & 2)){
-                                if(!in_code_tag) goto BreakSwitch;
-                                in_code_tag = 0;
-                            }
-                            else if(p->is_code & 1){
-                                if(in_code_tag) goto BreakSwitch;
-                                in_code_tag = 1;
-                            }
-                            else if(in_code_tag){
-                                msb_write_str(sb, t, l);
-                                goto BreakSwitch;
-                            }
                             StringView repl = p->repl;
                             msb_write_str(sb, repl.text, repl.length);
                             goto BreakSwitch;
                         }
                     }
                 }
-                if(in_code_tag) goto lDEFAULT;
                 msb_write_literal(sb, "&lt;");
                 break;
             }
             case '>':{
-                if(in_code_tag) goto lDEFAULT;
                 msb_write_literal(sb, "&gt;");
                 break;
             }
             FALLTHROUGH;
             // fall-through
             default:
-                lDEFAULT:
                 msb_write_char(sb, c);
         }
         BreakSwitch:;
     }
-    if(in_code_tag)
-        msb_write_char(sb, '`');
 }
 #if 0
 static

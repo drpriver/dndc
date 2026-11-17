@@ -29,8 +29,8 @@
       - These attributes can be retrieved from javascript.
 
   Inline Escapes::md .node #id(inline-escapes)
-    A backslash quotes a colon, pipe, opening or closing square bracket, or
-    another backslash in prose and headings. For example:
+    A backslash quotes a colon, pipe, opening or closing square bracket,
+    backtick, or another backslash in prose and headings. For example:
 
     ::pre #noid
       std\::vector

@@ -564,7 +564,7 @@ static inline
 _Bool
 dndc_inline_escapable(char c){
     switch(c){
-        case '\\': case ':': case '|': case '[': case ']': return 1;
+        case '\\': case ':': case '|': case '[': case ']': case '`': return 1;
         default: return 0;
     }
 }

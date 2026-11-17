@@ -36,6 +36,7 @@
     X(TestUntrusted) \
     X(TestSpecialChars) \
     X(TestInlineEscapes) \
+    X(TestBackticks) \
     X(TestMaliciousLinks) \
     X(TestImgAttributes) \
     X(TestJs) \
@@ -950,6 +951,52 @@ TestFunction(TestSpecialChars){
             TestPrintValue("output", output);
         }
         dndc_free_string(output);
+    }
+    TESTEND();
+}
+TestFunction(TestBackticks){
+    TESTBEGIN();
+    struct {StringView source, html, md;} cases[] = {
+        {SV("`hello`"), SV("<tt>hello</tt>"), SV("`hello`")},
+        {SV("`a` and `b`"), SV("<tt>a</tt> and <tt>b</tt>"), SV("`a` and `b`")},
+        {SV("`unmatched"), SV("`unmatched"), SV("\\`unmatched")},
+        {SV("\\`literal\\`"), SV("`literal`"), SV("\\`literal\\`")},
+        {SV("`a\\`b`"), SV("<tt>a`b</tt>"), SV("``a`b``")},
+        {SV("`\\[x\\] a\\|b std\\::vector \\\\`"),
+         SV("<tt>[x] a|b std::vector \\</tt>"),
+         SV("`[x] a|b std::vector \\`")},
+        {SV("`[hello | target]`"), SV("<tt><a href=\"target\">hello</a></tt>"), SV("`[hello | target]`")},
+        {SV("<tt>\\[x\\] <other></tt>"), SV("<tt>[x] &lt;other&gt;</tt>"), SV("`[x] <other>`")},
+        {SV("<code>\\[x\\]</code>"), SV("<code>[x]</code>"), SV("<code>\\[x\\]</code>")},
+        {SV("`<b>bold</b>`"), SV("<tt><b>bold</b></tt>"), SV("`<b>bold</b>`")},
+        {SV("[a\\]b\\|c \\! \\` | target]"), SV("<a href=\"target\">a]b|c \\! `</a>"), SV("[a\\]b\\|c \\\\! \\`](target)")},
+        {SV("C:\\notes \\! \\"), SV("C:\\notes \\! \\"), SV("C:\\\\notes \\\\! \\\\" )},
+        {SV("<tt>a`b``c</tt>"), SV("<tt>a<tt>b</tt>`c</tt>"), SV("```a`b``c```")},
+        {SV("<tt>\\`edge\\`</tt>"), SV("<tt>`edge`</tt>"), SV("`` `edge` ``")},
+        {SV("<tt> padded </tt>"), SV("<tt> padded </tt>"), SV("`  padded  `")},
+        {SV("<tt>   </tt>"), SV("<tt>   </tt>"), SV("`   `")},
+        {SV("<tt>C:\\notes \\!</tt>"), SV("<tt>C:\\notes \\!</tt>"), SV("`C:\\notes \\!`")},
+    };
+    for(size_t i=0; i<arrlen(cases); i++){
+        for(size_t prefix=0; prefix<33; prefix++){
+            MStringBuilder source = {.allocator=MALLOCATOR};
+            msb_write_nchar(&source, 'a', prefix);
+            msb_write_char(&source, ' ');
+            msb_write_str(&source, cases[i].source.text, cases[i].source.length);
+            msb_write_char(&source, '\n');
+            for(int md=0; md<2; md++){
+                LongString output={0};
+                int e = run_the_dndc(md ? OUTPUT_MD : OUTPUT_HTML, DNDC_ALLOW_BAD_LINKS | DNDC_SUPPRESS_WARNINGS,
+                    SV(""), msb_borrow_sv(&source), SV(""), &output, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, LS(""));
+                TestExpectFalse(e);
+                if(!e){
+                    StringView expected = md ? cases[i].md : cases[i].html;
+                    TestExpectTrue(strstr(output.text, expected.text) != NULL);
+                }
+                dndc_free_string(output);
+            }
+            msb_destroy(&source);
+        }
     }
     TESTEND();
 }
